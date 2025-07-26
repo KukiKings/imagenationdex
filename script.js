@@ -1,4 +1,3 @@
-// Countdown
 const countdown = document.getElementById("countdown");
 const launchDate = new Date("2025-07-28T00:00:00Z").getTime();
 setInterval(() => {
@@ -15,7 +14,6 @@ setInterval(() => {
   countdown.innerHTML = `${days}d ${hours}h ${minutes}m ${seconds}s`;
 }, 1000);
 
-// Wallet Connect (Mock)
 const connectBtn = document.getElementById("connectWallet");
 const mintBtn = document.getElementById("mintNFT");
 const xpVault = document.getElementById("xpVault");
@@ -26,8 +24,7 @@ connectBtn.onclick = () => {
   xpVault.style.display = "block";
 };
 
-// Mint NFT (Mock)
 mintBtn.onclick = () => {
-  alert("NFT Badge Minted 🏅");
+  mintNFT();
   document.getElementById("xpAmount").innerText = "100";
 };
