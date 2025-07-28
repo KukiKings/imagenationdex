@@ -1,10 +1,11 @@
-# IN$DEX Launch
+# IN$DEX Full Launch Bundle
 
-This is the full launch bundle for the IN$DEX project.  
-To deploy live on Vercel:
+This includes all core modules:
+- Wallet Connect (stub)
+- NFT Receipt Minter (stub)
+- Referral Tracker (stub)
+- XP Leaderboard (stub)
+- Legendary Drop Mint (stub)
+- IN$DEX Academy (stub)
 
-1. Visit https://vercel.com/import/project
-2. Upload this folder or connect your GitHub
-3. Set any required environment variables
-4. Deploy!
-
+Ready for Vercel deployment.
