@@ -1,3 +1,3 @@
 export default function handler(req, res) {
-  res.status(200).json({ message: "XP and quest engine activated" });
+  res.status(200).json({ message: "XP quest engine activated" });
 }
