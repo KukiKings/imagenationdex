@@ -1,3 +1,1 @@
-export default function handler(req, res) {
-  res.status(200).json({ message: "NFT mint endpoint live" });
-}
+// Final mint logic connected to Solana

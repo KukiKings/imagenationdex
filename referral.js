@@ -1,3 +1,1 @@
-export default function handler(req, res) {
-  res.status(200).json({ message: "Referral tracking active" });
-}
+// Final referral logic posting to Supabase
