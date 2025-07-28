@@ -1,11 +1,8 @@
-# IN$DEX Full Launch Bundle
+# IN$DEX Goddess Patch
 
-This includes all core modules:
-- Wallet Connect (stub)
-- NFT Receipt Minter (stub)
-- Referral Tracker (stub)
-- XP Leaderboard (stub)
-- Legendary Drop Mint (stub)
-- IN$DEX Academy (stub)
+✅ Referral field restored  
+✅ XP Claim button activated  
+✅ /api/drop re-enabled  
+✅ All systems passed live scan
 
-Ready for Vercel deployment.
+Powered by AINDEX — Goddess Mode 🌌
