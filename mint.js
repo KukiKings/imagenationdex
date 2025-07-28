@@ -1,3 +1,3 @@
-function mintNFT() {
-  alert("Minted NFT badge! 🎉 XP awarded.");
+export default function handler(req, res) {
+  res.status(200).json({ message: "NFT mint endpoint live" });
 }
