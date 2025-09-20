@@ -1,3 +1,4 @@
+![IN$DEX Banner](assets/banner.png)
 # IN$DEX — Image Nation Decentralised Exchange
 
 ![IN$DEX Logo](https://github.com/KukiKings/imagenationdex/blob/main/assets/logo.png)
