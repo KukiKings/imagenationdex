@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Confirm Transaction — IN$DEX</title>
+<style>
+  :root {
+    --cyan: #00D4FF; --blue: #2B35D8; --purple: #8B3FE8;
+    --black: #090A10; --green: #00E5A0; --gold: #FFB800;
+    --red: #FF4D6D; --surface: #12141F; --surface2: #1A1D2E;
+    --surface3: #22263A; --text: #F0F2FF; --text2: #A0A8C8;
+    --text-muted: #5A6080;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--black); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; max-width:430px; margin:0 auto; min-height:100vh; }
+  .topbar { background:var(--surface); border-bottom:1px solid rgba(255,255,255,0.06); padding:14px 16px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:100; }
+  .back-btn { width:36px; height:36px; border:none; background:var(--surface2); border-radius:10px; color:var(--text); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .topbar-title { font-size:16px; font-weight:600; }
+  .secure-badge { margin-left:auto; display:flex; align-items:center; gap:5px; font-size:11px; color:var(--green); background:rgba(0,229,160,0.1); padding:4px 10px; border-radius:20px; }
+
+  .content { padding:16px; padding-bottom:120px; }
+
+  /* Transaction summary card */
+  .txn-card { background:var(--surface); border-radius:16px; padding:20px; margin-bottom:14px; text-align:center; }
+  .txn-direction { font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+  .txn-amount { font-size:40px; font-weight:800; color:var(--text); margin-bottom:4px; }
+  .txn-usd { font-size:15px; color:var(--text2); margin-bottom:16px; }
+  .txn-flow { display:flex; align-items:center; gap:12px; justify-content:center; }
+  .txn-party { text-align:center; }
+  .party-avatar { width:44px; height:44px; border-radius:50%; background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:20px; margin:0 auto 6px; }
+  .party-name { font-size:13px; font-weight:600; }
+  .party-addr { font-size:11px; color:var(--text-muted); }
+  .txn-arrow { font-size:20px; color:var(--cyan); }
+
+  /* Fee breakdown */
+  .section-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin:16px 0 8px; }
+  .fee-card { background:var(--surface); border-radius:14px; overflow:hidden; margin-bottom:14px; }
+  .fee-row { display:flex; justify-content:space-between; align-items:center; padding:13px 16px; border-bottom:1px solid rgba(255,255,255,0.04); }
+  .fee-row:last-child { border-bottom:none; }
+  .fee-label { font-size:13px; color:var(--text2); }
+  .fee-value { font-size:13px; font-weight:600; }
+  .fee-value.green { color:var(--green); }
+  .fee-value.gold { color:var(--gold); }
+  .fee-value.muted { color:var(--text-muted); }
+
+  /* 98/2 callout */
+  .law-callout { background:linear-gradient(135deg,rgba(43,53,216,0.2),rgba(139,63,232,0.2)); border:1px solid rgba(139,63,232,0.3); border-radius:12px; padding:12px 14px; display:flex; gap:10px; align-items:flex-start; margin-bottom:14px; }
+  .law-icon { font-size:18px; flex-shrink:0; }
+  .law-text { font-size:12px; color:var(--text2); line-height:1.5; }
+  .law-text strong { color:var(--text); }
+
+  /* PQSI pre-flight */
+  .preflight-card { background:var(--surface); border-radius:14px; overflow:hidden; margin-bottom:14px; }
+  .preflight-header { padding:14px 16px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; }
+  .preflight-header-left { display:flex; align-items:center; gap:10px; }
+  .pqsi-badge { font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; letter-spacing:0.5px; }
+  .pqsi-clear { background:rgba(0,229,160,0.15); color:var(--green); }
+  .pqsi-caution { background:rgba(255,184,0,0.15); color:var(--gold); }
+  .preflight-title { font-size:14px; font-weight:600; }
+  .expand-icon { color:var(--text2); font-size:16px; transition:transform 0.2s; }
+  .expand-icon.open { transform:rotate(180deg); }
+  .preflight-body { padding:0 16px 14px; display:none; }
+  .preflight-body.open { display:block; }
+  .check-row { display:flex; align-items:center; justify-content:space-between; padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+  .check-row:last-child { border-bottom:none; }
+  .check-label { font-size:12px; color:var(--text2); }
+  .check-result { font-size:12px; font-weight:600; display:flex; align-items:center; gap:4px; }
+  .check-pass { color:var(--green); }
+  .check-fail { color:var(--red); }
+  .check-info { color:var(--text-muted); }
+
+  /* 2FA panel */
+  .twofa-panel { background:rgba(139,63,232,0.1); border:1px solid rgba(139,63,232,0.3); border-radius:14px; padding:16px; margin-bottom:14px; display:none; }
+  .twofa-panel.show { display:block; }
+  .twofa-title { font-size:14px; font-weight:700; color:var(--purple); margin-bottom:6px; }
+  .twofa-desc { font-size:12px; color:var(--text2); line-height:1.5; margin-bottom:12px; }
+  .bio-confirm-btn { width:100%; padding:12px; background:linear-gradient(135deg,var(--blue),var(--purple)); border:none; border-radius:10px; color:#fff; font-size:14px; font-weight:600; cursor:pointer; }
+
+  /* Bottom CTA */
+  .cta-bar { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:430px; background:linear-gradient(transparent,var(--black) 30%); padding:16px; }
+  .confirm-btn { width:100%; padding:16px; background:linear-gradient(135deg,var(--blue),var(--purple)); border:none; border-radius:14px; color:#fff; font-size:16px; font-weight:700; cursor:pointer; margin-bottom:10px; transition:opacity 0.2s; }
+  .confirm-btn:hover { opacity:0.9; }
+  .cancel-btn { width:100%; padding:13px; background:transparent; border:1px solid var(--surface3); border-radius:14px; color:var(--text2); font-size:15px; font-weight:500; cursor:pointer; }
+
+  .toast { position:fixed; bottom:120px; left:50%; transform:translateX(-50%) translateY(60px); background:var(--surface2); color:var(--text); padding:12px 20px; border-radius:12px; font-size:13px; font-weight:500; transition:transform 0.3s; z-index:200; white-space:nowrap; border:1px solid rgba(0,229,160,0.3); }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" onclick="history.back()">←</button>
+  <span class="topbar-title">Review & Sign</span>
+  <span class="secure-badge">🔒 PQSI Protected</span>
+</div>
+
+<div class="content">
+
+  <div class="txn-card">
+    <div class="txn-direction">You are sending</div>
+    <div class="txn-amount">50 INDX</div>
+    <div class="txn-usd">≈ $17.50 USD</div>
+    <div class="txn-flow">
+      <div class="txn-party">
+        <div class="party-avatar">👤</div>
+        <div class="party-name">You</div>
+        <div class="party-addr">AJ.IN$DEX</div>
+      </div>
+      <div class="txn-arrow">→</div>
+      <div class="txn-party">
+        <div class="party-avatar">🌏</div>
+        <div class="party-name">Maria S.</div>
+        <div class="party-addr">maria.index</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-label">Transaction Details</div>
+  <div class="fee-card">
+    <div class="fee-row">
+      <span class="fee-label">Amount</span>
+      <span class="fee-value">50 INDX ($17.50)</span>
+    </div>
+    <div class="fee-row">
+      <span class="fee-label">Platform fee</span>
+      <span class="fee-value muted">0.1 INDX ($0.04)</span>
+    </div>
+    <div class="fee-row">
+      <span class="fee-label">Network fee (SOL)</span>
+      <span class="fee-value muted">~$0.0005</span>
+    </div>
+    <div class="fee-row">
+      <span class="fee-label">Maria receives</span>
+      <span class="fee-value green">49.9 INDX ($17.47)</span>
+    </div>
+    <div class="fee-row">
+      <span class="fee-label">Speed</span>
+      <span class="fee-value" style="color:var(--cyan);">Instant · Solana</span>
+    </div>
+  </div>
+
+  <div class="law-callout">
+    <div class="law-icon">⚖️</div>
+    <div class="law-text"><strong>98/2 Civilisation Law</strong> — 0.002 INDX (2% of the 0.1 fee) routes to the Civilisation Fund. Your contribution to financial access for the unbanked. This is immutable.</div>
+  </div>
+
+  <!-- PQSI Pre-flight -->
+  <div class="preflight-card">
+    <div class="preflight-header" onclick="togglePreflight()">
+      <div class="preflight-header-left">
+        <span class="pqsi-badge pqsi-clear">T0 CLEAR</span>
+        <span class="preflight-title">SIINDEX Pre-flight</span>
+      </div>
+      <span class="expand-icon" id="expandIcon">▼</span>
+    </div>
+    <div class="preflight-body" id="preflightBody">
+      <div class="check-row">
+        <span class="check-label">Per-txn limit</span>
+        <span class="check-result check-pass">✓ $17.50 of $500 limit</span>
+      </div>
+      <div class="check-row">
+        <span class="check-label">Daily outflow</span>
+        <span class="check-result check-pass">✓ $17.50 of $2,000 cap</span>
+      </div>
+      <div class="check-row">
+        <span class="check-label">Chain allowed</span>
+        <span class="check-result check-pass">✓ Solana</span>
+      </div>
+      <div class="check-row">
+        <span class="check-label">PQSI threat scan</span>
+        <span class="check-result check-pass">✓ T0 — No threat detected</span>
+      </div>
+      <div class="check-row">
+        <span class="check-label">Recipient sanction check</span>
+        <span class="check-result check-pass">✓ OFAC / UN / EU — Clear</span>
+      </div>
+      <div class="check-row">
+        <span class="check-label">Transaction simulation</span>
+        <span class="check-result check-pass">✓ Output confirmed · 0% slippage</span>
+      </div>
+      <div class="check-row">
+        <span class="check-label">MEV protection</span>
+        <span class="check-result check-pass">✓ Jito bundle active</span>
+      </div>
+      <div class="check-row">
+        <span class="check-label">2FA required</span>
+        <span class="check-result check-info">— Below $500 threshold</span>
+      </div>
+      <div class="check-row">
+        <span class="check-label">Transaction Protection</span>
+        <span class="check-result check-pass">✓ Covered · $17.50 / $10,000</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2FA Panel (shown when amount exceeds threshold) -->
+  <div class="twofa-panel" id="twofaPanel">
+    <div class="twofa-title">🔐 Biometric Approval Required</div>
+    <div class="twofa-desc">This transaction exceeds your $500 auto-sign threshold. SIINDEX requires your biometric confirmation before proceeding.</div>
+    <button class="bio-confirm-btn" onclick="approveBio()">Confirm with Face ID / Fingerprint</button>
+  </div>
+
+</div>
+
+<div class="cta-bar">
+  <button class="confirm-btn" onclick="confirmTxn()">Confirm & Send 50 INDX</button>
+  <button class="cancel-btn" onclick="history.back()">Cancel</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let preflightOpen = false;
+
+  function togglePreflight() {
+    preflightOpen = !preflightOpen;
+    document.getElementById('preflightBody').classList.toggle('open', preflightOpen);
+    document.getElementById('expandIcon').classList.toggle('open', preflightOpen);
+  }
+
+  // Auto-open preflight on load
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      preflightOpen = true;
+      document.getElementById('preflightBody').classList.add('open');
+      document.getElementById('expandIcon').classList.add('open');
+    }, 600);
+  });
+
+  function approveBio() {
+    showToast('Biometric confirmed. Standing by.');
+    document.getElementById('twofaPanel').classList.remove('show');
+  }
+
+  function confirmTxn() {
+    showToast('Done. 50 INDX sent to Maria S. Standing by.');
+    setTimeout(() => { window.location.href = 'index.html'; }, 2500);
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3500);
+  }
+</script>
+</body>
+</html>

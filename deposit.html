@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IN$DEX — Deposit</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --cyan-dim:#0099BB; --cyan-bg:#071825; --cyan-border:#0A2535;
+    --black:#090A10; --surface:#111318; --surface2:#1A1D25; --border:#2A2D38;
+    --text:#EAEAEA; --text-muted:#6B7080; --text-dim:#3D4050;
+    --green:#2ECC71; --green-bg:#0D1F14; --red:#E74C3C;
+    --purple:#8B5CF6; --radius:16px; --nav-h:72px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none;}
+  .shell{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;}
+  .scroll-body{flex:1;overflow-y:auto;padding-bottom:40px;-webkit-overflow-scrolling:touch;}
+  .scroll-body::-webkit-scrollbar{display:none;}
+
+  /* HEADER */
+  .header{display:flex;align-items:center;gap:14px;padding:20px 20px 0;}
+  .back-btn{width:38px;height:38px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;flex-shrink:0;transition:background 0.2s;}
+  .back-btn:active{background:var(--surface2);}
+  .header-title{font-size:20px;font-weight:800;letter-spacing:-0.02em;}
+  .header-title span{color:var(--cyan);}
+
+  /* BALANCE PILL */
+  .balance-pill{margin:20px 20px 0;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;}
+  .bp-label{font-size:12px;color:var(--text-muted);}
+  .bp-val{font-size:20px;font-weight:900;color:var(--cyan);}
+  .bp-usd{font-size:12px;color:var(--text-muted);}
+
+  /* METHOD TABS */
+  .section{padding:20px 20px 0;}
+  .method-tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px;}
+  .method-tab{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:14px 8px;text-align:center;cursor:pointer;transition:all 0.2s;-webkit-user-select:none;user-select:none;}
+  .method-tab:active{transform:scale(0.97);}
+  .method-tab.active{background:var(--cyan-bg);border-color:var(--cyan-dim);}
+  .method-tab .mt-icon{font-size:22px;margin-bottom:5px;}
+  .method-tab .mt-label{font-size:11px;font-weight:700;color:var(--text-muted);}
+  .method-tab.active .mt-label{color:var(--cyan);}
+
+  /* AMOUNT INPUT */
+  .amount-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:24px;margin-bottom:16px;}
+  .amount-label{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;}
+  .amount-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .currency-badge{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:14px;font-weight:800;color:var(--text);flex-shrink:0;}
+  .big-input{flex:1;background:transparent;border:none;outline:none;font-size:36px;font-weight:900;color:var(--text);text-align:right;font-variant-numeric:tabular-nums;letter-spacing:-0.03em;-webkit-appearance:none;}
+  .big-input::placeholder{color:var(--text-dim);}
+  .big-input::-webkit-inner-spin-button,.big-input::-webkit-outer-spin-button{-webkit-appearance:none;}
+  .equiv{font-size:13px;color:var(--text-muted);text-align:right;}
+  .equiv span{color:var(--cyan);}
+  .quick-amounts{display:flex;gap:8px;margin-top:14px;}
+  .qa{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 4px;text-align:center;font-size:12px;font-weight:700;color:var(--text-muted);cursor:pointer;transition:all 0.2s;}
+  .qa:active{background:var(--cyan-bg);border-color:var(--cyan-dim);color:var(--cyan);}
+
+  /* PANELS */
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  /* CARD PANEL */
+  .field-group{margin-bottom:16px;}
+  .field-label{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:7px;display:block;}
+  .field-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:13px 16px;font-size:16px;color:var(--text);outline:none;-webkit-appearance:none;transition:border-color 0.2s;}
+  .field-input::placeholder{color:var(--text-muted);}
+  .field-input:focus{border-color:var(--cyan-dim);}
+  .card-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .provider-row{display:flex;gap:8px;margin-bottom:20px;}
+  .provider{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;font-size:12px;font-weight:700;color:var(--text-muted);cursor:pointer;transition:all 0.2s;}
+  .provider.active{background:var(--cyan-bg);border-color:var(--cyan-dim);color:var(--cyan);}
+
+  /* CRYPTO PANEL */
+  .qr-wrap{background:white;border-radius:16px;padding:16px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+  .qr-placeholder{width:180px;height:180px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#333;text-align:center;line-height:1.4;}
+  .address-box{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:10px;margin-bottom:12px;cursor:pointer;}
+  .address-text{flex:1;font-size:12px;font-family:'SF Mono',monospace;color:var(--text);word-break:break-all;line-height:1.5;}
+  .copy-btn{background:var(--cyan-bg);border:1px solid var(--cyan-border);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--cyan);cursor:pointer;white-space:nowrap;transition:background 0.2s;flex-shrink:0;}
+  .copy-btn:active{background:var(--cyan-dim);color:var(--black);}
+  .network-chips{display:flex;gap:8px;margin-bottom:16px;}
+  .net-chip{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;color:var(--text-muted);cursor:pointer;transition:all 0.2s;}
+  .net-chip.active{background:var(--cyan-bg);border-color:var(--cyan-dim);color:var(--cyan);}
+  .warning-box{background:#1F0D0D;border:1px solid #3D1515;border-radius:12px;padding:14px;font-size:12px;color:#E87070;line-height:1.5;margin-bottom:16px;}
+  .warning-box strong{color:var(--red);}
+
+  /* BANK PANEL */
+  .bank-step{display:flex;gap:14px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;}
+  .bank-num{width:28px;height:28px;border-radius:50%;background:var(--cyan-bg);border:1px solid var(--cyan-border);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--cyan);flex-shrink:0;}
+  .bank-text{flex:1;}
+  .bank-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;}
+  .bank-desc{font-size:12px;color:var(--text-muted);line-height:1.4;}
+  .bank-detail{font-family:'SF Mono',monospace;font-size:13px;color:var(--cyan);margin-top:4px;}
+
+  /* INFO ROW */
+  .info-row{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:13px;margin-bottom:16px;}
+  .info-icon{font-size:18px;flex-shrink:0;}
+  .info-text{font-size:12px;color:var(--text-muted);line-height:1.5;}
+  .info-text strong{color:var(--text);}
+
+  /* BTN */
+  .btn-primary{display:block;width:100%;background:linear-gradient(135deg,#2B35D8,#00D4FF);color:#fff;font-size:17px;font-weight:900;border:none;border-radius:14px;padding:18px;cursor:pointer;transition:opacity 0.2s,transform 0.15s;letter-spacing:0.01em;}
+  .btn-primary:active{transform:scale(0.97);opacity:0.9;}
+  .btn-primary:disabled{opacity:0.35;cursor:not-allowed;transform:none;}
+
+  /* SUCCESS */
+  .success-overlay{display:none;position:fixed;inset:0;background:var(--black);z-index:300;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:40px;text-align:center;}
+  .success-overlay.active{display:flex;}
+  .success-icon{width:80px;height:80px;border-radius:50%;background:var(--green-bg);border:2px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:36px;animation:popIn 0.4s cubic-bezier(0.34,1.56,0.64,1);}
+  @keyframes popIn{from{transform:scale(0);opacity:0;}to{transform:scale(1);opacity:1;}}
+  .success-title{font-size:24px;font-weight:900;color:var(--text);}
+  .success-sub{font-size:14px;color:var(--text-muted);line-height:1.6;max-width:300px;}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);max-width:320px;width:calc(100% - 40px);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:13px;color:var(--text);text-align:center;opacity:0;transition:opacity 0.3s,transform 0.3s;z-index:400;pointer-events:none;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* BOTTOM NAV */
+  .bottom-nav-spacer{height:64px;}
+  .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(16,18,26,0.96);backdrop-filter:blur(16px);border-top:1px solid #252836;display:flex;z-index:80;}
+  .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 0;cursor:pointer;opacity:0.5;transition:opacity 0.2s;}
+  .nav-item.active{opacity:1;}
+  .nav-icon{font-size:20px;}
+  .nav-label{font-size:10px;font-weight:600;color:#F0F2FF;}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="scroll-body">
+
+    <!-- HEADER -->
+    <div class="header">
+      <div class="back-btn" onclick="history.back()">←</div>
+      <div class="header-title">Deposit <span>Funds</span></div>
+    </div>
+
+    <!-- CURRENT BALANCE -->
+    <div class="balance-pill">
+      <div><div class="bp-label">Current Balance</div><div class="bp-val">50 INDX</div></div>
+      <div class="bp-usd">≈ $25.00 USD</div>
+    </div>
+
+    <div class="section">
+
+      <!-- METHOD TABS -->
+      <div class="method-tabs">
+        <div class="method-tab active" onclick="setMethod(this,'card')">
+          <div class="mt-icon">💳</div>
+          <div class="mt-label">Card</div>
+        </div>
+        <div class="method-tab" onclick="setMethod(this,'bank')">
+          <div class="mt-icon">🏦</div>
+          <div class="mt-label">Bank Transfer</div>
+        </div>
+        <div class="method-tab" onclick="setMethod(this,'crypto')">
+          <div class="mt-icon">🔗</div>
+          <div class="mt-label">Crypto</div>
+        </div>
+      </div>
+
+      <!-- CARD PANEL -->
+      <div class="panel active" id="panelCard">
+        <div class="amount-card">
+          <div class="amount-label">Amount (AUD)</div>
+          <div class="amount-row">
+            <div class="currency-badge">AUD</div>
+            <input class="big-input" id="cardAmount" type="number" placeholder="0" inputmode="decimal" oninput="calcCardEquiv()">
+          </div>
+          <div class="equiv" id="cardEquiv">≈ <span>0 INDX</span></div>
+          <div class="quick-amounts">
+            <div class="qa" onclick="setCardAmt(50)">$50</div>
+            <div class="qa" onclick="setCardAmt(100)">$100</div>
+            <div class="qa" onclick="setCardAmt(250)">$250</div>
+            <div class="qa" onclick="setCardAmt(500)">$500</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:14px;">
+          <div class="field-label" style="margin-bottom:8px;">Pay with</div>
+          <div class="provider-row">
+            <div class="provider active" onclick="selectProvider(this)">Visa / Mastercard</div>
+            <div class="provider" onclick="selectProvider(this)">Apple Pay</div>
+            <div class="provider" onclick="selectProvider(this)">Google Pay</div>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label">Card Number</label>
+          <input class="field-input" type="text" placeholder="1234 5678 9012 3456" maxlength="19" oninput="formatCard(this)">
+        </div>
+        <div class="card-row">
+          <div class="field-group">
+            <label class="field-label">Expiry</label>
+            <input class="field-input" type="text" placeholder="MM / YY" maxlength="7">
+          </div>
+          <div class="field-group">
+            <label class="field-label">CVV</label>
+            <input class="field-input" type="text" placeholder="123" maxlength="4" inputmode="numeric">
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Name on Card</label>
+          <input class="field-input" type="text" placeholder="Maria Santos">
+        </div>
+
+        <div class="info-row">
+          <div class="info-icon">⚡</div>
+          <div class="info-text"><strong>Instant settlement.</strong> INDX lands in your portal within 60 seconds. Powered by Grid Accounts — no custodian holds your funds.</div>
+        </div>
+
+        <button class="btn-primary" id="cardBtn" onclick="confirmDeposit('card')">Deposit Now →</button>
+      </div>
+
+      <!-- BANK PANEL -->
+      <div class="panel" id="panelBank">
+        <div class="amount-card">
+          <div class="amount-label">Amount (AUD)</div>
+          <div class="amount-row">
+            <div class="currency-badge">AUD</div>
+            <input class="big-input" type="number" placeholder="0" inputmode="decimal" oninput="calcCardEquiv()">
+          </div>
+          <div class="equiv">≈ <span>0 INDX</span></div>
+          <div class="quick-amounts">
+            <div class="qa" onclick="setCardAmt(100)">$100</div>
+            <div class="qa" onclick="setCardAmt(500)">$500</div>
+            <div class="qa" onclick="setCardAmt(1000)">$1,000</div>
+            <div class="qa" onclick="setCardAmt(5000)">$5,000</div>
+          </div>
+        </div>
+
+        <div class="bank-step">
+          <div class="bank-num">1</div>
+          <div class="bank-text">
+            <div class="bank-title">BSB & Account Number</div>
+            <div class="bank-desc">Transfer from your bank to this account</div>
+            <div class="bank-detail">BSB: 062-000 &nbsp;|&nbsp; ACC: 1234 5678</div>
+          </div>
+        </div>
+        <div class="bank-step">
+          <div class="bank-num">2</div>
+          <div class="bank-text">
+            <div class="bank-title">Reference</div>
+            <div class="bank-desc">Use your .IN$DEX name as the reference</div>
+            <div class="bank-detail">MARIASANTOS</div>
+          </div>
+        </div>
+        <div class="bank-step">
+          <div class="bank-num">3</div>
+          <div class="bank-text">
+            <div class="bank-title">INDX credited within 1 business day</div>
+            <div class="bank-desc">You'll receive a notification when your deposit is confirmed</div>
+          </div>
+        </div>
+
+        <div class="info-row" style="margin-top:16px;">
+          <div class="info-icon">🛡️</div>
+          <div class="info-text"><strong>No fees on bank transfers.</strong> The full amount converts to INDX at the live rate. Min. deposit: $50 AUD.</div>
+        </div>
+
+        <button class="btn-primary" onclick="confirmDeposit('bank')">I've Made the Transfer →</button>
+      </div>
+
+      <!-- CRYPTO PANEL -->
+      <div class="panel" id="panelCrypto">
+        <div style="margin-bottom:14px;">
+          <div class="field-label" style="margin-bottom:8px;">Select Network</div>
+          <div class="network-chips">
+            <div class="net-chip active" onclick="setNetwork(this,'SOL')">Solana (SOL)</div>
+            <div class="net-chip" onclick="setNetwork(this,'USDC')">USDC</div>
+            <div class="net-chip" onclick="setNetwork(this,'ETH')">Neon EVM</div>
+          </div>
+        </div>
+
+        <div class="qr-wrap">
+          <div class="qr-placeholder">
+            <!-- QR SVG generated inline -->
+            <svg width="180" height="180" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
+              <rect width="180" height="180" fill="white"/>
+              <!-- QR pattern simulation -->
+              <g fill="#090A10">
+                <!-- Top-left finder -->
+                <rect x="10" y="10" width="50" height="50"/><rect x="17" y="17" width="36" height="36" fill="white"/><rect x="24" y="24" width="22" height="22"/>
+                <!-- Top-right finder -->
+                <rect x="120" y="10" width="50" height="50"/><rect x="127" y="17" width="36" height="36" fill="white"/><rect x="134" y="24" width="22" height="22"/>
+                <!-- Bottom-left finder -->
+                <rect x="10" y="120" width="50" height="50"/><rect x="17" y="127" width="36" height="36" fill="white"/><rect x="24" y="134" width="22" height="22"/>
+                <!-- Data modules (simulated) -->
+                <rect x="70" y="10" width="7" height="7"/><rect x="84" y="10" width="7" height="7"/>
+                <rect x="70" y="24" width="7" height="7"/><rect x="77" y="17" width="7" height="7"/>
+                <rect x="91" y="17" width="7" height="7"/><rect x="98" y="24" width="7" height="7"/>
+                <rect x="105" y="10" width="7" height="7"/><rect x="112" y="17" width="7" height="7"/>
+                <rect x="70" y="38" width="7" height="7"/><rect x="84" y="38" width="7" height="7"/>
+                <rect x="98" y="38" width="7" height="7"/><rect x="112" y="38" width="7" height="7"/>
+                <rect x="70" y="52" width="7" height="7"/><rect x="91" y="52" width="7" height="7"/>
+                <rect x="105" y="45" width="7" height="7"/>
+                <rect x="10" y="70" width="7" height="7"/><rect x="24" y="70" width="7" height="7"/>
+                <rect x="38" y="70" width="7" height="7"/><rect x="52" y="70" width="7" height="7"/>
+                <rect x="70" y="70" width="7" height="7"/><rect x="84" y="70" width="7" height="7"/>
+                <rect x="98" y="70" width="7" height="7"/><rect x="112" y="70" width="7" height="7"/>
+                <rect x="126" y="70" width="7" height="7"/><rect x="140" y="70" width="7" height="7"/>
+                <rect x="154" y="70" width="7" height="7"/>
+                <rect x="10" y="84" width="7" height="7"/><rect x="31" y="84" width="7" height="7"/>
+                <rect x="52" y="84" width="7" height="7"/><rect x="77" y="84" width="7" height="7"/>
+                <rect x="98" y="84" width="7" height="7"/><rect x="119" y="84" width="7" height="7"/>
+                <rect x="140" y="84" width="7" height="7"/>
+                <rect x="10" y="98" width="7" height="7"/><rect x="24" y="98" width="7" height="7"/>
+                <rect x="45" y="98" width="7" height="7"/><rect x="70" y="98" width="7" height="7"/>
+                <rect x="91" y="98" width="7" height="7"/><rect x="112" y="98" width="7" height="7"/>
+                <rect x="133" y="98" width="7" height="7"/><rect x="154" y="98" width="7" height="7"/>
+                <rect x="70" y="112" width="7" height="7"/><rect x="84" y="112" width="7" height="7"/>
+                <rect x="105" y="112" width="7" height="7"/><rect x="126" y="112" width="7" height="7"/>
+                <rect x="147" y="112" width="7" height="7"/>
+                <rect x="70" y="126" width="7" height="7"/><rect x="91" y="126" width="7" height="7"/>
+                <rect x="112" y="126" width="7" height="7"/><rect x="133" y="126" width="7" height="7"/>
+                <rect x="154" y="126" width="7" height="7"/>
+                <rect x="70" y="140" width="7" height="7"/><rect x="84" y="140" width="7" height="7"/>
+                <rect x="98" y="140" width="7" height="7"/><rect x="119" y="140" width="7" height="7"/>
+                <rect x="147" y="140" width="7" height="7"/>
+                <rect x="70" y="154" width="7" height="7"/><rect x="91" y="154" width="7" height="7"/>
+                <rect x="112" y="154" width="7" height="7"/><rect x="140" y="154" width="7" height="7"/>
+                <rect x="161" y="154" width="7" height="7"/>
+              </g>
+            </svg>
+          </div>
+        </div>
+
+        <div class="address-box" onclick="copyAddress()">
+          <div class="address-text" id="cryptoAddress">7xKq3mNpRw9LdF2hTyV6cBsQeAuJnZ4oP1gXiYv8Mf5</div>
+          <div class="copy-btn" id="copyBtn">Copy</div>
+        </div>
+
+        <div class="warning-box">
+          <strong>⚠️ Send only SOL to this address.</strong> Sending other tokens may result in permanent loss. Minimum deposit: 0.1 SOL.
+        </div>
+
+        <div class="info-row">
+          <div class="info-icon">⚡</div>
+          <div class="info-text"><strong>1–2 block confirmations</strong> (~0.8 seconds on Solana). INDX credited automatically at live rate.</div>
+        </div>
+      </div>
+
+    </div><!-- /section -->
+    <div style="height:20px"></div>
+  </div>
+</div>
+
+<!-- SUCCESS -->
+<div class="success-overlay" id="successOverlay">
+  <div class="success-icon">✓</div>
+  <div class="success-title" id="successTitle">Deposit Initiated</div>
+  <div class="success-sub" id="successSub">Your funds are on the way. INDX will appear in your portal within 60 seconds.</div>
+  <button class="btn-primary" style="max-width:300px;margin-top:8px" onclick="window.location.href='receipt.html?type=deposit'">View Receipt →</button>
+  <button onclick="closeSuccess()" style="background:none;border:none;color:var(--text-muted);font-size:14px;margin-top:8px;cursor:pointer;padding:8px;">Back to Portal</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let activeMethod = 'card';
+const INDX_RATE = 0.50; // $0.50 per INDX
+
+function setMethod(el, method) {
+  document.querySelectorAll('.method-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel' + method.charAt(0).toUpperCase() + method.slice(1)).classList.add('active');
+  activeMethod = method;
+}
+
+function calcCardEquiv() {
+  const amt = parseFloat(document.getElementById('cardAmount')?.value || 0);
+  const indx = amt / INDX_RATE;
+  const el = document.getElementById('cardEquiv');
+  if (el) el.innerHTML = '≈ <span>' + (isNaN(indx) ? 0 : indx.toFixed(0)) + ' INDX</span>';
+}
+
+function setCardAmt(val) {
+  const inp = document.getElementById('cardAmount');
+  if (inp) { inp.value = val; calcCardEquiv(); }
+}
+
+function selectProvider(el) {
+  document.querySelectorAll('.provider').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function formatCard(el) {
+  let v = el.value.replace(/\D/g,'').slice(0,16);
+  el.value = v.replace(/(.{4})/g,'$1 ').trim();
+}
+
+function setNetwork(el, net) {
+  document.querySelectorAll('.net-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  const addresses = {
+    SOL: '7xKq3mNpRw9LdF2hTyV6cBsQeAuJnZ4oP1gXiYv8Mf5',
+    USDC: 'Gh9ZwEmdLJ8DscKNTkTqPbZJXiQGnwTyVeBqvE2vPdK3',
+    ETH: '0x3f4e2a1b8c9d5e6f7a0b1c2d3e4f5a6b7c8d9e0f'
+  };
+  document.getElementById('cryptoAddress').textContent = addresses[net] || addresses.SOL;
+  const warns = { SOL:'⚠️ Send only SOL to this address.', USDC:'⚠️ Send only USDC (Solana) to this address.', ETH:'⚠️ Send only ETH (Neon EVM) to this address.' };
+  document.querySelector('.warning-box').innerHTML = '<strong>' + warns[net] + '</strong> Sending other tokens may result in permanent loss. Minimum deposit: 0.1.';
+}
+
+function copyAddress() {
+  const addr = document.getElementById('cryptoAddress').textContent;
+  navigator.clipboard?.writeText(addr).catch(()=>{});
+  const btn = document.getElementById('copyBtn');
+  btn.textContent = 'Copied!';
+  btn.style.background = 'var(--green)';
+  btn.style.color = 'var(--black)';
+  setTimeout(() => { btn.textContent = 'Copy'; btn.style.background = ''; btn.style.color = ''; }, 2000);
+}
+
+function confirmDeposit(method) {
+  const msgs = {
+    card: 'Your card deposit is being processed. INDX will appear in your portal within 60 seconds.',
+    bank: 'Got it! We\'ll monitor for your transfer. INDX will be credited within 1 business day.',
+  };
+  document.getElementById('successSub').textContent = msgs[method] || msgs.card;
+  document.getElementById('successOverlay').classList.add('active');
+}
+
+function closeSuccess() {
+  document.getElementById('successOverlay').classList.remove('active');
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+</script>
+
+<div class="bottom-nav-spacer"></div>
+<nav class="bottom-nav">
+  <div class="nav-item active" onclick="window.location.href='citizen-dashboard.html'">
+    <div class="nav-icon">🏛️</div>
+    <div class="nav-label">Home</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='marketplace.html'">
+    <div class="nav-icon">🛒</div>
+    <div class="nav-label">Market</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='portfolio.html'">
+    <div class="nav-icon">📊</div>
+    <div class="nav-label">Portfolio</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='feed.html'">
+    <div class="nav-icon">🌏</div>
+    <div class="nav-label">Feed</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='profile.html'">
+    <div class="nav-icon">👤</div>
+    <div class="nav-label">Profile</div>
+  </div>
+</nav>
+</body>
+</html>

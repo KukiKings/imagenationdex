@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Scan to Pay — IN$DEX</title>
+<!-- jsQR: real QR decoding in the browser, no server needed -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<style>
+  :root {
+    --cyan:#00D4FF; --cyan-dim:#0099BB; --purple:#8B3FE8; --blue:#2B35D8;
+    --bg:#090A10; --surface:#0E1019; --surface2:#141622; --surface3:#1C1F2E;
+    --border:rgba(255,255,255,0.07); --text:#F0F2FF; --text-dim:#7A82A0;
+    --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    max-width:430px; margin:0 auto; min-height:100vh;
+    overflow:hidden;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    position:absolute; top:0; left:0; right:0; z-index:20;
+    display:flex; align-items:center; gap:12px;
+    padding:52px 20px 16px;
+    background:linear-gradient(180deg,rgba(9,10,16,0.95) 0%,transparent 100%);
+  }
+  .back-btn {
+    width:40px; height:40px; border-radius:50%;
+    background:rgba(14,16,25,0.8); border:1px solid rgba(255,255,255,0.15);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:18px; flex-shrink:0; backdrop-filter:blur(8px);
+  }
+  .header-title { font-size:18px; font-weight:700; }
+  .header-sub { font-size:12px; color:rgba(255,255,255,0.6); margin-top:1px; }
+  .header-actions { margin-left:auto; display:flex; gap:10px; }
+  .icon-btn {
+    width:40px; height:40px; border-radius:50%;
+    background:rgba(14,16,25,0.8); border:1px solid rgba(255,255,255,0.15);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:18px; backdrop-filter:blur(8px);
+    transition:all 0.2s;
+  }
+  .icon-btn.active { background:rgba(0,212,255,0.2); border-color:rgba(0,212,255,0.5); }
+
+  /* ── CAMERA VIEW ── */
+  #cameraView {
+    position:fixed; inset:0; width:100%; height:100%;
+    object-fit:cover; z-index:1;
+    background:#000;
+  }
+  #scanCanvas { display:none; }
+
+  /* ── SCANNER OVERLAY ── */
+  .scanner-overlay {
+    position:fixed; inset:0; z-index:10;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
+
+  /* Dark mask with transparent centre cutout */
+  .mask-top    { position:absolute; top:0; left:0; right:0; bottom:calc(50% + 110px); background:rgba(9,10,16,0.65); }
+  .mask-bottom { position:absolute; top:calc(50% + 110px); left:0; right:0; bottom:0; background:rgba(9,10,16,0.65); }
+  .mask-left   { position:absolute; top:calc(50% - 110px); left:0; width:calc(50% - 110px); height:220px; background:rgba(9,10,16,0.65); }
+  .mask-right  { position:absolute; top:calc(50% - 110px); right:0; width:calc(50% - 110px); height:220px; background:rgba(9,10,16,0.65); }
+
+  /* Scanning frame */
+  .scan-frame {
+    position:relative; width:220px; height:220px; z-index:11;
+  }
+  .corner {
+    position:absolute; width:24px; height:24px;
+    border-color:var(--cyan); border-style:solid;
+    transition:border-color 0.3s;
+  }
+  .corner.tl { top:0; left:0; border-width:3px 0 0 3px; border-radius:4px 0 0 0; }
+  .corner.tr { top:0; right:0; border-width:3px 3px 0 0; border-radius:0 4px 0 0; }
+  .corner.bl { bottom:0; left:0; border-width:0 0 3px 3px; border-radius:0 0 0 4px; }
+  .corner.br { bottom:0; right:0; border-width:0 3px 3px 0; border-radius:0 0 4px 0; }
+  .corner.found { border-color:var(--green); }
+
+  /* Scan line */
+  .scan-line {
+    position:absolute; left:4px; right:4px; height:2px;
+    background:linear-gradient(90deg,transparent,var(--cyan),transparent);
+    animation:scanMove 2s ease-in-out infinite;
+    opacity:0.8;
+  }
+  .scan-line.paused { animation-play-state:paused; }
+  @keyframes scanMove {
+    0%   { top:4px; }
+    50%  { top:calc(100% - 6px); }
+    100% { top:4px; }
+  }
+
+  /* Scan hint */
+  .scan-hint {
+    position:absolute; bottom:-44px; left:50%; transform:translateX(-50%);
+    white-space:nowrap; font-size:13px; color:rgba(255,255,255,0.7);
+    background:rgba(9,10,16,0.7); padding:8px 16px; border-radius:20px;
+    backdrop-filter:blur(6px);
+  }
+  .scan-hint.success { color:var(--green); background:rgba(0,229,160,0.15); }
+  .scan-hint.error   { color:var(--red);   background:rgba(255,77,109,0.12); }
+
+  /* ── BOTTOM PANEL ── */
+  .bottom-panel {
+    position:fixed; bottom:0; left:0; right:0; z-index:20;
+    max-width:430px; margin:0 auto;
+    background:linear-gradient(0deg,rgba(9,10,16,0.98) 70%,transparent 100%);
+    padding:20px 20px 36px;
+  }
+
+  /* Manual entry toggle */
+  .manual-toggle {
+    text-align:center; font-size:14px; color:var(--cyan); font-weight:600;
+    cursor:pointer; margin-bottom:16px; padding:8px;
+  }
+
+  /* Manual input */
+  .manual-wrap { display:none; }
+  .manual-wrap.open { display:block; }
+  .manual-label { font-size:12px; color:var(--text-dim); margin-bottom:8px; font-weight:500; }
+  .manual-row { display:flex; gap:10px; }
+  .manual-input {
+    flex:1; background:var(--surface2); border:1.5px solid var(--border);
+    border-radius:12px; padding:13px 16px; font-size:15px; color:var(--text);
+    outline:none; transition:border-color 0.2s; -webkit-appearance:none;
+  }
+  .manual-input:focus { border-color:rgba(0,212,255,0.4); }
+  .manual-input::placeholder { color:var(--text-dim); }
+  .manual-go {
+    padding:13px 20px; border-radius:12px; border:none;
+    background:linear-gradient(135deg,var(--blue),var(--purple));
+    color:white; font-size:14px; font-weight:700; cursor:pointer; white-space:nowrap;
+  }
+
+  /* Recent scans */
+  .recent-title { font-size:12px; color:var(--text-dim); font-weight:600; margin-bottom:10px; text-transform:uppercase; letter-spacing:0.06em; }
+  .recent-list { display:flex; flex-direction:column; gap:8px; }
+  .recent-item {
+    display:flex; align-items:center; gap:12px;
+    background:rgba(20,22,34,0.9); border:1px solid var(--border);
+    border-radius:12px; padding:11px 14px; cursor:pointer;
+    transition:border-color 0.2s; backdrop-filter:blur(6px);
+  }
+  .recent-item:hover { border-color:rgba(0,212,255,0.3); }
+  .recent-icon { font-size:20px; flex-shrink:0; }
+  .recent-body { flex:1; min-width:0; }
+  .recent-name { font-size:14px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .recent-meta { font-size:12px; color:var(--text-dim); }
+  .recent-amount { font-size:14px; font-weight:700; color:var(--cyan); }
+
+  /* ── PERMISSION / ERROR SCREENS ── */
+  .state-screen {
+    position:fixed; inset:0; z-index:30;
+    display:none; flex-direction:column; align-items:center; justify-content:center;
+    padding:40px 32px; text-align:center;
+    background:var(--bg);
+  }
+  .state-screen.show { display:flex; }
+  .state-icon { font-size:56px; margin-bottom:20px; }
+  .state-title { font-size:22px; font-weight:800; margin-bottom:10px; }
+  .state-sub { font-size:14px; color:var(--text-dim); line-height:1.6; margin-bottom:28px; }
+  .state-btn {
+    width:100%; padding:15px; border-radius:13px; border:none;
+    background:linear-gradient(135deg,var(--blue),var(--purple));
+    color:white; font-size:15px; font-weight:700; cursor:pointer; margin-bottom:12px;
+  }
+  .state-btn.ghost {
+    background:none; border:1px solid var(--border); color:var(--text-dim);
+  }
+
+  /* ── RESULT SHEET ── */
+  .result-overlay {
+    display:none; position:fixed; inset:0; z-index:50;
+    background:rgba(0,0,0,0.8); backdrop-filter:blur(12px);
+    align-items:flex-end; justify-content:center;
+  }
+  .result-overlay.open { display:flex; }
+  .result-sheet {
+    background:var(--surface); border-radius:24px 24px 0 0;
+    padding:28px 24px 48px; width:100%; max-width:430px;
+    animation:slideUp 0.3s ease;
+  }
+  @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+  .sheet-handle { width:40px; height:4px; background:var(--border); border-radius:2px; margin:0 auto 24px; }
+
+  .result-type { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:var(--text-dim); margin-bottom:6px; }
+  .result-name { font-size:24px; font-weight:800; margin-bottom:4px; }
+  .result-domain { font-size:14px; color:var(--cyan); font-family:'SF Mono',Consolas,monospace; margin-bottom:20px; }
+
+  .result-amount-row { display:flex; gap:10px; margin-bottom:16px; align-items:center; }
+  .result-amount-input {
+    flex:1; background:var(--surface2); border:1.5px solid var(--border);
+    border-radius:12px; padding:14px 16px; font-size:24px; font-weight:800;
+    color:var(--cyan); outline:none; transition:border-color 0.2s; -webkit-appearance:none;
+  }
+  .result-amount-input:focus { border-color:rgba(0,212,255,0.4); }
+  .result-token { font-size:15px; font-weight:700; color:var(--cyan); white-space:nowrap; }
+
+  .result-note-input {
+    width:100%; background:var(--surface2); border:1.5px solid var(--border);
+    border-radius:12px; padding:13px 16px; font-size:15px; color:var(--text);
+    outline:none; margin-bottom:20px; -webkit-appearance:none; font-family:inherit;
+  }
+  .result-note-input::placeholder { color:var(--text-dim); }
+  .result-note-input:focus { border-color:rgba(0,212,255,0.4); }
+
+  .pay-btn {
+    width:100%; padding:16px; border-radius:13px; border:none;
+    background:linear-gradient(135deg,var(--blue),var(--purple));
+    color:white; font-size:16px; font-weight:800; cursor:pointer;
+    margin-bottom:10px; transition:transform 0.1s;
+  }
+  .pay-btn:active { transform:scale(0.98); }
+  .scan-again-btn {
+    width:100%; padding:13px; border-radius:13px; border:1px solid var(--border);
+    background:none; color:var(--text-dim); font-size:14px; cursor:pointer;
+  }
+
+  /* verified tick */
+  .verified-row { display:flex; align-items:center; gap:8px; margin-bottom:20px; }
+  .verified-badge { display:flex; align-items:center; gap:6px; padding:6px 12px; border-radius:20px; background:rgba(0,229,160,0.1); border:1px solid rgba(0,229,160,0.25); font-size:12px; color:var(--green); font-weight:600; }
+
+  /* ── TOAST ── */
+  .toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--surface3); border:1px solid var(--border); border-radius:20px; padding:10px 20px; font-size:13px; font-weight:500; white-space:nowrap; opacity:0; transition:all 0.3s; z-index:999; pointer-events:none; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* BOTTOM NAV */
+  .bottom-nav-spacer{height:64px;}
+  .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(16,18,26,0.96);backdrop-filter:blur(16px);border-top:1px solid #252836;display:flex;z-index:80;}
+  .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 0;cursor:pointer;opacity:0.5;transition:opacity 0.2s;}
+  .nav-item.active{opacity:1;}
+  .nav-icon{font-size:20px;}
+  .nav-label{font-size:10px;font-weight:600;color:#F0F2FF;}
+</style>
+</head>
+<body>
+
+<!-- Hidden canvas for QR decode -->
+<canvas id="scanCanvas"></canvas>
+
+<!-- Camera feed -->
+<video id="cameraView" autoplay playsinline muted></video>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="back-btn" onclick="stopAndGoBack()">←</div>
+  <div>
+    <div class="header-title">Scan to Pay</div>
+    <div class="header-sub">Point at any IN$DEX QR code</div>
+  </div>
+  <div class="header-actions">
+    <div class="icon-btn" id="torchBtn" onclick="toggleTorch()" title="Torch">🔦</div>
+    <div class="icon-btn" id="flipBtn" onclick="flipCamera()" title="Flip camera">🔄</div>
+  </div>
+</div>
+
+<!-- SCANNER OVERLAY (mask + frame) -->
+<div class="scanner-overlay" id="scannerOverlay">
+  <div class="mask-top"></div>
+  <div class="mask-bottom"></div>
+  <div class="mask-left"></div>
+  <div class="mask-right"></div>
+  <div class="scan-frame" id="scanFrame">
+    <div class="corner tl" id="cornerTL"></div>
+    <div class="corner tr" id="cornerTR"></div>
+    <div class="corner bl" id="cornerBL"></div>
+    <div class="corner br" id="cornerBR"></div>
+    <div class="scan-line" id="scanLine"></div>
+    <div class="scan-hint" id="scanHint">Align QR code within the frame</div>
+  </div>
+</div>
+
+<!-- BOTTOM PANEL -->
+<div class="bottom-panel">
+  <div class="manual-toggle" onclick="toggleManual()">⌨️ Enter .IN$DEX address manually</div>
+  <div class="manual-wrap" id="manualWrap">
+    <div class="manual-label">Recipient .IN$DEX address or payment link</div>
+    <div class="manual-row">
+      <input class="manual-input" id="manualInput" type="text" placeholder="james.IN$DEX or pay.insdex.com/…" autocomplete="off" autocorrect="off" spellcheck="false">
+      <button class="manual-go" onclick="processManualEntry()">Pay →</button>
+    </div>
+  </div>
+
+  <div id="recentSection">
+    <div class="recent-title">Recent</div>
+    <div class="recent-list">
+      <div class="recent-item" onclick="loadRecent('james.IN$DEX','James','10')">
+        <div class="recent-icon">👤</div>
+        <div class="recent-body">
+          <div class="recent-name">James</div>
+          <div class="recent-meta">james.IN$DEX · 2 days ago</div>
+        </div>
+        <div class="recent-amount">10 INDX</div>
+      </div>
+      <div class="recent-item" onclick="loadRecent('sarah.IN$DEX','Sarah','25')">
+        <div class="recent-icon">👤</div>
+        <div class="recent-body">
+          <div class="recent-name">Sarah</div>
+          <div class="recent-meta">sarah.IN$DEX · 5 days ago</div>
+        </div>
+        <div class="recent-amount">25 INDX</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PERMISSION REQUEST SCREEN ── -->
+<div class="state-screen show" id="permissionScreen">
+  <div class="state-icon">📷</div>
+  <div class="state-title">Camera Access Needed</div>
+  <div class="state-sub">IN$DEX needs your camera to scan QR codes for instant payments. Your camera feed stays on your device — it's never sent anywhere.</div>
+  <button class="state-btn" onclick="requestCamera()">Allow Camera Access</button>
+  <button class="state-btn ghost" onclick="showManualFallback()">Enter Address Instead</button>
+</div>
+
+<!-- ── CAMERA DENIED SCREEN ── -->
+<div class="state-screen" id="deniedScreen">
+  <div class="state-icon">🚫</div>
+  <div class="state-title">Camera Access Denied</div>
+  <div class="state-sub">You blocked camera access. To scan QR codes, go to your phone's Settings → Browser → Camera and allow access. Or use manual entry below.</div>
+  <button class="state-btn" onclick="requestCamera()">Try Again</button>
+  <button class="state-btn ghost" onclick="showManualFallback()">Use Manual Entry</button>
+</div>
+
+<!-- ── NO CAMERA SCREEN ── -->
+<div class="state-screen" id="noCameraScreen">
+  <div class="state-icon">📵</div>
+  <div class="state-title">No Camera Available</div>
+  <div class="state-sub">Your device doesn't have a camera we can access, or you're on a desktop. Enter the recipient's .IN$DEX address or payment link manually.</div>
+  <button class="state-btn" onclick="showManualFallback()">Enter Address Manually</button>
+  <button class="state-btn ghost" onclick="stopAndGoBack()">Go Back</button>
+</div>
+
+<!-- ── RESULT SHEET ── -->
+<div class="result-overlay" id="resultOverlay">
+  <div class="result-sheet">
+    <div class="sheet-handle"></div>
+    <div class="result-type">Sending to</div>
+    <div class="result-name" id="resultName">—</div>
+    <div class="result-domain" id="resultDomain">—</div>
+    <div class="verified-row">
+      <div class="verified-badge">✓ Verified IN$DEX citizen</div>
+    </div>
+    <div class="result-amount-row">
+      <input class="result-amount-input" id="resultAmount" type="number" placeholder="0" inputmode="decimal">
+      <div class="result-token">INDX</div>
+    </div>
+    <input class="result-note-input" id="resultNote" type="text" placeholder="What's this for? (optional)">
+    <button class="pay-btn" onclick="goToSovereignPay()">⚡ Send Now</button>
+    <button class="scan-again-btn" onclick="scanAgain()">← Scan Another</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+  let stream = null;
+  let facingMode = 'environment'; // back camera by default
+  let torchOn = false;
+  let scanning = false;
+  let animFrame = null;
+  let scanCooldown = false;
+
+  const video = document.getElementById('cameraView');
+  const canvas = document.getElementById('scanCanvas');
+  const ctx = canvas.getContext('2d');
+
+  // ── CAMERA INIT ──
+  async function requestCamera() {
+    hideAllScreens();
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false
+      });
+      video.srcObject = stream;
+      video.play();
+      scanning = true;
+      document.getElementById('scannerOverlay').style.display = 'flex';
+      document.getElementById('bottomPanel') && (document.getElementById('bottomPanel').style.display = 'block');
+      requestAnimationFrame(tick);
+    } catch (err) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        document.getElementById('deniedScreen').classList.add('show');
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+        document.getElementById('noCameraScreen').classList.add('show');
+      } else {
+        showToast('⚠️ Camera error: ' + err.message);
+        document.getElementById('noCameraScreen').classList.add('show');
+      }
+    }
+  }
+
+  function hideAllScreens() {
+    ['permissionScreen','deniedScreen','noCameraScreen'].forEach(id => {
+      document.getElementById(id).classList.remove('show');
+    });
+  }
+
+  // ── SCAN LOOP ──
+  function tick() {
+    if (!scanning) return;
+    animFrame = requestAnimationFrame(tick);
+
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    if (scanCooldown) return;
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: 'dontInvert'
+    });
+
+    if (code) {
+      onQRFound(code.data);
+    }
+  }
+
+  // ── QR FOUND ──
+  function onQRFound(data) {
+    scanCooldown = true;
+
+    // Flash corners green
+    ['cornerTL','cornerTR','cornerBL','cornerBR'].forEach(id => {
+      document.getElementById(id).classList.add('found');
+    });
+    document.getElementById('scanLine').classList.add('paused');
+    document.getElementById('scanHint').textContent = '✓ QR Code found!';
+    document.getElementById('scanHint').className = 'scan-hint success';
+
+    // Vibrate if supported
+    if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+
+    setTimeout(() => parseQRData(data), 500);
+  }
+
+  // ── PARSE QR DATA ──
+  // Handles formats:
+  //   pay.insdex.com/username/amount
+  //   pay.insdex.com/username
+  //   username.IN$DEX
+  //   username (bare)
+  function parseQRData(data) {
+    let username = '';
+    let amount = '';
+    let displayName = '';
+
+    try {
+      const url = new URL(data);
+      const parts = url.pathname.replace(/^\//, '').split('/');
+      username = parts[0] || '';
+      amount = parts[1] || '';
+      displayName = toTitleCase(username);
+    } catch {
+      // Not a URL — try bare formats
+      if (data.toLowerCase().includes('.in$dex') || data.toLowerCase().includes('.indx')) {
+        username = data.split('.')[0];
+        displayName = toTitleCase(username);
+      } else {
+        username = data.trim();
+        displayName = toTitleCase(username);
+      }
+    }
+
+    if (!username) {
+      showScanError('QR code not recognised as an IN$DEX address. Try manual entry.');
+      return;
+    }
+
+    showResultSheet(displayName, username + '.IN$DEX', amount);
+  }
+
+  function toTitleCase(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+  }
+
+  function showScanError(msg) {
+    document.getElementById('scanHint').textContent = '⚠ ' + msg;
+    document.getElementById('scanHint').className = 'scan-hint error';
+    ['cornerTL','cornerTR','cornerBL','cornerBR'].forEach(id => {
+      document.getElementById(id).classList.remove('found');
+      document.getElementById(id).style.borderColor = 'var(--red)';
+    });
+    setTimeout(() => {
+      scanCooldown = false;
+      ['cornerTL','cornerTR','cornerBL','cornerBR'].forEach(id => {
+        document.getElementById(id).style.borderColor = 'var(--cyan)';
+        document.getElementById(id).classList.remove('found');
+      });
+      document.getElementById('scanLine').classList.remove('paused');
+      document.getElementById('scanHint').textContent = 'Align QR code within the frame';
+      document.getElementById('scanHint').className = 'scan-hint';
+    }, 2500);
+  }
+
+  // ── RESULT SHEET ──
+  function showResultSheet(name, domain, amount) {
+    document.getElementById('resultName').textContent = name;
+    document.getElementById('resultDomain').textContent = domain;
+    document.getElementById('resultAmount').value = amount || '';
+    document.getElementById('resultNote').value = '';
+    document.getElementById('resultOverlay').classList.add('open');
+    // Focus amount if no amount pre-filled
+    if (!amount) setTimeout(() => document.getElementById('resultAmount').focus(), 400);
+  }
+
+  function scanAgain() {
+    document.getElementById('resultOverlay').classList.remove('open');
+    scanCooldown = false;
+    ['cornerTL','cornerTR','cornerBL','cornerBR'].forEach(id => {
+      document.getElementById(id).classList.remove('found');
+      document.getElementById(id).style.borderColor = 'var(--cyan)';
+    });
+    document.getElementById('scanLine').classList.remove('paused');
+    document.getElementById('scanHint').textContent = 'Align QR code within the frame';
+    document.getElementById('scanHint').className = 'scan-hint';
+  }
+
+  function goToSovereignPay() {
+    const domain = document.getElementById('resultDomain').textContent;
+    const amount = document.getElementById('resultAmount').value;
+    const note = document.getElementById('resultNote').value;
+    const username = domain.replace('.IN$DEX','').replace('.in$dex','');
+
+    if (!amount || parseFloat(amount) <= 0) {
+      document.getElementById('resultAmount').style.borderColor = 'rgba(255,77,109,0.5)';
+      showToast('⚠️ Enter an amount first');
+      return;
+    }
+
+    // Pass params to SovereignPay via URL (in production use sessionStorage/state)
+    const params = new URLSearchParams({ to: username, amount, note });
+    stopCamera();
+    window.location.href = 'sovereignpay.html?' + params.toString();
+  }
+
+  // ── MANUAL ENTRY ──
+  let manualOpen = false;
+  function toggleManual() {
+    manualOpen = !manualOpen;
+    document.getElementById('manualWrap').classList.toggle('open', manualOpen);
+    document.getElementById('recentSection').style.display = manualOpen ? 'none' : 'block';
+    if (manualOpen) document.getElementById('manualInput').focus();
+  }
+
+  function showManualFallback() {
+    hideAllScreens();
+    scanning = false;
+    document.getElementById('scannerOverlay').style.display = 'none';
+    document.getElementById('cameraView').style.display = 'none';
+    document.body.style.background = 'var(--bg)';
+    document.getElementById('manualWrap').classList.add('open');
+    document.getElementById('recentSection').style.display = 'none';
+    document.querySelector('.manual-toggle').style.display = 'none';
+    document.getElementById('manualInput').focus();
+  }
+
+  function processManualEntry() {
+    const val = document.getElementById('manualInput').value.trim();
+    if (!val) { showToast('⚠️ Enter an address or payment link'); return; }
+    parseQRData(val);
+  }
+
+  document.getElementById('manualInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') processManualEntry();
+  });
+
+  // ── RECENT ──
+  function loadRecent(domain, name, amount) {
+    showResultSheet(name, domain, amount);
+    if (!scanning) {
+      // came from manual mode — fine
+    }
+  }
+
+  // ── TORCH ──
+  async function toggleTorch() {
+    if (!stream) { showToast('⚡ Start camera first'); return; }
+    const track = stream.getVideoTracks()[0];
+    if (!track) return;
+    const caps = track.getCapabilities ? track.getCapabilities() : {};
+    if (!caps.torch) { showToast('🔦 Torch not available on this device'); return; }
+    torchOn = !torchOn;
+    await track.applyConstraints({ advanced: [{ torch: torchOn }] });
+    document.getElementById('torchBtn').classList.toggle('active', torchOn);
+    showToast(torchOn ? '🔦 Torch on' : '🔦 Torch off');
+  }
+
+  // ── FLIP CAMERA ──
+  async function flipCamera() {
+    facingMode = facingMode === 'environment' ? 'user' : 'environment';
+    stopCamera();
+    await requestCamera();
+    document.getElementById('flipBtn').classList.add('active');
+    setTimeout(() => document.getElementById('flipBtn').classList.remove('active'), 400);
+  }
+
+  // ── STOP ──
+  function stopCamera() {
+    scanning = false;
+    if (animFrame) cancelAnimationFrame(animFrame);
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      stream = null;
+    }
+    torchOn = false;
+    document.getElementById('torchBtn').classList.remove('active');
+  }
+
+  function stopAndGoBack() {
+    stopCamera();
+    window.history.back();
+  }
+
+  // ── TOAST ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // ── CLEANUP on page leave ──
+  window.addEventListener('pagehide', stopCamera);
+  window.addEventListener('beforeunload', stopCamera);
+
+  // ── CHECK jsQR LOADED ──
+  window.addEventListener('load', () => {
+    if (typeof jsQR === 'undefined') {
+      // jsQR failed to load (offline?) — skip to manual
+      showToast('QR library unavailable — use manual entry');
+      showManualFallback();
+    }
+    // else: permission screen is already showing, user taps "Allow"
+  });
+</script>
+
+<div class="bottom-nav-spacer"></div>
+<nav class="bottom-nav">
+  <div class="nav-item active" onclick="window.location.href='citizen-dashboard.html'">
+    <div class="nav-icon">🏛️</div>
+    <div class="nav-label">Home</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='marketplace.html'">
+    <div class="nav-icon">🛒</div>
+    <div class="nav-label">Market</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='portfolio.html'">
+    <div class="nav-icon">📊</div>
+    <div class="nav-label">Portfolio</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='feed.html'">
+    <div class="nav-icon">🌏</div>
+    <div class="nav-label">Feed</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='profile.html'">
+    <div class="nav-icon">👤</div>
+    <div class="nav-label">Profile</div>
+  </div>
+</nav>
+</body>
+</html>

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>History — IN$DEX</title>
+<style>
+  :root {
+    --cyan: #00D4FF; --cyan-dim: #0099BB; --purple: #8B3FE8; --blue: #2B35D8;
+    --bg: #090A10; --surface: #0E1019; --surface2: #141622; --surface3: #1C1F2E;
+    --border: rgba(255,255,255,0.07); --text: #F0F2FF; --text-dim: #7A82A0;
+    --green: #00E5A0; --gold: #FFB800; --red: #FF4D6D;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; max-width:430px; margin:0 auto; min-height:100vh; padding-bottom:48px; }
+
+  .header { display:flex; align-items:center; gap:12px; padding:56px 20px 16px; }
+  .back-btn { width:40px; height:40px; border-radius:50%; background:var(--surface2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:18px; flex-shrink:0; }
+  .header-info { flex:1; }
+  .header-title { font-size:20px; font-weight:700; }
+  .header-sub { font-size:13px; color:var(--text-dim); margin-top:2px; }
+  .filter-icon { font-size:18px; cursor:pointer; padding:8px; }
+
+  /* SUMMARY ROW */
+  .summary-row { display:flex; gap:10px; padding:0 20px 16px; }
+  .sum-box { flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:14px; padding:12px 14px; text-align:center; }
+  .sum-num { font-size:17px; font-weight:800; }
+  .sum-num.green { color:var(--green); }
+  .sum-num.red { color:var(--red); }
+  .sum-lbl { font-size:10px; color:var(--text-dim); margin-top:3px; text-transform:uppercase; letter-spacing:0.05em; }
+
+  /* FILTERS */
+  .filters { display:flex; gap:8px; padding:0 20px 16px; overflow-x:auto; scrollbar-width:none; }
+  .filters::-webkit-scrollbar { display:none; }
+  .chip { padding:7px 14px; border-radius:20px; font-size:13px; font-weight:600; background:var(--surface2); border:1px solid var(--border); color:var(--text-dim); cursor:pointer; white-space:nowrap; flex-shrink:0; transition:all 0.2s; }
+  .chip.active { background:rgba(0,212,255,0.1); border-color:rgba(0,212,255,0.3); color:var(--cyan); }
+
+  /* SECTION LABEL */
+  .section-label { font-size:11px; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.08em; padding:0 20px; margin-bottom:8px; margin-top:4px; }
+
+  /* TX ITEM */
+  .tx-item { display:flex; align-items:center; gap:12px; padding:14px 20px; cursor:pointer; border-bottom:1px solid var(--border); transition:background 0.15s; }
+  .tx-item:last-child { border-bottom:none; }
+  .tx-item:hover { background:var(--surface2); }
+  .tx-icon { width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+  .tx-icon.earn { background:rgba(0,229,160,0.12); }
+  .tx-icon.send { background:rgba(255,77,109,0.1); }
+  .tx-icon.recv { background:rgba(0,212,255,0.1); }
+  .tx-icon.swap { background:rgba(139,63,232,0.15); }
+  .tx-icon.dep { background:rgba(43,53,216,0.18); }
+  .tx-icon.with { background:rgba(255,184,0,0.1); }
+  .tx-icon.mkt { background:rgba(0,229,160,0.1); }
+
+  .tx-body { flex:1; min-width:0; }
+  .tx-title { font-size:14px; font-weight:600; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tx-meta { font-size:12px; color:var(--text-dim); }
+  .tx-right { text-align:right; flex-shrink:0; }
+  .tx-amount { font-size:15px; font-weight:700; }
+  .tx-amount.pos { color:var(--green); }
+  .tx-amount.neg { color:var(--red); }
+  .tx-amount.neutral { color:var(--cyan); }
+  .tx-time { font-size:11px; color:var(--text-dim); margin-top:3px; }
+  .tx-status { font-size:10px; font-weight:700; padding:2px 8px; border-radius:10px; margin-top:4px; display:inline-block; }
+  .tx-status.complete { background:rgba(0,229,160,0.12); color:var(--green); }
+  .tx-status.pending { background:rgba(255,184,0,0.1); color:var(--gold); }
+  .tx-status.failed { background:rgba(255,77,109,0.1); color:var(--red); }
+
+  /* DETAIL SHEET */
+  .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(8px); z-index:100; align-items:flex-end; justify-content:center; }
+  .overlay.open { display:flex; }
+  .sheet { background:var(--surface); border-radius:24px 24px 0 0; padding:28px 24px 48px; width:100%; max-width:430px; animation:slideUp 0.3s ease; }
+  @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+  .sheet-handle { width:40px; height:4px; background:var(--border); border-radius:2px; margin:0 auto 24px; }
+  .detail-icon { width:64px; height:64px; border-radius:18px; display:flex; align-items:center; justify-content:center; font-size:28px; margin:0 auto 16px; }
+  .detail-amount { font-size:32px; font-weight:800; text-align:center; margin-bottom:4px; }
+  .detail-type { font-size:14px; color:var(--text-dim); text-align:center; margin-bottom:24px; }
+  .detail-rows { display:flex; flex-direction:column; }
+  .detail-row { display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--border); font-size:14px; }
+  .detail-row:last-child { border-bottom:none; }
+  .detail-row .lbl { color:var(--text-dim); }
+  .detail-row .val { font-weight:600; max-width:60%; text-align:right; word-break:break-all; }
+  .hash-val { font-family:'SF Mono',Consolas,monospace; font-size:12px; color:var(--cyan); }
+  .close-btn { width:100%; padding:14px; border-radius:12px; border:1px solid var(--border); background:none; color:var(--text-dim); font-size:14px; cursor:pointer; margin-top:20px; }
+
+  .toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--surface3); border:1px solid var(--border); border-radius:20px; padding:10px 20px; font-size:13px; font-weight:500; white-space:nowrap; opacity:0; transition:all 0.3s; z-index:999; pointer-events:none; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .empty-state { text-align:center; padding:60px 40px; }
+  .empty-icon { font-size:48px; margin-bottom:16px; }
+  .empty-title { font-size:18px; font-weight:700; margin-bottom:8px; }
+  .empty-sub { font-size:14px; color:var(--text-dim); }
+
+  /* BOTTOM NAV */
+  .bottom-nav-spacer{height:64px;}
+  .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(16,18,26,0.96);backdrop-filter:blur(16px);border-top:1px solid #252836;display:flex;z-index:80;}
+  .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 0;cursor:pointer;opacity:0.5;transition:opacity 0.2s;}
+  .nav-item.active{opacity:1;}
+  .nav-icon{font-size:20px;}
+  .nav-label{font-size:10px;font-weight:600;color:#F0F2FF;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="back-btn" onclick="window.history.back()">←</div>
+  <div class="header-info">
+    <div class="header-title">Transaction History</div>
+    <div class="header-sub">All activity on your sovereign wallet</div>
+  </div>
+  <div class="filter-icon" onclick="showToast('📅 Date filter coming Wave 1')">⚙️</div>
+</div>
+
+<!-- SUMMARY -->
+<div class="summary-row">
+  <div class="sum-box">
+    <div class="sum-num green">+50</div>
+    <div class="sum-lbl">INDX In</div>
+  </div>
+  <div class="sum-box">
+    <div class="sum-num red">0</div>
+    <div class="sum-lbl">INDX Out</div>
+  </div>
+  <div class="sum-box">
+    <div class="sum-num" style="color:var(--cyan)">1</div>
+    <div class="sum-lbl">Transactions</div>
+  </div>
+</div>
+
+<!-- FILTER CHIPS -->
+<div class="filters">
+  <div class="chip active" onclick="filterTx(this,'all')">All</div>
+  <div class="chip" onclick="filterTx(this,'earn')">💰 Earnings</div>
+  <div class="chip" onclick="filterTx(this,'dep')">⬇️ Deposits</div>
+  <div class="chip" onclick="filterTx(this,'with')">⬆️ Withdrawals</div>
+  <div class="chip" onclick="filterTx(this,'swap')">🔄 Swaps</div>
+  <div class="chip" onclick="filterTx(this,'send')">📤 Sent</div>
+  <div class="chip" onclick="filterTx(this,'recv')">📥 Received</div>
+  <div class="chip" onclick="filterTx(this,'mkt')">🏪 Market</div>
+</div>
+
+<!-- TRANSACTIONS -->
+<div id="txList">
+  <div class="section-label">Today — June 1, 2026</div>
+  <div>
+    <div class="tx-item" data-cat="earn" onclick="openDetail({icon:'⚡',iconClass:'earn',amount:'+50 INDX',type:'Genesis Welcome Bonus',rows:[['Type','Reward'],['Source','Genesis Programme'],['Wisdom +','5 points'],['Status','Complete'],['Time','2:04 PM'],['TX','5Kx9mNpQ3r…']]})">
+      <div class="tx-icon earn">⚡</div>
+      <div class="tx-body">
+        <div class="tx-title">Genesis Bonus</div>
+        <div class="tx-meta">Welcome reward · Genesis Programme</div>
+      </div>
+      <div class="tx-right">
+        <div class="tx-amount pos">+50 INDX</div>
+        <div class="tx-time">2:04 PM</div>
+        <div class="tx-status complete">Complete</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEMO HISTORY (greyed, for illustration) -->
+  <div class="section-label" style="margin-top:16px; opacity:0.5;">Activity will appear here as you use IN$DEX</div>
+  <div style="opacity:0.35; pointer-events:none;">
+
+    <div class="tx-item" data-cat="dep">
+      <div class="tx-icon dep">⬇️</div>
+      <div class="tx-body">
+        <div class="tx-title">Deposit — Commonwealth Bank</div>
+        <div class="tx-meta">Bank transfer · A$100 → 200 INDX</div>
+      </div>
+      <div class="tx-right">
+        <div class="tx-amount pos">+200 INDX</div>
+        <div class="tx-time">Yesterday</div>
+        <div class="tx-status complete">Complete</div>
+      </div>
+    </div>
+
+    <div class="tx-item" data-cat="swap">
+      <div class="tx-icon swap">🔄</div>
+      <div class="tx-body">
+        <div class="tx-title">Swap SOL → INDX</div>
+        <div class="tx-meta">SovSwap · 0.5 SOL</div>
+      </div>
+      <div class="tx-right">
+        <div class="tx-amount neutral">+42.3 INDX</div>
+        <div class="tx-time">Mon</div>
+        <div class="tx-status complete">Complete</div>
+      </div>
+    </div>
+
+    <div class="tx-item" data-cat="send">
+      <div class="tx-icon send">📤</div>
+      <div class="tx-body">
+        <div class="tx-title">Sent to james.IN$DEX</div>
+        <div class="tx-meta">SovereignPay · Coffee ☕</div>
+      </div>
+      <div class="tx-right">
+        <div class="tx-amount neg">-10 INDX</div>
+        <div class="tx-time">Sun</div>
+        <div class="tx-status complete">Complete</div>
+      </div>
+    </div>
+
+    <div class="tx-item" data-cat="earn">
+      <div class="tx-icon earn">📡</div>
+      <div class="tx-body">
+        <div class="tx-title">Light Node — Daily Reward</div>
+        <div class="tx-meta">Passive earning · 24hr uptime</div>
+      </div>
+      <div class="tx-right">
+        <div class="tx-amount pos">+5.4 INDX</div>
+        <div class="tx-time">Sat</div>
+        <div class="tx-status complete">Complete</div>
+      </div>
+    </div>
+
+    <div class="tx-item" data-cat="earn">
+      <div class="tx-icon earn">👥</div>
+      <div class="tx-body">
+        <div class="tx-title">Referral Reward — sarah.IN$DEX</div>
+        <div class="tx-meta">Wave 1 referral bonus</div>
+      </div>
+      <div class="tx-right">
+        <div class="tx-amount pos">+50 INDX</div>
+        <div class="tx-time">Fri</div>
+        <div class="tx-status complete">Complete</div>
+      </div>
+    </div>
+
+    <div class="tx-item" data-cat="mkt">
+      <div class="tx-icon mkt">🏪</div>
+      <div class="tx-body">
+        <div class="tx-title">Sale — Logo Design Service</div>
+        <div class="tx-meta">Marketplace · 98% received</div>
+      </div>
+      <div class="tx-right">
+        <div class="tx-amount pos">+49 INDX</div>
+        <div class="tx-time">Thu</div>
+        <div class="tx-status complete">Complete</div>
+      </div>
+    </div>
+
+    <div class="tx-item" data-cat="with">
+      <div class="tx-icon with">⬆️</div>
+      <div class="tx-body">
+        <div class="tx-title">Withdraw to NAB</div>
+        <div class="tx-meta">Bank transfer · A$50</div>
+      </div>
+      <div class="tx-right">
+        <div class="tx-amount neg">-100 INDX</div>
+        <div class="tx-time">Wed</div>
+        <div class="tx-status complete">Complete</div>
+      </div>
+    </div>
+
+    <div class="tx-item" data-cat="recv">
+      <div class="tx-icon recv">📥</div>
+      <div class="tx-body">
+        <div class="tx-title">Received from tom.IN$DEX</div>
+        <div class="tx-meta">SovereignPay · Rent split</div>
+      </div>
+      <div class="tx-right">
+        <div class="tx-amount pos">+25 INDX</div>
+        <div class="tx-time">Tue</div>
+        <div class="tx-status complete">Complete</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- DETAIL SHEET -->
+<div class="overlay" id="detailOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="detail-icon" id="detailIcon"></div>
+    <div class="detail-amount" id="detailAmount"></div>
+    <div class="detail-type" id="detailType"></div>
+    <div class="detail-rows" id="detailRows"></div>
+    <button class="close-btn" onclick="closeDetail()">Close</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  function filterTx(el, cat) {
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.tx-item').forEach(item => {
+      item.style.display = (cat === 'all' || item.dataset.cat === cat) ? 'flex' : 'none';
+    });
+  }
+
+  function openDetail(data) {
+    const iconClasses = { earn:'earn', dep:'dep', with:'with', swap:'swap', send:'send', recv:'recv', mkt:'mkt' };
+    const el = document.getElementById('detailIcon');
+    el.textContent = data.icon;
+    el.className = 'detail-icon tx-icon ' + (iconClasses[data.iconClass] || 'earn');
+    el.style.margin = '0 auto 16px';
+
+    const amountEl = document.getElementById('detailAmount');
+    amountEl.textContent = data.amount;
+    amountEl.style.color = data.amount.startsWith('+') ? 'var(--green)' : data.amount.startsWith('-') ? 'var(--red)' : 'var(--cyan)';
+
+    document.getElementById('detailType').textContent = data.type;
+
+    const rowsEl = document.getElementById('detailRows');
+    rowsEl.innerHTML = data.rows.map(([l,v]) =>
+      `<div class="detail-row"><div class="lbl">${l}</div><div class="val ${l==='TX'?'hash-val':''}">${v}</div></div>`
+    ).join('');
+
+    document.getElementById('detailOverlay').classList.add('open');
+  }
+
+  function closeDetail() {
+    document.getElementById('detailOverlay').classList.remove('open');
+  }
+
+  document.getElementById('detailOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeDetail();
+  });
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+</script>
+
+<div class="bottom-nav-spacer"></div>
+<nav class="bottom-nav">
+  <div class="nav-item" onclick="window.location.href='citizen-dashboard.html'">
+    <div class="nav-icon">🏛️</div>
+    <div class="nav-label">Home</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='marketplace.html'">
+    <div class="nav-icon">🛒</div>
+    <div class="nav-label">Market</div>
+  </div>
+  <div class="nav-item active" onclick="window.location.href='portfolio.html'">
+    <div class="nav-icon">📊</div>
+    <div class="nav-label">Portfolio</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='feed.html'">
+    <div class="nav-icon">🌏</div>
+    <div class="nav-label">Feed</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='profile.html'">
+    <div class="nav-icon">👤</div>
+    <div class="nav-label">Profile</div>
+  </div>
+</nav>
+</body>
+</html>

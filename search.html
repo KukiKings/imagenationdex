@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IN$DEX — Search</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --cyan-dim:#0099BB; --cyan-bg:#071825; --cyan-border:#0A2535;
+    --black:#090A10; --surface:#111318; --surface2:#1A1D25; --surface3:#22252F;
+    --border:#2A2D38; --text:#EAEAEA; --text-muted:#6B7080; --text-dim:#3D4050;
+    --green:#00E5A0; --green-bg:#0A1F18; --red:#FF4D6D;
+    --purple:#8B3FE8; --purple-bg:#120D1F; --gold:#FFB800;
+    --radius:16px; --nav-h:72px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none;}
+  .shell{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;}
+  .scroll-body{flex:1;overflow-y:auto;padding-bottom:calc(var(--nav-h) + 16px);-webkit-overflow-scrolling:touch;}
+  .scroll-body::-webkit-scrollbar{display:none;}
+
+  /* SEARCH BAR */
+  .search-header{padding:16px 20px 12px;border-bottom:1px solid var(--border);}
+  .search-row{display:flex;align-items:center;gap:10px;}
+  .back-btn{width:38px;height:38px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;flex-shrink:0;}
+  .back-btn:active{background:var(--surface2);}
+  .search-wrap{flex:1;position:relative;}
+  .search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none;}
+  .search-input{width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:12px 40px 12px 42px;font-size:15px;color:var(--text);outline:none;transition:border-color 0.2s;}
+  .search-input:focus{border-color:var(--cyan);}
+  .search-input::placeholder{color:var(--text-dim);}
+  .search-clear{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:18px;cursor:pointer;color:var(--text-muted);display:none;}
+
+  /* FILTER TABS */
+  .filter-tabs{display:flex;gap:8px;overflow-x:auto;padding:12px 20px 0;scrollbar-width:none;}
+  .filter-tabs::-webkit-scrollbar{display:none;}
+  .ft{flex:0 0 auto;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;background:var(--surface);border:1px solid var(--border);color:var(--text-muted);white-space:nowrap;transition:all 0.2s;}
+  .ft.active{background:var(--cyan-bg);border-color:var(--cyan);color:var(--cyan);}
+  .ft:active{opacity:0.8;}
+
+  /* SECTION HEADERS */
+  .section{padding:20px 20px 0;}
+  .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .section-title{font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;}
+  .section-clear{font-size:12px;color:var(--text-muted);cursor:pointer;}
+  .section-clear:active{color:var(--red);}
+
+  /* RECENT SEARCHES */
+  .recent-list{display:flex;flex-direction:column;gap:2px;}
+  .recent-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;cursor:pointer;transition:background 0.15s;}
+  .recent-item:active{background:var(--surface);}
+  .ri-icon{font-size:16px;color:var(--text-dim);}
+  .ri-text{font-size:14px;flex:1;}
+  .ri-remove{font-size:16px;color:var(--text-dim);padding:4px;}
+  .ri-remove:active{color:var(--red);}
+
+  /* TRENDING */
+  .trending-grid{display:flex;flex-direction:column;gap:8px;}
+  .trend-item{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:border-color 0.2s;}
+  .trend-item:active{border-color:var(--cyan);}
+  .trend-rank{font-size:13px;font-weight:800;color:var(--text-dim);min-width:20px;}
+  .trend-icon{font-size:20px;}
+  .trend-name{font-size:14px;font-weight:600;flex:1;}
+  .trend-meta{font-size:12px;color:var(--text-muted);margin-top:2px;}
+  .trend-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;}
+  .tb-listing{background:rgba(0,212,255,0.1);color:var(--cyan);}
+  .tb-token{background:rgba(0,229,160,0.1);color:var(--green);}
+  .tb-citizen{background:rgba(139,63,232,0.1);color:var(--purple);}
+  .tb-gov{background:rgba(255,184,0,0.1);color:var(--gold);}
+
+  /* RESULTS */
+  .results-container{padding:16px 20px 0;display:none;}
+  .results-container.show{display:block;}
+
+  /* LISTING RESULT */
+  .result-listing{display:flex;gap:12px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;cursor:pointer;margin-bottom:8px;transition:border-color 0.2s;}
+  .result-listing:active{border-color:var(--cyan);}
+  .rl-img{width:56px;height:56px;border-radius:10px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+  .rl-title{font-size:14px;font-weight:600;margin-bottom:3px;}
+  .rl-seller{font-size:11px;color:var(--text-muted);margin-bottom:4px;}
+  .rl-price{font-size:13px;font-weight:700;color:var(--cyan);}
+  .rl-badge{font-size:10px;color:var(--text-muted);background:var(--surface2);padding:2px 7px;border-radius:5px;margin-left:6px;}
+
+  /* TOKEN RESULT */
+  .result-token{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;cursor:pointer;margin-bottom:8px;}
+  .result-token:active{border-color:var(--green);}
+  .rt-icon{width:42px;height:42px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+  .rt-name{font-size:14px;font-weight:700;}
+  .rt-symbol{font-size:12px;color:var(--text-muted);}
+  .rt-price{margin-left:auto;text-align:right;}
+  .rt-val{font-size:14px;font-weight:700;}
+  .rt-change{font-size:12px;font-weight:600;margin-top:2px;}
+  .up{color:var(--green);}
+  .down{color:var(--red);}
+
+  /* CITIZEN RESULT */
+  .result-citizen{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;cursor:pointer;margin-bottom:8px;}
+  .result-citizen:active{border-color:var(--purple);}
+  .rc-av{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;flex-shrink:0;}
+  .rc-nm{font-size:14px;font-weight:700;}
+  .rc-hndl{font-size:12px;color:var(--cyan);}
+  .rc-ws{font-size:11px;color:var(--text-muted);margin-top:2px;}
+  .rc-follow{margin-left:auto;padding:7px 14px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;}
+  .rc-follow:active{border-color:var(--purple);color:var(--purple);}
+
+  /* GOVERNANCE RESULT */
+  .result-gov{padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;cursor:pointer;margin-bottom:8px;}
+  .result-gov:active{border-color:var(--gold);}
+  .rg-title{font-size:14px;font-weight:600;margin-bottom:4px;}
+  .rg-meta{font-size:12px;color:var(--text-muted);display:flex;gap:10px;}
+
+  /* EMPTY STATE */
+  .empty-state{text-align:center;padding:48px 24px;display:none;}
+  .empty-state.show{display:block;}
+  .es-icon{font-size:44px;margin-bottom:14px;}
+  .es-title{font-size:16px;font-weight:700;margin-bottom:6px;}
+  .es-sub{font-size:13px;color:var(--text-muted);line-height:1.6;}
+
+  /* RESULT SECTION HEADER */
+  .rs-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;margin-top:4px;}
+  .rs-title{font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;}
+  .rs-see-all{font-size:12px;color:var(--cyan);cursor:pointer;}
+
+  /* NAV */
+  .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;height:var(--nav-h);background:rgba(9,10,16,0.97);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;padding:0 8px 10px;z-index:100;}
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:8px 12px;border-radius:12px;transition:background 0.2s;flex:1;}
+  .nav-item:active{background:var(--surface);}
+  .nav-icon{font-size:22px;line-height:1;}
+  .nav-label{font-size:10px;font-weight:600;color:var(--text-muted);}
+  .nav-item.active .nav-label{color:var(--cyan);}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- SEARCH HEADER -->
+  <div class="search-header">
+    <div class="search-row">
+      <div class="back-btn" onclick="window.history.back()">←</div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" type="search" id="searchInput" placeholder="Listings, tokens, citizens…"
+          oninput="onSearch()" autofocus autocomplete="off">
+        <span class="search-clear" id="clearBtn" onclick="clearSearch()">✕</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILTER TABS -->
+  <div class="filter-tabs" id="filterTabs">
+    <div class="ft active" onclick="selectFilter(this,'all')">All</div>
+    <div class="ft" onclick="selectFilter(this,'listings')">🛒 Listings</div>
+    <div class="ft" onclick="selectFilter(this,'tokens')">💎 Tokens</div>
+    <div class="ft" onclick="selectFilter(this,'citizens')">👤 Citizens</div>
+    <div class="ft" onclick="selectFilter(this,'governance')">🗳️ Governance</div>
+  </div>
+
+  <div class="scroll-body" id="scrollBody">
+
+    <!-- DEFAULT STATE: RECENT + TRENDING -->
+    <div id="defaultState">
+
+      <!-- RECENT SEARCHES -->
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title">Recent</div>
+          <div class="section-clear" onclick="clearRecent()">Clear all</div>
+        </div>
+        <div class="recent-list" id="recentList">
+          <div class="recent-item" onclick="doSearch('ceramic coffee set')">
+            <span class="ri-icon">🕐</span>
+            <span class="ri-text">ceramic coffee set</span>
+            <span class="ri-remove" onclick="removeRecent(event, this)">✕</span>
+          </div>
+          <div class="recent-item" onclick="doSearch('INDX')">
+            <span class="ri-icon">🕐</span>
+            <span class="ri-text">INDX</span>
+            <span class="ri-remove" onclick="removeRecent(event, this)">✕</span>
+          </div>
+          <div class="recent-item" onclick="doSearch('kiri.IN$DEX')">
+            <span class="ri-icon">🕐</span>
+            <span class="ri-text">kiri.IN$DEX</span>
+            <span class="ri-remove" onclick="removeRecent(event, this)">✕</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- TRENDING -->
+      <div class="section" style="margin-top:20px;">
+        <div class="section-head">
+          <div class="section-title">Trending Now</div>
+        </div>
+        <div class="trending-grid">
+          <div class="trend-item" onclick="doSearch('handmade crafts')">
+            <div class="trend-rank">1</div>
+            <div class="trend-icon">🎨</div>
+            <div>
+              <div class="trend-name">Handmade Crafts</div>
+              <div class="trend-meta">142 new listings this week</div>
+            </div>
+            <div class="trend-badge tb-listing">LISTING</div>
+          </div>
+          <div class="trend-item" onclick="doSearch('INDX token')">
+            <div class="trend-rank">2</div>
+            <div class="trend-icon">◎</div>
+            <div>
+              <div class="trend-name">INDX</div>
+              <div class="trend-meta">+12.4% · A$0.50 genesis</div>
+            </div>
+            <div class="trend-badge tb-token">TOKEN</div>
+          </div>
+          <div class="trend-item" onclick="doSearch('fee reduction proposal')">
+            <div class="trend-rank">3</div>
+            <div class="trend-icon">🗳️</div>
+            <div>
+              <div class="trend-name">Fee Reduction Proposal</div>
+              <div class="trend-meta">847 votes · 2 days left</div>
+            </div>
+            <div class="trend-badge tb-gov">GOVERNANCE</div>
+          </div>
+          <div class="trend-item" onclick="doSearch('sovereign delivery')">
+            <div class="trend-rank">4</div>
+            <div class="trend-icon">🌐</div>
+            <div>
+              <div class="trend-name">Sovereign Delivery</div>
+              <div class="trend-meta">New courier network launched</div>
+            </div>
+            <div class="trend-badge tb-listing">LISTING</div>
+          </div>
+          <div class="trend-item" onclick="doSearch('aiko tanaka')">
+            <div class="trend-rank">5</div>
+            <div class="trend-icon">👑</div>
+            <div>
+              <div class="trend-name">Aiko Tanaka</div>
+              <div class="trend-meta">Top citizen · WS 194</div>
+            </div>
+            <div class="trend-badge tb-citizen">CITIZEN</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:20px;"></div>
+    </div>
+
+    <!-- RESULTS STATE -->
+    <div class="results-container" id="resultsState">
+
+      <!-- LISTINGS -->
+      <div id="section-listings">
+        <div class="rs-head">
+          <div class="rs-title">Listings</div>
+          <div class="rs-see-all" onclick="selectFilterByName('listings')">See all ›</div>
+        </div>
+        <div id="listings-results"></div>
+      </div>
+
+      <!-- TOKENS -->
+      <div id="section-tokens" style="margin-top:8px;">
+        <div class="rs-head">
+          <div class="rs-title">Tokens</div>
+          <div class="rs-see-all" onclick="window.location.href='dex-swap.html'">Trade ›</div>
+        </div>
+        <div id="tokens-results"></div>
+      </div>
+
+      <!-- CITIZENS -->
+      <div id="section-citizens" style="margin-top:8px;">
+        <div class="rs-head">
+          <div class="rs-title">Citizens</div>
+          <div class="rs-see-all" onclick="selectFilterByName('citizens')">See all ›</div>
+        </div>
+        <div id="citizens-results"></div>
+      </div>
+
+      <!-- GOVERNANCE -->
+      <div id="section-governance" style="margin-top:8px;">
+        <div class="rs-head">
+          <div class="rs-title">Governance</div>
+          <div class="rs-see-all" onclick="window.location.href='governance.html'">See all ›</div>
+        </div>
+        <div id="governance-results"></div>
+      </div>
+
+      <div style="height:20px;"></div>
+    </div>
+
+    <!-- EMPTY STATE -->
+    <div class="empty-state" id="emptyState">
+      <div class="es-icon">🔍</div>
+      <div class="es-title">No results found</div>
+      <div class="es-sub" id="emptySubtext">Try a different search term or browse trending topics above.</div>
+    </div>
+
+  </div>
+
+  <!-- NAV -->
+  <div class="bottom-nav">
+    <div class="nav-item" onclick="window.location.href='citizen-dashboard.html'">
+      <div class="nav-icon">🏠</div><div class="nav-label">Home</div>
+    </div>
+    <div class="nav-item" onclick="window.location.href='marketplace.html'">
+      <div class="nav-icon">🛒</div><div class="nav-label">Market</div>
+    </div>
+    <div class="nav-item active">
+      <div class="nav-icon">🔍</div><div class="nav-label" style="color:var(--cyan)">Search</div>
+    </div>
+    <div class="nav-item" onclick="window.location.href='feed.html'">
+      <div class="nav-icon">📣</div><div class="nav-label">Feed</div>
+    </div>
+    <div class="nav-item" onclick="window.location.href='profile.html'">
+      <div class="nav-icon">👤</div><div class="nav-label">Profile</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentFilter = 'all';
+  let searchTimer;
+
+  const DATA = {
+    listings: [
+      { emoji:'🎨', title:'Handmade Ceramic Coffee Set', seller:'kiri.IN$DEX', price:'150 INDX', category:'Crafts' },
+      { emoji:'📱', title:'iPhone 13 Pro — Excellent Condition', seller:'sione.IN$DEX', price:'800 INDX', category:'Electronics' },
+      { emoji:'👗', title:'Vintage Silk Kimono — Size M', seller:'amara.IN$DEX', price:'120 INDX', category:'Clothing' },
+      { emoji:'🥘', title:'Homemade Samoan Palusami — 6 Pack', seller:'tala.IN$DEX', price:'20 INDX', category:'Food' },
+      { emoji:'🖼️', title:'Koru Print Art — A2 Framed', seller:'kiri.IN$DEX', price:'55 INDX', category:'Crafts' },
+      { emoji:'🔧', title:'Professional Web Design Service', seller:'mele.IN$DEX', price:'200 INDX', category:'Services' },
+    ],
+    tokens: [
+      { icon:'◎', name:'INDX', symbol:'INDX · Solana', price:'A$0.50', change:'+12.4%', up:true },
+      { icon:'◉', name:'Solana', symbol:'SOL · Solana', price:'A$186.50', change:'+3.2%', up:true },
+      { icon:'💵', name:'USD Coin', symbol:'USDC · Solana', price:'A$1.56', change:'-0.1%', up:false },
+    ],
+    citizens: [
+      { initials:'KT', bg:'linear-gradient(135deg,#8B3FE8,#00D4FF)', name:'Kiri Tane', handle:'kiri.IN$DEX', ws:'WS 82 · 47 sales' },
+      { initials:'ST', bg:'linear-gradient(135deg,#00E5A0,#2B35D8)', name:'Sione Tuilagi', handle:'sione.IN$DEX', ws:'WS 74 · 38 sales' },
+      { initials:'AT', bg:'linear-gradient(135deg,#FFB800,#FF6B00)', name:'Aiko Tanaka', handle:'aiko.IN$DEX', ws:'WS 194 · 203 sales' },
+      { initials:'AD', bg:'linear-gradient(135deg,#FF4D6D,#8B3FE8)', name:'Amara Diallo', handle:'amara.IN$DEX', ws:'WS 66 · 21 sales' },
+    ],
+    governance: [
+      { title:'Proposal: Reduce Civilisation Fee to 1.5%', meta:'847 votes · 2 days left' },
+      { title:'Proposal: Add Fijian creole to platform languages', meta:'312 votes · 5 days left' },
+      { title:'Proposal: Launch IN$DEX mesh node in Samoa', meta:'124 votes · 7 days left' },
+    ]
+  };
+
+  function selectFilter(el, name) {
+    currentFilter = name;
+    document.querySelectorAll('.ft').forEach(f => f.classList.remove('active'));
+    el.classList.add('active');
+    const q = document.getElementById('searchInput').value.trim();
+    if (q) renderResults(q);
+  }
+
+  function selectFilterByName(name) {
+    currentFilter = name;
+    document.querySelectorAll('.ft').forEach(f => {
+      f.classList.toggle('active', f.textContent.toLowerCase().includes(name));
+    });
+    const q = document.getElementById('searchInput').value.trim();
+    if (q) renderResults(q);
+  }
+
+  function onSearch() {
+    const q = document.getElementById('searchInput').value.trim();
+    document.getElementById('clearBtn').style.display = q ? 'block' : 'none';
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      if (q.length >= 1) {
+        document.getElementById('defaultState').style.display = 'none';
+        renderResults(q);
+      } else {
+        document.getElementById('defaultState').style.display = 'block';
+        document.getElementById('resultsState').classList.remove('show');
+        document.getElementById('emptyState').classList.remove('show');
+      }
+    }, 220);
+  }
+
+  function doSearch(q) {
+    document.getElementById('searchInput').value = q;
+    document.getElementById('clearBtn').style.display = 'block';
+    document.getElementById('searchInput').focus();
+    onSearch();
+  }
+
+  function renderResults(q) {
+    const ql = q.toLowerCase();
+    const show = currentFilter;
+
+    // Filter data
+    const listings = DATA.listings.filter(l =>
+      l.title.toLowerCase().includes(ql) || l.seller.includes(ql) || l.category.toLowerCase().includes(ql));
+    const tokens = DATA.tokens.filter(t =>
+      t.name.toLowerCase().includes(ql) || t.symbol.toLowerCase().includes(ql));
+    const citizens = DATA.citizens.filter(c =>
+      c.name.toLowerCase().includes(ql) || c.handle.toLowerCase().includes(ql));
+    const governance = DATA.governance.filter(g =>
+      g.title.toLowerCase().includes(ql));
+
+    const hasResults = listings.length || tokens.length || citizens.length || governance.length;
+
+    document.getElementById('resultsState').classList.toggle('show', hasResults);
+    document.getElementById('emptyState').classList.toggle('show', !hasResults);
+    if (!hasResults) {
+      document.getElementById('emptySubtext').textContent = `No results for "${q}". Try different keywords.`;
+      return;
+    }
+
+    // Listings
+    const showListings = (show === 'all' || show === 'listings');
+    document.getElementById('section-listings').style.display = showListings && listings.length ? 'block' : 'none';
+    document.getElementById('listings-results').innerHTML = listings.slice(0,3).map(l => `
+      <div class="result-listing" onclick="window.location.href='listing-detail.html'">
+        <div class="rl-img">${l.emoji}</div>
+        <div>
+          <div class="rl-title">${highlight(l.title, ql)}</div>
+          <div class="rl-seller">${l.seller}</div>
+          <div><span class="rl-price">${l.price}</span><span class="rl-badge">${l.category}</span></div>
+        </div>
+      </div>`).join('');
+
+    // Tokens
+    const showTokens = (show === 'all' || show === 'tokens');
+    document.getElementById('section-tokens').style.display = showTokens && tokens.length ? 'block' : 'none';
+    document.getElementById('tokens-results').innerHTML = tokens.slice(0,3).map(t => `
+      <div class="result-token" onclick="window.location.href='dex-swap.html'">
+        <div class="rt-icon">${t.icon}</div>
+        <div>
+          <div class="rt-name">${highlight(t.name, ql)}</div>
+          <div class="rt-symbol">${t.symbol}</div>
+        </div>
+        <div class="rt-price">
+          <div class="rt-val">${t.price}</div>
+          <div class="rt-change ${t.up ? 'up' : 'down'}">${t.change}</div>
+        </div>
+      </div>`).join('');
+
+    // Citizens
+    const showCitizens = (show === 'all' || show === 'citizens');
+    document.getElementById('section-citizens').style.display = showCitizens && citizens.length ? 'block' : 'none';
+    document.getElementById('citizens-results').innerHTML = citizens.slice(0,3).map(c => `
+      <div class="result-citizen" onclick="window.location.href='citizen-profile.html'">
+        <div class="rc-av" style="background:${c.bg}">${c.initials}</div>
+        <div>
+          <div class="rc-nm">${highlight(c.name, ql)}</div>
+          <div class="rc-hndl">${c.handle}</div>
+          <div class="rc-ws">${c.ws}</div>
+        </div>
+        <div class="rc-follow">Follow</div>
+      </div>`).join('');
+
+    // Governance
+    const showGov = (show === 'all' || show === 'governance');
+    document.getElementById('section-governance').style.display = showGov && governance.length ? 'block' : 'none';
+    document.getElementById('governance-results').innerHTML = governance.slice(0,2).map(g => `
+      <div class="result-gov" onclick="window.location.href='governance.html'">
+        <div class="rg-title">${highlight(g.title, ql)}</div>
+        <div class="rg-meta"><span>🗳️ ${g.meta}</span></div>
+      </div>`).join('');
+  }
+
+  function highlight(text, q) {
+    if (!q) return text;
+    const re = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+    return text.replace(re, '<span style="color:var(--cyan);font-weight:700;">$1</span>');
+  }
+
+  function clearSearch() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('clearBtn').style.display = 'none';
+    document.getElementById('defaultState').style.display = 'block';
+    document.getElementById('resultsState').classList.remove('show');
+    document.getElementById('emptyState').classList.remove('show');
+  }
+
+  function clearRecent() {
+    document.getElementById('recentList').innerHTML = '<div style="font-size:13px;color:var(--text-dim);padding:8px 14px;">No recent searches</div>';
+  }
+
+  function removeRecent(e, el) {
+    e.stopPropagation();
+    el.closest('.recent-item').remove();
+  }
+
+  // Auto-focus
+  window.addEventListener('load', () => setTimeout(() => document.getElementById('searchInput').focus(), 100));
+</script>
+</body>
+</html>

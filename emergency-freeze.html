@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Emergency Freeze — IN$DEX</title>
+  <style>
+    :root {
+      --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+      --black:#090A10; --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+      --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+      --border:rgba(255,255,255,0.07);
+      --text:#F0F2FF; --text-muted:rgba(240,242,255,0.45); --text-dim:rgba(240,242,255,0.2);
+    }
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+    body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;}
+    .phone{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+
+    .topbar{display:flex;align-items:center;padding:14px 16px 10px;gap:10px;border-bottom:1px solid var(--border);}
+    .tb-back{width:36px;height:36px;border-radius:10px;background:var(--surface2);border:none;color:var(--text);font-size:18px;cursor:pointer;}
+    .tb-title{flex:1;font-size:17px;font-weight:800;}
+
+    .scroll-body{flex:1;overflow-y:auto;padding:24px 16px 40px;}
+
+    /* ACTIVE STATE */
+    #activeState { display: none; }
+    #frozenState { display: none; }
+
+    /* HERO */
+    .freeze-hero{text-align:center;padding:20px 0 24px;}
+    .fh-icon{font-size:64px;margin-bottom:16px;}
+    .fh-title{font-size:24px;font-weight:900;margin-bottom:8px;}
+    .fh-sub{font-size:14px;color:var(--text-muted);line-height:1.6;max-width:320px;margin:0 auto 28px;}
+
+    /* WHAT GETS FROZEN */
+    .freeze-list{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:20px;}
+    .fl-header{padding:14px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:800;color:var(--text-muted);}
+    .fl-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);}
+    .fl-item:last-child{border-bottom:none;}
+    .fl-icon{font-size:20px;width:32px;text-align:center;}
+    .fl-info{flex:1;}
+    .fl-name{font-size:14px;font-weight:700;}
+    .fl-desc{font-size:12px;color:var(--text-muted);margin-top:1px;}
+    .fl-status{font-size:12px;font-weight:700;}
+    .fl-status.freeze{color:var(--red);}
+    .fl-status.safe{color:var(--green);}
+
+    /* WHAT STAYS SAFE */
+    .safe-note{background:rgba(0,229,160,0.05);border:1px solid rgba(0,229,160,0.15);border-radius:14px;padding:14px 16px;margin-bottom:20px;}
+    .sn-title{font-size:13px;font-weight:800;color:var(--green);margin-bottom:8px;}
+    .sn-item{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-muted);margin-bottom:6px;}
+    .sn-item:last-child{margin-bottom:0;}
+
+    /* HOLD BUTTON */
+    .hold-container{position:relative;margin-bottom:16px;}
+    .hold-btn{width:100%;height:64px;border-radius:16px;background:linear-gradient(135deg,#FF4D6D,#c62a47);border:none;color:#fff;font-size:17px;font-weight:900;cursor:pointer;position:relative;overflow:hidden;letter-spacing:0.01em;}
+    .hold-progress{position:absolute;top:0;left:0;height:100%;background:rgba(255,255,255,0.15);border-radius:16px;width:0%;transition:none;}
+    .hold-label{position:relative;z-index:1;}
+
+    /* FROZEN STATE */
+    .frozen-banner{background:linear-gradient(135deg,rgba(255,77,109,0.15),rgba(139,63,232,0.1));border:2px solid rgba(255,77,109,0.3);border-radius:16px;padding:20px 16px;text-align:center;margin-bottom:20px;}
+    .fb-icon{font-size:52px;margin-bottom:12px;}
+    .fb-title{font-size:20px;font-weight:900;color:var(--red);margin-bottom:6px;}
+    .fb-sub{font-size:13px;color:var(--text-muted);line-height:1.6;}
+    .fb-time{font-size:22px;font-weight:900;color:var(--gold);margin-top:12px;}
+
+    .frozen-status{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px;}
+    .fs-row{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);}
+    .fs-row:last-child{border-bottom:none;}
+    .fs-lbl{font-size:13px;color:var(--text-muted);}
+    .fs-val{font-size:13px;font-weight:700;}
+
+    /* UNFREEZE */
+    .unfreeze-steps{background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.12);border-radius:14px;padding:14px 16px;margin-bottom:20px;}
+    .us-title{font-size:13px;font-weight:800;color:var(--cyan);margin-bottom:10px;}
+    .us-step{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;}
+    .us-step:last-child{margin-bottom:0;}
+    .us-num{width:22px;height:22px;border-radius:50%;background:rgba(0,212,255,0.12);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--cyan);flex-shrink:0;}
+    .us-text{font-size:13px;color:var(--text-muted);line-height:1.5;}
+
+    /* BUTTONS */
+    .btn-primary{width:100%;padding:16px;border-radius:14px;background:var(--cyan);border:none;color:#000;font-size:16px;font-weight:800;cursor:pointer;margin-bottom:10px;}
+    .btn-danger{width:100%;padding:16px;border-radius:14px;background:var(--red);border:none;color:#fff;font-size:16px;font-weight:800;cursor:pointer;margin-bottom:10px;}
+    .btn-ghost{width:100%;padding:14px;border-radius:14px;background:transparent;border:1px solid var(--border);color:var(--text-muted);font-size:14px;cursor:pointer;margin-bottom:10px;}
+
+    /* REPORT MODAL */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:flex-end;z-index:50;display:none;}
+    .modal-overlay.show{display:flex;}
+    .modal-card{width:100%;max-width:430px;margin:0 auto;background:var(--surface2);border-radius:20px 20px 0 0;padding:24px 16px 40px;}
+    .mc-title{font-size:18px;font-weight:900;margin-bottom:8px;}
+    .mc-sub{font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.6;}
+    .reason-option{padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:8px;cursor:pointer;font-size:14px;font-weight:600;}
+    .reason-option.selected{border-color:var(--red);background:rgba(255,77,109,0.05);}
+
+    @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+
+    #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+  </style>
+</head>
+<body>
+<div class="phone">
+  <div class="topbar">
+    <button class="tb-back" onclick="history.back()">←</button>
+    <div class="tb-title">🚨 Emergency Freeze</div>
+  </div>
+
+  <div class="scroll-body">
+
+    <!-- ACTIVE (unfrozen) STATE -->
+    <div id="activeState">
+      <div class="freeze-hero">
+        <div class="fh-icon">🔴</div>
+        <div class="fh-title">Freeze your account instantly</div>
+        <div class="fh-sub">If your phone was stolen or you see suspicious activity, freeze everything immediately. Your assets stay safe on-chain — no one can move them.</div>
+      </div>
+
+      <!-- WHAT GETS FROZEN -->
+      <div class="freeze-list">
+        <div class="fl-header">🔒 What gets locked immediately</div>
+        <div class="fl-item">
+          <div class="fl-icon">💸</div>
+          <div class="fl-info"><div class="fl-name">All outgoing transactions</div><div class="fl-desc">Sends, swaps, withdrawals</div></div>
+          <div class="fl-status freeze">FROZEN</div>
+        </div>
+        <div class="fl-item">
+          <div class="fl-icon">🛒</div>
+          <div class="fl-info"><div class="fl-name">Marketplace purchases</div><div class="fl-desc">New buy orders blocked</div></div>
+          <div class="fl-status freeze">FROZEN</div>
+        </div>
+        <div class="fl-item">
+          <div class="fl-icon">📋</div>
+          <div class="fl-info"><div class="fl-name">Pending orders</div><div class="fl-desc">Open limit orders cancelled</div></div>
+          <div class="fl-status freeze">CANCELLED</div>
+        </div>
+        <div class="fl-item">
+          <div class="fl-icon">🔑</div>
+          <div class="fl-info"><div class="fl-name">New device logins</div><div class="fl-desc">No new devices can authenticate</div></div>
+          <div class="fl-status freeze">BLOCKED</div>
+        </div>
+        <div class="fl-item">
+          <div class="fl-icon">💰</div>
+          <div class="fl-info"><div class="fl-name">Staking rewards</div><div class="fl-desc">Continue accruing — safe on-chain</div></div>
+          <div class="fl-status safe">SAFE ✓</div>
+        </div>
+        <div class="fl-item">
+          <div class="fl-icon">📥</div>
+          <div class="fl-info"><div class="fl-name">Incoming payments</div><div class="fl-desc">You can still receive INDX</div></div>
+          <div class="fl-status safe">ALLOWED ✓</div>
+        </div>
+      </div>
+
+      <!-- STAYS SAFE -->
+      <div class="safe-note">
+        <div class="sn-title">🛡️ Your assets can never be stolen</div>
+        <div class="sn-item">✓ INDX balance lives on-chain — the protocol holds it, not a server</div>
+        <div class="sn-item">✓ Even with your phone, a thief can't move funds without biometrics</div>
+        <div class="sn-item">✓ Grid Account requires 2-of-3 keys — one key alone does nothing</div>
+      </div>
+
+      <!-- HOLD TO FREEZE -->
+      <div class="hold-container">
+        <button class="hold-btn" id="holdBtn"
+          onmousedown="startHold()" ontouchstart="startHold()"
+          onmouseup="cancelHold()" ontouchend="cancelHold()"
+          onmouseleave="cancelHold()">
+          <div class="hold-progress" id="holdProgress"></div>
+          <div class="hold-label" id="holdLabel">🔴 Hold 3 seconds to freeze</div>
+        </button>
+      </div>
+
+      <button class="btn-ghost" onclick="showReportModal()">📋 Report suspicious activity instead</button>
+      <button class="btn-ghost" onclick="history.back()">Cancel — I'm safe</button>
+    </div>
+
+    <!-- FROZEN STATE -->
+    <div id="frozenState">
+      <div class="frozen-banner">
+        <div class="fb-icon">🧊</div>
+        <div class="fb-title">Account Frozen</div>
+        <div class="fb-sub">All transactions are blocked. Your assets are safe. SIINDEX security team has been notified.</div>
+        <div class="fb-time" id="frozenTimer">00:00</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Time frozen</div>
+      </div>
+
+      <div class="frozen-status">
+        <div class="fs-row"><div class="fs-lbl">Frozen at</div><div class="fs-val" id="frozenAt">—</div></div>
+        <div class="fs-row"><div class="fs-lbl">Transactions blocked</div><div class="fs-val" style="color:var(--red);" id="blockedCount">0</div></div>
+        <div class="fs-row"><div class="fs-lbl">Pending orders cancelled</div><div class="fs-val">3</div></div>
+        <div class="fs-row"><div class="fs-lbl">SIINDEX alert</div><div class="fs-val" style="color:var(--green);">Sent ✓</div></div>
+        <div class="fs-row"><div class="fs-lbl">Your balance</div><div class="fs-val" style="color:var(--cyan);">1,240 INDX — SAFE</div></div>
+      </div>
+
+      <div class="unfreeze-steps">
+        <div class="us-title">To unfreeze your account:</div>
+        <div class="us-step"><div class="us-num">1</div><div class="us-text">Verify your identity via biometrics or SMS code</div></div>
+        <div class="us-step"><div class="us-num">2</div><div class="us-text">Confirm your 12-word recovery phrase (optional but recommended)</div></div>
+        <div class="us-step"><div class="us-num">3</div><div class="us-text">Change your PIN and revoke any suspicious devices</div></div>
+      </div>
+
+      <button class="btn-primary" onclick="startUnfreeze()">🔓 Unfreeze my account</button>
+      <button class="btn-danger" onclick="reportStolen()">🚨 Report device stolen + contact support</button>
+      <button class="btn-ghost" onclick="window.location.href='account-recovery.html'">🔑 Need account recovery?</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- REPORT MODAL -->
+<div class="modal-overlay" id="reportModal">
+  <div class="modal-card">
+    <div class="mc-title">Report suspicious activity</div>
+    <div class="mc-sub">Tell us what happened so our security team can help. We'll investigate and freeze any affected functions.</div>
+    <div class="reason-option" onclick="selectReason(this)">📱 My phone / device was stolen</div>
+    <div class="reason-option" onclick="selectReason(this)">👀 I see a transaction I didn't make</div>
+    <div class="reason-option" onclick="selectReason(this)">🔑 Someone else accessed my account</div>
+    <div class="reason-option" onclick="selectReason(this)">💬 I received a suspicious message</div>
+    <div class="reason-option" onclick="selectReason(this)">❓ Something else</div>
+    <button class="btn-danger" style="margin-top:16px;" onclick="submitReport()">Submit report</button>
+    <button class="btn-ghost" onclick="document.getElementById('reportModal').classList.remove('show')">Cancel</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  let holdTimer = null;
+  let holdInterval = null;
+  let freezeStart = null;
+  let frozenTimerInterval = null;
+  let blockedCount = 0;
+
+  // Show active state by default
+  document.getElementById('activeState').style.display = 'block';
+
+  function startHold() {
+    let elapsed = 0;
+    const total = 3000;
+    const bar = document.getElementById('holdProgress');
+    const label = document.getElementById('holdLabel');
+    bar.style.transition = 'none'; bar.style.width = '0%';
+    holdInterval = setInterval(() => {
+      elapsed += 50;
+      bar.style.width = Math.min((elapsed / total) * 100, 100) + '%';
+      if (elapsed >= 1000) label.textContent = '🔴 Keep holding…';
+      if (elapsed >= 2000) label.textContent = '🔴 Almost there…';
+    }, 50);
+    holdTimer = setTimeout(() => {
+      clearInterval(holdInterval);
+      executeFreeze();
+    }, total);
+  }
+
+  function cancelHold() {
+    clearTimeout(holdTimer);
+    clearInterval(holdInterval);
+    document.getElementById('holdProgress').style.width = '0%';
+    document.getElementById('holdLabel').textContent = '🔴 Hold 3 seconds to freeze';
+  }
+
+  function executeFreeze() {
+    freezeStart = new Date();
+    document.getElementById('frozenAt').textContent = freezeStart.toLocaleTimeString();
+    document.getElementById('activeState').style.display = 'none';
+    document.getElementById('frozenState').style.display = 'block';
+    startFrozenTimer();
+    // simulate blocked transactions ticking up
+    setInterval(() => {
+      if (Math.random() > 0.7) {
+        blockedCount++;
+        document.getElementById('blockedCount').textContent = blockedCount;
+      }
+    }, 3000);
+    showToast('🧊 Account frozen — all transactions blocked');
+  }
+
+  function startFrozenTimer() {
+    frozenTimerInterval = setInterval(() => {
+      const diff = Math.floor((new Date() - freezeStart) / 1000);
+      const m = String(Math.floor(diff / 60)).padStart(2, '0');
+      const s = String(diff % 60).padStart(2, '0');
+      document.getElementById('frozenTimer').textContent = m + ':' + s;
+    }, 1000);
+  }
+
+  function startUnfreeze() {
+    window.location.href = 'account-recovery.html';
+  }
+
+  function reportStolen() {
+    showToast('🚨 Report submitted — SIINDEX security team notified');
+    setTimeout(() => showToast('Support team will contact you within 30 minutes'), 3000);
+  }
+
+  function showReportModal() {
+    document.getElementById('reportModal').classList.add('show');
+  }
+
+  function selectReason(el) {
+    document.querySelectorAll('.reason-option').forEach(r => r.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  function submitReport() {
+    document.getElementById('reportModal').classList.remove('show');
+    showToast('Report submitted ✓ — SIINDEX will investigate');
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.style.opacity = '1';
+    setTimeout(() => t.style.opacity = '0', 2800);
+  }
+</script>
+</body>
+</html>

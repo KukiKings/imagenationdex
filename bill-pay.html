@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Bill Pay — IN$DEX</title>
+  <style>
+    :root {
+      --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+      --black:#090A10; --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+      --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+      --border:rgba(255,255,255,0.07);
+      --text:#F0F2FF; --text-muted:rgba(240,242,255,0.45); --text-dim:rgba(240,242,255,0.2);
+    }
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+    body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+    .phone{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+
+    .topbar{display:flex;align-items:center;padding:14px 16px 10px;gap:10px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--black);z-index:20;}
+    .tb-back{width:36px;height:36px;border-radius:10px;background:var(--surface2);border:none;color:var(--text);font-size:18px;cursor:pointer;}
+    .tb-title{flex:1;font-size:17px;font-weight:800;}
+
+    .scroll-body{flex:1;overflow-y:auto;padding-bottom:80px;}
+
+    /* BALANCE BAR */
+    .balance-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);}
+    .bb-lbl{font-size:12px;color:var(--text-muted);}
+    .bb-val{font-size:18px;font-weight:900;color:var(--cyan);}
+    .bb-rate{font-size:11px;color:var(--text-muted);}
+
+    /* SEARCH */
+    .search-wrap{padding:14px 16px 10px;}
+    .search-field{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;color:var(--text);font-size:15px;outline:none;display:flex;align-items:center;}
+    .search-field::placeholder{color:var(--text-dim);}
+    .search-field:focus{border-color:var(--cyan);}
+
+    /* CATEGORIES */
+    .cats{display:flex;gap:8px;padding:0 16px 14px;overflow-x:auto;scrollbar-width:none;}
+    .cats::-webkit-scrollbar{display:none;}
+    .cat-pill{flex-shrink:0;display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;color:var(--text-muted);}
+    .cat-pill.active{background:var(--cyan);color:#000;border-color:var(--cyan);}
+
+    /* BILLER GRID */
+    .section-title{padding:0 16px;font-size:12px;font-weight:800;color:var(--text-muted);letter-spacing:0.07em;text-transform:uppercase;margin-bottom:10px;}
+    .biller-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 16px 20px;}
+    .biller{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 10px;text-align:center;cursor:pointer;transition:all 0.2s;}
+    .biller:active{transform:scale(0.96);}
+    .biller.selected{border-color:var(--cyan);background:rgba(0,212,255,0.05);}
+    .bi-icon{font-size:28px;margin-bottom:6px;}
+    .bi-name{font-size:12px;font-weight:700;line-height:1.3;}
+    .bi-cat{font-size:10px;color:var(--text-muted);margin-top:2px;}
+
+    /* PAY PANEL */
+    .pay-panel{margin:0 16px 20px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;display:none;}
+    .pp-biller{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);}
+    .pp-icon{font-size:32px;width:52px;height:52px;background:var(--surface2);border-radius:14px;display:flex;align-items:center;justify-content:center;}
+    .pp-name{font-size:16px;font-weight:800;}
+    .pp-cat{font-size:12px;color:var(--text-muted);}
+
+    .pp-label{font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;}
+    .pp-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;color:var(--text);font-size:15px;outline:none;margin-bottom:14px;}
+    .pp-input:focus{border-color:var(--cyan);}
+    .pp-input::placeholder{color:var(--text-dim);}
+
+    .amount-wrap{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:6px;}
+    .amount-wrap:focus-within{border-color:var(--cyan);}
+    .amt-input{flex:1;background:transparent;border:none;color:var(--text);font-size:22px;font-weight:800;outline:none;}
+    .amt-cur{font-size:13px;color:var(--text-muted);}
+
+    .pay-method-row{display:flex;gap:8px;margin-bottom:14px;}
+    .pm-opt{flex:1;padding:9px;border-radius:10px;border:1px solid var(--border);font-size:12px;font-weight:700;text-align:center;cursor:pointer;background:var(--surface3);color:var(--text-muted);}
+    .pm-opt.active{background:rgba(0,212,255,0.08);border-color:var(--cyan);color:var(--cyan);}
+
+    .pp-summary{background:var(--surface3);border-radius:10px;padding:12px;margin-bottom:16px;}
+    .pps-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;}
+    .pps-lbl{color:var(--text-muted);}
+
+    .schedule-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--border);margin-bottom:12px;}
+    .sr-label{font-size:13px;font-weight:700;}
+    .sr-toggle{width:44px;height:26px;border-radius:13px;background:var(--surface3);cursor:pointer;position:relative;transition:background 0.2s;}
+    .sr-knob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:all 0.2s;}
+
+    .btn-pay{width:100%;padding:16px;border-radius:14px;background:var(--cyan);border:none;color:#000;font-size:16px;font-weight:900;cursor:pointer;}
+    .btn-pay:disabled{opacity:0.35;}
+
+    /* RECENT PAYMENTS */
+    .recent-card{margin:0 16px 20px;background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+    .rp-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);}
+    .rp-item:last-child{border-bottom:none;}
+    .rp-icon{font-size:22px;width:36px;text-align:center;}
+    .rp-info{flex:1;}
+    .rp-name{font-size:13px;font-weight:700;}
+    .rp-date{font-size:11px;color:var(--text-muted);}
+    .rp-amt{font-size:14px;font-weight:800;color:var(--red);}
+    .rp-repeat{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:rgba(0,212,255,0.08);color:var(--cyan);}
+
+    /* FIXED PAY BAR */
+    .pay-bar{position:sticky;bottom:0;padding:12px 16px 24px;background:var(--black);border-top:1px solid var(--border);}
+
+    #toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+  </style>
+</head>
+<body>
+<div class="phone">
+  <div class="topbar">
+    <button class="tb-back" onclick="history.back()">←</button>
+    <div class="tb-title">🧾 Bill Pay</div>
+  </div>
+
+  <div class="scroll-body">
+
+    <!-- BALANCE -->
+    <div class="balance-bar">
+      <div>
+        <div class="bb-lbl">Your INDX balance</div>
+        <div class="bb-val">1,240 INDX</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="bb-lbl">≈ $634.88</div>
+        <div class="bb-rate">1 INDX = $0.35</div>
+      </div>
+    </div>
+
+    <!-- SEARCH -->
+    <div class="search-wrap">
+      <input class="search-field" type="text" placeholder="🔍  Search billers…" oninput="filterBillers(this.value)">
+    </div>
+
+    <!-- CATEGORIES -->
+    <div class="cats">
+      <div class="cat-pill active" onclick="filterCat(this,'all')">⚡ All</div>
+      <div class="cat-pill" onclick="filterCat(this,'utilities')">💡 Utilities</div>
+      <div class="cat-pill" onclick="filterCat(this,'telecom')">📱 Telecom</div>
+      <div class="cat-pill" onclick="filterCat(this,'housing')">🏠 Housing</div>
+      <div class="cat-pill" onclick="filterCat(this,'finance')">🏦 Finance</div>
+      <div class="cat-pill" onclick="filterCat(this,'govt')">🏛️ Govt</div>
+    </div>
+
+    <!-- BILLERS -->
+    <div class="section-title">Select a biller</div>
+    <div class="biller-grid" id="billerGrid"></div>
+
+    <!-- PAY PANEL -->
+    <div class="pay-panel" id="payPanel">
+      <div class="pp-biller">
+        <div class="pp-icon" id="ppIcon">⚡</div>
+        <div>
+          <div class="pp-name" id="ppName">AGL Energy</div>
+          <div class="pp-cat" id="ppCat">Electricity</div>
+        </div>
+      </div>
+
+      <div class="pp-label">Account / reference number</div>
+      <input class="pp-input" type="text" id="ppRef" placeholder="e.g. 9412 7800 1234" oninput="updatePaySummary()">
+
+      <div class="pp-label">Amount (USD)</div>
+      <div class="amount-wrap">
+        <span style="font-size:16px;color:var(--text-muted);">A$</span>
+        <input class="amt-input" type="number" id="ppAmt" placeholder="0.00" step="0.01" oninput="updatePaySummary()">
+      </div>
+
+      <div class="pp-label">Pay with</div>
+      <div class="pay-method-row">
+        <div class="pm-opt active" onclick="selectPM(this,'indx')">🪙 INDX</div>
+        <div class="pm-opt" onclick="selectPM(this,'usdc')">💵 USDC</div>
+        <div class="pm-opt" onclick="selectPM(this,'sol')">◎ SOL</div>
+      </div>
+
+      <div class="pp-summary">
+        <div class="pps-row"><div class="pps-lbl">Bill amount</div><div id="sumBill">—</div></div>
+        <div class="pps-row"><div class="pps-lbl">You pay in INDX</div><div id="sumIndx" style="color:var(--cyan);">—</div></div>
+        <div class="pps-row"><div class="pps-lbl">Protocol converts</div><div id="sumConvert">INDX → USD via DEX</div></div>
+        <div class="pps-row"><div class="pps-lbl">98/2 fee</div><div id="sumFee" style="color:var(--gold);">0 INDX</div></div>
+      </div>
+
+      <div class="schedule-row">
+        <div>
+          <div class="sr-label">🔁 Schedule recurring</div>
+          <div style="font-size:11px;color:var(--text-muted);">Auto-pay monthly on due date</div>
+        </div>
+        <div class="sr-toggle" id="schedToggle" onclick="toggleSchedule()">
+          <div class="sr-knob" id="schedKnob"></div>
+        </div>
+      </div>
+
+      <button class="btn-pay" id="payBtn" onclick="doPay()" disabled>Pay bill</button>
+    </div>
+
+    <!-- RECENT PAYMENTS -->
+    <div class="section-title">Recent payments</div>
+    <div class="recent-card">
+      <div class="rp-item">
+        <div class="rp-icon">💡</div>
+        <div class="rp-info"><div class="rp-name">AGL Energy</div><div class="rp-date">Jun 1 · Ref 9412780</div></div>
+        <div style="text-align:right;"><div class="rp-amt">-$142</div><div class="rp-repeat">Monthly</div></div>
+      </div>
+      <div class="rp-item">
+        <div class="rp-icon">📱</div>
+        <div class="rp-info"><div class="rp-name">Telstra Mobile</div><div class="rp-date">May 28 · Ref 00123456</div></div>
+        <div style="text-align:right;"><div class="rp-amt">-$65</div><div class="rp-repeat">Monthly</div></div>
+      </div>
+      <div class="rp-item">
+        <div class="rp-icon">🌊</div>
+        <div class="rp-info"><div class="rp-name">Sydney Water</div><div class="rp-date">May 15 · Ref SW7824</div></div>
+        <div><div class="rp-amt">-$88</div></div>
+      </div>
+      <div class="rp-item">
+        <div class="rp-icon">🏠</div>
+        <div class="rp-info"><div class="rp-name">Rent — 12 Smith St</div><div class="rp-date">May 1 · via PayID</div></div>
+        <div style="text-align:right;"><div class="rp-amt">-$1,400</div><div class="rp-repeat">Monthly</div></div>
+      </div>
+    </div>
+
+    <div style="height:20px;"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  const BILLERS = [
+    { id:1, icon:'💡', name:'AGL Energy', cat:'utilities' },
+    { id:2, icon:'🔥', name:'Origin Gas', cat:'utilities' },
+    { id:3, icon:'🌊', name:'Sydney Water', cat:'utilities' },
+    { id:4, icon:'📱', name:'Telstra', cat:'telecom' },
+    { id:5, icon:'📡', name:'Optus', cat:'telecom' },
+    { id:6, icon:'📶', name:'Vodafone', cat:'telecom' },
+    { id:7, icon:'🏠', name:'Rent / Landlord', cat:'housing' },
+    { id:8, icon:'🔧', name:'Strata Levy', cat:'housing' },
+    { id:9, icon:'🌐', name:'NBN Broadband', cat:'telecom' },
+    { id:10, icon:'🏦', name:'Mortgage', cat:'finance' },
+    { id:11, icon:'💳', name:'Credit Card', cat:'finance' },
+    { id:12, icon:'🏛️', name:'Council Rates', cat:'govt' },
+    { id:13, icon:'🚗', name:'NRMA Rego', cat:'govt' },
+    { id:14, icon:'📺', name:'Foxtel', cat:'utilities' },
+    { id:15, icon:'🛡️', name:'BUPA Health', cat:'finance' },
+    { id:16, icon:'🌍', name:'Other biller', cat:'all' },
+    { id:17, icon:'📦', name:'Australia Post', cat:'govt' },
+    { id:18, icon:'⚡', name:'EnergyAustralia', cat:'utilities' },
+  ];
+
+  let selectedBiller = null;
+  let payMethod = 'indx';
+  let schedOn = false;
+  let currentCat = 'all';
+  let searchVal = '';
+
+  function renderBillers() {
+    const filtered = BILLERS.filter(b =>
+      (currentCat === 'all' || b.cat === currentCat) &&
+      (searchVal === '' || b.name.toLowerCase().includes(searchVal.toLowerCase()))
+    );
+    document.getElementById('billerGrid').innerHTML = filtered.map(b => `
+      <div class="biller${selectedBiller && selectedBiller.id === b.id ? ' selected' : ''}" id="bil${b.id}" onclick="selectBiller(${b.id})">
+        <div class="bi-icon">${b.icon}</div>
+        <div class="bi-name">${b.name}</div>
+      </div>`).join('');
+  }
+
+  function selectBiller(id) {
+    selectedBiller = BILLERS.find(b => b.id === id);
+    renderBillers();
+    document.getElementById('ppIcon').textContent = selectedBiller.icon;
+    document.getElementById('ppName').textContent = selectedBiller.name;
+    document.getElementById('ppCat').textContent = selectedBiller.cat;
+    document.getElementById('payPanel').style.display = 'block';
+    document.getElementById('payPanel').scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+
+  function filterCat(el, cat) {
+    currentCat = cat;
+    document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    renderBillers();
+  }
+
+  function filterBillers(val) {
+    searchVal = val;
+    renderBillers();
+  }
+
+  function selectPM(el, pm) {
+    payMethod = pm;
+    document.querySelectorAll('.pm-opt').forEach(o => o.classList.remove('active'));
+    el.classList.add('active');
+    updatePaySummary();
+  }
+
+  function updatePaySummary() {
+    const amt = parseFloat(document.getElementById('ppAmt').value) || 0;
+    const ref = document.getElementById('ppRef').value;
+    const rate = { indx: 0.512, usdc: 1.00, sol: 142.00 }[payMethod];
+    const tokenAmt = (amt / rate).toFixed(2);
+    const fee = (tokenAmt * 0.02).toFixed(2);
+    const sym = { indx:'INDX', usdc:'USDC', sol:'SOL' }[payMethod];
+    document.getElementById('sumBill').textContent = amt > 0 ? 'A$' + amt.toFixed(2) : '—';
+    document.getElementById('sumIndx').textContent = amt > 0 ? tokenAmt + ' ' + sym : '—';
+    document.getElementById('sumConvert').textContent = sym + ' → USD via DEX';
+    document.getElementById('sumFee').textContent = amt > 0 ? fee + ' ' + sym : '0 INDX';
+    document.getElementById('payBtn').disabled = !(amt > 0 && ref.length > 3);
+    document.getElementById('payBtn').textContent = amt > 0
+      ? `Pay A$${amt.toFixed(2)} (${tokenAmt} ${sym})`
+      : 'Pay bill';
+  }
+
+  function toggleSchedule() {
+    schedOn = !schedOn;
+    const t = document.getElementById('schedToggle');
+    const k = document.getElementById('schedKnob');
+    t.style.background = schedOn ? 'var(--green)' : 'var(--surface3)';
+    k.style.left = schedOn ? 'auto' : '3px';
+    k.style.right = schedOn ? '3px' : 'auto';
+  }
+
+  function doPay() {
+    const amt = parseFloat(document.getElementById('ppAmt').value);
+    const name = selectedBiller ? selectedBiller.name : 'biller';
+    showToast(`✓ A$${amt.toFixed(2)} paid to ${name}${schedOn ? ' · Monthly auto-pay set' : ''}`);
+    document.getElementById('ppAmt').value = '';
+    document.getElementById('ppRef').value = '';
+    updatePaySummary();
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.style.opacity = '1';
+    setTimeout(() => t.style.opacity = '0', 2800);
+  }
+
+  renderBillers();
+</script>
+</body>
+</html>

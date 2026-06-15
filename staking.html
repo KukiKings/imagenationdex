@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IN$DEX — Sovereign Yield</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --cyan-dim:#0099BB; --cyan-bg:#071825; --cyan-border:#0A2535;
+    --black:#090A10; --surface:#111318; --surface2:#1A1D25; --surface3:#22252F;
+    --border:#2A2D38; --text:#EAEAEA; --text-muted:#6B7080; --text-dim:#3D4050;
+    --green:#00E5A0; --green-bg:#0A1F18; --red:#FF4D6D; --red-bg:#1F0A10;
+    --purple:#8B3FE8; --purple-bg:#120D1F; --gold:#FFB800; --gold-bg:#1F1600;
+    --radius:16px; --nav-h:72px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none;}
+  .shell{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;}
+  .scroll-body{flex:1;overflow-y:auto;padding-bottom:130px;-webkit-overflow-scrolling:touch;}
+  .scroll-body::-webkit-scrollbar{display:none;}
+
+  /* TOP BAR */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid var(--border);}
+  .topbar-back{width:38px;height:38px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;}
+  .topbar-back:active{background:var(--surface2);}
+  .topbar-title{font-size:17px;font-weight:700;}
+  .topbar-info{width:38px;height:38px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;}
+
+  /* HERO YIELD CARD */
+  .yield-hero{margin:20px;border-radius:20px;background:linear-gradient(135deg,#0A0D1F 0%,#10143A 50%,#0A1820 100%);border:1px solid rgba(0,212,255,0.2);padding:24px;position:relative;overflow:hidden;}
+  .yield-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(0,212,255,0.12) 0%,transparent 70%);pointer-events:none;}
+  .yield-label{font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:8px;}
+  .yield-apy{font-size:48px;font-weight:900;color:var(--cyan);letter-spacing:-0.03em;line-height:1;}
+  .yield-apy-sub{font-size:14px;color:var(--text-muted);margin-top:4px;margin-bottom:20px;}
+  .yield-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+  .ys{text-align:center;}
+  .ys-val{font-size:16px;font-weight:700;}
+  .ys-label{font-size:11px;color:var(--text-muted);margin-top:2px;}
+
+  /* LOCK REQUIRED NOTICE */
+  .lock-notice{margin:0 20px 20px;background:rgba(255,184,0,0.07);border:1px solid rgba(255,184,0,0.25);border-radius:14px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start;}
+  .ln-icon{font-size:22px;flex-shrink:0;}
+  .ln-title{font-size:13px;font-weight:700;color:var(--gold);margin-bottom:3px;}
+  .ln-desc{font-size:12px;color:var(--text-muted);line-height:1.55;}
+  .ln-link{color:var(--cyan);cursor:pointer;font-weight:600;}
+
+  /* TABS */
+  .tabs{display:flex;margin:0 20px 20px;background:var(--surface);border-radius:12px;padding:4px;gap:4px;}
+  .tab{flex:1;padding:9px;border-radius:9px;font-size:13px;font-weight:600;text-align:center;cursor:pointer;color:var(--text-muted);transition:all 0.2s;}
+  .tab.active{background:var(--surface3);color:var(--text);}
+
+  /* STAKE INPUT */
+  .stake-panel{padding:0 20px;}
+  .stake-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px;}
+  .sc-label{font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;}
+  .amount-wrap{background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;transition:border-color 0.2s;}
+  .amount-wrap:focus-within{border-color:var(--cyan);}
+  .amount-top{display:flex;align-items:baseline;gap:8px;margin-bottom:4px;}
+  .amount-input{background:transparent;border:none;outline:none;font-size:28px;font-weight:800;color:var(--text);width:100%;}
+  .amount-input::placeholder{color:var(--text-dim);}
+  .amount-ticker{font-size:16px;font-weight:700;color:var(--cyan);}
+  .amount-usd{font-size:12px;color:var(--text-muted);}
+  .amount-bal{display:flex;justify-content:space-between;margin-bottom:12px;font-size:12px;color:var(--text-muted);}
+  .use-max{color:var(--cyan);font-weight:600;cursor:pointer;}
+
+  /* QUICK AMOUNTS */
+  .quick-amounts{display:flex;gap:8px;margin-bottom:16px;}
+  .qa{flex:1;padding:8px 4px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);font-size:12px;font-weight:600;text-align:center;cursor:pointer;transition:all 0.2s;}
+  .qa:active{background:var(--cyan-bg);border-color:var(--cyan);color:var(--cyan);}
+
+  /* LOCK PERIOD */
+  .lock-periods{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+  .lp{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;cursor:pointer;transition:all 0.2s;}
+  .lp.active{background:var(--cyan-bg);border-color:var(--cyan);}
+  .lp-left{display:flex;align-items:center;gap:10px;}
+  .lp-icon{font-size:18px;}
+  .lp-name{font-size:14px;font-weight:600;}
+  .lp-sub{font-size:11px;color:var(--text-muted);}
+  .lp.active .lp-sub{color:var(--cyan-dim);}
+  .lp-apy{font-size:14px;font-weight:800;color:var(--green);}
+  .lp-check{width:20px;height:20px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;transition:all 0.2s;}
+  .lp.active .lp-check{background:var(--cyan);border-color:var(--cyan);color:#000;}
+
+  /* PROJECTION */
+  .projection{background:var(--green-bg);border:1px solid rgba(0,229,160,0.2);border-radius:12px;padding:14px 16px;margin-bottom:16px;}
+  .proj-row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;}
+  .proj-row:last-child{margin-bottom:0;padding-top:8px;border-top:1px solid rgba(0,229,160,0.15);font-weight:700;font-size:14px;}
+  .proj-label{color:var(--text-muted);}
+  .proj-val{color:var(--green);}
+
+  /* MY STAKES */
+  .stakes-list{padding:0 20px;display:flex;flex-direction:column;gap:10px;}
+  .stake-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
+  .si-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
+  .si-amount{font-size:18px;font-weight:800;}
+  .si-ticker{font-size:13px;font-weight:600;color:var(--cyan);margin-left:4px;}
+  .si-status{font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;}
+  .status-active{background:rgba(0,229,160,0.12);color:var(--green);}
+  .status-locked{background:rgba(255,184,0,0.12);color:var(--gold);}
+  .si-progress{height:4px;background:var(--border);border-radius:2px;margin-bottom:8px;overflow:hidden;}
+  .si-progress-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--cyan),var(--green));}
+  .si-meta{display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);}
+  .si-rewards{margin-top:12px;background:var(--green-bg);border:1px solid rgba(0,229,160,0.15);border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;}
+  .si-rewards-label{font-size:12px;color:var(--text-muted);}
+  .si-rewards-val{font-size:15px;font-weight:700;color:var(--green);}
+  .si-actions{display:flex;gap:8px;margin-top:12px;}
+  .si-btn{flex:1;padding:9px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;text-align:center;border:1px solid var(--border);background:var(--surface2);color:var(--text);}
+  .si-btn.claim{background:var(--green-bg);border-color:rgba(0,229,160,0.3);color:var(--green);}
+  .si-btn:active{opacity:0.8;}
+
+  /* EMPTY STATE */
+  .empty-state{text-align:center;padding:40px 24px;}
+  .empty-icon{font-size:48px;margin-bottom:14px;}
+  .empty-title{font-size:16px;font-weight:700;margin-bottom:6px;}
+  .empty-sub{font-size:13px;color:var(--text-muted);line-height:1.6;}
+
+  /* BOTTOM BAR */
+  .stake-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;padding:16px 20px 32px;background:linear-gradient(to top,var(--black) 65%,transparent);z-index:50;}
+  .stake-btn{width:100%;padding:16px;border-radius:14px;background:var(--cyan);border:none;color:#000;font-size:16px;font-weight:800;cursor:pointer;transition:opacity 0.2s;}
+  .stake-btn:active{opacity:0.85;}
+  .stake-btn:disabled{opacity:0.35;cursor:not-allowed;}
+
+  /* CONFIRM OVERLAY */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+  .overlay.show{opacity:1;pointer-events:all;}
+  .confirm-card{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:28px 24px;width:calc(100% - 48px);max-width:360px;text-align:center;}
+  .cc-icon{font-size:44px;margin-bottom:14px;}
+  .cc-title{font-size:20px;font-weight:800;margin-bottom:6px;}
+  .cc-sub{font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:20px;}
+  .cc-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px;text-align:left;}
+  .cc-row:last-of-type{border-bottom:none;}
+  .cc-label{color:var(--text-muted);}
+  .confirm-btn{width:100%;padding:15px;border-radius:12px;background:var(--cyan);border:none;color:#000;font-size:16px;font-weight:700;cursor:pointer;margin-top:18px;margin-bottom:10px;}
+  .cancel-btn{width:100%;padding:13px;border-radius:12px;background:transparent;border:1px solid var(--border);color:var(--text);font-size:14px;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <div class="topbar-back" onclick="window.history.back()">←</div>
+    <div class="topbar-title">Sovereign Yield</div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <div onclick="showTip('yield')" style="width:28px;height:28px;border-radius:50%;background:#1A1D25;border:1px solid #2A2D38;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#00D4FF;cursor:pointer;">ⓘ</div>
+      <div onclick="window.location.href='help.html'" style="width:28px;height:28px;border-radius:50%;background:#1A1D25;border:1px solid #2A2D38;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;">❓</div>
+    </div>
+  </div>
+
+  <div class="scroll-body">
+
+    <!-- HERO -->
+    <div class="yield-hero">
+      <div class="yield-label">Current APY</div>
+      <div class="yield-apy">5.5%</div>
+      <div class="yield-apy-sub">Sovereign Yield · Unlocks at Wisdom Score 100</div>
+      <div class="yield-stats">
+        <div class="ys"><div class="ys-val" style="color:var(--green)">842K</div><div class="ys-label">INDX Staked</div></div>
+        <div class="ys"><div class="ys-val" style="color:var(--cyan)">1,204</div><div class="ys-label">Stakers</div></div>
+        <div class="ys"><div class="ys-val" style="color:var(--gold)">46.3K</div><div class="ys-label">Rewards Paid</div></div>
+      </div>
+    </div>
+
+    <!-- WISDOM LOCK NOTICE -->
+    <div class="lock-notice" id="lockNotice">
+      <div class="ln-icon">⚡</div>
+      <div>
+        <div class="ln-title">Your Wisdom Score: 62 / 100</div>
+        <div class="ln-desc">You need Wisdom Score 100 to earn Sovereign Yield. Keep trading, verifying, and contributing to the Civilisation. <span class="ln-link" onclick="window.location.href='wisdom-score.html'">See how to level up →</span></div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <div class="tab active" id="tab-stake" onclick="switchTab('stake')">Stake</div>
+      <div class="tab" id="tab-mystakes" onclick="switchTab('mystakes')">My Stakes</div>
+      <div class="tab" id="tab-rewards" onclick="switchTab('rewards')">Rewards</div>
+    </div>
+
+    <!-- STAKE PANEL -->
+    <div id="panel-stake" class="stake-panel">
+      <div class="stake-card">
+        <div class="sc-label">Amount to Stake</div>
+        <div class="amount-wrap">
+          <div class="amount-top">
+            <input class="amount-input" type="number" id="stakeInput" placeholder="0" oninput="updateProjection()" min="0">
+            <span class="amount-ticker">INDX</span>
+          </div>
+          <div class="amount-usd" id="stakeUsd">≈ $0.00</div>
+        </div>
+        <div class="amount-bal">
+          <span>Available: <strong>1,240 INDX</strong></span>
+          <span class="use-max" onclick="setMax()">Use Max</span>
+        </div>
+        <div class="quick-amounts">
+          <div class="qa" onclick="setAmount(100)">100</div>
+          <div class="qa" onclick="setAmount(250)">250</div>
+          <div class="qa" onclick="setAmount(500)">500</div>
+          <div class="qa" onclick="setAmount(1000)">1,000</div>
+        </div>
+      </div>
+
+      <div class="stake-card">
+        <div class="sc-label">Lock Period</div>
+        <div class="lock-periods">
+          <div class="lp" id="lp-flex" onclick="selectLock('flex',4.0,'No minimum')">
+            <div class="lp-left">
+              <div class="lp-icon">🌊</div>
+              <div>
+                <div class="lp-name">Flexible</div>
+                <div class="lp-sub">Unstake anytime</div>
+              </div>
+            </div>
+            <div class="lp-apy">4.0%</div>
+            <div class="lp-check"></div>
+          </div>
+          <div class="lp active" id="lp-30" onclick="selectLock('30',5.5,'30-day lock')">
+            <div class="lp-left">
+              <div class="lp-icon">🔒</div>
+              <div>
+                <div class="lp-name">30 Days</div>
+                <div class="lp-sub">Best for most citizens</div>
+              </div>
+            </div>
+            <div class="lp-apy">5.5%</div>
+            <div class="lp-check">✓</div>
+          </div>
+          <div class="lp" id="lp-90" onclick="selectLock('90',7.2,'90-day lock')">
+            <div class="lp-left">
+              <div class="lp-icon">🏛️</div>
+              <div>
+                <div class="lp-name">90 Days</div>
+                <div class="lp-sub">Civilisation Builder bonus</div>
+              </div>
+            </div>
+            <div class="lp-apy">7.2%</div>
+            <div class="lp-check"></div>
+          </div>
+          <div class="lp" id="lp-365" onclick="selectLock('365',10.0,'365-day lock')">
+            <div class="lp-left">
+              <div class="lp-icon">👑</div>
+              <div>
+                <div class="lp-name">365 Days</div>
+                <div class="lp-sub">Sovereign tier — max rewards</div>
+              </div>
+            </div>
+            <div class="lp-apy">10.0%</div>
+            <div class="lp-check"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AUTO-COMPOUND TOGGLE -->
+      <div class="stake-card" style="padding:16px;">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="flex:1;">
+            <div style="font-size:14px;font-weight:800;margin-bottom:3px;">🔄 Auto-Compound</div>
+            <div style="font-size:12px;color:var(--text-muted);line-height:1.5;">Rewards automatically re-stake every 24h — your principal grows, so your next reward is larger than the last.</div>
+          </div>
+          <div id="compoundToggle" onclick="toggleCompound()" style="width:48px;height:28px;border-radius:14px;background:var(--green);cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0;">
+            <div id="compoundKnob" style="position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:#fff;transition:all 0.2s;box-shadow:0 1px 4px rgba(0,0,0,0.3);"></div>
+          </div>
+        </div>
+        <div id="compoundBadge" style="margin-top:10px;padding:8px 12px;background:rgba(0,229,160,0.07);border:1px solid rgba(0,229,160,0.2);border-radius:10px;font-size:12px;color:var(--green);font-weight:600;">
+          ✓ Compounding ON — rewards reinvest automatically every 24h
+        </div>
+      </div>
+
+      <!-- PROJECTION -->
+      <div class="projection" id="projection">
+        <div class="proj-row"><span class="proj-label">Staking</span><span class="proj-val" id="projAmt">0 INDX</span></div>
+        <div class="proj-row"><span class="proj-label">APY</span><span class="proj-val" id="projApy">5.5%</span></div>
+        <div class="proj-row"><span class="proj-label">Daily rewards</span><span class="proj-val" id="projDaily">0.00 INDX</span></div>
+        <div class="proj-row"><span class="proj-label">Monthly rewards</span><span class="proj-val" id="projMonthly">0.00 INDX</span></div>
+        <div class="proj-row"><span class="proj-label">At maturity</span><span class="proj-val" id="projTotal">0.00 INDX</span></div>
+        <div class="proj-row" id="compoundRow" style="border-top:1px solid rgba(0,229,160,0.2);margin-top:4px;padding-top:8px;">
+          <span class="proj-label">With compounding</span>
+          <span class="proj-val" id="projCompound" style="color:#FFB800;">0.00 INDX ✨</span>
+        </div>
+      </div>
+
+      <!-- COMPOUND CALCULATOR -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:20px;" id="compoundCalc">
+        <div style="font-size:13px;font-weight:800;margin-bottom:12px;">📈 Compound Growth Calculator</div>
+        <div style="display:flex;gap:6px;margin-bottom:12px;" id="calcTabs">
+          <div onclick="setCalcYear(1)" style="flex:1;text-align:center;padding:7px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--cyan);color:#000;" id="cy1">1 Year</div>
+          <div onclick="setCalcYear(3)" style="flex:1;text-align:center;padding:7px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--surface2);color:var(--text-muted);" id="cy3">3 Years</div>
+          <div onclick="setCalcYear(5)" style="flex:1;text-align:center;padding:7px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--surface2);color:var(--text-muted);" id="cy5">5 Years</div>
+          <div onclick="setCalcYear(10)" style="flex:1;text-align:center;padding:7px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;background:var(--surface2);color:var(--text-muted);" id="cy10">10 Years</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px;">
+          <div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px;">Without compound</div>
+            <div style="font-size:18px;font-weight:800;color:var(--text-muted);" id="simpleTotal">0 INDX</div>
+          </div>
+          <div style="font-size:20px;color:var(--text-dim);">→</div>
+          <div style="text-align:right;">
+            <div style="font-size:11px;color:var(--gold);margin-bottom:2px;">With compounding ✨</div>
+            <div style="font-size:24px;font-weight:900;color:var(--gold);" id="compoundTotal">0 INDX</div>
+          </div>
+        </div>
+        <div style="height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;">
+          <div id="calcBar" style="height:100%;background:linear-gradient(90deg,var(--green),var(--gold));border-radius:2px;width:0%;transition:width 0.6s ease;"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:6px;text-align:center;" id="calcExtra">Compounding earns you <span style="color:var(--gold);font-weight:700;" id="calcDiff">0 INDX</span> more</div>
+      </div>
+    </div>
+
+    <!-- MY STAKES PANEL -->
+    <div id="panel-mystakes" style="display:none;" class="stakes-list">
+      <div class="stake-item">
+        <div class="si-top">
+          <div><span class="si-amount">500</span><span class="si-ticker">INDX</span></div>
+          <div class="si-status status-active">ACTIVE</div>
+        </div>
+        <div class="si-progress"><div class="si-progress-fill" style="width:42%"></div></div>
+        <div class="si-meta">
+          <span>30-day lock · 5.5% APY</span>
+          <span>13 days left</span>
+        </div>
+        <div class="si-rewards">
+          <div>
+            <div class="si-rewards-label">Earned so far</div>
+            <div class="si-rewards-val">+3.75 INDX</div>
+          </div>
+          <div style="text-align:right">
+            <div class="si-rewards-label">At maturity</div>
+            <div class="si-rewards-val">+7.53 INDX</div>
+          </div>
+        </div>
+        <!-- Compound toggle row -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 6px;border-top:1px solid var(--border);margin-top:6px;">
+          <div>
+            <div style="font-size:12px;font-weight:700;">🔄 Auto-Compound</div>
+            <div style="font-size:11px;color:var(--text-muted);" id="compLabel1">OFF — rewards wait to be claimed</div>
+          </div>
+          <div id="ct1" onclick="toggleStakeCompound('ct1','compLabel1')" style="width:44px;height:26px;border-radius:13px;background:var(--surface3);cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0;">
+            <div style="position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:all 0.2s;box-shadow:0 1px 4px rgba(0,0,0,0.3);" id="ck1"></div>
+          </div>
+        </div>
+        <div class="si-actions">
+          <div class="si-btn claim" onclick="claimRewards(3.75)">Claim 3.75 INDX</div>
+          <div class="si-btn" onclick="showToast('Unstake available in 13 days')">Unstake</div>
+        </div>
+      </div>
+      <div class="stake-item">
+        <div class="si-top">
+          <div><span class="si-amount">200</span><span class="si-ticker">INDX</span></div>
+          <div class="si-status status-locked">🔒 LOCKED</div>
+        </div>
+        <div class="si-progress"><div class="si-progress-fill" style="width:8%"></div></div>
+        <div class="si-meta">
+          <span>90-day lock · 7.2% APY</span>
+          <span>83 days left</span>
+        </div>
+        <div class="si-rewards">
+          <div>
+            <div class="si-rewards-label">Earned so far</div>
+            <div class="si-rewards-val">+0.79 INDX</div>
+          </div>
+          <div style="text-align:right">
+            <div class="si-rewards-label">At maturity</div>
+            <div class="si-rewards-val">+14.4 INDX</div>
+          </div>
+        </div>
+        <!-- Compound toggle row — ON by default for 90-day -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 6px;border-top:1px solid var(--border);margin-top:6px;">
+          <div>
+            <div style="font-size:12px;font-weight:700;">🔄 Auto-Compound</div>
+            <div style="font-size:11px;color:var(--green);font-weight:600;" id="compLabel2">ON — rewards reinvest every 24h ✓</div>
+          </div>
+          <div id="ct2" onclick="toggleStakeCompound('ct2','compLabel2')" style="width:44px;height:26px;border-radius:13px;background:var(--green);cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0;">
+            <div style="position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:all 0.2s;box-shadow:0 1px 4px rgba(0,0,0,0.3);" id="ck2"></div>
+          </div>
+        </div>
+        <div class="si-actions">
+          <div class="si-btn" onclick="showEarlyUnstake()">Early Unstake</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REWARDS PANEL -->
+    <div id="panel-rewards" style="display:none;padding:0 20px;">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px;">
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:14px;">All-Time Rewards</div>
+        <div style="font-size:36px;font-weight:900;color:var(--green);margin-bottom:4px;">+4.54 INDX</div>
+        <div style="font-size:13px;color:var(--text-muted);">≈ $2.27 earned from staking</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+        <div style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;">Reward History</div>
+        <div id="rewardHistory"></div>
+      </div>
+    </div>
+
+    <div style="height:20px;"></div>
+  </div>
+
+  <!-- BOTTOM BAR (stake panel only) -->
+  <div class="stake-bar" id="stakeBar">
+    <button class="stake-btn" id="stakeBtn" onclick="openStakeConfirm()">Stake INDX</button>
+  </div>
+</div>
+
+<!-- CONFIRM OVERLAY -->
+<div class="overlay" id="confirmOverlay">
+  <div class="confirm-card" id="confirmCard">
+    <div class="cc-icon">🔒</div>
+    <div class="cc-title">Confirm Stake</div>
+    <div class="cc-sub">Your INDX will be locked and earning Sovereign Yield immediately.</div>
+    <div class="cc-row"><div class="cc-label">Amount</div><div id="cfAmt">0 INDX</div></div>
+    <div class="cc-row"><div class="cc-label">Lock period</div><div id="cfLock">30 days</div></div>
+    <div class="cc-row"><div class="cc-label">APY</div><div id="cfApy" style="color:var(--green)">5.5%</div></div>
+    <div class="cc-row"><div class="cc-label">Estimated return</div><div id="cfReturn" style="color:var(--green)">0 INDX</div></div>
+    <button class="confirm-btn" onclick="executeStake()">Confirm Stake</button>
+    <button class="cancel-btn" onclick="document.getElementById('confirmOverlay').classList.remove('show')">Cancel</button>
+  </div>
+</div>
+
+<script>
+  let selectedLock = { key:'30', apy:5.5, label:'30-day lock' };
+  let currentTab = 'stake';
+
+  function switchTab(tab) {
+    currentTab = tab;
+    ['stake','mystakes','rewards'].forEach(t => {
+      document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+      const panel = document.getElementById('panel-' + t);
+      if (panel) panel.style.display = t === tab ? (t === 'stake' ? 'block' : (t === 'mystakes' ? 'flex' : 'block')) : 'none';
+    });
+    document.getElementById('stakeBar').style.display = tab === 'stake' ? 'block' : 'none';
+    if (tab === 'rewards') buildRewardHistory();
+  }
+  // Fix flex for mystakes
+  document.getElementById('panel-mystakes').style.flexDirection = 'column';
+
+  function selectLock(key, apy, label) {
+    selectedLock = { key, apy, label };
+    document.querySelectorAll('.lp').forEach(el => {
+      el.classList.remove('active');
+      el.querySelector('.lp-check').textContent = '';
+    });
+    const el = document.getElementById('lp-' + key);
+    el.classList.add('active');
+    el.querySelector('.lp-check').textContent = '✓';
+    updateProjection();
+  }
+
+  function setAmount(val) {
+    document.getElementById('stakeInput').value = val;
+    updateProjection();
+  }
+  function setMax() { setAmount(1240); }
+
+  function updateProjection() {
+    const amt = parseFloat(document.getElementById('stakeInput').value) || 0;
+    const apy = selectedLock.apy / 100;
+    const days = selectedLock.key === 'flex' ? 30 : parseInt(selectedLock.key);
+    const daily = (amt * apy) / 365;
+    const monthly = daily * 30;
+    const total = (amt * apy * days) / 365;
+    document.getElementById('projAmt').textContent = amt.toLocaleString() + ' INDX';
+    document.getElementById('projApy').textContent = selectedLock.apy + '%';
+    document.getElementById('projDaily').textContent = daily.toFixed(2) + ' INDX';
+    document.getElementById('projMonthly').textContent = monthly.toFixed(2) + ' INDX';
+    document.getElementById('projTotal').textContent = '+' + total.toFixed(2) + ' INDX';
+    document.getElementById('stakeUsd').textContent = '≈ $' + (amt * 0.50).toFixed(2);
+    // Compound row
+    const compoundReturn = amt * Math.pow(1 + apy / 365, days) - amt;
+    const cr = document.getElementById('projCompound');
+    if (cr) cr.textContent = compoundOn ? '+' + compoundReturn.toFixed(2) + ' INDX ✨' : '(compounding off)';
+    if (cr) cr.style.color = compoundOn ? '#FFB800' : 'var(--text-muted)';
+    // Refresh calc
+    if (typeof updateCalc === 'function') updateCalc();
+  }
+
+  function openStakeConfirm() {
+    const amt = parseFloat(document.getElementById('stakeInput').value) || 0;
+    if (amt <= 0) { showToast('Enter an amount to stake'); return; }
+    if (amt > 1240) { showToast('Insufficient INDX balance'); return; }
+    const apy = selectedLock.apy / 100;
+    const days = selectedLock.key === 'flex' ? 30 : parseInt(selectedLock.key);
+    const total = (amt * apy * days) / 365;
+    document.getElementById('cfAmt').textContent = amt.toLocaleString() + ' INDX';
+    document.getElementById('cfLock').textContent = selectedLock.label;
+    document.getElementById('cfApy').textContent = selectedLock.apy + '%';
+    document.getElementById('cfReturn').textContent = '+' + total.toFixed(2) + ' INDX';
+    document.getElementById('confirmOverlay').classList.add('show');
+  }
+
+  function executeStake() {
+    const card = document.getElementById('confirmCard');
+    const amt = document.getElementById('stakeInput').value;
+    card.innerHTML = `<div style="padding:20px 0;"><div style="font-size:42px;margin-bottom:14px;">⚡</div><div style="font-size:16px;font-weight:700;margin-bottom:6px;">Staking…</div><div style="font-size:13px;color:var(--text-muted)">Locking INDX on Solana</div></div>`;
+    setTimeout(() => {
+      card.innerHTML = `
+        <div style="padding:8px;">
+          <div style="font-size:48px;margin-bottom:14px;">✅</div>
+          <div style="font-size:20px;font-weight:800;margin-bottom:8px;">Staked!</div>
+          <div style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:22px;">${amt} INDX is now earning ${selectedLock.apy}% APY Sovereign Yield. Rewards accrue every block.</div>
+          <button onclick="document.getElementById('confirmOverlay').classList.remove('show');switchTab('mystakes')" style="width:100%;padding:14px;border-radius:12px;background:var(--cyan);border:none;color:#000;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">View My Stakes</button>
+          <button onclick="document.getElementById('confirmOverlay').classList.remove('show')" style="width:100%;padding:14px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:15px;cursor:pointer;">Stake More</button>
+        </div>`;
+    }, 2000);
+  }
+
+  function claimRewards(amount) {
+    showToast(`+${amount} INDX claimed to your wallet ✓`);
+  }
+
+  function showEarlyUnstake() {
+    showToast('Early unstake incurs a 2% penalty on locked principal');
+  }
+
+  // ── AUTO-COMPOUND TOGGLE (stake panel) ──────────────────────────────
+  let compoundOn = true; // default ON for new stakes
+
+  function toggleCompound() {
+    compoundOn = !compoundOn;
+    const t = document.getElementById('compoundToggle');
+    const k = document.getElementById('compoundKnob');
+    const b = document.getElementById('compoundBadge');
+    if (compoundOn) {
+      t.style.background = 'var(--green)';
+      k.style.left = 'auto'; k.style.right = '4px';
+      b.textContent = '✓ Compounding ON — rewards reinvest automatically every 24h';
+      b.style.color = 'var(--green)';
+      b.style.borderColor = 'rgba(0,229,160,0.2)';
+      b.style.background = 'rgba(0,229,160,0.07)';
+    } else {
+      t.style.background = 'var(--surface3)';
+      k.style.right = 'auto'; k.style.left = '4px';
+      b.textContent = '✗ Compounding OFF — rewards accumulate, claim manually';
+      b.style.color = 'var(--text-muted)';
+      b.style.borderColor = 'var(--border)';
+      b.style.background = 'var(--surface)';
+    }
+    updateProjection();
+    showToast(compoundOn ? '🔄 Auto-Compound enabled — rewards reinvest daily' : 'Compounding off — rewards will wait to be claimed');
+  }
+
+  // ── COMPOUND TOGGLE ON EXISTING STAKES ──────────────────────────────
+  function toggleStakeCompound(toggleId, labelId) {
+    const t = document.getElementById(toggleId);
+    const l = document.getElementById(labelId);
+    const isOn = t.style.background === 'var(--green)' || t.dataset.on === '1';
+    const nowOn = !isOn;
+    t.dataset.on = nowOn ? '1' : '0';
+    const k = t.querySelector('div');
+    if (nowOn) {
+      t.style.background = 'var(--green)';
+      k.style.left = 'auto'; k.style.right = '3px';
+      l.textContent = 'ON — rewards reinvest every 24h ✓';
+      l.style.color = 'var(--green)';
+    } else {
+      t.style.background = 'var(--surface3)';
+      k.style.right = 'auto'; k.style.left = '3px';
+      l.textContent = 'OFF — rewards wait to be claimed';
+      l.style.color = 'var(--text-muted)';
+    }
+    showToast(nowOn ? '🔄 Compounding ON for this stake' : 'Compounding turned off');
+  }
+
+  // Initialise ct2 as ON (90-day already has it on)
+  document.addEventListener('DOMContentLoaded', function() {
+    const ct2 = document.getElementById('ct2');
+    if (ct2) ct2.dataset.on = '1';
+  });
+
+  // ── COMPOUND CALCULATOR ──────────────────────────────────────────────
+  let calcYears = 1;
+
+  function setCalcYear(y) {
+    calcYears = y;
+    ['1','3','5','10'].forEach(n => {
+      const el = document.getElementById('cy' + n);
+      el.style.background = n == y ? 'var(--cyan)' : 'var(--surface2)';
+      el.style.color = n == y ? '#000' : 'var(--text-muted)';
+    });
+    updateCalc();
+  }
+
+  function updateCalc() {
+    const amt = parseFloat(document.getElementById('stakeInput').value) || 500;
+    const apy = selectedLock.apy / 100;
+    const n = calcYears * 365; // days
+    const simple = amt + (amt * apy * calcYears);
+    const compound = amt * Math.pow((1 + apy / 365), n);
+    const diff = compound - simple;
+    document.getElementById('simpleTotal').textContent = simple.toFixed(0) + ' INDX';
+    document.getElementById('compoundTotal').textContent = compound.toFixed(0) + ' INDX';
+    document.getElementById('calcDiff').textContent = '+' + diff.toFixed(0) + ' INDX';
+    // Bar = diff as % of simple
+    const pct = Math.min((diff / simple) * 100 * 3, 95);
+    document.getElementById('calcBar').style.width = pct + '%';
+  }
+
+  function buildRewardHistory() {
+    const items = [
+      { date:'Today', amt:'+0.14', label:'Daily reward · 500 INDX stake' },
+      { date:'Yesterday', amt:'+0.14', label:'Daily reward · 500 INDX stake' },
+      { date:'Jun 7', amt:'+0.04', label:'Daily reward · 200 INDX stake' },
+      { date:'Jun 6', amt:'+0.18', label:'Daily reward · combined stakes' },
+      { date:'Jun 5', amt:'+0.18', label:'Daily reward · combined stakes' },
+    ];
+    document.getElementById('rewardHistory').innerHTML = items.map(i => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);">
+        <div>
+          <div style="font-size:13px;font-weight:600;">${i.label}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${i.date}</div>
+        </div>
+        <div style="font-size:14px;font-weight:700;color:var(--green)">${i.amt} INDX</div>
+      </div>`).join('');
+  }
+
+  const TIPS = {
+    yield: { title: 'Sovereign Yield', body: 'Stake INDX to earn passive interest. Rates: 4% (flex) · 5.5% (30d) · 7.2% (90d) · 10% (365d). Requires Wisdom Score 100. Your staked INDX stays in a non-custodial smart contract — only you can withdraw.', link: 'help.html' },
+    ws: { title: 'Wisdom Score', body: 'Your reputation score (0–200) earned by trading, verifying, voting, and referring. WS 100 is required to unlock Sovereign Yield. You currently have WS 62 — 38 points to go.', link: 'wisdom-score.html' }
+  };
+  function showTip(key) {
+    const tip = TIPS[key]; if (!tip) return;
+    let el = document.getElementById('tipOverlay');
+    if (!el) { el = document.createElement('div'); el.id = 'tipOverlay'; el.style.cssText = 'position:fixed;inset:0;z-index:999;display:flex;align-items:flex-end;justify-content:center;padding:0 0 90px;background:rgba(0,0,0,0.55);'; el.onclick = hideTip; document.body.appendChild(el); }
+    el.innerHTML = `<div onclick="event.stopPropagation()" style="background:#1A1D25;border:1px solid #2A2D38;border-radius:18px 18px 14px 14px;padding:20px;max-width:390px;width:calc(100% - 32px);"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><div style="font-size:14px;font-weight:800;color:#00D4FF;">${tip.title}</div><div onclick="hideTip()" style="width:28px;height:28px;border-radius:50%;background:#22252F;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;color:#6B7080;">✕</div></div><div style="font-size:13px;color:#EAEAEA;line-height:1.7;margin-bottom:14px;">${tip.body}</div><a href="${tip.link}" style="display:block;text-align:center;padding:11px;background:#00D4FF;color:#090A10;font-size:13px;font-weight:800;border-radius:10px;text-decoration:none;">Learn more →</a></div>`;
+    el.style.display = 'flex';
+  }
+  function hideTip() { const el = document.getElementById('tipOverlay'); if (el) el.style.display = 'none'; }
+
+  let toastTimer;
+  function showToast(msg) {
+    let t = document.getElementById('toast');
+    if (!t) { t = document.createElement('div'); t.id = 'toast'; t.style.cssText = 'position:fixed;bottom:110px;left:50%;transform:translateX(-50%);background:#1A1D25;border:1px solid #2A2D38;color:#EAEAEA;padding:10px 20px;border-radius:12px;font-size:14px;z-index:300;pointer-events:none;transition:opacity 0.3s;white-space:nowrap;'; document.body.appendChild(t); }
+    t.textContent = msg; t.style.opacity = '1';
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.style.opacity = '0', 2400);
+  }
+
+  updateProjection();
+</script>
+</body>
+</html>

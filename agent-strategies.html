@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Agent Strategies — IN$DEX</title>
+  <style>
+    :root{--cyan:#00D4FF;--blue:#2B35D8;--purple:#8B3FE8;--black:#090A10;--green:#00E5A0;--gold:#FFB800;--red:#FF4D6D;--surface:#12141F;--surface2:#1A1D2E;--surface3:#22263A;--border:rgba(255,255,255,0.07);--text:#F0F2FF;--text-muted:rgba(240,242,255,0.45);--text-dim:rgba(240,242,255,0.2);}
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+    body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+    .phone{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+    .topbar{display:flex;align-items:center;padding:14px 16px 10px;gap:10px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--black);z-index:20;}
+    .tb-back{width:36px;height:36px;border-radius:10px;background:var(--surface2);border:none;color:var(--text);font-size:18px;cursor:pointer;}
+    .tb-title{flex:1;font-size:17px;font-weight:800;}
+    .scroll-body{flex:1;overflow-y:auto;padding-bottom:40px;}
+    .section{padding:16px;}
+    .filter-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;scrollbar-width:none;}
+    .filter-row::-webkit-scrollbar{display:none;}
+    .filter-chip{flex-shrink:0;padding:7px 14px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;color:var(--text-muted);}
+    .filter-chip.active{background:rgba(0,212,255,0.1);border-color:rgba(0,212,255,0.3);color:var(--cyan);}
+    .strategy-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:14px;cursor:pointer;transition:border-color 0.2s;}
+    .strategy-card:active{transform:scale(0.99);}
+    .strategy-card.installed{border-color:rgba(0,229,160,0.25);}
+    .sc-top{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;}
+    .sc-ico{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+    .sc-meta{flex:1;}
+    .sc-name{font-size:15px;font-weight:800;margin-bottom:3px;}
+    .sc-desc{font-size:12px;color:var(--text-muted);line-height:1.5;}
+    .sc-right{text-align:right;}
+    .sc-perf{font-size:15px;font-weight:800;}
+    .sc-period{font-size:10px;color:var(--text-muted);}
+    .sc-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+    .tag{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;}
+    .tag-risk-low{background:rgba(0,229,160,0.1);color:var(--green);}
+    .tag-risk-med{background:rgba(255,184,0,0.1);color:var(--gold);}
+    .tag-risk-high{background:rgba(255,77,109,0.1);color:var(--red);}
+    .tag-type{background:rgba(0,212,255,0.08);color:var(--cyan);}
+    .tag-ws{background:rgba(139,63,232,0.1);color:var(--purple);}
+    .sc-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px;}
+    .scs{background:var(--surface2);border-radius:8px;padding:7px 8px;}
+    .scs-lbl{font-size:9px;color:var(--text-muted);margin-bottom:1px;}
+    .scs-val{font-size:12px;font-weight:700;}
+    .btn-install{width:100%;padding:11px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;border:none;}
+    .btn-install.install{background:linear-gradient(135deg,var(--blue),var(--purple));color:#fff;}
+    .btn-install.installed{background:rgba(0,229,160,0.1);color:var(--green);}
+    .installed-badge{position:absolute;top:14px;right:14px;background:rgba(0,229,160,0.15);color:var(--green);font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;}
+    #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+  </style>
+</head>
+<body>
+<div class="phone">
+  <div class="topbar">
+    <button class="tb-back" onclick="history.back()">←</button>
+    <div class="tb-title">🤖 Agent Strategies</div>
+  </div>
+  <div class="scroll-body">
+    <div class="section">
+      <div class="filter-row">
+        <div class="filter-chip active">All</div>
+        <div class="filter-chip">DCA</div>
+        <div class="filter-chip">Yield</div>
+        <div class="filter-chip">Trading</div>
+        <div class="filter-chip">LP</div>
+        <div class="filter-chip">Low risk</div>
+      </div>
+
+      <!-- DCA BOT -->
+      <div class="strategy-card installed" style="position:relative;">
+        <div class="installed-badge">✓ INSTALLED</div>
+        <div class="sc-top">
+          <div class="sc-ico" style="background:linear-gradient(135deg,rgba(43,53,216,0.2),rgba(0,212,255,0.1));">🔄</div>
+          <div class="sc-meta">
+            <div class="sc-name">DCA Accumulator</div>
+            <div class="sc-desc">Buys INDX on a schedule regardless of price. Smooths out volatility and builds holdings over time.</div>
+          </div>
+          <div class="sc-right"><div class="sc-perf" style="color:var(--green);">+18.4%</div><div class="sc-period">6-month avg</div></div>
+        </div>
+        <div class="sc-tags">
+          <span class="tag tag-risk-low">Low risk</span>
+          <span class="tag tag-type">DCA</span>
+          <span class="tag tag-ws">WS 0+</span>
+        </div>
+        <div class="sc-stats">
+          <div class="scs"><div class="scs-lbl">Users</div><div class="scs-val">3,840</div></div>
+          <div class="scs"><div class="scs-lbl">Avg return</div><div class="scs-val" style="color:var(--green);">+18.4%</div></div>
+          <div class="scs"><div class="scs-lbl">Min capital</div><div class="scs-val">$10</div></div>
+        </div>
+        <button class="btn-install installed" onclick="showToast('DCA Accumulator — view in agent-wallet-cli')">✓ Running</button>
+      </div>
+
+      <!-- YIELD OPTIMIZER -->
+      <div class="strategy-card" style="position:relative;">
+        <div class="sc-top">
+          <div class="sc-ico" style="background:linear-gradient(135deg,rgba(0,229,160,0.15),rgba(0,212,255,0.08));">⚡</div>
+          <div class="sc-meta">
+            <div class="sc-name">Yield Optimizer</div>
+            <div class="sc-desc">Auto-compounds staking rewards and moves INDX between 30d/90d/365d locks to maximise APY based on market conditions.</div>
+          </div>
+          <div class="sc-right"><div class="sc-perf" style="color:var(--green);">+24.1%</div><div class="sc-period">6-month avg</div></div>
+        </div>
+        <div class="sc-tags">
+          <span class="tag tag-risk-low">Low risk</span>
+          <span class="tag tag-type">Yield</span>
+          <span class="tag tag-ws">WS 100+</span>
+        </div>
+        <div class="sc-stats">
+          <div class="scs"><div class="scs-lbl">Users</div><div class="scs-val">1,240</div></div>
+          <div class="scs"><div class="scs-lbl">Avg return</div><div class="scs-val" style="color:var(--green);">+24.1%</div></div>
+          <div class="scs"><div class="scs-lbl">Min capital</div><div class="scs-val">500 INDX</div></div>
+        </div>
+        <button class="btn-install install" onclick="installStrategy('Yield Optimizer')">Install strategy</button>
+      </div>
+
+      <!-- LP COMPOUNDER -->
+      <div class="strategy-card" style="position:relative;">
+        <div class="sc-top">
+          <div class="sc-ico" style="background:linear-gradient(135deg,rgba(139,63,232,0.15),rgba(43,53,216,0.1));">💧</div>
+          <div class="sc-meta">
+            <div class="sc-name">LP Fee Compounder</div>
+            <div class="sc-desc">Harvests LP fees every 24h and re-adds them to your pool position. Compounds fee earnings automatically.</div>
+          </div>
+          <div class="sc-right"><div class="sc-perf" style="color:var(--cyan);">+31.8%</div><div class="sc-period">annualised</div></div>
+        </div>
+        <div class="sc-tags">
+          <span class="tag tag-risk-med">Medium risk</span>
+          <span class="tag tag-type">LP</span>
+          <span class="tag tag-ws">WS 50+</span>
+        </div>
+        <div class="sc-stats">
+          <div class="scs"><div class="scs-lbl">Users</div><div class="scs-val">642</div></div>
+          <div class="scs"><div class="scs-lbl">APY boost</div><div class="scs-val" style="color:var(--cyan);">+4.2%</div></div>
+          <div class="scs"><div class="scs-lbl">Min LP</div><div class="scs-val">$100</div></div>
+        </div>
+        <button class="btn-install install" onclick="installStrategy('LP Fee Compounder')">Install strategy</button>
+      </div>
+
+      <!-- REBALANCER -->
+      <div class="strategy-card" style="position:relative;">
+        <div class="sc-top">
+          <div class="sc-ico" style="background:linear-gradient(135deg,rgba(255,184,0,0.12),rgba(255,77,109,0.06));">⚖️</div>
+          <div class="sc-meta">
+            <div class="sc-name">Portfolio Rebalancer</div>
+            <div class="sc-desc">Maintains your target allocation between INDX/USDC/SOL. Auto-rebalances when deviation exceeds 5%.</div>
+          </div>
+          <div class="sc-right"><div class="sc-perf" style="color:var(--gold);">+15.2%</div><div class="sc-period">6-month avg</div></div>
+        </div>
+        <div class="sc-tags">
+          <span class="tag tag-risk-med">Medium risk</span>
+          <span class="tag tag-type">Trading</span>
+          <span class="tag tag-ws">WS 75+</span>
+        </div>
+        <div class="sc-stats">
+          <div class="scs"><div class="scs-lbl">Users</div><div class="scs-val">418</div></div>
+          <div class="scs"><div class="scs-lbl">Avg return</div><div class="scs-val" style="color:var(--gold);">+15.2%</div></div>
+          <div class="scs"><div class="scs-lbl">Min capital</div><div class="scs-val">$200</div></div>
+        </div>
+        <button class="btn-install install" onclick="installStrategy('Portfolio Rebalancer')">Install strategy</button>
+      </div>
+
+      <!-- GRID TRADER -->
+      <div class="strategy-card" style="position:relative;">
+        <div class="sc-top">
+          <div class="sc-ico" style="background:linear-gradient(135deg,rgba(255,77,109,0.12),rgba(139,63,232,0.08));">📊</div>
+          <div class="sc-meta">
+            <div class="sc-name">Grid Trader</div>
+            <div class="sc-desc">Places buy/sell orders at regular price intervals. Profits from INDX volatility within a defined range.</div>
+          </div>
+          <div class="sc-right"><div class="sc-perf" style="color:var(--red);">+42.7%</div><div class="sc-period">high risk avg</div></div>
+        </div>
+        <div class="sc-tags">
+          <span class="tag tag-risk-high">High risk</span>
+          <span class="tag tag-type">Trading</span>
+          <span class="tag tag-ws">WS 100+</span>
+        </div>
+        <div class="sc-stats">
+          <div class="scs"><div class="scs-lbl">Users</div><div class="scs-val">184</div></div>
+          <div class="scs"><div class="scs-lbl">Avg return</div><div class="scs-val" style="color:var(--red);">+42.7%</div></div>
+          <div class="scs"><div class="scs-lbl">Min capital</div><div class="scs-val">$500</div></div>
+        </div>
+        <button class="btn-install install" onclick="installStrategy('Grid Trader')">Install strategy</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+function installStrategy(name){showToast(`✅ ${name} installed — configure in Agent Wallet`);}
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}
+</script>
+</body>
+</html>

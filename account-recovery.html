@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Account Recovery — IN$DEX</title>
+  <style>
+    :root {
+      --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+      --black:#090A10; --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+      --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+      --border:rgba(255,255,255,0.07);
+      --text:#F0F2FF; --text-muted:rgba(240,242,255,0.45); --text-dim:rgba(240,242,255,0.2);
+    }
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+    body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;}
+    .phone{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+
+    .topbar{display:flex;align-items:center;padding:14px 16px 10px;gap:10px;border-bottom:1px solid var(--border);}
+    .tb-back{width:36px;height:36px;border-radius:10px;background:var(--surface2);border:none;color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+    .tb-title{flex:1;font-size:17px;font-weight:800;}
+
+    /* PROGRESS */
+    .progress{display:flex;align-items:center;justify-content:center;gap:0;padding:20px 24px 4px;}
+    .prog-step{display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;}
+    .prog-circle{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;transition:all 0.3s;}
+    .prog-circle.done{background:var(--green);color:#000;}
+    .prog-circle.active{background:var(--cyan);color:#000;}
+    .prog-circle.pending{background:var(--surface3);color:var(--text-muted);}
+    .prog-label{font-size:10px;color:var(--text-muted);font-weight:600;text-align:center;}
+    .prog-label.active{color:var(--cyan);}
+    .prog-line{flex:1;height:2px;background:var(--surface3);margin-top:-18px;transition:background 0.3s;}
+    .prog-line.done{background:var(--green);}
+
+    /* SCREENS */
+    .screen{display:none;padding:24px 16px;flex:1;}
+    .screen.active{display:flex;flex-direction:column;}
+
+    .screen-icon{font-size:52px;text-align:center;margin-bottom:16px;}
+    .screen-title{font-size:22px;font-weight:900;text-align:center;margin-bottom:8px;}
+    .screen-sub{font-size:14px;color:var(--text-muted);text-align:center;line-height:1.6;margin-bottom:28px;}
+
+    /* METHOD CARDS */
+    .method-card{background:var(--surface);border:2px solid var(--border);border-radius:16px;padding:18px;margin-bottom:12px;cursor:pointer;transition:all 0.2s;}
+    .method-card:active{transform:scale(0.98);}
+    .method-card.selected{border-color:var(--cyan);background:rgba(0,212,255,0.05);}
+    .mc-top{display:flex;align-items:center;gap:14px;margin-bottom:8px;}
+    .mc-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;}
+    .mc-name{font-size:15px;font-weight:800;}
+    .mc-desc{font-size:13px;color:var(--text-muted);line-height:1.5;}
+    .mc-recommended{display:inline-block;font-size:10px;font-weight:700;background:rgba(0,229,160,0.1);color:var(--green);border:1px solid rgba(0,229,160,0.2);padding:2px 8px;border-radius:20px;margin-top:4px;}
+
+    /* INPUTS */
+    .input-label{font-size:13px;font-weight:700;margin-bottom:6px;color:var(--text-muted);}
+    .input-field{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;color:var(--text);font-size:15px;outline:none;margin-bottom:16px;}
+    .input-field:focus{border-color:var(--cyan);}
+    .input-field::placeholder{color:var(--text-dim);}
+
+    /* OTP BOXES */
+    .otp-row{display:flex;gap:8px;justify-content:center;margin-bottom:20px;}
+    .otp-box{width:46px;height:54px;background:var(--surface);border:1px solid var(--border);border-radius:12px;text-align:center;font-size:20px;font-weight:800;color:var(--text);outline:none;}
+    .otp-box:focus{border-color:var(--cyan);}
+
+    /* RECOVERY KEY INPUT */
+    .key-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:20px;}
+    .key-word{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:6px;}
+    .kw-num{font-size:11px;color:var(--text-muted);font-weight:700;min-width:16px;}
+    .kw-input{flex:1;background:transparent;border:none;color:var(--text);font-size:13px;font-weight:600;outline:none;width:100%;}
+
+    /* BIOMETRIC */
+    .bio-circle{width:100px;height:100px;border-radius:50%;background:var(--surface2);border:3px solid var(--border);margin:0 auto 20px;display:flex;align-items:center;justify-content:center;font-size:44px;cursor:pointer;transition:all 0.3s;}
+    .bio-circle.scanning{border-color:var(--cyan);box-shadow:0 0 0 8px rgba(0,212,255,0.12);animation:scanPulse 1.2s ease-in-out infinite;}
+    @keyframes scanPulse{0%,100%{box-shadow:0 0 0 8px rgba(0,212,255,0.12);}50%{box-shadow:0 0 0 16px rgba(0,212,255,0.05);}}
+
+    /* SUCCESS */
+    .success-ring{width:90px;height:90px;border-radius:50%;background:rgba(0,229,160,0.1);border:3px solid var(--green);margin:0 auto 20px;display:flex;align-items:center;justify-content:center;font-size:40px;}
+    .restored-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);}
+    .restored-item:last-child{border-bottom:none;}
+    .ri-check{width:28px;height:28px;border-radius:50%;background:rgba(0,229,160,0.1);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+    .ri-text{font-size:13px;font-weight:600;}
+
+    /* BUTTONS */
+    .btn-primary{width:100%;padding:16px;border-radius:14px;background:var(--cyan);border:none;color:#000;font-size:16px;font-weight:800;cursor:pointer;margin-top:auto;}
+    .btn-primary:disabled{opacity:0.35;cursor:not-allowed;}
+    .btn-ghost{width:100%;padding:14px;border-radius:14px;background:transparent;border:1px solid var(--border);color:var(--text-muted);font-size:14px;cursor:pointer;margin-top:10px;}
+
+    /* SECURITY NOTE */
+    .security-note{background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.15);border-radius:12px;padding:12px 14px;margin-bottom:20px;font-size:12px;color:var(--text-muted);line-height:1.6;}
+    .security-note strong{color:var(--cyan);}
+
+    /* TOAST */
+    #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+  </style>
+</head>
+<body>
+<div class="phone">
+
+  <div class="topbar">
+    <button class="tb-back" onclick="history.back()">←</button>
+    <div class="tb-title">🔑 Account Recovery</div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress" id="progressBar">
+    <div class="prog-step">
+      <div class="prog-circle active" id="pc1">1</div>
+      <div class="prog-label active" id="pl1">Verify</div>
+    </div>
+    <div class="prog-line" id="line1"></div>
+    <div class="prog-step">
+      <div class="prog-circle pending" id="pc2">2</div>
+      <div class="prog-label" id="pl2">Recover</div>
+    </div>
+    <div class="prog-line" id="line2"></div>
+    <div class="prog-step">
+      <div class="prog-circle pending" id="pc3">3</div>
+      <div class="prog-label" id="pl3">Restored</div>
+    </div>
+  </div>
+
+  <!-- SCREEN 1: VERIFY IDENTITY -->
+  <div class="screen active" id="screen1">
+    <div class="screen-icon">🛡️</div>
+    <div class="screen-title">Recover your account</div>
+    <div class="screen-sub">Your INDX and wallet are safe — they live on-chain. We just need to verify it's you before restoring access.</div>
+
+    <div class="security-note">
+      <strong>🔒 Your assets are never at risk.</strong> The IN$DEX Grid Account uses 2-of-3 keys. Even without your device, your Cloud Key + Recovery Key can restore full access.
+    </div>
+
+    <div class="input-label">Phone number on your account</div>
+    <input class="input-field" type="tel" id="recovPhone" placeholder="+61 4XX XXX XXX" oninput="checkPhone()">
+
+    <div class="input-label">Email address</div>
+    <input class="input-field" type="email" id="recovEmail" placeholder="your@email.com" oninput="checkPhone()">
+
+    <div style="margin-bottom:16px;">
+      <div class="input-label">Verify with</div>
+      <div style="display:flex;gap:8px;">
+        <div id="vMethod1" onclick="selectVerify('sms')" style="flex:1;padding:12px;background:var(--cyan);border-radius:10px;text-align:center;font-size:13px;font-weight:700;color:#000;cursor:pointer;border:2px solid var(--cyan);">📱 SMS code</div>
+        <div id="vMethod2" onclick="selectVerify('email')" style="flex:1;padding:12px;background:var(--surface);border-radius:10px;text-align:center;font-size:13px;font-weight:700;color:var(--text-muted);cursor:pointer;border:2px solid var(--border);">📧 Email code</div>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="step1Btn" onclick="goStep2()" disabled>Send verification code</button>
+  </div>
+
+  <!-- SCREEN 1b: OTP -->
+  <div class="screen" id="screen1b">
+    <div class="screen-icon">📱</div>
+    <div class="screen-title">Enter the code</div>
+    <div class="screen-sub" id="otpSub">We sent a 6-digit code to your phone. Enter it below.</div>
+
+    <div class="otp-row">
+      <input class="otp-box" maxlength="1" id="ob0" oninput="otpMove(0)" type="number">
+      <input class="otp-box" maxlength="1" id="ob1" oninput="otpMove(1)" type="number">
+      <input class="otp-box" maxlength="1" id="ob2" oninput="otpMove(2)" type="number">
+      <input class="otp-box" maxlength="1" id="ob3" oninput="otpMove(3)" type="number">
+      <input class="otp-box" maxlength="1" id="ob4" oninput="otpMove(4)" type="number">
+      <input class="otp-box" maxlength="1" id="ob5" oninput="otpMove(5)" type="number">
+    </div>
+    <div style="text-align:center;font-size:13px;color:var(--text-muted);margin-bottom:24px;">Didn't receive it? <span style="color:var(--cyan);cursor:pointer;" onclick="showToast('New code sent ✓')">Resend</span></div>
+
+    <button class="btn-primary" id="otpBtn" onclick="verifyOTP()" disabled>Verify</button>
+    <button class="btn-ghost" onclick="showScreen('screen1')">← Back</button>
+  </div>
+
+  <!-- SCREEN 2: CHOOSE RECOVERY METHOD -->
+  <div class="screen" id="screen2">
+    <div class="screen-title" style="text-align:left;margin-bottom:6px;">How do you want to recover?</div>
+    <div class="screen-sub" style="text-align:left;margin-bottom:20px;">Choose the method that matches what you still have access to.</div>
+
+    <div class="method-card selected" id="mCloud" onclick="selectMethod('cloud')">
+      <div class="mc-top">
+        <div class="mc-icon" style="background:rgba(0,212,255,0.1);">☁️</div>
+        <div>
+          <div class="mc-name">Cloud Key</div>
+          <div class="mc-recommended">Recommended</div>
+        </div>
+      </div>
+      <div class="mc-desc">Restore from your encrypted Cloud Key stored in iCloud / Google Drive. Fastest method — no words to type.</div>
+    </div>
+
+    <div class="method-card" id="mPhrase" onclick="selectMethod('phrase')">
+      <div class="mc-top">
+        <div class="mc-icon" style="background:rgba(139,63,232,0.1);">📋</div>
+        <div><div class="mc-name">12-Word Recovery Phrase</div></div>
+      </div>
+      <div class="mc-desc">Enter the 12-word recovery phrase you saved when you created your Grid Account.</div>
+    </div>
+
+    <div class="method-card" id="mBio" onclick="selectMethod('biometric')">
+      <div class="mc-top">
+        <div class="mc-icon" style="background:rgba(0,229,160,0.1);">🧬</div>
+        <div><div class="mc-name">Biometric + SIINDEX</div></div>
+      </div>
+      <div class="mc-desc">Use Face ID / fingerprint on a trusted device. SIINDEX AI will verify your identity pattern over 24h.</div>
+    </div>
+
+    <button class="btn-primary" onclick="goRecovery()" style="margin-top:auto;">Continue with selected method</button>
+  </div>
+
+  <!-- SCREEN 2b: CLOUD KEY -->
+  <div class="screen" id="screen2cloud">
+    <div class="screen-icon">☁️</div>
+    <div class="screen-title">Restore from Cloud</div>
+    <div class="screen-sub">Your encrypted Cloud Key is stored in your account's cloud backup. Tap below to fetch and decrypt it.</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+        <div style="font-size:24px;">🍎</div>
+        <div><div style="font-size:14px;font-weight:700;">iCloud Keychain</div><div style="font-size:12px;color:var(--green);">Connected ✓</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="font-size:24px;">🔵</div>
+        <div><div style="font-size:14px;font-weight:700;">Google Drive</div><div style="font-size:12px;color:var(--text-muted);">Not connected</div></div>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="doCloudRestore()">🔑 Fetch from iCloud</button>
+    <button class="btn-ghost" onclick="showScreen('screen2')">← Choose different method</button>
+  </div>
+
+  <!-- SCREEN 2c: 12-WORD PHRASE -->
+  <div class="screen" id="screen2phrase">
+    <div class="screen-title" style="margin-bottom:6px;">Enter recovery phrase</div>
+    <div class="screen-sub" style="margin-bottom:20px;">Enter your 12 words in the exact order you saved them. Never share these with anyone.</div>
+    <div class="key-grid" id="wordGrid"></div>
+    <button class="btn-primary" id="phraseBtn" onclick="verifyPhrase()" disabled>Restore account</button>
+    <button class="btn-ghost" onclick="showScreen('screen2')">← Back</button>
+  </div>
+
+  <!-- SCREEN 2d: BIOMETRIC -->
+  <div class="screen" id="screen2bio">
+    <div class="screen-icon" style="margin-bottom:8px;">🧬</div>
+    <div class="screen-title">Biometric recovery</div>
+    <div class="screen-sub" style="margin-bottom:24px;">SIINDEX AI will cross-reference your biometric signature, transaction patterns, and device history over 24 hours.</div>
+    <div class="bio-circle" id="bioCircle" onclick="startBioScan()">👁️</div>
+    <div style="text-align:center;font-size:13px;color:var(--text-muted);margin-bottom:24px;" id="bioStatus">Tap to begin Face ID scan</div>
+    <div style="background:rgba(255,184,0,0.06);border:1px solid rgba(255,184,0,0.15);border-radius:12px;padding:12px 14px;margin-bottom:20px;font-size:12px;color:var(--text-muted);">
+      ⏱️ <strong style="color:var(--gold);">24h review period.</strong> For security, biometric recovery requires SIINDEX verification. You'll receive a notification when complete.
+    </div>
+    <button class="btn-ghost" onclick="showScreen('screen2')">← Choose different method</button>
+  </div>
+
+  <!-- SCREEN 3: RESTORED -->
+  <div class="screen" id="screen3">
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+      <div class="success-ring">✅</div>
+      <div class="screen-title">Account restored!</div>
+      <div class="screen-sub">Your Grid Account is fully restored. All your assets, history and settings are exactly as you left them.</div>
+
+      <div style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:24px;">
+        <div class="restored-item"><div class="ri-check">✓</div><div class="ri-text">INDX balance — 1,240 INDX</div></div>
+        <div class="restored-item"><div class="ri-check">✓</div><div class="ri-text">Marketplace orders & history</div></div>
+        <div class="restored-item"><div class="ri-check">✓</div><div class="ri-text">Active stakes (500 INDX + 200 INDX)</div></div>
+        <div class="restored-item"><div class="ri-check">✓</div><div class="ri-text">Wisdom Score — 62 pts</div></div>
+        <div class="restored-item"><div class="ri-check">✓</div><div class="ri-text">Domain — <span style="color:var(--cyan);">AJ.IN$DEX</span></div></div>
+        <div class="restored-item"><div class="ri-check">✓</div><div class="ri-text">Governance votes & referrals</div></div>
+      </div>
+
+      <div style="background:rgba(255,77,109,0.05);border:1px solid rgba(255,77,109,0.15);border-radius:12px;padding:12px 14px;width:100%;margin-bottom:24px;font-size:12px;color:var(--text-muted);">
+        🔒 For your security, all other devices have been signed out. Set up biometrics on this device after logging in.
+      </div>
+    </div>
+    <button class="btn-primary" onclick="window.location.href='citizen-dashboard.html'">Go to my dashboard →</button>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+  let verifyMethod = 'sms';
+  let recovMethod = 'cloud';
+  let currentScreen = 'screen1';
+
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    currentScreen = id;
+  }
+
+  function selectVerify(m) {
+    verifyMethod = m;
+    const s = document.getElementById('vMethod1');
+    const e = document.getElementById('vMethod2');
+    if (m === 'sms') {
+      s.style.background = 'var(--cyan)'; s.style.borderColor = 'var(--cyan)'; s.style.color = '#000';
+      e.style.background = 'var(--surface)'; e.style.borderColor = 'var(--border)'; e.style.color = 'var(--text-muted)';
+    } else {
+      e.style.background = 'var(--cyan)'; e.style.borderColor = 'var(--cyan)'; e.style.color = '#000';
+      s.style.background = 'var(--surface)'; s.style.borderColor = 'var(--border)'; s.style.color = 'var(--text-muted)';
+    }
+  }
+
+  function checkPhone() {
+    const p = document.getElementById('recovPhone').value;
+    const e = document.getElementById('recovEmail').value;
+    document.getElementById('step1Btn').disabled = !(p.length >= 8 && e.includes('@'));
+  }
+
+  function goStep2() {
+    document.getElementById('otpSub').textContent = verifyMethod === 'sms'
+      ? 'We sent a 6-digit code to your phone. Enter it below.'
+      : 'We sent a 6-digit code to your email. Enter it below.';
+    showScreen('screen1b');
+    setTimeout(() => document.getElementById('ob0').focus(), 100);
+  }
+
+  function otpMove(i) {
+    const v = document.getElementById('ob' + i).value;
+    if (v.length >= 1 && i < 5) document.getElementById('ob' + (i+1)).focus();
+    const filled = [0,1,2,3,4,5].every(n => document.getElementById('ob'+n).value.length > 0);
+    document.getElementById('otpBtn').disabled = !filled;
+  }
+
+  function verifyOTP() {
+    // advance progress
+    setProgress(1);
+    showScreen('screen2');
+  }
+
+  function setProgress(step) {
+    // step 0=verify, 1=recover, 2=restored
+    const circles = ['pc1','pc2','pc3'];
+    const labels = ['pl1','pl2','pl3'];
+    const lines = ['line1','line2'];
+    circles.forEach((id, i) => {
+      const el = document.getElementById(id);
+      el.className = 'prog-circle ' + (i < step ? 'done' : i === step ? 'active' : 'pending');
+      if (i < step) el.textContent = '✓';
+      else el.textContent = i + 1;
+      document.getElementById(labels[i]).className = 'prog-label' + (i === step ? ' active' : '');
+    });
+    lines.forEach((id, i) => {
+      document.getElementById(id).className = 'prog-line' + (i < step ? ' done' : '');
+    });
+  }
+
+  function selectMethod(m) {
+    recovMethod = m;
+    ['cloud','phrase','biometric'].forEach(k => {
+      const el = document.getElementById('m' + k.charAt(0).toUpperCase() + k.slice(1));
+      if (el) el.classList.toggle('selected', k === m);
+    });
+  }
+
+  function goRecovery() {
+    if (recovMethod === 'cloud') showScreen('screen2cloud');
+    else if (recovMethod === 'phrase') { buildWordGrid(); showScreen('screen2phrase'); }
+    else showScreen('screen2bio');
+  }
+
+  function doCloudRestore() {
+    showToast('🔑 Fetching from iCloud…');
+    setTimeout(() => {
+      setProgress(2);
+      showScreen('screen3');
+    }, 2000);
+  }
+
+  function buildWordGrid() {
+    const grid = document.getElementById('wordGrid');
+    grid.innerHTML = Array.from({length:12}, (_,i) => `
+      <div class="key-word">
+        <span class="kw-num">${i+1}</span>
+        <input class="kw-input" type="text" placeholder="word" oninput="checkPhrase()">
+      </div>`).join('');
+  }
+
+  function checkPhrase() {
+    const inputs = document.querySelectorAll('.kw-input');
+    const filled = [...inputs].every(i => i.value.trim().length > 0);
+    document.getElementById('phraseBtn').disabled = !filled;
+  }
+
+  function verifyPhrase() {
+    showToast('Verifying phrase…');
+    setTimeout(() => { setProgress(2); showScreen('screen3'); }, 1800);
+  }
+
+  function startBioScan() {
+    const c = document.getElementById('bioCircle');
+    c.classList.add('scanning');
+    document.getElementById('bioStatus').textContent = 'Scanning… hold still';
+    setTimeout(() => {
+      c.classList.remove('scanning');
+      document.getElementById('bioStatus').textContent = '✓ Scan submitted — SIINDEX reviewing (up to 24h)';
+      showToast('Biometric submitted — you\'ll be notified when verified');
+    }, 3000);
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.style.opacity = '1';
+    setTimeout(() => t.style.opacity = '0', 2500);
+  }
+</script>
+</body>
+</html>

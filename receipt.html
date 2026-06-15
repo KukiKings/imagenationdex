@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Receipt — IN$DEX</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --cyan-dim:#0099BB; --purple:#8B3FE8; --blue:#2B35D8;
+    --bg:#090A10; --surface:#0E1019; --surface2:#141622; --surface3:#1C1F2E;
+    --border:rgba(255,255,255,0.07); --text:#F0F2FF; --text-dim:#7A82A0;
+    --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; max-width:430px; margin:0 auto; min-height:100vh; padding-bottom:48px; }
+
+  .header { display:flex; align-items:center; gap:12px; padding:56px 20px 20px; }
+  .back-btn { width:40px; height:40px; border-radius:50%; background:var(--surface2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:18px; flex-shrink:0; }
+  .header-title { font-size:20px; font-weight:700; }
+  .header-sub { font-size:13px; color:var(--text-dim); margin-top:2px; }
+
+  /* TYPE SELECTOR */
+  .type-selector { display:flex; gap:8px; padding:0 20px 16px; overflow-x:auto; scrollbar-width:none; }
+  .type-selector::-webkit-scrollbar { display:none; }
+  .type-btn { padding:7px 14px; border-radius:20px; font-size:13px; font-weight:600; background:var(--surface2); border:1px solid var(--border); color:var(--text-dim); cursor:pointer; white-space:nowrap; flex-shrink:0; transition:all 0.2s; }
+  .type-btn.active { background:rgba(0,212,255,0.1); border-color:rgba(0,212,255,0.3); color:var(--cyan); }
+
+  /* NFT BADGE */
+  .nft-badge {
+    margin:0 20px 16px;
+    background:linear-gradient(135deg,rgba(139,63,232,0.15),rgba(0,212,255,0.08));
+    border:1px solid rgba(139,63,232,0.3);
+    border-radius:14px;
+    padding:12px 16px;
+    display:flex; align-items:center; gap:12px;
+  }
+  .nft-badge .nft-icon { font-size:22px; flex-shrink:0; }
+  .nft-badge .nft-text { flex:1; }
+  .nft-badge .nft-title { font-size:13px; font-weight:700; color:var(--purple); margin-bottom:2px; }
+  .nft-badge .nft-sub { font-size:11px; color:var(--text-dim); }
+  .nft-badge .nft-btn { padding:7px 14px; border-radius:10px; border:none; background:linear-gradient(135deg,var(--blue),var(--purple)); color:white; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; flex-shrink:0; }
+  .nft-badge.minted { border-color:rgba(0,229,160,0.3); background:rgba(0,229,160,0.05); }
+  .nft-badge.minted .nft-title { color:var(--green); }
+
+  /* RECEIPT CARD */
+  .receipt-card {
+    margin:0 20px 16px;
+    background:var(--surface2);
+    border:1px solid var(--border);
+    border-radius:20px;
+    overflow:hidden;
+    position:relative;
+  }
+  .receipt-card.nft-glow { border-color:rgba(139,63,232,0.4); box-shadow:0 0 24px rgba(139,63,232,0.12); }
+
+  .receipt-top { padding:28px 24px 0; text-align:center; }
+  .receipt-icon { width:72px; height:72px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:32px; margin:0 auto 16px; transition:all 0.4s; }
+  .receipt-icon.payment { background:rgba(0,229,160,0.12); }
+  .receipt-icon.swap { background:rgba(139,63,232,0.15); }
+  .receipt-icon.deposit { background:rgba(43,53,216,0.18); }
+  .receipt-icon.market { background:rgba(0,212,255,0.1); }
+  .receipt-icon.nft { background:linear-gradient(135deg,rgba(139,63,232,0.3),rgba(0,212,255,0.2)); border:2px solid rgba(139,63,232,0.5); animation:nftGlow 2s infinite; }
+  @keyframes nftGlow { 0%,100%{box-shadow:0 0 12px rgba(139,63,232,0.3)} 50%{box-shadow:0 0 24px rgba(139,63,232,0.6)} }
+
+  .receipt-status { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:4px; }
+  .receipt-status.success { color:var(--green); }
+  .receipt-amount { font-size:40px; font-weight:900; margin-bottom:4px; }
+  .receipt-amount.green { color:var(--green); }
+  .receipt-amount.cyan { color:var(--cyan); }
+  .receipt-sub { font-size:14px; color:var(--text-dim); margin-bottom:20px; }
+
+  /* NFT TOKEN ID STRIP */
+  .nft-token-strip {
+    display:none;
+    background:linear-gradient(135deg,rgba(139,63,232,0.1),rgba(0,212,255,0.05));
+    border-top:1px solid rgba(139,63,232,0.2);
+    padding:10px 24px;
+    text-align:center;
+  }
+  .nft-token-strip.show { display:block; }
+  .nft-token-id { font-size:11px; font-family:'SF Mono',Consolas,monospace; color:var(--purple); }
+  .nft-token-label { font-size:10px; color:var(--text-dim); margin-bottom:2px; text-transform:uppercase; letter-spacing:0.06em; }
+
+  /* TEAR LINE */
+  .tear-line { display:flex; align-items:center; height:24px; background:var(--bg); }
+  .tear-line::before, .tear-line::after { content:''; width:20px; height:20px; border-radius:50%; background:var(--bg); flex-shrink:0; }
+  .tear-dots { flex:1; border-top:2px dashed var(--border); }
+
+  .receipt-bottom { padding:0 24px 24px; }
+  .receipt-row { display:flex; justify-content:space-between; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--border); font-size:14px; }
+  .receipt-row:last-child { border-bottom:none; }
+  .receipt-row .lbl { color:var(--text-dim); }
+  .receipt-row .val { font-weight:600; max-width:55%; text-align:right; word-break:break-all; }
+  .receipt-row .val.green { color:var(--green); }
+  .receipt-row .val.red { color:var(--red); }
+  .receipt-row .val.mono { font-family:'SF Mono',Consolas,monospace; font-size:12px; color:var(--cyan); }
+  .receipt-row .val.purple { color:var(--purple); }
+
+  .watermark { position:absolute; bottom:16px; right:20px; font-size:36px; font-weight:900; color:rgba(255,255,255,0.03); letter-spacing:-2px; pointer-events:none; }
+
+  /* ACTIONS */
+  .actions { display:flex; gap:10px; padding:0 20px; margin-bottom:16px; }
+  .action-btn { flex:1; padding:14px; border-radius:12px; border:none; font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s; }
+  .action-btn.primary { background:linear-gradient(135deg,var(--blue),var(--purple)); color:white; }
+  .action-btn.secondary { background:var(--surface2); border:1px solid var(--border); color:var(--text-dim); }
+  .action-btn.nft-mint { background:linear-gradient(135deg,rgba(139,63,232,0.8),rgba(43,53,216,0.8)); color:white; border:1px solid rgba(139,63,232,0.4); }
+  .action-btn.nft-view { background:rgba(139,63,232,0.1); border:1px solid rgba(139,63,232,0.3); color:var(--purple); }
+
+  /* SOLANA BADGE */
+  .solana-badge { margin:0 20px 16px; background:rgba(153,69,255,0.08); border:1px solid rgba(153,69,255,0.2); border-radius:12px; padding:12px 16px; display:flex; align-items:center; gap:10px; }
+  .solana-badge .icon { font-size:16px; flex-shrink:0; }
+  .solana-badge .text { font-size:12px; color:rgba(153,69,255,0.85); }
+  .solana-badge .link { font-size:12px; color:var(--cyan); font-family:'SF Mono',Consolas,monospace; cursor:pointer; }
+  .solana-badge .time { font-size:11px; color:rgba(153,69,255,0.7); font-weight:600; }
+
+  /* STORY PROTOCOL NOTE */
+  .story-note { margin:0 20px 20px; background:rgba(255,184,0,0.05); border:1px solid rgba(255,184,0,0.2); border-radius:12px; padding:12px 16px; display:flex; gap:10px; align-items:flex-start; }
+  .story-note .icon { font-size:16px; flex-shrink:0; margin-top:1px; }
+  .story-note .text { font-size:13px; color:rgba(255,184,0,0.85); line-height:1.5; }
+
+  /* NFT MINT OVERLAY */
+  .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); backdrop-filter:blur(12px); z-index:100; align-items:center; justify-content:center; padding:24px; }
+  .overlay.open { display:flex; }
+  .mint-card { background:var(--surface); border:1px solid rgba(139,63,232,0.3); border-radius:24px; padding:32px 24px; width:100%; max-width:380px; text-align:center; animation:popIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275); }
+  @keyframes popIn { from{transform:scale(0.8);opacity:0} to{transform:scale(1);opacity:1} }
+
+  /* MINT STATES */
+  .mint-confirm, .mint-minting, .mint-success { }
+  .mint-icon { font-size:52px; margin-bottom:16px; }
+  .mint-title { font-size:22px; font-weight:800; margin-bottom:8px; }
+  .mint-sub { font-size:14px; color:var(--text-dim); line-height:1.6; margin-bottom:20px; }
+
+  .mint-fee-row { display:flex; justify-content:space-between; padding:10px 0; font-size:14px; border-bottom:1px solid var(--border); }
+  .mint-fee-row:last-of-type { border-bottom:none; }
+  .mint-fee-row .lbl { color:var(--text-dim); }
+  .mint-fee-row .val { font-weight:600; }
+
+  .mint-cost { background:var(--surface2); border-radius:12px; padding:14px 16px; margin-bottom:20px; text-align:left; }
+  .mint-cost-label { font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:10px; }
+
+  .mint-btn { width:100%; padding:14px; border-radius:12px; border:none; background:linear-gradient(135deg,var(--purple),var(--blue)); color:white; font-size:15px; font-weight:700; cursor:pointer; margin-bottom:10px; }
+  .mint-cancel { width:100%; padding:12px; border-radius:12px; border:1px solid var(--border); background:none; color:var(--text-dim); font-size:14px; cursor:pointer; }
+
+  /* MINTING ANIMATION */
+  .mint-progress { margin:20px 0; }
+  .mint-spinner { width:56px; height:56px; border:3px solid var(--surface3); border-top-color:var(--purple); border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 16px; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .mint-steps { display:flex; flex-direction:column; gap:8px; text-align:left; margin-bottom:20px; }
+  .mint-step { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--text-dim); }
+  .mint-step .step-dot { width:8px; height:8px; border-radius:50%; background:var(--surface3); flex-shrink:0; transition:background 0.3s; }
+  .mint-step.done { color:var(--text); }
+  .mint-step.done .step-dot { background:var(--green); }
+  .mint-step.active .step-dot { background:var(--purple); animation:pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* SUCCESS NFT CARD */
+  .nft-success-card {
+    background:linear-gradient(135deg,rgba(139,63,232,0.2),rgba(0,212,255,0.1));
+    border:1px solid rgba(139,63,232,0.4);
+    border-radius:16px;
+    padding:20px;
+    margin-bottom:20px;
+  }
+  .nft-success-icon { font-size:40px; margin-bottom:8px; }
+  .nft-id { font-family:'SF Mono',Consolas,monospace; font-size:13px; color:var(--purple); margin-bottom:4px; }
+  .nft-chain { font-size:11px; color:var(--text-dim); }
+
+  .toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--surface3); border:1px solid var(--border); border-radius:20px; padding:10px 20px; font-size:13px; font-weight:500; white-space:nowrap; opacity:0; transition:all 0.3s; z-index:999; pointer-events:none; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* BOTTOM NAV */
+  .bottom-nav-spacer{height:64px;}
+  .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(16,18,26,0.96);backdrop-filter:blur(16px);border-top:1px solid #252836;display:flex;z-index:80;}
+  .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 0;cursor:pointer;opacity:0.5;transition:opacity 0.2s;}
+  .nav-item.active{opacity:1;}
+  .nav-icon{font-size:20px;}
+  .nav-label{font-size:10px;font-weight:600;color:#F0F2FF;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="back-btn" onclick="window.history.back()">←</div>
+  <div>
+    <div class="header-title">Receipt</div>
+    <div class="header-sub">Sovereign proof of transaction</div>
+  </div>
+</div>
+
+<!-- TYPE SELECTOR -->
+<div class="type-selector">
+  <div class="type-btn active" onclick="showReceipt(this,'payment')">💸 Payment</div>
+  <div class="type-btn" onclick="showReceipt(this,'swap')">🔄 Swap</div>
+  <div class="type-btn" onclick="showReceipt(this,'deposit')">⬇️ Deposit</div>
+  <div class="type-btn" onclick="showReceipt(this,'market')">🏪 Marketplace</div>
+</div>
+
+<!-- NFT MINT BADGE -->
+<div class="nft-badge" id="nftBadge">
+  <div class="nft-icon">💎</div>
+  <div class="nft-text">
+    <div class="nft-title">Mint as NFT Receipt</div>
+    <div class="nft-sub">Immutable proof on Solana · ~$0.000005</div>
+  </div>
+  <button class="nft-btn" onclick="openMintOverlay()">Mint NFT</button>
+</div>
+
+<!-- RECEIPT CARD -->
+<div class="receipt-card" id="receiptCard">
+  <div class="receipt-top">
+    <div class="receipt-icon payment" id="receiptIcon">💸</div>
+    <div class="receipt-status success" id="receiptStatus">Confirmed</div>
+    <div class="receipt-amount green" id="receiptAmount">-10 INDX</div>
+    <div class="receipt-sub" id="receiptSub">Sent to james.IN$DEX</div>
+  </div>
+  <div class="nft-token-strip" id="nftTokenStrip">
+    <div class="nft-token-label">NFT Receipt Token ID</div>
+    <div class="nft-token-id" id="nftTokenId">—</div>
+  </div>
+  <div class="tear-line">
+    <div class="tear-dots"></div>
+  </div>
+  <div class="receipt-bottom" id="receiptRows"></div>
+  <div class="watermark">IN$DEX</div>
+</div>
+
+<!-- ACTIONS -->
+<div class="actions" id="receiptActions">
+  <button class="action-btn primary" onclick="shareReceipt()">↗ Share</button>
+  <button class="action-btn secondary" onclick="copyTx()">Copy TX</button>
+  <button class="action-btn secondary" id="galleryBtn" onclick="window.location.href='nft-gallery.html'" style="display:none;">🖼️ View in Gallery</button>
+  <button class="action-btn nft-mint" id="nftActionBtn" onclick="openMintOverlay()">💎 Mint NFT</button>
+</div>
+
+<!-- SOLANA BADGE -->
+<div class="solana-badge">
+  <div class="icon">◎</div>
+  <div style="flex:1;">
+    <div class="text">Verified on Solana</div>
+    <div class="link" id="solanaTx" onclick="showToast('🔗 Solana explorer coming Wave 1')">5Kx9mNpQ3rYt8v…</div>
+  </div>
+  <div class="time">~0.4s</div>
+</div>
+
+<!-- STORY PROTOCOL NOTE (shown for marketplace receipts) -->
+<div class="story-note" id="storyNote" style="display:none;">
+  <div class="icon">📖</div>
+  <div class="text">This NFT receipt is registered with <strong>Story Protocol</strong>. Every resale of this item triggers an automatic royalty back to the original creator — forever.</div>
+</div>
+
+<!-- ===== NFT MINT OVERLAY ===== -->
+<div class="overlay" id="mintOverlay">
+  <div class="mint-card">
+
+    <!-- CONFIRM -->
+    <div id="mintConfirm">
+      <div class="mint-icon">💎</div>
+      <div class="mint-title">Mint NFT Receipt</div>
+      <div class="mint-sub">Turn this transaction into an immutable NFT on Solana. Stored in your sovereign wallet forever.</div>
+      <div class="mint-cost">
+        <div class="mint-cost-label">What you're minting</div>
+        <div class="mint-fee-row"><div class="lbl">Type</div><div class="val" id="mintType">Payment Receipt</div></div>
+        <div class="mint-fee-row"><div class="lbl">Standard</div><div class="val">Compressed NFT (cNFT)</div></div>
+        <div class="mint-fee-row"><div class="lbl">Transferable</div><div class="val">No · Soulbound</div></div>
+        <div class="mint-fee-row"><div class="lbl">Royalty</div><div class="val" id="mintRoyalty">N/A</div></div>
+        <div class="mint-fee-row"><div class="lbl">Mint cost</div><div class="val" style="color:var(--green)">~$0.000005</div></div>
+        <div class="mint-fee-row"><div class="lbl">Protocol</div><div class="val" style="color:var(--purple)">Metaplex Bubblegum</div></div>
+      </div>
+      <button class="mint-btn" onclick="startMinting()">💎 Mint to My Wallet</button>
+      <button class="mint-cancel" onclick="closeMintOverlay()">Cancel</button>
+    </div>
+
+    <!-- MINTING -->
+    <div id="mintMinting" style="display:none;">
+      <div class="mint-progress">
+        <div class="mint-spinner"></div>
+        <div class="mint-title" id="mintingTitle">Minting…</div>
+        <div class="mint-sub" id="mintingSub">Broadcasting to Solana</div>
+      </div>
+      <div class="mint-steps">
+        <div class="mint-step active" id="ms1"><div class="step-dot"></div>Compressing NFT data</div>
+        <div class="mint-step" id="ms2"><div class="step-dot"></div>Writing to Solana ledger</div>
+        <div class="mint-step" id="ms3"><div class="step-dot"></div>Registering with Story Protocol</div>
+        <div class="mint-step" id="ms4"><div class="step-dot"></div>Depositing to your wallet</div>
+      </div>
+    </div>
+
+    <!-- SUCCESS -->
+    <div id="mintSuccess" style="display:none;">
+      <div class="mint-icon">🎉</div>
+      <div class="mint-title" style="color:var(--green)">NFT Minted!</div>
+      <div class="nft-success-card">
+        <div class="nft-success-icon">💎</div>
+        <div class="nft-id" id="successNftId">IN$DEX Receipt #—</div>
+        <div class="nft-chain">Solana · Compressed NFT · Soulbound</div>
+      </div>
+      <div class="mint-sub">This receipt now lives in your sovereign wallet as permanent, immutable proof. No one can alter or delete it.</div>
+      <button class="mint-btn" onclick="completeMint()">✓ Done</button>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let currentType = 'payment';
+  let isMinted = false;
+
+  const receipts = {
+    payment: {
+      icon:'💸', iconClass:'payment', status:'Confirmed', amountClass:'green',
+      amount:'-10 INDX', sub:'Sent to james.IN$DEX',
+      mintType:'Payment Receipt', royalty:'N/A',
+      rows:[
+        ['From','mariasantos.IN$DEX'],['To','james.IN$DEX'],['Note','Coffee ☕'],
+        ['Amount','10 INDX'],['Civil Fee (2%)','0.20 INDX'],['Recipient got','9.80 INDX'],
+        ['Time','1 Jun 2026, 2:04 PM'],['Network','Solana'],['TX Hash','5Kx9mNpQ3rYt8v…'],
+      ], story: false
+    },
+    swap: {
+      icon:'🔄', iconClass:'swap', status:'Confirmed', amountClass:'cyan',
+      amount:'+42.3 INDX', sub:'0.5 SOL → INDX via SovSwap',
+      mintType:'Swap Receipt', royalty:'N/A',
+      rows:[
+        ['Swapped','0.5 SOL'],['Received','42.3 INDX'],['Rate','1 SOL = 84.6 INDX'],
+        ['Slippage','0.5%'],['Sovereign Fee (2%)','0.86 INDX'],
+        ['Time','1 Jun 2026, 1:38 PM'],['Network','Solana'],['TX Hash','7Gv2xBnR5tWm1q…'],
+      ], story: false
+    },
+    deposit: {
+      icon:'⬇️', iconClass:'deposit', status:'Complete', amountClass:'green',
+      amount:'+200 INDX', sub:'A$100 via Commonwealth Bank',
+      mintType:'Deposit Receipt', royalty:'N/A',
+      rows:[
+        ['Method','Bank Transfer'],['AUD Amount','A$100.00'],['Rate','A$0.50 / INDX'],
+        ['INDX Credited','200 INDX'],['Reference','INSDEX-4821-JUN'],
+        ['Settled','1 Jun 2026, 11:22 AM'],['TX Hash','3Px8yQmN6uKz2s…'],
+      ], story: false
+    },
+    market: {
+      icon:'🏪', iconClass:'market', status:'Purchased', amountClass:'green',
+      amount:'-25 INDX', sub:'Logo Design Service · sarah.IN$DEX',
+      mintType:'Marketplace Purchase Receipt', royalty:'10% to original creator',
+      rows:[
+        ['Item','Logo Design Service'],['Seller','sarah.IN$DEX'],['Price','25 INDX'],
+        ['Civil Fee (2%)','0.50 INDX'],['Seller received','24.5 INDX'],
+        ['Recursive Royalty','10% · Story Protocol'],
+        ['Time','31 May 2026, 6:14 PM'],['TX Hash','9Lk4cFwP2sRj7n…'],
+      ], story: true
+    }
+  };
+
+  function showReceipt(el, type) {
+    document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    currentType = type;
+    isMinted = false;
+
+    const r = receipts[type];
+    document.getElementById('receiptIcon').textContent = {payment:'💸',swap:'🔄',deposit:'⬇️',market:'🏪'}[type];
+    document.getElementById('receiptIcon').className = 'receipt-icon ' + r.iconClass;
+    document.getElementById('receiptStatus').textContent = r.status;
+    document.getElementById('receiptAmount').textContent = r.amount;
+    document.getElementById('receiptAmount').className = 'receipt-amount ' + r.amountClass;
+    document.getElementById('receiptSub').textContent = r.sub;
+
+    const rowsEl = document.getElementById('receiptRows');
+    rowsEl.innerHTML = r.rows.map(([lbl,val]) => {
+      const isMono = lbl === 'TX Hash';
+      const isGreen = lbl.includes('received') || lbl.includes('Credited');
+      const isRed = lbl === 'Civil Fee (2%)';
+      const isPurple = lbl === 'Recursive Royalty';
+      const cls = isMono ? 'mono' : isGreen ? 'green' : isRed ? 'red' : isPurple ? 'purple' : '';
+      return `<div class="receipt-row"><div class="lbl">${lbl}</div><div class="val ${cls}">${val}</div></div>`;
+    }).join('');
+
+    const txRow = r.rows.find(row => row[0] === 'TX Hash');
+    if (txRow) document.getElementById('solanaTx').textContent = txRow[1];
+
+    document.getElementById('storyNote').style.display = r.story ? 'flex' : 'none';
+    document.getElementById('mintType').textContent = r.mintType;
+    document.getElementById('mintRoyalty').textContent = r.royalty;
+
+    // Reset NFT badge
+    resetNftBadge();
+    document.getElementById('receiptCard').classList.remove('nft-glow');
+    document.getElementById('nftTokenStrip').classList.remove('show');
+    document.getElementById('receiptIcon').className = 'receipt-icon ' + r.iconClass;
+  }
+
+  function resetNftBadge() {
+    const badge = document.getElementById('nftBadge');
+    badge.className = 'nft-badge';
+    badge.innerHTML = `<div class="nft-icon">💎</div>
+      <div class="nft-text">
+        <div class="nft-title">Mint as NFT Receipt</div>
+        <div class="nft-sub">Immutable proof on Solana · ~$0.000005</div>
+      </div>
+      <button class="nft-btn" onclick="openMintOverlay()">Mint NFT</button>`;
+    document.getElementById('nftActionBtn').className = 'action-btn nft-mint';
+    document.getElementById('nftActionBtn').innerHTML = '💎 Mint NFT';
+    document.getElementById('nftActionBtn').onclick = openMintOverlay;
+  }
+
+  function openMintOverlay() {
+    document.getElementById('mintConfirm').style.display = 'block';
+    document.getElementById('mintMinting').style.display = 'none';
+    document.getElementById('mintSuccess').style.display = 'none';
+    ['ms1','ms2','ms3','ms4'].forEach(id => {
+      const el = document.getElementById(id);
+      el.classList.remove('done','active');
+    });
+    document.getElementById('mintOverlay').classList.add('open');
+  }
+
+  function closeMintOverlay() {
+    document.getElementById('mintOverlay').classList.remove('open');
+  }
+
+  function startMinting() {
+    document.getElementById('mintConfirm').style.display = 'none';
+    document.getElementById('mintMinting').style.display = 'block';
+
+    const steps = [
+      { id:'ms1', title:'Minting…', sub:'Compressing NFT metadata' },
+      { id:'ms2', title:'Writing…', sub:'Confirming on Solana ledger' },
+      { id:'ms3', title:'Registering…', sub:'Story Protocol royalty hook' },
+      { id:'ms4', title:'Delivering…', sub:'Depositing to mariasantos.IN$DEX' },
+    ];
+
+    let i = 0;
+    const run = () => {
+      if (i > 0) {
+        document.getElementById(steps[i-1].id).classList.remove('active');
+        document.getElementById(steps[i-1].id).classList.add('done');
+        document.getElementById(steps[i-1].id).querySelector('.step-dot').style.background = 'var(--green)';
+      }
+      if (i < steps.length) {
+        const s = steps[i];
+        document.getElementById(s.id).classList.add('active');
+        document.getElementById('mintingTitle').textContent = s.title;
+        document.getElementById('mintingSub').textContent = s.sub;
+        i++;
+        setTimeout(run, 900);
+      } else {
+        document.getElementById(steps[steps.length-1].id).classList.remove('active');
+        document.getElementById(steps[steps.length-1].id).classList.add('done');
+        setTimeout(showMintSuccess, 400);
+      }
+    };
+    setTimeout(run, 300);
+  }
+
+  function showMintSuccess() {
+    document.getElementById('mintMinting').style.display = 'none';
+    document.getElementById('mintSuccess').style.display = 'block';
+    const nftId = 'IN$DEX-REC-' + Math.random().toString(36).substr(2,8).toUpperCase();
+    document.getElementById('successNftId').textContent = nftId;
+    window._mintedNftId = nftId;
+  }
+
+  function completeMint() {
+    closeMintOverlay();
+    isMinted = true;
+    const gb = document.getElementById('galleryBtn'); if (gb) gb.style.display = '';
+
+    // Update receipt card
+    document.getElementById('receiptCard').classList.add('nft-glow');
+    document.getElementById('receiptIcon').className = 'receipt-icon nft';
+
+    // Show token strip
+    document.getElementById('nftTokenId').textContent = window._mintedNftId;
+    document.getElementById('nftTokenStrip').classList.add('show');
+
+    // Update badge
+    const badge = document.getElementById('nftBadge');
+    badge.className = 'nft-badge minted';
+    badge.innerHTML = `<div class="nft-icon">✅</div>
+      <div class="nft-text">
+        <div class="nft-title">NFT Receipt Minted</div>
+        <div class="nft-sub">${window._mintedNftId} · Soulbound · Solana</div>
+      </div>
+      <button class="nft-btn" style="background:rgba(0,229,160,0.15);color:var(--green);border:1px solid rgba(0,229,160,0.3);" onclick="showToast('🔗 View on Solana Explorer coming Wave 1')">View NFT</button>`;
+
+    document.getElementById('nftActionBtn').className = 'action-btn nft-view';
+    document.getElementById('nftActionBtn').innerHTML = '✅ NFT Minted';
+    document.getElementById('nftActionBtn').onclick = () => showToast('🔗 Your NFT receipt is in your wallet');
+
+    showToast('🎉 NFT Receipt minted to your wallet!');
+  }
+
+  function shareReceipt() {
+    const msg = isMinted
+      ? `Sovereign receipt + NFT: ${window._mintedNftId} · Verified on Solana`
+      : 'Transaction verified on Solana — IN$DEX Sovereign Commerce';
+    if (navigator.share) {
+      navigator.share({ title:'IN$DEX Receipt', text: msg, url:'https://app.insdex.com/receipt/5Kx9' });
+    } else {
+      showToast('🔗 Receipt link copied');
+    }
+  }
+
+  function copyTx() {
+    const tx = document.getElementById('solanaTx').textContent;
+    showToast('📋 TX copied: ' + tx);
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  document.getElementById('mintOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeMintOverlay();
+  });
+
+  // Init
+  showReceipt(document.querySelector('.type-btn.active'), 'payment');
+</script>
+
+<div class="bottom-nav-spacer"></div>
+<nav class="bottom-nav">
+  <div class="nav-item" onclick="window.location.href='citizen-dashboard.html'">
+    <div class="nav-icon">🏛️</div>
+    <div class="nav-label">Home</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='marketplace.html'">
+    <div class="nav-icon">🛒</div>
+    <div class="nav-label">Market</div>
+  </div>
+  <div class="nav-item active" onclick="window.location.href='portfolio.html'">
+    <div class="nav-icon">📊</div>
+    <div class="nav-label">Portfolio</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='feed.html'">
+    <div class="nav-icon">🌏</div>
+    <div class="nav-label">Feed</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='profile.html'">
+    <div class="nav-icon">👤</div>
+    <div class="nav-label">Profile</div>
+  </div>
+</nav>
+</body>
+</html>

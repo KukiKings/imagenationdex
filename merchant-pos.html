@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Merchant POS — IN$DEX</title>
+  <style>
+    :root {
+      --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+      --black:#090A10; --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+      --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+      --border:rgba(255,255,255,0.07);
+      --text:#F0F2FF; --text-muted:rgba(240,242,255,0.45); --text-dim:rgba(240,242,255,0.2);
+    }
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+    body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+    .phone{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+
+    .topbar{display:flex;align-items:center;padding:14px 16px 10px;gap:10px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--black);z-index:20;}
+    .tb-back{width:36px;height:36px;border-radius:10px;background:var(--surface2);border:none;color:var(--text);font-size:18px;cursor:pointer;}
+    .tb-title{flex:1;font-size:17px;font-weight:800;}
+    .tb-history{padding:6px 12px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;}
+
+    .scroll-body{flex:1;overflow-y:auto;padding-bottom:20px;}
+
+    /* SESSION STATS */
+    .session-bar{display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid var(--border);}
+    .sb-item{padding:12px;text-align:center;border-right:1px solid var(--border);}
+    .sb-item:last-child{border-right:none;}
+    .sb-lbl{font-size:10px;color:var(--text-muted);margin-bottom:3px;font-weight:600;}
+    .sb-val{font-size:16px;font-weight:900;}
+
+    /* SCREENS */
+    .screen{display:none;padding:20px 16px;}
+    .screen.active{display:block;}
+
+    /* KEYPAD SCREEN */
+    .amount-display{text-align:center;padding:16px 0 8px;}
+    .ad-amount{font-size:52px;font-weight:900;letter-spacing:-0.02em;min-height:70px;line-height:1;}
+    .ad-sub{font-size:14px;color:var(--text-muted);margin-top:4px;}
+    .ad-indx{font-size:16px;font-weight:700;color:var(--cyan);margin-top:6px;}
+
+    .desc-field{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;color:var(--text);font-size:14px;outline:none;margin-bottom:16px;}
+    .desc-field::placeholder{color:var(--text-dim);}
+    .desc-field:focus{border-color:var(--cyan);}
+
+    /* KEYPAD */
+    .keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+    .kp-btn{height:64px;background:var(--surface);border:1px solid var(--border);border-radius:14px;font-size:22px;font-weight:700;cursor:pointer;color:var(--text);transition:all 0.1s;display:flex;align-items:center;justify-content:center;}
+    .kp-btn:active{background:var(--surface3);transform:scale(0.95);}
+    .kp-btn.delete{font-size:18px;background:var(--surface2);}
+    .kp-btn.zero{grid-column:span 2;}
+
+    .btn-charge{width:100%;height:64px;border-radius:16px;background:var(--green);border:none;color:#000;font-size:18px;font-weight:900;cursor:pointer;transition:all 0.15s;}
+    .btn-charge:disabled{opacity:0.3;cursor:not-allowed;}
+    .btn-charge:active{transform:scale(0.98);}
+
+    /* QR SCREEN */
+    .qr-header{text-align:center;margin-bottom:20px;}
+    .qr-amount{font-size:36px;font-weight:900;margin-bottom:4px;}
+    .qr-indx{font-size:14px;color:var(--cyan);}
+    .qr-desc{font-size:13px;color:var(--text-muted);margin-top:4px;}
+
+    .qr-box{width:220px;height:220px;margin:0 auto 20px;background:#fff;border-radius:16px;padding:16px;display:flex;align-items:center;justify-content:center;position:relative;}
+    .qr-inner{width:100%;height:100%;background:var(--black);border-radius:6px;display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);gap:2px;padding:8px;}
+    .qr-cell{border-radius:1px;}
+
+    .qr-timer{text-align:center;font-size:13px;color:var(--text-muted);margin-bottom:20px;}
+    .qr-timer span{color:var(--gold);font-weight:700;}
+
+    .waiting-dots{display:flex;justify-content:center;gap:8px;margin-bottom:20px;}
+    .wd{width:10px;height:10px;border-radius:50%;background:var(--surface3);animation:wdPulse 1.4s ease-in-out infinite;}
+    .wd:nth-child(2){animation-delay:0.2s;}
+    .wd:nth-child(3){animation-delay:0.4s;}
+    @keyframes wdPulse{0%,80%,100%{background:var(--surface3);}40%{background:var(--cyan);}}
+
+    .share-row{display:flex;gap:8px;margin-bottom:12px;}
+    .share-btn{flex:1;padding:12px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:700;cursor:pointer;text-align:center;}
+    .cancel-btn{width:100%;padding:14px;border-radius:14px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:14px;cursor:pointer;}
+
+    /* SUCCESS SCREEN */
+    .success-anim{text-align:center;padding:20px 0;}
+    .sa-ring{width:100px;height:100px;border-radius:50%;background:rgba(0,229,160,0.1);border:3px solid var(--green);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:46px;animation:successPop 0.4s ease;}
+    @keyframes successPop{from{transform:scale(0.7);opacity:0;}to{transform:scale(1);opacity:1;}}
+    .sa-amount{font-size:34px;font-weight:900;color:var(--green);margin-bottom:6px;}
+    .sa-from{font-size:14px;color:var(--text-muted);}
+
+    .txn-detail{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin:20px 0;}
+    .td-row{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+    .td-row:last-child{border-bottom:none;}
+    .td-lbl{color:var(--text-muted);}
+    .td-val{font-weight:700;}
+
+    .btn-new{width:100%;padding:16px;border-radius:14px;background:var(--cyan);border:none;color:#000;font-size:16px;font-weight:900;cursor:pointer;margin-bottom:10px;}
+    .btn-receipt{width:100%;padding:14px;border-radius:14px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:14px;cursor:pointer;}
+
+    /* HISTORY TAB */
+    .hist-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);}
+    .hist-item:last-child{border-bottom:none;}
+    .hi-icon{width:40px;height:40px;border-radius:12px;background:rgba(0,229,160,0.1);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+    .hi-info{flex:1;}
+    .hi-desc{font-size:13px;font-weight:700;}
+    .hi-time{font-size:11px;color:var(--text-muted);margin-top:1px;}
+    .hi-amt{font-size:16px;font-weight:900;color:var(--green);}
+
+    /* DAILY SUMMARY */
+    .daily-summary{background:linear-gradient(135deg,rgba(0,212,255,0.08),rgba(43,53,216,0.08));border:1px solid rgba(0,212,255,0.15);border-radius:14px;padding:16px;margin-bottom:16px;}
+    .ds-title{font-size:13px;font-weight:800;color:var(--cyan);margin-bottom:10px;}
+    .ds-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .ds-item{background:rgba(0,0,0,0.2);border-radius:10px;padding:10px;}
+    .ds-lbl{font-size:11px;color:var(--text-muted);margin-bottom:3px;}
+    .ds-val{font-size:16px;font-weight:800;}
+
+    #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+  </style>
+</head>
+<body>
+<div class="phone">
+  <div class="topbar">
+    <button class="tb-back" onclick="history.back()">←</button>
+    <div class="tb-title">🏪 Merchant POS</div>
+    <div class="tb-history" onclick="showHistory()">📋 Today</div>
+  </div>
+
+  <!-- SESSION STATS -->
+  <div class="session-bar">
+    <div class="sb-item">
+      <div class="sb-lbl">Session sales</div>
+      <div class="sb-val" id="sessionTotal" style="color:var(--green);">$0</div>
+    </div>
+    <div class="sb-item">
+      <div class="sb-lbl">Transactions</div>
+      <div class="sb-val" id="sessionCount">0</div>
+    </div>
+    <div class="sb-item">
+      <div class="sb-lbl">INDX received</div>
+      <div class="sb-val" id="sessionIndx" style="color:var(--cyan);">0</div>
+    </div>
+  </div>
+
+  <div class="scroll-body">
+
+    <!-- KEYPAD SCREEN -->
+    <div class="screen active" id="screenKeypad">
+      <div class="amount-display">
+        <div class="ad-amount" id="displayAmt">$0</div>
+        <div class="ad-sub">Enter sale amount</div>
+        <div class="ad-indx" id="displayIndx">≈ 0 INDX</div>
+      </div>
+
+      <input class="desc-field" type="text" id="descField" placeholder="💬 Item description (optional)">
+
+      <div class="keypad">
+        <div class="kp-btn" onclick="kp('1')">1</div>
+        <div class="kp-btn" onclick="kp('2')">2</div>
+        <div class="kp-btn" onclick="kp('3')">3</div>
+        <div class="kp-btn" onclick="kp('4')">4</div>
+        <div class="kp-btn" onclick="kp('5')">5</div>
+        <div class="kp-btn" onclick="kp('6')">6</div>
+        <div class="kp-btn" onclick="kp('7')">7</div>
+        <div class="kp-btn" onclick="kp('8')">8</div>
+        <div class="kp-btn" onclick="kp('9')">9</div>
+        <div class="kp-btn" onclick="kp('.')">.</div>
+        <div class="kp-btn zero" onclick="kp('0')">0</div>
+        <div class="kp-btn delete" onclick="kpDel()">⌫</div>
+      </div>
+
+      <button class="btn-charge" id="chargeBtn" onclick="generateQR()" disabled>Charge Customer →</button>
+    </div>
+
+    <!-- QR SCREEN -->
+    <div class="screen" id="screenQR">
+      <div class="qr-header">
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px;">Customer pays</div>
+        <div class="qr-amount" id="qrAmount">$0</div>
+        <div class="qr-indx" id="qrIndx">0 INDX</div>
+        <div class="qr-desc" id="qrDesc"></div>
+      </div>
+
+      <div class="qr-box">
+        <div class="qr-inner" id="qrCanvas"></div>
+      </div>
+
+      <div class="qr-timer">Expires in <span id="qrCountdown">5:00</span></div>
+
+      <div class="waiting-dots"><div class="wd"></div><div class="wd"></div><div class="wd"></div></div>
+      <div style="text-align:center;font-size:13px;color:var(--text-muted);margin-bottom:16px;">Waiting for payment…</div>
+
+      <div class="share-row">
+        <div class="share-btn" onclick="shareLink()">🔗 Share link</div>
+        <div class="share-btn" onclick="showToast('NFC payment link sent to device')">📲 NFC tap</div>
+        <div class="share-btn" onclick="simulatePay()">✅ Simulate</div>
+      </div>
+      <button class="cancel-btn" onclick="showScreen('screenKeypad')">Cancel — start over</button>
+    </div>
+
+    <!-- SUCCESS SCREEN -->
+    <div class="screen" id="screenSuccess">
+      <div class="success-anim">
+        <div class="sa-ring">✅</div>
+        <div class="sa-amount" id="paidAmount">$0 received</div>
+        <div class="sa-from" id="paidFrom">Payment confirmed on Solana</div>
+      </div>
+
+      <div class="txn-detail">
+        <div class="td-row"><div class="td-lbl">Amount</div><div class="td-val" id="tdAmt">—</div></div>
+        <div class="td-row"><div class="td-lbl">INDX received</div><div class="td-val" id="tdIndx" style="color:var(--cyan);">—</div></div>
+        <div class="td-row"><div class="td-lbl">Description</div><div class="td-val" id="tdDesc">—</div></div>
+        <div class="td-row"><div class="td-lbl">Paid by</div><div class="td-val" id="tdFrom" style="color:var(--purple);">—</div></div>
+        <div class="td-row"><div class="td-lbl">Time</div><div class="td-val" id="tdTime">—</div></div>
+        <div class="td-row"><div class="td-lbl">98/2 to Civ. Fund</div><div class="td-val" id="tdFee" style="color:var(--gold);">—</div></div>
+        <div class="td-row"><div class="td-lbl">You received net</div><div class="td-val" id="tdNet" style="color:var(--green);">—</div></div>
+        <div class="td-row"><div class="td-lbl">Solana tx</div><div class="td-val" style="color:var(--cyan);font-size:11px;">Confirmed ✓</div></div>
+      </div>
+
+      <button class="btn-new" onclick="newSale()">⚡ New sale</button>
+      <button class="btn-receipt" onclick="showToast('Receipt sent to customer ✓')">📧 Send receipt to customer</button>
+    </div>
+
+    <!-- HISTORY SCREEN -->
+    <div class="screen" id="screenHistory">
+      <div class="daily-summary">
+        <div class="ds-title">📊 Today's summary</div>
+        <div class="ds-grid">
+          <div class="ds-item"><div class="ds-lbl">Total sales</div><div class="ds-val" id="hTotalSales" style="color:var(--green);">$0</div></div>
+          <div class="ds-item"><div class="ds-lbl">Transactions</div><div class="ds-val" id="hTxnCount">0</div></div>
+          <div class="ds-item"><div class="ds-lbl">INDX earned</div><div class="ds-val" id="hIndxEarned" style="color:var(--cyan);">0</div></div>
+          <div class="ds-item"><div class="ds-lbl">To Civ. Fund</div><div class="ds-val" id="hFund" style="color:var(--gold);">0</div></div>
+        </div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;" id="histList">
+        <div style="padding:14px 16px;text-align:center;color:var(--text-muted);font-size:13px;">No sales yet today</div>
+      </div>
+
+      <button style="width:100%;margin-top:16px;padding:14px;border-radius:14px;background:transparent;border:1px solid var(--border);color:var(--text-muted);font-size:14px;cursor:pointer;" onclick="showScreen('screenKeypad')">← Back to POS</button>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  let rawAmt = ''; // cents string
+  let qrTimer = null;
+  let sessionTotal = 0;
+  let sessionCount = 0;
+  let sessionIndx = 0;
+  const RATE = 0.35;
+  const transactions = [];
+
+  // ── KEYPAD ──────────────────────────────────────────────────────
+  function kp(key) {
+    if (key === '.' && rawAmt.includes('.')) return;
+    if (rawAmt.length >= 8) return;
+    rawAmt += key;
+    updateDisplay();
+  }
+
+  function kpDel() {
+    rawAmt = rawAmt.slice(0, -1);
+    updateDisplay();
+  }
+
+  function updateDisplay() {
+    const num = parseFloat(rawAmt) || 0;
+    document.getElementById('displayAmt').textContent = 'A$' + (num || 0).toFixed(rawAmt.includes('.') ? Math.min(rawAmt.split('.')[1]?.length || 0, 2) : 0);
+    document.getElementById('displayIndx').textContent = '≈ ' + (num / RATE).toFixed(1) + ' INDX';
+    document.getElementById('chargeBtn').disabled = num <= 0;
+    document.getElementById('chargeBtn').textContent = num > 0 ? `Charge A$${num.toFixed(2)} →` : 'Charge Customer →';
+  }
+
+  // ── GENERATE QR ─────────────────────────────────────────────────
+  function generateQR() {
+    const amt = parseFloat(rawAmt) || 0;
+    const indxAmt = (amt / RATE).toFixed(2);
+    const desc = document.getElementById('descField').value || 'IN$DEX Sale';
+    document.getElementById('qrAmount').textContent = 'A$' + amt.toFixed(2);
+    document.getElementById('qrIndx').textContent = indxAmt + ' INDX';
+    document.getElementById('qrDesc').textContent = desc;
+    buildQRPattern();
+    startQRTimer();
+    showScreen('screenQR');
+  }
+
+  function buildQRPattern() {
+    const cells = 81;
+    const html = Array.from({ length: cells }, (_, i) => {
+      const row = Math.floor(i / 9), col = i % 9;
+      // corner squares
+      const isCorner = (row < 3 && col < 3) || (row < 3 && col > 5) || (row > 5 && col < 3);
+      const bg = isCorner ? 'var(--text)' : (Math.random() > 0.45 ? 'var(--text)' : 'transparent');
+      return `<div style="background:${bg};border-radius:1px;"></div>`;
+    }).join('');
+    document.getElementById('qrCanvas').innerHTML = html;
+  }
+
+  function startQRTimer() {
+    let secs = 300;
+    clearInterval(qrTimer);
+    qrTimer = setInterval(() => {
+      secs--;
+      const m = String(Math.floor(secs / 60)).padStart(2, '0');
+      const s = String(secs % 60).padStart(2, '0');
+      document.getElementById('qrCountdown').textContent = m + ':' + s;
+      if (secs <= 0) { clearInterval(qrTimer); showToast('QR expired — regenerate'); }
+    }, 1000);
+  }
+
+  function simulatePay() {
+    clearInterval(qrTimer);
+    const amt = parseFloat(rawAmt) || 0;
+    const indxAmt = (amt / RATE);
+    const fee = indxAmt * 0.02;
+    const net = indxAmt - fee;
+    const desc = document.getElementById('descField').value || 'IN$DEX Sale';
+    const payers = ['mark.IN$DEX', 'sarah.IN$DEX', 'james.IN$DEX', 'lisa.IN$DEX'];
+    const payer = payers[Math.floor(Math.random() * payers.length)];
+
+    document.getElementById('paidAmount').textContent = 'A$' + amt.toFixed(2) + ' received';
+    document.getElementById('paidFrom').textContent = 'Paid by ' + payer;
+    document.getElementById('tdAmt').textContent = 'A$' + amt.toFixed(2);
+    document.getElementById('tdIndx').textContent = indxAmt.toFixed(2) + ' INDX';
+    document.getElementById('tdDesc').textContent = desc;
+    document.getElementById('tdFrom').textContent = payer;
+    document.getElementById('tdTime').textContent = new Date().toLocaleTimeString();
+    document.getElementById('tdFee').textContent = fee.toFixed(2) + ' INDX (2%)';
+    document.getElementById('tdNet').textContent = net.toFixed(2) + ' INDX';
+
+    // update session
+    sessionTotal += amt; sessionCount++; sessionIndx += net;
+    document.getElementById('sessionTotal').textContent = 'A$' + sessionTotal.toFixed(2);
+    document.getElementById('sessionCount').textContent = sessionCount;
+    document.getElementById('sessionIndx').textContent = sessionIndx.toFixed(1);
+
+    transactions.push({ amt, indxAmt: net.toFixed(2), desc, payer, time: new Date().toLocaleTimeString() });
+    updateHistoryStats();
+    showScreen('screenSuccess');
+  }
+
+  function shareLink() {
+    navigator.clipboard?.writeText('https://pay.IN$DEX/' + Math.random().toString(36).slice(2,8).toUpperCase())
+      .then(() => showToast('Payment link copied ✓'))
+      .catch(() => showToast('Payment link: pay.IN$DEX/X8K2P1'));
+  }
+
+  function newSale() {
+    rawAmt = '';
+    document.getElementById('descField').value = '';
+    updateDisplay();
+    showScreen('screenKeypad');
+  }
+
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  function showHistory() {
+    updateHistoryStats();
+    buildHistoryList();
+    showScreen('screenHistory');
+  }
+
+  function updateHistoryStats() {
+    const total = transactions.reduce((s, t) => s + t.amt, 0);
+    const indx = transactions.reduce((s, t) => s + parseFloat(t.indxAmt), 0);
+    document.getElementById('hTotalSales').textContent = 'A$' + total.toFixed(2);
+    document.getElementById('hTxnCount').textContent = transactions.length;
+    document.getElementById('hIndxEarned').textContent = indx.toFixed(1);
+    document.getElementById('hFund').textContent = (total / RATE * 0.02).toFixed(1);
+  }
+
+  function buildHistoryList() {
+    if (!transactions.length) {
+      document.getElementById('histList').innerHTML = '<div style="padding:14px 16px;text-align:center;color:var(--text-muted);font-size:13px;">No sales yet today</div>';
+      return;
+    }
+    document.getElementById('histList').innerHTML = [...transactions].reverse().map(t => `
+      <div class="hist-item">
+        <div class="hi-icon">💰</div>
+        <div class="hi-info"><div class="hi-desc">${t.desc}</div><div class="hi-time">${t.time} · ${t.payer}</div></div>
+        <div class="hi-amt">+A$${t.amt.toFixed(2)}</div>
+      </div>`).join('');
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.style.opacity = '1';
+    setTimeout(() => t.style.opacity = '0', 2500);
+  }
+</script>
+</body>
+</html>

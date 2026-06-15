@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IN$DEX — Arbitration Court</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --cyan-bg:#071825;
+    --black:#090A10; --surface:#111318; --surface2:#1A1D25; --surface3:#22252F;
+    --border:#2A2D38; --text:#EAEAEA; --text-muted:#6B7080; --text-dim:#3D4050;
+    --green:#00E5A0; --green-bg:#0A1F18;
+    --purple:#8B3FE8; --purple-bg:#120D1F;
+    --gold:#FFB800; --red:#FF4D6D; --blue:#2B35D8;
+    --nav-h:72px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+  .shell{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;}
+  .scroll-body{flex:1;overflow-y:auto;padding-bottom:calc(var(--nav-h)+16px);-webkit-overflow-scrolling:touch;}
+  .scroll-body::-webkit-scrollbar{display:none;}
+
+  .header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;}
+  .back-btn{width:36px;height:36px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;flex-shrink:0;}
+  .hdr-title{font-size:17px;font-weight:800;}
+  .hdr-sub{font-size:11px;color:var(--text-muted);margin-top:2px;}
+
+  /* STATS */
+  .stats-row{display:flex;padding:16px 20px;gap:10px;}
+  .stat-chip{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 10px;text-align:center;}
+  .sc-val{font-size:18px;font-weight:900;}
+  .sc-label{font-size:10px;color:var(--text-muted);margin-top:2px;text-transform:uppercase;letter-spacing:0.04em;}
+
+  /* TABS */
+  .tabs{display:flex;border-bottom:1px solid var(--border);}
+  .tab{flex:1;text-align:center;padding:13px 0;font-size:13px;font-weight:600;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;}
+  .tab.active{color:var(--cyan);border-bottom-color:var(--cyan);}
+
+  /* CASE CARD */
+  .case-card{margin:12px 20px 0;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;cursor:pointer;transition:border-color 0.2s;}
+  .case-card:active{border-color:var(--cyan);}
+  .cc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .cc-id{font-size:11px;color:var(--text-muted);font-family:monospace;}
+  .cc-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;}
+  .s-jury{background:rgba(255,184,0,0.1);border:1px solid rgba(255,184,0,0.2);color:var(--gold);}
+  .s-active{background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.2);color:var(--cyan);}
+  .s-closed{background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.2);color:var(--green);}
+  .s-appeal{background:rgba(139,63,232,0.1);border:1px solid rgba(139,63,232,0.2);color:var(--purple);}
+  .cc-title{font-size:14px;font-weight:700;margin-bottom:4px;}
+  .cc-desc{font-size:12px;color:var(--text-muted);line-height:1.5;margin-bottom:10px;}
+  .cc-parties{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .party-chip{font-size:11px;padding:4px 10px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);}
+  .cc-vs{font-size:11px;color:var(--text-dim);}
+  .cc-escrow{display:flex;align-items:center;gap:6px;font-size:12px;background:var(--surface2);padding:8px 10px;border-radius:8px;margin-bottom:10px;}
+  .cc-jury-row{display:flex;gap:-4px;align-items:center;}
+  .juror-av{width:24px;height:24px;border-radius:50%;background:var(--surface2);border:2px solid var(--black);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-left:-6px;}
+  .juror-av:first-child{margin-left:0;}
+  .jury-label{font-size:11px;color:var(--text-muted);margin-left:8px;}
+
+  /* VOTE BAR */
+  .verdict-bar{height:8px;border-radius:4px;overflow:hidden;display:flex;margin:10px 0 6px;}
+  .vb-claimant{background:var(--cyan);transition:width 0.8s ease;}
+  .vb-respondent{background:var(--red);transition:width 0.8s ease;}
+  .verdict-labels{display:flex;justify-content:space-between;font-size:11px;}
+
+  /* FILE CASE */
+  .file-form{padding:16px 20px;}
+  .form-label{font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:8px;}
+  .form-select,.form-input{width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:13px 14px;font-size:14px;color:var(--text);outline:none;appearance:none;margin-bottom:14px;font-family:inherit;}
+  .form-select:focus,.form-input:focus{border-color:var(--cyan);}
+  .form-textarea{width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:13px 14px;font-size:13px;color:var(--text);outline:none;font-family:inherit;resize:none;min-height:100px;line-height:1.55;margin-bottom:14px;}
+  .form-textarea:focus{border-color:var(--cyan);}
+  .form-input::placeholder,.form-textarea::placeholder{color:var(--text-dim);}
+  .evidence-row{display:flex;gap:8px;margin-bottom:14px;}
+  .evi-slot{flex:1;height:60px;background:var(--surface);border:1.5px dashed var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;transition:border-color 0.2s;}
+  .evi-slot:active{border-color:var(--cyan);}
+  .stake-notice{padding:12px 14px;background:rgba(255,77,109,0.06);border:1px solid rgba(255,77,109,0.2);border-radius:10px;font-size:12px;color:var(--text-muted);line-height:1.6;margin-bottom:14px;}
+  .stake-notice strong{color:var(--red);}
+  .file-btn{width:100%;padding:15px;border-radius:12px;background:var(--cyan);color:var(--black);font-size:15px;font-weight:800;border:none;cursor:pointer;}
+  .file-btn:active{opacity:0.85;}
+
+  /* JUROR PANEL */
+  .juror-card{display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid rgba(42,45,56,0.5);}
+  .jc-av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0;}
+  .jc-name{font-size:13px;font-weight:700;}
+  .jc-ws{font-size:11px;color:var(--text-muted);}
+  .jc-badge{margin-left:auto;font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;}
+
+  /* OVERLAY */
+  .overlay{position:fixed;inset:0;background:rgba(9,10,16,0.96);display:none;align-items:center;justify-content:center;z-index:200;padding:24px;}
+  .overlay.show{display:flex;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px 24px;width:100%;max-width:360px;}
+  .modal-title{font-size:17px;font-weight:800;margin-bottom:10px;}
+  .modal-sub{font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:18px;}
+  .modal-btn-row{display:flex;gap:10px;}
+  .modal-btn{flex:1;padding:13px;border-radius:12px;font-size:14px;font-weight:700;border:none;cursor:pointer;}
+  .mbtn-primary{background:var(--cyan);color:var(--black);}
+  .mbtn-cancel{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+
+  /* NAV */
+  .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;height:var(--nav-h);background:rgba(9,10,16,0.97);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;padding:0 8px 10px;z-index:100;}
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:8px 12px;border-radius:12px;flex:1;}
+  .nav-item:active{background:var(--surface);}
+  .nav-icon{font-size:22px;line-height:1;}
+  .nav-label{font-size:10px;font-weight:600;color:var(--text-muted);}
+
+  .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1E2130;border:1px solid var(--border);border-radius:12px;padding:11px 20px;font-size:13px;font-weight:600;white-space:nowrap;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;}
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="header">
+    <div class="back-btn" onclick="window.history.back()">←</div>
+    <div>
+      <div class="hdr-title">⚖️ Sovereign Court</div>
+      <div class="hdr-sub">Decentralised arbitration · Jury-enforced verdicts</div>
+    </div>
+  </div>
+
+  <div class="scroll-body">
+
+    <!-- STATS -->
+    <div class="stats-row">
+      <div class="stat-chip">
+        <div class="sc-val" style="color:var(--cyan)">47</div>
+        <div class="sc-label">Active Cases</div>
+      </div>
+      <div class="stat-chip">
+        <div class="sc-val" style="color:var(--green)">312</div>
+        <div class="sc-label">Resolved</div>
+      </div>
+      <div class="stat-chip">
+        <div class="sc-val" style="color:var(--gold)">284</div>
+        <div class="sc-label">Jurors</div>
+      </div>
+      <div class="stat-chip">
+        <div class="sc-val" style="color:var(--purple)">96%</div>
+        <div class="sc-label">Satisfaction</div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <div class="tab active" id="tab-cases" onclick="switchTab('cases')">Cases</div>
+      <div class="tab" id="tab-jury" onclick="switchTab('jury')">Jury Pool</div>
+      <div class="tab" id="tab-file" onclick="switchTab('file')">File Case</div>
+    </div>
+
+    <!-- CASES -->
+    <div id="panel-cases">
+
+      <div class="case-card" onclick="openVerdict()">
+        <div class="cc-top">
+          <div class="cc-id">CASE-2024-0047</div>
+          <div class="cc-status s-active">Jury Deliberating</div>
+        </div>
+        <div class="cc-title">Escrow dispute — digital art commission</div>
+        <div class="cc-desc">Buyer claims delivered artwork does not match agreed brief. Seller disputes and requests escrow release. 5,400 INDX locked.</div>
+        <div class="cc-parties">
+          <div class="party-chip">🖼️ amara.IN$DEX (Claimant)</div>
+          <div class="cc-vs">vs</div>
+          <div class="party-chip">🎨 kiri.IN$DEX (Respondent)</div>
+        </div>
+        <div class="cc-escrow">🔒 5,400 INDX in escrow · Decision in <strong style="color:var(--gold)">18h 22m</strong></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div class="cc-jury-row">
+            <div class="juror-av" style="background:linear-gradient(135deg,#8B3FE8,#00D4FF)">AT</div>
+            <div class="juror-av" style="background:linear-gradient(135deg,#00E5A0,#2B35D8)">ST</div>
+            <div class="juror-av" style="background:linear-gradient(135deg,#FFB800,#FF6B00)">MK</div>
+            <div class="juror-av" style="background:var(--surface3)">+2</div>
+            <div class="jury-label">5 jurors seated</div>
+          </div>
+        </div>
+        <div class="verdict-bar" style="margin-top:12px;">
+          <div class="vb-claimant" style="width:40%"></div>
+          <div class="vb-respondent" style="width:60%"></div>
+        </div>
+        <div class="verdict-labels">
+          <span style="color:var(--cyan)">Claimant 40%</span>
+          <span style="color:var(--red)">Respondent 60%</span>
+        </div>
+      </div>
+
+      <div class="case-card">
+        <div class="cc-top">
+          <div class="cc-id">CASE-2024-0046</div>
+          <div class="cc-status s-jury">Selecting Jury</div>
+        </div>
+        <div class="cc-title">Royalty dispute — Story Protocol integration</div>
+        <div class="cc-desc">Creator claims derivative work published without proper royalty attribution via Story Protocol hooks. Seeking 2,000 INDX in damages.</div>
+        <div class="cc-parties">
+          <div class="party-chip">🎵 sione.IN$DEX (Claimant)</div>
+          <div class="cc-vs">vs</div>
+          <div class="party-chip">🎤 tala.IN$DEX (Respondent)</div>
+        </div>
+        <div class="cc-escrow">🔒 2,000 INDX held · Jury selection in progress</div>
+      </div>
+
+      <div class="case-card" style="opacity:0.65;">
+        <div class="cc-top">
+          <div class="cc-id">CASE-2024-0039</div>
+          <div class="cc-status s-closed">Resolved ✓</div>
+        </div>
+        <div class="cc-title">P2P handshake fraud — non-delivery of goods</div>
+        <div class="cc-desc">Jury ruled in favour of buyer 5-0. Escrow released to claimant. Respondent Wisdom Score reduced by 25 points.</div>
+        <div class="cc-parties">
+          <div class="party-chip">📦 Buyer (won)</div>
+          <div class="cc-vs">vs</div>
+          <div class="party-chip">🏪 Seller (lost)</div>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:8px;">Verdict: 5-0 unanimous · 800 INDX released to buyer · 14 days ago</div>
+      </div>
+
+      <div style="height:12px;"></div>
+    </div>
+
+    <!-- JURY POOL -->
+    <div id="panel-jury" style="display:none;">
+      <div style="padding:14px 20px 4px;font-size:12px;color:var(--text-muted);line-height:1.6;">Citizens with Wisdom Score 100+ are eligible for jury duty. Selected randomly per case. Jurors earn +5 INDX per verdict.</div>
+      <div class="juror-card">
+        <div class="jc-av" style="background:linear-gradient(135deg,#FFB800,#FF6B00)">AT</div>
+        <div>
+          <div class="jc-name">Aiko Tanaka</div>
+          <div class="jc-ws">aiko.IN$DEX · WS 194</div>
+        </div>
+        <div class="jc-badge" style="background:rgba(0,229,160,0.1);color:var(--green)">12 verdicts</div>
+      </div>
+      <div class="juror-card">
+        <div class="jc-av" style="background:linear-gradient(135deg,#00E5A0,#2B35D8)">ST</div>
+        <div>
+          <div class="jc-name">Sione Tuilagi</div>
+          <div class="jc-ws">sione.IN$DEX · WS 142</div>
+        </div>
+        <div class="jc-badge" style="background:rgba(0,229,160,0.1);color:var(--green)">8 verdicts</div>
+      </div>
+      <div class="juror-card">
+        <div class="jc-av" style="background:linear-gradient(135deg,#8B3FE8,#00D4FF)">MK</div>
+        <div>
+          <div class="jc-name">Mele Kealoha</div>
+          <div class="jc-ws">mele.IN$DEX · WS 128</div>
+        </div>
+        <div class="jc-badge" style="background:rgba(0,229,160,0.1);color:var(--green)">5 verdicts</div>
+      </div>
+      <div style="padding:16px 20px;background:rgba(0,212,255,0.05);margin:12px 20px;border-radius:12px;border:1px solid rgba(0,212,255,0.1);">
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px;">Your Juror Status</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">WS 62 / 100 needed to join jury pool. <strong style="color:var(--cyan)">38 points to go.</strong></div>
+        <div onclick="window.location.href='wisdom-score.html'" style="font-size:13px;font-weight:700;color:var(--cyan);cursor:pointer;">Earn Wisdom Score →</div>
+      </div>
+    </div>
+
+    <!-- FILE CASE -->
+    <div id="panel-file" style="display:none;">
+      <div class="file-form">
+        <div class="form-label">Case Type</div>
+        <select class="form-select">
+          <option>Select dispute type…</option>
+          <option>Escrow / Non-delivery</option>
+          <option>Item not as described</option>
+          <option>Royalty / IP dispute</option>
+          <option>Handshake fraud</option>
+          <option>Smart contract bug</option>
+          <option>Other</option>
+        </select>
+        <div class="form-label">Respondent</div>
+        <input class="form-input" placeholder="e.g. kiri.IN$DEX" type="text">
+        <div class="form-label">Case Summary</div>
+        <textarea class="form-textarea" placeholder="Describe the dispute clearly. Include dates, amounts, and what resolution you seek…"></textarea>
+        <div class="form-label">Evidence (optional)</div>
+        <div class="evidence-row">
+          <div class="evi-slot" onclick="showToast('Attach screenshot')">📸</div>
+          <div class="evi-slot" onclick="showToast('Attach document')">📄</div>
+          <div class="evi-slot" onclick="showToast('Link transaction')">🔗</div>
+          <div class="evi-slot" onclick="showToast('Chat export')">💬</div>
+        </div>
+        <div class="stake-notice">
+          <strong>⚠️ Filing Bond:</strong> A 50 INDX bond is staked when filing. If your case is dismissed as frivolous, you forfeit the bond. Winning cases receive the bond back plus respondent costs.
+        </div>
+        <button class="file-btn" onclick="fileCase()">File Case · 50 INDX Bond</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="bottom-nav">
+    <div class="nav-item" onclick="window.location.href='citizen-dashboard.html'">
+      <div class="nav-icon">🏠</div><div class="nav-label">Home</div>
+    </div>
+    <div class="nav-item" onclick="window.location.href='governance.html'">
+      <div class="nav-icon">🗳️</div><div class="nav-label">Govern</div>
+    </div>
+    <div class="nav-item" onclick="window.location.href='dispute.html'">
+      <div class="nav-icon">🛡️</div><div class="nav-label">Dispute</div>
+    </div>
+    <div class="nav-item" onclick="window.location.href='search.html'">
+      <div class="nav-icon">🔍</div><div class="nav-label">Search</div>
+    </div>
+    <div class="nav-item" onclick="window.location.href='profile.html'">
+      <div class="nav-icon">👤</div><div class="nav-label">Profile</div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-title">⚖️ Cast Your Verdict</div>
+    <div class="modal-sub">CASE-2024-0047: Digital art commission dispute. Review the evidence below then vote. Your vote is cryptographically signed and immutable.</div>
+    <div style="background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--text-muted);line-height:1.6;">
+      Claimant argues brief specified "abstract" style. Respondent submitted "semi-realistic." Chat logs show no amendment to brief. 3 of 5 jurors currently favour claimant.
+    </div>
+    <div class="modal-btn-row">
+      <button class="modal-btn mbtn-cancel" onclick="voteVerdict('respondent')">Respondent wins</button>
+      <button class="modal-btn mbtn-primary" onclick="voteVerdict('claimant')">Claimant wins</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  function switchTab(name) {
+    ['cases','jury','file'].forEach(t => {
+      document.getElementById('tab-'+t).classList.toggle('active', t===name);
+      document.getElementById('panel-'+t).style.display = t===name ? 'block' : 'none';
+    });
+  }
+  function openVerdict() { document.getElementById('overlay').classList.add('show'); }
+  function voteVerdict(side) {
+    document.getElementById('overlay').classList.remove('show');
+    showToast(side === 'claimant' ? '✓ Voted: Claimant wins · +5 INDX earned' : '✓ Voted: Respondent wins · +5 INDX earned');
+  }
+  function fileCase() { showToast('Filing case… 50 INDX bond required'); }
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2400);
+  }
+</script>
+</body>
+</html>

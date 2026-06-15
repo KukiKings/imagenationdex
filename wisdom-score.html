@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IN$DEX — Wisdom Score</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --cyan-dim:#0099BB; --cyan-bg:#071825;
+    --black:#090A10; --surface:#111318; --surface2:#1A1D25; --surface3:#22252F;
+    --border:#2A2D38; --text:#EAEAEA; --text-muted:#6B7080; --text-dim:#3D4050;
+    --green:#00E5A0; --green-bg:#0A1F18; --red:#FF4D6D;
+    --purple:#8B3FE8; --purple-bg:#120D1F; --gold:#FFB800; --gold-bg:#1F1600;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none;}
+  .shell{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;}
+  .scroll-body{flex:1;overflow-y:auto;padding-bottom:40px;-webkit-overflow-scrolling:touch;}
+  .scroll-body::-webkit-scrollbar{display:none;}
+
+  /* TOP BAR */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid var(--border);}
+  .topbar-back{width:38px;height:38px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;}
+  .topbar-back:active{background:var(--surface2);}
+  .topbar-title{font-size:17px;font-weight:700;}
+  .topbar-share{font-size:13px;color:var(--text-muted);cursor:pointer;padding:6px 10px;}
+
+  /* SCORE HERO */
+  .score-hero{padding:28px 20px 24px;text-align:center;}
+  .score-ring-wrap{position:relative;width:160px;height:160px;margin:0 auto 20px;}
+  .score-ring{transform:rotate(-90deg);}
+  .ring-bg{fill:none;stroke:var(--surface2);stroke-width:12;}
+  .ring-fill{fill:none;stroke-width:12;stroke-linecap:round;transition:stroke-dashoffset 1s ease;}
+  .score-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  .score-number{font-size:42px;font-weight:900;letter-spacing:-0.02em;line-height:1;}
+  .score-max{font-size:14px;color:var(--text-muted);font-weight:600;}
+  .score-tier{display:inline-flex;align-items:center;gap:6px;background:rgba(139,63,232,0.15);border:1px solid rgba(139,63,232,0.3);border-radius:20px;padding:5px 14px;font-size:13px;font-weight:700;color:var(--purple);margin-bottom:6px;}
+  .score-next{font-size:13px;color:var(--text-muted);}
+  .score-next strong{color:var(--text);}
+
+  /* MILESTONE TRACK */
+  .milestones{padding:0 20px 24px;}
+  .ms-title{font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:14px;}
+  .ms-track{position:relative;padding-left:28px;}
+  .ms-line{position:absolute;left:10px;top:10px;bottom:10px;width:2px;background:var(--border);}
+  .ms-line-fill{position:absolute;left:10px;top:10px;width:2px;background:linear-gradient(to bottom,var(--cyan),var(--purple));transition:height 1s ease;}
+  .milestone{display:flex;align-items:flex-start;gap:14px;margin-bottom:16px;position:relative;}
+  .ms-dot{width:22px;height:22px;border-radius:50%;border:2px solid var(--border);background:var(--black);display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;margin-left:-28px;z-index:1;transition:all 0.3s;}
+  .ms-dot.done{background:var(--cyan);border-color:var(--cyan);color:#000;font-size:12px;}
+  .ms-dot.active{background:var(--purple);border-color:var(--purple);color:#fff;font-size:12px;}
+  .ms-dot.locked{background:var(--surface2);border-color:var(--border);color:var(--text-dim);}
+  .ms-card{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;transition:border-color 0.2s;}
+  .ms-card.done{border-color:rgba(0,212,255,0.3);}
+  .ms-card.active{border-color:rgba(139,63,232,0.4);background:var(--purple-bg);}
+  .ms-score{font-size:11px;font-weight:700;color:var(--text-dim);margin-bottom:3px;}
+  .ms-card.done .ms-score{color:var(--cyan);}
+  .ms-card.active .ms-score{color:var(--purple);}
+  .ms-name{font-size:14px;font-weight:700;margin-bottom:3px;}
+  .ms-desc{font-size:12px;color:var(--text-muted);line-height:1.5;}
+  .ms-badge{display:inline-block;margin-top:6px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;}
+  .badge-done{background:rgba(0,212,255,0.12);color:var(--cyan);}
+  .badge-active{background:rgba(139,63,232,0.2);color:var(--purple);}
+  .badge-locked{background:var(--surface2);color:var(--text-dim);}
+
+  /* EARN POINTS */
+  .earn-section{padding:0 20px 24px;}
+  .earn-title{font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:12px;}
+  .earn-list{display:flex;flex-direction:column;gap:8px;}
+  .earn-item{display:flex;align-items:center;gap:12px;padding:13px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;cursor:pointer;transition:border-color 0.2s;}
+  .earn-item:active{border-color:var(--cyan);}
+  .earn-icon{font-size:22px;flex-shrink:0;}
+  .earn-name{font-size:13px;font-weight:600;margin-bottom:2px;}
+  .earn-sub{font-size:11px;color:var(--text-muted);}
+  .earn-pts{margin-left:auto;text-align:right;}
+  .pts-val{font-size:14px;font-weight:800;color:var(--gold);}
+  .pts-label{font-size:10px;color:var(--text-muted);}
+  .earn-done{margin-left:auto;font-size:18px;}
+
+  /* BREAKDOWN */
+  .breakdown{padding:0 20px 24px;}
+  .bd-title{font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:12px;}
+  .bd-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .bd-row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);}
+  .bd-row:last-child{border-bottom:none;}
+  .bd-icon{font-size:18px;}
+  .bd-label{font-size:13px;flex:1;}
+  .bd-bar-wrap{width:80px;height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+  .bd-bar-fill{height:100%;border-radius:2px;background:var(--cyan);}
+  .bd-pts{font-size:13px;font-weight:700;color:var(--cyan);min-width:32px;text-align:right;}
+
+  /* LEADERBOARD TEASER */
+  .lb-teaser{margin:0 20px 24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .lb-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+  .lb-title-text{font-size:13px;font-weight:700;}
+  .lb-see-all{font-size:12px;color:var(--cyan);cursor:pointer;}
+  .lb-row{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);}
+  .lb-row:last-child{border-bottom:none;}
+  .lb-rank{width:22px;font-size:13px;font-weight:700;color:var(--text-muted);}
+  .lb-rank.gold{color:var(--gold);}
+  .lb-rank.silver{color:#C0C0C0;}
+  .lb-rank.bronze{color:#CD7F32;}
+  .lb-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;}
+  .lb-name{font-size:13px;font-weight:600;flex:1;}
+  .lb-handle{font-size:11px;color:var(--text-muted);}
+  .lb-score{font-size:14px;font-weight:800;color:var(--gold);}
+  .lb-you{background:rgba(0,212,255,0.05);border-color:rgba(0,212,255,0.2);}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <div class="topbar-back" onclick="window.history.back()">←</div>
+    <div class="topbar-title">Wisdom Score</div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <div onclick="showTip('ws')" style="width:28px;height:28px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--cyan);cursor:pointer;">ⓘ</div>
+      <div onclick="window.location.href='help.html'" style="width:28px;height:28px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;">❓</div>
+    </div>
+  </div>
+
+  <div class="scroll-body">
+
+    <!-- SCORE HERO -->
+    <div class="score-hero">
+      <div class="score-ring-wrap">
+        <svg class="score-ring" width="160" height="160" viewBox="0 0 160 160">
+          <circle class="ring-bg" cx="80" cy="80" r="68"/>
+          <circle class="ring-fill" id="ringFill" cx="80" cy="80" r="68"
+            stroke="url(#ringGrad)"
+            stroke-dasharray="427"
+            stroke-dashoffset="427"/>
+          <defs>
+            <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#8B3FE8"/>
+              <stop offset="100%" stop-color="#00D4FF"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="score-center">
+          <div class="score-number" id="scoreDisplay">0</div>
+          <div class="score-max">/ 200</div>
+        </div>
+      </div>
+      <div class="score-tier">⚡ Citizen — Tier 2</div>
+      <div style="height:8px;"></div>
+      <div class="score-next">Next milestone: <strong>Governance Vote at 50 pts</strong> — <strong style="color:var(--cyan)">12 pts away</strong></div>
+    </div>
+
+    <!-- MILESTONES -->
+    <div class="milestones">
+      <div class="ms-title">Milestones</div>
+      <div class="ms-track">
+        <div class="ms-line"></div>
+        <div class="ms-line-fill" id="msLineFill"></div>
+
+        <div class="milestone">
+          <div class="ms-dot done">✓</div>
+          <div class="ms-card done">
+            <div class="ms-score">SCORE 20 — START</div>
+            <div class="ms-name">🌱 Genesis Citizen</div>
+            <div class="ms-desc">Account created. Welcome to the Civilisation.</div>
+            <span class="ms-badge badge-done">UNLOCKED</span>
+          </div>
+        </div>
+
+        <div class="milestone">
+          <div class="ms-dot active">→</div>
+          <div class="ms-card active">
+            <div class="ms-score">SCORE 50 — 12 PTS AWAY</div>
+            <div class="ms-name">🗳️ Governance Vote</div>
+            <div class="ms-desc">Vote on Civilisation proposals. Your voice shapes the 98/2 economy.</div>
+            <span class="ms-badge badge-active">IN PROGRESS</span>
+          </div>
+        </div>
+
+        <div class="milestone">
+          <div class="ms-dot locked">🔒</div>
+          <div class="ms-card">
+            <div class="ms-score">SCORE 100</div>
+            <div class="ms-name">💎 Sovereign Yield</div>
+            <div class="ms-desc">Earn 5.5% APY staking rewards on your INDX holdings.</div>
+            <span class="ms-badge badge-locked">LOCKED</span>
+          </div>
+        </div>
+
+        <div class="milestone">
+          <div class="ms-dot locked">🔒</div>
+          <div class="ms-card">
+            <div class="ms-score">SCORE 150</div>
+            <div class="ms-name">⚖️ Fee Reduction</div>
+            <div class="ms-desc">Your Civilisation Fee drops from 2% to 1.5% on all transactions.</div>
+            <span class="ms-badge badge-locked">LOCKED</span>
+          </div>
+        </div>
+
+        <div class="milestone">
+          <div class="ms-dot locked">🔒</div>
+          <div class="ms-card">
+            <div class="ms-score">SCORE 200</div>
+            <div class="ms-name">👑 Sovereign Elder</div>
+            <div class="ms-desc">Maximum tier. Propose new laws, mentor new citizens, earn Elder rewards.</div>
+            <span class="ms-badge badge-locked">LOCKED</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EARN POINTS -->
+    <div class="earn-section">
+      <div class="earn-title">How to Earn Points</div>
+      <div class="earn-list">
+        <div class="earn-item" onclick="window.location.href='sovereign-verify.html'">
+          <div class="earn-icon">✅</div>
+          <div>
+            <div class="earn-name">Complete Verification</div>
+            <div class="earn-sub">Tier 1 → Tier 3 sovereign identity</div>
+          </div>
+          <div class="earn-pts"><div class="pts-val">+15</div><div class="pts-label">pts each tier</div></div>
+        </div>
+        <div class="earn-item" onclick="window.location.href='marketplace.html'">
+          <div class="earn-icon">🛒</div>
+          <div>
+            <div class="earn-name">Make a Purchase</div>
+            <div class="earn-sub">Buy from the Marketplace</div>
+          </div>
+          <div class="earn-pts"><div class="pts-val">+2</div><div class="pts-label">pts per trade</div></div>
+        </div>
+        <div class="earn-item" onclick="window.location.href='create-listing.html'">
+          <div class="earn-icon">📦</div>
+          <div>
+            <div class="earn-name">Sell an Item</div>
+            <div class="earn-sub">Complete a successful sale</div>
+          </div>
+          <div class="earn-pts"><div class="pts-val">+3</div><div class="pts-label">pts per sale</div></div>
+        </div>
+        <div class="earn-item" onclick="window.location.href='governance.html'">
+          <div class="earn-icon">🗳️</div>
+          <div>
+            <div class="earn-name">Vote in Governance</div>
+            <div class="earn-sub">Participate in Civilisation decisions</div>
+          </div>
+          <div class="earn-pts"><div class="pts-val">+5</div><div class="pts-label">pts per vote</div></div>
+        </div>
+        <div class="earn-item" onclick="window.location.href='referral.html'">
+          <div class="earn-icon">🤝</div>
+          <div>
+            <div class="earn-name">Refer a Citizen</div>
+            <div class="earn-sub">Your referral joins and trades</div>
+          </div>
+          <div class="earn-pts"><div class="pts-val">+10</div><div class="pts-label">pts per referral</div></div>
+        </div>
+        <div class="earn-item" onclick="window.location.href='staking.html'">
+          <div class="earn-icon">🔒</div>
+          <div>
+            <div class="earn-name">Stake INDX</div>
+            <div class="earn-sub">Lock tokens for Sovereign Yield</div>
+          </div>
+          <div class="earn-pts"><div class="pts-val">+8</div><div class="pts-label">per stake</div></div>
+        </div>
+        <div class="earn-item" onclick="window.location.href='light-node.html'">
+          <div class="earn-icon">💡</div>
+          <div>
+            <div class="earn-name">Run a Light Node</div>
+            <div class="earn-sub">Contribute to mesh network uptime</div>
+          </div>
+          <div class="earn-pts"><div class="pts-val">+1</div><div class="pts-label">pt per day</div></div>
+        </div>
+        <div class="earn-item" onclick="window.location.href='feed.html'">
+          <div class="earn-icon">📣</div>
+          <div>
+            <div class="earn-name">Post to the Feed</div>
+            <div class="earn-sub">Share knowledge with citizens</div>
+          </div>
+          <div class="earn-pts"><div class="pts-val">+1</div><div class="pts-label">pt per post</div></div>
+        </div>
+        <div class="earn-item">
+          <div class="earn-icon">📅</div>
+          <div>
+            <div class="earn-name">Daily Login</div>
+            <div class="earn-sub">7-day streak bonus ×2</div>
+          </div>
+          <div class="earn-done">✅</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCORE BREAKDOWN -->
+    <div class="breakdown">
+      <div class="bd-title">Your Breakdown</div>
+      <div class="bd-card">
+        <div class="bd-row">
+          <div class="bd-icon">✅</div>
+          <div class="bd-label">Verification</div>
+          <div class="bd-bar-wrap"><div class="bd-bar-fill" style="width:100%"></div></div>
+          <div class="bd-pts">15</div>
+        </div>
+        <div class="bd-row">
+          <div class="bd-icon">🛒</div>
+          <div class="bd-label">Trading</div>
+          <div class="bd-bar-wrap"><div class="bd-bar-fill" style="width:60%"></div></div>
+          <div class="bd-pts">12</div>
+        </div>
+        <div class="bd-row">
+          <div class="bd-icon">🤝</div>
+          <div class="bd-label">Referrals</div>
+          <div class="bd-bar-wrap"><div class="bd-bar-fill" style="width:30%"></div></div>
+          <div class="bd-pts">10</div>
+        </div>
+        <div class="bd-row">
+          <div class="bd-icon">📅</div>
+          <div class="bd-label">Daily logins</div>
+          <div class="bd-bar-wrap"><div class="bd-bar-fill" style="width:50%"></div></div>
+          <div class="bd-pts">10</div>
+        </div>
+        <div class="bd-row">
+          <div class="bd-icon">💡</div>
+          <div class="bd-label">Light Node</div>
+          <div class="bd-bar-wrap"><div class="bd-bar-fill" style="width:25%"></div></div>
+          <div class="bd-pts">5</div>
+        </div>
+        <div class="bd-row" style="border-bottom:none;background:var(--surface2);">
+          <div class="bd-icon">⚡</div>
+          <div class="bd-label" style="font-weight:700;">Total</div>
+          <div class="bd-bar-wrap"><div class="bd-bar-fill" style="width:76%;background:linear-gradient(90deg,var(--purple),var(--cyan))"></div></div>
+          <div class="bd-pts" style="color:var(--gold)">62</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEADERBOARD TEASER -->
+    <div class="lb-teaser">
+      <div class="lb-header">
+        <div class="lb-title-text">🏆 Community Leaderboard</div>
+        <div class="lb-see-all" onclick="showToast('Full leaderboard coming soon')">See all ›</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank gold">1</div>
+        <div class="lb-avatar" style="background:linear-gradient(135deg,#FFB800,#FF6B00)">AT</div>
+        <div><div class="lb-name">Aiko Tanaka</div><div class="lb-handle">aiko.IN$DEX</div></div>
+        <div class="lb-score">194 ⚡</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank silver">2</div>
+        <div class="lb-avatar" style="background:linear-gradient(135deg,#8B3FE8,#4060FF)">MD</div>
+        <div><div class="lb-name">Mele Davu</div><div class="lb-handle">mele.IN$DEX</div></div>
+        <div class="lb-score">187 ⚡</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank bronze">3</div>
+        <div class="lb-avatar" style="background:linear-gradient(135deg,#00E5A0,#00A0C0)">SK</div>
+        <div><div class="lb-name">Sione Kefu</div><div class="lb-handle">sione.IN$DEX</div></div>
+        <div class="lb-score">172 ⚡</div>
+      </div>
+      <div class="lb-row lb-you">
+        <div class="lb-rank" style="color:var(--cyan)">47</div>
+        <div class="lb-avatar" style="background:linear-gradient(135deg,#2B35D8,#00D4FF)">AJ</div>
+        <div><div class="lb-name">You</div><div class="lb-handle">aj.IN$DEX</div></div>
+        <div class="lb-score" style="color:var(--cyan)">62 ⚡</div>
+      </div>
+    </div>
+
+    <div style="height:20px;"></div>
+  </div>
+</div>
+
+<script>
+  const SCORE = 62;
+  const MAX = 200;
+
+  // Animate ring
+  window.addEventListener('load', () => {
+    const circumference = 427;
+    const offset = circumference - (SCORE / MAX) * circumference;
+    setTimeout(() => {
+      document.getElementById('ringFill').style.strokeDashoffset = offset;
+    }, 200);
+
+    // Count up
+    let current = 0;
+    const target = SCORE;
+    const step = Math.ceil(target / 40);
+    const counter = setInterval(() => {
+      current = Math.min(current + step, target);
+      document.getElementById('scoreDisplay').textContent = current;
+      if (current >= target) clearInterval(counter);
+    }, 25);
+
+    // Milestone line
+    const pct = (SCORE / MAX) * 100;
+    const trackHeight = document.querySelector('.ms-track').offsetHeight - 20;
+    setTimeout(() => {
+      document.getElementById('msLineFill').style.height = (pct / 100 * trackHeight) + 'px';
+    }, 400);
+  });
+
+  const TIPS = {
+    ws: { title: 'Wisdom Score', body: 'A reputation score (0–200) earned by contributing to the Republic — not by spending money. Milestones: 50 = governance voting, 100 = Sovereign Yield, 150 = fee reduction + Council eligibility, 200 = Sovereign Elder.', link: 'help.html' },
+    yield: { title: 'Sovereign Yield', body: 'Passive interest on staked INDX. Unlocks at Wisdom Score 100. Rates: 4% flex · 5.5% 30d · 7.2% 90d · 10% 365d.', link: 'staking.html' },
+    gov: { title: 'Governance', body: 'Citizens with WS 50+ can vote on proposals — fee changes, new features, fund allocation. Voting power scales with your Wisdom Score, not wallet size.', link: 'governance.html' }
+  };
+  function showTip(key) {
+    const tip = TIPS[key]; if (!tip) return;
+    let el = document.getElementById('tipOverlay');
+    if (!el) { el = document.createElement('div'); el.id = 'tipOverlay'; el.style.cssText = 'position:fixed;inset:0;z-index:999;display:flex;align-items:flex-end;justify-content:center;padding:0 0 90px;background:rgba(0,0,0,0.55);'; el.onclick = hideTip; document.body.appendChild(el); }
+    el.innerHTML = `<div onclick="event.stopPropagation()" style="background:#1A1D25;border:1px solid #2A2D38;border-radius:18px 18px 14px 14px;padding:20px;max-width:390px;width:calc(100% - 32px);"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><div style="font-size:14px;font-weight:800;color:#00D4FF;">${tip.title}</div><div onclick="hideTip()" style="width:28px;height:28px;border-radius:50%;background:#22252F;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;color:#6B7080;">✕</div></div><div style="font-size:13px;color:#EAEAEA;line-height:1.7;margin-bottom:14px;">${tip.body}</div><a href="${tip.link}" style="display:block;text-align:center;padding:11px;background:#00D4FF;color:#090A10;font-size:13px;font-weight:800;border-radius:10px;text-decoration:none;">Learn more →</a></div>`;
+    el.style.display = 'flex';
+  }
+  function hideTip() { const el = document.getElementById('tipOverlay'); if (el) el.style.display = 'none'; }
+
+  let toastTimer;
+  function showToast(msg) {
+    let t = document.getElementById('toast');
+    if (!t) { t = document.createElement('div'); t.id = 'toast'; t.style.cssText = 'position:fixed;bottom:40px;left:50%;transform:translateX(-50%);background:#1A1D25;border:1px solid #2A2D38;color:#EAEAEA;padding:10px 20px;border-radius:12px;font-size:14px;z-index:300;pointer-events:none;transition:opacity 0.3s;white-space:nowrap;'; document.body.appendChild(t); }
+    t.textContent = msg; t.style.opacity = '1';
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.style.opacity = '0', 2400);
+  }
+</script>
+</body>
+</html>

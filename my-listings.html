@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>My Listings — IN$DEX</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --cyan-dim:#0099BB; --purple:#8B3FE8; --blue:#2B35D8;
+    --bg:#090A10; --surface:#0E1019; --surface2:#141622; --surface3:#1C1F2E;
+    --border:rgba(255,255,255,0.07); --text:#F0F2FF; --text-dim:#7A82A0;
+    --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; max-width:430px; margin:0 auto; min-height:100vh; padding-bottom:48px; }
+
+  .header { display:flex; align-items:center; gap:12px; padding:56px 20px 20px; }
+  .back-btn { width:40px; height:40px; border-radius:50%; background:var(--surface2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:18px; flex-shrink:0; }
+  .header-info { flex:1; }
+  .header-title { font-size:20px; font-weight:700; }
+  .header-sub { font-size:13px; color:var(--text-dim); margin-top:2px; }
+
+  /* STATS */
+  .stats-row { display:flex; gap:10px; padding:0 20px 20px; }
+  .stat-box { flex:1; background:var(--surface2); border:1px solid var(--border); border-radius:14px; padding:12px; text-align:center; }
+  .stat-num { font-size:20px; font-weight:800; }
+  .stat-num.green { color:var(--green); }
+  .stat-num.cyan { color:var(--cyan); }
+  .stat-lbl { font-size:10px; color:var(--text-dim); margin-top:3px; text-transform:uppercase; letter-spacing:0.05em; }
+
+  /* TABS */
+  .tabs { display:flex; margin:0 20px 20px; background:var(--surface2); border-radius:12px; padding:4px; gap:4px; }
+  .tab { flex:1; padding:9px; border-radius:9px; text-align:center; font-size:13px; font-weight:600; color:var(--text-dim); cursor:pointer; transition:all 0.2s; }
+  .tab.active { background:var(--surface3); color:var(--text); }
+
+  /* LIST ITEM */
+  .listing-item { display:flex; gap:12px; padding:14px 20px; border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.15s; }
+  .listing-item:last-child { border-bottom:none; }
+  .listing-item:hover { background:var(--surface2); }
+  .listing-thumb { width:54px; height:54px; border-radius:12px; background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:26px; flex-shrink:0; border:1px solid var(--border); }
+  .listing-body { flex:1; min-width:0; }
+  .listing-title { font-size:14px; font-weight:600; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .listing-meta { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .listing-price { font-size:14px; font-weight:700; color:var(--cyan); }
+  .listing-status { font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px; }
+  .listing-status.active { background:rgba(0,229,160,0.12); color:var(--green); }
+  .listing-status.sold { background:rgba(255,184,0,0.1); color:var(--gold); }
+  .listing-status.paused { background:var(--surface3); color:var(--text-dim); }
+  .listing-views { font-size:12px; color:var(--text-dim); }
+  .listing-actions { display:flex; flex-direction:column; gap:6px; align-items:flex-end; flex-shrink:0; }
+  .action-btn { font-size:11px; font-weight:600; padding:5px 10px; border-radius:8px; cursor:pointer; border:none; white-space:nowrap; }
+  .action-btn.edit { background:rgba(0,212,255,0.1); color:var(--cyan); }
+  .action-btn.pause { background:var(--surface3); color:var(--text-dim); }
+  .action-btn.delete { background:rgba(255,77,109,0.1); color:var(--red); }
+
+  /* ORDER ITEM */
+  .order-item { display:flex; align-items:center; gap:12px; padding:14px 20px; border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.15s; }
+  .order-item:last-child { border-bottom:none; }
+  .order-item:hover { background:var(--surface2); }
+  .order-icon { width:44px; height:44px; border-radius:12px; background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+  .order-body { flex:1; }
+  .order-title { font-size:14px; font-weight:600; margin-bottom:3px; }
+  .order-meta { font-size:12px; color:var(--text-dim); }
+  .order-right { text-align:right; }
+  .order-amount { font-size:14px; font-weight:700; color:var(--green); }
+  .order-status { font-size:11px; font-weight:700; padding:3px 8px; border-radius:10px; display:inline-block; margin-top:4px; }
+  .order-status.new { background:rgba(0,212,255,0.1); color:var(--cyan); }
+  .order-status.fulfilled { background:rgba(0,229,160,0.12); color:var(--green); }
+  .order-status.pending { background:rgba(255,184,0,0.1); color:var(--gold); }
+
+  /* EMPTY */
+  .empty-state { text-align:center; padding:48px 32px; }
+  .empty-icon { font-size:48px; margin-bottom:16px; }
+  .empty-title { font-size:17px; font-weight:700; margin-bottom:8px; }
+  .empty-sub { font-size:13px; color:var(--text-dim); line-height:1.5; margin-bottom:20px; }
+  .empty-btn { padding:13px 28px; border-radius:12px; border:none; background:linear-gradient(135deg,var(--blue),var(--purple)); color:white; font-size:14px; font-weight:700; cursor:pointer; }
+
+  /* NEW LISTING BTN */
+  .new-listing-btn { display:flex; align-items:center; justify-content:center; gap:8px; margin:0 20px 20px; padding:14px; border-radius:14px; border:1.5px dashed rgba(0,212,255,0.3); background:rgba(0,212,255,0.04); color:var(--cyan); font-size:14px; font-weight:700; cursor:pointer; transition:all 0.2s; }
+  .new-listing-btn:hover { background:rgba(0,212,255,0.08); border-color:rgba(0,212,255,0.5); }
+
+  /* ORDER DETAIL SHEET */
+  .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(8px); z-index:100; align-items:flex-end; justify-content:center; }
+  .overlay.open { display:flex; }
+  .sheet { background:var(--surface); border-radius:24px 24px 0 0; padding:28px 24px 48px; width:100%; max-width:430px; animation:slideUp 0.3s ease; }
+  @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+  .sheet-handle { width:40px; height:4px; background:var(--border); border-radius:2px; margin:0 auto 20px; }
+  .sheet-title { font-size:18px; font-weight:700; margin-bottom:16px; }
+  .detail-row { display:flex; justify-content:space-between; padding:11px 0; border-bottom:1px solid var(--border); font-size:14px; }
+  .detail-row:last-child { border-bottom:none; }
+  .detail-row .lbl { color:var(--text-dim); }
+  .detail-row .val { font-weight:600; }
+  .sheet-actions { display:flex; gap:10px; margin-top:20px; }
+  .sh-btn { flex:1; padding:13px; border-radius:12px; border:none; font-size:14px; font-weight:700; cursor:pointer; }
+  .sh-btn.primary { background:linear-gradient(135deg,var(--blue),var(--purple)); color:white; }
+  .sh-btn.ghost { background:var(--surface2); border:1px solid var(--border); color:var(--text-dim); }
+
+  .toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--surface3); border:1px solid var(--border); border-radius:20px; padding:10px 20px; font-size:13px; font-weight:500; white-space:nowrap; opacity:0; transition:all 0.3s; z-index:999; pointer-events:none; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .tab-content { display:none; }
+  .tab-content.active { display:block; }
+
+  /* BOTTOM NAV */
+  .bottom-nav-spacer{height:64px;}
+  .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(16,18,26,0.96);backdrop-filter:blur(16px);border-top:1px solid #252836;display:flex;z-index:80;}
+  .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 0;cursor:pointer;opacity:0.5;transition:opacity 0.2s;}
+  .nav-item.active{opacity:1;}
+  .nav-icon{font-size:20px;}
+  .nav-label{font-size:10px;font-weight:600;color:#F0F2FF;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="back-btn" onclick="window.history.back()">←</div>
+  <div class="header-info">
+    <div class="header-title">My Listings</div>
+    <div class="header-sub">Manage your marketplace activity</div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-row">
+  <div class="stat-box">
+    <div class="stat-num">0</div>
+    <div class="stat-lbl">Active</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-num">0</div>
+    <div class="stat-lbl">Orders</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-num green">0</div>
+    <div class="stat-lbl">INDX Earned</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-num cyan">98%</div>
+    <div class="stat-lbl">Your Cut</div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" id="tab-listings" onclick="switchTab('listings')">🏪 Listings</div>
+  <div class="tab" id="tab-orders" onclick="switchTab('orders')">📦 Orders</div>
+  <div class="tab" id="tab-earnings" onclick="switchTab('earnings')">💰 Earnings</div>
+</div>
+
+<!-- NEW LISTING BUTTON -->
+<div class="new-listing-btn" onclick="window.location.href='create-listing.html'">
+  + List Something New
+</div>
+
+<!-- LISTINGS TAB -->
+<div class="tab-content active" id="content-listings">
+  <div class="empty-state">
+    <div class="empty-icon">🏪</div>
+    <div class="empty-title">No listings yet</div>
+    <div class="empty-sub">List a service, digital product, or physical item. You keep 98% of every sale — 2% goes to the Civilisation.</div>
+    <button class="empty-btn" onclick="window.location.href='create-listing.html'">+ Create First Listing</button>
+  </div>
+
+  <!-- Demo listings (hidden until user creates some) -->
+  <div style="display:none;" id="demoListings">
+    <div class="listing-item" onclick="openOrderSheet('Logo Design Service','25 INDX','Active','47 views','logo.IN$DEX')">
+      <div class="listing-thumb">🎨</div>
+      <div class="listing-body">
+        <div class="listing-title">Logo Design Service</div>
+        <div class="listing-meta">
+          <div class="listing-price">25 INDX</div>
+          <div class="listing-status active">Active</div>
+          <div class="listing-views">👁 47 views</div>
+        </div>
+      </div>
+      <div class="listing-actions">
+        <div class="action-btn edit" onclick="event.stopPropagation(); showToast('✏️ Edit listing coming Wave 1')">Edit</div>
+        <div class="action-btn pause" onclick="event.stopPropagation(); showToast('⏸ Listing paused')">Pause</div>
+      </div>
+    </div>
+    <div class="listing-item" onclick="openOrderSheet('Social Media Pack','15 INDX','Sold','23 views','socialmedia.IN$DEX')">
+      <div class="listing-thumb">📱</div>
+      <div class="listing-body">
+        <div class="listing-title">Social Media Content Pack</div>
+        <div class="listing-meta">
+          <div class="listing-price">15 INDX</div>
+          <div class="listing-status sold">Sold ×3</div>
+          <div class="listing-views">👁 23 views</div>
+        </div>
+      </div>
+      <div class="listing-actions">
+        <div class="action-btn edit" onclick="event.stopPropagation(); showToast('✏️ Edit listing coming Wave 1')">Edit</div>
+        <div class="action-btn delete" onclick="event.stopPropagation(); showToast('🗑 Delete coming Wave 1')">Delete</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ORDERS TAB -->
+<div class="tab-content" id="content-orders">
+  <div class="empty-state">
+    <div class="empty-icon">📦</div>
+    <div class="empty-title">No orders yet</div>
+    <div class="empty-sub">When someone buys one of your listings, the order will appear here. You'll get notified instantly.</div>
+    <button class="empty-btn" onclick="switchTab('listings'); document.getElementById('tab-listings').classList.add('active');">View My Listings</button>
+  </div>
+
+  <!-- Demo orders (hidden) -->
+  <div style="display:none;" id="demoOrders">
+    <div class="order-item" onclick="openOrderSheet('Logo Design Service','25 INDX','New','Buyer: james.IN$DEX')">
+      <div class="order-icon">🎨</div>
+      <div class="order-body">
+        <div class="order-title">Logo Design Service</div>
+        <div class="order-meta">james.IN$DEX · 2 hours ago</div>
+      </div>
+      <div class="order-right">
+        <div class="order-amount">+24.5 INDX</div>
+        <div class="order-status new">New Order</div>
+      </div>
+    </div>
+    <div class="order-item" onclick="window.location.href='dispute.html'">
+      <div class="order-icon">📱</div>
+      <div class="order-body">
+        <div class="order-title">Social Media Pack</div>
+        <div class="order-meta">sarah.IN$DEX · Yesterday</div>
+      </div>
+      <div class="order-right">
+        <div class="order-amount">+14.7 INDX</div>
+        <div class="order-status fulfilled">Fulfilled</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EARNINGS TAB -->
+<div class="tab-content" id="content-earnings">
+  <div style="padding:0 20px;">
+    <div style="background:var(--surface2); border:1px solid var(--border); border-radius:16px; padding:20px; text-align:center; margin-bottom:16px;">
+      <div style="font-size:13px; color:var(--text-dim); margin-bottom:6px;">Total Marketplace Earnings</div>
+      <div style="font-size:36px; font-weight:900; color:var(--green);">0 INDX</div>
+      <div style="font-size:13px; color:var(--text-dim); margin-top:4px;">≈ A$0.00</div>
+    </div>
+    <div style="background:var(--surface2); border:1px solid var(--border); border-radius:16px; padding:16px;">
+      <div style="font-size:14px; font-weight:700; margin-bottom:12px;">The 98/2 Law</div>
+      <div style="font-size:13px; color:var(--text-dim); line-height:1.6;">Every sale you make, <strong style="color:var(--cyan);">98% goes directly to you</strong>. The 2% Civilisation Fee funds the network infrastructure that makes sovereign commerce possible — no corporate middleman taking 30%.</div>
+    </div>
+    <div style="margin-top:16px; background:rgba(0,229,160,0.05); border:1px solid rgba(0,229,160,0.15); border-radius:14px; padding:14px 16px;">
+      <div style="font-size:13px; color:var(--green); font-weight:600; margin-bottom:4px;">💡 Recursive Royalties</div>
+      <div style="font-size:13px; color:rgba(0,229,160,0.75); line-height:1.5;">Digital items you sell earn you a royalty every time they're resold — automatically, via Story Protocol. List once, earn forever.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ORDER SHEET -->
+<div class="overlay" id="orderOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="orderSheetTitle">Order Details</div>
+    <div id="orderSheetRows"></div>
+    <div class="sheet-actions">
+      <button class="sh-btn primary" id="orderPrimaryBtn">Mark as Fulfilled</button>
+      <button class="sh-btn ghost" onclick="closeOrderSheet()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  function switchTab(tab) {
+    ['listings','orders','earnings'].forEach(t => {
+      document.getElementById('tab-'+t).classList.toggle('active', t===tab);
+      document.getElementById('content-'+t).classList.toggle('active', t===tab);
+    });
+  }
+
+  function openOrderSheet(title, price, status, detail) {
+    document.getElementById('orderSheetTitle').textContent = title;
+    document.getElementById('orderSheetRows').innerHTML = `
+      <div class="detail-row"><div class="lbl">Price</div><div class="val" style="color:var(--cyan)">${price}</div></div>
+      <div class="detail-row"><div class="lbl">Status</div><div class="val">${status}</div></div>
+      <div class="detail-row"><div class="lbl">Info</div><div class="val">${detail}</div></div>
+      <div class="detail-row"><div class="lbl">Your cut (98%)</div><div class="val" style="color:var(--green)">+${(parseFloat(price)*0.98).toFixed(1)} INDX</div></div>
+      <div class="detail-row"><div class="lbl">Civilisation Fee</div><div class="val" style="color:var(--red)">-${(parseFloat(price)*0.02).toFixed(2)} INDX</div></div>
+    `;
+    document.getElementById('orderOverlay').classList.add('open');
+  }
+
+  function closeOrderSheet() { document.getElementById('orderOverlay').classList.remove('open'); }
+  document.getElementById('orderOverlay').addEventListener('click', function(e) { if(e.target===this) closeOrderSheet(); });
+  document.getElementById('orderPrimaryBtn').onclick = () => { closeOrderSheet(); showToast('✓ Order marked as fulfilled'); };
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+</script>
+
+<div class="bottom-nav-spacer"></div>
+<nav class="bottom-nav">
+  <div class="nav-item" onclick="window.location.href='citizen-dashboard.html'">
+    <div class="nav-icon">🏛️</div>
+    <div class="nav-label">Home</div>
+  </div>
+  <div class="nav-item active" onclick="window.location.href='marketplace.html'">
+    <div class="nav-icon">🛒</div>
+    <div class="nav-label">Market</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='portfolio.html'">
+    <div class="nav-icon">📊</div>
+    <div class="nav-label">Portfolio</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='feed.html'">
+    <div class="nav-icon">🌏</div>
+    <div class="nav-label">Feed</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='profile.html'">
+    <div class="nav-icon">👤</div>
+    <div class="nav-label">Profile</div>
+  </div>
+</nav>
+</body>
+</html>

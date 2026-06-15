@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Notifications — IN$DEX</title>
+<style>
+  :root {
+    --cyan: #00D4FF;
+    --cyan-dim: #0099BB;
+    --purple: #8B3FE8;
+    --blue: #2B35D8;
+    --bg: #090A10;
+    --surface: #0E1019;
+    --surface2: #141622;
+    --surface3: #1C1F2E;
+    --border: rgba(255,255,255,0.07);
+    --text: #F0F2FF;
+    --text-dim: #7A82A0;
+    --green: #00E5A0;
+    --gold: #FFB800;
+    --red: #FF4D6D;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    padding-bottom: 48px;
+  }
+
+  /* HEADER */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 56px 20px 16px;
+  }
+  .back-btn {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+  }
+  .header-center { text-align: center; }
+  .header-title { font-size: 20px; font-weight: 700; }
+  .header-count {
+    display: inline-block;
+    background: var(--red);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 20px;
+    padding: 2px 8px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .mark-all-btn {
+    font-size: 13px;
+    color: var(--cyan);
+    font-weight: 600;
+    cursor: pointer;
+    padding: 8px 0;
+  }
+
+  /* FILTER CHIPS */
+  .filters {
+    display: flex;
+    gap: 8px;
+    padding: 0 20px 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .filters::-webkit-scrollbar { display: none; }
+  .filter-chip {
+    padding: 7px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .filter-chip.active {
+    background: rgba(0,212,255,0.1);
+    border-color: rgba(0,212,255,0.3);
+    color: var(--cyan);
+  }
+
+  /* SECTION LABEL */
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0 20px;
+    margin-bottom: 8px;
+    margin-top: 4px;
+  }
+
+  /* NOTIFICATION ITEM */
+  .notif-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 20px;
+    cursor: pointer;
+    transition: background 0.15s;
+    position: relative;
+    border-bottom: 1px solid var(--border);
+  }
+  .notif-item:last-child { border-bottom: none; }
+  .notif-item.unread { background: rgba(0,212,255,0.03); }
+  .notif-item:hover { background: var(--surface2); }
+  .notif-item.unread::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--cyan);
+  }
+
+  .notif-icon {
+    width: 44px; height: 44px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .notif-icon.earn { background: rgba(0,229,160,0.12); }
+  .notif-icon.referral { background: rgba(255,184,0,0.12); }
+  .notif-icon.market { background: rgba(0,212,255,0.1); }
+  .notif-icon.system { background: rgba(43,53,216,0.15); }
+  .notif-icon.warning { background: rgba(255,77,109,0.1); }
+  .notif-icon.wisdom { background: rgba(139,63,232,0.15); }
+
+  .notif-body { flex: 1; min-width: 0; }
+  .notif-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 3px;
+    line-height: 1.3;
+  }
+  .notif-item.unread .notif-title { color: var(--text); }
+  .notif-item:not(.unread) .notif-title { color: var(--text-dim); font-weight: 500; }
+  .notif-desc {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.4;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .notif-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .notif-time { font-size: 11px; color: var(--text-dim); }
+  .notif-action {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--cyan);
+    padding: 3px 10px;
+    border-radius: 10px;
+    background: rgba(0,212,255,0.1);
+    cursor: pointer;
+  }
+  .notif-amount {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--green);
+    flex-shrink: 0;
+    align-self: center;
+  }
+  .notif-amount.negative { color: var(--red); }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 60px 40px;
+  }
+  .empty-icon { font-size: 48px; margin-bottom: 16px; }
+  .empty-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  .empty-sub { font-size: 14px; color: var(--text-dim); line-height: 1.5; }
+
+  /* SETTINGS SECTION */
+  .notif-settings {
+    margin: 20px 20px 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .ns-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .ns-row:last-child { border-bottom: none; }
+  .ns-icon { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
+  .ns-label { flex: 1; font-size: 14px; font-weight: 500; }
+  .ns-toggle {
+    width: 44px; height: 24px;
+    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.3s;
+    flex-shrink: 0;
+  }
+  .ns-toggle.on { background: linear-gradient(135deg, var(--blue), var(--cyan-dim)); }
+  .ns-toggle.off { background: var(--surface3); border: 1px solid var(--border); }
+  .ns-thumb {
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: white;
+    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+  .ns-toggle.on .ns-thumb { transform: translateX(20px); }
+
+  /* GROUP WRAPPER */
+  .notif-group { background: var(--surface); }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 90px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 999;
+    pointer-events: none;
+  }
+  .toast.show { opacity:1; transform: translateX(-50%) translateY(0); }
+
+  /* BOTTOM NAV */
+  .bottom-nav-spacer{height:64px;}
+  .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(16,18,26,0.96);backdrop-filter:blur(16px);border-top:1px solid #252836;display:flex;z-index:80;}
+  .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 0;cursor:pointer;opacity:0.5;transition:opacity 0.2s;}
+  .nav-item.active{opacity:1;}
+  .nav-icon{font-size:20px;}
+  .nav-label{font-size:10px;font-weight:600;color:#F0F2FF;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="back-btn" onclick="window.history.back()">←</div>
+  <div class="header-center">
+    <span class="header-title">Notifications</span>
+    <span class="header-count" id="unreadCount">4</span>
+  </div>
+  <div class="mark-all-btn" onclick="markAllRead()">Mark all read</div>
+</div>
+
+<!-- FILTERS -->
+<div class="filters">
+  <div class="filter-chip active" onclick="filterNotifs(this,'all')">All</div>
+  <div class="filter-chip" onclick="filterNotifs(this,'earn')">💰 Earnings</div>
+  <div class="filter-chip" onclick="filterNotifs(this,'referral')">👥 Referrals</div>
+  <div class="filter-chip" onclick="filterNotifs(this,'market')">🏪 Market</div>
+  <div class="filter-chip" onclick="filterNotifs(this,'system')">⚙️ System</div>
+</div>
+
+<!-- NOTIFICATIONS LIST -->
+<div id="notifList">
+
+  <!-- TODAY -->
+  <div class="section-label">Today</div>
+  <div class="notif-group">
+
+    <div class="notif-item unread" data-category="earn" onclick="tapNotif(this,'earn')">
+      <div class="notif-icon earn">⚡</div>
+      <div class="notif-body">
+        <div class="notif-title">Genesis Bonus Received</div>
+        <div class="notif-desc">Done. Your 50 INDX Genesis Bonus is in your wallet. Standing by.</div>
+        <div class="notif-meta">
+          <div class="notif-time">2 min ago</div>
+          <div class="notif-action" onclick="event.stopPropagation(); window.location.href='citizen-dashboard.html'">View Balance</div>
+        </div>
+      </div>
+      <div class="notif-amount">+50 INDX</div>
+    </div>
+
+    <div class="notif-item unread" data-category="system" onclick="tapNotif(this,'system')">
+      <div class="notif-icon system">🏛️</div>
+      <div class="notif-body">
+        <div class="notif-title">Welcome to IN$DEX.</div>
+        <div class="notif-desc">I'm SIINDEX, your Sovereign AI. Your identity mariasantos.IN$DEX is live and your account is secure. I'll be here whenever you need me.</div>
+        <div class="notif-meta">
+          <div class="notif-time">5 min ago</div>
+          <div class="notif-action" onclick="event.stopPropagation(); window.location.href='pag.html'">Ask SIINDEX</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notif-item unread" data-category="system" onclick="tapNotif(this,'system')">
+      <div class="notif-icon wisdom">🧠</div>
+      <div class="notif-body">
+        <div class="notif-title">Wisdom Score: 20. You're on the board.</div>
+        <div class="notif-desc">Reach 50 to unlock Governance voting. Three actions gets you there. I'm tracking your progress.</div>
+        <div class="notif-meta">
+          <div class="notif-time">5 min ago</div>
+          <div class="notif-action" onclick="event.stopPropagation(); window.location.href='profile.html'">View Score</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notif-item unread" data-category="earn" onclick="tapNotif(this,'earn')">
+      <div class="notif-icon earn">💰</div>
+      <div class="notif-body">
+        <div class="notif-title">First Deposit — Offer Available</div>
+        <div class="notif-desc">Deposit $50 or more in your first 7 days and receive 10 INDX. Offer expires in 6 days.</div>
+        <div class="notif-meta">
+          <div class="notif-time">10 min ago</div>
+          <div class="notif-action" onclick="event.stopPropagation(); window.location.href='deposit.html'">Deposit Now</div>
+        </div>
+      </div>
+      <div class="notif-amount" style="color:var(--gold)">🎁 +10</div>
+    </div>
+
+  </div>
+
+  <!-- EARLIER -->
+  <div class="section-label" style="margin-top:16px;">Earlier</div>
+  <div class="notif-group">
+
+    <div class="notif-item" data-category="referral" onclick="tapNotif(this,'referral')">
+      <div class="notif-icon referral">👥</div>
+      <div class="notif-body">
+        <div class="notif-title">Referral Programme is Live</div>
+        <div class="notif-desc">Earn 50 INDX for every citizen you bring in. First 250 recruiters earn a bonus 50 INDX. Share your link now.</div>
+        <div class="notif-meta">
+          <div class="notif-time">1 hour ago</div>
+          <div class="notif-action" onclick="event.stopPropagation(); window.location.href='referral.html'">Get Link</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notif-item" data-category="market" onclick="tapNotif(this,'market')">
+      <div class="notif-icon market">🏪</div>
+      <div class="notif-body">
+        <div class="notif-title">Marketplace is Open</div>
+        <div class="notif-desc">Buy and sell anything — services, digital goods, physical items, RWA. Keep 98% of every sale you make.</div>
+        <div class="notif-meta">
+          <div class="notif-time">1 hour ago</div>
+          <div class="notif-action" onclick="event.stopPropagation(); window.location.href='marketplace.html'">Browse Market</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notif-item" data-category="earn" onclick="tapNotif(this,'earn')">
+      <div class="notif-icon system">📡</div>
+      <div class="notif-body">
+        <div class="notif-title">Light Node Available</div>
+        <div class="notif-desc">Earn 3–8 INDX per day passively by running a Light Node on your phone. Zero setup, minimal battery.</div>
+        <div class="notif-meta">
+          <div class="notif-time">2 hours ago</div>
+          <div class="notif-action" onclick="event.stopPropagation(); window.location.href='light-node.html'">Activate Node</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notif-item" data-category="system" onclick="tapNotif(this,'system')">
+      <div class="notif-icon system">🔐</div>
+      <div class="notif-body">
+        <div class="notif-title">Your wallet is secure.</div>
+        <div class="notif-desc">Grid Account created via Squads Protocol MPC. No seed phrase. Biometric-gated. I'm watching over it. Standing by.</div>
+        <div class="notif-meta">
+          <div class="notif-time">3 hours ago</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- NOTIFICATION SETTINGS -->
+<div class="section-label" style="margin-top:24px;">Notification Settings</div>
+<div class="notif-settings">
+  <div class="ns-row">
+    <div class="ns-icon">💰</div>
+    <div class="ns-label">Earnings & Rewards</div>
+    <div class="ns-toggle on" onclick="toggleNS(this)"><div class="ns-thumb"></div></div>
+  </div>
+  <div class="ns-row">
+    <div class="ns-icon">👥</div>
+    <div class="ns-label">Referral Activity</div>
+    <div class="ns-toggle on" onclick="toggleNS(this)"><div class="ns-thumb"></div></div>
+  </div>
+  <div class="ns-row">
+    <div class="ns-icon">🏪</div>
+    <div class="ns-label">Marketplace</div>
+    <div class="ns-toggle on" onclick="toggleNS(this)"><div class="ns-thumb"></div></div>
+  </div>
+  <div class="ns-row">
+    <div class="ns-icon">📡</div>
+    <div class="ns-label">Light Node Status</div>
+    <div class="ns-toggle on" onclick="toggleNS(this)"><div class="ns-thumb"></div></div>
+  </div>
+  <div class="ns-row">
+    <div class="ns-icon">🏛️</div>
+    <div class="ns-label">Governance & Proposals</div>
+    <div class="ns-toggle off" onclick="toggleNS(this)"><div class="ns-thumb"></div></div>
+  </div>
+  <div class="ns-row">
+    <div class="ns-icon">⚙️</div>
+    <div class="ns-label">System & Security</div>
+    <div class="ns-toggle on" onclick="toggleNS(this)"><div class="ns-thumb"></div></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+  let unreadCount = 4;
+
+  function tapNotif(el, category) {
+    if (el.classList.contains('unread')) {
+      el.classList.remove('unread');
+      unreadCount = Math.max(0, unreadCount - 1);
+      updateCount();
+    }
+  }
+
+  function markAllRead() {
+    document.querySelectorAll('.notif-item.unread').forEach(el => el.classList.remove('unread'));
+    unreadCount = 0;
+    updateCount();
+    showToast('✓ All notifications marked as read');
+  }
+
+  function updateCount() {
+    const badge = document.getElementById('unreadCount');
+    if (unreadCount === 0) {
+      badge.style.display = 'none';
+    } else {
+      badge.style.display = 'inline-block';
+      badge.textContent = unreadCount;
+    }
+  }
+
+  function filterNotifs(chipEl, category) {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    chipEl.classList.add('active');
+
+    const items = document.querySelectorAll('.notif-item');
+    items.forEach(item => {
+      if (category === 'all' || item.dataset.category === category) {
+        item.style.display = 'flex';
+      } else {
+        item.style.display = 'none';
+      }
+    });
+
+    // Show/hide section labels based on visible items
+    document.querySelectorAll('.section-label').forEach(label => {
+      const group = label.nextElementSibling;
+      if (group) {
+        const visibleItems = group.querySelectorAll('.notif-item[style="display: flex;"], .notif-item:not([style*="none"])');
+        const allItems = group.querySelectorAll('.notif-item');
+        let anyVisible = false;
+        allItems.forEach(item => {
+          if (item.style.display !== 'none') anyVisible = true;
+        });
+        label.style.display = anyVisible ? 'block' : 'none';
+        group.style.display = anyVisible ? 'block' : 'none';
+      }
+    });
+  }
+
+  function toggleNS(el) {
+    if (el.classList.contains('on')) {
+      el.classList.remove('on');
+      el.classList.add('off');
+      showToast('🔕 Notifications disabled');
+    } else {
+      el.classList.remove('off');
+      el.classList.add('on');
+      showToast('🔔 Notifications enabled');
+    }
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+</script>
+
+<div class="bottom-nav-spacer"></div>
+<nav class="bottom-nav">
+  <div class="nav-item" onclick="window.location.href='citizen-dashboard.html'">
+    <div class="nav-icon">🏛️</div>
+    <div class="nav-label">Home</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='marketplace.html'">
+    <div class="nav-icon">🛒</div>
+    <div class="nav-label">Market</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='portfolio.html'">
+    <div class="nav-icon">📊</div>
+    <div class="nav-label">Portfolio</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='feed.html'">
+    <div class="nav-icon">🌏</div>
+    <div class="nav-label">Feed</div>
+  </div>
+  <div class="nav-item active" onclick="window.location.href='profile.html'">
+    <div class="nav-icon">👤</div>
+    <div class="nav-label">Profile</div>
+  </div>
+</nav>
+</body>
+</html>

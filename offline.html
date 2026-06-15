@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Sovereign Mesh — Offline Mode — IN$DEX</title>
+<style>
+  :root{
+    --bg:#090A10;--surface:#10121A;--surface2:#181B26;--surface3:#1E2130;
+    --border:#252836;--border2:#2E3348;
+    --cyan:#00D4FF;--cyan-dim:rgba(0,212,255,0.18);
+    --blue:#2B35D8;--purple:#8B3FE8;--green:#00E5A0;--gold:#FFB800;--red:#FF4D6D;
+    --text:#F0F2FF;--text2:#9CA3B8;--text-muted:#5A6178;
+    --green-bg:rgba(0,229,160,0.08);
+    --gold-bg:rgba(255,184,0,0.08);
+    --orange:#FF8C00;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;min-height:100vh;max-width:430px;margin:0 auto;overflow-x:hidden;}
+
+  .header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;position:sticky;top:0;background:rgba(9,10,16,0.92);backdrop-filter:blur(16px);z-index:50;border-bottom:1px solid var(--border);}
+  .header-back{width:36px;height:36px;background:var(--surface2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;border:none;color:var(--text);}
+  .header-title{font-size:17px;font-weight:700;}
+  .online-badge{font-size:12px;font-weight:700;padding:5px 10px;border-radius:20px;display:flex;align-items:center;gap:6px;}
+  .online-badge.online{background:var(--green-bg);border:1px solid rgba(0,229,160,0.3);color:var(--green);}
+  .online-badge.offline{background:rgba(255,140,0,0.1);border:1px solid rgba(255,140,0,0.3);color:var(--orange);}
+  .status-dot{width:7px;height:7px;border-radius:50%;background:currentColor;}
+  .status-dot.pulse{animation:pulse 1.5s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+  /* HERO */
+  .hero{margin:16px;background:linear-gradient(135deg,rgba(43,53,216,0.2),rgba(0,212,255,0.1));border:1px solid rgba(0,212,255,0.2);border-radius:20px;padding:20px;text-align:center;}
+  .hero-orb{width:80px;height:80px;margin:0 auto 14px;position:relative;}
+  .orb-ring{position:absolute;inset:0;border-radius:50%;border:2px solid var(--cyan-dim);animation:orbRing 3s linear infinite;}
+  .orb-ring:nth-child(2){inset:-8px;border-color:rgba(0,212,255,0.1);animation-delay:-1s;animation-duration:4s;}
+  .orb-ring:nth-child(3){inset:-16px;border-color:rgba(0,212,255,0.06);animation-delay:-2s;animation-duration:5s;}
+  @keyframes orbRing{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+  .orb-inner{position:absolute;inset:8px;border-radius:50%;background:radial-gradient(circle at 40% 35%,rgba(0,212,255,0.3),rgba(43,53,216,0.4));display:flex;align-items:center;justify-content:center;font-size:28px;}
+  .hero-title{font-size:20px;font-weight:800;margin-bottom:6px;}
+  .hero-sub{font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:16px;}
+  .hero-stat-row{display:flex;justify-content:center;gap:20px;}
+  .hero-stat{text-align:center;}
+  .hero-stat-val{font-size:20px;font-weight:800;color:var(--cyan);}
+  .hero-stat-label{font-size:10px;color:var(--text-muted);margin-top:2px;}
+
+  /* STATUS GRID */
+  .status-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 16px;}
+  .status-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;}
+  .status-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .status-card-icon{font-size:22px;}
+  .status-pill{font-size:10px;font-weight:700;padding:3px 7px;border-radius:6px;}
+  .status-pill.active{background:var(--green-bg);color:var(--green);}
+  .status-pill.cached{background:rgba(0,212,255,0.1);color:var(--cyan);}
+  .status-pill.syncing{background:var(--gold-bg);color:var(--gold);}
+  .status-card-val{font-size:17px;font-weight:800;margin-bottom:2px;}
+  .status-card-label{font-size:11px;color:var(--text-muted);}
+
+  /* PEER MAP */
+  .peer-section{padding:0 16px 16px;}
+  .section-title{font-size:14px;font-weight:700;margin-bottom:10px;}
+  .peer-map{background:var(--surface);border:1px solid var(--border);border-radius:14px;height:180px;position:relative;overflow:hidden;}
+  .peer-map-bg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0.04;}
+  .peer-map-bg svg{width:100%;height:100%;}
+  .peer-dot{position:absolute;width:10px;height:10px;border-radius:50%;transform:translate(-50%,-50%);cursor:pointer;}
+  .peer-dot.you{width:16px;height:16px;background:var(--cyan);box-shadow:0 0 12px var(--cyan);}
+  .peer-dot.near{background:var(--green);}
+  .peer-dot.medium{background:var(--gold);}
+  .peer-dot.far{background:var(--text-muted);}
+  .peer-pulse{position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--cyan);animation:peerPulse 2s ease-out infinite;}
+  @keyframes peerPulse{0%{transform:scale(1);opacity:0.6;}100%{transform:scale(2.5);opacity:0;}}
+  .peer-line{position:absolute;background:rgba(0,212,255,0.15);height:1px;transform-origin:left center;pointer-events:none;}
+  .peer-map-label{position:absolute;bottom:8px;right:10px;font-size:10px;color:var(--text-muted);}
+
+  /* PEER LIST */
+  .peer-list{margin-top:10px;display:flex;flex-direction:column;gap:6px;}
+  .peer-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;}
+  .peer-avatar{width:32px;height:32px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+  .peer-body{flex:1;min-width:0;}
+  .peer-name{font-size:13px;font-weight:600;}
+  .peer-dist{font-size:11px;color:var(--text-muted);}
+  .peer-signal{width:24px;display:flex;gap:2px;align-items:flex-end;flex-shrink:0;}
+  .signal-bar{width:4px;border-radius:1px;}
+  .signal-bar.active{background:var(--green);}
+  .signal-bar.inactive{background:var(--surface3);}
+
+  /* CACHED ACTIONS */
+  .cached-section{padding:0 16px 16px;}
+  .cached-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+  .cached-header{padding:12px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);}
+  .cached-icon{font-size:20px;}
+  .cached-title{font-size:13px;font-weight:700;}
+  .cached-count{margin-left:auto;font-size:11px;color:var(--text-muted);}
+  .cached-item{padding:11px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);}
+  .cached-item:last-child{border-bottom:none;}
+  .cached-emoji{font-size:18px;flex-shrink:0;}
+  .cached-body{flex:1;min-width:0;}
+  .cached-name{font-size:13px;font-weight:600;}
+  .cached-meta{font-size:11px;color:var(--text-muted);margin-top:1px;}
+  .cached-status{font-size:11px;font-weight:700;}
+  .cached-status.queued{color:var(--gold);}
+  .cached-status.sent{color:var(--green);}
+
+  /* SYNC BANNER */
+  .sync-banner{margin:0 16px 16px;background:var(--green-bg);border:1px solid rgba(0,229,160,0.3);border-radius:14px;padding:14px;display:flex;gap:12px;align-items:center;}
+  .sync-banner.offline{background:rgba(255,140,0,0.07);border-color:rgba(255,140,0,0.25);}
+  .sync-icon{font-size:24px;flex-shrink:0;}
+  .sync-title{font-size:13px;font-weight:700;margin-bottom:3px;}
+  .sync-desc{font-size:12px;color:var(--text2);line-height:1.4;}
+
+  /* INFO CARDS */
+  .info-grid{padding:0 16px 16px;display:flex;flex-direction:column;gap:8px;}
+  .info-row{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px;display:flex;gap:12px;align-items:flex-start;}
+  .info-icon{font-size:20px;flex-shrink:0;margin-top:1px;}
+  .info-body{flex:1;}
+  .info-title{font-size:13px;font-weight:700;margin-bottom:3px;}
+  .info-desc{font-size:12px;color:var(--text2);line-height:1.5;}
+
+  #toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface2);border:1px solid var(--border2);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;opacity:0;transition:all 0.3s;z-index:200;white-space:nowrap;pointer-events:none;}
+
+  .bottom-nav{height:64px;}
+  .nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(16,18,26,0.96);backdrop-filter:blur(16px);border-top:1px solid var(--border);display:flex;z-index:80;}
+  .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 0;cursor:pointer;opacity:0.5;}
+  .nav-item.active{opacity:1;}
+  .nav-icon{font-size:20px;}
+  .nav-label{font-size:10px;font-weight:600;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <button class="header-back" onclick="window.history.back()">←</button>
+  <div class="header-title">Sovereign Mesh</div>
+  <div class="online-badge online" id="networkBadge">
+    <div class="status-dot pulse"></div>
+    <span id="networkLabel">Online</span>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-orb">
+    <div class="orb-ring"></div>
+    <div class="orb-ring"></div>
+    <div class="orb-ring"></div>
+    <div class="orb-inner">📡</div>
+  </div>
+  <div class="hero-title">Sovereign Mesh</div>
+  <div class="hero-sub">P2P network powered by libp2p. Send INDX to nearby citizens even when the internet is down, using Bluetooth and local Wi-Fi.</div>
+  <div class="hero-stat-row">
+    <div class="hero-stat">
+      <div class="hero-stat-val" id="peerCount">4</div>
+      <div class="hero-stat-label">Nearby Peers</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val" id="syncStatus">Live</div>
+      <div class="hero-stat-label">Sync Status</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val" id="cachedBalance">50</div>
+      <div class="hero-stat-label">Cached INDX</div>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS GRID -->
+<div class="status-grid">
+  <div class="status-card">
+    <div class="status-card-top">
+      <span class="status-card-icon">🔗</span>
+      <span class="status-pill active">Active</span>
+    </div>
+    <div class="status-card-val">libp2p</div>
+    <div class="status-card-label">P2P Protocol</div>
+  </div>
+  <div class="status-card">
+    <div class="status-card-top">
+      <span class="status-card-icon">📦</span>
+      <span class="status-pill cached">Cached</span>
+    </div>
+    <div class="status-card-val" id="txQueue">0</div>
+    <div class="status-card-label">Queued TX</div>
+  </div>
+  <div class="status-card">
+    <div class="status-card-top">
+      <span class="status-card-icon">📻</span>
+      <span class="status-pill active">On</span>
+    </div>
+    <div class="status-card-val">BT + WiFi</div>
+    <div class="status-card-label">Mesh Radios</div>
+  </div>
+  <div class="status-card">
+    <div class="status-card-top">
+      <span class="status-card-icon">⏱</span>
+      <span class="status-pill syncing">2.4s</span>
+    </div>
+    <div class="status-card-val" id="latency">2.4s</div>
+    <div class="status-card-label">Avg Latency</div>
+  </div>
+</div>
+
+<!-- PEER MAP -->
+<div class="peer-section">
+  <div class="section-title">📡 Nearby Peers</div>
+  <div class="peer-map" id="peerMap">
+    <div class="peer-map-bg">
+      <svg viewBox="0 0 400 180"><circle cx="200" cy="90" r="40" fill="none" stroke="#fff" stroke-width="0.5"/><circle cx="200" cy="90" r="80" fill="none" stroke="#fff" stroke-width="0.5"/><circle cx="200" cy="90" r="120" fill="none" stroke="#fff" stroke-width="0.5"/></svg>
+    </div>
+    <!-- You (center) -->
+    <div class="peer-dot you" style="left:50%;top:50%;">
+      <div class="peer-pulse"></div>
+    </div>
+    <!-- Peers -->
+    <div class="peer-dot near" style="left:62%;top:38%;" title="marisol" onclick="pingPeer('marisol')"></div>
+    <div class="peer-dot near" style="left:35%;top:55%;" title="kwame" onclick="pingPeer('kwame')"></div>
+    <div class="peer-dot medium" style="left:70%;top:65%;" title="priya" onclick="pingPeer('priya')"></div>
+    <div class="peer-dot far" style="left:22%;top:30%;" title="tomas" onclick="pingPeer('tomas')"></div>
+    <div class="peer-map-label">Tap a peer to ping</div>
+  </div>
+
+  <div class="peer-list">
+    <div class="peer-item">
+      <div class="peer-avatar">🌺</div>
+      <div class="peer-body">
+        <div class="peer-name">marisol.IN$DEX</div>
+        <div class="peer-dist">~12m · Bluetooth</div>
+      </div>
+      <div class="peer-signal">
+        <div class="signal-bar active" style="height:6px;"></div>
+        <div class="signal-bar active" style="height:9px;"></div>
+        <div class="signal-bar active" style="height:12px;"></div>
+        <div class="signal-bar active" style="height:15px;"></div>
+      </div>
+    </div>
+    <div class="peer-item">
+      <div class="peer-avatar">⚡</div>
+      <div class="peer-body">
+        <div class="peer-name">kwame.IN$DEX</div>
+        <div class="peer-dist">~28m · Local WiFi</div>
+      </div>
+      <div class="peer-signal">
+        <div class="signal-bar active" style="height:6px;"></div>
+        <div class="signal-bar active" style="height:9px;"></div>
+        <div class="signal-bar active" style="height:12px;"></div>
+        <div class="signal-bar inactive" style="height:15px;"></div>
+      </div>
+    </div>
+    <div class="peer-item">
+      <div class="peer-avatar">🦁</div>
+      <div class="peer-body">
+        <div class="peer-name">priya.IN$DEX</div>
+        <div class="peer-dist">~85m · Mesh relay</div>
+      </div>
+      <div class="peer-signal">
+        <div class="signal-bar active" style="height:6px;"></div>
+        <div class="signal-bar active" style="height:9px;"></div>
+        <div class="signal-bar inactive" style="height:12px;"></div>
+        <div class="signal-bar inactive" style="height:15px;"></div>
+      </div>
+    </div>
+    <div class="peer-item">
+      <div class="peer-avatar">🎵</div>
+      <div class="peer-body">
+        <div class="peer-name">tomas.IN$DEX</div>
+        <div class="peer-dist">~210m · Mesh relay</div>
+      </div>
+      <div class="peer-signal">
+        <div class="signal-bar active" style="height:6px;"></div>
+        <div class="signal-bar inactive" style="height:9px;"></div>
+        <div class="signal-bar inactive" style="height:12px;"></div>
+        <div class="signal-bar inactive" style="height:15px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SYNC BANNER -->
+<div class="sync-banner" id="syncBanner">
+  <div class="sync-icon">✅</div>
+  <div>
+    <div class="sync-title">Fully Synced</div>
+    <div class="sync-desc">All transactions are confirmed on Solana. Your balance and history are up to date.</div>
+  </div>
+</div>
+
+<!-- CACHED PENDING TX -->
+<div class="cached-section" id="cachedSection" style="display:none;">
+  <div class="section-title">⏳ Queued Transactions</div>
+  <div class="cached-card" id="cachedList"></div>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="info-grid">
+  <div class="section-title" style="padding:0 0 4px;">📖 How Sovereign Mesh Works</div>
+  <div class="info-row">
+    <div class="info-icon">📡</div>
+    <div class="info-body">
+      <div class="info-title">P2P Over Bluetooth & WiFi</div>
+      <div class="info-desc">When internet is unavailable, IN$DEX switches to libp2p over Bluetooth LE and local WiFi to reach nearby citizens on the same mesh.</div>
+    </div>
+  </div>
+  <div class="info-row">
+    <div class="info-icon">📦</div>
+    <div class="info-body">
+      <div class="info-title">Offline-First Transactions</div>
+      <div class="info-desc">Send INDX to anyone on the mesh. Transactions are signed locally and queued. When either peer reconnects to Solana, they settle automatically.</div>
+    </div>
+  </div>
+  <div class="info-row">
+    <div class="info-icon">🔒</div>
+    <div class="info-body">
+      <div class="info-title">Cryptographically Secure</div>
+      <div class="info-desc">Every offline transaction is signed by your Grid Account private key — the same security as online, even without internet.</div>
+    </div>
+  </div>
+  <div class="info-row">
+    <div class="info-icon">🌍</div>
+    <div class="info-body">
+      <div class="info-title">Built for the Unbanked</div>
+      <div class="info-desc">Sovereign Mesh ensures citizens in areas with unreliable internet — markets, rural regions, disaster zones — can still transact freely.</div>
+    </div>
+  </div>
+</div>
+
+<div style="height:80px;"></div>
+
+<div id="toast"></div>
+
+<div class="bottom-nav"></div>
+<nav class="nav">
+  <div class="nav-item" onclick="window.location.href='citizen-dashboard.html'"><div class="nav-icon">🏛️</div><div class="nav-label">Home</div></div>
+  <div class="nav-item" onclick="window.location.href='light-node.html'"><div class="nav-icon">💡</div><div class="nav-label">Node</div></div>
+  <div class="nav-item active"><div class="nav-icon">📡</div><div class="nav-label">Mesh</div></div>
+  <div class="nav-item" onclick="window.location.href='portfolio.html'"><div class="nav-icon">📊</div><div class="nav-label">Portfolio</div></div>
+  <div class="nav-item" onclick="window.location.href='profile.html'"><div class="nav-icon">👤</div><div class="nav-label">Profile</div></div>
+</nav>
+
+<script>
+// Simulate live mesh state
+let isOnline = navigator.onLine;
+let peerCount = 4;
+let cachedTx = [];
+
+function updateNetworkStatus() {
+  isOnline = navigator.onLine;
+  const badge = document.getElementById('networkBadge');
+  const label = document.getElementById('networkLabel');
+  const syncStatus = document.getElementById('syncStatus');
+  const syncBanner = document.getElementById('syncBanner');
+  
+  if (isOnline) {
+    badge.className = 'online-badge online';
+    label.textContent = 'Online';
+    syncStatus.textContent = 'Live';
+    syncBanner.className = 'sync-banner';
+    syncBanner.innerHTML = '<div class="sync-icon">✅</div><div><div class="sync-title">Fully Synced</div><div class="sync-desc">All transactions confirmed on Solana. Balance and history up to date.</div></div>';
+    // Auto-flush queued tx
+    if (cachedTx.length > 0) {
+      setTimeout(flushQueue, 1000);
+    }
+  } else {
+    badge.className = 'online-badge offline';
+    label.textContent = 'Offline';
+    syncStatus.textContent = 'Mesh';
+    syncBanner.className = 'sync-banner offline';
+    syncBanner.innerHTML = '<div class="sync-icon">📡</div><div><div class="sync-title">Sovereign Mesh Active</div><div class="sync-desc">No internet — operating P2P via Bluetooth & WiFi. Transactions queue locally and settle when you reconnect.</div></div>';
+  }
+}
+
+window.addEventListener('online', updateNetworkStatus);
+window.addEventListener('offline', updateNetworkStatus);
+window.addEventListener('DOMContentLoaded', () => {
+  updateNetworkStatus();
+  simulateMeshActivity();
+});
+
+function simulateMeshActivity() {
+  // Subtly animate latency
+  setInterval(() => {
+    const latency = (1.8 + Math.random() * 2).toFixed(1);
+    document.getElementById('latency').textContent = latency + 's';
+  }, 3000);
+
+  // Occasionally a new peer connects
+  setInterval(() => {
+    if (Math.random() > 0.7) {
+      const drift = Math.floor(Math.random() * 2) - 1;
+      peerCount = Math.max(1, peerCount + drift);
+      document.getElementById('peerCount').textContent = peerCount;
+    }
+  }, 8000);
+}
+
+function pingPeer(name) {
+  showToast('📡 Pinging ' + name + '.IN$DEX...');
+  setTimeout(() => showToast('✅ ' + name + '.IN$DEX responded · 23ms'), 1200);
+}
+
+function flushQueue() {
+  cachedTx = [];
+  document.getElementById('txQueue').textContent = '0';
+  document.getElementById('cachedSection').style.display = 'none';
+  showToast('✅ Queued transactions settled on Solana');
+}
+
+// Allow simulating offline for demo
+document.getElementById('peerMap').addEventListener('dblclick', () => {
+  if (isOnline) {
+    // Simulate queueing a transaction
+    const tx = { to: 'marisol.IN$DEX', amount: 5, id: 'MESH-' + Date.now().toString(36).toUpperCase() };
+    cachedTx.push(tx);
+    document.getElementById('txQueue').textContent = cachedTx.length;
+    document.getElementById('cachedSection').style.display = 'block';
+    const list = document.getElementById('cachedList');
+    list.innerHTML = cachedTx.map(t => `
+      <div class="cached-item">
+        <div class="cached-emoji">💸</div>
+        <div class="cached-body">
+          <div class="cached-name">Send ${t.amount} INDX → ${t.to}</div>
+          <div class="cached-meta">TX: ${t.id}</div>
+        </div>
+        <div class="cached-status queued">Queued</div>
+      </div>
+    `).join('');
+    showToast('📦 TX queued in Sovereign Mesh');
+  }
+});
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.opacity = '1';
+  t.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => {
+    t.style.opacity = '0';
+    t.style.transform = 'translateX(-50%) translateY(20px)';
+  }, 2500);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>L99 Launch Command — IN$DEX</title>
+<style>
+  :root {
+    --cyan: #00D4FF; --blue: #2B35D8; --purple: #8B3FE8;
+    --black: #090A10; --green: #00E5A0; --gold: #FFB800;
+    --red: #FF4D6D; --surface: #12141F; --surface2: #1A1D2E;
+    --surface3: #22263A; --text: #F0F2FF; --text2: #A0A8C8;
+    --text-muted: #5A6080;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--black); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; max-width:430px; margin:0 auto; min-height:100vh; overflow-x:hidden; }
+
+  /* Header */
+  .topbar { background:var(--surface); border-bottom:1px solid rgba(0,212,255,0.15); padding:14px 16px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:100; }
+  .back-btn { width:36px; height:36px; border:none; background:var(--surface2); border-radius:10px; color:var(--text); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .topbar-center { flex:1; text-align:center; }
+  .topbar-title { font-size:14px; font-weight:700; color:var(--cyan); letter-spacing:1px; }
+  .topbar-sub { font-size:11px; color:var(--text-muted); }
+  .live-dot { width:8px; height:8px; border-radius:50%; background:var(--green); display:inline-block; margin-right:4px; animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* SIINDEX identity strip */
+  .si-strip { background:linear-gradient(135deg,rgba(43,53,216,0.4),rgba(139,63,232,0.4)); border-bottom:1px solid rgba(139,63,232,0.3); padding:14px 16px; display:flex; align-items:center; gap:12px; }
+  .si-ring { width:44px; height:44px; border-radius:50%; border:2px solid var(--cyan); display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; animation:ring-pulse 3s ease-in-out infinite; }
+  @keyframes ring-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,212,255,0.4)} 50%{box-shadow:0 0 0 8px rgba(0,212,255,0)} }
+  .si-id { }
+  .si-name-strip { font-size:13px; font-weight:700; color:var(--cyan); letter-spacing:0.5px; }
+  .si-status-strip { font-size:12px; color:var(--text2); }
+  .si-time { margin-left:auto; text-align:right; }
+  .si-time-val { font-size:14px; font-weight:700; color:var(--text); font-family:monospace; }
+  .si-time-label { font-size:10px; color:var(--text-muted); }
+
+  /* Content */
+  .content { padding:14px; }
+
+  /* Countdown */
+  .countdown-card { background:var(--surface); border-radius:16px; padding:20px 16px; margin-bottom:14px; text-align:center; border:1px solid rgba(0,212,255,0.1); }
+  .countdown-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:2px; margin-bottom:16px; }
+  .countdown-date { font-size:14px; font-weight:700; color:var(--gold); margin-bottom:16px; letter-spacing:1px; }
+  .countdown-grid { display:flex; gap:10px; justify-content:center; margin-bottom:16px; }
+  .cd-unit { background:var(--surface2); border-radius:12px; padding:14px 10px; min-width:64px; }
+  .cd-num { font-size:28px; font-weight:900; color:var(--cyan); font-family:monospace; display:block; }
+  .cd-label { font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-top:4px; display:block; }
+  .launch-label { font-size:13px; color:var(--text2); }
+  .launch-label strong { color:var(--text); }
+
+  /* SIINDEX feed */
+  .feed-card { background:var(--surface); border-radius:14px; overflow:hidden; margin-bottom:14px; }
+  .feed-header { padding:12px 16px; display:flex; align-items:center; gap:8px; background:var(--surface2); border-bottom:1px solid rgba(255,255,255,0.04); }
+  .feed-title { font-size:13px; font-weight:600; }
+  .feed-count { margin-left:auto; font-size:11px; color:var(--text-muted); }
+  .feed-list { max-height:180px; overflow-y:auto; scrollbar-width:none; }
+  .feed-list::-webkit-scrollbar { display:none; }
+  .feed-item { padding:10px 16px; border-bottom:1px solid rgba(255,255,255,0.03); display:flex; align-items:flex-start; gap:10px; }
+  .feed-item:last-child { border-bottom:none; }
+  .feed-time { font-size:10px; color:var(--text-muted); font-family:monospace; white-space:nowrap; padding-top:2px; min-width:42px; }
+  .feed-msg { font-size:12px; color:var(--text2); line-height:1.4; }
+  .feed-msg.green { color:var(--green); }
+  .feed-msg.gold { color:var(--gold); }
+  .feed-msg.cyan { color:var(--cyan); }
+
+  /* Pool status */
+  .pool-card { background:var(--surface); border-radius:14px; margin-bottom:14px; overflow:hidden; }
+  .pool-header { padding:12px 16px; background:var(--surface2); display:flex; align-items:center; justify-content:space-between; }
+  .pool-title { font-size:13px; font-weight:600; }
+  .pool-live { font-size:11px; background:rgba(0,229,160,0.12); color:var(--green); padding:3px 8px; border-radius:6px; }
+  .pool-stats { display:grid; grid-template-columns:1fr 1fr; padding:14px 16px; gap:10px; }
+  .pool-stat { }
+  .ps-val { font-size:18px; font-weight:800; }
+  .ps-val.cyan { color:var(--cyan); }
+  .ps-val.green { color:var(--green); }
+  .ps-val.gold { color:var(--gold); }
+  .ps-label { font-size:11px; color:var(--text-muted); margin-top:2px; }
+  .pool-bar-row { padding:0 16px 14px; }
+  .pool-bar-label { display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); margin-bottom:6px; }
+  .pool-bar-track { background:var(--surface3); border-radius:4px; height:8px; }
+  .pool-bar-fill { height:8px; border-radius:4px; background:linear-gradient(90deg,var(--cyan),var(--green)); transition:width 2s; }
+
+  /* Sequence checklist */
+  .seq-card { background:var(--surface); border-radius:14px; overflow:hidden; margin-bottom:14px; }
+  .seq-header { padding:12px 16px; background:var(--surface2); font-size:13px; font-weight:600; display:flex; justify-content:space-between; }
+  .seq-progress { font-size:11px; color:var(--cyan); }
+  .seq-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-top:1px solid rgba(255,255,255,0.04); }
+  .seq-icon { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+  .seq-icon.done { background:rgba(0,229,160,0.15); }
+  .seq-icon.active { background:rgba(0,212,255,0.15); animation:spin-slow 3s linear infinite; }
+  .seq-icon.pending { background:var(--surface2); }
+  @keyframes spin-slow { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+  .seq-info { flex:1; }
+  .seq-name { font-size:13px; font-weight:500; }
+  .seq-detail { font-size:11px; color:var(--text-muted); margin-top:2px; }
+  .seq-status { font-size:11px; font-weight:600; }
+  .seq-status.done { color:var(--green); }
+  .seq-status.active { color:var(--cyan); }
+  .seq-status.pending { color:var(--text-muted); }
+
+  /* Citizen arrival */
+  .arrival-card { background:var(--surface); border-radius:14px; overflow:hidden; margin-bottom:14px; }
+  .arrival-header { padding:12px 16px; background:var(--surface2); display:flex; align-items:center; justify-content:space-between; }
+  .arrival-title { font-size:13px; font-weight:600; }
+  .arrival-count { font-size:20px; font-weight:800; color:var(--cyan); padding:12px 16px 4px; }
+  .arrival-sub { font-size:12px; color:var(--text-muted); padding:0 16px 12px; }
+  .arrival-list { padding:0 16px 14px; }
+  .arrival-item { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.03); }
+  .arrival-item:last-child { border-bottom:none; }
+  .arr-flag { font-size:18px; }
+  .arr-info { flex:1; }
+  .arr-name { font-size:13px; font-weight:500; }
+  .arr-loc { font-size:11px; color:var(--text-muted); }
+  .arr-ws { font-size:11px; color:var(--cyan); }
+  .arr-time { font-size:11px; color:var(--text-muted); }
+
+  /* Controls */
+  .controls { display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
+  .ctrl-btn { width:100%; padding:14px; border:none; border-radius:12px; font-size:14px; font-weight:700; cursor:pointer; transition:all 0.2s; }
+  .ctrl-btn.primary { background:linear-gradient(135deg,var(--blue),var(--purple)); color:#fff; }
+  .ctrl-btn.warning { background:rgba(255,184,0,0.12); border:1px solid rgba(255,184,0,0.3); color:var(--gold); }
+  .ctrl-btn.danger { background:rgba(255,77,109,0.1); border:1px solid rgba(255,77,109,0.3); color:var(--red); }
+  .ctrl-btn:hover { opacity:0.9; transform:translateY(-1px); }
+
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(60px); background:var(--surface2); color:var(--text); padding:12px 20px; border-radius:12px; font-size:13px; font-weight:500; transition:transform 0.3s; z-index:200; border:1px solid rgba(0,229,160,0.3); max-width:380px; text-align:center; white-space:normal; }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" onclick="history.back()">←</button>
+  <div class="topbar-center">
+    <div class="topbar-title"><span class="live-dot"></span>L99 LAUNCH COMMAND</div>
+    <div class="topbar-sub">AJ Henry · SIINDEX Sovereign AI</div>
+  </div>
+  <div style="width:36px"></div>
+</div>
+
+<div class="si-strip">
+  <div class="si-ring">⚡</div>
+  <div class="si-id">
+    <div class="si-name-strip">SIINDEX</div>
+    <div class="si-status-strip">All systems nominal. Monitoring. Standing by.</div>
+  </div>
+  <div class="si-time">
+    <div class="si-time-val" id="liveTime">--:--:--</div>
+    <div class="si-time-label">AEST</div>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- Countdown -->
+  <div class="countdown-card">
+    <div class="countdown-label">Time to Launch</div>
+    <div class="countdown-date">24 SEPTEMBER 2026 · 10:00 AM AEST</div>
+    <div class="countdown-grid">
+      <div class="cd-unit"><span class="cd-num" id="cd-days">000</span><span class="cd-label">Days</span></div>
+      <div class="cd-unit"><span class="cd-num" id="cd-hours">00</span><span class="cd-label">Hours</span></div>
+      <div class="cd-unit"><span class="cd-num" id="cd-mins">00</span><span class="cd-label">Mins</span></div>
+      <div class="cd-unit"><span class="cd-num" id="cd-secs">00</span><span class="cd-label">Secs</span></div>
+    </div>
+    <div class="launch-label">L99 · <strong>Image Nation Decentralised Exchange</strong></div>
+  </div>
+
+  <!-- SIINDEX Live Feed -->
+  <div class="feed-card">
+    <div class="feed-header">
+      <span class="feed-title">⚡ SIINDEX Live Feed</span>
+      <span class="feed-count" id="feedCount">0 events</span>
+    </div>
+    <div class="feed-list" id="feedList"></div>
+  </div>
+
+  <!-- Pool Status -->
+  <div class="pool-card">
+    <div class="pool-header">
+      <span class="pool-title">INDX/SOL — Raydium</span>
+      <span class="pool-live">LIVE</span>
+    </div>
+    <div class="pool-stats">
+      <div class="pool-stat">
+        <div class="ps-val cyan" id="poolPrice">$0.350</div>
+        <div class="ps-label">INDX Price</div>
+      </div>
+      <div class="pool-stat">
+        <div class="ps-val green" id="poolTVL">$0</div>
+        <div class="ps-label">Pool TVL</div>
+      </div>
+      <div class="pool-stat">
+        <div class="ps-val gold" id="poolVol">$0</div>
+        <div class="ps-label">24h Volume</div>
+      </div>
+      <div class="pool-stat">
+        <div class="ps-val" id="poolFee">0.25%</div>
+        <div class="ps-label">Fee Tier</div>
+      </div>
+    </div>
+    <div class="pool-bar-row">
+      <div class="pool-bar-label">
+        <span>Pool Depth</span>
+        <span id="poolDepthPct">Building...</span>
+      </div>
+      <div class="pool-bar-track">
+        <div class="pool-bar-fill" id="poolBar" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Launch Sequence Checklist -->
+  <div class="seq-card">
+    <div class="seq-header">
+      Launch Sequence
+      <span class="seq-progress" id="seqProgress">0 / 8 complete</span>
+    </div>
+    <div id="seqList"></div>
+  </div>
+
+  <!-- Citizen Arrivals -->
+  <div class="arrival-card">
+    <div class="arrival-header">
+      <span class="arrival-title">First Citizens Arriving</span>
+      <span style="font-size:11px;color:var(--green);" id="arrivalLive">Live</span>
+    </div>
+    <div class="arrival-count" id="citizenCount">0</div>
+    <div class="arrival-sub">citizens onboarded since launch</div>
+    <div class="arrival-list" id="arrivalList"></div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="ctrl-btn primary" onclick="triggerLaunch()">Initiate L99 Launch Sequence</button>
+    <button class="ctrl-btn warning" onclick="window.location.href='liquidity-pool-setup.html'">Configure Liquidity Pool</button>
+    <button class="ctrl-btn warning" onclick="showToast('SIINDEX ops brief opening...')">SIINDEX Ops Brief</button>
+    <button class="ctrl-btn danger" onclick="confirmHalt()">Emergency Halt</button>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// === COUNTDOWN ===
+const LAUNCH = new Date('2026-09-24T10:00:00+10:00');
+function updateCountdown() {
+  const now = new Date();
+  const diff = LAUNCH - now;
+  if (diff <= 0) {
+    document.getElementById('cd-days').textContent = '000';
+    document.getElementById('cd-hours').textContent = '00';
+    document.getElementById('cd-mins').textContent = '00';
+    document.getElementById('cd-secs').textContent = '00';
+    return;
+  }
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
+  const secs = Math.floor((diff % 60000) / 1000);
+  document.getElementById('cd-days').textContent = String(days).padStart(3,'0');
+  document.getElementById('cd-hours').textContent = String(hours).padStart(2,'0');
+  document.getElementById('cd-mins').textContent = String(mins).padStart(2,'0');
+  document.getElementById('cd-secs').textContent = String(secs).padStart(2,'0');
+}
+
+// === LIVE TIME ===
+function updateTime() {
+  const now = new Date();
+  const aest = new Date(now.toLocaleString('en-AU',{timeZone:'Australia/Melbourne'}));
+  const hh = String(aest.getHours()).padStart(2,'0');
+  const mm = String(aest.getMinutes()).padStart(2,'0');
+  const ss = String(aest.getSeconds()).padStart(2,'0');
+  document.getElementById('liveTime').textContent = hh+':'+mm+':'+ss;
+}
+
+// === SIINDEX FEED ===
+const FEED_MSGS = [
+  { msg: "AJ, I'm online. L99 launch monitoring active. All systems nominal.", type:'cyan' },
+  { msg: "Knowledge base health: 100%. All canonical constants verified.", type:'green' },
+  { msg: "Raydium pool pre-flight ready. Awaiting your deployment instruction.", type:'' },
+  { msg: "PQSI threat monitor: T0 CLEAR across all active corridors.", type:'green' },
+  { msg: "Reserve ratio: 102.4%. Civilisation Fund: $8,420. Standing by.", type:'' },
+  { msg: "Compliance shield: active. Travel Rule ZK-proof engine: operational.", type:'green' },
+  { msg: "MemeDAO governance: 0 pending proposals. Quorum ready.", type:'' },
+  { msg: "First citizen onboarding path: tested. 90-second setup confirmed.", type:'green' },
+];
+let feedItems = [];
+function addFeedMsg(msg, type) {
+  const now = new Date();
+  const t = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  feedItems.unshift({ time:t, msg, type });
+  renderFeed();
+}
+function renderFeed() {
+  const el = document.getElementById('feedList');
+  el.innerHTML = feedItems.map(f =>
+    `<div class="feed-item"><span class="feed-time">${f.time}</span><span class="feed-msg ${f.type}">${f.msg}</span></div>`
+  ).join('');
+  document.getElementById('feedCount').textContent = feedItems.length + ' events';
+}
+
+// === LAUNCH SEQUENCE ===
+const SEQUENCE = [
+  { name:'SIINDEX pre-flight scan', detail:'7-check validation on all systems', state:'done' },
+  { name:'Liquidity pool deployed', detail:'INDX/SOL · Raydium CLMM', state:'done' },
+  { name:'INDX token verified', detail:'SPL Token-2022 · 100M supply · $0.35', state:'done' },
+  { name:'Compliance shield active', detail:'ZK-proof, Travel Rule, PQSI', state:'done' },
+  { name:'Onboarding flow armed', detail:'90-second KYC Tier 0 ready', state:'active' },
+  { name:'MemeDAO governance live', detail:'Proposals + voting enabled at WS ≥ 50', state:'pending' },
+  { name:'First citizen guided arrival', detail:'SIINDEX narrates first 100 arrivals', state:'pending' },
+  { name:'L99 public announcement', detail:'SIINDEX broadcast to all channels', state:'pending' },
+];
+function renderSequence() {
+  const el = document.getElementById('seqList');
+  const icons = { done:'✓', active:'⟳', pending:'◯' };
+  el.innerHTML = SEQUENCE.map(s =>
+    `<div class="seq-item">
+      <div class="seq-icon ${s.state}">${icons[s.state]}</div>
+      <div class="seq-info">
+        <div class="seq-name">${s.name}</div>
+        <div class="seq-detail">${s.detail}</div>
+      </div>
+      <div class="seq-status ${s.state}">${s.state === 'done' ? 'Done' : s.state === 'active' ? 'Active' : 'Queued'}</div>
+    </div>`
+  ).join('');
+  const done = SEQUENCE.filter(s => s.state === 'done').length;
+  document.getElementById('seqProgress').textContent = done + ' / ' + SEQUENCE.length + ' complete';
+}
+
+// === CITIZEN ARRIVALS ===
+const CITIZENS = [
+  { flag:'🇫🇯', name:'Mere Tuvou', loc:'Suva, Fiji', ws:'WS 0', time:'Just now' },
+  { flag:'🇵🇬', name:'John Kaupa', loc:'Port Moresby, PNG', ws:'WS 0', time:'2m ago' },
+  { flag:'🇼🇸', name:'Faleolo Fepulea\'i', loc:'Apia, Samoa', ws:'WS 0', time:'4m ago' },
+  { flag:'🇨🇰', name:'Teina Matapo', loc:'Rarotonga, Cook Islands', ws:'WS 0', time:'7m ago' },
+];
+let citizenCount = 0;
+function renderArrivals() {
+  const el = document.getElementById('arrivalList');
+  el.innerHTML = CITIZENS.slice(0,4).map(c =>
+    `<div class="arrival-item">
+      <span class="arr-flag">${c.flag}</span>
+      <div class="arr-info">
+        <div class="arr-name">${c.name}</div>
+        <div class="arr-loc">${c.loc}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="arr-ws">${c.ws}</div>
+        <div class="arr-time">${c.time}</div>
+      </div>
+    </div>`
+  ).join('');
+}
+
+// === POOL SIMULATION ===
+let tvl = 0, vol = 0;
+function updatePool() {
+  tvl += Math.random() * 200;
+  vol += Math.random() * 80;
+  const depth = Math.min(tvl / 50000 * 100, 100);
+  document.getElementById('poolTVL').textContent = '$' + tvl.toLocaleString('en-US',{maximumFractionDigits:0});
+  document.getElementById('poolVol').textContent = '$' + vol.toLocaleString('en-US',{maximumFractionDigits:0});
+  document.getElementById('poolBar').style.width = depth + '%';
+  document.getElementById('poolDepthPct').textContent = depth.toFixed(1) + '% of target';
+  // Small price drift
+  const drift = 0.35 + (Math.random() - 0.5) * 0.002;
+  document.getElementById('poolPrice').textContent = '$' + drift.toFixed(4);
+}
+
+// === TRIGGER LAUNCH ===
+let launched = false;
+function triggerLaunch() {
+  if (launched) { showToast('L99 launch sequence already active. Standing by.'); return; }
+  launched = true;
+  addFeedMsg('AJ, launch sequence initiated. Executing in order. Standing by.', 'cyan');
+  setTimeout(() => { addFeedMsg('Onboarding flow: live. First citizen path is active.', 'green'); }, 1500);
+  setTimeout(() => { addFeedMsg('MemeDAO governance: enabling. Quorum set.', ''); SEQUENCE[5].state = 'done'; renderSequence(); }, 3000);
+  setTimeout(() => {
+    addFeedMsg('First citizen arrival detected — Mere Tuvou, Fiji. Guiding her through setup.', 'green');
+    citizenCount = 1;
+    document.getElementById('citizenCount').textContent = citizenCount;
+    renderArrivals();
+  }, 4500);
+  setTimeout(() => { addFeedMsg('L99 announcement broadcast initiated across all channels.', 'cyan'); SEQUENCE[6].state = 'done'; SEQUENCE[7].state = 'active'; renderSequence(); }, 6000);
+  setTimeout(() => {
+    addFeedMsg('Done. L99 is live. IN$DEX is open to the world. Standing by, AJ.', 'green');
+    SEQUENCE[4].state = 'done'; SEQUENCE[7].state = 'done'; renderSequence();
+    citizenCount = 4;
+    document.getElementById('citizenCount').textContent = citizenCount;
+    showToast('Done. L99 is live. The world has access. Standing by.');
+  }, 8000);
+}
+
+function confirmHalt() {
+  if (confirm('Emergency halt — this will pause all SIINDEX operations. Confirm?')) {
+    addFeedMsg('Emergency halt applied. All agent operations suspended. Awaiting your instruction, AJ.', 'gold');
+    showToast('Emergency halt applied. SIINDEX suspended. Standing by.');
+  }
+}
+
+// === INIT FEED ===
+function initFeed() {
+  let i = 0;
+  const interval = setInterval(() => {
+    if (i >= FEED_MSGS.length) { clearInterval(interval); return; }
+    addFeedMsg(FEED_MSGS[i].msg, FEED_MSGS[i].type);
+    i++;
+  }, 700);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+// Boot
+setInterval(updateCountdown, 1000);
+setInterval(updateTime, 1000);
+setInterval(updatePool, 3000);
+updateCountdown();
+updateTime();
+renderSequence();
+renderArrivals();
+initFeed();
+updatePool();
+</script>
+</body>
+</html>

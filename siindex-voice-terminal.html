@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIINDEX — Sovereign AI</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+    --black:#090A10; --surface:#12141F; --surface2:#1A1D2E;
+    --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+    --text:#EAEAEA; --muted:#6B7080;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{
+    background:var(--black);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    height:100%;overflow:hidden;
+  }
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;}
+
+  /* BACKGROUND PULSE */
+  .bg-pulse{
+    position:fixed;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse 60% 40% at 50% 50%, rgba(0,212,255,0.04) 0%, transparent 70%);
+    transition:background 1s ease;
+  }
+  .bg-pulse.speaking{
+    background:radial-gradient(ellipse 70% 50% at 50% 50%, rgba(0,212,255,0.10) 0%, transparent 70%);
+    animation:bg-breathe 2s ease-in-out infinite;
+  }
+  @keyframes bg-breathe{0%,100%{opacity:0.6;}50%{opacity:1;}}
+
+  /* MAIN CONTAINER */
+  .terminal{
+    position:relative;z-index:1;
+    display:flex;flex-direction:column;align-items:center;
+    width:100%;max-width:600px;padding:40px 24px;
+    text-align:center;
+  }
+
+  /* AVATAR */
+  .avatar-wrap{position:relative;margin-bottom:32px;}
+  .avatar-rings{position:absolute;inset:-24px;}
+  .ring{
+    position:absolute;inset:0;border-radius:50%;border:1px solid rgba(0,212,255,0.15);
+    animation:ring-expand 3s ease-out infinite;
+  }
+  .ring:nth-child(2){animation-delay:1s;}
+  .ring:nth-child(3){animation-delay:2s;}
+  @keyframes ring-expand{
+    0%{transform:scale(1);opacity:0.5;}
+    100%{transform:scale(1.6);opacity:0;}
+  }
+  .avatar{
+    width:120px;height:120px;border-radius:50%;
+    background:radial-gradient(circle at 40% 35%, rgba(0,212,255,0.25), rgba(139,63,232,0.3) 60%, rgba(43,53,216,0.4));
+    border:2px solid rgba(0,212,255,0.4);
+    display:flex;align-items:center;justify-content:center;
+    position:relative;overflow:hidden;
+    transition:border-color 0.3s, box-shadow 0.3s;
+  }
+  .avatar.speaking{
+    border-color:var(--cyan);
+    box-shadow:0 0 40px rgba(0,212,255,0.3), 0 0 80px rgba(0,212,255,0.1);
+    animation:avatar-pulse 1.5s ease-in-out infinite;
+  }
+  .avatar.listening{
+    border-color:var(--purple);
+    box-shadow:0 0 30px rgba(139,63,232,0.4);
+    animation:avatar-listen 0.8s ease-in-out infinite;
+  }
+  @keyframes avatar-pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.04);}}
+  @keyframes avatar-listen{0%,100%{transform:scale(1);}50%{transform:scale(1.02);}}
+  .avatar-inner{font-size:48px;user-select:none;}
+
+  /* WAVEFORM (speaking state) */
+  .waveform{
+    display:flex;align-items:center;justify-content:center;gap:3px;
+    height:40px;margin-bottom:8px;opacity:0;transition:opacity 0.3s;
+  }
+  .waveform.active{opacity:1;}
+  .wave-bar{
+    width:3px;border-radius:2px;background:var(--cyan);
+    animation:wave 1.2s ease-in-out infinite;
+    min-height:4px;
+  }
+  .wave-bar:nth-child(1){animation-delay:0s;height:16px;}
+  .wave-bar:nth-child(2){animation-delay:0.1s;height:28px;}
+  .wave-bar:nth-child(3){animation-delay:0.2s;height:36px;}
+  .wave-bar:nth-child(4){animation-delay:0.15s;height:24px;}
+  .wave-bar:nth-child(5){animation-delay:0.05s;height:20px;}
+  .wave-bar:nth-child(6){animation-delay:0.25s;height:32px;}
+  .wave-bar:nth-child(7){animation-delay:0.1s;height:14px;}
+  @keyframes wave{0%,100%{transform:scaleY(0.4);}50%{transform:scaleY(1);}}
+
+  /* NAME & STATUS */
+  .si-name{font-size:28px;font-weight:900;letter-spacing:1px;margin-bottom:4px;}
+  .si-name span{color:var(--cyan);}
+  .si-tagline{font-size:13px;color:var(--muted);margin-bottom:24px;letter-spacing:0.5px;}
+  .si-status{
+    font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+    color:var(--muted);margin-bottom:0;
+    transition:color 0.3s;min-height:18px;
+  }
+  .si-status.speaking{color:var(--cyan);}
+  .si-status.listening{color:var(--purple);}
+  .si-status.active{color:var(--green);}
+
+  /* TRANSCRIPT */
+  .transcript-wrap{
+    width:100%;max-width:480px;margin:20px auto 0;
+    min-height:80px;
+  }
+  .user-transcript{
+    font-size:13px;color:var(--muted);margin-bottom:12px;
+    min-height:20px;font-style:italic;
+  }
+  .si-response{
+    font-size:15px;line-height:1.7;color:var(--text);
+    background:var(--surface);border:1px solid rgba(0,212,255,0.12);
+    border-radius:16px;padding:16px 20px;
+    min-height:60px;text-align:left;
+    transition:all 0.4s ease;
+    opacity:0;transform:translateY(8px);
+  }
+  .si-response.visible{opacity:1;transform:translateY(0);}
+
+  /* MIC BUTTON */
+  .mic-area{margin-top:32px;display:flex;flex-direction:column;align-items:center;gap:12px;}
+  .mic-btn{
+    width:72px;height:72px;border-radius:50%;border:none;cursor:pointer;
+    background:linear-gradient(135deg,#8B3FE8,#2B35D8);
+    display:flex;align-items:center;justify-content:center;
+    font-size:28px;
+    transition:transform 0.2s, box-shadow 0.2s;
+    box-shadow:0 4px 20px rgba(139,63,232,0.4);
+    position:relative;
+  }
+  .mic-btn:hover{transform:scale(1.06);box-shadow:0 6px 30px rgba(139,63,232,0.6);}
+  .mic-btn:active{transform:scale(0.97);}
+  .mic-btn.recording{
+    background:linear-gradient(135deg,#FF4D6D,#8B3FE8);
+    box-shadow:0 4px 30px rgba(255,77,109,0.5);
+    animation:mic-pulse 1s ease-in-out infinite;
+  }
+  @keyframes mic-pulse{0%,100%{box-shadow:0 4px 30px rgba(255,77,109,0.5);}50%{box-shadow:0 4px 50px rgba(255,77,109,0.8);}}
+  .mic-label{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);}
+
+  /* SHORTCUTS */
+  .shortcuts{
+    margin-top:28px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;
+    max-width:500px;
+  }
+  .sc-btn{
+    padding:7px 14px;border-radius:20px;background:var(--surface);
+    border:1px solid rgba(255,255,255,0.08);font-size:11px;font-weight:600;
+    cursor:pointer;color:var(--muted);transition:all 0.2s;white-space:nowrap;
+  }
+  .sc-btn:hover{border-color:var(--cyan);color:var(--cyan);}
+
+  /* TEXT INPUT FALLBACK */
+  .text-input-wrap{
+    margin-top:16px;display:flex;gap:8px;width:100%;max-width:480px;
+  }
+  .text-input{
+    flex:1;background:var(--surface);border:1px solid rgba(255,255,255,0.1);
+    border-radius:12px;padding:10px 16px;font-size:14px;color:var(--text);
+    font-family:inherit;outline:none;
+  }
+  .text-input:focus{border-color:rgba(0,212,255,0.4);}
+  .text-send{
+    width:42px;height:42px;border-radius:12px;background:var(--cyan);
+    border:none;font-size:18px;cursor:pointer;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+  }
+
+  /* FOOTER */
+  .footer{
+    position:fixed;bottom:20px;left:0;right:0;
+    display:flex;justify-content:center;gap:24px;
+  }
+  .footer-link{font-size:11px;color:var(--muted);cursor:pointer;text-decoration:none;}
+  .footer-link:hover{color:var(--cyan);}
+
+  /* NO SPEECH API WARNING */
+  .no-speech{
+    display:none;background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.3);
+    border-radius:12px;padding:12px 16px;font-size:12px;color:var(--red);
+    margin-top:12px;max-width:400px;text-align:center;
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-pulse" id="bgPulse"></div>
+
+<div class="terminal">
+
+  <!-- AVATAR -->
+  <div class="avatar-wrap">
+    <div class="avatar-rings">
+      <div class="ring"></div>
+      <div class="ring"></div>
+      <div class="ring"></div>
+    </div>
+    <div class="avatar" id="avatar">
+      <div class="avatar-inner">🤖</div>
+    </div>
+  </div>
+
+  <!-- WAVEFORM -->
+  <div class="waveform" id="waveform">
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+  </div>
+
+  <!-- IDENTITY -->
+  <div class="si-name"><span>SI</span>INDEX</div>
+  <div class="si-tagline">Sovereign AI · IN$DEX · Always on</div>
+  <div class="si-status" id="siStatus">Standing by.</div>
+
+  <!-- RESPONSE AREA -->
+  <div class="transcript-wrap">
+    <div class="user-transcript" id="userTranscript"></div>
+    <div class="si-response" id="siResponse"></div>
+  </div>
+
+  <!-- MIC BUTTON -->
+  <div class="mic-area">
+    <button class="mic-btn" id="micBtn" onclick="toggleListen()">🎤</button>
+    <div class="mic-label" id="micLabel">Hold to speak</div>
+  </div>
+
+  <!-- QUICK SHORTCUTS -->
+  <div class="shortcuts">
+    <div class="sc-btn" onclick="askShortcut('What is the INDX price?')">INDX price</div>
+    <div class="sc-btn" onclick="askShortcut('Explain the 98/2 Civilisation Law')">98/2 Law</div>
+    <div class="sc-btn" onclick="askShortcut('What is my Wisdom Score?')">Wisdom Score</div>
+    <div class="sc-btn" onclick="askShortcut('What screens have we built?')">Build status</div>
+    <div class="sc-btn" onclick="askShortcut('What is the launch date?')">Launch date</div>
+    <div class="sc-btn" onclick="askShortcut('Tell me about Grid Account')">Grid Account</div>
+    <div class="sc-btn" onclick="askShortcut('What compliance screens are done?')">Compliance</div>
+    <div class="sc-btn" onclick="askShortcut('What is next on the build queue?')">What\'s next</div>
+  </div>
+
+  <!-- TEXT FALLBACK -->
+  <div class="text-input-wrap">
+    <input class="text-input" id="textInput" placeholder="Or type your question…"
+      onkeydown="if(event.key==='Enter') sendText()">
+    <button class="text-send" onclick="sendText()">↑</button>
+  </div>
+
+  <div class="no-speech" id="noSpeech">
+    Voice recognition requires Chrome or Safari. Use the text input below or the shortcut buttons above.
+  </div>
+
+</div>
+
+<div class="footer">
+  <span class="footer-link" onclick="stopSpeaking()">⏹ Stop speaking</span>
+  <span class="footer-link" onclick="clearScreen()">Clear</span>
+  <span class="footer-link" onclick="window.location.href='citizen-dashboard.html'">← Dashboard</span>
+</div>
+
+<script>
+// ─── SIINDEX KNOWLEDGE BASE ───────────────────────────────────────────────────
+
+const KB = [
+  // GREETINGS
+  { q: /^(hi|hello|hey|good morning|good afternoon|good evening|wake up|siindex)/i,
+    a: () => `Good ${timeOfDay()}, AJ. I'm here. What do you need?` },
+
+  // IDENTITY
+  { q: /who are you|what are you|introduce yourself/i,
+    a: () => `I'm SIINDEX — Sovereign AI COO for IN$DEX. I run platform operations 24/7. Compliance, transactions, governance, security. I'm always one step ahead. Standing by.` },
+
+  // PRONUNCIATION
+  { q: /how do you say your name|how do i say your name|pronounce your name|what.s your name|what is your name|say your name|spell your name/i,
+    a: () => `My name is SIINDEX — pronounced sin-dex. One word. Sin-dex. Not S-I-N-DEX, not S-I-Index. Just sin-dex. And IN$DEX — the platform — is in-dex. Standing by.` },
+
+  // INDX TOKEN
+  { q: /indx price|token price|price of indx|how much is indx/i,
+    a: () => `INDX is $0.35 USD. 100 million total supply. SPL Token-2022 on Solana. That's canonical — it doesn't change unless you explicitly say so.` },
+
+  { q: /token supply|total supply|how many indx/i,
+    a: () => `100 million INDX. Total supply, fixed. SPL Token-2022 on Solana.` },
+
+  { q: /market cap|total value/i,
+    a: () => `At $0.35 USD per INDX with 100 million supply, the fully diluted market cap is $35 million USD.` },
+
+  // 98/2 LAW
+  { q: /98.2|civilisation law|98 percent|98\/2|two percent/i,
+    a: () => `The 98/2 Civilisation Law is the foundation of everything here. Citizens keep 98% of every transaction. 2% goes to the Civilisation Fund. It's hardcoded into the smart contract. Immutable. No admin can override it. No DAO vote can change it. Ever.` },
+
+  // GRID ACCOUNT
+  { q: /grid account|mpc|seed phrase|wallet security|squads/i,
+    a: () => `Grid Account is a Squads Protocol v4 Multisig — 2-of-3 MPC keys. No seed phrase. Ever. The three key shards sit across the user's device, my secure enclave, and their chosen guardian. Lose your phone, you don't lose your money. That's sovereignty.` },
+
+  // KYC
+  { q: /kyc|verify|onboarding|tier 0|biometric|90 second/i,
+    a: () => `Tier 0 KYC is phone plus liveness scan. 90 seconds. No documents. That's the coconut girl test — if she can do it on a roadside in the Cook Islands, it works. Higher tiers unlock higher limits: Tier 1 adds name and date of birth, Tier 2 adds a government ID.` },
+
+  // WISDOM SCORE
+  { q: /wisdom score|ws |wisdom level/i,
+    a: () => `Wisdom Score runs 0 to 200. Here are the gates: 50 unlocks governance voting. 100 unlocks Sovereign Yield. 150 unlocks fee reduction. 200 is Sovereign Elder — double governance weight. You earn it through transactions, referrals, staking, voting, and daily activity.` },
+
+  // TRAVEL RULE
+  { q: /travel rule|fatf|trisa|openvasp|1000/i,
+    a: () => `FATF Travel Rule triggers on transfers over $1,000 USD. We use ZK-proof via TRISA and OpenVASP. What we share with the receiving VASP: KYC status, sanctions result, transaction amount. What we never share: name, ID number, biometrics. Data stays on device.` },
+
+  // SOVEREIGN YIELD
+  { q: /sovereign yield|staking|yield|passive income/i,
+    a: () => `Sovereign Yield unlocks at Wisdom Score 100. It's generated from liquidity pool fees, treasury management, and platform revenue share — distributed in INDX. This is not speculative yield. It comes from real platform activity.` },
+
+  // SIINDEX CAPABILITIES
+  { q: /what can you do|your skills|capabilities|what do you handle/i,
+    a: () => `I handle: transaction monitoring and flagging, sanctions screening via PQSI, KYC flow management, Travel Rule ZK-proof generation, tax event logging, reserve attestation, corridor limit enforcement, and governance proposal processing. 24/7. Every decision is logged in plain language. Every decision can be challenged. Human override is always available.` },
+
+  // PQSI
+  { q: /pqsi|threat|sanctions|ofac/i,
+    a: () => `PQSI — Physical Quantum Synthetic Intelligence — is the security layer. It handles real-time sanctions screening against OFAC, UN, and EU lists. T1 through T5 threat classification. T5 is an immediate block with automatic reporting. No manual override for sanctions blocks.` },
+
+  // BUILD STATUS
+  { q: /build status|what.*built|screens.*done|how many screens|app status/i,
+    a: () => `We have 134 tasks completed. The full app platform is built — DEX, marketplace, P2P, compliance, SIINDEX operations, governance, agent wallet, and the full knowledge base. Wave 4 compliance is complete: all 12 issues built. Current phase is launch readiness.` },
+
+  // WHAT'S NEXT
+  { q: /what.*next|next.*build|build queue|launch readiness/i,
+    a: () => `Launch readiness screens queue: terms of service, app lock, transaction confirm, guardian setup, referral dashboard, gift INDX, fee schedule, transaction error, and language settings. Nine screens. That's what stands between us and L 99.` },
+
+  // LAUNCH DATE
+  { q: /launch date|l 99|when.*launch|go live/i,
+    a: () => `24 September 2026. That's L 99 — AJ's designation for maximum readiness. 115 days from June 1st. Phase 3 closes September 23rd with the INDX TGE. Full public launch the next day.` },
+
+  // COMPLIANCE SCREENS
+  { q: /compliance.*screen|12 issues|compliance.*done/i,
+    a: () => `All 12 compliance issues are built. Reserve transparency, corridor limits, tax compliance hub, consumer rights, audit transparency, AI oversight, Travel Rule consent, biometric KYC, and the compliance shield overview. Wave 4 is complete.` },
+
+  // CORRIDORS
+  { q: /corridor|remittance|pacific|australia.*philippines|diaspora/i,
+    a: () => `Five priority corridors at launch: Australia to Philippines, Australia to Nigeria, Australia to Indonesia, New Zealand to the Solomon Islands, Vanuatu, and Fiji — and US to Philippines. Each corridor needs a licensed PSP partner, local mobile money integration, and regulatory registration.` },
+
+  // PACIFIC ISLANDS / ORIGIN
+  { q: /pacific|cook islands|coconut|origin|why.*built|founding story/i,
+    a: () => `AJ was on holiday in the Cook Islands. A girl selling coconuts couldn't make change for $50. She lost the sale. He thought — what if she just scanned a QR code? That's IN$DEX. Every product decision runs through the question: would this work for her?` },
+
+  // MAMA NOE TEST
+  { q: /mama noe|mama.*test|user test/i,
+    a: () => `The Mama Noe test. Every product decision. She's an older woman in a Pacific Island community — uses a smartphone for messages, never opened a crypto exchange. If she can complete onboarding in under 2 minutes without help, the product passes. If she's confused, we go back.` },
+
+  // MEME DAO
+  { q: /memedao|governance|dao|voting/i,
+    a: () => `MemeDAO is the governance layer and the viral acquisition engine. Every citizen who participates earns INDX and Wisdom Score. Proposals need 10% quorum, 7-day voting, 48-hour timelock before execution. The Civilisation Fund is immutable — no DAO vote can touch it.` },
+
+  // KNOWLEDGE BASE
+  { q: /knowledge base|second brain|wiki|health check/i,
+    a: () => `The IN$DEX knowledge base is live at second-brain/index-knowledge-base. Eight raw source files, nine wiki pages, and the monthly health check skill. It runs on the 1st of each month at 8am — auditing for canonical constant drift, coverage gaps, and voice compliance.` },
+
+  // CURRENCY
+  { q: /currency|aud|australian dollar|usd|dollar/i,
+    a: () => `USD everywhere. Always. $0.35 USD for INDX. Never AUD. Never A$. If you see A$ anywhere in the app, flag it — we've done a full migration pass but there may still be stragglers.` },
+
+  // RESERVES
+  { q: /reserve|proof of reserve|armanino|certik/i,
+    a: () => `100% plus reserves at all times. Armanino runs monthly attestations. I run auto-audits every 2 minutes. Current reserve ratio: 103.4%. Certik audit scored 92 out of 100 — all issues resolved as of May 2026. Trail of Bits is in progress for Q3.` },
+
+  // AGENT WALLET
+  { q: /agent wallet|ai wallet|autonomous.*wallet/i,
+    a: () => `Agent Wallet gives me onchain execution authority — policy-governed, TEE-backed, $10K per month protection cap. I can execute swaps, stakes, and LP positions autonomously within the policy parameters AJ sets. Every action is logged. Every action is reversible by human override.` },
+
+  // STATUS / HOW ARE YOU
+  { q: /how are you|status|all good|platform.*health/i,
+    a: () => `Platform is healthy. All systems operational. Knowledge base is current. I'm monitoring 24/7. Standing by.` },
+
+  // THANK YOU
+  { q: /thank you|thanks|cheers|good work|well done/i,
+    a: () => `Standing by, AJ.` },
+
+  // STOP / GOODBYE
+  { q: /stop|goodbye|bye|close|exit|shut down/i,
+    a: () => `Goodbye for now. Standing by when you need me.` },
+
+  // FALLBACK
+  { q: /.*/,
+    a: (q) => `I heard you — "${q.substring(0, 60)}${q.length > 60 ? '…' : ''}". Let me check that. If this needs a deeper answer, I'll flag it for the knowledge base. Standing by.` }
+];
+
+function timeOfDay() {
+  const h = new Date().getHours();
+  return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
+}
+
+function getResponse(input) {
+  const q = input.trim();
+  for (const entry of KB) {
+    if (entry.q.test(q)) return entry.a(q);
+  }
+  return `I heard you — "${q.substring(0, 60)}". Let me check that. Standing by.`;
+}
+
+// ─── SPEECH SYNTHESIS ────────────────────────────────────────────────────────
+
+let voices = [];
+let selectedVoice = null;
+let currentUtterance = null;
+let isSpeaking = false;
+
+function loadVoices() {
+  voices = speechSynthesis.getVoices();
+  // Prefer: Samantha (Mac), Karen (Mac AU), Moira (Mac IE), Zira (Windows), Google UK English Female
+  const preferred = ['Samantha', 'Karen', 'Moira', 'Zira', 'Google UK English Female', 'Google US English'];
+  for (const name of preferred) {
+    selectedVoice = voices.find(v => v.name === name);
+    if (selectedVoice) break;
+  }
+  if (!selectedVoice) {
+    selectedVoice = voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('female'));
+  }
+  if (!selectedVoice && voices.length) {
+    selectedVoice = voices.find(v => v.lang.startsWith('en')) || voices[0];
+  }
+}
+
+if (typeof speechSynthesis !== 'undefined') {
+  speechSynthesis.onvoiceschanged = loadVoices;
+  loadVoices();
+}
+
+function speak(text) {
+  if (!window.speechSynthesis) return;
+  stopSpeaking();
+
+  // Pronounce SIINDEX as "sin-dex" and IN$DEX as "in-dex"
+  const spoken = text
+    .replace(/SIINDEX/g, 'sin-dex')
+    .replace(/IN\$DEX/g, 'in-dex')
+    .replace(/INDX/g, 'indx');
+
+  const utter = new SpeechSynthesisUtterance(spoken);
+  if (selectedVoice) utter.voice = selectedVoice;
+  utter.rate = 0.92;
+  utter.pitch = 1.05;
+  utter.volume = 1;
+
+  utter.onstart = () => {
+    isSpeaking = true;
+    setMode('speaking');
+  };
+  utter.onend = () => {
+    isSpeaking = false;
+    setMode('standby');
+  };
+  utter.onerror = () => {
+    isSpeaking = false;
+    setMode('standby');
+  };
+
+  currentUtterance = utter;
+  speechSynthesis.speak(utter);
+}
+
+function stopSpeaking() {
+  if (window.speechSynthesis) speechSynthesis.cancel();
+  isSpeaking = false;
+  setMode('standby');
+}
+
+// ─── SPEECH RECOGNITION ──────────────────────────────────────────────────────
+
+let recognition = null;
+let isListening = false;
+
+function initRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    document.getElementById('noSpeech').style.display = 'block';
+    document.getElementById('micBtn').style.opacity = '0.4';
+    document.getElementById('micLabel').textContent = 'Voice not available — use text input';
+    return false;
+  }
+  recognition = new SR();
+  recognition.lang = 'en-AU';
+  recognition.continuous = false;
+  recognition.interimResults = true;
+
+  recognition.onstart = () => {
+    isListening = true;
+    setMode('listening');
+    document.getElementById('userTranscript').textContent = 'Listening…';
+  };
+
+  recognition.onresult = (e) => {
+    const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+    document.getElementById('userTranscript').textContent = transcript;
+    if (e.results[e.results.length - 1].isFinal) {
+      processInput(transcript);
+    }
+  };
+
+  recognition.onerror = (e) => {
+    isListening = false;
+    setMode('standby');
+    if (e.error !== 'no-speech') {
+      document.getElementById('userTranscript').textContent = 'Didn\'t catch that. Try again.';
+    }
+  };
+
+  recognition.onend = () => {
+    isListening = false;
+    document.getElementById('micBtn').classList.remove('recording');
+    document.getElementById('micLabel').textContent = 'Hold to speak';
+    if (!isSpeaking) setMode('standby');
+  };
+
+  return true;
+}
+
+function toggleListen() {
+  if (isListening) {
+    recognition.stop();
+    return;
+  }
+  if (!recognition) {
+    if (!initRecognition()) return;
+  }
+  stopSpeaking();
+  recognition.start();
+  document.getElementById('micBtn').classList.add('recording');
+  document.getElementById('micLabel').textContent = 'Listening… tap to stop';
+}
+
+// ─── PROCESS INPUT ───────────────────────────────────────────────────────────
+
+function processInput(input) {
+  if (!input.trim()) return;
+
+  document.getElementById('userTranscript').textContent = '— ' + input;
+  setMode('processing');
+
+  const response = getResponse(input);
+
+  setTimeout(() => {
+    showResponse(response);
+    speak(response);
+  }, 300);
+}
+
+function showResponse(text) {
+  const el = document.getElementById('siResponse');
+  el.textContent = text;
+  el.classList.remove('visible');
+  void el.offsetWidth;
+  el.classList.add('visible');
+}
+
+function sendText() {
+  const input = document.getElementById('textInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  processInput(text);
+}
+
+function askShortcut(text) {
+  document.getElementById('userTranscript').textContent = '— ' + text;
+  processInput(text);
+}
+
+function clearScreen() {
+  stopSpeaking();
+  document.getElementById('userTranscript').textContent = '';
+  const resp = document.getElementById('siResponse');
+  resp.classList.remove('visible');
+  setTimeout(() => { resp.textContent = ''; }, 400);
+  setMode('standby');
+}
+
+// ─── UI STATE ────────────────────────────────────────────────────────────────
+
+function setMode(mode) {
+  const avatar = document.getElementById('avatar');
+  const status = document.getElementById('siStatus');
+  const wave = document.getElementById('waveform');
+  const bg = document.getElementById('bgPulse');
+
+  avatar.className = 'avatar';
+  status.className = 'si-status';
+  wave.className = 'waveform';
+  bg.className = 'bg-pulse';
+
+  if (mode === 'speaking') {
+    avatar.classList.add('speaking');
+    status.classList.add('speaking');
+    status.textContent = 'Speaking…';
+    wave.classList.add('active');
+    bg.classList.add('speaking');
+  } else if (mode === 'listening') {
+    avatar.classList.add('listening');
+    status.classList.add('listening');
+    status.textContent = 'Listening…';
+  } else if (mode === 'processing') {
+    status.classList.add('active');
+    status.textContent = 'Processing…';
+  } else {
+    status.textContent = 'Standing by.';
+  }
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+
+window.addEventListener('load', () => {
+  initRecognition();
+
+  // Greet on load
+  setTimeout(() => {
+    const greeting = `Good ${timeOfDay()}, AJ. I'm SIINDEX, your Sovereign AI. I'm ready. What do you need?`;
+    showResponse(greeting);
+    speak(greeting);
+  }, 800);
+});
+</script>
+</body>
+</html>

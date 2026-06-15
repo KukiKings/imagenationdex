@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IN$DEX — Create Listing</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --cyan-dim:#0099BB; --cyan-bg:#071825; --cyan-border:#0A2535;
+    --black:#090A10; --surface:#111318; --surface2:#1A1D25; --surface3:#22252F;
+    --border:#2A2D38; --text:#EAEAEA; --text-muted:#6B7080; --text-dim:#3D4050;
+    --green:#00E5A0; --green-bg:#0A1F18; --red:#FF4D6D; --red-bg:#1F0A10;
+    --purple:#8B3FE8; --purple-bg:#120D1F; --gold:#FFB800;
+    --radius:16px; --nav-h:72px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none;}
+  .shell{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;}
+  .scroll-body{flex:1;overflow-y:auto;padding-bottom:120px;-webkit-overflow-scrolling:touch;}
+  .scroll-body::-webkit-scrollbar{display:none;}
+
+  /* ── TOP BAR ── */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid var(--border);}
+  .topbar-back{width:38px;height:38px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;}
+  .topbar-back:active{background:var(--surface2);}
+  .topbar-title{font-size:17px;font-weight:700;}
+  .topbar-save{font-size:14px;font-weight:600;color:var(--text-muted);cursor:pointer;padding:6px 10px;}
+
+  /* ── SECTIONS ── */
+  .section{padding:20px 20px 0;}
+  .section-label{font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;}
+
+  /* ── PHOTO UPLOAD ── */
+  .photo-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;}
+  .photo-row::-webkit-scrollbar{display:none;}
+  .photo-slot{flex:0 0 90px;height:90px;border-radius:12px;background:var(--surface);border:1.5px dashed var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;position:relative;overflow:hidden;transition:border-color 0.2s;}
+  .photo-slot.has-img{border-style:solid;border-color:var(--border);}
+  .photo-slot:active{border-color:var(--cyan);}
+  .photo-slot .add-icon{font-size:22px;color:var(--text-dim);}
+  .photo-slot .add-label{font-size:10px;color:var(--text-dim);}
+  .photo-slot img{width:100%;height:100%;object-fit:cover;border-radius:10px;}
+  .photo-slot .remove-x{position:absolute;top:4px;right:4px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;z-index:2;}
+  .photo-main-badge{position:absolute;bottom:4px;left:4px;background:var(--cyan);color:#000;font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;}
+
+  /* ── INPUTS ── */
+  .input-field{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 16px;font-size:15px;color:var(--text);outline:none;transition:border-color 0.2s;margin-bottom:10px;}
+  .input-field::placeholder{color:var(--text-dim);}
+  .input-field:focus{border-color:var(--cyan);}
+  textarea.input-field{resize:none;line-height:1.5;}
+  .char-count{font-size:12px;color:var(--text-dim);text-align:right;margin-top:-6px;margin-bottom:10px;}
+
+  /* ── CATEGORY PILLS ── */
+  .cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px;}
+  .cat-pill{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:10px 6px;text-align:center;cursor:pointer;transition:all 0.2s;}
+  .cat-pill:active,.cat-pill.active{background:var(--cyan-bg);border-color:var(--cyan);}
+  .cat-pill .cat-icon{font-size:20px;margin-bottom:4px;}
+  .cat-pill .cat-name{font-size:11px;color:var(--text-muted);}
+  .cat-pill.active .cat-name{color:var(--cyan);}
+
+  /* ── PRICE ROW ── */
+  .price-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+  .price-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;}
+  .price-box:focus-within{border-color:var(--cyan);}
+  .price-currency{font-size:11px;color:var(--text-muted);margin-bottom:4px;font-weight:600;}
+  .price-input{width:100%;background:transparent;border:none;outline:none;font-size:20px;font-weight:700;color:var(--text);}
+  .price-input::placeholder{color:var(--text-dim);}
+  .price-converted{font-size:11px;color:var(--text-muted);margin-top:2px;}
+  .price-converted span{color:var(--cyan);}
+
+  /* ── CONDITION SELECTOR ── */
+  .condition-row{display:flex;gap:8px;margin-bottom:4px;}
+  .cond-btn{flex:1;padding:9px 4px;border-radius:10px;background:var(--surface);border:1.5px solid var(--border);font-size:12px;font-weight:600;color:var(--text-muted);text-align:center;cursor:pointer;transition:all 0.2s;}
+  .cond-btn:active,.cond-btn.active{background:var(--cyan-bg);border-color:var(--cyan);color:var(--cyan);}
+
+  /* ── DELIVERY OPTIONS ── */
+  .delivery-row{display:flex;flex-direction:column;gap:8px;}
+  .delivery-opt{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;cursor:pointer;transition:border-color 0.2s;}
+  .delivery-opt.active{border-color:var(--cyan);}
+  .del-left{display:flex;align-items:center;gap:12px;}
+  .del-icon{font-size:22px;}
+  .del-name{font-size:14px;font-weight:600;}
+  .del-desc{font-size:12px;color:var(--text-muted);margin-top:2px;}
+  .del-check{width:22px;height:22px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;transition:all 0.2s;}
+  .delivery-opt.active .del-check{background:var(--cyan);border-color:var(--cyan);color:#000;}
+
+  /* ── FEE NOTICE ── */
+  .fee-notice{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin:20px 20px 0;display:flex;gap:12px;align-items:flex-start;}
+  .fee-icon{font-size:20px;flex-shrink:0;}
+  .fee-title{font-size:13px;font-weight:600;margin-bottom:3px;}
+  .fee-desc{font-size:12px;color:var(--text-muted);line-height:1.5;}
+  .fee-highlight{color:var(--green);font-weight:700;}
+
+  /* ── BOTTOM PUBLISH BAR ── */
+  .publish-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;padding:16px 20px 32px;background:linear-gradient(to top,var(--black) 70%,transparent);z-index:50;}
+  .publish-btn{width:100%;padding:16px;border-radius:14px;background:var(--cyan);border:none;color:#000;font-size:16px;font-weight:800;cursor:pointer;transition:opacity 0.2s;}
+  .publish-btn:active{opacity:0.85;}
+  .publish-btn:disabled{opacity:0.35;cursor:not-allowed;}
+
+  /* ── DRAFT LABEL ── */
+  .draft-btn{text-align:center;margin-top:10px;font-size:13px;color:var(--text-muted);cursor:pointer;padding:4px;}
+  .draft-btn:active{color:var(--text);}
+
+  /* ── SUCCESS OVERLAY ── */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+  .overlay.show{opacity:1;pointer-events:all;}
+  .success-card{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:32px 28px;text-align:center;width:calc(100% - 48px);max-width:360px;}
+  .success-icon{font-size:52px;margin-bottom:16px;}
+  .success-title{font-size:20px;font-weight:800;margin-bottom:8px;}
+  .success-sub{font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:24px;}
+  .success-actions{display:flex;flex-direction:column;gap:10px;}
+  .btn-primary{width:100%;padding:14px;border-radius:12px;background:var(--cyan);border:none;color:#000;font-size:15px;font-weight:700;cursor:pointer;}
+  .btn-secondary{width:100%;padding:14px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <div class="topbar-back" onclick="window.history.back()">←</div>
+    <div class="topbar-title">Create Listing</div>
+    <div class="topbar-save" onclick="saveDraft()">Save Draft</div>
+  </div>
+
+  <div class="scroll-body">
+
+    <!-- PHOTOS -->
+    <div class="section">
+      <div class="section-label">Photos (up to 5)</div>
+      <div class="photo-row" id="photoRow">
+        <div class="photo-slot" id="slot0" onclick="triggerUpload(0)">
+          <div class="add-icon">📷</div>
+          <div class="add-label">Main photo</div>
+        </div>
+        <div class="photo-slot" id="slot1" onclick="triggerUpload(1)">
+          <div class="add-icon">＋</div>
+        </div>
+        <div class="photo-slot" id="slot2" onclick="triggerUpload(2)">
+          <div class="add-icon">＋</div>
+        </div>
+        <div class="photo-slot" id="slot3" onclick="triggerUpload(3)">
+          <div class="add-icon">＋</div>
+        </div>
+        <div class="photo-slot" id="slot4" onclick="triggerUpload(4)">
+          <div class="add-icon">＋</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TITLE -->
+    <div class="section" style="margin-top:20px;">
+      <div class="section-label">Title</div>
+      <input class="input-field" type="text" id="titleInput" maxlength="80" placeholder="What are you selling?" oninput="updateTitle()">
+      <div class="char-count"><span id="titleCount">0</span>/80</div>
+    </div>
+
+    <!-- CATEGORY -->
+    <div class="section">
+      <div class="section-label">Category</div>
+      <div class="cat-grid">
+        <div class="cat-pill" onclick="selectCat(this,'Electronics')">
+          <div class="cat-icon">📱</div>
+          <div class="cat-name">Electronics</div>
+        </div>
+        <div class="cat-pill" onclick="selectCat(this,'Clothing')">
+          <div class="cat-icon">👕</div>
+          <div class="cat-name">Clothing</div>
+        </div>
+        <div class="cat-pill" onclick="selectCat(this,'Food')">
+          <div class="cat-icon">🥘</div>
+          <div class="cat-name">Food</div>
+        </div>
+        <div class="cat-pill" onclick="selectCat(this,'Services')">
+          <div class="cat-icon">🔧</div>
+          <div class="cat-name">Services</div>
+        </div>
+        <div class="cat-pill" onclick="selectCat(this,'Crafts')">
+          <div class="cat-icon">🎨</div>
+          <div class="cat-name">Crafts</div>
+        </div>
+        <div class="cat-pill" onclick="selectCat(this,'Other')">
+          <div class="cat-icon">📦</div>
+          <div class="cat-name">Other</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DESCRIPTION -->
+    <div class="section" style="margin-top:20px;">
+      <div class="section-label">Description</div>
+      <textarea class="input-field" id="descInput" rows="4" maxlength="500" placeholder="Describe your item — condition, size, any details buyers should know..." oninput="updateDesc()"></textarea>
+      <div class="char-count"><span id="descCount">0</span>/500</div>
+    </div>
+
+    <!-- PRICE -->
+    <div class="section">
+      <div class="section-label">Price</div>
+      <div class="price-row">
+        <div class="price-box">
+          <div class="price-currency">AUD $</div>
+          <input class="price-input" type="number" id="audInput" placeholder="0.00" oninput="calcPrice()" min="0" step="0.01">
+          <div class="price-converted">≈ <span id="indxPreview">0</span> INDX</div>
+        </div>
+        <div class="price-box" style="border-color:var(--cyan);">
+          <div class="price-currency" style="color:var(--cyan);">INDX ◎</div>
+          <input class="price-input" type="number" id="indxInput" placeholder="0" oninput="calcPriceFromIndx()" min="0">
+          <div class="price-converted">≈ A$<span id="audPreview">0.00</span></div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text-dim);margin-bottom:4px;">1 INDX = A$0.50 · Genesis price</div>
+    </div>
+
+    <!-- CONDITION -->
+    <div class="section" style="margin-top:20px;">
+      <div class="section-label">Condition</div>
+      <div class="condition-row">
+        <div class="cond-btn" onclick="selectCond(this,'New')">🌟 New</div>
+        <div class="cond-btn" onclick="selectCond(this,'Like New')">✨ Like New</div>
+        <div class="cond-btn" onclick="selectCond(this,'Used')">👌 Used</div>
+        <div class="cond-btn" onclick="selectCond(this,'Parts')">🔩 Parts</div>
+      </div>
+    </div>
+
+    <!-- DELIVERY -->
+    <div class="section" style="margin-top:20px;">
+      <div class="section-label">Delivery Options</div>
+      <div class="delivery-row">
+        <div class="delivery-opt active" id="del-pickup" onclick="toggleDelivery('pickup')">
+          <div class="del-left">
+            <div class="del-icon">🤝</div>
+            <div>
+              <div class="del-name">Local Pickup</div>
+              <div class="del-desc">Buyer collects in person</div>
+            </div>
+          </div>
+          <div class="del-check">✓</div>
+        </div>
+        <div class="delivery-opt" id="del-sovereign" onclick="toggleDelivery('sovereign')">
+          <div class="del-left">
+            <div class="del-icon">🌐</div>
+            <div>
+              <div class="del-name">Sovereign Delivery</div>
+              <div class="del-desc">P2P courier via community network</div>
+            </div>
+          </div>
+          <div class="del-check"></div>
+        </div>
+        <div class="delivery-opt" id="del-post" onclick="toggleDelivery('post')">
+          <div class="del-left">
+            <div class="del-icon">📬</div>
+            <div>
+              <div class="del-name">Post / Courier</div>
+              <div class="del-desc">Standard shipping, buyer pays postage</div>
+            </div>
+          </div>
+          <div class="del-check"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOCATION -->
+    <div class="section" style="margin-top:20px;">
+      <div class="section-label">Location</div>
+      <input class="input-field" type="text" id="locationInput" placeholder="Suburb, City (e.g. Newtown, Sydney)" value="">
+    </div>
+
+    <!-- TAGS -->
+    <div class="section" style="margin-top:20px;">
+      <div class="section-label">Tags (optional)</div>
+      <input class="input-field" type="text" id="tagsInput" placeholder="e.g. vintage, handmade, organic — comma separated">
+    </div>
+
+    <!-- FEE NOTICE -->
+    <div class="fee-notice">
+      <div class="fee-icon">⚖️</div>
+      <div>
+        <div class="fee-title">98/2 Civilisation Law</div>
+        <div class="fee-desc">You keep <span class="fee-highlight">98%</span> of every sale. Just 2% goes to the Civilisation Fund — no platform tax, no hidden fees.</div>
+      </div>
+    </div>
+
+    <div style="height:20px;"></div>
+  </div>
+
+  <!-- PUBLISH BAR -->
+  <div class="publish-bar">
+    <button class="publish-btn" id="publishBtn" onclick="publishListing()">Publish Listing</button>
+    <div class="draft-btn" onclick="saveDraft()">Save as draft</div>
+  </div>
+</div>
+
+<!-- SUCCESS OVERLAY -->
+<div class="overlay" id="successOverlay">
+  <div class="success-card">
+    <div class="success-icon">🎉</div>
+    <div class="success-title">Listing Published!</div>
+    <div class="success-sub" id="successSub">Your listing is live on the IN$DEX Marketplace and backed by an NFT receipt on Solana.</div>
+    <div class="success-actions">
+      <button class="btn-primary" onclick="viewListing()">View Listing</button>
+      <button class="btn-secondary" onclick="createAnother()">Create Another</button>
+      <button class="btn-secondary" onclick="window.location.href='my-listings.html'">My Listings</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let selectedCat = '';
+  let selectedCond = '';
+  let deliveryOpts = { pickup: true, sovereign: false, post: false };
+
+  function updateTitle() {
+    document.getElementById('titleCount').textContent = document.getElementById('titleInput').value.length;
+  }
+  function updateDesc() {
+    document.getElementById('descCount').textContent = document.getElementById('descInput').value.length;
+  }
+
+  function selectCat(el, name) {
+    document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    selectedCat = name;
+  }
+
+  function selectCond(el, name) {
+    document.querySelectorAll('.cond-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    selectedCond = name;
+  }
+
+  function toggleDelivery(key) {
+    deliveryOpts[key] = !deliveryOpts[key];
+    const el = document.getElementById('del-' + key);
+    el.classList.toggle('active', deliveryOpts[key]);
+    el.querySelector('.del-check').textContent = deliveryOpts[key] ? '✓' : '';
+  }
+
+  function calcPrice() {
+    const aud = parseFloat(document.getElementById('audInput').value) || 0;
+    const indx = Math.round(aud / 0.50);
+    document.getElementById('indxPreview').textContent = indx.toLocaleString();
+    document.getElementById('indxInput').value = indx || '';
+    document.getElementById('audPreview').textContent = aud.toFixed(2);
+  }
+
+  function calcPriceFromIndx() {
+    const indx = parseFloat(document.getElementById('indxInput').value) || 0;
+    const aud = indx * 0.50;
+    document.getElementById('audPreview').textContent = aud.toFixed(2);
+    document.getElementById('audInput').value = aud || '';
+    document.getElementById('indxPreview').textContent = indx.toLocaleString();
+  }
+
+  function triggerUpload(idx) {
+    // In production: trigger native file picker
+    // For demo: simulate with placeholder colours
+    const slot = document.getElementById('slot' + idx);
+    if (slot.classList.contains('has-img')) return;
+    const colours = ['#1A1D25','#22252F','#2A2D38','#1A1D25','#22252F'];
+    const emojis = ['🖼️','📸','🌄','🏠','✨'];
+    slot.innerHTML = `<div style="width:100%;height:100%;background:${colours[idx]};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:28px">${emojis[idx]}</div>`;
+    if (idx === 0) slot.innerHTML += `<div class="photo-main-badge">Main</div>`;
+    slot.innerHTML += `<div class="remove-x" onclick="removePhoto(event,${idx})">✕</div>`;
+    slot.classList.add('has-img');
+  }
+
+  function removePhoto(e, idx) {
+    e.stopPropagation();
+    const slot = document.getElementById('slot' + idx);
+    slot.innerHTML = idx === 0 ? `<div class="add-icon">📷</div><div class="add-label">Main photo</div>` : `<div class="add-icon">＋</div>`;
+    slot.classList.remove('has-img');
+    slot.onclick = () => triggerUpload(idx);
+  }
+
+  function publishListing() {
+    const title = document.getElementById('titleInput').value.trim();
+    const price = document.getElementById('audInput').value;
+    if (!title) { showToast('Add a title for your listing'); return; }
+    if (!price) { showToast('Set a price for your listing'); return; }
+    if (!selectedCat) { showToast('Choose a category'); return; }
+    if (!selectedCond) { showToast('Select item condition'); return; }
+
+    const btn = document.getElementById('publishBtn');
+    btn.textContent = 'Publishing…';
+    btn.disabled = true;
+
+    setTimeout(() => {
+      const indxAmt = document.getElementById('indxInput').value || '0';
+      document.getElementById('successSub').textContent =
+        `"${title}" is now live at A$${parseFloat(price).toFixed(2)} (${indxAmt} INDX). Your 98% is protected by escrow.`;
+      document.getElementById('successOverlay').classList.add('show');
+    }, 1600);
+  }
+
+  function saveDraft() {
+    showToast('Draft saved ✓');
+  }
+
+  function viewListing() {
+    window.location.href = 'listing-detail.html';
+  }
+
+  function createAnother() {
+    document.getElementById('successOverlay').classList.remove('show');
+    document.getElementById('publishBtn').textContent = 'Publish Listing';
+    document.getElementById('publishBtn').disabled = false;
+    document.getElementById('titleInput').value = '';
+    document.getElementById('descInput').value = '';
+    document.getElementById('audInput').value = '';
+    document.getElementById('indxInput').value = '';
+    document.getElementById('titleCount').textContent = '0';
+    document.getElementById('descCount').textContent = '0';
+    document.querySelectorAll('.cat-pill,.cond-btn').forEach(el => el.classList.remove('active'));
+    selectedCat = ''; selectedCond = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  let toastTimer;
+  function showToast(msg) {
+    let t = document.getElementById('toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'toast';
+      t.style.cssText = 'position:fixed;bottom:110px;left:50%;transform:translateX(-50%);background:#1A1D25;border:1px solid #2A2D38;color:#EAEAEA;padding:10px 20px;border-radius:12px;font-size:14px;z-index:300;pointer-events:none;transition:opacity 0.3s;white-space:nowrap;';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.style.opacity = '0', 2400);
+  }
+</script>
+</body>
+</html>

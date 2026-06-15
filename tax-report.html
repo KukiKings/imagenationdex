@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Tax Report — IN$DEX</title>
+  <style>
+    :root {
+      --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+      --black:#090A10; --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+      --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+      --border:rgba(255,255,255,0.07);
+      --text:#F0F2FF; --text-muted:rgba(240,242,255,0.45); --text-dim:rgba(240,242,255,0.2);
+    }
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+    body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+    .phone{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+
+    .topbar{display:flex;align-items:center;padding:14px 16px 10px;gap:10px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--black);z-index:20;}
+    .tb-back{width:36px;height:36px;border-radius:10px;background:var(--surface2);border:none;color:var(--text);font-size:18px;cursor:pointer;}
+    .tb-title{flex:1;font-size:17px;font-weight:800;}
+
+    .scroll-body{flex:1;overflow-y:auto;padding-bottom:30px;}
+
+    /* YEAR PICKER */
+    .year-picker{display:flex;gap:8px;padding:16px;overflow-x:auto;scrollbar-width:none;}
+    .year-picker::-webkit-scrollbar{display:none;}
+    .yp-item{flex-shrink:0;padding:8px 18px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;}
+    .yp-item.active{background:var(--cyan);color:#000;border-color:var(--cyan);}
+
+    /* JURISDICTION */
+    .jurisdiction{padding:0 16px 16px;}
+    .jur-label{font-size:12px;color:var(--text-muted);margin-bottom:8px;font-weight:600;}
+    .jur-row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;}
+    .jur-row::-webkit-scrollbar{display:none;}
+    .jur-pill{flex-shrink:0;padding:7px 14px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s;}
+    .jur-pill.active{background:var(--purple);border-color:var(--purple);}
+
+    /* SUMMARY CARDS */
+    .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 16px;}
+    .sc{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;}
+    .sc-lbl{font-size:11px;color:var(--text-muted);margin-bottom:5px;font-weight:600;}
+    .sc-val{font-size:18px;font-weight:900;}
+    .sc-sub{font-size:11px;color:var(--text-muted);margin-top:3px;}
+
+    /* TAX ESTIMATE */
+    .tax-estimate{margin:0 16px 16px;background:linear-gradient(135deg,rgba(43,53,216,0.2),rgba(139,63,232,0.1));border:1px solid rgba(139,63,232,0.2);border-radius:16px;padding:18px;}
+    .te-label{font-size:12px;color:var(--text-muted);margin-bottom:4px;}
+    .te-val{font-size:32px;font-weight:900;margin-bottom:4px;}
+    .te-note{font-size:12px;color:var(--text-muted);line-height:1.5;}
+    .te-breakdown{margin-top:14px;padding-top:14px;border-top:1px solid rgba(139,63,232,0.2);}
+    .te-row{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;}
+    .te-row-lbl{color:var(--text-muted);}
+    .te-row-val{font-weight:700;}
+
+    /* SECTIONS */
+    .section-title{padding:0 16px;font-size:12px;font-weight:800;color:var(--text-muted);letter-spacing:0.07em;text-transform:uppercase;margin-bottom:10px;}
+
+    /* INCOME BREAKDOWN */
+    .income-card{margin:0 16px 10px;background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+    .ic-row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);}
+    .ic-row:last-child{border-bottom:none;}
+    .ic-icon{font-size:20px;width:30px;text-align:center;}
+    .ic-info{flex:1;}
+    .ic-name{font-size:13px;font-weight:700;}
+    .ic-type{font-size:11px;color:var(--text-muted);}
+    .ic-val{font-size:14px;font-weight:800;}
+
+    /* TRANSACTIONS TABLE */
+    .txn-card{margin:0 16px 16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+    .txn-header{display:grid;grid-template-columns:1fr 2fr 1fr 1fr;gap:4px;padding:10px 14px;background:var(--surface3);font-size:11px;font-weight:700;color:var(--text-muted);}
+    .txn-row{display:grid;grid-template-columns:1fr 2fr 1fr 1fr;gap:4px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;align-items:center;}
+    .txn-row:last-child{border-bottom:none;}
+    .txn-type{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;white-space:nowrap;}
+    .txn-gain{color:var(--green);}
+    .txn-loss{color:var(--red);}
+
+    /* EXPORT BUTTONS */
+    .export-section{padding:0 16px 16px;}
+    .export-btn{display:flex;align-items:center;gap:12px;width:100%;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;color:var(--text);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;transition:all 0.2s;}
+    .export-btn:active{transform:scale(0.98);}
+    .eb-icon{font-size:22px;}
+    .eb-info{flex:1;text-align:left;}
+    .eb-desc{font-size:11px;color:var(--text-muted);font-weight:400;margin-top:1px;}
+    .eb-badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;}
+
+    /* DISCLAIMER */
+    .disclaimer{margin:0 16px 24px;background:rgba(255,184,0,0.05);border:1px solid rgba(255,184,0,0.12);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--text-muted);line-height:1.6;}
+
+    #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+  </style>
+</head>
+<body>
+<div class="phone">
+  <div class="topbar">
+    <button class="tb-back" onclick="history.back()">←</button>
+    <div class="tb-title">📊 Tax Report</div>
+  </div>
+
+  <div class="scroll-body">
+
+    <!-- YEAR PICKER -->
+    <div class="year-picker" id="yearPicker">
+      <div class="yp-item" onclick="selectYear(this,'2022-23')">FY 2022-23</div>
+      <div class="yp-item" onclick="selectYear(this,'2023-24')">FY 2023-24</div>
+      <div class="yp-item active" onclick="selectYear(this,'2024-25')">FY 2024-25</div>
+      <div class="yp-item" onclick="selectYear(this,'2025-26')">FY 2025-26</div>
+    </div>
+
+    <!-- JURISDICTION -->
+    <div class="jurisdiction">
+      <div class="jur-label">Jurisdiction</div>
+      <div class="jur-row">
+        <div class="jur-pill active" onclick="selectJur(this,'AU')">🇦🇺 Australia (ATO)</div>
+        <div class="jur-pill" onclick="selectJur(this,'US')">🇺🇸 United States (IRS)</div>
+        <div class="jur-pill" onclick="selectJur(this,'UK')">🇬🇧 United Kingdom (HMRC)</div>
+        <div class="jur-pill" onclick="selectJur(this,'PH')">🇵🇭 Philippines</div>
+        <div class="jur-pill" onclick="selectJur(this,'NG')">🇳🇬 Nigeria</div>
+        <div class="jur-pill" onclick="selectJur(this,'XX')">🌍 Other</div>
+      </div>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="summary-grid">
+      <div class="sc">
+        <div class="sc-lbl">Total transactions</div>
+        <div class="sc-val">247</div>
+        <div class="sc-sub">FY 2024-25</div>
+      </div>
+      <div class="sc">
+        <div class="sc-lbl">Taxable events</div>
+        <div class="sc-val" style="color:var(--gold);">89</div>
+        <div class="sc-sub">Disposals + income</div>
+      </div>
+      <div class="sc">
+        <div class="sc-lbl">Capital gains</div>
+        <div class="sc-val" style="color:var(--green);" id="totalGains">+A$4,820</div>
+        <div class="sc-sub" id="gainsSub">Trades + disposals</div>
+      </div>
+      <div class="sc">
+        <div class="sc-lbl">Crypto income</div>
+        <div class="sc-val" style="color:var(--cyan);" id="totalIncome">A$1,240</div>
+        <div class="sc-sub">Staking + referrals</div>
+      </div>
+    </div>
+
+    <!-- TAX ESTIMATE -->
+    <div class="tax-estimate">
+      <div class="te-label">Estimated tax liability (AU CGT)</div>
+      <div class="te-val" id="taxOwed" style="color:var(--gold);">A$1,815</div>
+      <div class="te-note" id="taxNote">Based on 30% marginal rate. Assets held &gt;12 months qualify for 50% CGT discount.</div>
+      <div class="te-breakdown">
+        <div class="te-row"><div class="te-row-lbl">Short-term gains (held &lt;12m)</div><div class="te-row-val" id="stGains" style="color:var(--gold);">A$1,240</div></div>
+        <div class="te-row"><div class="te-row-lbl">Long-term gains (50% discount)</div><div class="te-row-val" id="ltGains" style="color:var(--green);">A$3,580 → A$1,790</div></div>
+        <div class="te-row"><div class="te-row-lbl">Staking / referral income</div><div class="te-row-val" id="stakingIncome" style="color:var(--cyan);">A$1,240</div></div>
+        <div class="te-row"><div class="te-row-lbl">Total assessable</div><div class="te-row-val" id="totalAssessable">A$6,060</div></div>
+      </div>
+    </div>
+
+    <!-- INCOME BREAKDOWN -->
+    <div style="margin-bottom:10px;">
+      <div class="section-title">Income sources</div>
+      <div class="income-card">
+        <div class="ic-row">
+          <div class="ic-icon">🔒</div>
+          <div class="ic-info"><div class="ic-name">Staking rewards</div><div class="ic-type">Ordinary income (ATO TR 2014/1)</div></div>
+          <div class="ic-val" style="color:var(--green);">A$624</div>
+        </div>
+        <div class="ic-row">
+          <div class="ic-icon">👥</div>
+          <div class="ic-info"><div class="ic-name">Referral bonuses</div><div class="ic-type">Ordinary income</div></div>
+          <div class="ic-val" style="color:var(--cyan);">A$340</div>
+        </div>
+        <div class="ic-row">
+          <div class="ic-icon">📦</div>
+          <div class="ic-info"><div class="ic-name">Marketplace sales</div><div class="ic-type">Business / capital event</div></div>
+          <div class="ic-val" style="color:var(--gold);">A$2,100</div>
+        </div>
+        <div class="ic-row">
+          <div class="ic-icon">🚲</div>
+          <div class="ic-info"><div class="ic-name">Sovereign Delivery</div><div class="ic-type">Ordinary income</div></div>
+          <div class="ic-val" style="color:var(--purple);">A$276</div>
+        </div>
+        <div class="ic-row">
+          <div class="ic-icon">🏛️</div>
+          <div class="ic-info"><div class="ic-name">Governance rewards</div><div class="ic-type">Ordinary income</div></div>
+          <div class="ic-val" style="color:var(--text-muted);">A$0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRANSACTION SAMPLE -->
+    <div style="margin-bottom:14px;">
+      <div class="section-title">Recent taxable events</div>
+      <div class="txn-card">
+        <div class="txn-header">
+          <div>Date</div><div>Description</div><div>Cost</div><div>Gain/Loss</div>
+        </div>
+        <div class="txn-row">
+          <div style="color:var(--text-muted);">Jun 5</div>
+          <div><div>Sold 200 INDX</div><div style="font-size:10px;color:var(--text-muted);">DEX swap</div></div>
+          <div>A$82</div>
+          <div class="txn-gain">+A$18</div>
+        </div>
+        <div class="txn-row">
+          <div style="color:var(--text-muted);">May 28</div>
+          <div><div>Sold Mkt item</div><div style="font-size:10px;color:var(--text-muted);">Marketplace</div></div>
+          <div>A$120</div>
+          <div class="txn-gain">+A$120</div>
+        </div>
+        <div class="txn-row">
+          <div style="color:var(--text-muted);">Apr 12</div>
+          <div><div>Sold 500 INDX</div><div style="font-size:10px;color:var(--text-muted);">DEX swap</div></div>
+          <div>A$195</div>
+          <div class="txn-gain">+A$55</div>
+        </div>
+        <div class="txn-row">
+          <div style="color:var(--text-muted);">Mar 3</div>
+          <div><div>Staking reward</div><div style="font-size:10px;color:var(--text-muted);">Income event</div></div>
+          <div>—</div>
+          <div class="txn-gain">+A$14</div>
+        </div>
+        <div class="txn-row">
+          <div style="color:var(--text-muted);">Jan 18</div>
+          <div><div>Sold 100 INDX</div><div style="font-size:10px;color:var(--text-muted);">DEX swap</div></div>
+          <div>A$52</div>
+          <div class="txn-loss">–A$8</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- EXPORT -->
+    <div class="export-section">
+      <div class="section-title">Export your records</div>
+
+      <div class="export-btn" onclick="doExport('csv')">
+        <div class="eb-icon">📄</div>
+        <div class="eb-info">
+          <div>CSV — All transactions</div>
+          <div class="eb-desc">Compatible with Koinly, CoinTracker, CryptoTaxCalculator</div>
+        </div>
+        <div class="eb-badge" style="background:rgba(0,229,160,0.1);color:var(--green);">FREE</div>
+      </div>
+
+      <div class="export-btn" onclick="doExport('pdf')">
+        <div class="eb-icon">📋</div>
+        <div class="eb-info">
+          <div>PDF — ATO-ready summary</div>
+          <div class="eb-desc">Formatted tax statement for your accountant</div>
+        </div>
+        <div class="eb-badge" style="background:rgba(0,229,160,0.1);color:var(--green);">FREE</div>
+      </div>
+
+      <div class="export-btn" onclick="doExport('ato')">
+        <div class="eb-icon">🇦🇺</div>
+        <div class="eb-info">
+          <div>myTax pre-fill (ATO)</div>
+          <div class="eb-desc">Direct export to ATO myTax — one click lodgement</div>
+        </div>
+        <div class="eb-badge" style="background:rgba(0,212,255,0.1);color:var(--cyan);">BETA</div>
+      </div>
+
+      <div class="export-btn" onclick="doExport('accountant')">
+        <div class="eb-icon">📧</div>
+        <div class="eb-info">
+          <div>Email to my accountant</div>
+          <div class="eb-desc">Send full report package directly</div>
+        </div>
+        <div class="eb-badge" style="background:rgba(139,63,232,0.1);color:var(--purple);">PRO</div>
+      </div>
+    </div>
+
+    <!-- DISCLAIMER -->
+    <div class="disclaimer">
+      ⚠️ <strong style="color:var(--gold);">Not tax advice.</strong> IN$DEX provides this report as a record-keeping tool only. Tax rules vary by jurisdiction and personal circumstance. Consult a registered tax professional before lodging. ATO guidance on crypto assets: <span style="color:var(--cyan);">ato.gov.au/crypto</span>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  function selectYear(el, year) {
+    document.querySelectorAll('.yp-item').forEach(y => y.classList.remove('active'));
+    el.classList.add('active');
+    updateForYear(year);
+  }
+
+  function selectJur(el, code) {
+    document.querySelectorAll('.jur-pill').forEach(j => j.classList.remove('active'));
+    el.classList.add('active');
+    updateForJur(code);
+  }
+
+  function updateForYear(y) {
+    const data = {
+      '2022-23': { gains:'A$1,240', income:'A$320', tax:'A$468', note:'Previous financial year' },
+      '2023-24': { gains:'A$2,800', income:'A$640', tax:'A$1,032', note:'Previous financial year' },
+      '2024-25': { gains:'A$4,820', income:'A$1,240', tax:'A$1,815', note:'Based on 30% marginal rate. Assets held >12 months qualify for 50% CGT discount.' },
+      '2025-26': { gains:'A$240', income:'A$124', tax:'A$109', note:'Partial year — FY in progress' },
+    };
+    const d = data[y] || data['2024-25'];
+    document.getElementById('totalGains').textContent = '+' + d.gains;
+    document.getElementById('totalIncome').textContent = d.income;
+    document.getElementById('taxOwed').textContent = d.tax;
+    document.getElementById('taxNote').textContent = d.note;
+  }
+
+  function updateForJur(code) {
+    const notes = {
+      AU: 'Based on 30% marginal rate. Assets held >12 months qualify for 50% CGT discount.',
+      US: 'Based on short-term/long-term capital gains rates. Staking income taxed as ordinary income.',
+      UK: 'HMRC crypto assets guidance applied. CGT annual exempt amount deducted.',
+      PH: 'BIR guidelines for virtual asset taxation. 6% CGT applies to disposals.',
+      NG: 'FIRS guidance on digital assets. Income tax rate applies to crypto earnings.',
+      XX: 'Select your jurisdiction for accurate estimates. Generic 20% rate applied.',
+    };
+    document.getElementById('taxNote').textContent = notes[code] || notes['XX'];
+    showToast('Jurisdiction updated to ' + code);
+  }
+
+  function doExport(type) {
+    const msgs = {
+      csv: '📄 CSV exported — check your downloads',
+      pdf: '📋 PDF generated — ready to download',
+      ato: '🇦🇺 Connecting to ATO myTax…',
+      accountant: '📧 Report emailed to your accountant',
+    };
+    showToast(msgs[type] || 'Exporting…');
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.style.opacity = '1';
+    setTimeout(() => t.style.opacity = '0', 2500);
+  }
+</script>
+</body>
+</html>

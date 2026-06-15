@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Language Settings — IN$DEX</title>
+<style>
+  :root {
+    --cyan: #00D4FF; --blue: #2B35D8; --purple: #8B3FE8;
+    --black: #090A10; --green: #00E5A0; --gold: #FFB800;
+    --red: #FF4D6D; --surface: #12141F; --surface2: #1A1D2E;
+    --surface3: #22263A; --text: #F0F2FF; --text2: #A0A8C8;
+    --text-muted: #5A6080;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--black); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; max-width:430px; margin:0 auto; min-height:100vh; }
+  .topbar { background:var(--surface); border-bottom:1px solid rgba(255,255,255,0.06); padding:14px 16px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:100; }
+  .back-btn { width:36px; height:36px; border:none; background:var(--surface2); border-radius:10px; color:var(--text); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .topbar-title { font-size:16px; font-weight:600; }
+  .content { padding:16px; padding-bottom:60px; }
+
+  .search-wrap { position:relative; margin-bottom:20px; }
+  .search-input { width:100%; background:var(--surface); border:1px solid var(--surface3); border-radius:12px; padding:13px 16px 13px 44px; color:var(--text); font-size:15px; outline:none; transition:border-color 0.2s; }
+  .search-input:focus { border-color:var(--cyan); }
+  .search-input::placeholder { color:var(--text-muted); }
+  .search-icon { position:absolute; left:14px; top:50%; transform:translateY(-50%); font-size:18px; color:var(--text-muted); pointer-events:none; }
+
+  .section-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin:0 0 10px; }
+
+  .lang-list { display:flex; flex-direction:column; gap:2px; margin-bottom:24px; }
+  .lang-item { display:flex; align-items:center; gap:14px; padding:14px 16px; background:var(--surface); border-radius:12px; cursor:pointer; border:1px solid transparent; transition:all 0.15s; }
+  .lang-item:hover { border-color:rgba(0,212,255,0.2); }
+  .lang-item.selected { background:rgba(0,212,255,0.06); border-color:rgba(0,212,255,0.3); }
+  .lang-flag { font-size:24px; width:36px; text-align:center; flex-shrink:0; }
+  .lang-info { flex:1; }
+  .lang-name { font-size:15px; font-weight:500; }
+  .lang-native { font-size:13px; color:var(--text-muted); margin-top:1px; }
+  .lang-check { width:22px; height:22px; border-radius:50%; border:2px solid var(--surface3); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .lang-item.selected .lang-check { background:var(--cyan); border-color:var(--cyan); }
+  .lang-check-inner { display:none; color:#000; font-size:13px; font-weight:700; }
+  .lang-item.selected .lang-check-inner { display:block; }
+  .lang-badge { font-size:10px; padding:2px 7px; border-radius:6px; font-weight:600; margin-top:3px; display:inline-block; }
+  .badge-beta { background:rgba(255,184,0,0.15); color:var(--gold); }
+  .badge-full { background:rgba(0,229,160,0.1); color:var(--green); }
+
+  .beta-note { background:rgba(255,184,0,0.08); border:1px solid rgba(255,184,0,0.2); border-radius:10px; padding:10px 14px; font-size:12px; color:var(--text2); line-height:1.5; margin-top:8px; }
+
+  .toast { position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(60px); background:var(--surface2); color:var(--text); padding:12px 20px; border-radius:12px; font-size:13px; font-weight:500; transition:transform 0.3s; z-index:200; white-space:nowrap; border:1px solid rgba(0,229,160,0.3); }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" onclick="history.back()">←</button>
+  <span class="topbar-title">Language</span>
+</div>
+
+<div class="content">
+
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" type="text" placeholder="Search languages..." oninput="filterLanguages(this.value)">
+  </div>
+
+  <div class="section-label" id="primaryLabel">Pacific First</div>
+  <div class="lang-list" id="primaryList"></div>
+
+  <div class="section-label" id="globalLabel">Global Languages</div>
+  <div class="lang-list" id="globalList"></div>
+
+  <div class="beta-note" id="betaNote">Languages marked BETA are community-translated and may have some missing phrases. Help us improve them by tapping the flag icon in any screen.</div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const PRIMARY = [
+  { flag:'🇦🇺', name:'English (Australia)', native:'English', code:'en-au', status:'full' },
+  { flag:'🇺🇸', name:'English (US)', native:'English', code:'en-us', status:'full' },
+  { flag:'🇫🇯', name:'Fijian', native:'Na vosa Vakaviti', code:'fj', status:'beta' },
+  { flag:'🇼🇸', name:'Samoan', native:'Gagana Samoa', code:'sm', status:'beta' },
+  { flag:'🇹🇴', name:'Tongan', native:'lea faka-Tonga', code:'to', status:'beta' },
+  { flag:'🇨🇰', name:'Cook Islands Māori', native:'Māori Kūki ʻĀirani', code:'rar', status:'beta' },
+  { flag:'🇵🇬', name:'Tok Pisin', native:'Tok Pisin', code:'tpi', status:'beta' },
+  { flag:'🇻🇺', name:'Bislama', native:'Bislama', code:'bi', status:'beta' },
+  { flag:'🇵🇭', name:'Filipino', native:'Filipino', code:'fil', status:'beta' },
+];
+
+const GLOBAL = [
+  { flag:'🇪🇸', name:'Spanish', native:'Español', code:'es', status:'full' },
+  { flag:'🇵🇹', name:'Portuguese', native:'Português', code:'pt', status:'full' },
+  { flag:'🇫🇷', name:'French', native:'Français', code:'fr', status:'full' },
+  { flag:'🇮🇩', name:'Indonesian', native:'Bahasa Indonesia', code:'id', status:'full' },
+  { flag:'🇸🇦', name:'Arabic', native:'العربية', code:'ar', status:'beta' },
+  { flag:'🇮🇳', name:'Hindi', native:'हिन्दी', code:'hi', status:'beta' },
+  { flag:'🇨🇳', name:'Mandarin (Simplified)', native:'普通话', code:'zh', status:'beta' },
+  { flag:'🇻🇳', name:'Vietnamese', native:'Tiếng Việt', code:'vi', status:'beta' },
+  { flag:'🇹🇭', name:'Thai', native:'ภาษาไทย', code:'th', status:'beta' },
+  { flag:'🇳🇬', name:'Hausa', native:'Hausa', code:'ha', status:'beta' },
+  { flag:'🇰🇪', name:'Swahili', native:'Kiswahili', code:'sw', status:'beta' },
+];
+
+let selected = 'en-au';
+
+function renderList(items, containerId) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = items.map(lang => `
+    <div class="lang-item ${lang.code === selected ? 'selected' : ''}" onclick="selectLang('${lang.code}', '${lang.name}')">
+      <span class="lang-flag">${lang.flag}</span>
+      <div class="lang-info">
+        <div class="lang-name">${lang.name}</div>
+        <div class="lang-native">${lang.native}</div>
+        <span class="lang-badge ${lang.status === 'full' ? 'badge-full' : 'badge-beta'}">${lang.status === 'full' ? 'FULL' : 'BETA'}</span>
+      </div>
+      <div class="lang-check"><span class="lang-check-inner">✓</span></div>
+    </div>
+  `).join('');
+}
+
+function selectLang(code, name) {
+  selected = code;
+  renderList(PRIMARY, 'primaryList');
+  renderList(GLOBAL, 'globalList');
+  showToast(`Language set to ${name}. Standing by.`);
+}
+
+function filterLanguages(query) {
+  const q = query.toLowerCase();
+  const filteredPrimary = PRIMARY.filter(l => l.name.toLowerCase().includes(q) || l.native.toLowerCase().includes(q));
+  const filteredGlobal = GLOBAL.filter(l => l.name.toLowerCase().includes(q) || l.native.toLowerCase().includes(q));
+  renderList(filteredPrimary, 'primaryList');
+  renderList(filteredGlobal, 'globalList');
+  document.getElementById('primaryLabel').style.display = filteredPrimary.length ? 'block' : 'none';
+  document.getElementById('globalLabel').style.display = filteredGlobal.length ? 'block' : 'none';
+  document.getElementById('betaNote').style.display = query ? 'none' : 'block';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// Init
+renderList(PRIMARY, 'primaryList');
+renderList(GLOBAL, 'globalList');
+</script>
+</body>
+</html>

@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Verify Your Identity — IN$DEX</title>
+  <style>
+    :root{--cyan:#00D4FF;--blue:#2B35D8;--purple:#8B3FE8;--black:#090A10;--green:#00E5A0;--gold:#FFB800;--red:#FF4D6D;--surface:#12141F;--surface2:#1A1D2E;--surface3:#22263A;--border:rgba(255,255,255,0.07);--text:#F0F2FF;--text-muted:rgba(240,242,255,0.45);--text-dim:rgba(240,242,255,0.2);}
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+    body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overflow:hidden;}
+    .phone{max-width:430px;margin:0 auto;height:100vh;display:flex;flex-direction:column;position:relative;}
+
+    /* TOPBAR */
+    .topbar{display:flex;align-items:center;padding:14px 16px 10px;gap:10px;background:var(--black);z-index:30;flex-shrink:0;}
+    .tb-back{width:36px;height:36px;border-radius:10px;background:var(--surface2);border:none;color:var(--text);font-size:18px;cursor:pointer;}
+    .tb-title{flex:1;font-size:17px;font-weight:800;}
+    .tb-time{font-size:12px;color:var(--text-muted);}
+
+    /* STEP DOTS */
+    .step-dots{display:flex;gap:6px;justify-content:center;padding:10px 16px;flex-shrink:0;}
+    .dot{height:4px;border-radius:2px;background:var(--surface3);transition:all 0.3s;}
+    .dot.active{background:var(--cyan);width:24px;}
+    .dot.done{background:var(--green);}
+    .dot:not(.active):not(.done){width:16px;}
+
+    /* SCREENS */
+    .screen{position:absolute;inset:0;display:flex;flex-direction:column;transition:transform 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.35s;padding-top:110px;}
+    .screen.hidden-left{transform:translateX(-100%);opacity:0;pointer-events:none;}
+    .screen.hidden-right{transform:translateX(100%);opacity:0;pointer-events:none;}
+    .screen.active{transform:translateX(0);opacity:1;}
+    .screen-inner{flex:1;overflow-y:auto;padding:0 16px 16px;}
+
+    /* INTRO SCREEN */
+    .intro-hero{text-align:center;padding:20px 0 24px;}
+    .ih-emoji{font-size:64px;margin-bottom:16px;}
+    .ih-title{font-size:24px;font-weight:900;margin-bottom:10px;}
+    .ih-sub{font-size:14px;color:var(--text-muted);line-height:1.7;max-width:300px;margin:0 auto;}
+    .tier-path{display:flex;gap:0;margin:20px 0;}
+    .tier-item{flex:1;text-align:center;position:relative;}
+    .tier-item::after{content:'';position:absolute;top:20px;right:0;width:50%;height:2px;background:var(--border);}
+    .tier-item:last-child::after{display:none;}
+    .tier-item::before{content:'';position:absolute;top:20px;left:0;width:50%;height:2px;background:var(--border);}
+    .tier-item:first-child::before{display:none;}
+    .ti-circle{width:40px;height:40px;border-radius:50%;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:16px;position:relative;z-index:1;}
+    .ti-circle.now{background:rgba(0,212,255,0.15);border:2px solid var(--cyan);}
+    .ti-circle.later{background:var(--surface2);border:2px solid var(--border);}
+    .ti-label{font-size:10px;font-weight:700;color:var(--text-muted);}
+    .ti-limit{font-size:9px;color:var(--text-dim);margin-top:2px;}
+    .promise-list{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:8px;}
+    .pl-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+    .pl-item:last-child{border-bottom:none;}
+    .pl-ico{font-size:18px;flex-shrink:0;}
+    .pl-text{font-size:13px;line-height:1.5;}
+
+    /* PHONE STEP */
+    .step-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:20px;margin-bottom:14px;}
+    .sc-icon{font-size:40px;text-align:center;margin-bottom:12px;}
+    .sc-title{font-size:18px;font-weight:900;text-align:center;margin-bottom:6px;}
+    .sc-sub{font-size:13px;color:var(--text-muted);text-align:center;line-height:1.6;margin-bottom:18px;}
+    .phone-input-row{display:flex;gap:8px;margin-bottom:12px;}
+    .flag-select{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 10px;font-size:16px;cursor:pointer;}
+    .phone-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-size:18px;font-weight:700;outline:none;letter-spacing:1px;}
+    .phone-input:focus{border-color:rgba(0,212,255,0.4);}
+    .otp-row{display:flex;gap:8px;justify-content:center;margin:16px 0;}
+    .otp-box{width:48px;height:56px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;transition:border-color 0.2s;}
+    .otp-box.filled{border-color:rgba(0,212,255,0.4);color:var(--cyan);}
+    .otp-hint{font-size:12px;color:var(--text-muted);text-align:center;}
+    .resend-link{font-size:12px;color:var(--cyan);cursor:pointer;font-weight:700;text-align:center;display:block;margin-top:8px;}
+
+    /* LIVENESS SCAN */
+    .camera-frame{position:relative;margin:0 auto 16px;width:240px;height:280px;}
+    .cam-placeholder{width:100%;height:100%;background:var(--surface2);border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:80px;border:2px solid var(--border);}
+    .cam-ring{position:absolute;inset:-6px;border-radius:30px;border:3px solid transparent;transition:border-color 0.4s;}
+    .cam-ring.scanning{border-color:var(--cyan);animation:pulse 1.5s infinite;}
+    .cam-ring.success{border-color:var(--green);}
+    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+    .cam-corners{}
+    .cam-corners::before,.cam-corners::after{content:'';position:absolute;width:24px;height:24px;border-color:var(--cyan);border-style:solid;}
+    .scan-status{text-align:center;margin-bottom:16px;}
+    .ss-icon{font-size:22px;margin-bottom:6px;}
+    .ss-text{font-size:14px;font-weight:700;}
+    .ss-sub{font-size:12px;color:var(--text-muted);margin-top:3px;}
+    .scan-checks{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:14px;}
+    .sc-check{font-size:11px;font-weight:700;padding:5px 10px;border-radius:20px;background:var(--surface);border:1px solid var(--border);color:var(--text-muted);transition:all 0.3s;}
+    .sc-check.pass{background:rgba(0,229,160,0.1);border-color:rgba(0,229,160,0.25);color:var(--green);}
+    .privacy-note{background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.1);border-radius:10px;padding:12px;font-size:11px;color:var(--text-muted);line-height:1.6;text-align:center;}
+
+    /* SUCCESS */
+    .success-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px 20px;min-height:400px;}
+    .success-badge{width:100px;height:100px;border-radius:50%;background:rgba(0,229,160,0.12);border:3px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:48px;margin:0 auto 20px;}
+    .sb-title{font-size:26px;font-weight:900;margin-bottom:8px;}
+    .sb-sub{font-size:14px;color:var(--text-muted);line-height:1.7;margin-bottom:24px;}
+    .tier-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.25);border-radius:12px;padding:10px 18px;margin-bottom:24px;}
+    .tb-emoji{font-size:20px;}
+    .tb-text{font-size:14px;font-weight:900;color:var(--green);}
+    .unlocks-title{font-size:12px;font-weight:800;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px;}
+    .unlocks{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px;width:100%;}
+    .unlock-item{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center;}
+    .ui-ico{font-size:20px;margin-bottom:4px;}
+    .ui-name{font-size:11px;font-weight:700;}
+
+    /* BUTTON */
+    .btn-primary{width:100%;padding:16px;border-radius:14px;background:var(--cyan);border:none;color:#000;font-size:16px;font-weight:900;cursor:pointer;margin-top:4px;}
+    .btn-primary:disabled{opacity:0.35;cursor:not-allowed;}
+    .btn-primary.green{background:var(--green);}
+
+    #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+  </style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- TOPBAR -->
+  <div class="topbar" style="position:relative;z-index:30;">
+    <button class="tb-back" id="backBtn" onclick="goBack()">←</button>
+    <div class="tb-title" id="tbTitle">Verify your identity</div>
+    <div class="tb-time">~90 sec</div>
+  </div>
+
+  <!-- STEP DOTS -->
+  <div class="step-dots">
+    <div class="dot active" id="dot0"></div>
+    <div class="dot" id="dot1"></div>
+    <div class="dot" id="dot2"></div>
+    <div class="dot" id="dot3"></div>
+  </div>
+
+  <!-- SCREEN 0: INTRO -->
+  <div class="screen active" id="screen0">
+    <div class="screen-inner">
+      <div class="intro-hero">
+        <div class="ih-emoji">🛡️</div>
+        <div class="ih-title">Verify in 90 seconds.</div>
+        <div class="ih-sub">No ID card needed. Just your phone number and your face. That's it.</div>
+      </div>
+
+      <div class="tier-path">
+        <div class="tier-item">
+          <div class="ti-circle now">📱</div>
+          <div class="ti-label">Tier 0</div>
+          <div class="ti-limit">$500/day</div>
+        </div>
+        <div class="tier-item">
+          <div class="ti-circle later">🆔</div>
+          <div class="ti-label">Tier 1</div>
+          <div class="ti-limit">$2K/day</div>
+        </div>
+        <div class="tier-item">
+          <div class="ti-circle later">📄</div>
+          <div class="ti-label">Tier 2</div>
+          <div class="ti-limit">$10K/day</div>
+        </div>
+      </div>
+
+      <div class="promise-list">
+        <div class="pl-item">
+          <div class="pl-ico">⚡</div>
+          <div class="pl-text"><strong>Done in 90 seconds.</strong> No waiting. No appointments.</div>
+        </div>
+        <div class="pl-item">
+          <div class="pl-ico">📱</div>
+          <div class="pl-text"><strong>No ID card required.</strong> Phone number + face scan is all you need to start.</div>
+        </div>
+        <div class="pl-item">
+          <div class="pl-ico">🔒</div>
+          <div class="pl-text"><strong>Your face never leaves your phone.</strong> Biometric data is processed on-device — never stored on our servers.</div>
+        </div>
+        <div class="pl-item">
+          <div class="pl-ico">🌍</div>
+          <div class="pl-text"><strong>Works anywhere in the world.</strong> No bank account needed. Just a smartphone.</div>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="goToStep(1)">Start verification →</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 1: PHONE -->
+  <div class="screen hidden-right" id="screen1">
+    <div class="screen-inner">
+      <div class="step-card">
+        <div class="sc-icon">📱</div>
+        <div class="sc-title">Your phone number</div>
+        <div class="sc-sub">We'll send a 6-digit code to confirm it's really you. Standard SMS rates may apply.</div>
+        <div class="phone-input-row">
+          <div class="flag-select" onclick="showToast('Country selector — 180+ countries')">🇦🇺 +61</div>
+          <input class="phone-input" type="tel" id="phoneInput" placeholder="4XX XXX XXX" oninput="checkPhone()">
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);line-height:1.6;">Your number is only used for verification. We never sell it or use it for marketing.</div>
+      </div>
+      <button class="btn-primary" id="sendOtpBtn" onclick="sendOtp()" disabled>Send code →</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: OTP -->
+  <div class="screen hidden-right" id="screen2">
+    <div class="screen-inner">
+      <div class="step-card">
+        <div class="sc-icon">💬</div>
+        <div class="sc-title">Enter your code</div>
+        <div class="sc-sub" id="otpSub">We sent a 6-digit code to your number. Check your messages.</div>
+        <div class="otp-row" id="otpRow">
+          <div class="otp-box" id="otp0">—</div>
+          <div class="otp-box" id="otp1">—</div>
+          <div class="otp-box" id="otp2">—</div>
+          <div class="otp-box" id="otp3">—</div>
+          <div class="otp-box" id="otp4">—</div>
+          <div class="otp-box" id="otp5">—</div>
+        </div>
+        <div class="otp-hint">Code expires in <span id="otpTimer" style="color:var(--gold);font-weight:700;">4:59</span></div>
+        <div class="resend-link" onclick="showToast('New code sent to your number')">Didn't get it? Resend →</div>
+      </div>
+      <!-- Simulated keypad -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
+        <button style="padding:18px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:22px;font-weight:700;cursor:pointer;" onclick="otpKey('1')">1</button>
+        <button style="padding:18px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:22px;font-weight:700;cursor:pointer;" onclick="otpKey('2')">2</button>
+        <button style="padding:18px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:22px;font-weight:700;cursor:pointer;" onclick="otpKey('3')">3</button>
+        <button style="padding:18px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:22px;font-weight:700;cursor:pointer;" onclick="otpKey('4')">4</button>
+        <button style="padding:18px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:22px;font-weight:700;cursor:pointer;" onclick="otpKey('5')">5</button>
+        <button style="padding:18px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:22px;font-weight:700;cursor:pointer;" onclick="otpKey('6')">6</button>
+        <button style="padding:18px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:22px;font-weight:700;cursor:pointer;" onclick="otpKey('7')">7</button>
+        <button style="padding:18px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:22px;font-weight:700;cursor:pointer;" onclick="otpKey('8')">8</button>
+        <button style="padding:18px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:22px;font-weight:700;cursor:pointer;" onclick="otpKey('9')">9</button>
+        <button style="padding:18px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:22px;font-weight:700;cursor:pointer;" onclick="otpKey('0')">0</button>
+        <button style="padding:18px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);font-size:22px;cursor:pointer;grid-column:3;" onclick="otpKey('del')">⌫</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: LIVENESS SCAN -->
+  <div class="screen hidden-right" id="screen3">
+    <div class="screen-inner" style="display:flex;flex-direction:column;align-items:center;">
+      <div class="camera-frame">
+        <div class="cam-placeholder" id="camPlaceholder">😐</div>
+        <div class="cam-ring" id="camRing"></div>
+      </div>
+      <div class="scan-status">
+        <div class="ss-icon" id="scanIcon">🔍</div>
+        <div class="ss-text" id="scanText">Position your face in the frame</div>
+        <div class="ss-sub" id="scanSub">Look straight ahead · Good lighting helps</div>
+      </div>
+      <div class="scan-checks" id="scanChecks">
+        <div class="sc-check" id="chk0">👤 Face detected</div>
+        <div class="sc-check" id="chk1">💡 Lighting OK</div>
+        <div class="sc-check" id="chk2">🎯 Centered</div>
+        <div class="sc-check" id="chk3">👁️ Eyes open</div>
+        <div class="sc-check" id="chk4">🔄 Liveness</div>
+      </div>
+      <div class="privacy-note" style="margin-bottom:12px;">🔒 Your face is processed <strong>on this device only</strong>. Nothing is sent to our servers. Your biometric stays yours.</div>
+      <button class="btn-primary" id="scanBtn" onclick="startScan()">Start face scan →</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 4: SUCCESS -->
+  <div class="screen hidden-right" id="screen4">
+    <div class="screen-inner">
+      <div class="success-screen">
+        <div class="success-badge">✅</div>
+        <div class="sb-title">You're all set.</div>
+        <div class="sb-sub">Welcome to IN$DEX. I'm SIINDEX, your Sovereign AI. Your wallet is ready and your account is secure. I'll be here whenever you need me.</div>
+        <div class="tier-badge">
+          <div class="tb-emoji">🛡️</div>
+          <div class="tb-text">Tier 0 — Verified</div>
+        </div>
+        <div class="unlocks-title">You can now</div>
+        <div class="unlocks">
+          <div class="unlock-item"><div class="ui-ico">💸</div><div class="ui-name">Send money</div></div>
+          <div class="unlock-item"><div class="ui-ico">🪙</div><div class="ui-name">Buy INDX</div></div>
+          <div class="unlock-item"><div class="ui-ico">🏪</div><div class="ui-name">P2P market</div></div>
+          <div class="unlock-item"><div class="ui-ico">🗳️</div><div class="ui-name">Vote at WS 50</div></div>
+        </div>
+        <button class="btn-primary green" onclick="showToast('Welcome to IN$DEX. Standing by.')">Go to my wallet →</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+<div id="toast"></div>
+<script>
+let currentStep = 0;
+let otpDigits = [];
+let otpSecs = 299;
+let otpInterval = null;
+let scanRunning = false;
+
+function updateDots(step){
+  for(let i=0;i<4;i++){
+    const d = document.getElementById('dot'+i);
+    d.className = 'dot';
+    if(i < step) d.classList.add('done');
+    else if(i === step) d.classList.add('active');
+  }
+}
+
+function goToStep(step){
+  const screens = ['screen0','screen1','screen2','screen3','screen4'];
+  const titles = ['Verify your identity','Step 1 of 3 — Phone','Step 2 of 3 — Confirm','Step 3 of 3 — Face scan','Verified ✓'];
+  document.getElementById(screens[currentStep]).className = 'screen hidden-left';
+  document.getElementById(screens[step]).className = 'screen active';
+  currentStep = step;
+  document.getElementById('tbTitle').textContent = titles[step];
+  updateDots(step);
+  if(step === 2) startOtpTimer();
+  if(step === 3) setTimeout(()=>autoScanDemo(), 1200);
+}
+
+function goBack(){
+  if(currentStep > 0) goToStep(currentStep - 1);
+  else history.back();
+}
+
+function checkPhone(){
+  const v = document.getElementById('phoneInput').value;
+  document.getElementById('sendOtpBtn').disabled = v.length < 8;
+}
+
+function sendOtp(){
+  const v = document.getElementById('phoneInput').value;
+  document.getElementById('otpSub').textContent = 'We sent a 6-digit code to +61 '+v+'. Check your messages.';
+  goToStep(2);
+  showToast('Code sent! Check your messages.');
+}
+
+function startOtpTimer(){
+  otpSecs = 299;
+  clearInterval(otpInterval);
+  otpInterval = setInterval(()=>{
+    otpSecs--;
+    const m=Math.floor(otpSecs/60), s=otpSecs%60;
+    const el=document.getElementById('otpTimer');
+    if(el) el.textContent=m+':'+(s<10?'0':'')+s;
+    if(otpSecs<=0) clearInterval(otpInterval);
+  },1000);
+}
+
+function otpKey(k){
+  if(k==='del'){otpDigits.pop();}
+  else if(otpDigits.length < 6){otpDigits.push(k);}
+  for(let i=0;i<6;i++){
+    const box=document.getElementById('otp'+i);
+    if(i < otpDigits.length){
+      box.textContent=otpDigits[i];
+      box.classList.add('filled');
+    } else {
+      box.textContent='—';
+      box.classList.remove('filled');
+    }
+  }
+  if(otpDigits.length === 6){
+    clearInterval(otpInterval);
+    showToast('✓ Code confirmed!');
+    setTimeout(()=>goToStep(3), 700);
+  }
+}
+
+function startScan(){
+  if(scanRunning) return;
+  scanRunning = true;
+  document.getElementById('scanBtn').textContent = 'Scanning…';
+  document.getElementById('scanBtn').disabled = true;
+  document.getElementById('camRing').classList.add('scanning');
+  document.getElementById('scanIcon').textContent = '🔍';
+  document.getElementById('scanText').textContent = 'Scanning…';
+  document.getElementById('scanSub').textContent = 'Hold still and look at the camera';
+  autoScanDemo();
+}
+
+function autoScanDemo(){
+  const checks = ['chk0','chk1','chk2','chk3','chk4'];
+  const messages = ['Face detected ✓','Lighting OK ✓','Centered ✓','Eyes open ✓','Liveness confirmed ✓'];
+  const emojis = ['😊','😊','😊','😊','✅'];
+  let i = 0;
+  const interval = setInterval(()=>{
+    if(i < checks.length){
+      document.getElementById(checks[i]).classList.add('pass');
+      document.getElementById(checks[i]).textContent = '✓ '+messages[i].replace(' ✓','');
+      document.getElementById('camPlaceholder').textContent = emojis[i];
+      i++;
+    } else {
+      clearInterval(interval);
+      document.getElementById('camRing').classList.remove('scanning');
+      document.getElementById('camRing').classList.add('success');
+      document.getElementById('scanIcon').textContent = '✅';
+      document.getElementById('scanText').textContent = 'Verification complete!';
+      document.getElementById('scanSub').textContent = 'Your identity is confirmed';
+      showToast('Identity verified! Welcome to IN$DEX 🎉');
+      setTimeout(()=>goToStep(4), 1200);
+    }
+  }, 600);
+}
+
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}
+</script>
+</body>
+</html>

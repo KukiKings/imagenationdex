@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Liquidity Pools — IN$DEX</title>
+  <style>
+    :root {
+      --cyan:#00D4FF;--blue:#2B35D8;--purple:#8B3FE8;
+      --black:#090A10;--green:#00E5A0;--gold:#FFB800;--red:#FF4D6D;
+      --surface:#12141F;--surface2:#1A1D2E;--surface3:#22263A;
+      --border:rgba(255,255,255,0.07);
+      --text:#F0F2FF;--text-muted:rgba(240,242,255,0.45);--text-dim:rgba(240,242,255,0.2);
+    }
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+    body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+    .phone{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+    .topbar{display:flex;align-items:center;padding:14px 16px 10px;gap:10px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--black);z-index:20;}
+    .tb-back{width:36px;height:36px;border-radius:10px;background:var(--surface2);border:none;color:var(--text);font-size:18px;cursor:pointer;}
+    .tb-title{flex:1;font-size:17px;font-weight:800;}
+    .scroll-body{flex:1;overflow-y:auto;padding-bottom:30px;}
+
+    /* TABS */
+    .tabs{display:flex;padding:14px 16px 0;gap:4px;}
+    .tab{flex:1;padding:10px;text-align:center;font-size:13px;font-weight:700;border-radius:10px 10px 0 0;cursor:pointer;border:1px solid var(--border);border-bottom:none;background:var(--surface2);color:var(--text-muted);}
+    .tab.active{background:var(--surface);color:var(--cyan);border-color:rgba(0,212,255,0.2);}
+
+    /* STATS STRIP */
+    .stats-strip{display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid var(--border);}
+    .ss-item{padding:12px 10px;text-align:center;border-right:1px solid var(--border);}
+    .ss-item:last-child{border-right:none;}
+    .ss-lbl{font-size:10px;color:var(--text-muted);margin-bottom:3px;font-weight:600;}
+    .ss-val{font-size:15px;font-weight:900;}
+
+    /* POOL CARDS */
+    .section{padding:16px;}
+    .sect-title{font-size:12px;font-weight:800;color:var(--text-muted);letter-spacing:0.07em;text-transform:uppercase;margin-bottom:12px;}
+    .pool-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:12px;cursor:pointer;transition:all 0.2s;}
+    .pool-card:active{transform:scale(0.98);}
+    .pc-top{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+    .pc-tokens{display:flex;margin-right:4px;}
+    .pc-tok{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:2px solid var(--black);}
+    .pc-tok:nth-child(2){margin-left:-10px;}
+    .pc-name{font-size:15px;font-weight:800;}
+    .pc-fee{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;background:rgba(0,212,255,0.08);color:var(--cyan);margin-left:6px;}
+    .pc-apy{font-size:14px;font-weight:800;color:var(--green);margin-left:auto;}
+    .pc-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+    .pcs{background:var(--surface2);border-radius:8px;padding:8px 10px;}
+    .pcs-lbl{font-size:10px;color:var(--text-muted);margin-bottom:2px;}
+    .pcs-val{font-size:13px;font-weight:700;}
+    .pc-bar{height:4px;background:var(--surface3);border-radius:2px;margin-top:10px;overflow:hidden;}
+    .pc-bar-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--cyan),var(--purple));}
+
+    /* ADD LIQUIDITY FORM */
+    .liq-form{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:14px;}
+    .lf-title{font-size:14px;font-weight:800;margin-bottom:14px;}
+    .token-input{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;}
+    .ti-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+    .ti-label{font-size:12px;color:var(--text-muted);}
+    .ti-bal{font-size:12px;color:var(--text-muted);}
+    .ti-row{display:flex;align-items:center;gap:10px;}
+    .ti-token{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:800;flex-shrink:0;}
+    .ti-input{flex:1;background:transparent;border:none;color:var(--text);font-size:20px;font-weight:700;outline:none;text-align:right;}
+    .ti-input::placeholder{color:var(--text-dim);}
+    .ti-usd{font-size:11px;color:var(--text-muted);text-align:right;margin-top:4px;}
+    .plus-divider{text-align:center;font-size:18px;color:var(--text-muted);margin:-2px 0;}
+    .il-warning{background:rgba(255,184,0,0.06);border:1px solid rgba(255,184,0,0.15);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--text-muted);line-height:1.6;}
+    .liq-summary{background:var(--surface3);border-radius:10px;padding:12px;margin-bottom:14px;}
+    .ls-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;}
+    .ls-lbl{color:var(--text-muted);}
+    .btn-add{width:100%;padding:16px;border-radius:14px;background:var(--cyan);border:none;color:#000;font-size:16px;font-weight:900;cursor:pointer;}
+    .btn-add:disabled{opacity:0.35;cursor:not-allowed;}
+
+    /* MY POSITIONS */
+    .position-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;}
+    .pos-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+    .pos-pair{font-size:14px;font-weight:800;}
+    .pos-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(0,229,160,0.1);color:var(--green);}
+    .pos-row{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+    .pos-row:last-child{border-bottom:none;}
+    .pos-lbl{color:var(--text-muted);}
+    .pos-actions{display:flex;gap:8px;margin-top:12px;}
+    .pos-btn{flex:1;padding:10px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--border);}
+    .pos-btn.add{background:rgba(0,229,160,0.08);color:var(--green);border-color:rgba(0,229,160,0.2);}
+    .pos-btn.remove{background:rgba(255,77,109,0.08);color:var(--red);border-color:rgba(255,77,109,0.2);}
+
+    /* IL CALCULATOR */
+    .il-calc{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px;}
+    .il-calc-title{font-size:13px;font-weight:800;margin-bottom:12px;}
+    .il-slider-label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;}
+    .il-slider{width:100%;margin-bottom:12px;}
+    .il-result{display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid var(--border);}
+    .il-col{text-align:center;}
+    .il-col-lbl{font-size:11px;color:var(--text-muted);margin-bottom:3px;}
+    .il-col-val{font-size:16px;font-weight:900;}
+
+    /* SCREEN TOGGLE */
+    .screen{display:none;}
+    .screen.active{display:block;}
+
+    #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+  </style>
+</head>
+<body>
+<div class="phone">
+  <div class="topbar">
+    <button class="tb-back" onclick="history.back()">←</button>
+    <div class="tb-title">💧 Liquidity Pools</div>
+  </div>
+
+  <div class="scroll-body">
+    <!-- STATS -->
+    <div class="stats-strip">
+      <div class="ss-item"><div class="ss-lbl">Total TVL</div><div class="ss-val" style="color:var(--cyan);">$4.2M</div></div>
+      <div class="ss-item"><div class="ss-lbl">24h Volume</div><div class="ss-val">$842K</div></div>
+      <div class="ss-item"><div class="ss-lbl">Your liquidity</div><div class="ss-val" style="color:var(--green);">$0</div></div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs" style="padding:14px 16px 0;">
+      <div class="tab active" id="tabPools" onclick="switchTab('pools')">All Pools</div>
+      <div class="tab" id="tabAdd" onclick="switchTab('add')">Add Liquidity</div>
+      <div class="tab" id="tabMine" onclick="switchTab('mine')">My Positions</div>
+    </div>
+
+    <!-- POOLS LIST -->
+    <div class="screen active" id="screenPools">
+      <div class="section">
+        <div class="sect-title">Active pools</div>
+
+        <div class="pool-card" onclick="switchTab('add')">
+          <div class="pc-top">
+            <div class="pc-tokens">
+              <div class="pc-tok" style="background:rgba(0,212,255,0.15);">🪙</div>
+              <div class="pc-tok" style="background:rgba(0,229,160,0.15);">💵</div>
+            </div>
+            <div><div class="pc-name">INDX / USDC <span class="pc-fee">0.3%</span></div></div>
+            <div class="pc-apy">18.4% APY</div>
+          </div>
+          <div class="pc-stats">
+            <div class="pcs"><div class="pcs-lbl">TVL</div><div class="pcs-val" style="color:var(--cyan);">$2.4M</div></div>
+            <div class="pcs"><div class="pcs-lbl">24h fees</div><div class="pcs-val" style="color:var(--gold);">$7,200</div></div>
+            <div class="pcs"><div class="pcs-lbl">LPs</div><div class="pcs-val">142</div></div>
+          </div>
+          <div class="pc-bar"><div class="pc-bar-fill" style="width:78%;"></div></div>
+        </div>
+
+        <div class="pool-card" onclick="switchTab('add')">
+          <div class="pc-top">
+            <div class="pc-tokens">
+              <div class="pc-tok" style="background:rgba(0,212,255,0.15);">🪙</div>
+              <div class="pc-tok" style="background:rgba(139,63,232,0.15);">◎</div>
+            </div>
+            <div><div class="pc-name">INDX / SOL <span class="pc-fee">0.3%</span></div></div>
+            <div class="pc-apy">24.1% APY</div>
+          </div>
+          <div class="pc-stats">
+            <div class="pcs"><div class="pcs-lbl">TVL</div><div class="pcs-val" style="color:var(--cyan);">$1.2M</div></div>
+            <div class="pcs"><div class="pcs-lbl">24h fees</div><div class="pcs-val" style="color:var(--gold);">$4,800</div></div>
+            <div class="pcs"><div class="pcs-lbl">LPs</div><div class="pcs-val">84</div></div>
+          </div>
+          <div class="pc-bar"><div class="pc-bar-fill" style="width:55%;background:linear-gradient(90deg,var(--purple),var(--cyan));"></div></div>
+        </div>
+
+        <div class="pool-card" onclick="switchTab('add')">
+          <div class="pc-top">
+            <div class="pc-tokens">
+              <div class="pc-tok" style="background:rgba(0,212,255,0.15);">🪙</div>
+              <div class="pc-tok" style="background:rgba(255,184,0,0.15);">₿</div>
+            </div>
+            <div><div class="pc-name">INDX / wBTC <span class="pc-fee">0.5%</span></div></div>
+            <div class="pc-apy">31.8% APY</div>
+          </div>
+          <div class="pc-stats">
+            <div class="pcs"><div class="pcs-lbl">TVL</div><div class="pcs-val" style="color:var(--cyan);">$612K</div></div>
+            <div class="pcs"><div class="pcs-lbl">24h fees</div><div class="pcs-val" style="color:var(--gold);">$3,060</div></div>
+            <div class="pcs"><div class="pcs-lbl">LPs</div><div class="pcs-val">37</div></div>
+          </div>
+          <div class="pc-bar"><div class="pc-bar-fill" style="width:32%;background:linear-gradient(90deg,var(--gold),var(--red));"></div></div>
+        </div>
+
+        <!-- IL CALCULATOR -->
+        <div class="il-calc">
+          <div class="il-calc-title">📐 Impermanent Loss Calculator</div>
+          <div class="il-slider-label">
+            <span style="font-size:12px;color:var(--text-muted);">Price change from entry</span>
+            <span style="font-weight:700;" id="ilPctLabel">+50%</span>
+          </div>
+          <input type="range" class="il-slider" id="ilSlider" min="-80" max="300" value="50" oninput="calcIL(this.value)">
+          <div class="il-result">
+            <div class="il-col"><div class="il-col-lbl">Hold value</div><div class="il-col-val" id="ilHold" style="color:var(--text-muted);">$1,500</div></div>
+            <div class="il-col"><div class="il-col-lbl">LP value</div><div class="il-col-val" id="ilLP" style="color:var(--cyan);">$1,414</div></div>
+            <div class="il-col"><div class="il-col-lbl">IL loss</div><div class="il-col-val" id="ilLoss" style="color:var(--red);">–5.7%</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADD LIQUIDITY -->
+    <div class="screen" id="screenAdd">
+      <div class="section">
+        <div class="liq-form">
+          <div class="lf-title">Add to INDX / USDC Pool</div>
+          <div class="token-input">
+            <div class="ti-top"><div class="ti-label">Token A</div><div class="ti-bal">Balance: 1,240 INDX</div></div>
+            <div class="ti-row">
+              <div class="ti-token">🪙 INDX</div>
+              <input class="ti-input" type="number" id="amtA" placeholder="0" oninput="syncAmounts('A')">
+            </div>
+            <div class="ti-usd" id="usdA">≈ $0.00</div>
+          </div>
+          <div class="plus-divider">+</div>
+          <div class="token-input" style="margin-top:10px;">
+            <div class="ti-top"><div class="ti-label">Token B</div><div class="ti-bal">Balance: $340 USDC</div></div>
+            <div class="ti-row">
+              <div class="ti-token">💵 USDC</div>
+              <input class="ti-input" type="number" id="amtB" placeholder="0" oninput="syncAmounts('B')">
+            </div>
+            <div class="ti-usd" id="usdB">≈ $0.00</div>
+          </div>
+          <div class="il-warning" style="margin-top:12px;">
+            ⚠️ <strong style="color:var(--gold);">Impermanent loss risk.</strong> If INDX price moves significantly from your entry, your LP position may be worth less than simply holding. Pool fees (0.3%) compensate over time.
+          </div>
+          <div class="liq-summary">
+            <div class="ls-row"><div class="ls-lbl">Pool share</div><div id="poolShare">—</div></div>
+            <div class="ls-row"><div class="ls-lbl">Est. daily fees</div><div id="dailyFees" style="color:var(--gold);">—</div></div>
+            <div class="ls-row"><div class="ls-lbl">APY (fees only)</div><div id="feeApy" style="color:var(--green);">18.4%</div></div>
+            <div class="ls-row"><div class="ls-lbl">LP tokens received</div><div id="lpTokens" style="color:var(--cyan);">—</div></div>
+          </div>
+          <button class="btn-add" id="addBtn" onclick="doAddLiquidity()" disabled>Add Liquidity</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MY POSITIONS -->
+    <div class="screen" id="screenMine">
+      <div class="section">
+        <div style="background:rgba(0,229,160,0.05);border:1px solid rgba(0,229,160,0.15);border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:var(--text-muted);">
+          You have <strong style="color:var(--green);">1 active position</strong> earning fees right now.
+        </div>
+        <div class="position-card">
+          <div class="pos-header">
+            <div class="pos-pair">🪙 INDX / 💵 USDC</div>
+            <div class="pos-badge">ACTIVE</div>
+          </div>
+          <div class="pos-row"><div class="pos-lbl">Your liquidity</div><div style="font-weight:700;">$240.00</div></div>
+          <div class="pos-row"><div class="pos-lbl">INDX deposited</div><div style="font-weight:700;">234.38 INDX</div></div>
+          <div class="pos-row"><div class="pos-lbl">USDC deposited</div><div style="font-weight:700;">120.00 USDC</div></div>
+          <div class="pos-row"><div class="pos-lbl">Pool share</div><div style="font-weight:700;">0.01%</div></div>
+          <div class="pos-row"><div class="pos-lbl">Fees earned</div><div style="font-weight:700;color:var(--gold);">+$4.28</div></div>
+          <div class="pos-row"><div class="pos-lbl">IL (current)</div><div style="font-weight:700;color:var(--red);">–$1.14 (–0.47%)</div></div>
+          <div class="pos-row"><div class="pos-lbl">Net P&L</div><div style="font-weight:700;color:var(--green);">+$3.14 (+1.3%)</div></div>
+          <div class="pos-actions">
+            <button class="pos-btn add" onclick="switchTab('add')">+ Add more</button>
+            <button class="pos-btn remove" onclick="showToast('Remove liquidity — confirm in the next step')">− Remove</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+  function switchTab(t) {
+    ['pools','add','mine'].forEach(id => {
+      document.getElementById('tab'+id.charAt(0).toUpperCase()+id.slice(1)).classList.toggle('active', id===t);
+      document.getElementById('screen'+id.charAt(0).toUpperCase()+id.slice(1)).classList.toggle('active', id===t);
+    });
+  }
+  function syncAmounts(side) {
+    const rate = 0.35;
+    if (side==='A') {
+      const a = parseFloat(document.getElementById('amtA').value)||0;
+      const b = a*rate;
+      document.getElementById('amtB').value = b>0?b.toFixed(2):'';
+      document.getElementById('usdA').textContent = '≈ A$'+(a*rate).toFixed(2);
+      document.getElementById('usdB').textContent = '≈ A$'+b.toFixed(2);
+      updateSummary(a*rate*2);
+    } else {
+      const b = parseFloat(document.getElementById('amtB').value)||0;
+      const a = b/rate;
+      document.getElementById('amtA').value = a>0?a.toFixed(2):'';
+      document.getElementById('usdA').textContent = '≈ A$'+(a*rate).toFixed(2);
+      document.getElementById('usdB').textContent = '≈ A$'+b.toFixed(2);
+      updateSummary(b*2);
+    }
+  }
+  function updateSummary(totalAUD) {
+    if (!totalAUD) { document.getElementById('addBtn').disabled=true; return; }
+    const share = (totalAUD/4200000*100).toFixed(4);
+    document.getElementById('poolShare').textContent = share+'%';
+    document.getElementById('dailyFees').textContent = 'A$'+(totalAUD*0.184/365).toFixed(4);
+    document.getElementById('lpTokens').textContent = (totalAUD/0.35).toFixed(2)+' LP-INDX';
+    document.getElementById('addBtn').disabled = false;
+  }
+  function calcIL(pct) {
+    const p = parseFloat(pct)/100;
+    const ratio = (1+p);
+    const ilFactor = 2*Math.sqrt(ratio)/(1+ratio)-1;
+    const holdVal = 1000*(1+p/2);
+    const lpVal = holdVal*(1+ilFactor);
+    document.getElementById('ilPctLabel').textContent = (p>=0?'+':'')+Math.round(p*100)+'%';
+    document.getElementById('ilHold').textContent = 'A$'+holdVal.toFixed(0);
+    document.getElementById('ilLP').textContent = 'A$'+lpVal.toFixed(0);
+    document.getElementById('ilLoss').textContent = (ilFactor*100).toFixed(1)+'%';
+    document.getElementById('ilLoss').style.color = ilFactor<0?'var(--red)':'var(--green)';
+  }
+  function doAddLiquidity() {
+    showToast('✓ Liquidity added — LP tokens issued');
+    document.getElementById('amtA').value='';
+    document.getElementById('amtB').value='';
+    document.getElementById('addBtn').disabled=true;
+    setTimeout(()=>switchTab('mine'),800);
+  }
+  function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}
+  calcIL(50);
+</script>
+</body>
+</html>

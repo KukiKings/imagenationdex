@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Limit Orders — IN$DEX</title>
+  <style>
+    :root {
+      --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+      --black:#090A10; --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+      --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+      --border:rgba(255,255,255,0.07);
+      --text:#F0F2FF; --text-muted:rgba(240,242,255,0.45); --text-dim:rgba(240,242,255,0.2);
+    }
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+    body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+    .phone{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+
+    .topbar{display:flex;align-items:center;padding:14px 16px 10px;gap:10px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--black);z-index:20;}
+    .tb-back{width:36px;height:36px;border-radius:10px;background:var(--surface2);border:none;color:var(--text);font-size:18px;cursor:pointer;}
+    .tb-title{flex:1;font-size:17px;font-weight:800;}
+    .tb-live{font-size:11px;font-weight:700;color:var(--green);background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.18);border-radius:20px;padding:4px 10px;}
+
+    /* PRICE BAR */
+    .price-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);}
+    .pb-left{display:flex;align-items:baseline;gap:8px;}
+    .pb-price{font-size:24px;font-weight:900;}
+    .pb-chg{font-size:13px;font-weight:700;}
+    .pb-chg.up{color:var(--green);}
+    .pb-chg.dn{color:var(--red);}
+    .pb-stats{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
+    .pb-stat{font-size:11px;color:var(--text-muted);}
+
+    /* TABS */
+    .tabs{display:flex;padding:12px 16px 0;gap:4px;}
+    .tab{flex:1;padding:10px;text-align:center;font-size:14px;font-weight:700;border-radius:10px 10px 0 0;cursor:pointer;border:1px solid var(--border);border-bottom:none;}
+    .tab.buy.active{background:rgba(0,229,160,0.1);color:var(--green);border-color:rgba(0,229,160,0.2);}
+    .tab.sell.active{background:rgba(255,77,109,0.1);color:var(--red);border-color:rgba(255,77,109,0.2);}
+    .tab:not(.active){background:var(--surface2);color:var(--text-muted);}
+
+    /* FORM */
+    .order-form{padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:0 0 14px 14px;margin:0 16px 16px;}
+    .of-label{font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;}
+    .of-input-wrap{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+    .of-input-wrap:focus-within{border-color:var(--cyan);}
+    .of-input{flex:1;background:transparent;border:none;color:var(--text);font-size:18px;font-weight:700;outline:none;}
+    .of-input::placeholder{color:var(--text-dim);}
+    .of-currency{font-size:14px;font-weight:700;color:var(--text-muted);}
+    .of-hint{font-size:12px;color:var(--text-muted);margin-top:-8px;margin-bottom:12px;}
+
+    .pct-row{display:flex;gap:6px;margin-bottom:14px;}
+    .pct-btn{flex:1;padding:7px;border-radius:8px;background:var(--surface3);border:none;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;}
+    .pct-btn:active{background:var(--cyan);color:#000;}
+
+    /* EXPIRY */
+    .expiry-row{display:flex;gap:6px;margin-bottom:14px;}
+    .exp-opt{flex:1;padding:9px;border-radius:8px;background:var(--surface3);border:1px solid var(--border);font-size:12px;font-weight:700;cursor:pointer;text-align:center;transition:all 0.15s;color:var(--text-muted);}
+    .exp-opt.active{background:var(--surface2);color:var(--text);border-color:var(--cyan);}
+
+    /* SUMMARY */
+    .order-summary{background:var(--surface2);border-radius:10px;padding:12px;margin-bottom:14px;}
+    .os-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;}
+    .os-lbl{color:var(--text-muted);}
+    .os-val{font-weight:700;}
+
+    /* SUBMIT BUTTON */
+    .btn-buy{width:100%;padding:16px;border-radius:14px;background:var(--green);border:none;color:#000;font-size:16px;font-weight:900;cursor:pointer;}
+    .btn-sell{width:100%;padding:16px;border-radius:14px;background:var(--red);border:none;color:#fff;font-size:16px;font-weight:900;cursor:pointer;}
+    .btn:disabled{opacity:0.35;cursor:not-allowed;}
+
+    /* DEPTH CHART */
+    .depth-card{margin:0 16px 16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;}
+    .dc-title{font-size:12px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:12px;}
+    .depth-bars{display:flex;flex-direction:column;gap:3px;}
+    .db-row{display:flex;align-items:center;gap:8px;}
+    .db-price{font-size:12px;font-weight:700;min-width:60px;text-align:right;}
+    .db-bar-wrap{flex:1;height:18px;position:relative;display:flex;align-items:center;}
+    .db-bar{height:14px;border-radius:3px;position:absolute;right:0;}
+    .db-bar.ask{background:rgba(255,77,109,0.25);}
+    .db-bar.bid{background:rgba(0,229,160,0.2);}
+    .db-amt{font-size:11px;color:var(--text-muted);min-width:70px;text-align:right;}
+    .mid-price{text-align:center;padding:4px;font-size:13px;font-weight:800;color:var(--gold);border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin:4px 0;}
+
+    /* OPEN ORDERS */
+    .section-title{padding:0 16px;font-size:12px;font-weight:800;color:var(--text-muted);letter-spacing:0.07em;text-transform:uppercase;margin-bottom:10px;}
+    .orders-list{margin:0 16px 20px;display:flex;flex-direction:column;gap:8px;}
+    .order-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;}
+    .oi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+    .oi-type{font-size:12px;font-weight:800;padding:3px 10px;border-radius:20px;}
+    .oi-type.buy{background:rgba(0,229,160,0.1);color:var(--green);}
+    .oi-type.sell{background:rgba(255,77,109,0.1);color:var(--red);}
+    .oi-status{font-size:11px;color:var(--text-muted);}
+    .oi-details{display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px;}
+    .oi-fill{height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;margin-bottom:8px;}
+    .oi-fill-bar{height:100%;border-radius:2px;}
+    .oi-actions{display:flex;gap:8px;}
+    .oi-btn{flex:1;padding:7px;border-radius:8px;background:var(--surface3);border:none;color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;}
+    .oi-btn.cancel{color:var(--red);}
+
+    #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+  </style>
+</head>
+<body>
+<div class="phone">
+  <div class="topbar">
+    <button class="tb-back" onclick="history.back()">←</button>
+    <div class="tb-title">📋 Limit Orders</div>
+    <div class="tb-live">INDX/USD</div>
+  </div>
+
+  <!-- PRICE BAR -->
+  <div class="price-bar">
+    <div class="pb-left">
+      <div class="pb-price">A$<span id="livePx">0.512</span></div>
+      <div class="pb-chg up" id="pxChg">+2.4%</div>
+    </div>
+    <div class="pb-stats">
+      <div class="pb-stat">24h High: $0.528</div>
+      <div class="pb-stat">24h Low: $0.494</div>
+      <div class="pb-stat">Vol: 1.24M INDX</div>
+    </div>
+  </div>
+
+  <!-- BUY / SELL TABS -->
+  <div style="padding:16px 16px 0;">
+    <div class="tabs" style="padding:0;">
+      <div class="tab buy active" id="tabBuy" onclick="switchSide('buy')">📈 Limit Buy</div>
+      <div class="tab sell" id="tabSell" onclick="switchSide('sell')">📉 Limit Sell</div>
+    </div>
+    <div class="order-form" id="orderForm">
+      <!-- TARGET PRICE -->
+      <div class="of-label">Target price (per INDX)</div>
+      <div class="of-input-wrap">
+        <span style="font-size:14px;color:var(--text-muted);">A$</span>
+        <input class="of-input" type="number" id="targetPrice" placeholder="0.000" step="0.001" oninput="updateSummary()">
+      </div>
+      <div class="of-hint" id="priceHint">Current price: $0.35 · Order fills when price hits your target</div>
+
+      <!-- AMOUNT -->
+      <div class="of-label">Amount (INDX)</div>
+      <div class="of-input-wrap">
+        <input class="of-input" type="number" id="orderAmt" placeholder="0" step="1" oninput="updateSummary()">
+        <span class="of-currency">INDX</span>
+      </div>
+      <div class="pct-row">
+        <button class="pct-btn" onclick="setPct(25)">25%</button>
+        <button class="pct-btn" onclick="setPct(50)">50%</button>
+        <button class="pct-btn" onclick="setPct(75)">75%</button>
+        <button class="pct-btn" onclick="setPct(100)">MAX</button>
+      </div>
+
+      <!-- EXPIRY -->
+      <div class="of-label">Order expires</div>
+      <div class="expiry-row">
+        <div class="exp-opt active" onclick="setExpiry(this,'24h')">24h</div>
+        <div class="exp-opt" onclick="setExpiry(this,'7d')">7 days</div>
+        <div class="exp-opt" onclick="setExpiry(this,'30d')">30 days</div>
+        <div class="exp-opt" onclick="setExpiry(this,'gtc')">GTC</div>
+      </div>
+
+      <!-- SUMMARY -->
+      <div class="order-summary" id="orderSummary">
+        <div class="os-row"><div class="os-lbl">Order type</div><div class="os-val" id="sumType">Limit Buy</div></div>
+        <div class="os-row"><div class="os-lbl">Target price</div><div class="os-val" id="sumPrice">—</div></div>
+        <div class="os-row"><div class="os-lbl">Amount</div><div class="os-val" id="sumAmt">—</div></div>
+        <div class="os-row"><div class="os-lbl">Total cost</div><div class="os-val" id="sumTotal" style="color:var(--gold);">—</div></div>
+        <div class="os-row"><div class="os-lbl">Expires</div><div class="os-val" id="sumExpiry">24 hours</div></div>
+      </div>
+
+      <button class="btn-buy" id="submitBtn" onclick="placeOrder()">Place Limit Buy Order</button>
+    </div>
+  </div>
+
+  <!-- DEPTH CHART -->
+  <div class="depth-card">
+    <div class="dc-title">Order Book Depth</div>
+    <div class="depth-bars" id="depthBars"></div>
+  </div>
+
+  <!-- OPEN ORDERS -->
+  <div class="section-title">Your open orders (<span id="openCount">3</span>)</div>
+  <div class="orders-list" id="ordersList"></div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+  let side = 'buy';
+  let expiry = '24h';
+  let currentPrice = 0.35;
+
+  // ── LIVE PRICE ────────────────────────────────────────────────────
+  setInterval(() => {
+    currentPrice += (Math.random() - 0.48) * 0.003;
+    currentPrice = Math.max(0.48, Math.min(0.56, currentPrice));
+    document.getElementById('livePx').textContent = currentPrice.toFixed(3);
+    const chg = ((currentPrice - 0.50) / 0.50 * 100).toFixed(1);
+    const el = document.getElementById('pxChg');
+    el.textContent = (chg >= 0 ? '+' : '') + chg + '%';
+    el.className = 'pb-chg ' + (chg >= 0 ? 'up' : 'dn');
+    updateSummary();
+  }, 3000);
+
+  // ── SWITCH SIDE ──────────────────────────────────────────────────
+  function switchSide(s) {
+    side = s;
+    const tabBuy = document.getElementById('tabBuy');
+    const tabSell = document.getElementById('tabSell');
+    const btn = document.getElementById('submitBtn');
+    tabBuy.className = 'tab buy' + (s === 'buy' ? ' active' : '');
+    tabSell.className = 'tab sell' + (s === 'sell' ? ' active' : '');
+    if (s === 'buy') {
+      btn.className = 'btn-buy'; btn.textContent = 'Place Limit Buy Order';
+      document.getElementById('sumType').textContent = 'Limit Buy';
+    } else {
+      btn.className = 'btn-sell'; btn.textContent = 'Place Limit Sell Order';
+      document.getElementById('sumType').textContent = 'Limit Sell';
+    }
+    updateSummary();
+  }
+
+  function setPct(pct) {
+    const balance = side === 'buy' ? 1240 : 1240;
+    document.getElementById('orderAmt').value = Math.floor(balance * pct / 100);
+    updateSummary();
+  }
+
+  function setExpiry(el, val) {
+    expiry = val;
+    document.querySelectorAll('.exp-opt').forEach(e => e.classList.remove('active'));
+    el.classList.add('active');
+    const labels = { '24h':'24 hours', '7d':'7 days', '30d':'30 days', 'gtc':'Good Till Cancelled' };
+    document.getElementById('sumExpiry').textContent = labels[val];
+  }
+
+  function updateSummary() {
+    const price = parseFloat(document.getElementById('targetPrice').value) || 0;
+    const amt = parseFloat(document.getElementById('orderAmt').value) || 0;
+    const total = price * amt;
+    document.getElementById('sumPrice').textContent = price > 0 ? 'A$' + price.toFixed(3) : '—';
+    document.getElementById('sumAmt').textContent = amt > 0 ? amt.toLocaleString() + ' INDX' : '—';
+    document.getElementById('sumTotal').textContent = total > 0 ? 'A$' + total.toFixed(2) : '—';
+    const hint = side === 'buy'
+      ? 'Current: A$' + currentPrice.toFixed(3) + (price < currentPrice ? ' · Buys below market ✓' : ' · Above market — executes now')
+      : 'Current: A$' + currentPrice.toFixed(3) + (price > currentPrice ? ' · Sells above market ✓' : ' · Below market — executes now');
+    document.getElementById('priceHint').textContent = hint;
+  }
+
+  function placeOrder() {
+    const price = parseFloat(document.getElementById('targetPrice').value);
+    const amt = parseFloat(document.getElementById('orderAmt').value);
+    if (!price || !amt) { showToast('Enter a price and amount'); return; }
+    showToast(side === 'buy'
+      ? `✓ Limit buy placed — ${amt} INDX at A$${price.toFixed(3)}`
+      : `✓ Limit sell placed — ${amt} INDX at A$${price.toFixed(3)}`);
+    document.getElementById('targetPrice').value = '';
+    document.getElementById('orderAmt').value = '';
+    updateSummary();
+    document.getElementById('openCount').textContent = '4';
+  }
+
+  // ── DEPTH CHART ──────────────────────────────────────────────────
+  function buildDepth() {
+    const asks = [
+      { price: 0.528, amt: 4200 }, { price: 0.524, amt: 8100 }, { price: 0.520, amt: 12400 }, { price: 0.516, amt: 6800 },
+    ];
+    const bids = [
+      { price: 0.508, amt: 9600 }, { price: 0.504, amt: 14200 }, { price: 0.500, amt: 18000 }, { price: 0.496, amt: 7400 },
+    ];
+    const maxAmt = 18000;
+    let html = '';
+    asks.reverse().forEach(a => {
+      const w = Math.round((a.amt / maxAmt) * 100);
+      html += `<div class="db-row"><div class="db-price" style="color:var(--red);">A$${a.price.toFixed(3)}</div><div class="db-bar-wrap"><div class="db-bar ask" style="width:${w}%;right:0;"></div></div><div class="db-amt">${a.amt.toLocaleString()}</div></div>`;
+    });
+    html += `<div class="mid-price">A$${currentPrice.toFixed(3)} — Market</div>`;
+    bids.forEach(b => {
+      const w = Math.round((b.amt / maxAmt) * 100);
+      html += `<div class="db-row"><div class="db-price" style="color:var(--green);">A$${b.price.toFixed(3)}</div><div class="db-bar-wrap"><div class="db-bar bid" style="width:${w}%;right:0;"></div></div><div class="db-amt">${b.amt.toLocaleString()}</div></div>`;
+    });
+    document.getElementById('depthBars').innerHTML = html;
+  }
+
+  // ── OPEN ORDERS ──────────────────────────────────────────────────
+  const openOrders = [
+    { id:1, side:'buy', price:0.490, amt:500, filled:0, expiry:'6h left' },
+    { id:2, side:'sell', price:0.545, amt:200, filled:62, expiry:'2d left' },
+    { id:3, side:'buy', price:0.480, amt:1000, filled:15, expiry:'GTC' },
+  ];
+
+  function buildOrders() {
+    document.getElementById('ordersList').innerHTML = openOrders.map(o => `
+      <div class="order-item" id="oi${o.id}">
+        <div class="oi-top">
+          <div class="oi-type ${o.side}">${o.side === 'buy' ? '📈 Limit Buy' : '📉 Limit Sell'}</div>
+          <div class="oi-status">${o.expiry}</div>
+        </div>
+        <div class="oi-details">
+          <span style="font-weight:700;">${o.amt.toLocaleString()} INDX @ A$${o.price.toFixed(3)}</span>
+          <span style="color:var(--text-muted);">${o.filled}% filled</span>
+        </div>
+        <div class="oi-fill">
+          <div class="oi-fill-bar" style="width:${o.filled}%;background:${o.side==='buy'?'var(--green)':'var(--red)'}"></div>
+        </div>
+        <div class="oi-actions">
+          <button class="oi-btn" onclick="editOrder(${o.id})">Edit</button>
+          <button class="oi-btn cancel" onclick="cancelOrder(${o.id})">Cancel</button>
+        </div>
+      </div>`).join('');
+  }
+
+  function cancelOrder(id) {
+    document.getElementById('oi' + id).style.opacity = '0.4';
+    showToast('Order #' + id + ' cancelled');
+    document.getElementById('openCount').textContent = openOrders.length - 1;
+  }
+
+  function editOrder(id) {
+    const o = openOrders.find(x => x.id === id);
+    document.getElementById('targetPrice').value = o.price;
+    document.getElementById('orderAmt').value = o.amt;
+    switchSide(o.side);
+    updateSummary();
+    showToast('Editing order #' + id + ' — update and re-submit');
+  }
+
+  buildDepth();
+  buildOrders();
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.style.opacity = '1';
+    setTimeout(() => t.style.opacity = '0', 2500);
+  }
+</script>
+</body>
+</html>

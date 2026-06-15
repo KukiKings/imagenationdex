@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Liquidity Pool Setup — IN$DEX</title>
+<style>
+  :root {
+    --cyan: #00D4FF; --blue: #2B35D8; --purple: #8B3FE8;
+    --black: #090A10; --green: #00E5A0; --gold: #FFB800;
+    --red: #FF4D6D; --surface: #12141F; --surface2: #1A1D2E;
+    --surface3: #22263A; --text: #F0F2FF; --text2: #A0A8C8;
+    --text-muted: #5A6080;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--black); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; max-width:430px; margin:0 auto; min-height:100vh; }
+  .topbar { background:var(--surface); border-bottom:1px solid rgba(255,255,255,0.06); padding:14px 16px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:100; }
+  .back-btn { width:36px; height:36px; border:none; background:var(--surface2); border-radius:10px; color:var(--text); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .topbar-title { font-size:16px; font-weight:600; }
+  .topbar-sub { margin-left:auto; font-size:11px; color:var(--text-muted); }
+  .content { padding:16px; padding-bottom:140px; }
+
+  /* Steps */
+  .steps-bar { display:flex; align-items:center; gap:6px; margin-bottom:20px; }
+  .step { display:flex; align-items:center; gap:6px; }
+  .step-dot { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0; }
+  .step-dot.done { background:var(--green); color:#000; }
+  .step-dot.active { background:linear-gradient(135deg,var(--blue),var(--purple)); color:#fff; }
+  .step-dot.pending { background:var(--surface2); color:var(--text-muted); border:1px solid var(--surface3); }
+  .step-label { font-size:11px; color:var(--text-muted); }
+  .step.active .step-label { color:var(--text); }
+  .step-line { flex:1; height:1px; background:var(--surface3); }
+
+  /* Panel cards */
+  .panel { display:none; }
+  .panel.active { display:block; }
+
+  /* Wallet connect */
+  .wallet-hero { text-align:center; padding:20px 0 16px; }
+  .wallet-hero-icon { font-size:48px; margin-bottom:12px; }
+  .wallet-hero-title { font-size:20px; font-weight:800; margin-bottom:6px; }
+  .wallet-hero-sub { font-size:14px; color:var(--text2); line-height:1.5; }
+  .phantom-btn { width:100%; padding:16px; background:#9945FF; border:none; border-radius:14px; color:#fff; font-size:16px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; margin:20px 0 10px; transition:opacity 0.2s; }
+  .phantom-btn:hover { opacity:0.9; }
+  .phantom-logo { width:24px; height:24px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; }
+  .wallet-note { font-size:12px; color:var(--text-muted); text-align:center; line-height:1.5; }
+
+  /* SI Banner */
+  .si-card { background:var(--surface2); border-left:3px solid var(--cyan); border-radius:12px; padding:14px 16px; display:flex; gap:12px; align-items:flex-start; margin-bottom:16px; }
+  .si-avatar { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,var(--cyan),var(--purple)); display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+  .si-name { font-size:11px; color:var(--cyan); font-weight:600; margin-bottom:3px; letter-spacing:0.5px; }
+  .si-text { font-size:13px; color:var(--text2); line-height:1.5; }
+
+  .section-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin:16px 0 10px; }
+
+  /* Pool config */
+  .pool-pair { background:var(--surface); border-radius:14px; padding:16px; margin-bottom:14px; }
+  .pool-pair-title { font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; }
+  .pair-display { display:flex; align-items:center; gap:12px; justify-content:center; margin-bottom:16px; }
+  .token-badge { background:var(--surface2); border-radius:10px; padding:10px 16px; display:flex; align-items:center; gap:8px; }
+  .token-icon { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; }
+  .token-icon.indx { background:linear-gradient(135deg,var(--cyan),var(--blue)); }
+  .token-icon.sol { background:linear-gradient(135deg,#9945FF,#14F195); }
+  .token-sym { font-size:15px; font-weight:700; }
+  .pair-slash { font-size:20px; color:var(--text-muted); }
+
+  .input-row { display:flex; flex-direction:column; gap:10px; }
+  .token-input-wrap { background:var(--surface2); border:1px solid var(--surface3); border-radius:12px; padding:14px 16px; transition:border-color 0.2s; }
+  .token-input-wrap:focus-within { border-color:var(--cyan); }
+  .token-input-label { font-size:11px; color:var(--text-muted); margin-bottom:6px; }
+  .token-input-row { display:flex; align-items:center; gap:8px; }
+  .token-input-field { flex:1; background:transparent; border:none; color:var(--text); font-size:20px; font-weight:700; outline:none; }
+  .token-input-field::placeholder { color:var(--text-muted); }
+  .token-input-sym { font-size:14px; font-weight:600; color:var(--text2); }
+  .token-input-usd { font-size:12px; color:var(--text-muted); margin-top:4px; }
+
+  .auto-balance-note { background:rgba(0,212,255,0.06); border:1px solid rgba(0,212,255,0.2); border-radius:10px; padding:10px 14px; font-size:12px; color:var(--text2); margin-top:10px; display:flex; align-items:flex-start; gap:8px; }
+
+  /* Fee tier */
+  .fee-tiers { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+  .tier-card { background:var(--surface); border:1px solid var(--surface3); border-radius:12px; padding:14px; cursor:pointer; transition:all 0.2s; }
+  .tier-card.selected { border-color:var(--cyan); background:rgba(0,212,255,0.06); }
+  .tier-pct { font-size:18px; font-weight:800; color:var(--text); margin-bottom:4px; }
+  .tier-pct.cyan { color:var(--cyan); }
+  .tier-desc { font-size:11px; color:var(--text-muted); line-height:1.4; }
+  .tier-badge { font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; background:rgba(0,229,160,0.15); color:var(--green); margin-top:6px; display:inline-block; }
+
+  /* Price range */
+  .price-range-card { background:var(--surface); border-radius:14px; padding:16px; margin-bottom:14px; }
+  .price-range-title { font-size:13px; font-weight:600; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; }
+  .full-range-tag { font-size:11px; background:rgba(0,229,160,0.1); color:var(--green); padding:3px 8px; border-radius:6px; }
+  .price-inputs { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .price-input-box { background:var(--surface2); border-radius:10px; padding:12px; text-align:center; }
+  .price-input-label { font-size:11px; color:var(--text-muted); margin-bottom:6px; }
+  .price-input-val { font-size:16px; font-weight:700; color:var(--text); }
+  .price-input-sub { font-size:11px; color:var(--text-muted); margin-top:2px; }
+  .full-range-note { font-size:12px; color:var(--text2); text-align:center; margin-top:10px; }
+
+  /* PQSI pre-flight (compact) */
+  .preflight-card { background:var(--surface); border-radius:14px; overflow:hidden; margin-bottom:14px; }
+  .preflight-header { padding:14px 16px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; }
+  .pqsi-badge { font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px; background:rgba(0,229,160,0.15); color:var(--green); }
+  .preflight-title { font-size:14px; font-weight:600; margin-left:10px; }
+  .expand-icon { color:var(--text2); transition:transform 0.2s; }
+  .expand-icon.open { transform:rotate(180deg); }
+  .preflight-body { padding:0 16px 14px; display:none; }
+  .preflight-body.open { display:block; }
+  .check-row { display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+  .check-row:last-child { border-bottom:none; }
+  .check-label { font-size:12px; color:var(--text2); }
+  .check-pass { font-size:12px; color:var(--green); font-weight:600; }
+  .check-info { font-size:12px; color:var(--text-muted); }
+
+  /* Summary */
+  .summary-card { background:var(--surface); border-radius:14px; overflow:hidden; margin-bottom:14px; }
+  .sum-row { display:flex; justify-content:space-between; padding:13px 16px; border-top:1px solid rgba(255,255,255,0.04); }
+  .sum-label { font-size:13px; color:var(--text2); }
+  .sum-value { font-size:13px; font-weight:600; }
+  .sum-value.green { color:var(--green); }
+  .sum-value.cyan { color:var(--cyan); }
+
+  /* 2FA Panel */
+  .twofa-panel { background:rgba(139,63,232,0.1); border:1px solid rgba(139,63,232,0.35); border-radius:14px; padding:16px; margin-bottom:14px; }
+  .twofa-title { font-size:14px; font-weight:700; color:var(--purple); margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+  .twofa-desc { font-size:12px; color:var(--text2); line-height:1.5; margin-bottom:12px; }
+  .bio-confirm-btn { width:100%; padding:12px; background:linear-gradient(135deg,var(--blue),var(--purple)); border:none; border-radius:10px; color:#fff; font-size:14px; font-weight:600; cursor:pointer; }
+
+  .cta-bar { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:430px; background:linear-gradient(transparent,var(--black) 30%); padding:16px; }
+  .main-btn { width:100%; padding:16px; background:linear-gradient(135deg,var(--blue),var(--purple)); border:none; border-radius:14px; color:#fff; font-size:16px; font-weight:700; cursor:pointer; margin-bottom:10px; transition:opacity 0.2s; }
+  .main-btn:hover { opacity:0.9; }
+  .sec-btn { width:100%; padding:13px; background:transparent; border:1px solid var(--surface3); border-radius:14px; color:var(--text2); font-size:15px; cursor:pointer; }
+
+  /* Success */
+  .success-panel { text-align:center; padding:40px 20px; display:none; }
+  .success-panel.show { display:block; }
+  .success-icon { font-size:64px; margin-bottom:16px; }
+  .success-title { font-size:24px; font-weight:800; margin-bottom:8px; color:var(--green); }
+  .success-sub { font-size:14px; color:var(--text2); line-height:1.5; margin-bottom:24px; }
+  .success-detail { background:var(--surface); border-radius:14px; padding:16px; text-align:left; margin-bottom:20px; }
+  .sd-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+  .sd-row:last-child { border-bottom:none; }
+  .sd-label { font-size:12px; color:var(--text-muted); }
+  .sd-value { font-size:12px; font-weight:600; }
+
+  .toast { position:fixed; bottom:130px; left:50%; transform:translateX(-50%) translateY(60px); background:var(--surface2); color:var(--text); padding:12px 20px; border-radius:12px; font-size:13px; font-weight:500; transition:transform 0.3s; z-index:200; white-space:nowrap; border:1px solid rgba(0,229,160,0.3); }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <button class="back-btn" onclick="history.back()">←</button>
+  <span class="topbar-title">Liquidity Pool Setup</span>
+  <span class="topbar-sub">Raydium · INDX/SOL</span>
+</div>
+
+<div class="content">
+
+  <!-- Progress steps -->
+  <div class="steps-bar">
+    <div class="step" id="step1-el">
+      <div class="step-dot active" id="dot1">1</div>
+      <div class="step-label" id="label1">Connect</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" id="step2-el">
+      <div class="step-dot pending" id="dot2">2</div>
+      <div class="step-label" id="label2">Configure</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" id="step3-el">
+      <div class="step-dot pending" id="dot3">3</div>
+      <div class="step-label" id="label3">Pre-flight</div>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" id="step4-el">
+      <div class="step-dot pending" id="dot4">4</div>
+      <div class="step-label" id="label4">Launch</div>
+    </div>
+  </div>
+
+  <!-- STEP 1: Connect Phantom -->
+  <div class="panel active" id="panel1">
+    <div class="si-card">
+      <div class="si-avatar">⚡</div>
+      <div>
+        <div class="si-name">SIINDEX</div>
+        <div class="si-text">AJ, I'll run a full pre-flight on this transaction before anything goes onchain. Connect your Phantom wallet and I'll take it from there. Standing by.</div>
+      </div>
+    </div>
+    <div class="wallet-hero">
+      <div class="wallet-hero-icon">👻</div>
+      <div class="wallet-hero-title">Connect Phantom Wallet</div>
+      <div class="wallet-hero-sub">Your liquidity pool funding wallet. IN$DEX never stores your keys — this is a direct Phantom connection.</div>
+    </div>
+    <button class="phantom-btn" onclick="connectWallet()">
+      <div class="phantom-logo">👻</div>
+      Connect Phantom
+    </button>
+    <div class="wallet-note">Only approve the connection — no transaction will be sent until you confirm in Step 4.</div>
+  </div>
+
+  <!-- STEP 2: Configure pool -->
+  <div class="panel" id="panel2">
+    <div class="si-card">
+      <div class="si-avatar">⚡</div>
+      <div>
+        <div class="si-name">SIINDEX</div>
+        <div class="si-text">Wallet connected. Now set your pool parameters. I'll calculate the optimal amounts and fee tier. Standing by.</div>
+      </div>
+    </div>
+
+    <div class="pool-pair">
+      <div class="pool-pair-title">Pool Pair</div>
+      <div class="pair-display">
+        <div class="token-badge">
+          <div class="token-icon indx">⚡</div>
+          <span class="token-sym">INDX</span>
+        </div>
+        <span class="pair-slash">/</span>
+        <div class="token-badge">
+          <div class="token-icon sol">◎</div>
+          <span class="token-sym">SOL</span>
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="token-input-wrap">
+          <div class="token-input-label">INDX Amount</div>
+          <div class="token-input-row">
+            <input class="token-input-field" type="number" placeholder="0" id="indxAmount" oninput="updateCalc()">
+            <span class="token-input-sym">INDX</span>
+          </div>
+          <div class="token-input-usd" id="indxUSD">≈ $0.00 USD</div>
+        </div>
+        <div class="token-input-wrap">
+          <div class="token-input-label">SOL Amount</div>
+          <div class="token-input-row">
+            <input class="token-input-field" type="number" placeholder="0" id="solAmount" oninput="updateCalc()">
+            <span class="token-input-sym">SOL</span>
+          </div>
+          <div class="token-input-usd" id="solUSD">≈ $0.00 USD</div>
+        </div>
+      </div>
+
+      <div class="auto-balance-note">
+        <span>💡</span>
+        <span>For launch at $0.35 INDX and SOL at ~$155: 1,000 INDX requires approximately 2.26 SOL to maintain the initial price ratio.</span>
+      </div>
+    </div>
+
+    <div class="section-label">Fee Tier</div>
+    <div class="fee-tiers">
+      <div class="tier-card" onclick="selectTier(this,'0.01%')">
+        <div class="tier-pct">0.01%</div>
+        <div class="tier-desc">Stable pairs only. Not suitable for INDX.</div>
+      </div>
+      <div class="tier-card selected" onclick="selectTier(this,'0.25%')">
+        <div class="tier-pct cyan">0.25%</div>
+        <div class="tier-desc">Standard — best for new token launches.</div>
+        <span class="tier-badge">RECOMMENDED</span>
+      </div>
+      <div class="tier-card" onclick="selectTier(this,'1%')">
+        <div class="tier-pct">1%</div>
+        <div class="tier-desc">Exotic or volatile pairs. Higher fee capture.</div>
+      </div>
+      <div class="tier-card" onclick="selectTier(this,'0.05%')">
+        <div class="tier-pct">0.05%</div>
+        <div class="tier-desc">Major pairs (BTC/ETH equivalent).</div>
+      </div>
+    </div>
+
+    <div class="price-range-card">
+      <div class="price-range-title">
+        Price Range
+        <span class="full-range-tag">Full Range</span>
+      </div>
+      <div class="price-inputs">
+        <div class="price-input-box">
+          <div class="price-input-label">Min Price</div>
+          <div class="price-input-val">$0.00</div>
+          <div class="price-input-sub">INDX per SOL</div>
+        </div>
+        <div class="price-input-box">
+          <div class="price-input-label">Max Price</div>
+          <div class="price-input-val">∞</div>
+          <div class="price-input-sub">INDX per SOL</div>
+        </div>
+      </div>
+      <div class="full-range-note">Full range — your liquidity covers all prices. Recommended for launch to maximise depth.</div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Pre-flight -->
+  <div class="panel" id="panel3">
+    <div class="si-card">
+      <div class="si-avatar">⚡</div>
+      <div>
+        <div class="si-name">SIINDEX</div>
+        <div class="si-text">Running pre-flight on your liquidity pool transaction. All 7 checks. This takes about 3 seconds. Standing by.</div>
+      </div>
+    </div>
+
+    <div class="preflight-card">
+      <div class="preflight-header" onclick="togglePreflight()">
+        <div style="display:flex;align-items:center">
+          <span class="pqsi-badge">T0 CLEAR</span>
+          <span class="preflight-title">SIINDEX Pre-flight</span>
+        </div>
+        <span class="expand-icon open" id="pfIcon">▼</span>
+      </div>
+      <div class="preflight-body open" id="pfBody">
+        <div class="check-row"><span class="check-label">[1] Per-txn policy</span><span class="check-pass">✓ Within limit</span></div>
+        <div class="check-row"><span class="check-label">[2] Daily outflow cap</span><span class="check-pass">✓ Within cap</span></div>
+        <div class="check-row"><span class="check-label">[3] Protocol allowlist</span><span class="check-pass">✓ Raydium — approved</span></div>
+        <div class="check-row"><span class="check-label">[4] PQSI threat scan</span><span class="check-pass">✓ T0 — no threat detected</span></div>
+        <div class="check-row"><span class="check-label">[5] Contract verification</span><span class="check-pass">✓ Raydium CLMM v2 — verified</span></div>
+        <div class="check-row"><span class="check-label">[6] Sanction check</span><span class="check-pass">✓ OFAC / UN / EU — Clear</span></div>
+        <div class="check-row"><span class="check-label">[7] 2FA requirement</span><span class="check-info">→ Required (amount exceeds $500 threshold)</span></div>
+        <div class="check-row"><span class="check-label">Transaction Protection</span><span class="check-pass">✓ Covered up to $10,000</span></div>
+      </div>
+    </div>
+
+    <div class="twofa-panel">
+      <div class="twofa-title">🔐 2FA Required</div>
+      <div class="twofa-desc">This liquidity pool transaction requires biometric confirmation. SIINDEX won't proceed without your explicit approval. This is your final check before anything goes onchain.</div>
+      <button class="bio-confirm-btn" onclick="approve2FA()">Confirm with Face ID / Fingerprint</button>
+    </div>
+
+    <div class="summary-card" id="summaryCard">
+      <div class="sum-row"><span class="sum-label">Action</span><span class="sum-value">Add Liquidity — INDX/SOL</span></div>
+      <div class="sum-row"><span class="sum-label">Protocol</span><span class="sum-value">Raydium CLMM</span></div>
+      <div class="sum-row"><span class="sum-label">Chain</span><span class="sum-value">Solana</span></div>
+      <div class="sum-row"><span class="sum-label">INDX deposited</span><span class="sum-value cyan" id="sumINDX">— INDX</span></div>
+      <div class="sum-row"><span class="sum-label">SOL deposited</span><span class="sum-value cyan" id="sumSOL">— SOL</span></div>
+      <div class="sum-row"><span class="sum-label">Total USD value</span><span class="sum-value green" id="sumTotal">$0.00</span></div>
+      <div class="sum-row"><span class="sum-label">Fee tier</span><span class="sum-value" id="sumFee">0.25%</span></div>
+      <div class="sum-row"><span class="sum-label">Price range</span><span class="sum-value">Full range</span></div>
+      <div class="sum-row"><span class="sum-label">MEV protection</span><span class="sum-value green">Jito bundle ✓</span></div>
+      <div class="sum-row"><span class="sum-label">Civilisation Fund (2%)</span><span class="sum-value" id="sumCivFund">—</span></div>
+    </div>
+  </div>
+
+  <!-- STEP 4: Launch (shown after 2FA approved) -->
+  <div class="panel" id="panel4">
+    <div class="success-panel show" id="successPanel">
+      <div class="success-icon">🌊</div>
+      <div class="success-title">Pool Created</div>
+      <div class="success-sub">Done. Your INDX/SOL liquidity pool is live on Raydium. SIINDEX is monitoring it. Standing by.</div>
+      <div class="success-detail">
+        <div class="sd-row"><span class="sd-label">TX Hash</span><span class="sd-value" id="txHash">Ax7f...9kp2</span></div>
+        <div class="sd-row"><span class="sd-label">Pool address</span><span class="sd-value">5Gr8...m3xQ</span></div>
+        <div class="sd-row"><span class="sd-label">Confirmation</span><span class="sd-value" style="color:var(--green)">Confirmed · 0.4s</span></div>
+        <div class="sd-row"><span class="sd-label">INDX deposited</span><span class="sd-value" id="txINDX">—</span></div>
+        <div class="sd-row"><span class="sd-label">SOL deposited</span><span class="sd-value" id="txSOL">—</span></div>
+        <div class="sd-row"><span class="sd-label">Coverage applied</span><span class="sd-value" id="txCoverage" style="color:var(--green)">—</span></div>
+      </div>
+      <button class="main-btn" onclick="window.location.href='l99-launch-command.html'">Open Launch Command Center</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="cta-bar" id="ctaBar">
+  <button class="main-btn" id="mainBtn" onclick="nextStep()">Connect Phantom Wallet</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let currentStep = 1;
+let walletConnected = false;
+let bioApproved = false;
+let selectedTier = '0.25%';
+const SOL_PRICE = 155;
+const INDX_PRICE = 0.35;
+
+function setStep(n) {
+  currentStep = n;
+  for (let i = 1; i <= 4; i++) {
+    document.getElementById('panel' + i).classList.toggle('active', i === n);
+    const dot = document.getElementById('dot' + i);
+    dot.className = 'step-dot ' + (i < n ? 'done' : i === n ? 'active' : 'pending');
+    dot.textContent = i < n ? '✓' : i;
+    document.getElementById('label' + i).parentElement.classList.toggle('active', i === n);
+  }
+  updateCTA();
+}
+
+function updateCTA() {
+  const btn = document.getElementById('mainBtn');
+  const cta = document.getElementById('ctaBar');
+  const labels = ['Connect Phantom Wallet','Review Pre-flight','Sign & Deploy Pool',''];
+  btn.textContent = labels[currentStep - 1];
+  cta.style.display = currentStep === 4 ? 'none' : 'block';
+}
+
+function nextStep() {
+  if (currentStep === 1) {
+    showToast('Open Phantom and approve the connection request.');
+    return;
+  }
+  if (currentStep === 2) {
+    const indx = parseFloat(document.getElementById('indxAmount').value);
+    const sol = parseFloat(document.getElementById('solAmount').value);
+    if (!indx || !sol) { showToast('Enter INDX and SOL amounts first.'); return; }
+    // Update summary values
+    document.getElementById('sumINDX').textContent = indx.toLocaleString() + ' INDX';
+    document.getElementById('sumSOL').textContent = sol + ' SOL';
+    const total = (indx * INDX_PRICE) + (sol * SOL_PRICE);
+    document.getElementById('sumTotal').textContent = '$' + total.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2});
+    document.getElementById('sumFee').textContent = selectedTier;
+    const civFee = total * 0.0004; // 2% of the 0.2% fee
+    document.getElementById('sumCivFund').textContent = '$' + civFee.toFixed(4);
+    setStep(3);
+    return;
+  }
+  if (currentStep === 3) {
+    if (!bioApproved) { showToast('Biometric approval required before proceeding.'); return; }
+    executeTxn();
+  }
+}
+
+function connectWallet() {
+  showToast('Phantom connection request sent. Approve in your wallet.');
+  setTimeout(() => {
+    walletConnected = true;
+    showToast('Wallet connected. Ready to configure. Standing by.');
+    setStep(2);
+    document.getElementById('mainBtn').textContent = 'Review Pre-flight →';
+  }, 2000);
+}
+
+function approve2FA() {
+  bioApproved = true;
+  showToast('Biometric confirmed. Pre-flight passed. Ready to deploy. Standing by.');
+  document.getElementById('mainBtn').textContent = 'Sign & Deploy Pool';
+}
+
+function executeTxn() {
+  const indx = parseFloat(document.getElementById('indxAmount').value) || 0;
+  const sol = parseFloat(document.getElementById('solAmount').value) || 0;
+  const total = (indx * INDX_PRICE) + (sol * SOL_PRICE);
+  showToast('Submitting transaction to Raydium via Jito bundle...');
+  setTimeout(() => {
+    document.getElementById('txINDX').textContent = indx.toLocaleString() + ' INDX';
+    document.getElementById('txSOL').textContent = sol + ' SOL';
+    document.getElementById('txCoverage').textContent = '$' + Math.min(total, 10000).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' covered';
+    setStep(4);
+  }, 2500);
+}
+
+function selectTier(el, tier) {
+  document.querySelectorAll('.tier-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedTier = tier;
+}
+
+function updateCalc() {
+  const indx = parseFloat(document.getElementById('indxAmount').value) || 0;
+  const sol = parseFloat(document.getElementById('solAmount').value) || 0;
+  document.getElementById('indxUSD').textContent = '≈ $' + (indx * INDX_PRICE).toFixed(2) + ' USD';
+  document.getElementById('solUSD').textContent = '≈ $' + (sol * SOL_PRICE).toFixed(2) + ' USD';
+}
+
+function togglePreflight() {
+  const body = document.getElementById('pfBody');
+  const icon = document.getElementById('pfIcon');
+  body.classList.toggle('open');
+  icon.classList.toggle('open');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+updateCTA();
+</script>
+</body>
+</html>

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Audit Transparency — IN$DEX</title>
+  <style>
+    :root{--cyan:#00D4FF;--blue:#2B35D8;--purple:#8B3FE8;--black:#090A10;--green:#00E5A0;--gold:#FFB800;--red:#FF4D6D;--surface:#12141F;--surface2:#1A1D2E;--surface3:#22263A;--border:rgba(255,255,255,0.07);--text:#F0F2FF;--text-muted:rgba(240,242,255,0.45);--text-dim:rgba(240,242,255,0.2);}
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+    body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+    .phone{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+    .topbar{display:flex;align-items:center;padding:14px 16px 10px;gap:10px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--black);z-index:20;}
+    .tb-back{width:36px;height:36px;border-radius:10px;background:var(--surface2);border:none;color:var(--text);font-size:18px;cursor:pointer;}
+    .tb-title{flex:1;font-size:17px;font-weight:800;}
+    .scroll-body{flex:1;overflow-y:auto;padding-bottom:40px;}
+    .section{padding:16px;}
+    .section-title{font-size:12px;font-weight:800;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px;}
+
+    /* TRUST SCORE HEADER */
+    .trust-header{background:linear-gradient(135deg,rgba(0,212,255,0.1),rgba(0,229,160,0.06));border:1px solid rgba(0,212,255,0.15);border-radius:18px;padding:20px;margin-bottom:16px;}
+    .th-score-row{display:flex;align-items:center;gap:16px;margin-bottom:12px;}
+    .th-score-circle{width:70px;height:70px;border-radius:50%;background:rgba(0,212,255,0.12);border:3px solid rgba(0,212,255,0.3);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;}
+    .th-score-num{font-size:24px;font-weight:900;color:var(--cyan);}
+    .th-score-max{font-size:10px;color:var(--text-muted);}
+    .th-score-text{}
+    .th-score-title{font-size:16px;font-weight:900;margin-bottom:3px;}
+    .th-score-sub{font-size:12px;color:var(--text-muted);line-height:1.5;}
+    .th-pillars{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+    .th-pillar{background:rgba(255,255,255,0.04);border-radius:8px;padding:8px 4px;text-align:center;}
+    .tp-ico{font-size:16px;margin-bottom:2px;}
+    .tp-name{font-size:9px;color:var(--text-muted);font-weight:700;}
+    .tp-val{font-size:11px;font-weight:800;margin-top:2px;}
+
+    /* AUDIT CARDS */
+    .audit-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:12px;}
+    .audit-item{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border);}
+    .audit-item:last-child{border-bottom:none;}
+    .ai-badge{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+    .ai-body{flex:1;}
+    .ai-name{font-size:14px;font-weight:800;margin-bottom:3px;}
+    .ai-detail{font-size:11px;color:var(--text-muted);line-height:1.6;}
+    .ai-meta{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap;}
+    .meta-chip{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;}
+    .chip-green{background:rgba(0,229,160,0.1);color:var(--green);}
+    .chip-cyan{background:rgba(0,212,255,0.08);color:var(--cyan);}
+    .chip-gold{background:rgba(255,184,0,0.1);color:var(--gold);}
+    .chip-purple{background:rgba(139,63,232,0.1);color:var(--purple);}
+    .chip-red{background:rgba(255,77,109,0.08);color:var(--red);}
+    .ai-link{font-size:11px;color:var(--cyan);cursor:pointer;font-weight:700;margin-top:6px;display:inline-block;}
+
+    /* CONTRACT REGISTRY */
+    .contract-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:12px;}
+    .contract-item{padding:13px 16px;border-bottom:1px solid var(--border);}
+    .contract-item:last-child{border-bottom:none;}
+    .ci-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+    .ci-name{font-size:13px;font-weight:800;}
+    .ci-chain{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:rgba(0,212,255,0.08);color:var(--cyan);}
+    .ci-addr{font-family:monospace;font-size:11px;color:var(--text-muted);word-break:break-all;margin-bottom:6px;}
+    .ci-actions{display:flex;gap:8px;}
+    .ci-btn{font-size:10px;font-weight:700;padding:4px 10px;border-radius:8px;cursor:pointer;border:none;}
+    .ci-copy{background:rgba(0,212,255,0.08);color:var(--cyan);}
+    .ci-verify{background:rgba(0,229,160,0.08);color:var(--green);}
+
+    /* BUG BOUNTY */
+    .bounty-card{background:linear-gradient(135deg,rgba(255,184,0,0.08),rgba(139,63,232,0.05));border:1px solid rgba(255,184,0,0.15);border-radius:14px;padding:16px;margin-bottom:12px;}
+    .bc-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+    .bc-title{font-size:15px;font-weight:900;}
+    .bc-sub{font-size:11px;color:var(--text-muted);}
+    .bc-tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+    .bct{background:rgba(0,0,0,0.2);border-radius:10px;padding:10px;text-align:center;}
+    .bct-sev{font-size:10px;font-weight:800;text-transform:uppercase;margin-bottom:4px;}
+    .bct-val{font-size:15px;font-weight:900;}
+    .bct-label{font-size:9px;color:var(--text-muted);margin-top:2px;}
+    .btn-report{width:100%;padding:12px;border-radius:10px;background:rgba(255,184,0,0.1);border:1px solid rgba(255,184,0,0.25);color:var(--gold);font-size:14px;font-weight:800;cursor:pointer;}
+
+    /* DAO GOVERNANCE */
+    .dao-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;}
+    .dao-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);}
+    .dao-item:last-child{border-bottom:none;}
+    .dao-ico{font-size:20px;flex-shrink:0;}
+    .dao-body{flex:1;}
+    .dao-name{font-size:13px;font-weight:700;}
+    .dao-detail{font-size:11px;color:var(--text-muted);margin-top:1px;}
+    .dao-status{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap;}
+
+    /* LEGAL WRAPPER */
+    .legal-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;}
+    .lc-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);align-items:flex-start;}
+    .lc-row:last-child{border-bottom:none;}
+    .lc-lbl{font-size:12px;color:var(--text-muted);}
+    .lc-val{font-size:12px;font-weight:700;text-align:right;max-width:60%;}
+
+    #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+  </style>
+</head>
+<body>
+<div class="phone">
+  <div class="topbar">
+    <button class="tb-back" onclick="history.back()">←</button>
+    <div class="tb-title">🔍 Audit Transparency</div>
+  </div>
+  <div class="scroll-body">
+    <div class="section">
+
+      <!-- TRUST SCORE -->
+      <div class="trust-header">
+        <div class="th-score-row">
+          <div class="th-score-circle">
+            <div class="th-score-num">92</div>
+            <div class="th-score-max">/100</div>
+          </div>
+          <div class="th-score-text">
+            <div class="th-score-title">Security Trust Score</div>
+            <div class="th-score-sub">Based on Certik audit · Updated May 2026. Trail of Bits audit in progress — expected Q3 2026.</div>
+          </div>
+        </div>
+        <div class="th-pillars">
+          <div class="th-pillar"><div class="tp-ico">🔐</div><div class="tp-name">Access</div><div class="tp-val" style="color:var(--green);">96</div></div>
+          <div class="th-pillar"><div class="tp-ico">💾</div><div class="tp-name">Logic</div><div class="tp-val" style="color:var(--green);">94</div></div>
+          <div class="th-pillar"><div class="tp-ico">🪙</div><div class="tp-name">Token</div><div class="tp-val" style="color:var(--cyan);">91</div></div>
+          <div class="th-pillar"><div class="tp-ico">🌉</div><div class="tp-name">Bridge</div><div class="tp-val" style="color:var(--gold);">87</div></div>
+        </div>
+      </div>
+
+      <!-- SECURITY AUDITS -->
+      <div class="section-title">Security audits</div>
+      <div class="audit-card">
+        <div class="audit-item">
+          <div class="ai-badge" style="background:rgba(0,229,160,0.1);">🛡️</div>
+          <div class="ai-body">
+            <div class="ai-name">Certik — Full Protocol Audit</div>
+            <div class="ai-detail">Comprehensive audit of all smart contracts including INDX token, DEX liquidity pools, Grid Account multisig, and Civilisation Fund. 3 critical, 7 high, 14 medium issues — all resolved.</div>
+            <div class="ai-meta">
+              <span class="meta-chip chip-green">Score: 92/100</span>
+              <span class="meta-chip chip-cyan">May 2026</span>
+              <span class="meta-chip chip-green">All issues resolved</span>
+            </div>
+            <div class="ai-link" onclick="showToast('Opening Certik report…')">View full report →</div>
+          </div>
+        </div>
+        <div class="audit-item">
+          <div class="ai-badge" style="background:rgba(139,63,232,0.1);">🔬</div>
+          <div class="ai-body">
+            <div class="ai-name">Trail of Bits — Deep Logic Audit</div>
+            <div class="ai-detail">Focused audit on PQSI threat-detection logic, ZK-proof circuits, and cross-program invocations on Solana. Includes formal verification of the 98/2 Civilisation Law enforcement.</div>
+            <div class="ai-meta">
+              <span class="meta-chip chip-gold">In progress</span>
+              <span class="meta-chip chip-cyan">Q3 2026 target</span>
+            </div>
+          </div>
+        </div>
+        <div class="audit-item">
+          <div class="ai-badge" style="background:rgba(0,212,255,0.1);">📊</div>
+          <div class="ai-body">
+            <div class="ai-name">Armanino — Proof of Reserves</div>
+            <div class="ai-detail">Monthly attestation of platform reserves vs. user liabilities. Current ratio: 103.4%. Published on-chain every month.</div>
+            <div class="ai-meta">
+              <span class="meta-chip chip-green">Monthly</span>
+              <span class="meta-chip chip-cyan">June 2026 ✓</span>
+            </div>
+            <div class="ai-link" onclick="showToast('Opening Armanino attestation…')">View latest attestation →</div>
+          </div>
+        </div>
+        <div class="audit-item">
+          <div class="ai-badge" style="background:rgba(255,184,0,0.1);">🤖</div>
+          <div class="ai-body">
+            <div class="ai-name">SIINDEX Auto-Audit</div>
+            <div class="ai-detail">Continuous smart contract state validation running every 2 minutes. Checks reserve ratio, Civilisation Fund balance, liquidity pool health, and multisig key integrity.</div>
+            <div class="ai-meta">
+              <span class="meta-chip chip-green">Live · Every 2 min</span>
+              <span class="meta-chip chip-cyan">Last check: 47s ago</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONTRACT REGISTRY -->
+      <div class="section-title">Contract address registry</div>
+      <div class="contract-card">
+        <div class="contract-item">
+          <div class="ci-header">
+            <div class="ci-name">INDX Token (SPL Token-2022)</div>
+            <div class="ci-chain">Solana</div>
+          </div>
+          <div class="ci-addr">INDXm9BeRQSANaP3b5VAVWL1TMUETXp3J8b1h3qMxFhq</div>
+          <div class="ci-actions">
+            <button class="ci-btn ci-copy" onclick="copyAddr('INDXm9BeRQSANaP3b5VAVWL1TMUETXp3J8b1h3qMxFhq')">Copy</button>
+            <button class="ci-btn ci-verify" onclick="showToast('Opening Solscan explorer…')">Verify on Solscan</button>
+          </div>
+        </div>
+        <div class="contract-item">
+          <div class="ci-header">
+            <div class="ci-name">DEX Liquidity Pool</div>
+            <div class="ci-chain">Solana</div>
+          </div>
+          <div class="ci-addr">LPo0xD3aQqNj7EWqMpyVz2kKqWvF6bR8hJC5m2nXdPeA</div>
+          <div class="ci-actions">
+            <button class="ci-btn ci-copy" onclick="copyAddr('LPo0xD3aQqNj7EWqMpyVz2kKqWvF6bR8hJC5m2nXdPeA')">Copy</button>
+            <button class="ci-btn ci-verify" onclick="showToast('Opening Solscan explorer…')">Verify on Solscan</button>
+          </div>
+        </div>
+        <div class="contract-item">
+          <div class="ci-header">
+            <div class="ci-name">Civilisation Fund Vault</div>
+            <div class="ci-chain">Solana</div>
+          </div>
+          <div class="ci-addr">CivFbHdK4mRqP7sTVyWx1eU2JLCnKYp9Qo3nZcA8vFuP</div>
+          <div class="ci-actions">
+            <button class="ci-btn ci-copy" onclick="copyAddr('CivFbHdK4mRqP7sTVyWx1eU2JLCnKYp9Qo3nZcA8vFuP')">Copy</button>
+            <button class="ci-btn ci-verify" onclick="showToast('Opening Solscan explorer…')">Verify on Solscan</button>
+          </div>
+        </div>
+        <div class="contract-item">
+          <div class="ci-header">
+            <div class="ci-name">Grid Account Multisig (Squads v4)</div>
+            <div class="ci-chain">Solana</div>
+          </div>
+          <div class="ci-addr">GrdAc7kZ1vQrMn8bWXeFp4LtJCvBsDhq2URpK5eNmXoY</div>
+          <div class="ci-actions">
+            <button class="ci-btn ci-copy" onclick="copyAddr('GrdAc7kZ1vQrMn8bWXeFp4LtJCvBsDhq2URpK5eNmXoY')">Copy</button>
+            <button class="ci-btn ci-verify" onclick="showToast('Opening Solscan explorer…')">Verify on Solscan</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- BUG BOUNTY -->
+      <div class="section-title">Bug bounty program</div>
+      <div class="bounty-card">
+        <div class="bc-header">
+          <div style="font-size:28px;">🐛</div>
+          <div>
+            <div class="bc-title">IN$DEX Bug Bounty — Powered by Immunefi</div>
+            <div class="bc-sub">Help secure the platform. Get paid for finding bugs.</div>
+          </div>
+        </div>
+        <div class="bc-tiers">
+          <div class="bct">
+            <div class="bct-sev" style="color:var(--red);">Critical</div>
+            <div class="bct-val" style="color:var(--red);">$50K</div>
+            <div class="bct-label">USDC</div>
+          </div>
+          <div class="bct">
+            <div class="bct-sev" style="color:var(--gold);">High</div>
+            <div class="bct-val" style="color:var(--gold);">$10K</div>
+            <div class="bct-label">USDC</div>
+          </div>
+          <div class="bct">
+            <div class="bct-sev" style="color:var(--cyan);">Medium</div>
+            <div class="bct-val" style="color:var(--cyan);">$2K</div>
+            <div class="bct-label">USDC</div>
+          </div>
+        </div>
+        <button class="btn-report" onclick="showToast('Opening Immunefi bug bounty page…')">🔒 Report a vulnerability →</button>
+      </div>
+
+      <!-- DAO GOVERNANCE -->
+      <div class="section-title">DAO governance — protocol changes</div>
+      <div class="dao-card">
+        <div class="dao-item">
+          <div class="dao-ico">📜</div>
+          <div class="dao-body">
+            <div class="dao-name">Protocol Upgrade Proposals</div>
+            <div class="dao-detail">All changes to smart contract logic require a MemeDAO vote. Minimum quorum: 10% of staked INDX. 7-day voting window.</div>
+          </div>
+          <span class="dao-status chip-green">Active ✓</span>
+        </div>
+        <div class="dao-item">
+          <div class="dao-ico">⏱️</div>
+          <div class="dao-body">
+            <div class="dao-name">Timelock — 48 hours</div>
+            <div class="dao-detail">All approved upgrades are delayed 48 hours before execution. Gives citizens time to exit if they disagree.</div>
+          </div>
+          <span class="dao-status chip-cyan">Enforced</span>
+        </div>
+        <div class="dao-item">
+          <div class="dao-ico">🔒</div>
+          <div class="dao-body">
+            <div class="dao-name">Civilisation Fund — immutable</div>
+            <div class="dao-detail">The 98/2 split cannot be changed by any vote. Encoded in the token contract itself. No admin override exists.</div>
+          </div>
+          <span class="dao-status chip-green">Immutable</span>
+        </div>
+        <div class="dao-item">
+          <div class="dao-ico">🗳️</div>
+          <div class="dao-body">
+            <div class="dao-name">Active proposals</div>
+            <div class="dao-detail">IMP-014: Increase Sovereign Yield cap to 12% APY · Voting ends Jun 18 · Current: 68% For</div>
+          </div>
+          <span class="dao-status chip-gold" onclick="showToast('Opening governance portal…')" style="cursor:pointer;">Vote →</span>
+        </div>
+      </div>
+
+      <!-- LEGAL WRAPPER -->
+      <div class="section-title">Legal wrapper & MiCA whitepaper</div>
+      <div class="legal-card">
+        <div class="lc-row"><div class="lc-lbl">Legal entity</div><div class="lc-val">Image Nation Foundation Ltd. (Marshall Islands)</div></div>
+        <div class="lc-row"><div class="lc-lbl">Registered number</div><div class="lc-val">IMF-2025-0847</div></div>
+        <div class="lc-row"><div class="lc-lbl">MiCA status</div><div class="lc-val" style="color:var(--gold);">Application in progress · ESMA review</div></div>
+        <div class="lc-row"><div class="lc-lbl">MiCA whitepaper</div><div class="lc-val"><span style="color:var(--cyan);cursor:pointer;" onclick="showToast('Downloading MiCA whitepaper…')">Download PDF →</span></div></div>
+        <div class="lc-row"><div class="lc-lbl">MAS registered</div><div class="lc-val" style="color:var(--green);">✓ Singapore (VASP)</div></div>
+        <div class="lc-row"><div class="lc-lbl">AUSTRAC registered</div><div class="lc-val" style="color:var(--green);">✓ Australia (DCE)</div></div>
+        <div class="lc-row"><div class="lc-lbl">FinCEN MSB</div><div class="lc-val" style="color:var(--green);">✓ United States</div></div>
+        <div class="lc-row"><div class="lc-lbl">CBN sandbox</div><div class="lc-val" style="color:var(--green);">✓ Nigeria</div></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+function copyAddr(a){
+  navigator.clipboard.writeText(a).then(()=>showToast('Address copied ✓')).catch(()=>showToast('Address: '+a.slice(0,12)+'…'));
+}
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2800);}
+// Animate audit check counter
+let secs=47;
+setInterval(()=>{secs=(secs+1)%120;},1000);
+</script>
+</body>
+</html>

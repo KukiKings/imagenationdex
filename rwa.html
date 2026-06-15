@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Tokenise Asset — IN$DEX</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --cyan-dim:#0099BB; --purple:#8B3FE8; --blue:#2B35D8;
+    --bg:#090A10; --surface:#0E1019; --surface2:#141622; --surface3:#1C1F2E;
+    --border:rgba(255,255,255,0.07); --text:#F0F2FF; --text-dim:#7A82A0;
+    --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; max-width:430px; margin:0 auto; min-height:100vh; padding-bottom:60px; }
+
+  /* HEADER */
+  .header { display:flex; align-items:center; gap:12px; padding:56px 20px 20px; }
+  .back-btn { width:40px; height:40px; border-radius:50%; background:var(--surface2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:18px; flex-shrink:0; }
+  .header-title { font-size:20px; font-weight:700; }
+  .header-sub { font-size:13px; color:var(--text-dim); margin-top:2px; }
+
+  /* HERO */
+  .hero { margin:0 20px 24px; background:linear-gradient(135deg,#0A1428,#0D1535,#120A28); border:1px solid rgba(139,63,232,0.2); border-radius:20px; padding:24px; position:relative; overflow:hidden; }
+  .hero::before { content:''; position:absolute; top:-40px; right:-40px; width:180px; height:180px; background:radial-gradient(circle,rgba(139,63,232,0.12) 0%,transparent 70%); pointer-events:none; }
+  .hero-row { display:flex; align-items:center; gap:16px; }
+  .hero-icon { font-size:40px; flex-shrink:0; }
+  .hero-title { font-size:18px; font-weight:800; margin-bottom:4px; }
+  .hero-desc { font-size:13px; color:var(--text-dim); line-height:1.5; }
+  .hero-desc strong { color:var(--cyan); }
+
+  /* STEP INDICATOR */
+  .steps-wrap { display:flex; align-items:center; padding:0 20px 20px; gap:0; }
+  .step-item { display:flex; flex-direction:column; align-items:center; flex:1; }
+  .step-circle { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; border:2px solid var(--border); color:var(--text-dim); background:var(--surface2); transition:all 0.3s; }
+  .step-circle.active { border-color:var(--cyan); color:var(--cyan); background:rgba(0,212,255,0.1); }
+  .step-circle.done { border-color:var(--green); color:var(--green); background:rgba(0,229,160,0.1); }
+  .step-label { font-size:10px; color:var(--text-dim); margin-top:4px; text-align:center; }
+  .step-label.active { color:var(--cyan); }
+  .step-line { flex:1; height:2px; background:var(--border); margin-top:-14px; align-self:flex-start; transition:background 0.3s; }
+  .step-line.done { background:var(--green); }
+
+  /* FORM */
+  .form-section { padding:0 20px; display:none; }
+  .form-section.active { display:block; }
+  .section-label { font-size:13px; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:12px; }
+  .form-group { margin-bottom:16px; }
+  .form-label { font-size:12px; color:var(--text-dim); margin-bottom:6px; font-weight:500; display:flex; justify-content:space-between; }
+  .form-label .optional { color:var(--text-dim); font-weight:400; opacity:0.6; }
+  .form-input { width:100%; background:var(--surface2); border:1.5px solid var(--border); border-radius:12px; padding:13px 16px; font-size:15px; color:var(--text); outline:none; transition:border-color 0.2s; -webkit-appearance:none; }
+  .form-input:focus { border-color:rgba(0,212,255,0.4); }
+  .form-input::placeholder { color:var(--text-dim); }
+  .form-textarea { width:100%; background:var(--surface2); border:1.5px solid var(--border); border-radius:12px; padding:13px 16px; font-size:15px; color:var(--text); outline:none; resize:none; height:88px; transition:border-color 0.2s; font-family:inherit; -webkit-appearance:none; }
+  .form-textarea:focus { border-color:rgba(0,212,255,0.4); }
+  .form-textarea::placeholder { color:var(--text-dim); }
+
+  /* CATEGORY GRID */
+  .category-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+  .cat-card { background:var(--surface2); border:1.5px solid var(--border); border-radius:14px; padding:14px 12px; cursor:pointer; transition:all 0.2s; text-align:center; }
+  .cat-card:hover { border-color:rgba(139,63,232,0.3); }
+  .cat-card.selected { border-color:rgba(139,63,232,0.5); background:rgba(139,63,232,0.08); }
+  .cat-icon { font-size:28px; margin-bottom:6px; }
+  .cat-name { font-size:13px; font-weight:700; margin-bottom:2px; }
+  .cat-desc { font-size:11px; color:var(--text-dim); line-height:1.3; }
+
+  /* UPLOAD ZONE */
+  .upload-zone { border:1.5px dashed rgba(139,63,232,0.3); border-radius:14px; padding:28px 20px; text-align:center; cursor:pointer; transition:all 0.2s; margin-bottom:16px; }
+  .upload-zone:hover { border-color:rgba(139,63,232,0.5); background:rgba(139,63,232,0.04); }
+  .upload-zone.has-file { border-color:rgba(0,229,160,0.4); background:rgba(0,229,160,0.04); }
+  .upload-icon { font-size:36px; margin-bottom:8px; }
+  .upload-label { font-size:14px; font-weight:600; margin-bottom:4px; }
+  .upload-sub { font-size:12px; color:var(--text-dim); }
+
+  /* ROYALTY SLIDER */
+  .royalty-wrap { background:var(--surface2); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:16px; }
+  .royalty-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .royalty-label { font-size:14px; font-weight:600; }
+  .royalty-value { font-size:20px; font-weight:800; color:var(--purple); }
+  .royalty-slider { width:100%; -webkit-appearance:none; height:6px; border-radius:3px; background:var(--surface3); outline:none; margin-bottom:8px; }
+  .royalty-slider::-webkit-slider-thumb { -webkit-appearance:none; width:22px; height:22px; border-radius:50%; background:linear-gradient(135deg,var(--purple),var(--blue)); cursor:pointer; box-shadow:0 2px 8px rgba(139,63,232,0.4); }
+  .royalty-tips { display:flex; justify-content:space-between; font-size:11px; color:var(--text-dim); }
+
+  /* PRICE INPUT */
+  .price-wrap { background:var(--surface2); border:1.5px solid var(--border); border-radius:14px; padding:16px 18px; margin-bottom:8px; display:flex; align-items:center; gap:12px; transition:border-color 0.2s; }
+  .price-wrap:focus-within { border-color:rgba(0,212,255,0.4); }
+  .price-input { flex:1; background:none; border:none; outline:none; font-size:28px; font-weight:800; color:var(--text); }
+  .price-input::placeholder { color:var(--text-dim); }
+  .price-token { padding:6px 14px; border-radius:20px; background:rgba(0,212,255,0.1); border:1px solid rgba(0,212,255,0.2); color:var(--cyan); font-size:14px; font-weight:700; white-space:nowrap; }
+
+  /* SUPPLY TOGGLE */
+  .supply-row { display:flex; gap:10px; margin-bottom:16px; }
+  .supply-opt { flex:1; padding:12px; border-radius:12px; background:var(--surface2); border:1.5px solid var(--border); text-align:center; cursor:pointer; transition:all 0.2s; }
+  .supply-opt.selected { border-color:rgba(139,63,232,0.5); background:rgba(139,63,232,0.08); }
+  .supply-opt .s-num { font-size:18px; font-weight:800; color:var(--purple); }
+  .supply-opt .s-lbl { font-size:11px; color:var(--text-dim); margin-top:2px; }
+
+  /* INFO BOX */
+  .info-box { background:rgba(0,212,255,0.05); border:1px solid rgba(0,212,255,0.15); border-radius:12px; padding:12px 14px; display:flex; gap:10px; margin-bottom:16px; }
+  .info-box .icon { font-size:15px; flex-shrink:0; margin-top:1px; }
+  .info-box .text { font-size:13px; color:rgba(0,212,255,0.8); line-height:1.5; }
+
+  .purple-box { background:rgba(139,63,232,0.06); border:1px solid rgba(139,63,232,0.2); border-radius:12px; padding:12px 14px; display:flex; gap:10px; margin-bottom:16px; }
+  .purple-box .icon { font-size:15px; flex-shrink:0; margin-top:1px; }
+  .purple-box .text { font-size:13px; color:rgba(139,63,232,0.9); line-height:1.5; }
+
+  /* PREVIEW CARD */
+  .preview-card { background:linear-gradient(135deg,rgba(139,63,232,0.15),rgba(0,212,255,0.08)); border:1px solid rgba(139,63,232,0.3); border-radius:20px; padding:24px; margin-bottom:20px; text-align:center; }
+  .preview-thumb { width:80px; height:80px; border-radius:16px; background:linear-gradient(135deg,rgba(139,63,232,0.3),rgba(0,212,255,0.2)); display:flex; align-items:center; justify-content:center; font-size:36px; margin:0 auto 14px; border:1px solid rgba(139,63,232,0.3); }
+  .preview-name { font-size:18px; font-weight:800; margin-bottom:4px; }
+  .preview-owner { font-size:13px; color:var(--cyan); font-family:'SF Mono',Consolas,monospace; margin-bottom:12px; }
+  .preview-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.06); font-size:13px; }
+  .preview-row:last-child { border-bottom:none; }
+  .preview-row .lbl { color:var(--text-dim); }
+  .preview-row .val { font-weight:600; }
+  .preview-row .val.purple { color:var(--purple); }
+  .preview-row .val.green { color:var(--green); }
+
+  /* NEXT/BACK BUTTONS */
+  .btn-row { display:flex; gap:10px; padding:20px 20px 0; }
+  .next-btn { flex:1; padding:15px; border-radius:13px; border:none; background:linear-gradient(135deg,var(--blue),var(--purple)); color:white; font-size:15px; font-weight:700; cursor:pointer; transition:opacity 0.2s, transform 0.1s; }
+  .next-btn:active { transform:scale(0.98); }
+  .back-step-btn { padding:15px 20px; border-radius:13px; border:1px solid var(--border); background:none; color:var(--text-dim); font-size:15px; font-weight:600; cursor:pointer; }
+
+  /* MINT OVERLAY */
+  .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(14px); z-index:100; align-items:center; justify-content:center; padding:24px; }
+  .overlay.open { display:flex; }
+  .mint-card { background:var(--surface); border:1px solid rgba(139,63,232,0.3); border-radius:24px; padding:32px 24px; width:100%; max-width:380px; text-align:center; animation:popIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275); }
+  @keyframes popIn { from{transform:scale(0.8);opacity:0} to{transform:scale(1);opacity:1} }
+  .mint-spinner { width:60px; height:60px; border:3px solid var(--surface3); border-top-color:var(--purple); border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 16px; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .mint-icon { font-size:52px; margin-bottom:14px; }
+  .mint-title { font-size:22px; font-weight:800; margin-bottom:8px; }
+  .mint-sub { font-size:14px; color:var(--text-dim); line-height:1.6; margin-bottom:20px; }
+  .mint-step-list { display:flex; flex-direction:column; gap:8px; text-align:left; margin-bottom:20px; }
+  .mint-step { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--text-dim); }
+  .mint-step .dot { width:8px; height:8px; border-radius:50%; background:var(--surface3); flex-shrink:0; transition:all 0.3s; }
+  .mint-step.done { color:var(--text); } .mint-step.done .dot { background:var(--green); }
+  .mint-step.active .dot { background:var(--purple); animation:pdot 1s infinite; }
+  @keyframes pdot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .nft-result-card { background:linear-gradient(135deg,rgba(139,63,232,0.2),rgba(0,212,255,0.1)); border:1px solid rgba(139,63,232,0.4); border-radius:16px; padding:20px; margin-bottom:20px; animation:nftGlow 2s infinite; }
+  @keyframes nftGlow { 0%,100%{box-shadow:0 0 12px rgba(139,63,232,0.2)} 50%{box-shadow:0 0 28px rgba(139,63,232,0.4)} }
+  .nft-result-icon { font-size:40px; margin-bottom:8px; }
+  .nft-token-id { font-family:'SF Mono',Consolas,monospace; font-size:14px; color:var(--purple); margin-bottom:4px; font-weight:700; }
+  .nft-meta { font-size:12px; color:var(--text-dim); }
+
+  .done-btn { width:100%; padding:14px; border-radius:12px; border:none; background:linear-gradient(135deg,var(--blue),var(--purple)); color:white; font-size:15px; font-weight:700; cursor:pointer; margin-bottom:10px; }
+  .list-btn { width:100%; padding:13px; border-radius:12px; border:1px solid rgba(0,212,255,0.3); background:rgba(0,212,255,0.06); color:var(--cyan); font-size:14px; font-weight:700; cursor:pointer; }
+
+  .toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--surface3); border:1px solid var(--border); border-radius:20px; padding:10px 20px; font-size:13px; font-weight:500; white-space:nowrap; opacity:0; transition:all 0.3s; z-index:999; pointer-events:none; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* BOTTOM NAV */
+  .bottom-nav-spacer{height:64px;}
+  .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(16,18,26,0.96);backdrop-filter:blur(16px);border-top:1px solid #252836;display:flex;z-index:80;}
+  .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px 0;cursor:pointer;opacity:0.5;transition:opacity 0.2s;}
+  .nav-item.active{opacity:1;}
+  .nav-icon{font-size:20px;}
+  .nav-label{font-size:10px;font-weight:600;color:#F0F2FF;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="back-btn" onclick="window.history.back()">←</div>
+  <div>
+    <div class="header-title">Tokenise Asset</div>
+    <div class="header-sub">Turn anything into a sovereign NFT</div>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-row">
+    <div class="hero-icon">🏛️</div>
+    <div>
+      <div class="hero-title">Real World Asset Tokenisation</div>
+      <div class="hero-desc">Turn any asset — physical, digital, or intellectual — into an NFT. <strong>You own the token. You set the royalty. Story Protocol tracks every resale.</strong></div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP INDICATOR -->
+<div class="steps-wrap">
+  <div class="step-item">
+    <div class="step-circle active" id="sc1">1</div>
+    <div class="step-label active" id="sl1">Asset Type</div>
+  </div>
+  <div class="step-line" id="line1"></div>
+  <div class="step-item">
+    <div class="step-circle" id="sc2">2</div>
+    <div class="step-label" id="sl2">Details</div>
+  </div>
+  <div class="step-line" id="line2"></div>
+  <div class="step-item">
+    <div class="step-circle" id="sc3">3</div>
+    <div class="step-label" id="sl3">Royalties</div>
+  </div>
+  <div class="step-line" id="line3"></div>
+  <div class="step-item">
+    <div class="step-circle" id="sc4">4</div>
+    <div class="step-label" id="sl4">Mint</div>
+  </div>
+</div>
+
+<!-- ===== STEP 1: ASSET TYPE ===== -->
+<div class="form-section active" id="step1">
+  <div class="section-label">What are you tokenising?</div>
+  <div class="category-grid">
+    <div class="cat-card" onclick="selectCat(this,'physical','🏠')">
+      <div class="cat-icon">🏠</div>
+      <div class="cat-name">Physical Asset</div>
+      <div class="cat-desc">Property, vehicle, equipment, inventory</div>
+    </div>
+    <div class="cat-card" onclick="selectCat(this,'digital','🎨')">
+      <div class="cat-icon">🎨</div>
+      <div class="cat-name">Digital Creation</div>
+      <div class="cat-desc">Art, music, design, video, writing</div>
+    </div>
+    <div class="cat-card" onclick="selectCat(this,'ip','💡')">
+      <div class="cat-icon">💡</div>
+      <div class="cat-name">Intellectual Property</div>
+      <div class="cat-desc">Brand, patent, formula, method</div>
+    </div>
+    <div class="cat-card" onclick="selectCat(this,'service','🤝')">
+      <div class="cat-icon">🤝</div>
+      <div class="cat-name">Service Contract</div>
+      <div class="cat-desc">Ongoing service, subscription, access</div>
+    </div>
+    <div class="cat-card" onclick="selectCat(this,'land','🌍')">
+      <div class="cat-icon">🌍</div>
+      <div class="cat-name">Land / Property</div>
+      <div class="cat-desc">Title deed, land rights, lease</div>
+    </div>
+    <div class="cat-card" onclick="selectCat(this,'other','📦')">
+      <div class="cat-icon">📦</div>
+      <div class="cat-name">Other Asset</div>
+      <div class="cat-desc">Anything with real or digital value</div>
+    </div>
+  </div>
+  <div class="info-box">
+    <div class="icon">💡</div>
+    <div class="text">No ID required to tokenise. Your <strong>mariasantos.IN$DEX</strong> identity IS the ownership record — no government registration needed to get started.</div>
+  </div>
+  <div class="btn-row">
+    <button class="next-btn" onclick="goStep(2)">Next — Add Details →</button>
+  </div>
+</div>
+
+<!-- ===== STEP 2: DETAILS ===== -->
+<div class="form-section" id="step2">
+  <div class="section-label">Asset Details</div>
+
+  <div class="form-group">
+    <div class="form-label">Asset Name</div>
+    <input class="form-input" id="assetName" type="text" placeholder="e.g. My Logo Design Service, 2019 Toyota Hilux…">
+  </div>
+
+  <div class="form-group">
+    <div class="form-label">Description <span class="optional">optional</span></div>
+    <textarea class="form-textarea" id="assetDesc" placeholder="Describe what this asset is, what it includes, and any conditions of ownership or use…"></textarea>
+  </div>
+
+  <div class="form-group">
+    <div class="form-label">Asset Photo / File <span class="optional">optional</span></div>
+    <div class="upload-zone" id="uploadZone" onclick="simulateUpload()">
+      <div class="upload-icon" id="uploadIcon">📷</div>
+      <div class="upload-label" id="uploadLabel">Tap to upload photo or document</div>
+      <div class="upload-sub" id="uploadSub">JPG, PNG, PDF, MP3, MP4 · Max 50MB</div>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <div class="form-label">Estimated Value <span class="optional">optional</span></div>
+    <div class="price-wrap">
+      <input class="price-input" id="assetValue" type="number" placeholder="0" inputmode="decimal">
+      <div class="price-token">INDX</div>
+    </div>
+    <div style="font-size:12px; color:var(--text-dim); margin-top:6px;">This sets a reference value. You can list for a different price later.</div>
+  </div>
+
+  <div class="purple-box">
+    <div class="icon">📖</div>
+    <div class="text">Your asset's metadata is hashed and stored on Solana. The original file can be stored on IPFS or your own server — you control it.</div>
+  </div>
+
+  <div class="btn-row">
+    <button class="back-step-btn" onclick="goStep(1)">← Back</button>
+    <button class="next-btn" onclick="goStep(3)">Next — Set Royalties →</button>
+  </div>
+</div>
+
+<!-- ===== STEP 3: ROYALTIES ===== -->
+<div class="form-section" id="step3">
+  <div class="section-label">Royalty Settings</div>
+
+  <div class="royalty-wrap">
+    <div class="royalty-header">
+      <div class="royalty-label">Royalty on every resale</div>
+      <div class="royalty-value" id="royaltyDisplay">10%</div>
+    </div>
+    <input class="royalty-slider" id="royaltySlider" type="range" min="0" max="50" value="10" oninput="updateRoyalty(this.value)">
+    <div class="royalty-tips">
+      <span>0% — One-time sale</span>
+      <span>10% — Recommended</span>
+      <span>50% — Max</span>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <div class="icon">📖</div>
+    <div class="text"><strong>Story Protocol</strong> enforces your royalty automatically. Every time your NFT is resold anywhere — on IN$DEX or another platform — <strong id="royaltyNote">10%</strong> goes directly to your wallet. No chasing, no invoices, no middleman.</div>
+  </div>
+
+  <div class="section-label" style="margin-top:4px;">Supply</div>
+  <div class="supply-row">
+    <div class="supply-opt selected" id="sup1" onclick="selectSupply(this,1)">
+      <div class="s-num">1</div>
+      <div class="s-lbl">1 of 1 · Unique</div>
+    </div>
+    <div class="supply-opt" id="sup10" onclick="selectSupply(this,10)">
+      <div class="s-num">10</div>
+      <div class="s-lbl">10 editions</div>
+    </div>
+    <div class="supply-opt" id="supUnlim" onclick="selectSupply(this,0)">
+      <div class="s-num">∞</div>
+      <div class="s-lbl">Unlimited</div>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <div class="form-label">Listing Price <span class="optional">optional — list later</span></div>
+    <div class="price-wrap">
+      <input class="price-input" id="listPrice" type="number" placeholder="0" inputmode="decimal">
+      <div class="price-token">INDX</div>
+    </div>
+  </div>
+
+  <div class="purple-box">
+    <div class="icon">💎</div>
+    <div class="text">Once minted, this asset becomes a <strong>compressed NFT</strong> on Solana — costing less than $0.000005. The royalty percentage is locked into the token contract and cannot be changed after minting.</div>
+  </div>
+
+  <div class="btn-row">
+    <button class="back-step-btn" onclick="goStep(2)">← Back</button>
+    <button class="next-btn" onclick="goStep(4)">Next — Preview & Mint →</button>
+  </div>
+</div>
+
+<!-- ===== STEP 4: PREVIEW & MINT ===== -->
+<div class="form-section" id="step4">
+  <div class="section-label">Review Your NFT</div>
+
+  <div class="preview-card">
+    <div class="preview-thumb" id="previewThumb">📦</div>
+    <div class="preview-name" id="previewName">My Asset</div>
+    <div class="preview-owner">mariasantos.IN$DEX</div>
+    <div class="preview-row"><div class="lbl">Type</div><div class="val" id="previewType">—</div></div>
+    <div class="preview-row"><div class="lbl">Supply</div><div class="val" id="previewSupply">1 of 1</div></div>
+    <div class="preview-row"><div class="lbl">Royalty</div><div class="val purple" id="previewRoyalty">10%</div></div>
+    <div class="preview-row"><div class="lbl">List Price</div><div class="val green" id="previewPrice">Not listed yet</div></div>
+    <div class="preview-row"><div class="lbl">Protocol</div><div class="val">Story Protocol + Metaplex</div></div>
+    <div class="preview-row"><div class="lbl">Chain</div><div class="val">Solana</div></div>
+    <div class="preview-row"><div class="lbl">Mint Cost</div><div class="val green">~$0.000005</div></div>
+  </div>
+
+  <div class="purple-box">
+    <div class="icon">⚠️</div>
+    <div class="text">Once minted, the asset name, royalty %, and supply <strong>cannot be changed</strong>. Price and description can be updated anytime.</div>
+  </div>
+
+  <div class="btn-row">
+    <button class="back-step-btn" onclick="goStep(3)">← Back</button>
+    <button class="next-btn" onclick="openMintOverlay()" style="background:linear-gradient(135deg,var(--purple),var(--blue));">💎 Mint NFT →</button>
+  </div>
+</div>
+
+<!-- ===== MINT OVERLAY ===== -->
+<div class="overlay" id="mintOverlay">
+  <div class="mint-card">
+
+    <!-- MINTING -->
+    <div id="mintMinting">
+      <div class="mint-spinner"></div>
+      <div class="mint-title" id="mintTitle">Minting…</div>
+      <div class="mint-sub" id="mintSub">Preparing your sovereign NFT</div>
+      <div class="mint-step-list">
+        <div class="mint-step active" id="ms1"><div class="dot"></div>Compressing asset metadata</div>
+        <div class="mint-step" id="ms2"><div class="dot"></div>Writing to Solana ledger</div>
+        <div class="mint-step" id="ms3"><div class="dot"></div>Registering royalty with Story Protocol</div>
+        <div class="mint-step" id="ms4"><div class="dot"></div>Minting NFT to your wallet</div>
+        <div class="mint-step" id="ms5"><div class="dot"></div>Generating sovereign certificate</div>
+      </div>
+    </div>
+
+    <!-- SUCCESS -->
+    <div id="mintSuccess" style="display:none;">
+      <div class="mint-icon">🎉</div>
+      <div class="mint-title" style="color:var(--green)">Asset Tokenised!</div>
+      <div class="nft-result-card">
+        <div class="nft-result-icon" id="successThumb">📦</div>
+        <div class="nft-token-id" id="successTokenId">IN$DEX-RWA-——</div>
+        <div class="nft-meta">Solana · Compressed NFT · Story Protocol</div>
+      </div>
+      <div class="mint-sub" id="successDesc">Your asset is now a sovereign NFT. Every resale triggers your royalty automatically.</div>
+      <button class="done-btn" onclick="window.location.href='citizen-dashboard.html'">✓ Back to Dashboard</button>
+      <button class="list-btn" onclick="window.location.href='marketplace.html'">🏪 List on Marketplace</button>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let currentStep = 1;
+  let selectedCategory = '';
+  let selectedCatIcon = '📦';
+  let selectedSupply = 1;
+
+  // Category selection
+  function selectCat(el, cat, icon) {
+    document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedCategory = cat;
+    selectedCatIcon = icon;
+  }
+
+  // Supply selection
+  function selectSupply(el, val) {
+    document.querySelectorAll('.supply-opt').forEach(s => s.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedSupply = val;
+    const labels = { 1:'1 of 1 · Unique', 10:'10 editions', 0:'Unlimited' };
+    document.getElementById('previewSupply').textContent = labels[val] || '1 of 1';
+  }
+
+  // Royalty slider
+  function updateRoyalty(val) {
+    document.getElementById('royaltyDisplay').textContent = val + '%';
+    document.getElementById('royaltyNote').textContent = val + '%';
+    document.getElementById('previewRoyalty').textContent = val + '%';
+  }
+
+  // Upload simulation
+  function simulateUpload() {
+    document.getElementById('uploadZone').classList.add('has-file');
+    document.getElementById('uploadIcon').textContent = '✅';
+    document.getElementById('uploadLabel').textContent = 'asset-photo.jpg uploaded';
+    document.getElementById('uploadSub').textContent = 'Tap to change';
+    showToast('📷 Photo attached (demo)');
+  }
+
+  // Step navigation
+  function goStep(n) {
+    // Validate step 1
+    if (n === 2 && !selectedCategory) {
+      showToast('⚠️ Select an asset type first');
+      return;
+    }
+    // Validate step 2
+    if (n === 3 && !document.getElementById('assetName').value.trim()) {
+      showToast('⚠️ Enter an asset name first');
+      return;
+    }
+
+    // Update step circles
+    for (let i = 1; i <= 4; i++) {
+      const sc = document.getElementById('sc' + i);
+      const sl = document.getElementById('sl' + i);
+      sc.classList.remove('active','done');
+      sl.classList.remove('active');
+      if (i < n) { sc.classList.add('done'); sc.textContent = '✓'; }
+      else if (i === n) { sc.classList.add('active'); sc.textContent = i; sl.classList.add('active'); }
+      else { sc.textContent = i; }
+    }
+    // Update lines
+    for (let i = 1; i <= 3; i++) {
+      const line = document.getElementById('line' + i);
+      line.classList.toggle('done', i < n);
+    }
+
+    // Show/hide sections
+    document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('step' + n).classList.add('active');
+    currentStep = n;
+
+    // Populate preview on step 4
+    if (n === 4) buildPreview();
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function buildPreview() {
+    const name = document.getElementById('assetName').value.trim() || 'My Asset';
+    const royalty = document.getElementById('royaltySlider').value;
+    const price = document.getElementById('listPrice').value;
+    const typeLabels = { physical:'Physical Asset', digital:'Digital Creation', ip:'Intellectual Property', service:'Service Contract', land:'Land / Property', other:'Other Asset' };
+
+    document.getElementById('previewThumb').textContent = selectedCatIcon;
+    document.getElementById('previewName').textContent = name;
+    document.getElementById('previewType').textContent = typeLabels[selectedCategory] || '—';
+    document.getElementById('previewRoyalty').textContent = royalty + '%';
+    document.getElementById('previewPrice').textContent = price ? price + ' INDX' : 'Not listed yet';
+    document.getElementById('successThumb').textContent = selectedCatIcon;
+  }
+
+  // Mint flow
+  function openMintOverlay() {
+    document.getElementById('mintMinting').style.display = 'block';
+    document.getElementById('mintSuccess').style.display = 'none';
+    ['ms1','ms2','ms3','ms4','ms5'].forEach(id => {
+      const el = document.getElementById(id);
+      el.classList.remove('done','active');
+      el.querySelector('.dot').style.background = 'var(--surface3)';
+    });
+    document.getElementById('mintOverlay').classList.add('open');
+    runMinting();
+  }
+
+  function runMinting() {
+    const steps = [
+      { id:'ms1', title:'Compressing…', sub:'Encoding asset metadata as cNFT' },
+      { id:'ms2', title:'Writing…', sub:'Confirmed on Solana in ~0.4s' },
+      { id:'ms3', title:'Registering…', sub:'Story Protocol royalty hook active' },
+      { id:'ms4', title:'Minting…', sub:'NFT deposited to mariasantos.IN$DEX' },
+      { id:'ms5', title:'Certifying…', sub:'Sovereign ownership certificate issued' },
+    ];
+    let i = 0;
+    const run = () => {
+      if (i > 0) {
+        const prev = document.getElementById(steps[i-1].id);
+        prev.classList.remove('active');
+        prev.classList.add('done');
+        prev.querySelector('.dot').style.background = 'var(--green)';
+      }
+      if (i < steps.length) {
+        const s = steps[i];
+        const el = document.getElementById(s.id);
+        el.classList.add('active');
+        document.getElementById('mintTitle').textContent = s.title;
+        document.getElementById('mintSub').textContent = s.sub;
+        i++;
+        setTimeout(run, 1000);
+      } else {
+        setTimeout(showMintSuccess, 400);
+      }
+    };
+    setTimeout(run, 300);
+  }
+
+  function showMintSuccess() {
+    document.getElementById('mintMinting').style.display = 'none';
+    document.getElementById('mintSuccess').style.display = 'block';
+    const name = document.getElementById('assetName').value.trim() || 'Asset';
+    const tokenId = 'IN$DEX-RWA-' + Math.random().toString(36).substr(2,8).toUpperCase();
+    const royalty = document.getElementById('royaltySlider').value;
+    document.getElementById('successTokenId').textContent = tokenId;
+    document.getElementById('successDesc').textContent = `"${name}" is now a sovereign NFT. Every resale triggers your ${royalty}% royalty automatically via Story Protocol.`;
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+</script>
+
+<div class="bottom-nav-spacer"></div>
+<nav class="bottom-nav">
+  <div class="nav-item" onclick="window.location.href='citizen-dashboard.html'">
+    <div class="nav-icon">🏛️</div>
+    <div class="nav-label">Home</div>
+  </div>
+  <div class="nav-item active" onclick="window.location.href='marketplace.html'">
+    <div class="nav-icon">🛒</div>
+    <div class="nav-label">Market</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='portfolio.html'">
+    <div class="nav-icon">📊</div>
+    <div class="nav-label">Portfolio</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='feed.html'">
+    <div class="nav-icon">🌏</div>
+    <div class="nav-label">Feed</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='profile.html'">
+    <div class="nav-icon">👤</div>
+    <div class="nav-label">Profile</div>
+  </div>
+</nav>
+</body>
+</html>
