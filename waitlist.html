@@ -279,24 +279,69 @@
     badge.classList.toggle('show', val.length >= 4);
   }
 
-  function joinWaitlist() {
+  // SUPABASE CONFIG
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+
+  async function joinWaitlist() {
     const name = document.getElementById('nameInput').value.trim();
     const contact = document.getElementById('contactInput').value.trim();
     if (!name) { showToast('Enter your name first.'); return; }
     if (!contact) { showToast('Add a phone or email — we\'ll notify you.'); return; }
 
-    // Generate position
-    const pos = base + 1;
-    const refCode = 'IND-' + Math.random().toString(36).substr(2,6).toUpperCase();
+    const btn = document.getElementById('submitBtn');
+    btn.textContent = 'Securing your spot...';
+    btn.disabled = true;
 
-    // Show success
-    document.getElementById('signupForm').style.display = 'none';
-    document.getElementById('shareCard').style.display = 'none';
-    document.getElementById('successState').classList.add('show');
-    document.getElementById('queuePosition').textContent = '#' + pos.toLocaleString();
-    document.getElementById('shareLink').textContent = 'https://index.imagenationdex.com/join?ref=' + refCode;
-    base = pos;
-    document.getElementById('waitlistCount').textContent = pos.toLocaleString();
+    // Get selected region
+    const regionBtn = document.querySelector('.region-btn.selected .region-name');
+    const region = regionBtn ? regionBtn.textContent : null;
+
+    // Get referral code if entered
+    const referredBy = document.getElementById('refInput').value.trim() || null;
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/waitlist`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({ name, contact, region, referred_by: referredBy })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        // Duplicate contact — treat gracefully
+        if (err.code === '23505') {
+          showToast('You\'re already on the list! Check your spot below.');
+        } else {
+          throw new Error(err.message);
+        }
+      }
+
+      const data = await res.json();
+      const row = Array.isArray(data) ? data[0] : data;
+      const refCode = row?.referral_code || 'IND-' + Math.random().toString(36).substr(2,6).toUpperCase();
+      const pos = base + 1;
+
+      // Show success
+      document.getElementById('signupForm').style.display = 'none';
+      document.getElementById('shareCard').style.display = 'none';
+      document.getElementById('successState').classList.add('show');
+      document.getElementById('queuePosition').textContent = '#' + pos.toLocaleString();
+      document.getElementById('shareLink').textContent = 'https://imagenationdex.com/join?ref=' + refCode;
+      base = pos;
+      document.getElementById('waitlistCount').textContent = pos.toLocaleString();
+
+    } catch (e) {
+      console.error('Waitlist error:', e);
+      showToast('Something went wrong. Please try again.');
+      btn.textContent = 'Join the Sovereign Republic';
+      btn.disabled = false;
+    }
   }
 
   const shareText = 'I just joined the IN$DEX waitlist — the world\'s first sovereign DeFi for real people. 90 seconds to onboard, no bank needed. Get your spot:';
