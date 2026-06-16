@@ -54,7 +54,7 @@
 ## Part 2: Core Stack & Governance
 
 ### The Sovereign Stack (4 Layers)
-- **Layer 1 — Identity Sovereignty:** yourname.imagenationdex, biometric onboarding, Wisdom Score
+- **Layer 1 — Identity Sovereignty:** yourname.IN$DEX, biometric onboarding, Wisdom Score
 - **Layer 2 — Asset Sovereignty:** Non-custodial wallet, RWA tokenization, NFTs, CryptoCards
 - **Layer 3 — Economic Sovereignty:** INDX token, Genesis Vaults, 2% SovereignPay, 7 revenue streams
 - **Layer 4 — Collaboration Sovereignty:** MemeDAO, WiSenDum governance, Skill Graph

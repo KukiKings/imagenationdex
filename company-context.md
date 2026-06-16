@@ -17,7 +17,7 @@ Meanwhile, a girl selling coconuts on the roadside in the Cook Islands can't acc
 
 IN$DEX is a sovereign decentralised exchange with two equal pillars:
 
-**1. Financial Inclusion** — Zero-friction onboarding for the unbanked and underserved globally. No KYC. No bank account. Sign up via email, mobile number, QR code, or card. Instantly receive a free Web3 domain (yourname.imagenationdex). Immediately able to buy, sell, and receive payments for real-world assets (RWA) and digital assets P2P.
+**1. Financial Inclusion** — Zero-friction onboarding for the unbanked and underserved globally. No KYC. No bank account. Sign up via email, mobile number, QR code, or card. Instantly receive a free Web3 domain (yourname.IN$DEX). Immediately able to buy, sell, and receive payments for real-world assets (RWA) and digital assets P2P.
 
 **2. Creator / Meme Economy** — A living meme economy where creators mint memes as NFTs, sell merch P2P, earn INDX tokens, and govern the platform via MemeDAO. Memes become value. Creators become sovereign.
 

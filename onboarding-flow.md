@@ -48,13 +48,13 @@ Any person, anywhere in the world — no bank account, no ID, no crypto knowledg
 **What they see:**
 - A prompt to choose their free Web3 domain name:
   - *"Choose your IN$DEX name — this is your wallet address"*
-  - Input field: **[yourname].imagenationdex**
+  - Input field: **[yourname].IN$DEX**
   - Real-time availability check
 - A single confirm button: *"Claim My Name"*
 
 **What happens in the background:**
 - SIINDEX creates the user's non-custodial Solana wallet
-- Web3 domain is minted and assigned instantly (yourname.imagenationdex)
+- Web3 domain is minted and assigned instantly (yourname.IN$DEX)
 - Wallet address is linked to domain — no long wallet strings for the user to manage
 - User record created in MemeDAO governance layer
 
@@ -68,7 +68,7 @@ Any person, anywhere in the world — no bank account, no ID, no crypto knowledg
 **What they see:**
 - A confirmation screen:
   - ✅ *"Welcome to IN$DEX, [name]."*
-  - *"Your wallet is live. Your domain is [yourname].imagenationdex"*
+  - *"Your wallet is live. Your domain is [yourname].IN$DEX"*
   - *"You can now receive payments, buy, and sell — instantly."*
 - Two primary action buttons:
   - **Receive Payment** — shows their QR code to share with anyone

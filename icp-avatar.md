@@ -25,7 +25,7 @@ She is not unambitious. She is unequipped.
 
 ## How IN$DEX Helps Her
 
-Someone shows Mama Noe a QR code. She scans it, signs up with her mobile number or email, gets her free Web3 domain — **mamanoe.imagenationdex** — and her wallet is live. No KYC. No bank. No forms.
+Someone shows Mama Noe a QR code. She scans it, signs up with her mobile number or email, gets her free Web3 domain — **mamanoe.IN$DEX** — and her wallet is live. No KYC. No bank. No forms.
 
 Now the tourist with no cash can pay her. The grandchild overseas can send her money. She can receive tithes digitally, pay her grandchildren from her wallet, and sell tuluk to anyone — not just whoever happens to have $1.50 in coins.
 

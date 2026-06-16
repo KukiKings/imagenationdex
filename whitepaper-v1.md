@@ -45,7 +45,7 @@ Zero-friction onboarding for the unbanked. Scan a QR code. Enter a mobile number
 **Pillar 2 — Creator Economy**
 A living meme economy where creators mint NFTs, sell merch P2P, earn INDX tokens, and govern the platform via MemeDAO. Memes become value. Creators become sovereign.
 
-Every new user receives a free Web3 domain — **yourname.imagenationdex** — that serves as their identity, wallet address, and storefront. No long wallet strings. No complexity. Just a name.
+Every new user receives a free Web3 domain — **yourname.IN$DEX** — that serves as their identity, wallet address, and storefront. No long wallet strings. No complexity. Just a name.
 
 ---
 

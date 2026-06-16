@@ -11,7 +11,7 @@
 - SIINDEX COO activated ✅
 - Onboarding flow specification complete ✅
 - Solana smart contract development begins
-- Web3 domain infrastructure scoped (yourname.imagenationdex)
+- Web3 domain infrastructure scoped (yourname.IN$DEX)
 - Lead developer / tech partner engaged
 
 ---
