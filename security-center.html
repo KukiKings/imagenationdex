@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Security Center — IN$DEX</title>
+<style>
+  :root {
+    --cyan: #00D4FF; --blue: #2B35D8; --purple: #8B3FE8;
+    --black: #090A10; --green: #00E5A0; --gold: #FFB800;
+    --red: #FF4D6D; --surface: #12141F; --surface2: #1A1D2E;
+    --surface3: #22263A; --text: #E8EAFF; --text2: #A0A8C8;
+    --text3: #5A6080; --orange: #FF8C00;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--black); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; max-width:430px; margin:0 auto; min-height:100vh; }
+
+  /* TOPBAR */
+  .topbar { position:sticky; top:0; z-index:100; background:rgba(9,10,16,0.95); backdrop-filter:blur(12px); border-bottom:1px solid rgba(0,212,255,0.1); padding:14px 20px; display:flex; align-items:center; justify-content:space-between; }
+  .back-btn { color:var(--cyan); text-decoration:none; font-size:13px; font-weight:600; }
+  .topbar-title { font-size:15px; font-weight:800; }
+  .topbar-badge { font-size:10px; font-weight:700; padding:3px 8px; border-radius:10px; }
+  .badge-t0 { background:rgba(0,229,160,0.15); color:var(--green); }
+  .badge-t2 { background:rgba(255,184,0,0.15); color:var(--gold); }
+  .badge-t3 { background:rgba(255,140,0,0.15); color:var(--orange); }
+  .badge-t4 { background:rgba(255,77,109,0.15); color:var(--red); }
+
+  .page { padding:0 20px 100px; }
+
+  /* PQSI HERO */
+  .pqsi-hero { padding:24px 0 20px; text-align:center; }
+  .pqsi-ring { position:relative; width:100px; height:100px; margin:0 auto 16px; }
+  .pqsi-ring svg { width:100%; height:100%; transform:rotate(-90deg); }
+  .pqsi-inner { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .pqsi-tier { font-size:22px; font-weight:900; color:var(--green); }
+  .pqsi-label { font-size:9px; color:var(--text3); text-transform:uppercase; letter-spacing:0.8px; }
+  .pqsi-title { font-size:18px; font-weight:800; margin-bottom:4px; }
+  .pqsi-sub { font-size:13px; color:var(--text2); }
+
+  /* ALERT BANNER */
+  .alert-banner { display:none; background:rgba(255,77,109,0.08); border:1px solid rgba(255,77,109,0.3); border-radius:14px; padding:14px 16px; margin-bottom:16px; }
+  .alert-banner.show { display:flex; align-items:flex-start; gap:10px; }
+  .alert-icon { font-size:18px; flex-shrink:0; }
+  .alert-text { font-size:13px; color:var(--text2); }
+  .alert-text strong { color:var(--red); }
+
+  /* SECTION */
+  .section { margin-bottom:20px; }
+  .section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text3); margin-bottom:10px; padding-left:2px; }
+
+  /* 7 LAYER STACK */
+  .layer-stack { display:flex; flex-direction:column; gap:6px; }
+  .layer-card { background:var(--surface2); border-radius:12px; padding:12px 14px; display:flex; align-items:center; gap:12px; border-left:3px solid transparent; }
+  .layer-card.active { border-left-color:var(--green); }
+  .layer-card.partial { border-left-color:var(--gold); }
+  .layer-card.pending { border-left-color:var(--text3); }
+  .layer-num { width:24px; height:24px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; flex-shrink:0; }
+  .layer-card.active .layer-num { background:rgba(0,229,160,0.12); color:var(--green); }
+  .layer-card.partial .layer-num { background:rgba(255,184,0,0.12); color:var(--gold); }
+  .layer-card.pending .layer-num { background:rgba(90,96,128,0.2); color:var(--text3); }
+  .layer-info { flex:1; }
+  .layer-name { font-size:13px; font-weight:700; margin-bottom:1px; }
+  .layer-desc { font-size:11px; color:var(--text3); }
+  .layer-status { font-size:10px; font-weight:700; }
+  .status-active { color:var(--green); }
+  .status-partial { color:var(--gold); }
+  .status-pending { color:var(--text3); }
+
+  /* THREAT GRID */
+  .threat-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .threat-card { background:var(--surface2); border-radius:12px; padding:14px; }
+  .threat-dot-row { display:flex; align-items:center; gap:6px; margin-bottom:6px; }
+  .tdot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .tdot-clear { background:var(--green); }
+  .tdot-pending { background:var(--text3); }
+  .tdot-caution { background:var(--gold); animation:blink 1.2s infinite; }
+  .tdot-alert { background:var(--orange); animation:blink 0.8s infinite; }
+  .tdot-critical { background:var(--red); animation:blink 0.5s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .threat-name { font-size:11px; font-weight:700; }
+  .threat-section { font-size:10px; color:var(--text3); margin-bottom:4px; }
+  .threat-detail { font-size:10px; color:var(--text2); }
+
+  /* PROTECTION CARD */
+  .protection-card { background:linear-gradient(135deg,rgba(0,212,255,0.06),rgba(139,63,232,0.06)); border:1px solid rgba(0,212,255,0.15); border-radius:16px; padding:18px; margin-bottom:8px; }
+  .prot-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .prot-title { font-size:13px; font-weight:700; }
+  .prot-pct { font-size:13px; font-weight:800; color:var(--cyan); }
+  .prot-bar-bg { background:var(--surface3); border-radius:10px; height:6px; margin-bottom:12px; }
+  .prot-bar-fill { height:100%; border-radius:10px; background:linear-gradient(90deg,var(--cyan),var(--purple)); }
+  .prot-stats { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .prot-stat { text-align:center; }
+  .prot-stat-val { font-size:15px; font-weight:800; color:var(--text); }
+  .prot-stat-label { font-size:10px; color:var(--text3); }
+
+  /* WISDOM CARD */
+  .wisdom-card { background:var(--surface2); border-radius:14px; padding:16px; }
+  .wisdom-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .wisdom-score { font-size:28px; font-weight:900; color:var(--gold); }
+  .wisdom-max { font-size:13px; color:var(--text3); align-self:flex-end; padding-bottom:4px; }
+  .wisdom-bar-bg { background:var(--surface3); border-radius:10px; height:8px; margin-bottom:10px; overflow:hidden; }
+  .wisdom-bar-fill { height:100%; border-radius:10px; background:linear-gradient(90deg,var(--gold),var(--cyan)); }
+  .wisdom-gates { display:flex; justify-content:space-between; }
+  .wisdom-gate { text-align:center; }
+  .gate-num { font-size:11px; font-weight:700; }
+  .gate-num.unlocked { color:var(--green); }
+  .gate-num.locked { color:var(--text3); }
+  .gate-label { font-size:9px; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; }
+
+  /* GRID ACCOUNT */
+  .grid-card { background:var(--surface2); border-radius:14px; padding:16px; }
+  .grid-header { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .grid-icon { font-size:22px; }
+  .grid-title { font-size:14px; font-weight:700; }
+  .grid-sub { font-size:11px; color:var(--text3); }
+  .mpc-keys { display:flex; flex-direction:column; gap:6px; }
+  .mpc-key { display:flex; align-items:center; gap:8px; background:var(--surface3); border-radius:10px; padding:10px 12px; }
+  .key-icon { font-size:14px; }
+  .key-info { flex:1; }
+  .key-name { font-size:12px; font-weight:700; }
+  .key-detail { font-size:10px; color:var(--text3); }
+  .key-status { font-size:10px; font-weight:700; }
+  .key-active { color:var(--green); }
+  .key-standby { color:var(--text3); }
+  .no-seed { margin-top:10px; background:rgba(0,229,160,0.06); border:1px solid rgba(0,229,160,0.15); border-radius:10px; padding:10px 12px; font-size:12px; color:var(--green); text-align:center; font-weight:700; }
+
+  /* SEVEN LAWS */
+  .laws-list { display:flex; flex-direction:column; gap:6px; }
+  .law-item { display:flex; align-items:flex-start; gap:10px; background:var(--surface2); border-radius:10px; padding:12px 14px; }
+  .law-num { width:22px; height:22px; border-radius:6px; background:linear-gradient(135deg,var(--blue),var(--purple)); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800; flex-shrink:0; color:white; }
+  .law-text { font-size:12px; color:var(--text2); line-height:1.5; }
+  .law-text strong { color:var(--text); }
+
+  /* INCIDENT LOG */
+  .incident-list { display:flex; flex-direction:column; gap:6px; }
+  .incident-empty { text-align:center; padding:20px; color:var(--text3); font-size:13px; }
+  .incident-item { background:var(--surface2); border-radius:10px; padding:12px 14px; display:flex; gap:10px; }
+  .inc-tier { font-size:9px; font-weight:800; padding:2px 8px; border-radius:8px; height:fit-content; flex-shrink:0; }
+  .inc-t0 { background:rgba(0,229,160,0.12); color:var(--green); }
+  .inc-t2 { background:rgba(255,184,0,0.12); color:var(--gold); }
+  .inc-t3 { background:rgba(255,140,0,0.12); color:var(--orange); }
+  .inc-t4 { background:rgba(255,77,109,0.12); color:var(--red); }
+  .inc-body { flex:1; }
+  .inc-desc { font-size:12px; color:var(--text2); margin-bottom:2px; }
+  .inc-date { font-size:10px; color:var(--text3); }
+
+  /* SIINDEX STATUS */
+  .siindex-status { background:var(--surface2); border-radius:14px; padding:16px; display:flex; align-items:center; gap:12px; }
+  .si-avatar { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,var(--blue),var(--purple)); display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:900; color:white; flex-shrink:0; }
+  .si-info { flex:1; }
+  .si-name { font-size:14px; font-weight:800; }
+  .si-role { font-size:11px; color:var(--text3); }
+  .si-pulse { display:flex; align-items:center; gap:5px; margin-top:4px; }
+  .pulse-dot { width:6px; height:6px; border-radius:50%; background:var(--green); animation:blink 1.5s infinite; }
+  .pulse-text { font-size:10px; color:var(--green); font-weight:700; }
+  .si-next { font-size:11px; color:var(--text3); text-align:right; }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<nav class="topbar">
+  <a href="citizen-dashboard.html" class="back-btn">← Dashboard</a>
+  <span class="topbar-title">Security Center</span>
+  <span class="topbar-badge badge-t0" id="topTierBadge">T0 CLEAR</span>
+</nav>
+
+<div class="page">
+
+  <!-- PQSI HERO -->
+  <div class="pqsi-hero">
+    <div class="pqsi-ring">
+      <svg viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(0,229,160,0.12)" stroke-width="8"/>
+        <circle cx="50" cy="50" r="42" fill="none" stroke="#00E5A0" stroke-width="8"
+          stroke-dasharray="264" stroke-dashoffset="66" stroke-linecap="round"/>
+      </svg>
+      <div class="pqsi-inner">
+        <div class="pqsi-tier" id="pqsiTier">T0</div>
+        <div class="pqsi-label">PQSI</div>
+      </div>
+    </div>
+    <div class="pqsi-title">All Systems Secure</div>
+    <div class="pqsi-sub" id="lastScanText">Awaiting first security scan</div>
+  </div>
+
+  <!-- ALERT BANNER (shown on T2+) -->
+  <div class="alert-banner" id="alertBanner">
+    <div class="alert-icon">⚠️</div>
+    <div class="alert-text"><strong>Threat Detected</strong><br><span id="alertDetail">Review the incident log below.</span></div>
+  </div>
+
+  <!-- SIINDEX STATUS -->
+  <div class="section">
+    <div class="siindex-status">
+      <div class="si-avatar">S</div>
+      <div class="si-info">
+        <div class="si-name">SIINDEX</div>
+        <div class="si-role">Sovereign AI COO · Active 24/7</div>
+        <div class="si-pulse">
+          <div class="pulse-dot"></div>
+          <div class="pulse-text">Monitoring all 10 security zones</div>
+        </div>
+      </div>
+      <div class="si-next">
+        <div style="font-size:10px;color:var(--text3)">Next scan</div>
+        <div style="font-size:12px;font-weight:700;color:var(--cyan)" id="nextScanTime">in ~6 hours</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 ACTIVE THREAT MONITORS -->
+  <div class="section">
+    <div class="section-title">Active Threat Monitors</div>
+    <div class="threat-grid">
+      <div class="threat-card">
+        <div class="threat-dot-row">
+          <div class="tdot tdot-pending" id="dot-drain"></div>
+          <div class="threat-name">Wallet Drain</div>
+        </div>
+        <div class="threat-section">Phantom Wallet</div>
+        <div class="threat-detail" id="detail-drain">Awaiting first scan</div>
+      </div>
+      <div class="threat-card">
+        <div class="threat-dot-row">
+          <div class="tdot tdot-pending" id="dot-lp"></div>
+          <div class="threat-name">LP Watch</div>
+        </div>
+        <div class="threat-section">Raydium CLMM</div>
+        <div class="threat-detail" id="detail-lp">Pool not yet created</div>
+      </div>
+      <div class="threat-card">
+        <div class="threat-dot-row">
+          <div class="tdot tdot-pending" id="dot-fake"></div>
+          <div class="threat-name">Fake INDX</div>
+        </div>
+        <div class="threat-section">Token Authority</div>
+        <div class="threat-detail" id="detail-fake">Awaiting token mint</div>
+      </div>
+      <div class="threat-card">
+        <div class="threat-dot-row">
+          <div class="tdot tdot-pending" id="dot-airdrop"></div>
+          <div class="threat-name">Airdrop Scams</div>
+        </div>
+        <div class="threat-section">Token Accounts</div>
+        <div class="threat-detail" id="detail-airdrop">Awaiting first scan</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7-LAYER PQSI STACK -->
+  <div class="section">
+    <div class="section-title">PQSI 7-Layer Security Stack</div>
+    <div class="layer-stack">
+      <div class="layer-card active">
+        <div class="layer-num">7</div>
+        <div class="layer-info">
+          <div class="layer-name">Governance</div>
+          <div class="layer-desc">MemeDAO oversight · Immutable audit trail · Emergency pause</div>
+        </div>
+        <div class="layer-status status-active">ACTIVE</div>
+      </div>
+      <div class="layer-card active">
+        <div class="layer-num">6</div>
+        <div class="layer-info">
+          <div class="layer-name">AI Monitoring</div>
+          <div class="layer-desc">SIINDEX 24/7 surveillance · T0–T4 escalation · 63+ screens</div>
+        </div>
+        <div class="layer-status status-active">ACTIVE</div>
+      </div>
+      <div class="layer-card active">
+        <div class="layer-num">5</div>
+        <div class="layer-info">
+          <div class="layer-name">Transaction</div>
+          <div class="layer-desc">7-point pre-flight · Jito MEV · 98/2 Law · Sanctions check</div>
+        </div>
+        <div class="layer-status status-active">ACTIVE</div>
+      </div>
+      <div class="layer-card active">
+        <div class="layer-num">4</div>
+        <div class="layer-info">
+          <div class="layer-name">Identity</div>
+          <div class="layer-desc">ZK-proof biometric · Phone OTP · Wisdom Score gates · TRISA</div>
+        </div>
+        <div class="layer-status status-active">ACTIVE</div>
+      </div>
+      <div class="layer-card active">
+        <div class="layer-num">3</div>
+        <div class="layer-info">
+          <div class="layer-name">Network</div>
+          <div class="layer-desc">TLS 1.3 · Certificate pinning · Rate limiting · CORS hardening</div>
+        </div>
+        <div class="layer-status status-active">ACTIVE</div>
+      </div>
+      <div class="layer-card partial">
+        <div class="layer-num">2</div>
+        <div class="layer-info">
+          <div class="layer-name">Quantum (PQC)</div>
+          <div class="layer-desc">CRYSTALS-Kyber · CRYSTALS-Dilithium · Post-quantum keys</div>
+        </div>
+        <div class="layer-status status-partial">ROADMAP</div>
+      </div>
+      <div class="layer-card active">
+        <div class="layer-num">1</div>
+        <div class="layer-info">
+          <div class="layer-name">Physical (TEE)</div>
+          <div class="layer-desc">iOS Secure Enclave · Android StrongBox · Keys never exported</div>
+        </div>
+        <div class="layer-status status-active">ACTIVE</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRANSACTION PROTECTION -->
+  <div class="section">
+    <div class="section-title">Transaction Protection</div>
+    <div class="protection-card">
+      <div class="prot-header">
+        <div class="prot-title">🛡️ Agent Wallet Coverage</div>
+        <div class="prot-pct" id="protPct">0% used</div>
+      </div>
+      <div class="prot-bar-bg">
+        <div class="prot-bar-fill" id="protBar" style="width:0%"></div>
+      </div>
+      <div class="prot-stats">
+        <div class="prot-stat">
+          <div class="prot-stat-val" id="protUsed">$0</div>
+          <div class="prot-stat-label">Used this month</div>
+        </div>
+        <div class="prot-stat">
+          <div class="prot-stat-val">$10,000</div>
+          <div class="prot-stat-label">Monthly limit</div>
+        </div>
+        <div class="prot-stat">
+          <div class="prot-stat-val" id="protRemaining">$10,000</div>
+          <div class="prot-stat-label">Remaining</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GRID ACCOUNT -->
+  <div class="section">
+    <div class="section-title">Grid Account — MPC Key Status</div>
+    <div class="grid-card">
+      <div class="grid-header">
+        <div class="grid-icon">🔐</div>
+        <div>
+          <div class="grid-title">Squads Protocol v4 Multisig</div>
+          <div class="grid-sub">2-of-3 keys required to sign. SIINDEX cannot act alone.</div>
+        </div>
+      </div>
+      <div class="mpc-keys">
+        <div class="mpc-key">
+          <div class="key-icon">📱</div>
+          <div class="key-info">
+            <div class="key-name">Key 1 — Device Key</div>
+            <div class="key-detail">TEE-secured · iOS Secure Enclave / Android StrongBox · Never exported</div>
+          </div>
+          <div class="key-status key-active">ACTIVE</div>
+        </div>
+        <div class="mpc-key">
+          <div class="key-icon">👤</div>
+          <div class="key-info">
+            <div class="key-name">Key 2 — Guardian Key</div>
+            <div class="key-detail">Held by your nominated guardian · Required for recovery</div>
+          </div>
+          <div class="key-status key-standby">STANDBY</div>
+        </div>
+        <div class="mpc-key">
+          <div class="key-icon">🤖</div>
+          <div class="key-info">
+            <div class="key-name">Key 3 — SIINDEX Recovery Key</div>
+            <div class="key-detail">TEE-backed HSM · Used only in verified recovery flow · MemeDAO audited</div>
+          </div>
+          <div class="key-status key-standby">STANDBY</div>
+        </div>
+      </div>
+      <div class="no-seed">✓ No seed phrase exists — nothing to steal, nothing to lose</div>
+    </div>
+  </div>
+
+  <!-- WISDOM SCORE SECURITY GATES -->
+  <div class="section">
+    <div class="section-title">Your Wisdom Score — Security Trust Level</div>
+    <div class="wisdom-card">
+      <div class="wisdom-header">
+        <div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:2px">Current Score</div>
+          <div style="display:flex;align-items:baseline;gap:4px">
+            <div class="wisdom-score" id="wisdomScore">0</div>
+            <div class="wisdom-max">/ 200</div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:var(--text3)">Trust Level</div>
+          <div style="font-size:14px;font-weight:800;color:var(--text)" id="wisdomLevel">New Citizen</div>
+        </div>
+      </div>
+      <div class="wisdom-bar-bg">
+        <div class="wisdom-bar-fill" id="wisdomBar" style="width:0%"></div>
+      </div>
+      <div class="wisdom-gates">
+        <div class="wisdom-gate">
+          <div class="gate-num locked" id="gate50">50</div>
+          <div class="gate-label">Governance</div>
+        </div>
+        <div class="wisdom-gate">
+          <div class="gate-num locked" id="gate100">100</div>
+          <div class="gate-label">Yield</div>
+        </div>
+        <div class="wisdom-gate">
+          <div class="gate-num locked" id="gate150">150</div>
+          <div class="gate-label">Fee Cut</div>
+        </div>
+        <div class="wisdom-gate">
+          <div class="gate-num locked" id="gate200">200</div>
+          <div class="gate-label">Elder</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- THE SEVEN LAWS -->
+  <div class="section">
+    <div class="section-title">The Seven Security Laws</div>
+    <div class="laws-list">
+      <div class="law-item"><div class="law-num">1</div><div class="law-text"><strong>No unsigned execution.</strong> SIINDEX never signs without passing all 7 pre-flight checks.</div></div>
+      <div class="law-item"><div class="law-num">2</div><div class="law-text"><strong>98/2 is untouchable.</strong> Any bypass attempt is blocked instantly — no override exists.</div></div>
+      <div class="law-item"><div class="law-num">3</div><div class="law-text"><strong>Biometrics never leave your device.</strong> ZK-proof only — we verify you without ever seeing you.</div></div>
+      <div class="law-item"><div class="law-num">4</div><div class="law-text"><strong>Grid Account requires two keys.</strong> SIINDEX alone cannot access your funds. Ever.</div></div>
+      <div class="law-item"><div class="law-num">5</div><div class="law-text"><strong>2FA is non-negotiable.</strong> Above your threshold, biometric approval is always required.</div></div>
+      <div class="law-item"><div class="law-num">6</div><div class="law-text"><strong>T4 means full stop.</strong> Active attack = all SIINDEX operations halt until AJ authorises resumption.</div></div>
+      <div class="law-item"><div class="law-num">7</div><div class="law-text"><strong>Every event is permanent.</strong> Security logs are immutable — no deletion, no modification, ever.</div></div>
+    </div>
+  </div>
+
+  <!-- INCIDENT LOG -->
+  <div class="section">
+    <div class="section-title">Incident Log</div>
+    <div class="incident-list" id="incidentLog">
+      <div class="incident-empty">🛡️ No incidents recorded.<br>All systems nominal.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── STATE (injected/updated by SIINDEX) ──
+const SECURITY = {
+  threatTier: 'T0',
+  lastScan: null,
+  activeAlert: null,
+  coverage: { used: 0, limit: 10000 },
+  wisdomScore: 0,
+  categories: {
+    drain:   { status: 'pending', detail: 'Awaiting first scan' },
+    lp:      { status: 'pending', detail: 'Pool not yet created' },
+    fake:    { status: 'pending', detail: 'Awaiting token mint' },
+    airdrop: { status: 'pending', detail: 'Awaiting first scan' }
+  },
+  incidents: []
+};
+
+const TIER_COLOURS = { T0:'#00E5A0', T1:'#00D4FF', T2:'#FFB800', T3:'#FF8C00', T4:'#FF4D6D' };
+const TIER_LABELS  = { T0:'T0 CLEAR', T1:'T1 ADVISORY', T2:'T2 CAUTION', T3:'T3 ALERT', T4:'T4 CRITICAL' };
+const DOT_CLASS    = { clear:'tdot-clear', pending:'tdot-pending', caution:'tdot-caution', alert:'tdot-alert', critical:'tdot-critical' };
+const WISDOM_LEVELS = [[0,'New Citizen'],[50,'Participating'],[100,'Sovereign'],[150,'Trusted Elder'],[200,'Sovereign Elder']];
+
+function render() {
+  const tier = SECURITY.threatTier || 'T0';
+  const colour = TIER_COLOURS[tier] || TIER_COLOURS.T0;
+
+  // Tier badge + ring
+  document.getElementById('pqsiTier').textContent = tier;
+  document.getElementById('pqsiTier').style.color = colour;
+  document.getElementById('topTierBadge').textContent = TIER_LABELS[tier] || 'T0 CLEAR';
+  document.getElementById('topTierBadge').style.color = colour;
+  document.getElementById('topTierBadge').style.background = colour + '22';
+
+  // SVG ring colour
+  const ring = document.querySelector('.pqsi-ring circle:nth-child(2)');
+  if (ring) ring.style.stroke = colour;
+
+  // Hero text
+  const heroText = { T0:'All Systems Secure', T1:'Advisory — Monitoring', T2:'Caution — Review Required', T3:'Alert — Action Needed', T4:'Critical — Immediate Action' };
+  document.querySelector('.pqsi-title').textContent = heroText[tier] || 'All Systems Secure';
+  document.getElementById('lastScanText').textContent = SECURITY.lastScan ? 'Last scan: ' + SECURITY.lastScan : 'Awaiting first security scan';
+
+  // Alert banner
+  const banner = document.getElementById('alertBanner');
+  if (SECURITY.activeAlert && tier !== 'T0' && tier !== 'T1') {
+    banner.classList.add('show');
+    document.getElementById('alertDetail').textContent = SECURITY.activeAlert;
+  } else {
+    banner.classList.remove('show');
+  }
+
+  // Threat dots
+  Object.entries(SECURITY.categories).forEach(([key, cat]) => {
+    const dot = document.getElementById('dot-' + key);
+    const detail = document.getElementById('detail-' + key);
+    if (dot) dot.className = 'tdot ' + (DOT_CLASS[cat.status] || 'tdot-pending');
+    if (detail) detail.textContent = cat.detail;
+  });
+
+  // Coverage
+  const used = SECURITY.coverage.used || 0;
+  const limit = SECURITY.coverage.limit || 10000;
+  const pct = Math.min(100, Math.round((used / limit) * 100));
+  document.getElementById('protPct').textContent = pct + '% used';
+  document.getElementById('protBar').style.width = pct + '%';
+  document.getElementById('protUsed').textContent = '$' + used.toLocaleString();
+  document.getElementById('protRemaining').textContent = '$' + (limit - used).toLocaleString();
+
+  // Wisdom score
+  const score = SECURITY.wisdomScore || 0;
+  document.getElementById('wisdomScore').textContent = score;
+  document.getElementById('wisdomBar').style.width = (score / 200 * 100) + '%';
+  const level = [...WISDOM_LEVELS].reverse().find(([s]) => score >= s);
+  document.getElementById('wisdomLevel').textContent = level ? level[1] : 'New Citizen';
+  [50,100,150,200].forEach(gate => {
+    const el = document.getElementById('gate' + gate);
+    if (el) el.className = 'gate-num ' + (score >= gate ? 'unlocked' : 'locked');
+  });
+
+  // Incident log
+  const logEl = document.getElementById('incidentLog');
+  if (!SECURITY.incidents || SECURITY.incidents.length === 0) {
+    logEl.innerHTML = '<div class="incident-empty">🛡️ No incidents recorded.<br>All systems nominal.</div>';
+  } else {
+    logEl.innerHTML = [...SECURITY.incidents].reverse().slice(0, 10).map(inc => {
+      const cls = 'inc-' + (inc.tier || 'T0').toLowerCase();
+      return `<div class="incident-item">
+        <div class="inc-tier ${cls}">${inc.tier || 'T0'}</div>
+        <div class="inc-body">
+          <div class="inc-desc">${inc.description}</div>
+          <div class="inc-date">${inc.date} · ${inc.resolved ? '✓ Resolved' : '⚠ Active'}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Next scan (approximate — 6h from last scan)
+  if (SECURITY.lastScan) {
+    document.getElementById('nextScanTime').textContent = 'within 6 hours';
+  }
+}
+
+render();
+</script>
+</body>
+</html>

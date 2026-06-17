@@ -181,12 +181,12 @@
       <div class="mc-desc">Restore from your encrypted Cloud Key stored in iCloud / Google Drive. Fastest method — no words to type.</div>
     </div>
 
-    <div class="method-card" id="mPhrase" onclick="selectMethod('phrase')">
+    <div class="method-card" id="mGuardian" onclick="selectMethod('guardian')">
       <div class="mc-top">
-        <div class="mc-icon" style="background:rgba(139,63,232,0.1);">📋</div>
-        <div><div class="mc-name">12-Word Recovery Phrase</div></div>
+        <div class="mc-icon" style="background:rgba(139,63,232,0.1);">🤝</div>
+        <div><div class="mc-name">Guardian Recovery</div></div>
       </div>
-      <div class="mc-desc">Enter the 12-word recovery phrase you saved when you created your Grid Account.</div>
+      <div class="mc-desc">Ask your designated Guardian to approve your recovery request. They'll tap "Approve" in their IN$DEX app — no words, no phrases.</div>
     </div>
 
     <div class="method-card" id="mBio" onclick="selectMethod('biometric')">
@@ -219,13 +219,34 @@
     <button class="btn-ghost" onclick="showScreen('screen2')">← Choose different method</button>
   </div>
 
-  <!-- SCREEN 2c: 12-WORD PHRASE -->
-  <div class="screen" id="screen2phrase">
-    <div class="screen-title" style="margin-bottom:6px;">Enter recovery phrase</div>
-    <div class="screen-sub" style="margin-bottom:20px;">Enter your 12 words in the exact order you saved them. Never share these with anyone.</div>
-    <div class="key-grid" id="wordGrid"></div>
-    <button class="btn-primary" id="phraseBtn" onclick="verifyPhrase()" disabled>Restore account</button>
-    <button class="btn-ghost" onclick="showScreen('screen2')">← Back</button>
+  <!-- SCREEN 2c: GUARDIAN RECOVERY -->
+  <div class="screen" id="screen2guardian">
+    <div class="screen-icon">🤝</div>
+    <div class="screen-title">Guardian Recovery</div>
+    <div class="screen-sub">Your Guardian will receive a push notification asking them to approve your recovery. This is your MPC Recovery Key — held by a trusted person you chose.</div>
+    <div class="security-note">
+      <strong>🔒 No words. No phrases.</strong> Guardian Recovery uses your 2-of-3 MPC keys. Your Guardian taps "Approve" — that's it. No sensitive information is ever shared.
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:20px;">
+      <div style="display:flex;align-items:center;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--border);margin-bottom:12px;">
+        <div style="font-size:28px;">👤</div>
+        <div>
+          <div style="font-size:14px;font-weight:700;">Your Guardian</div>
+          <div style="font-size:12px;color:var(--text-muted);">Recovery approval request will be sent to their device</div>
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--text-muted);line-height:1.6;">
+        1. Tap "Send recovery request" below<br>
+        2. Contact your Guardian — tell them to open IN$DEX<br>
+        3. They'll see an approval notification and tap "Approve"<br>
+        4. Your access is restored instantly
+      </div>
+    </div>
+    <div style="background:rgba(255,184,0,0.06);border:1px solid rgba(255,184,0,0.15);border-radius:12px;padding:12px 14px;margin-bottom:20px;font-size:12px;color:var(--text-muted);">
+      ⏱️ <strong style="color:var(--gold);">Guardian must approve within 24 hours.</strong> If they don't respond, contact SIINDEX support.
+    </div>
+    <button class="btn-primary" onclick="sendGuardianRequest()">🤝 Send recovery request</button>
+    <button class="btn-ghost" onclick="showScreen('screen2')">← Choose different method</button>
   </div>
 
   <!-- SCREEN 2d: BIOMETRIC -->
@@ -338,7 +359,7 @@
 
   function selectMethod(m) {
     recovMethod = m;
-    ['cloud','phrase','biometric'].forEach(k => {
+    ['cloud','guardian','biometric'].forEach(k => {
       const el = document.getElementById('m' + k.charAt(0).toUpperCase() + k.slice(1));
       if (el) el.classList.toggle('selected', k === m);
     });
@@ -346,7 +367,7 @@
 
   function goRecovery() {
     if (recovMethod === 'cloud') showScreen('screen2cloud');
-    else if (recovMethod === 'phrase') { buildWordGrid(); showScreen('screen2phrase'); }
+    else if (recovMethod === 'guardian') { showScreen('screen2guardian'); }
     else showScreen('screen2bio');
   }
 
@@ -358,24 +379,13 @@
     }, 2000);
   }
 
-  function buildWordGrid() {
-    const grid = document.getElementById('wordGrid');
-    grid.innerHTML = Array.from({length:12}, (_,i) => `
-      <div class="key-word">
-        <span class="kw-num">${i+1}</span>
-        <input class="kw-input" type="text" placeholder="word" oninput="checkPhrase()">
-      </div>`).join('');
-  }
-
-  function checkPhrase() {
-    const inputs = document.querySelectorAll('.kw-input');
-    const filled = [...inputs].every(i => i.value.trim().length > 0);
-    document.getElementById('phraseBtn').disabled = !filled;
-  }
-
-  function verifyPhrase() {
-    showToast('Verifying phrase…');
-    setTimeout(() => { setProgress(2); showScreen('screen3'); }, 1800);
+  function sendGuardianRequest() {
+    showToast('🤝 Recovery request sent to your Guardian');
+    setTimeout(() => {
+      document.getElementById('screen2guardian').querySelector('.btn-primary').textContent = '⏳ Waiting for Guardian approval…';
+      document.getElementById('screen2guardian').querySelector('.btn-primary').disabled = true;
+    }, 500);
+    // In production: SIINDEX sends push notification to guardian's device via Supabase
   }
 
   function startBioScan() {
