@@ -1027,14 +1027,119 @@
     applyMode(!current);
   }
 
-  // ── INIT: pull name from URL param or use demo ──
-  window.addEventListener('DOMContentLoaded', () => {
-    const params = new URLSearchParams(location.search);
-    const name = params.get('name') || 'Maria Santos';
-    const goal = params.get('goal') || 'earn';
-    initDashboard(name, goal);
-    animateWisdom();
-    // Apply saved mode (default: simple ON for new users)
+  // ── SUPABASE AUTH + LIVE DATA ──
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+
+  window.addEventListener('DOMContentLoaded', async () => {
+    // Dynamically load Supabase if not already loaded
+    if (!window.supabase) {
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+    }
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    // Check session
+    const { data: { session } } = await sb.auth.getSession();
+
+    if (session) {
+      // Load citizen data from Supabase
+      const { data: citizen } = await sb
+        .from('citizens')
+        .select('citizen_name, web3_domain, wisdom_score, indx_balance, genesis_citizen, kyc_tier')
+        .eq('auth_user_id', session.user.id)
+        .single();
+
+      if (citizen) {
+        const name = citizen.citizen_name || 'Sovereign';
+        const domain = citizen.web3_domain ? citizen.web3_domain.replace('.indx','') + '.IN$DEX' : 'sovereign.IN$DEX';
+        const wisdom = citizen.wisdom_score || 0;
+        const balance = citizen.indx_balance || 0;
+
+        initDashboard(name, 'earn');
+
+        // Override domain with real one
+        document.getElementById('headerDomain').textContent = domain;
+
+        // Update wisdom score ring
+        const ring = document.getElementById('wisdomRing');
+        const bar = document.getElementById('wisdomBar');
+        if (ring) {
+          setTimeout(() => {
+            const pct = Math.min(wisdom / 200, 1);
+            ring.style.strokeDashoffset = (163 - (163 * pct)).toFixed(1);
+            if (bar) bar.style.width = (pct * 100) + '%';
+          }, 400);
+          const scoreEl = ring.closest('.wisdom-ring')?.querySelector('.wisdom-score-val');
+          if (scoreEl) scoreEl.textContent = wisdom;
+          const labelEl = document.querySelector('.wisdom-progress-label');
+          if (labelEl) labelEl.textContent = `${wisdom} / 200 — tap to see full breakdown ›`;
+        }
+
+        // Update balance display
+        const balEl = document.querySelector('.balance-amount');
+        if (balEl) {
+          balEl.textContent = balance.toLocaleString() + ' INDX';
+        }
+
+        // Load recent transactions
+        const { data: txs } = await sb
+          .from('transactions')
+          .select('amount_indx, direction, status, created_at, counterparty_address')
+          .eq('citizen_id', (await sb.from('citizens').select('id').eq('auth_user_id', session.user.id).single()).data?.id)
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (txs && txs.length) {
+          const actList = document.querySelector('.activity-list');
+          if (actList) {
+            actList.innerHTML = txs.map(tx => {
+              const sign = tx.direction === 'receive' ? '+' : '−';
+              const cls = tx.direction === 'receive' ? 'plus' : 'minus';
+              const d = new Date(tx.created_at);
+              const when = d.toLocaleDateString('en-AU', { day:'numeric', month:'short' });
+              return `<div class="activity-item">
+                <div class="activity-icon" style="background:${tx.direction==='receive'?'rgba(0,229,160,0.1)':'rgba(255,77,109,0.1)'}">
+                  ${tx.direction==='receive'?'📥':'📤'}
+                </div>
+                <div class="activity-body">
+                  <div class="activity-desc">${tx.direction==='receive'?'Received from':'Sent to'} ${tx.counterparty_address||'—'}</div>
+                  <div class="activity-meta">${when} · ${tx.status}</div>
+                </div>
+                <div class="activity-amount ${cls}">${sign}${tx.amount_indx} INDX</div>
+              </div>`;
+            }).join('');
+          }
+        }
+
+        // Wire sign-out
+        const signOutEl = document.querySelector('[onclick*="signout"], [onclick*="sign-out"], [href*="signout"]');
+        if (!signOutEl) {
+          const avatarEl = document.getElementById('avatarEl');
+          if (avatarEl) avatarEl.setAttribute('title', 'Tap to sign out');
+          avatarEl?.addEventListener('contextmenu', async (e) => {
+            e.preventDefault();
+            await sb.auth.signOut();
+            window.location.href = 'login.html';
+          });
+        }
+      } else {
+        // Has session but no citizen row — complete signup
+        window.location.href = 'login.html';
+      }
+    } else {
+      // No session — use demo mode (URL param) for now
+      const params = new URLSearchParams(location.search);
+      const name = params.get('name') || 'Maria Santos';
+      const goal = params.get('goal') || 'earn';
+      initDashboard(name, goal);
+      animateWisdom();
+    }
+
     const saved = localStorage.getItem('simpleMode');
     applyMode(saved === null ? true : saved !== '0');
   });
