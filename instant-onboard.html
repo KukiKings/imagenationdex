@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IN$DEX — Instant Onboard</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --cyan-bg:#071825; --black:#090A10; --surface:#12141F;
+    --surface2:#1A1D2E; --surface3:#22263A; --border:#2A2D38;
+    --text:#EAEAEA; --text-muted:#6B7080; --text-dim:#3D4050;
+    --green:#00E5A0; --green-bg:#0A1F18; --purple:#8B3FE8; --gold:#FFB800;
+    --red:#FF4D6D;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none;}
+  .shell{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;}
+  .scroll-body{flex:1;overflow-y:auto;padding-bottom:40px;-webkit-overflow-scrolling:touch;}
+  .scroll-body::-webkit-scrollbar{display:none;}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid var(--border);}
+  .topbar-back{width:38px;height:38px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;}
+  .topbar-title{font-size:17px;font-weight:700;}
+  .topbar-right{width:38px;}
+
+  /* HERO */
+  .hero{padding:28px 20px 0;text-align:center;}
+  .hero-label{display:inline-flex;align-items:center;gap:6px;background:var(--green-bg);border:1px solid var(--green);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;color:var(--green);margin-bottom:16px;}
+  .hero-title{font-size:24px;font-weight:800;line-height:1.25;margin-bottom:8px;}
+  .hero-title span{color:var(--cyan);}
+  .hero-sub{font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:24px;}
+
+  /* AMOUNT SEND */
+  .amount-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin:0 20px 20px;display:flex;align-items:center;justify-content:space-between;}
+  .amount-left .label{font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;}
+  .amount-left .value{font-size:26px;font-weight:800;color:var(--cyan);}
+  .amount-left .usd{font-size:12px;color:var(--text-muted);margin-top:2px;}
+  .amount-edit{padding:8px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;font-size:13px;color:var(--text-muted);cursor:pointer;}
+  .amount-edit:active{background:var(--surface3);}
+
+  /* QR */
+  .qr-section{padding:0 20px 20px;}
+  .qr-card{background:var(--surface);border:1.5px solid var(--cyan);border-radius:20px;padding:24px;text-align:center;}
+  .qr-label{font-size:12px;font-weight:600;color:var(--cyan);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:16px;}
+  .qr-box{width:200px;height:200px;margin:0 auto 16px;background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+  .qr-inner{width:180px;height:180px;display:grid;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(10,1fr);gap:1px;}
+  .qr-inner div{background:#090A10;border-radius:1px;}
+  .qr-corner{position:absolute;border:3px solid #090A10;border-radius:4px;}
+  .qr-corner.tl{top:10px;left:10px;width:36px;height:36px;}
+  .qr-corner.tr{top:10px;right:10px;width:36px;height:36px;}
+  .qr-corner.bl{bottom:10px;left:10px;width:36px;height:36px;}
+  .qr-sub{font-size:13px;color:var(--text-muted);line-height:1.5;margin-bottom:16px;}
+  .qr-sub strong{color:var(--text);}
+  .qr-timer{display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 14px;font-size:13px;color:var(--gold);}
+
+  /* DIVIDER */
+  .or-divider{display:flex;align-items:center;gap:12px;padding:16px 20px;}
+  .or-divider .line{flex:1;height:1px;background:var(--border);}
+  .or-divider span{font-size:12px;color:var(--text-dim);font-weight:600;}
+
+  /* PHONE ENTRY */
+  .phone-section{padding:0 20px 20px;}
+  .section-label{font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;}
+  .phone-row{display:flex;gap:8px;}
+  .dial-btn{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:0 14px;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;font-weight:600;flex-shrink:0;}
+  .phone-input-wrap{flex:1;background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:4px 16px;display:flex;align-items:center;transition:border-color 0.2s;}
+  .phone-input-wrap:focus-within{border-color:var(--cyan);}
+  .phone-input{flex:1;background:transparent;border:none;outline:none;font-size:16px;color:var(--text);padding:10px 0;}
+  .phone-input::placeholder{color:var(--text-dim);}
+  .send-phone-btn{width:100%;margin-top:10px;padding:14px;border-radius:14px;background:var(--cyan);border:none;color:#000;font-size:15px;font-weight:800;cursor:pointer;transition:opacity 0.2s;}
+  .send-phone-btn:active{opacity:0.85;}
+
+  /* STEPS */
+  .steps-section{padding:0 20px 20px;}
+  .steps-title{font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;}
+  .step-row{display:flex;gap:14px;align-items:flex-start;margin-bottom:14px;}
+  .step-num{width:28px;height:28px;border-radius:50%;background:var(--cyan-bg);border:1.5px solid var(--cyan);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--cyan);flex-shrink:0;margin-top:1px;}
+  .step-text .step-h{font-size:14px;font-weight:700;margin-bottom:2px;}
+  .step-text .step-s{font-size:12px;color:var(--text-muted);line-height:1.5;}
+
+  /* SUCCESS OVERLAY */
+  .overlay{position:fixed;inset:0;background:rgba(9,10,16,0.97);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+  .overlay.show{opacity:1;pointer-events:all;}
+  .success-card{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:32px 24px;width:calc(100% - 48px);max-width:360px;text-align:center;}
+  .pulse-ring{width:80px;height:80px;border-radius:50%;background:var(--green-bg);border:2px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 16px;animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,229,160,0.3)}50%{box-shadow:0 0 0 12px rgba(0,229,160,0)}}
+  .s-title{font-size:22px;font-weight:800;margin-bottom:6px;}
+  .s-name{font-size:18px;color:var(--cyan);font-weight:700;margin-bottom:4px;}
+  .s-domain{font-size:13px;color:var(--text-muted);margin-bottom:16px;}
+  .s-pill{display:inline-flex;align-items:center;gap:6px;background:var(--green-bg);border:1px solid var(--green);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;color:var(--green);margin-bottom:24px;}
+  .s-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;}
+  .s-row:last-of-type{border-bottom:none;}
+  .s-label{color:var(--text-muted);}
+  .btn-primary{width:100%;padding:15px;border-radius:14px;background:var(--cyan);border:none;color:#000;font-size:16px;font-weight:800;cursor:pointer;margin-top:20px;margin-bottom:10px;}
+  .btn-secondary{width:100%;padding:14px;border-radius:14px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;}
+
+  /* EDIT AMOUNT OVERLAY */
+  .amount-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:300;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+  .amount-overlay.show{opacity:1;pointer-events:all;}
+  .amount-sheet{background:var(--surface2);border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-width:430px;}
+  .amount-sheet h3{font-size:16px;font-weight:700;margin-bottom:16px;}
+  .amount-input{width:100%;background:var(--surface3);border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;font-size:24px;font-weight:800;color:var(--text);outline:none;text-align:center;}
+  .amount-input:focus{border-color:var(--cyan);}
+  .quick-amounts{display:flex;gap:8px;margin-top:12px;}
+  .qa{flex:1;padding:10px;border-radius:10px;background:var(--surface3);border:1px solid var(--border);font-size:14px;font-weight:700;text-align:center;cursor:pointer;color:var(--text);}
+  .qa:active{background:var(--cyan-bg);border-color:var(--cyan);color:var(--cyan);}
+  .set-btn{width:100%;margin-top:14px;padding:14px;border-radius:12px;background:var(--cyan);border:none;color:#000;font-size:15px;font-weight:800;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <div class="topbar-back" onclick="window.history.back()">←</div>
+    <div class="topbar-title">Instant Onboard</div>
+    <div class="topbar-right"></div>
+  </div>
+
+  <div class="scroll-body">
+
+    <div class="hero">
+      <div class="hero-label">⚡ 90 seconds</div>
+      <div class="hero-title">Get anyone on <span>IN$DEX</span><br>right now</div>
+      <div class="hero-sub">Show them the QR code. They scan, onboard in 90 seconds, and receive your payment instantly — no bank account, no ID documents.</div>
+    </div>
+
+    <!-- AMOUNT TO SEND -->
+    <div class="amount-card">
+      <div class="amount-left">
+        <div class="label">Sending after onboard</div>
+        <div class="value" id="sendAmount">50 INDX</div>
+        <div class="usd" id="sendUsd">≈ $17.50 USD</div>
+      </div>
+      <div class="amount-edit" onclick="openAmountEditor()">Edit</div>
+    </div>
+
+    <!-- QR CODE -->
+    <div class="qr-section">
+      <div class="qr-card">
+        <div class="qr-label">📷 They scan this QR code</div>
+        <div class="qr-box">
+          <!-- Stylised QR pattern -->
+          <svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <rect width="200" height="200" fill="white"/>
+            <!-- Top-left finder -->
+            <rect x="10" y="10" width="56" height="56" rx="6" fill="#090A10"/>
+            <rect x="18" y="18" width="40" height="40" rx="4" fill="white"/>
+            <rect x="24" y="24" width="28" height="28" rx="3" fill="#090A10"/>
+            <!-- Top-right finder -->
+            <rect x="134" y="10" width="56" height="56" rx="6" fill="#090A10"/>
+            <rect x="142" y="18" width="40" height="40" rx="4" fill="white"/>
+            <rect x="148" y="24" width="28" height="28" rx="3" fill="#090A10"/>
+            <!-- Bottom-left finder -->
+            <rect x="10" y="134" width="56" height="56" rx="6" fill="#090A10"/>
+            <rect x="18" y="142" width="40" height="40" rx="4" fill="white"/>
+            <rect x="24" y="148" width="28" height="28" rx="3" fill="#090A10"/>
+            <!-- Data dots pattern -->
+            <rect x="76" y="10" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="88" y="10" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="100" y="10" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="76" y="22" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="100" y="22" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="88" y="34" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="76" y="46" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="88" y="46" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="100" y="46" width="8" height="8" rx="2" fill="#090A10"/>
+            <!-- Middle data -->
+            <rect x="10" y="76" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="22" y="76" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="46" y="76" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="58" y="76" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="76" y="76" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="100" y="76" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="112" y="76" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="136" y="76" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="160" y="76" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="172" y="76" width="8" height="8" rx="2" fill="#090A10"/>
+            <!-- Centre logo area -->
+            <rect x="82" y="82" width="36" height="36" rx="8" fill="#090A10"/>
+            <text x="100" y="106" text-anchor="middle" fill="#00D4FF" font-size="16" font-weight="900" font-family="Arial">IN$</text>
+            <!-- Lower data -->
+            <rect x="10" y="100" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="34" y="100" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="58" y="100" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="136" y="100" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="148" y="100" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="172" y="100" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="10" y="112" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="46" y="112" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="136" y="112" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="160" y="112" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="76" y="124" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="100" y="124" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="124" y="124" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="136" y="136" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="160" y="136" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="172" y="148" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="136" y="160" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="148" y="172" width="8" height="8" rx="2" fill="#090A10"/>
+            <rect x="172" y="172" width="8" height="8" rx="2" fill="#090A10"/>
+          </svg>
+        </div>
+        <div class="qr-sub">Points to <strong>imagenationdex.com/join</strong><br>Works on any phone, no app needed first</div>
+        <div class="qr-timer" id="qrTimer">⏱ Refreshes in 4:59</div>
+      </div>
+    </div>
+
+    <div class="or-divider">
+      <div class="line"></div>
+      <span>OR ENTER THEIR NUMBER</span>
+      <div class="line"></div>
+    </div>
+
+    <!-- PHONE FALLBACK -->
+    <div class="phone-section">
+      <div class="section-label">Their mobile number</div>
+      <div class="phone-row">
+        <div class="dial-btn">🇦🇺 +61</div>
+        <div class="phone-input-wrap">
+          <input class="phone-input" type="tel" id="phoneInput" placeholder="Mobile number" inputmode="numeric">
+        </div>
+      </div>
+      <button class="send-phone-btn" onclick="triggerSMSOnboard()">Send Onboard Link via SMS</button>
+    </div>
+
+    <!-- HOW IT WORKS -->
+    <div class="steps-section">
+      <div class="steps-title">What happens next</div>
+      <div class="step-row">
+        <div class="step-num">1</div>
+        <div class="step-text">
+          <div class="step-h">They scan or tap the link</div>
+          <div class="step-s">Opens IN$DEX in their browser. No app download needed to start.</div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-num">2</div>
+        <div class="step-text">
+          <div class="step-h">Phone + face scan — 90 seconds</div>
+          <div class="step-s">Their identity is verified through liveness detection. No documents. No waiting.</div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-num">3</div>
+        <div class="step-text">
+          <div class="step-h">Web3 wallet + domain created</div>
+          <div class="step-s">They receive a sovereign wallet and a Web3 domain name — theirs forever.</div>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-num">4</div>
+        <div class="step-text">
+          <div class="step-h">Your payment arrives instantly</div>
+          <div class="step-s">The moment they finish onboarding, your INDX lands in their wallet. They're ready to spend, save, or send.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- EDIT AMOUNT OVERLAY -->
+<div class="amount-overlay" id="amountOverlay" onclick="closeAmountEditor(event)">
+  <div class="amount-sheet" onclick="event.stopPropagation()">
+    <h3>How much are you sending?</h3>
+    <input class="amount-input" type="number" id="amountInput" placeholder="0" min="0" step="1" oninput="updateAmountPreview()">
+    <div class="quick-amounts">
+      <div class="qa" onclick="setQuick(10)">10 INDX</div>
+      <div class="qa" onclick="setQuick(50)">50 INDX</div>
+      <div class="qa" onclick="setQuick(100)">100 INDX</div>
+      <div class="qa" onclick="setQuick(200)">200 INDX</div>
+    </div>
+    <button class="set-btn" onclick="confirmAmount()">Set Amount</button>
+  </div>
+</div>
+
+<!-- SUCCESS OVERLAY -->
+<div class="overlay" id="successOverlay">
+  <div class="success-card" id="successCard">
+    <div class="pulse-ring">✓</div>
+    <div class="s-title">She's in!</div>
+    <div class="s-name" id="sName">New Citizen</div>
+    <div class="s-domain" id="sDomain">citizen.IN$DEX</div>
+    <div class="s-pill">⚡ Wallet created · Payment sent</div>
+    <div class="s-row"><span class="s-label">Sent</span><span id="sSent" style="color:var(--cyan);font-weight:700;">50 INDX</span></div>
+    <div class="s-row"><span class="s-label">USD value</span><span id="sUsd">≈ $17.50</span></div>
+    <div class="s-row"><span class="s-label">Web3 domain</span><span id="sDom2" style="color:var(--green);">citizen.IN$DEX</span></div>
+    <div class="s-row"><span class="s-label">Wisdom Score</span><span style="color:var(--gold);">10 pts — Welcome bonus</span></div>
+    <button class="btn-primary" onclick="window.location.href='send.html'">Send to Someone Else</button>
+    <button class="btn-secondary" onclick="window.location.href='citizen-dashboard.html'">Back to Dashboard</button>
+  </div>
+</div>
+
+<script>
+  let sendAmountINDX = 50;
+  const INDX_RATE = 0.35;
+
+  function updateAmountDisplay() {
+    const usd = (sendAmountINDX * INDX_RATE).toFixed(2);
+    document.getElementById('sendAmount').textContent = sendAmountINDX + ' INDX';
+    document.getElementById('sendUsd').textContent = '≈ $' + usd + ' USD';
+  }
+
+  function openAmountEditor() {
+    document.getElementById('amountInput').value = sendAmountINDX;
+    document.getElementById('amountOverlay').classList.add('show');
+  }
+  function closeAmountEditor(e) {
+    document.getElementById('amountOverlay').classList.remove('show');
+  }
+  function setQuick(n) {
+    document.getElementById('amountInput').value = n;
+    updateAmountPreview();
+  }
+  function updateAmountPreview() {}
+  function confirmAmount() {
+    const v = parseInt(document.getElementById('amountInput').value) || 50;
+    sendAmountINDX = v;
+    updateAmountDisplay();
+    document.getElementById('amountOverlay').classList.remove('show');
+  }
+
+  // QR timer countdown
+  let seconds = 299;
+  setInterval(() => {
+    seconds--;
+    if (seconds < 0) seconds = 299;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    document.getElementById('qrTimer').textContent = `⏱ Refreshes in ${m}:${s.toString().padStart(2,'0')}`;
+  }, 1000);
+
+  // Simulate scan complete (demo)
+  let scanTimer;
+  function startScanWatch() {
+    scanTimer = setTimeout(() => {
+      showSuccess('Nia Tuilagi', 'nia.IN$DEX');
+    }, 8000);
+  }
+  startScanWatch();
+
+  function triggerSMSOnboard() {
+    const phone = document.getElementById('phoneInput').value.trim();
+    if (!phone) { showToast('Enter their mobile number first'); return; }
+    showToast('Onboard link sent via SMS ✓');
+    setTimeout(() => showSuccess('New Citizen', 'citizen.IN$DEX'), 4000);
+  }
+
+  function showSuccess(name, domain) {
+    const usd = (sendAmountINDX * INDX_RATE).toFixed(2);
+    document.getElementById('sName').textContent = name;
+    document.getElementById('sDomain').textContent = domain;
+    document.getElementById('sSent').textContent = sendAmountINDX + ' INDX';
+    document.getElementById('sUsd').textContent = '≈ $' + usd + ' USD';
+    document.getElementById('sDom2').textContent = domain;
+    document.getElementById('successOverlay').classList.add('show');
+  }
+
+  let toastTimer;
+  function showToast(msg) {
+    let t = document.getElementById('toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'toast';
+      t.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1A1D25;border:1px solid #2A2D38;color:#EAEAEA;padding:10px 20px;border-radius:12px;font-size:14px;z-index:500;pointer-events:none;transition:opacity 0.3s;white-space:nowrap;';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.style.opacity = '0', 2400);
+  }
+
+  updateAmountDisplay();
+</script>
+</body>
+</html>

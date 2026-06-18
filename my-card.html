@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IN$DEX — My Card</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8; --black:#090A10;
+    --green:#00E5A0; --green-bg:#0A1F18; --gold:#FFB800; --red:#FF4D6D;
+    --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+    --border:#2A2D38; --text:#EAEAEA; --text-muted:#6B7080;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none;}
+  .shell{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;}
+
+  /* TOPBAR */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;position:sticky;top:0;background:var(--black);z-index:50;border-bottom:1px solid var(--border);}
+  .tb-back{width:36px;height:36px;border-radius:50%;background:var(--surface);border:none;color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .tb-title{font-size:16px;font-weight:700;}
+  .tb-menu{width:36px;height:36px;border-radius:50%;background:var(--surface);border:none;color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+
+  /* CARD DISPLAY */
+  .card-stage{padding:24px 24px 16px;perspective:1200px;}
+  .card-3d{position:relative;width:100%;max-width:360px;margin:0 auto;aspect-ratio:1.586/1;border-radius:20px;background:linear-gradient(135deg,var(--blue) 0%,var(--purple) 60%,var(--cyan) 100%);padding:24px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 20px 60px rgba(43,53,216,0.4),0 0 0 1px rgba(255,255,255,0.08);cursor:pointer;transition:transform 0.6s;transform-style:preserve-3d;user-select:none;}
+  .card-3d.flipped{transform:rotateY(180deg);}
+  .card-front,.card-back{position:absolute;inset:0;border-radius:20px;backface-visibility:hidden;padding:24px;}
+  .card-back{background:linear-gradient(135deg,var(--blue),var(--purple));transform:rotateY(180deg);display:flex;flex-direction:column;justify-content:center;align-items:center;}
+  .card-logo{font-size:15px;font-weight:900;letter-spacing:0.08em;color:rgba(255,255,255,0.9);}
+  .card-chip{width:36px;height:28px;border-radius:5px;background:linear-gradient(135deg,#FFB800,#FFF0A0);margin:8px 0;}
+  .card-front-body{display:flex;flex-direction:column;gap:4px;}
+  .card-number{font-size:16px;letter-spacing:0.2em;font-weight:600;color:#fff;}
+  .card-row{display:flex;justify-content:space-between;align-items:flex-end;}
+  .card-label{font-size:9px;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.08em;}
+  .card-value{font-size:13px;font-weight:600;color:#fff;}
+  .card-brand{font-size:11px;font-weight:800;color:rgba(255,255,255,0.8);text-align:right;}
+  .card-tap-hint{font-size:11px;color:rgba(255,255,255,0.5);text-align:center;margin-top:10px;}
+  .card-type-row{display:flex;justify-content:center;gap:8px;margin:12px 0 16px;}
+  .type-pill{padding:6px 16px;border-radius:20px;font-size:12px;font-weight:700;border:2px solid var(--border);color:var(--text-muted);cursor:pointer;transition:all 0.2s;}
+  .type-pill.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,0.08);}
+
+  /* STATUS */
+  .card-status{margin:0 24px 16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;}
+  .cs-left{display:flex;align-items:center;gap:10px;}
+  .cs-dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);}
+  .cs-dot.frozen{background:var(--red);box-shadow:0 0 8px var(--red);}
+  .cs-label{font-size:13px;font-weight:700;}
+  .cs-sub{font-size:11px;color:var(--text-muted);}
+  .freeze-btn{padding:7px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;font-weight:700;cursor:pointer;}
+  .freeze-btn.frozen{border-color:var(--red);color:var(--red);}
+
+  /* QUICK ACTIONS */
+  .section-title{font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;padding:0 24px;margin-bottom:12px;}
+  .quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:0 24px;margin-bottom:24px;}
+  .quick-item{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;}
+  .quick-item:active{opacity:0.7;}
+  .qi-icon{font-size:22px;}
+  .qi-label{font-size:10px;font-weight:700;text-align:center;color:var(--text-muted);}
+
+  /* BALANCES */
+  .balance-row{margin:0 24px 24px;background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+  .bal-item{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);}
+  .bal-item:last-child{border-bottom:none;}
+  .bal-left{display:flex;align-items:center;gap:10px;}
+  .bal-icon{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;}
+  .bal-name{font-size:13px;font-weight:700;}
+  .bal-sub{font-size:11px;color:var(--text-muted);}
+  .bal-right{text-align:right;}
+  .bal-amount{font-size:14px;font-weight:700;}
+  .bal-usd{font-size:11px;color:var(--text-muted);}
+
+  /* LIMITS */
+  .limits-wrap{margin:0 24px 24px;}
+  .limit-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:8px;}
+  .limit-header{display:flex;justify-content:space-between;margin-bottom:8px;}
+  .limit-label{font-size:13px;font-weight:700;}
+  .limit-val{font-size:13px;font-weight:700;color:var(--cyan);}
+  .limit-bar{height:5px;background:var(--surface3);border-radius:3px;overflow:hidden;}
+  .limit-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--cyan),var(--purple));}
+
+  /* HISTORY */
+  .tx-list{margin:0 24px 32px;}
+  .tx-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);}
+  .tx-item:last-child{border-bottom:none;}
+  .tx-icon{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+  .tx-body{flex:1;}
+  .tx-desc{font-size:13px;font-weight:700;}
+  .tx-meta{font-size:11px;color:var(--text-muted);}
+  .tx-amount{font-size:14px;font-weight:800;text-align:right;}
+  .tx-amount.debit{color:var(--red);}
+  .tx-amount.credit{color:var(--green);}
+
+  /* ORDER CARD OVERLAY */
+  .overlay{position:fixed;inset:0;background:rgba(9,10,16,0.92);z-index:200;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+  .overlay.show{opacity:1;pointer-events:all;}
+  .sheet{background:var(--surface);border-radius:24px 24px 0 0;padding:24px;width:100%;max-width:430px;margin:0 auto;max-height:80vh;overflow-y:auto;}
+  .sheet-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;}
+  .sheet-title{font-size:18px;font-weight:800;margin-bottom:6px;}
+  .sheet-sub{font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.5;}
+  .card-option{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;cursor:pointer;display:flex;align-items:center;gap:14px;}
+  .card-option.selected{border-color:var(--cyan);}
+  .co-icon{font-size:28px;}
+  .co-title{font-size:14px;font-weight:700;}
+  .co-desc{font-size:12px;color:var(--text-muted);}
+  .co-price{font-size:13px;font-weight:800;color:var(--cyan);margin-left:auto;}
+  .sheet-btn{width:100%;padding:16px;border-radius:14px;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;color:#000;font-size:16px;font-weight:800;cursor:pointer;margin-top:8px;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <button class="tb-back" onclick="history.back()">←</button>
+    <div class="tb-title">My IN$DEX Card</div>
+    <button class="tb-menu" onclick="showOrderSheet()">＋</button>
+  </div>
+
+  <!-- CARD TYPE TOGGLE -->
+  <div class="card-type-row">
+    <div class="type-pill active" id="pillVirtual" onclick="setType('virtual')">Virtual</div>
+    <div class="type-pill" id="pillPhysical" onclick="setType('physical')">Physical</div>
+  </div>
+
+  <!-- CARD DISPLAY -->
+  <div class="card-stage">
+    <div class="card-3d" id="card3d" onclick="flipCard()">
+      <div class="card-front">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div class="card-logo">IN$DEX</div>
+          <div style="font-size:22px;">📶</div>
+        </div>
+        <div class="card-chip"></div>
+        <div class="card-front-body">
+          <div class="card-number" id="cardNumber">•••• •••• •••• 7429</div>
+          <div class="card-row">
+            <div>
+              <div class="card-label">Card Holder</div>
+              <div class="card-value">Arthur Henry</div>
+            </div>
+            <div>
+              <div class="card-label">Expires</div>
+              <div class="card-value">09/29</div>
+            </div>
+            <div class="card-brand">VISA<br>Debit</div>
+          </div>
+        </div>
+      </div>
+      <div class="card-back">
+        <div style="width:100%;height:36px;background:rgba(0,0,0,0.4);border-radius:4px;margin-bottom:16px;"></div>
+        <div style="background:rgba(255,255,255,0.1);border-radius:8px;padding:10px 14px;width:100%;text-align:right;">
+          <div class="card-label">CVV</div>
+          <div style="font-size:18px;font-weight:800;letter-spacing:0.2em;color:#fff;">• • •</div>
+        </div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:16px;text-align:center;">Tap front to flip back</div>
+      </div>
+    </div>
+    <div class="card-tap-hint">Tap card to reveal details</div>
+  </div>
+
+  <!-- STATUS -->
+  <div class="card-status">
+    <div class="cs-left">
+      <div class="cs-dot" id="csDot"></div>
+      <div>
+        <div class="cs-label" id="csLabel">Card Active</div>
+        <div class="cs-sub">Virtual · Tap-to-pay enabled</div>
+      </div>
+    </div>
+    <button class="freeze-btn" id="freezeBtn" onclick="toggleFreeze()">Freeze</button>
+  </div>
+
+  <!-- QUICK ACTIONS -->
+  <div class="section-title">Card Actions</div>
+  <div class="quick-grid">
+    <div class="quick-item" onclick="showQR()">
+      <div class="qi-icon">📲</div>
+      <div class="qi-label">Pay QR</div>
+    </div>
+    <div class="quick-item" onclick="showATM()">
+      <div class="qi-icon">🏧</div>
+      <div class="qi-label">ATM</div>
+    </div>
+    <div class="quick-item" onclick="window.location.href='withdraw.html'">
+      <div class="qi-icon">💵</div>
+      <div class="qi-label">Cashout</div>
+    </div>
+    <div class="quick-item" onclick="window.location.href='top-up.html'">
+      <div class="qi-icon">➕</div>
+      <div class="qi-label">Top Up</div>
+    </div>
+  </div>
+
+  <!-- BALANCES -->
+  <div class="section-title">Available Balance</div>
+  <div class="balance-row">
+    <div class="bal-item">
+      <div class="bal-left">
+        <div class="bal-icon" style="background:rgba(0,212,255,0.12);color:var(--cyan);">◎</div>
+        <div>
+          <div class="bal-name">INDX</div>
+          <div class="bal-sub">IN$DEX Token</div>
+        </div>
+      </div>
+      <div class="bal-right">
+        <div class="bal-amount">1,240 INDX</div>
+        <div class="bal-usd">≈ $434.00 USD</div>
+      </div>
+    </div>
+    <div class="bal-item">
+      <div class="bal-left">
+        <div class="bal-icon" style="background:rgba(0,229,160,0.12);color:var(--green);">$</div>
+        <div>
+          <div class="bal-name">USDC</div>
+          <div class="bal-sub">USD Coin</div>
+        </div>
+      </div>
+      <div class="bal-right">
+        <div class="bal-amount">$48.00</div>
+        <div class="bal-usd">Ready to spend</div>
+      </div>
+    </div>
+    <div class="bal-item">
+      <div class="bal-left">
+        <div class="bal-icon" style="background:rgba(255,184,0,0.12);color:var(--gold);">◉</div>
+        <div>
+          <div class="bal-name">SOL</div>
+          <div class="bal-sub">Solana</div>
+        </div>
+      </div>
+      <div class="bal-right">
+        <div class="bal-amount">2.48 SOL</div>
+        <div class="bal-usd">≈ $462.52 USD</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SPENDING LIMITS -->
+  <div class="section-title">Spending Limits</div>
+  <div class="limits-wrap">
+    <div class="limit-item">
+      <div class="limit-header">
+        <div class="limit-label">Daily limit</div>
+        <div class="limit-val">$340 / $500 USD</div>
+      </div>
+      <div class="limit-bar"><div class="limit-fill" style="width:68%"></div></div>
+    </div>
+    <div class="limit-item">
+      <div class="limit-header">
+        <div class="limit-label">Monthly limit</div>
+        <div class="limit-val">$1,240 / $5,000 USD</div>
+      </div>
+      <div class="limit-bar"><div class="limit-fill" style="width:25%"></div></div>
+    </div>
+    <div class="limit-item">
+      <div class="limit-header">
+        <div class="limit-label">ATM withdrawals</div>
+        <div class="limit-val">$80 / $200 USD today</div>
+      </div>
+      <div class="limit-bar"><div class="limit-fill" style="width:40%"></div></div>
+    </div>
+  </div>
+
+  <!-- TRANSACTION HISTORY -->
+  <div class="section-title">Recent Transactions</div>
+  <div class="tx-list">
+    <div class="tx-item">
+      <div class="tx-icon" style="background:rgba(0,229,160,0.12);">🥥</div>
+      <div class="tx-body">
+        <div class="tx-desc">Coconut stall — Avarua Market</div>
+        <div class="tx-meta">Cook Islands · Tap to pay · Today 10:14 AM</div>
+      </div>
+      <div class="tx-amount debit">−$3.50</div>
+    </div>
+    <div class="tx-item">
+      <div class="tx-icon" style="background:rgba(0,212,255,0.12);">📲</div>
+      <div class="tx-body">
+        <div class="tx-desc">P2P from Sione Tuilagi</div>
+        <div class="tx-meta">50 INDX · sione.IN$DEX · Yesterday</div>
+      </div>
+      <div class="tx-amount credit">+$17.50</div>
+    </div>
+    <div class="tx-item">
+      <div class="tx-icon" style="background:rgba(255,184,0,0.12);">🏧</div>
+      <div class="tx-body">
+        <div class="tx-desc">ATM Withdrawal — BSP Nadi</div>
+        <div class="tx-meta">Fiji · FJD 46 · 2 days ago</div>
+      </div>
+      <div class="tx-amount debit">−$20.00</div>
+    </div>
+    <div class="tx-item">
+      <div class="tx-icon" style="background:rgba(0,229,160,0.12);">🛒</div>
+      <div class="tx-body">
+        <div class="tx-desc">SHOP Pacific — Port Vila</div>
+        <div class="tx-meta">Vanuatu · QR scan · 3 days ago</div>
+      </div>
+      <div class="tx-amount debit">−$12.80</div>
+    </div>
+    <div class="tx-item">
+      <div class="tx-icon" style="background:rgba(139,63,232,0.12);">💎</div>
+      <div class="tx-body">
+        <div class="tx-desc">NFT Sale — Sione's Beat Vol. 1</div>
+        <div class="tx-meta">1 INDX royalty · Marketplace · 5 days ago</div>
+      </div>
+      <div class="tx-amount credit">+$0.35</div>
+    </div>
+    <div class="tx-item">
+      <div class="tx-icon" style="background:rgba(0,229,160,0.12);">🏠</div>
+      <div class="tx-body">
+        <div class="tx-desc">Rent — Mama Noe Vaka</div>
+        <div class="tx-meta">Tonga · 400 TOP · 7 days ago</div>
+      </div>
+      <div class="tx-amount debit">−$168.07</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ORDER CARD SHEET -->
+<div class="overlay" id="orderOverlay" onclick="hideSheet(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Get Your IN$DEX Card</div>
+    <div class="sheet-sub">Spend your crypto anywhere. No bank account needed.</div>
+    <div class="card-option selected">
+      <div class="co-icon">📱</div>
+      <div>
+        <div class="co-title">Virtual Card</div>
+        <div class="co-desc">Ready instantly · Apple Pay / Google Pay / QR</div>
+      </div>
+      <div class="co-price">Free</div>
+    </div>
+    <div class="card-option">
+      <div class="co-icon">💳</div>
+      <div>
+        <div class="co-title">Physical Card</div>
+        <div class="co-desc">Delivered in 5–10 days · Visa Debit · ATM access</div>
+      </div>
+      <div class="co-price">$9.99</div>
+    </div>
+    <div class="card-option">
+      <div class="co-icon">⚡</div>
+      <div>
+        <div class="co-title">Physical Express</div>
+        <div class="co-desc">2–3 day courier delivery · Priority issue</div>
+      </div>
+      <div class="co-price">$24.99</div>
+    </div>
+    <button class="sheet-btn" onclick="hideSheet()">Activate Virtual Card →</button>
+  </div>
+</div>
+
+<!-- QR SHEET -->
+<div class="overlay" id="qrOverlay" onclick="hideSheet(event)">
+  <div class="sheet" style="text-align:center;">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Pay by QR</div>
+    <div class="sheet-sub">Show this at any store that accepts QR payments.</div>
+    <svg width="180" height="180" viewBox="0 0 100 100" style="margin:0 auto 16px;">
+      <rect width="100" height="100" rx="8" fill="#12141F" stroke="#2A2D38"/>
+      <!-- simplified QR pattern -->
+      <rect x="10" y="10" width="25" height="25" rx="3" fill="none" stroke="#00D4FF" stroke-width="3"/>
+      <rect x="65" y="10" width="25" height="25" rx="3" fill="none" stroke="#00D4FF" stroke-width="3"/>
+      <rect x="10" y="65" width="25" height="25" rx="3" fill="none" stroke="#00D4FF" stroke-width="3"/>
+      <rect x="15" y="15" width="15" height="15" rx="2" fill="#00D4FF"/>
+      <rect x="70" y="15" width="15" height="15" rx="2" fill="#00D4FF"/>
+      <rect x="15" y="70" width="15" height="15" rx="2" fill="#00D4FF"/>
+      <!-- data cells -->
+      <rect x="42" y="10" width="5" height="5" rx="1" fill="#8B3FE8"/>
+      <rect x="50" y="10" width="5" height="5" rx="1" fill="#8B3FE8"/>
+      <rect x="42" y="18" width="5" height="5" rx="1" fill="#8B3FE8"/>
+      <rect x="55" y="18" width="5" height="5" rx="1" fill="#8B3FE8"/>
+      <rect x="10" y="40" width="5" height="5" rx="1" fill="#8B3FE8"/>
+      <rect x="18" y="40" width="5" height="5" rx="1" fill="#8B3FE8"/>
+      <rect x="10" y="48" width="5" height="5" rx="1" fill="#8B3FE8"/>
+      <rect x="40" y="40" width="5" height="5" rx="1" fill="#00D4FF"/>
+      <rect x="48" y="40" width="5" height="5" rx="1" fill="#00D4FF"/>
+      <rect x="55" y="48" width="5" height="5" rx="1" fill="#00D4FF"/>
+      <rect x="63" y="40" width="5" height="5" rx="1" fill="#8B3FE8"/>
+      <rect x="40" y="55" width="5" height="5" rx="1" fill="#8B3FE8"/>
+      <rect x="55" y="55" width="5" height="5" rx="1" fill="#00D4FF"/>
+      <rect x="70" y="42" width="5" height="5" rx="1" fill="#8B3FE8"/>
+      <rect x="78" y="42" width="5" height="5" rx="1" fill="#8B3FE8"/>
+      <rect x="85" y="48" width="5" height="5" rx="1" fill="#00D4FF"/>
+      <rect x="42" y="70" width="5" height="5" rx="1" fill="#00D4FF"/>
+      <rect x="50" y="70" width="5" height="5" rx="1" fill="#8B3FE8"/>
+      <rect x="55" y="78" width="5" height="5" rx="1" fill="#00D4FF"/>
+      <rect x="63" y="70" width="5" height="5" rx="1" fill="#8B3FE8"/>
+      <rect x="70" y="78" width="5" height="5" rx="1" fill="#00D4FF"/>
+      <rect x="85" y="70" width="5" height="5" rx="1" fill="#8B3FE8"/>
+      <text x="50" y="97" text-anchor="middle" fill="#6B7080" font-size="6">arthur.IN$DEX</text>
+    </svg>
+    <div style="font-size:13px;color:var(--text-muted);">arthur.IN$DEX · $434.00 available</div>
+  </div>
+</div>
+
+<script>
+  let frozen = false;
+  let flipped = false;
+  let cardType = 'virtual';
+
+  function flipCard() {
+    flipped = !flipped;
+    document.getElementById('card3d').classList.toggle('flipped', flipped);
+  }
+
+  function setType(t) {
+    cardType = t;
+    document.getElementById('pillVirtual').classList.toggle('active', t === 'virtual');
+    document.getElementById('pillPhysical').classList.toggle('active', t === 'physical');
+    document.getElementById('cardNumber').textContent = t === 'virtual' ? '•••• •••• •••• 7429' : '•••• •••• •••• 3816';
+  }
+
+  function toggleFreeze() {
+    frozen = !frozen;
+    const dot = document.getElementById('csDot');
+    const label = document.getElementById('csLabel');
+    const btn = document.getElementById('freezeBtn');
+    dot.classList.toggle('frozen', frozen);
+    label.textContent = frozen ? 'Card Frozen' : 'Card Active';
+    btn.textContent = frozen ? 'Unfreeze' : 'Freeze';
+    btn.classList.toggle('frozen', frozen);
+    showToast(frozen ? '🔒 Card frozen. Tap Unfreeze to reactivate.' : '✅ Card unfrozen. Ready to spend.');
+  }
+
+  function showOrderSheet() { document.getElementById('orderOverlay').classList.add('show'); }
+  function showQR() { document.getElementById('qrOverlay').classList.add('show'); }
+  function showATM() { showToast('🏧 Nearest ATM: BSP Bank, 200m. Supports INDX withdrawals.'); }
+
+  function hideSheet(e) {
+    if (!e || e.target.classList.contains('overlay') || e.target.classList.contains('sheet-btn')) {
+      document.querySelectorAll('.overlay').forEach(o => o.classList.remove('show'));
+    }
+  }
+
+  let toastTimeout;
+  function showToast(msg) {
+    let t = document.getElementById('toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'toast';
+      t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#22263A;border:1px solid #2A2D38;color:#EAEAEA;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:999;max-width:360px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.4);';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.opacity = '1';
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => { t.style.opacity = '0'; }, 3000);
+  }
+</script>
+</body>
+</html>
