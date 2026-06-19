@@ -161,6 +161,7 @@
   .confirm-pay-btn{width:100%;padding:15px;border-radius:12px;background:var(--cyan);border:none;color:#000;font-size:16px;font-weight:700;cursor:pointer;margin-top:20px;margin-bottom:10px;}
   .confirm-cancel{width:100%;padding:13px;border-radius:12px;background:transparent;border:1px solid var(--border);color:var(--text);font-size:14px;cursor:pointer;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="shell">
@@ -355,6 +356,11 @@
 </div>
 
 <script>
+// ── SUPABASE CLIENT ──
+const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 // ── DATA ──
 
 const CORRIDORS = [
@@ -637,7 +643,7 @@ function openConfirm() {
   document.getElementById('confirmOverlay').classList.add('show');
 }
 
-function executeSend() {
+async function executeSend() {
   const card = document.getElementById('confirmCard');
   const t = TOKENS[selectedToken];
   const usd = (parseFloat(amountStr) * t.rate).toFixed(2);
@@ -652,6 +658,22 @@ function executeSend() {
       <div style="font-size:16px;font-weight:700;margin-bottom:6px;">Sending…</div>
       <div style="font-size:13px;color:var(--text-muted)">Broadcasting to Solana</div>
     </div>`;
+
+  // ── Supabase INSERT ──
+  const citizenId = sessionStorage.getItem('citizen_id');
+  const amtIndx = selectedToken === 'INDX' ? parseFloat(amountStr) : parseFloat(usd) / 0.24;
+  try {
+    await sb.from('transactions').insert({
+      citizen_id:           citizenId || null,
+      amount_indx:          parseFloat(amtIndx.toFixed(4)),
+      direction:            'send',
+      counterparty_address: recipientPhone || recipientName || 'unknown',
+      status:               'complete'
+    });
+    // Update sessionStorage balance
+    const prevBal = parseInt(sessionStorage.getItem('citizen_balance') || '0');
+    sessionStorage.setItem('citizen_balance', String(Math.max(0, prevBal - Math.round(amtIndx))));
+  } catch(e) { /* silent — never block the payment flow */ }
 
   setTimeout(() => {
     const flag = selectedCorridor ? selectedCorridor.flag : '🌏';

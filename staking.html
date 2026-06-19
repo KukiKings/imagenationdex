@@ -133,6 +133,7 @@
   .confirm-btn{width:100%;padding:15px;border-radius:12px;background:var(--cyan);border:none;color:#000;font-size:16px;font-weight:700;cursor:pointer;margin-top:18px;margin-bottom:10px;}
   .cancel-btn{width:100%;padding:13px;border-radius:12px;background:transparent;border:1px solid var(--border);color:var(--text);font-size:14px;cursor:pointer;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="shell">
@@ -416,6 +417,14 @@
 </div>
 
 <script>
+  // ── SUPABASE CLIENT ──
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // APY ranges per lock tier (canonical — tokenomics-v1.md)
+  const APY_RANGES = { flex:{low:3,high:5}, '30':{low:4,high:7}, '90':{low:6,high:9}, '365':{low:9,high:13} };
+
   let selectedLock = { key:'30', apy:5.5, label:'30-day lock' };
   let currentTab = 'stake';
 
@@ -486,16 +495,57 @@
     document.getElementById('confirmOverlay').classList.add('show');
   }
 
-  function executeStake() {
+  async function executeStake() {
     const card = document.getElementById('confirmCard');
-    const amt = document.getElementById('stakeInput').value;
+    const amt = parseFloat(document.getElementById('stakeInput').value) || 0;
+    if (amt <= 0) return;
+
     card.innerHTML = `<div style="padding:20px 0;"><div style="font-size:42px;margin-bottom:14px;">⚡</div><div style="font-size:16px;font-weight:700;margin-bottom:6px;">Staking…</div><div style="font-size:13px;color:var(--text-muted)">Locking INDX on Solana</div></div>`;
+
+    // ── Supabase INSERT ──
+    const citizenId = sessionStorage.getItem('citizen_id');
+    const range = APY_RANGES[selectedLock.key] || { low: 4, high: 7 };
+    const now = new Date();
+    let unlocksAt = null;
+    if (selectedLock.key !== 'flex') {
+      const d = new Date(now);
+      d.setDate(d.getDate() + parseInt(selectedLock.key));
+      unlocksAt = d.toISOString();
+    }
+    const position = {
+      citizen_id:   citizenId || null,
+      amount_indx:  amt,
+      lock_period:  selectedLock.key,
+      apy_low:      range.low,
+      apy_high:     range.high,
+      auto_compound: compoundOn,
+      status:       'active',
+      started_at:   now.toISOString(),
+      unlocks_at:   unlocksAt
+    };
+    let positionId = null;
+    try {
+      const { data } = await sb.from('staking_positions').insert(position).select('id').single();
+      if (data?.id) positionId = data.id;
+    } catch(e) { /* silent — never block the flow */ }
+
+    // Cache to localStorage for My Stakes tab (available without auth)
+    try {
+      const cached = JSON.parse(localStorage.getItem('staking_positions') || '[]');
+      cached.unshift({ ...position, id: positionId || 'local_' + Date.now() });
+      localStorage.setItem('staking_positions', JSON.stringify(cached.slice(0, 10)));
+    } catch(e) {}
+
+    // Update sessionStorage balance
+    const prevBal = parseInt(sessionStorage.getItem('citizen_balance') || '0');
+    sessionStorage.setItem('citizen_balance', String(Math.max(0, prevBal - amt)));
+
     setTimeout(() => {
       card.innerHTML = `
         <div style="padding:8px;">
           <div style="font-size:48px;margin-bottom:14px;">✅</div>
           <div style="font-size:20px;font-weight:800;margin-bottom:8px;">Staked!</div>
-          <div style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:22px;">${amt} INDX is now earning ${selectedLock.apy}% Est. Sovereign Yield. Rewards distributed daily.</div>
+          <div style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:22px;">${amt} INDX locked · Est. ${range.low}–${range.high}% yield · Rewards distributed daily.</div>
           <button onclick="document.getElementById('confirmOverlay').classList.remove('show');switchTab('mystakes')" style="width:100%;padding:14px;border-radius:12px;background:var(--cyan);border:none;color:#000;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">View My Stakes</button>
           <button onclick="document.getElementById('confirmOverlay').classList.remove('show')" style="width:100%;padding:14px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:15px;cursor:pointer;">Stake More</button>
         </div>`;
