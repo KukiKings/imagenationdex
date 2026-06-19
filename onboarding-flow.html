@@ -657,6 +657,7 @@
   .faq-body.open { display: block; }
   .faq-body strong { color: var(--text); }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -883,6 +884,11 @@
 </div>
 
 <script>
+  // ── SUPABASE CLIENT ──
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
   let selectedGoal = null;
 
   // ── GOAL SELECTION ──
@@ -1023,7 +1029,7 @@
       last.classList.add('done');
       last.querySelector('.ls-icon').textContent = doneIcon;
 
-      setTimeout(() => {
+      setTimeout(async () => {
         document.getElementById('loadingOverlay').classList.remove('active');
         // Reset loading steps for reuse
         steps.forEach(id => {
@@ -1031,6 +1037,38 @@
           el.classList.remove('done','active-step');
           el.querySelector('.ls-icon').textContent = '○';
         });
+
+        // ── SUPABASE INSERT — create citizen record ──
+        const contact = document.getElementById('contactInput')?.value?.trim() || '';
+        const isPhone = contact.startsWith('+') || /^[\d\s\-()+]+$/.test(contact);
+        try {
+          const { data, error } = await sb.from('citizens').insert({
+            citizen_name: name,
+            phone_number: isPhone ? contact : null,
+            web3_domain: slug + '.indx',
+            indx_balance: 50,
+            genesis_citizen: true,
+            wisdom_score: 25,
+            kyc_tier: 0
+          }).select('id').single();
+
+          if (data?.id) {
+            sessionStorage.setItem('citizen_id', data.id);
+            sessionStorage.setItem('citizen_name', name);
+          }
+
+          // Duplicate phone — citizen already exists, look them up
+          if (error?.code === '23505' && isPhone) {
+            const { data: existing } = await sb
+              .from('citizens').select('id, citizen_name')
+              .eq('phone_number', contact).single();
+            if (existing?.id) {
+              sessionStorage.setItem('citizen_id', existing.id);
+              sessionStorage.setItem('citizen_name', existing.citizen_name || name);
+            }
+          }
+        } catch(e) { /* silent fail — never block onboarding */ }
+
         goToScreen(3);
       }, 400);
     }, delay);
