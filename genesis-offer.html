@@ -125,6 +125,7 @@ footer{background:var(--surface);border-top:1px solid rgba(255,255,255,0.06);pad
   .package-total{flex-direction:column;gap:8px;text-align:center;}
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -328,17 +329,27 @@ function tick(){
 }
 tick();setInterval(tick,1000);
 
+// ── LIVE WAITLIST COUNTER ──
+const SUPA_URL='https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
 let base=2847;
-setInterval(()=>{
-  if(Math.random()<0.2){
-    base++;
-    const spots=5000-base;
-    const pct=Math.round((base/5000)*100);
-    document.getElementById('heroCount').textContent=base.toLocaleString();
-    document.getElementById('spotsRemain').textContent=(5000-base).toLocaleString();
-    document.getElementById('spotsBar').style.width=pct+'%';
-  }
-},11000);
+function updateCounterUI(n){
+  const spots=5000-n;
+  const pct=Math.round((n/5000)*100);
+  document.getElementById('heroCount').textContent=n.toLocaleString();
+  const spotsEl=document.getElementById('spotsRemain');
+  if(spotsEl) spotsEl.textContent=Math.max(0,spots).toLocaleString();
+  const barEl=document.getElementById('spotsBar');
+  if(barEl) barEl.style.width=Math.min(100,pct)+'%';
+}
+(async()=>{
+  try{
+    const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
+    const {data}=await sb.rpc('get_waitlist_count');
+    if(typeof data==='number'&&data>0) base=data;
+  }catch(e){}
+  updateCounterUI(base);
+})();
 
 function toggleFaq(el){
   const a=el.nextElementSibling,icon=el.querySelector('.faq-icon'),isOpen=a.classList.contains('open');

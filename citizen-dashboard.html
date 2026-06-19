@@ -1132,12 +1132,55 @@
         window.location.href = 'login.html';
       }
     } else {
-      // No session — use demo mode (URL param) for now
+      // No auth session — check sessionStorage (set during onboarding)
+      const storedId     = sessionStorage.getItem('citizen_id');
+      const storedName   = sessionStorage.getItem('citizen_name');
+      const storedWisdom = parseInt(sessionStorage.getItem('citizen_wisdom') || '0');
+      const storedBal    = parseInt(sessionStorage.getItem('citizen_balance') || '0');
+      const storedDomain = sessionStorage.getItem('citizen_web3_domain');
+
       const params = new URLSearchParams(location.search);
-      const name = params.get('name') || 'Maria Santos';
-      const goal = params.get('goal') || 'earn';
-      initDashboard(name, goal);
-      animateWisdom();
+      const name = storedName || params.get('name') || 'Sovereign';
+      initDashboard(name, 'earn');
+
+      if (storedId) {
+        // Fresh from onboarding — render real genesis values from sessionStorage
+        const slug = name.toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,20) || 'sovereign';
+        const domain = storedDomain
+          ? storedDomain.replace('.indx','') + '.IN$DEX'
+          : slug + '.IN$DEX';
+        document.getElementById('headerDomain').textContent = domain;
+
+        // Wisdom ring
+        const ring = document.getElementById('wisdomRing');
+        const bar  = document.getElementById('wisdomBar');
+        if (ring) {
+          setTimeout(() => {
+            const pct = Math.min(storedWisdom / 200, 1);
+            ring.style.strokeDashoffset = (163 - (163 * pct)).toFixed(1);
+            if (bar) bar.style.width = (pct * 100) + '%';
+          }, 400);
+          const scoreEl = ring.closest('.wisdom-ring')?.querySelector('.wisdom-score-val');
+          if (scoreEl) scoreEl.textContent = storedWisdom;
+          const nextGate = storedWisdom < 50 ? 50 : storedWisdom < 100 ? 100 : storedWisdom < 150 ? 150 : 200;
+          const toNext   = nextGate - storedWisdom;
+          const labelEl  = document.querySelector('.wisdom-progress-label');
+          if (labelEl) labelEl.textContent = `${storedWisdom} / 200 — ${toNext} pts to next gate ›`;
+          const titleEl  = document.querySelector('.wisdom-title');
+          if (titleEl)  titleEl.textContent  = storedWisdom >= 50 ? 'Governor' : 'Citizen';
+          const descEl   = document.querySelector('.wisdom-desc');
+          if (descEl && storedWisdom < 100) {
+            descEl.innerHTML = `Reach <span style='color:var(--cyan);'>100 to unlock Sovereign Yield</span>. ${100 - storedWisdom} pts away.`;
+          }
+        }
+
+        // Balance
+        const balEl = document.getElementById('balanceAmount');
+        if (balEl) balEl.textContent = storedBal.toLocaleString();
+      } else {
+        // True demo — no sessionStorage
+        animateWisdom();
+      }
     }
 
     const saved = localStorage.getItem('simpleMode');
