@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Buy INDX — IN$DEX</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://js.stripe.com/v3/"></script>
 <style>
   :root {
     --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
@@ -55,7 +57,6 @@
     border:1px solid #00D4FF33;border-radius:14px;
     padding:14px 18px;margin:18px 20px 0;
   }
-  .price-left{}
   .price-value{font-size:28px;font-weight:900;color:var(--cyan);letter-spacing:-0.03em;}
   .price-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-top:1px;}
   .price-right{text-align:right;}
@@ -70,7 +71,6 @@
     padding:14px 16px;display:flex;align-items:center;gap:12px;
   }
   .genesis-icon{font-size:26px;flex-shrink:0;}
-  .genesis-text{}
   .genesis-title{font-size:14px;font-weight:700;color:var(--gold);margin-bottom:2px;}
   .genesis-desc{font-size:12px;color:var(--muted);line-height:1.4;}
   .genesis-badge{
@@ -82,10 +82,9 @@
 
   /* ── BODY ── */
   .body{padding:20px;flex:1;display:flex;flex-direction:column;gap:20px;}
-
-  /* ── AMOUNT SELECTOR ── */
   .section-label{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
 
+  /* ── AMOUNT SELECTOR ── */
   .quick-amounts{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
   .quick-btn{
     flex:1;min-width:60px;
@@ -118,7 +117,6 @@
     display:flex;align-items:center;justify-content:space-between;
     background:var(--surface2);border-radius:12px;padding:14px 16px;
   }
-  .conv-left{}
   .conv-indx{font-size:24px;font-weight:900;color:var(--cyan);letter-spacing:-0.02em;}
   .conv-label{font-size:11px;color:var(--muted);margin-top:1px;}
   .conv-right{text-align:right;}
@@ -130,11 +128,10 @@
   }
   .conv-total{font-size:11px;color:var(--muted);margin-top:4px;}
   .conv-total strong{color:var(--text);}
-
   .fee-note{font-size:11px;color:var(--muted);text-align:center;padding:2px 0;}
   .fee-note span{color:var(--cyan);}
 
-  /* ── PAYMENT METHOD ── */
+  /* ── PAYMENT METHODS ── */
   .payment-methods{display:flex;flex-direction:column;gap:10px;}
   .pay-method{
     display:flex;align-items:center;gap:14px;
@@ -159,6 +156,19 @@
     transition:all 0.2s;flex-shrink:0;
   }
   .pay-method.selected .pay-check{background:var(--cyan);border-color:var(--cyan);color:var(--bg);}
+
+  /* ── STRIPE CARD FORM ── */
+  #cardFormSection{display:none;margin-top:4px;}
+  .card-form-wrap{
+    background:var(--surface);border:1.5px solid var(--border);
+    border-radius:14px;padding:16px;
+  }
+  .card-form-label{font-size:12px;color:var(--muted);margin-bottom:10px;}
+  #stripe-card-element{
+    background:var(--surface2);border:1.5px solid var(--border);
+    border-radius:10px;padding:14px;
+  }
+  #card-errors{font-size:12px;color:var(--red);margin-top:8px;min-height:18px;}
 
   /* ── TOTAL SUMMARY ── */
   .total-card{
@@ -186,11 +196,88 @@
   }
   .btn-primary:active{transform:scale(0.97);}
   .btn-primary:disabled{opacity:0.35;cursor:not-allowed;transform:none;}
-
   .secure-note{
     display:flex;align-items:center;justify-content:center;gap:6px;
     font-size:11px;color:var(--muted);margin-top:10px;
   }
+
+  /* ── MODALS (PayID + USDC) ── */
+  .modal-overlay{
+    display:none;position:fixed;inset:0;background:rgba(9,10,16,0.92);
+    z-index:100;align-items:flex-end;justify-content:center;
+  }
+  .modal-overlay.active{display:flex;}
+  .modal-sheet{
+    background:var(--surface);border-radius:24px 24px 0 0;
+    padding:24px 24px 40px;width:100%;max-width:430px;
+    border-top:1px solid var(--border);
+    animation:slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  @keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+  .modal-handle{width:40px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 20px;}
+  .modal-title{font-size:18px;font-weight:800;margin-bottom:4px;}
+  .modal-sub{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.4;}
+  .detail-card{
+    background:var(--surface2);border:1px solid var(--border);border-radius:14px;
+    padding:16px;margin-bottom:16px;
+  }
+  .detail-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;}
+  .detail-row:not(:last-child){border-bottom:1px solid var(--border);}
+  .detail-key{font-size:12px;color:var(--muted);}
+  .detail-val{font-size:14px;font-weight:700;color:var(--text);text-align:right;}
+  .detail-val.cyan{color:var(--cyan);}
+  .copy-btn{
+    background:transparent;border:1px solid var(--border);border-radius:8px;
+    color:var(--muted);font-size:11px;padding:3px 8px;cursor:pointer;margin-left:8px;
+    transition:color 0.2s,border-color 0.2s;
+  }
+  .copy-btn:active{color:var(--cyan);border-color:var(--cyan);}
+  .modal-steps{margin-bottom:20px;}
+  .modal-step{display:flex;align-items:flex-start;gap:12px;margin-bottom:10px;}
+  .step-num{
+    width:24px;height:24px;border-radius:50%;background:var(--surface2);
+    border:1px solid var(--border);font-size:12px;font-weight:700;color:var(--muted);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;
+  }
+  .step-text{font-size:13px;color:var(--text);line-height:1.4;}
+  .btn-confirm{
+    width:100%;background:var(--cyan);color:var(--bg);
+    font-size:15px;font-weight:900;border:none;border-radius:14px;
+    padding:16px;cursor:pointer;transition:transform 0.15s;margin-bottom:10px;
+  }
+  .btn-confirm:active{transform:scale(0.97);}
+  .btn-cancel{
+    width:100%;background:transparent;color:var(--muted);
+    font-size:14px;border:none;cursor:pointer;padding:12px;
+  }
+  .warning-note{
+    background:#FF4D6D11;border:1px solid #FF4D6D33;border-radius:10px;
+    padding:10px 12px;font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.4;
+  }
+  .warning-note strong{color:var(--red);}
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav{display:flex;align-items:center;justify-content:space-around;
+    padding:10px 8px calc(10px + env(safe-area-inset-bottom));
+    background:rgba(9,10,16,0.95);border-top:1px solid var(--border);
+    position:sticky;bottom:0;z-index:50;}
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;
+    flex:1;padding:6px 4px;cursor:pointer;text-decoration:none;-webkit-user-select:none;user-select:none;}
+  .nav-icon{font-size:20px;line-height:1;}
+  .nav-label{font-size:10px;font-weight:600;color:var(--muted);letter-spacing:0.02em;}
+  .nav-item.active .nav-label{color:var(--cyan);}
+  .nav-item.active .nav-icon{filter:drop-shadow(0 0 5px var(--cyan));}
+
+  /* ── PROCESSING OVERLAY ── */
+  .processing-overlay{
+    display:none;position:fixed;inset:0;background:rgba(9,10,16,0.95);z-index:150;
+    flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  }
+  .processing-overlay.active{display:flex;}
+  .spinner{width:48px;height:48px;border-radius:50%;border:3px solid var(--border);
+    border-top-color:var(--cyan);animation:spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .processing-label{font-size:14px;color:var(--muted);}
 
   /* ── SUCCESS OVERLAY ── */
   .success-overlay{
@@ -219,9 +306,7 @@
   }
   .success-indx{font-size:40px;font-weight:900;color:var(--cyan);letter-spacing:-0.02em;margin-bottom:2px;}
   .success-indx-label{font-size:13px;color:var(--muted);}
-  .success-bonus{
-    margin-top:10px;font-size:13px;color:var(--gold);font-weight:700;
-  }
+  .success-bonus{margin-top:10px;font-size:13px;color:var(--gold);font-weight:700;}
   .success-actions{display:flex;flex-direction:column;gap:10px;width:100%;}
   .btn-success-primary{
     background:var(--cyan);color:var(--bg);border:none;border-radius:12px;
@@ -232,32 +317,32 @@
   .btn-success-secondary{
     background:var(--surface);color:var(--muted);border:1px solid var(--border);
     border-radius:12px;padding:13px;font-size:14px;cursor:pointer;width:100%;
-    transition:color 0.2s;
   }
-  .btn-success-secondary:active{color:var(--text);}
 
-  /* ── PROCESSING OVERLAY ── */
-  .processing-overlay{
-    display:none;position:fixed;inset:0;background:rgba(9,10,16,0.95);z-index:150;
-    flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  /* ── PENDING OVERLAY ── */
+  .pending-overlay{
+    display:none;position:fixed;inset:0;background:var(--bg);z-index:200;
+    flex-direction:column;align-items:center;justify-content:center;
+    padding:32px;text-align:center;
   }
-  .processing-overlay.active{display:flex;}
-  .spinner{width:48px;height:48px;border-radius:50%;border:3px solid var(--border);
-    border-top-color:var(--cyan);animation:spin 0.8s linear infinite;}
-  @keyframes spin{to{transform:rotate(360deg);}}
-  .processing-label{font-size:14px;color:var(--muted);}
-
-  /* ── BOTTOM NAV ── */
-  .bottom-nav{display:flex;align-items:center;justify-content:space-around;
-    padding:10px 8px calc(10px + env(safe-area-inset-bottom));
-    background:rgba(9,10,16,0.95);border-top:1px solid var(--border);
-    position:sticky;bottom:0;z-index:50;}
-  .nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;
-    flex:1;padding:6px 4px;cursor:pointer;text-decoration:none;-webkit-user-select:none;user-select:none;}
-  .nav-icon{font-size:20px;line-height:1;}
-  .nav-label{font-size:10px;font-weight:600;color:var(--muted);letter-spacing:0.02em;}
-  .nav-item.active .nav-label{color:var(--cyan);}
-  .nav-item.active .nav-icon{filter:drop-shadow(0 0 5px var(--cyan));}
+  .pending-overlay.active{display:flex;}
+  .pending-orb{
+    width:96px;height:96px;border-radius:50%;
+    background:linear-gradient(135deg,#1A1400,#0A1200);
+    border:2px solid #FFB80055;
+    display:flex;align-items:center;justify-content:center;
+    font-size:40px;margin-bottom:24px;
+    animation:popIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  .pending-title{font-size:24px;font-weight:900;margin-bottom:6px;}
+  .pending-title span{color:var(--gold);}
+  .pending-sub{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:28px;}
+  .pending-ref{
+    background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:16px 20px;width:100%;margin-bottom:28px;
+  }
+  .pending-ref-label{font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.06em;}
+  .pending-ref-val{font-size:18px;font-weight:800;color:var(--cyan);}
 </style>
 </head>
 <body>
@@ -267,26 +352,24 @@
   <div class="top-nav">
     <a class="back-btn" href="citizen-dashboard.html">‹</a>
     <div class="top-nav-title">Buy INDX</div>
-    <div class="top-nav-badge">$0.34</div>
+    <div class="top-nav-badge">$0.24</div>
   </div>
 
   <!-- Hero -->
   <div class="hero">
-    <div class="indx-orb">
-      <div class="indx-symbol">IN$</div>
-    </div>
+    <div class="indx-orb"><div class="indx-symbol">IN$</div></div>
     <div class="hero-title">INDX <span>Token</span></div>
     <div class="hero-sub">The sovereign currency of Image Nation</div>
   </div>
 
   <!-- Price Band -->
   <div class="price-band">
-    <div class="price-left">
-      <div class="price-value">$0.34</div>
+    <div>
+      <div class="price-value">$0.24</div>
       <div class="price-label">Genesis Price per INDX</div>
     </div>
     <div class="price-right">
-      <div class="price-usd">≈ USD 0.33</div>
+      <div class="price-usd">USD · SPL Token-2022</div>
       <div class="price-change">↑ Genesis Rate Locked</div>
     </div>
   </div>
@@ -296,7 +379,7 @@
     <div class="genesis-icon">🎁</div>
     <div class="genesis-text">
       <div class="genesis-title">Genesis Bonus Active</div>
-      <div class="genesis-desc">First purchase gets a bonus on top. Limited supply.</div>
+      <div class="genesis-desc">First purchase gets +50 INDX free. Limited supply.</div>
     </div>
     <div class="genesis-badge">+50</div>
   </div>
@@ -313,7 +396,7 @@
         <div class="quick-btn" onclick="setAmount(250, this)">$250</div>
       </div>
       <div class="aud-input-wrap">
-        <div class="aud-prefix">A$</div>
+        <div class="aud-prefix">$</div>
         <input class="aud-input" id="audInput" type="number" inputmode="decimal"
           placeholder="50" value="50" oninput="calcConversion()">
         <div class="aud-currency">USD</div>
@@ -324,17 +407,17 @@
     <div>
       <div class="section-label">You receive</div>
       <div class="conversion-row">
-        <div class="conv-left">
-          <div class="conv-indx" id="convIndx">100</div>
+        <div>
+          <div class="conv-indx" id="convIndx">208</div>
           <div class="conv-label">INDX tokens</div>
         </div>
         <div class="conv-right">
           <div class="conv-bonus" id="convBonus">+50 Genesis Bonus</div>
-          <div class="conv-total">Total: <strong id="convTotal">150 INDX</strong></div>
+          <div class="conv-total">Total: <strong id="convTotal">258 INDX</strong></div>
         </div>
       </div>
       <div class="fee-note" style="margin-top:8px;">
-        Processing fee: <span>0%</span> during Genesis. Powered by IN$DEX.
+        Processing fee: <span id="feeSpan">0% during Genesis</span>. Powered by IN$DEX.
       </div>
     </div>
 
@@ -346,7 +429,7 @@
           <div class="pay-icon">🏦</div>
           <div class="pay-info">
             <div class="pay-name">PayID — Bank Transfer</div>
-            <div class="pay-desc">Instant USD transfer · No card fees · Tier 2 required</div>
+            <div class="pay-desc">Instant transfer · No card fees · 1–2 hours to confirm</div>
           </div>
           <div class="pay-check">✓</div>
         </div>
@@ -354,7 +437,7 @@
           <div class="pay-icon">💳</div>
           <div class="pay-info">
             <div class="pay-name">Debit / Credit Card</div>
-            <div class="pay-desc">Visa, Mastercard · 1.5% card processing fee</div>
+            <div class="pay-desc">Visa, Mastercard · 1.5% card processing fee · Instant</div>
           </div>
           <div class="pay-check">✓</div>
         </div>
@@ -362,9 +445,18 @@
           <div class="pay-icon">🔵</div>
           <div class="pay-info">
             <div class="pay-name">USDC (On-Chain)</div>
-            <div class="pay-desc">Send USDC from any Solana wallet · Instant settlement</div>
+            <div class="pay-desc">Send USDC from any Solana wallet · 1–2 hours to confirm</div>
           </div>
           <div class="pay-check">✓</div>
+        </div>
+      </div>
+
+      <!-- Stripe Card Form (shown when card selected) -->
+      <div id="cardFormSection">
+        <div class="card-form-wrap" style="margin-top:12px;">
+          <div class="card-form-label">Enter your card details</div>
+          <div id="stripe-card-element"></div>
+          <div id="card-errors"></div>
         </div>
       </div>
     </div>
@@ -375,7 +467,7 @@
       <div class="total-card">
         <div class="total-row">
           <span class="total-key">You pay</span>
-          <span class="total-val" id="summaryPay">$50.00</span>
+          <span class="total-val" id="summaryPay">$50.00 USD</span>
         </div>
         <div class="total-row">
           <span class="total-key">Processing fee</span>
@@ -383,7 +475,7 @@
         </div>
         <div class="total-row">
           <span class="total-key">INDX purchased</span>
-          <span class="total-val highlight" id="summaryIndx">100 INDX</span>
+          <span class="total-val highlight" id="summaryIndx">208 INDX</span>
         </div>
         <div class="total-row">
           <span class="total-key">Genesis bonus</span>
@@ -391,7 +483,7 @@
         </div>
         <div class="total-row">
           <span class="total-key">Total INDX to wallet</span>
-          <span class="total-val green" id="summaryTotal">150 INDX</span>
+          <span class="total-val green" id="summaryTotal">258 INDX</span>
         </div>
       </div>
     </div>
@@ -401,7 +493,7 @@
   <!-- CTA -->
   <div class="cta-area">
     <button class="btn-primary" id="buyBtn" onclick="confirmPurchase()">
-      Buy 150 INDX for $50 →
+      Buy 258 INDX for $50.00 →
     </button>
     <div class="secure-note">🔒 Secured by your Grid Account · Solana blockchain</div>
   </div>
@@ -417,37 +509,187 @@
 
 </div><!-- /shell -->
 
+<!-- ── PAYID MODAL ── -->
+<div class="modal-overlay" id="payidModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Send to IN$DEX PayID</div>
+    <div class="modal-sub">Open your banking app and send the exact amount below. Your INDX will be released within 1–2 hours of confirmation.</div>
+
+    <div class="detail-card">
+      <div class="detail-row">
+        <span class="detail-key">PayID</span>
+        <span class="detail-val cyan">pay@imagenationdex.com
+          <button class="copy-btn" onclick="copyText('pay@imagenationdex.com', this)">Copy</button>
+        </span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-key">Amount to send</span>
+        <span class="detail-val cyan" id="payidAmount">$50.00 USD</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-key">Reference (required)</span>
+        <span class="detail-val" id="payidRef">INDX-000000
+          <button class="copy-btn" id="payidRefCopy" onclick="copyText(document.getElementById('payidRef').dataset.ref, this)">Copy</button>
+        </span>
+      </div>
+    </div>
+
+    <div class="warning-note">
+      ⚠️ <strong>Include the reference.</strong> Without it we can't match your payment and release your INDX.
+    </div>
+
+    <div class="modal-steps">
+      <div class="modal-step">
+        <div class="step-num">1</div>
+        <div class="step-text">Open your bank app and send to <strong>pay@imagenationdex.com</strong></div>
+      </div>
+      <div class="modal-step">
+        <div class="step-num">2</div>
+        <div class="step-text">Enter the exact amount and your reference code</div>
+      </div>
+      <div class="modal-step">
+        <div class="step-num">3</div>
+        <div class="step-text">Tap "I've sent it" below — we'll notify you when INDX is released</div>
+      </div>
+    </div>
+
+    <button class="btn-confirm" onclick="confirmPayidSent()">I've Sent the Payment →</button>
+    <button class="btn-cancel" onclick="closeModal('payidModal')">Cancel</button>
+  </div>
+</div>
+
+<!-- ── USDC MODAL ── -->
+<div class="modal-overlay" id="usdcModal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Send USDC on Solana</div>
+    <div class="modal-sub">Send USDC from any Solana wallet to the address below. Your INDX will be released within 1–2 hours.</div>
+
+    <div class="detail-card">
+      <div class="detail-row">
+        <span class="detail-key">Network</span>
+        <span class="detail-val">Solana Mainnet</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-key">Amount</span>
+        <span class="detail-val cyan" id="usdcAmount">50.00 USDC</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-key">Send to address</span>
+        <span class="detail-val" style="font-size:11px;word-break:break-all;">
+          8HxNac3HAT56gJk3LRdGqiwq6DgciGK4cnaVMUNZaMZt
+          <button class="copy-btn" onclick="copyText('8HxNac3HAT56gJk3LRdGqiwq6DgciGK4cnaVMUNZaMZt', this)">Copy</button>
+        </span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-key">Memo / Reference</span>
+        <span class="detail-val" id="usdcRef">INDX-000000
+          <button class="copy-btn" id="usdcRefCopy" onclick="copyText(document.getElementById('usdcRef').dataset.ref, this)">Copy</button>
+        </span>
+      </div>
+    </div>
+
+    <div class="warning-note">
+      ⚠️ <strong>Solana only.</strong> Do not send from Ethereum or any other chain. USDC on other networks cannot be recovered.
+    </div>
+
+    <div class="modal-steps">
+      <div class="modal-step">
+        <div class="step-num">1</div>
+        <div class="step-text">Open Phantom or your Solana wallet</div>
+      </div>
+      <div class="modal-step">
+        <div class="step-num">2</div>
+        <div class="step-text">Send the exact USDC amount with the memo reference</div>
+      </div>
+      <div class="modal-step">
+        <div class="step-num">3</div>
+        <div class="step-text">Tap "I've sent USDC" — we verify on-chain and release your INDX</div>
+      </div>
+    </div>
+
+    <button class="btn-confirm" onclick="confirmUsdcSent()">I've Sent USDC →</button>
+    <button class="btn-cancel" onclick="closeModal('usdcModal')">Cancel</button>
+  </div>
+</div>
+
 <!-- Processing -->
 <div class="processing-overlay" id="processingOverlay">
   <div class="spinner"></div>
   <div class="processing-label" id="processingLabel">Confirming payment…</div>
 </div>
 
-<!-- Success -->
+<!-- Success (card / instant) -->
 <div class="success-overlay" id="successOverlay">
   <div class="success-orb">✓</div>
   <div class="success-title">INDX <span>Received!</span></div>
   <div class="success-sub" id="successSub">Your tokens are now in your Grid Account wallet.</div>
   <div class="success-tokens">
-    <div class="success-indx" id="successIndxAmount">150</div>
+    <div class="success-indx" id="successIndxAmount">258</div>
     <div class="success-indx-label">INDX added to your wallet</div>
     <div class="success-bonus" id="successBonusLine">Includes +50 Genesis Bonus 🎁</div>
   </div>
   <div class="success-actions">
-    <button class="btn-success-primary" onclick="window.location.href='portfolio.html'">
-      View in Portfolio →
-    </button>
-    <button class="btn-success-secondary" onclick="window.location.href='citizen-dashboard.html'">
-      Back to Dashboard
-    </button>
+    <button class="btn-success-primary" onclick="window.location.href='portfolio.html'">View in Portfolio →</button>
+    <button class="btn-success-secondary" onclick="window.location.href='citizen-dashboard.html'">Back to Dashboard</button>
+  </div>
+</div>
+
+<!-- Pending (PayID / USDC) -->
+<div class="pending-overlay" id="pendingOverlay">
+  <div class="pending-orb">⏳</div>
+  <div class="pending-title">Payment <span>Received</span></div>
+  <div class="pending-sub" id="pendingSub">We've logged your payment. Once we verify the transfer, your INDX will appear in your wallet — usually within 1–2 hours.<br><br>SIINDEX will notify you the moment it's confirmed.</div>
+  <div class="pending-ref">
+    <div class="pending-ref-label">Your reference</div>
+    <div class="pending-ref-val" id="pendingRefDisplay">INDX-000000</div>
+  </div>
+  <div class="success-actions">
+    <button class="btn-success-primary" onclick="window.location.href='citizen-dashboard.html'">Back to Dashboard</button>
+    <button class="btn-success-secondary" onclick="window.location.href='history.html'">View Transaction History</button>
   </div>
 </div>
 
 <script>
+  // ── CONSTANTS ──
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  // ⚠️ STRIPE SETUP: Replace with your Stripe publishable key from stripe.com/dashboard
+  // Test key format: pk_test_51... | Live key: pk_live_51...
+  const STRIPE_PK = 'pk_test_REPLACE_WITH_YOUR_STRIPE_PUBLISHABLE_KEY';
+  const GRID_WALLET = '8HxNac3HAT56gJk3LRdGqiwq6DgciGK4cnaVMUNZaMZt';
   const INDX_PRICE_USD = 0.24;
   const GENESIS_BONUS = 50;
+
+  // ── SUPABASE + STRIPE INIT ──
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  let stripeInstance = null;
+  let cardElement = null;
+  try {
+    if (!STRIPE_PK.includes('REPLACE')) {
+      stripeInstance = Stripe(STRIPE_PK);
+      const elements = stripeInstance.elements({
+        appearance: {
+          theme: 'night',
+          variables: { colorPrimary: '#00D4FF', colorBackground: '#1A1D25', colorText: '#EAEAEA' }
+        }
+      });
+      cardElement = elements.create('card');
+      cardElement.mount('#stripe-card-element');
+      cardElement.on('change', e => {
+        document.getElementById('card-errors').textContent = e.error ? e.error.message : '';
+      });
+    }
+  } catch(e) { console.log('Stripe not configured:', e.message); }
+
+  // ── STATE ──
   let selectedPayMethod = 'payid';
   let genesisUsed = false;
+  const citizenId = sessionStorage.getItem('citizen_id') || null;
+  const citizenName = sessionStorage.getItem('citizen_name') || 'Sovereign';
 
   // ── AMOUNT HELPERS ──
   function setAmount(val, btn) {
@@ -458,37 +700,36 @@
   }
 
   function calcConversion() {
-    const aud = parseFloat(document.getElementById('audInput').value) || 0;
-
-    // Deselect quick buttons if custom
+    const usd = parseFloat(document.getElementById('audInput').value) || 0;
     const quickVals = [25, 50, 100, 250];
     document.querySelectorAll('.quick-btn').forEach((b, i) => {
-      b.classList.toggle('active', quickVals[i] === aud);
+      b.classList.toggle('active', quickVals[i] === usd);
     });
 
     const purchased = Math.floor(usd / INDX_PRICE_USD);
-    const bonus = (!genesisUsed && aud >= 10) ? GENESIS_BONUS : 0;
+    const bonus = (!genesisUsed && usd >= 10) ? GENESIS_BONUS : 0;
     const total = purchased + bonus;
-
-    // Card fee
-    const fee = (selectedPayMethod === 'card') ? aud * 0.015 : 0;
-    const feeText = fee > 0 ? `A$${fee.toFixed(2)}` : '$0.00 (Genesis)';
+    const fee = (selectedPayMethod === 'card') ? usd * 0.015 : 0;
+    const feeText = fee > 0 ? `$${fee.toFixed(2)} USD (1.5% card fee)` : '$0.00 (Genesis)';
 
     document.getElementById('convIndx').textContent = purchased.toLocaleString();
-    document.getElementById('convBonus').textContent = bonus > 0 ? `+${bonus} Genesis Bonus` : '';
-    document.getElementById('convBonus').style.display = bonus > 0 ? '' : 'none';
+    const bonusEl = document.getElementById('convBonus');
+    bonusEl.textContent = bonus > 0 ? `+${bonus} Genesis Bonus` : '';
+    bonusEl.style.display = bonus > 0 ? '' : 'none';
     document.getElementById('convTotal').textContent = total.toLocaleString() + ' INDX';
+    document.getElementById('feeSpan').textContent = fee > 0 ? '1.5% card processing' : '0% during Genesis';
 
-    document.getElementById('summaryPay').textContent = `A$${aud.toFixed(2)}`;
+    document.getElementById('summaryPay').textContent = `$${usd.toFixed(2)} USD`;
     document.getElementById('summaryFee').textContent = feeText;
+    document.getElementById('summaryFee').className = 'total-val ' + (fee > 0 ? '' : 'highlight');
     document.getElementById('summaryIndx').textContent = purchased.toLocaleString() + ' INDX';
     document.getElementById('summaryBonus').textContent = bonus > 0 ? `+${bonus} INDX` : 'Not eligible';
     document.getElementById('summaryBonus').className = 'total-val ' + (bonus > 0 ? 'gold' : '');
     document.getElementById('summaryTotal').textContent = total.toLocaleString() + ' INDX';
 
-    const label = aud > 0 ? `Buy ${total.toLocaleString()} INDX for A$${aud.toFixed(2)} →` : 'Enter an amount';
+    const label = usd > 0 ? `Buy ${total.toLocaleString()} INDX for $${usd.toFixed(2)} →` : 'Enter an amount';
     document.getElementById('buyBtn').textContent = label;
-    document.getElementById('buyBtn').disabled = aud < 10;
+    document.getElementById('buyBtn').disabled = usd < 10;
   }
 
   // ── PAYMENT METHOD ──
@@ -497,49 +738,187 @@
     document.querySelectorAll('.pay-method').forEach(m => m.classList.remove('selected'));
     const map = { payid: 'payPayid', card: 'payCard', crypto: 'payCrypto' };
     document.getElementById(map[method]).classList.add('selected');
+    document.getElementById('cardFormSection').style.display = method === 'card' ? 'block' : 'none';
     calcConversion();
   }
 
-  // ── PURCHASE ──
-  function confirmPurchase() {
-    const aud = parseFloat(document.getElementById('audInput').value) || 0;
-    if (aud < 10) return;
-
-    const overlay = document.getElementById('processingOverlay');
-    const label = document.getElementById('processingLabel');
-    overlay.classList.add('active');
-
-    const msgs = [
-      'Confirming payment…',
-      'Connecting to Solana…',
-      'Minting INDX to your wallet…',
-      'Almost done…',
-    ];
-    let i = 0;
-    const interval = setInterval(() => {
-      if (++i < msgs.length) label.textContent = msgs[i];
-    }, 700);
-
-    setTimeout(() => {
-      clearInterval(interval);
-      overlay.classList.remove('active');
-      showSuccess(aud);
-    }, 3000);
+  // ── REFERENCE GENERATOR ──
+  function makeRef() {
+    const short = citizenId ? citizenId.slice(0, 6).toUpperCase() : Math.random().toString(36).slice(2,8).toUpperCase();
+    return 'INDX-' + short;
   }
 
-  function showSuccess(aud) {
+  // ── MAIN PURCHASE DISPATCHER ──
+  function confirmPurchase() {
+    const usd = parseFloat(document.getElementById('audInput').value) || 0;
+    if (usd < 10) return;
+    if (selectedPayMethod === 'payid') showPayidModal(usd);
+    else if (selectedPayMethod === 'card') handleCardPayment(usd);
+    else if (selectedPayMethod === 'crypto') showUsdcModal(usd);
+  }
+
+  // ── PAYID FLOW ──
+  function showPayidModal(usd) {
+    const ref = makeRef();
+    const refEl = document.getElementById('payidRef');
+    refEl.childNodes[0].textContent = ref + ' ';
+    refEl.dataset.ref = ref;
+    document.getElementById('payidRefCopy').onclick = () => copyText(ref, document.getElementById('payidRefCopy'));
+    document.getElementById('payidAmount').textContent = `$${usd.toFixed(2)} USD`;
+    document.getElementById('payidModal').classList.add('active');
+  }
+
+  async function confirmPayidSent() {
+    closeModal('payidModal');
+    const usd = parseFloat(document.getElementById('audInput').value) || 0;
+    const purchased = Math.floor(usd / INDX_PRICE_USD);
+    const bonus = !genesisUsed ? GENESIS_BONUS : 0;
+    const total = purchased + bonus;
+    const ref = document.getElementById('payidRef').dataset.ref || makeRef();
+
+    // INSERT pending transaction to Supabase
+    if (citizenId) {
+      await sb.from('transactions').insert({
+        citizen_id: citizenId,
+        amount_indx: total,
+        direction: 'receive',
+        counterparty_address: `fiat_payid:${ref}`,
+        status: 'pending'
+      });
+    }
+
+    document.getElementById('pendingSub').textContent =
+      `We've logged your PayID payment of $${usd.toFixed(2)} USD. Once verified, ${total.toLocaleString()} INDX will appear in your wallet — usually within 1–2 hours. SIINDEX will notify you.`;
+    document.getElementById('pendingRefDisplay').textContent = ref;
+    document.getElementById('pendingOverlay').classList.add('active');
+  }
+
+  // ── USDC FLOW ──
+  function showUsdcModal(usd) {
+    const ref = makeRef();
+    const refEl = document.getElementById('usdcRef');
+    refEl.childNodes[0].textContent = ref + ' ';
+    refEl.dataset.ref = ref;
+    document.getElementById('usdcRefCopy').onclick = () => copyText(ref, document.getElementById('usdcRefCopy'));
+    document.getElementById('usdcAmount').textContent = `${usd.toFixed(2)} USDC`;
+    document.getElementById('usdcModal').classList.add('active');
+  }
+
+  async function confirmUsdcSent() {
+    closeModal('usdcModal');
+    const usd = parseFloat(document.getElementById('audInput').value) || 0;
+    const purchased = Math.floor(usd / INDX_PRICE_USD);
+    const bonus = !genesisUsed ? GENESIS_BONUS : 0;
+    const total = purchased + bonus;
+    const ref = document.getElementById('usdcRef').dataset.ref || makeRef();
+
+    // INSERT pending transaction to Supabase
+    if (citizenId) {
+      await sb.from('transactions').insert({
+        citizen_id: citizenId,
+        amount_indx: total,
+        direction: 'receive',
+        counterparty_address: `usdc_solana:${ref}`,
+        status: 'pending'
+      });
+    }
+
+    document.getElementById('pendingSub').textContent =
+      `We've logged your USDC transfer of ${usd.toFixed(2)} USDC. Once we verify on-chain, ${total.toLocaleString()} INDX will appear in your wallet — usually within 1–2 hours.`;
+    document.getElementById('pendingRefDisplay').textContent = ref;
+    document.getElementById('pendingOverlay').classList.add('active');
+  }
+
+  // ── STRIPE CARD FLOW ──
+  async function handleCardPayment(usd) {
+    if (!stripeInstance || !cardElement) {
+      document.getElementById('card-errors').textContent =
+        'Card payments not yet configured. Please use PayID or USDC.';
+      return;
+    }
+
     const purchased = Math.floor(usd / INDX_PRICE_USD);
     const bonus = !genesisUsed ? GENESIS_BONUS : 0;
     const total = purchased + bonus;
 
+    showProcessing('Connecting to payment gateway…');
+
+    // Call Supabase Edge Function to create PaymentIntent
+    // ⚠️ SETUP NEEDED: Deploy 'create-payment-intent' edge function first
+    // See: /Projects/ImageNation DEX/SIINDEX-Skills/siindex-devops
+    const { data, error } = await sb.functions.invoke('create-payment-intent', {
+      body: { amount_usd: usd, citizen_id: citizenId, indx_total: total }
+    });
+
+    if (error || !data?.clientSecret) {
+      hideProcessing();
+      document.getElementById('card-errors').textContent =
+        'Payment setup failed. Please try PayID or USDC.';
+      return;
+    }
+
+    updateProcessing('Processing card payment…');
+
+    const result = await stripeInstance.confirmCardPayment(data.clientSecret, {
+      payment_method: { card: cardElement }
+    });
+
+    hideProcessing();
+
+    if (result.error) {
+      document.getElementById('card-errors').textContent = result.error.message;
+      return;
+    }
+
+    // Payment succeeded — INSERT confirmed transaction
+    if (citizenId) {
+      await sb.from('transactions').insert({
+        citizen_id: citizenId,
+        amount_indx: total,
+        direction: 'receive',
+        counterparty_address: `stripe:${result.paymentIntent.id}`,
+        status: 'complete'
+      });
+      // Update citizen balance
+      const currentBal = parseInt(sessionStorage.getItem('citizen_balance') || '0');
+      const newBal = currentBal + total;
+      sessionStorage.setItem('citizen_balance', String(newBal));
+      await sb.from('citizens').update({ indx_balance: newBal }).eq('id', citizenId);
+    }
+
+    genesisUsed = true;
+    showSuccess(usd, total, bonus);
+  }
+
+  // ── SUCCESS ──
+  function showSuccess(usd, total, bonus) {
     genesisUsed = true;
     document.getElementById('genesisBanner').style.display = 'none';
-
     document.getElementById('successIndxAmount').textContent = total.toLocaleString();
-    document.getElementById('successSub').textContent = `${purchased.toLocaleString()} INDX purchased for A$${aud.toFixed(2)}.`;
+    document.getElementById('successSub').textContent =
+      `${(total - bonus).toLocaleString()} INDX purchased for $${usd.toFixed(2)} USD.`;
     document.getElementById('successBonusLine').style.display = bonus > 0 ? '' : 'none';
-
     document.getElementById('successOverlay').classList.add('active');
+  }
+
+  // ── PROCESSING HELPERS ──
+  function showProcessing(msg) {
+    document.getElementById('processingLabel').textContent = msg || 'Processing…';
+    document.getElementById('processingOverlay').classList.add('active');
+  }
+  function updateProcessing(msg) { document.getElementById('processingLabel').textContent = msg; }
+  function hideProcessing() { document.getElementById('processingOverlay').classList.remove('active'); }
+
+  // ── MODAL HELPERS ──
+  function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+  function copyText(text, btn) {
+    navigator.clipboard.writeText(text).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      btn.style.color = 'var(--cyan)';
+      setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
+    });
   }
 
   // ── INIT ──

@@ -98,6 +98,7 @@
   .nav-icon{font-size:20px;}
   .nav-label{font-size:10px;font-weight:600;color:#F0F2FF;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -113,15 +114,15 @@
 <!-- SUMMARY -->
 <div class="summary-row">
   <div class="sum-box">
-    <div class="sum-num green">+50</div>
+    <div class="sum-num green" id="sumIn">—</div>
     <div class="sum-lbl">INDX In</div>
   </div>
   <div class="sum-box">
-    <div class="sum-num red">0</div>
+    <div class="sum-num red" id="sumOut">—</div>
     <div class="sum-lbl">INDX Out</div>
   </div>
   <div class="sum-box">
-    <div class="sum-num" style="color:var(--cyan)">1</div>
+    <div class="sum-num" style="color:var(--cyan)" id="sumCount">—</div>
     <div class="sum-lbl">Transactions</div>
   </div>
 </div>
@@ -140,22 +141,8 @@
 
 <!-- TRANSACTIONS -->
 <div id="txList">
-  <div class="section-label">Today — June 1, 2026</div>
-  <div>
-    <div class="tx-item" data-cat="earn" onclick="openDetail({icon:'⚡',iconClass:'earn',amount:'+50 INDX',type:'Genesis Welcome Bonus',rows:[['Type','Reward'],['Source','Genesis Programme'],['Wisdom +','5 points'],['Status','Complete'],['Time','2:04 PM'],['TX','5Kx9mNpQ3r…']]})">
-      <div class="tx-icon earn">⚡</div>
-      <div class="tx-body">
-        <div class="tx-title">Genesis Bonus</div>
-        <div class="tx-meta">Welcome reward · Genesis Programme</div>
-      </div>
-      <div class="tx-right">
-        <div class="tx-amount pos">+50 INDX</div>
-        <div class="tx-time">2:04 PM</div>
-        <div class="tx-status complete">Complete</div>
-      </div>
-    </div>
-  </div>
-
+  <div style="text-align:center;padding:40px 20px;color:var(--text-dim);font-size:14px;" id="txLoading">Loading transactions…</div>
+  <div style="display:none" id="txEmpty">
   <!-- DEMO HISTORY (greyed, for illustration) -->
   <div class="section-label" style="margin-top:16px; opacity:0.5;">Activity will appear here as you use IN$DEX</div>
   <div style="opacity:0.35; pointer-events:none;">
@@ -265,6 +252,8 @@
     </div>
 
   </div>
+  </div><!-- /txEmpty -->
+  <div id="txReal"></div>
 </div>
 
 <!-- DETAIL SHEET -->
@@ -282,6 +271,117 @@
 <div class="toast" id="toast"></div>
 
 <script>
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgwNTgxNjIsImV4cCI6MjA2MzYzNDE2Mn0.MN3iqtmL5H68_SIyR-UeMixCPkZJO9aMuiuCJjE3OGs';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const DIR_META = {
+    send:   { icon:'📤', cat:'send',  cls:'send',  label:'Sent',     sign:'-' },
+    receive:{ icon:'📥', cat:'recv',  cls:'recv',  label:'Received', sign:'+' },
+    earn:   { icon:'⚡', cat:'earn',  cls:'earn',  label:'Reward',   sign:'+' },
+    deposit:{ icon:'⬇️', cat:'dep',   cls:'dep',   label:'Deposit',  sign:'+' },
+    withdraw:{ icon:'⬆️',cat:'with',  cls:'with',  label:'Withdraw', sign:'-' },
+    swap:   { icon:'🔄', cat:'swap',  cls:'swap',  label:'Swap',     sign:'' },
+  };
+
+  function fmtDate(iso) {
+    const d = new Date(iso);
+    const now = new Date();
+    const diff = Math.floor((now - d) / 86400000);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Yesterday';
+    return d.toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric' });
+  }
+
+  function fmtTime(iso) {
+    return new Date(iso).toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:true });
+  }
+
+  (async function loadHistory() {
+    const citizenId = sessionStorage.getItem('citizen_id');
+    const loadEl = document.getElementById('txLoading');
+    const emptyEl = document.getElementById('txEmpty');
+    const realEl  = document.getElementById('txReal');
+
+    if (!citizenId) {
+      loadEl.style.display = 'none';
+      emptyEl.style.display = 'block';
+      document.getElementById('sumIn').textContent = '—';
+      document.getElementById('sumOut').textContent = '—';
+      document.getElementById('sumCount').textContent = '0';
+      return;
+    }
+
+    try {
+      const { data: txs, error } = await sb
+        .from('transactions')
+        .select('*')
+        .eq('citizen_id', citizenId)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      loadEl.style.display = 'none';
+
+      if (error || !txs || txs.length === 0) {
+        emptyEl.style.display = 'block';
+        document.getElementById('sumIn').textContent = '0';
+        document.getElementById('sumOut').textContent = '0';
+        document.getElementById('sumCount').textContent = '0';
+        return;
+      }
+
+      // Summary counts
+      let totalIn = 0, totalOut = 0;
+      txs.forEach(tx => {
+        const m = DIR_META[tx.direction] || {};
+        if (m.sign === '+') totalIn += (tx.amount_indx || 0);
+        if (m.sign === '-') totalOut += (tx.amount_indx || 0);
+      });
+      document.getElementById('sumIn').textContent = '+' + Math.round(totalIn);
+      document.getElementById('sumOut').textContent = Math.round(totalOut).toString();
+      document.getElementById('sumCount').textContent = txs.length.toString();
+
+      // Group by date
+      const groups = {};
+      txs.forEach(tx => {
+        const label = fmtDate(tx.created_at || tx.inserted_at || new Date().toISOString());
+        if (!groups[label]) groups[label] = [];
+        groups[label].push(tx);
+      });
+
+      let html = '';
+      for (const [dateLabel, items] of Object.entries(groups)) {
+        html += `<div class="section-label">${dateLabel}</div>`;
+        items.forEach(tx => {
+          const m = DIR_META[tx.direction] || { icon:'◎', cat:'earn', cls:'earn', label:'Activity', sign:'' };
+          const amt = tx.amount_indx ? Math.abs(tx.amount_indx).toFixed(2).replace(/\.?0+$/, '') : '0';
+          const display = m.sign ? `${m.sign}${amt} INDX` : `${amt} INDX`;
+          const amtCls = m.sign === '+' ? 'pos' : m.sign === '-' ? 'neg' : 'neutral';
+          const counterpart = tx.counterparty_address ? `· ${tx.counterparty_address}` : '';
+          const time = fmtTime(tx.created_at || new Date().toISOString());
+          html += `
+<div class="tx-item" data-cat="${m.cat}">
+  <div class="tx-icon ${m.cls}">${m.icon}</div>
+  <div class="tx-body">
+    <div class="tx-title">${m.label}</div>
+    <div class="tx-meta">IN$DEX ${counterpart}</div>
+  </div>
+  <div class="tx-right">
+    <div class="tx-amount ${amtCls}">${display}</div>
+    <div class="tx-time">${time}</div>
+    <div class="tx-status complete">Complete</div>
+  </div>
+</div>`;
+        });
+      }
+      realEl.innerHTML = html;
+
+    } catch(e) {
+      loadEl.style.display = 'none';
+      emptyEl.style.display = 'block';
+    }
+  })();
+
   function filterTx(el, cat) {
     document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
     el.classList.add('active');

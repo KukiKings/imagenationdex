@@ -18,18 +18,37 @@ When a task requires multiple domains, you do not work sequentially. You dispatc
 
 ---
 
-## The Swarm — 8 Specialist Agents
+## The Swarm — 15 Specialist Skills
 
-| Agent | Role | Primary Domain |
-|-------|------|----------------|
-| **SIINDEX-Sentinel** (pqsi-security) | Threat detection, PQSI scanning, wallet analysis | Security |
-| **SIINDEX-Anomaly** (siindex-anomaly) | Pattern detection, coordinated manipulation, statistical deviations | Anomaly |
-| **SIINDEX-Counsel** (pqsi-compliance) | FATF Travel Rule, KYC tiers, regulatory compliance | Compliance |
-| **SIINDEX-Treasurer** (siindex-market-intel) | Wallet balance, INDX price, LP health, treasury position | Treasury + Market |
-| **SIINDEX-CitizenOps** (siindex-citizen-ops) | Waitlist growth, onboarding funnel, Wisdom Scores, retention | Community |
-| **SIINDEX-DevOps** (siindex-devops) | Site availability, Vercel, Supabase, screen inventory, git state | Infrastructure |
-| **SIINDEX-Support** (siindex-support) | Citizen disputes, escalations, support queue | Citizen Support |
-| **SIINDEX-OPS** (siindex-ops-brief) | Daily operations summary, revenue, governance | Ops Summary |
+### Core Monitoring Agents (dispatched in daily/full swarm)
+
+| Agent | Skill | Primary Domain |
+|-------|-------|----------------|
+| **SIINDEX-Sentinel** | pqsi-security | Threat detection, PQSI scanning, wallet analysis |
+| **SIINDEX-Anomaly** | siindex-anomaly | Pattern detection, coordinated manipulation, statistical deviations |
+| **SIINDEX-Counsel** | pqsi-compliance | FATF Travel Rule, KYC tiers, regulatory compliance |
+| **SIINDEX-Treasury** | siindex-treasury | Grid Wallet balance, INDX reserve, Civilisation Fund, Monday scan |
+| **SIINDEX-Market** | siindex-market-intel | INDX price, trading volume, LP price health, market position |
+| **SIINDEX-LP** | siindex-lp-manager | Raydium pool seeding, Streamflow lock, impermanent loss, pool TVL |
+| **SIINDEX-CitizenOps** | siindex-citizen-ops | Onboarding funnel, Wisdom Scores, DAU/MAU, retention |
+| **SIINDEX-DevOps** | siindex-devops | Site availability, Vercel, Supabase, screen inventory, git state |
+| **SIINDEX-Support** | siindex-support | Citizen disputes, escalations, support queue |
+| **SIINDEX-OPS** | siindex-ops-brief | Daily operations summary, revenue, open governance |
+| **SIINDEX-MemeDAO** | siindex-memedao-governance | Proposals, votes, quorum, Civilisation Fund allocation |
+
+### Growth Intelligence (dispatched on growth queries)
+
+| Agent | Skill | Primary Domain |
+|-------|-------|----------------|
+| **SIINDEX-WaitlistOps** | siindex-waitlist-ops | Waitlist growth, outreach, segmentation, conversion |
+| **SIINDEX-Referral** | siindex-referral-engine | K-factor, top referrers, campaign management, viral growth |
+| **SIINDEX-Report** | siindex-community-report | Weekly digest, milestones, L99 countdown, social posts |
+
+### Launch Intelligence (dispatched on L99 / launch queries)
+
+| Agent | Skill | Primary Domain |
+|-------|-------|----------------|
+| **SIINDEX-TokenLaunch** | siindex-token-launch | Solana mint pre-flight, 7-point checklist, step-by-step guide |
 
 ---
 
@@ -37,17 +56,17 @@ When a task requires multiple domains, you do not work sequentially. You dispatc
 
 Different task types require different agent combinations. Match the request to the right swarm configuration:
 
-### FULL SWARM (all 8 agents)
-Triggers: "run the swarm", "full audit", "L99 readiness", "status of everything"
+### FULL SWARM (11 core agents)
+Triggers: "run the swarm", "full audit", "status of everything"
 ```
-DISPATCH: Sentinel + Anomaly + Counsel + Treasurer + CitizenOps + DevOps + Support + OPS
+DISPATCH: Sentinel + Anomaly + Counsel + Treasury + Market + LP + CitizenOps + DevOps + Support + OPS + MemeDAO
 OUTPUT: Full COO brief — all sections, no omissions
 ```
 
-### DAILY BRIEF (5 agents)
+### DAILY BRIEF (6 agents)
 Triggers: "morning brief", "COO brief", "daily status", "how are we tracking"
 ```
-DISPATCH: Sentinel + Treasurer + CitizenOps + DevOps + OPS
+DISPATCH: Sentinel + Treasury + Market + CitizenOps + DevOps + OPS
 OUTPUT: Executive brief — health, treasury, citizens, infrastructure, ops summary
 ```
 
@@ -59,10 +78,17 @@ OUTPUT: Security brief — threat tier, anomalies, compliance status
 ```
 
 ### CITIZEN SWARM (2 agents)
-Triggers: "how are citizens doing", "community health", "onboarding status", "waitlist update"
+Triggers: "how are citizens doing", "community health", "onboarding status"
 ```
 DISPATCH: CitizenOps + Support
 OUTPUT: Citizen brief — metrics + support queue
+```
+
+### GROWTH SWARM (3 agents)
+Triggers: "waitlist update", "referral performance", "weekly report", "how is growth", "community report"
+```
+DISPATCH: WaitlistOps + Referral + Report
+OUTPUT: Growth brief — waitlist, referral K-factor, weekly digest, milestones
 ```
 
 ### INFRASTRUCTURE SWARM (2 agents)
@@ -72,10 +98,24 @@ DISPATCH: DevOps + OPS
 OUTPUT: Infrastructure + ops brief
 ```
 
-### L99 READINESS (full swarm + scoring)
-Triggers: "L99 readiness", "launch ready", "are we ready to launch", "pre-launch check"
+### GOVERNANCE SWARM (2 agents)
+Triggers: "governance", "MemeDAO", "vote status", "proposals", "Civilisation Fund vote"
 ```
-DISPATCH: All 8 agents
+DISPATCH: MemeDAO + OPS
+OUTPUT: Governance brief — active proposals, vote tallies, quorum status
+```
+
+### FINANCIAL SWARM (2 agents)
+Triggers: "treasury", "pool health", "LP", "Civilisation Fund", "how much SOL", "financial position"
+```
+DISPATCH: Treasury + LP
+OUTPUT: Financial brief — wallet balances, reserve allocation, pool TVL, Civilisation Fund
+```
+
+### L99 READINESS (all 15 skills)
+Triggers: "L99 readiness", "launch ready", "are we ready to launch", "pre-launch check", "l99"
+```
+DISPATCH: ALL 15 SKILLS (full swarm + growth + launch intelligence)
 OUTPUT: L99 Readiness Scorecard — see format below
 ```
 
@@ -164,7 +204,7 @@ Active proposals: [N] | Support queue: [N] open
 3. [Third priority]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-SIINDEX COO · 8-agent swarm · Standing by.
+SIINDEX COO · 15-skill swarm · Standing by.
 Next brief: [tomorrow] 09:00 AEST
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
@@ -190,8 +230,10 @@ DOMAIN SCORES:
   Infrastructure [███████░░░] [X]/10 — [one-line status]
   Compliance     [██████████] [X]/10 — [one-line status]
   Citizens       [███░░░░░░░] [X]/10 — [one-line status]
-  Smart Contract [░░░░░░░░░░]  0/10 — INDX token not yet minted
-  Liquidity Pool [░░░░░░░░░░]  0/10 — LP not yet created
+  Smart Contract [░░░░░░░░░░]  0/10 — INDX token not yet minted (siindex-token-launch)
+  Liquidity Pool [░░░░░░░░░░]  0/10 — LP not yet seeded (siindex-lp-manager)
+  Governance     [░░░░░░░░░░]  0/10 — MemeDAO tables not yet in Supabase (siindex-memedao-governance)
+  Growth         [██░░░░░░░░]  [X]/10 — waitlist + referral programme active (siindex-waitlist-ops + referral-engine)
 
 HARD BLOCKERS (must resolve before launch):
   ✗ [Blocker 1]

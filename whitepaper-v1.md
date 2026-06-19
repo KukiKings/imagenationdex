@@ -145,3 +145,163 @@ That is the mission. That is IN$DEX.
 *IN$DEX — Image Nation Decentralised Exchange | Whitepaper v1.0 | 2025*
 *Founder: Arthur John Henry (AJ) | dadyboy73@gmail.com*
 *Built on Solana | Ticker: INDX | Operated by SIINDEX*
+
+---
+
+## APPENDIX A — Canonical Constants
+> These values are final. Every screen, document, and build must match exactly. If something conflicts with this section, this section wins.
+> Last verified: 2026-06-19 (Session 18). All 100+ app screens confirmed clean.
+
+### Token
+| Field | Canonical Value |
+|---|---|
+| Token name | INDX |
+| Standard | **SPL Token-2022** (not plain SPL) |
+| Blockchain | Solana Mainnet |
+| Genesis price | **$0.24 USD** — never $0.35, $0.34, $0.512, or A$0.512 |
+| Total supply | **100,000,000** (100 million) |
+| Decimals | 6 |
+| Mint authority | Burned immediately after mint |
+| Freeze authority | Burned immediately after mint |
+
+### Staking APY (canonical ranges — do not invent different numbers)
+| Lock Period | Est. APY Range |
+|---|---|
+| Flex (no lock) | 3–5% |
+| 30 days | 4–7% |
+| 90 days | 6–9% |
+| 365 days | 9–13% |
+
+### Wisdom Score System
+| Score | Gate / Title |
+|---|---|
+| 0–49 | Citizen |
+| 50 | Governor — unlocks governance voting |
+| 100 | Sovereign — unlocks Sovereign Yield + Staking |
+| 150 | Elder — unlocks fee reduction |
+| 200 | Sovereign Elder — maximum tier |
+| Max score | 200 |
+
+### 98/2 Civilisation Law (immutable — cannot be bypassed by any screen or contract)
+- Citizens keep **98%** of every transaction value
+- **2%** goes to the Civilisation Fund
+- This law is hard-coded. No screen, feature, or SIINDEX action may alter or bypass it.
+
+### Grid Account
+- Technology: Squads Protocol v4 Multisig
+- Keys: 2-of-3 MPC (Device Key + Cloud Key + Recovery Key)
+- **No seed phrase exists** — ever. Any screen suggesting a seed phrase is a violation.
+- Recovery: Any 2-of-3 keys restore full access
+
+### Progressive Biometric KYC Tiers
+| Tier | Requirements |
+|---|---|
+| 0 | Phone number + liveness scan only (no documents) |
+| 1 | ID document |
+| 2 | Enhanced due diligence |
+| 3+ | Full compliance |
+
+### FATF Travel Rule
+- ZK-proof compliance via TRISA/OpenVASP
+- Triggers at transfers >$1,000 USD
+- Identity data never leaves the device
+
+### Security Constants (do not change without AJ written authorisation)
+| Constant | Value |
+|---|---|
+| Grid Wallet | 8HxNac3HAT56gJk3LRdGqiwq6DgciGK4cnaVMUNZaMZt |
+| Supabase ref | zljgthfzbalsunuoohcd (ap-southeast-2) |
+| TX Protection | $10,000 USD/month per Grid Account |
+| 2FA threshold | $500 USD |
+| LP lock | 12 months from pool creation (Streamflow) |
+| Security scan | Every 6 hours |
+| Treasury scan | Every Monday 9 AM AEST |
+| Alert email | dadyboy73@gmail.com |
+
+---
+
+## APPENDIX B — Platform Build Status
+> Updated each session. Use this to avoid building what already exists.
+> Last updated: 2026-06-19 (Session 19)
+
+### Supabase Backend (live — project ref: zljgthfzbalsunuoohcd)
+- ✅ `waitlist` table — anon INSERT, RLS on
+- ✅ `citizens` table — anon INSERT, auth SELECT/UPDATE own row
+- ✅ `transactions` table — anon + auth INSERT, auth SELECT own rows
+- ✅ `staking_positions` table — anon INSERT, auth SELECT/UPDATE own rows
+- ✅ `security_events` table — append-only, Law 7 compliant
+- ✅ `get_waitlist_count()` RPC — public counter (waitlist + citizens)
+- ✅ `get_citizen_by_phone(phone)` RPC — login phone fallback
+- ✅ `link_citizen_auth(phone, auth_id)` RPC — links anon citizen to auth session
+- ✅ `create-payment-intent` Edge Function — Stripe PaymentIntent creation (ACTIVE, needs STRIPE_SECRET_KEY secret)
+- ✅ `siindex-chat` Edge Function — SIINDEX conversational AI, streaming SSE, Claude Haiku backend (ACTIVE, needs ANTHROPIC_API_KEY secret)
+- ✅ `siindex-voice-tts` Edge Function — ElevenLabs TTS, Phase 2 voice (ACTIVE, graceful fallback until ELEVENLABS_API_KEY added in September)
+
+### App Screens — Supabase Wired
+- ✅ `onboarding-flow.html` — INSERT citizens, set sessionStorage
+- ✅ `login.html` — OTP verify, phone fallback, sessionStorage on success
+- ✅ `citizen-dashboard.html` — reads sessionStorage for wisdom/balance/domain
+- ✅ `genesis-offer.html` — real waitlist count via RPC
+- ✅ `home-v2.html` — real waitlist count via RPC
+- ✅ `history.html` — live transactions SELECT, date grouping
+- ✅ `staking.html` — INSERT staking_positions, APY ranges canonical
+- ✅ `send.html` — INSERT transactions on send
+
+### App Screens — Complete (not wired to live data, no action needed)
+All 100+ screens exist and are clean at $0.24 USD, no A$, no seed phrase. Key screens:
+`sovereign-academy.html` (6 tracks, 19 lessons, 140 Wisdom Points) · `staking-calculator.html` · `buy-indx.html` · `receive.html` · `bill-pay.html` · `withdraw.html` · `dex-swap.html` · `marketplace.html` · `nft-marketplace.html` · `referral-dashboard.html` · `security-center.html` · `notifications-setup.html` · `governance.html` · `wisdom-score.html` · `portfolio.html` · `profile.html`
+
+### Pending (not yet built or wired)
+- ✅ `profile.html` — sessionStorage wired (citizen_name, wisdom, web3_domain) — initProfile() at line 784
+- ✅ `wisdom-score.html` — sessionStorage wired (citizen_wisdom → SCORE, initYouRow() for leaderboard)
+- ✅ `portfolio.html` — sessionStorage wired (citizen_balance → INDX totals at $0.24 USD)
+- ✅ `buy-indx.html` — PayID + USDC + Stripe flows built. Edge Function deployed. Needs: STRIPE_SECRET_KEY in Supabase secrets + STRIPE_PK in HTML + real PayID address from AJ's bank
+- ✅ `siindex-chat.html` — SIINDEX conversational AI chat screen. Streaming word-by-word responses. Interview mode (?mode=interview). Phase 2 voice toggle built in (silent until ELEVENLABS_API_KEY added). Public URL: imagenationdex.com/siindex-chat + imagenationdex.com/siindex-chat?mode=interview
+- ✅ Vercel deployment — imagenationdex live, GitHub auto-deploy active (2026-06-19)
+- ⬜ Solana INDX token mint — **Human Validation Zone, AJ signs in Phantom** (last step before launch)
+
+### L99 Launch Target
+**24 September 2026**
+
+---
+
+## APPENDIX C — Known Deviations from Original Spec
+
+| Original | Actual (canonical) | Reason |
+|---|---|---|
+| "QPSI" in whitepaper | **PQSI** | Physical Quantum Synthetic Intelligence — full name updated in all screens and docs |
+| "SPL token" | **SPL Token-2022** | Token-2022 supports transfer fees, extensions. Confirmed in tokenomics-v1.md |
+| No price stated in original | **$0.24 USD genesis price** | Set in Session 13 (Task #71). Replaces old $0.35 working price. |
+| "Micro INDX airdrop on signup" | **50 INDX genesis welcome bonus** | Canonical amount set in onboarding-flow.html INSERT and citizen-dashboard.html |
+| "3 steps to onboard" | **Phone + name + portal activation** | 3 steps confirmed: (1) phone/OTP, (2) name/domain, (3) portal activation |
+| "0 KYC required" | **Progressive KYC — Tier 0 = phone + liveness only** | Tier 0 requires no documents, but liveness scan is mandatory |
+
+---
+
+## APPENDIX D — Verification Protocol
+> Run this at the start and end of every build session.
+
+### Session Start (before writing a single line of code)
+1. Read this whitepaper appendix — confirm canonical values are in your active context
+2. Read `memory.md` — pick up exactly where the last session ended
+3. Read `gotchas.md` — check for known errors before building
+4. Check `/Projects/ImageNation DEX/` — confirm the screen you're about to build doesn't already exist
+5. Ask: does this feature appear in Appendix B (Build Status)? If it's marked ✅ — don't rebuild it.
+
+### After Every Build (before `git add`)
+1. Run the price audit: `grep -E "0\.35\b" *.html | grep -v "cubic-bezier\|opacity\|animation\|ease\|transition"` → must return nothing
+2. Run the currency audit: `grep "A\$" *.html | grep -v "cubic-bezier\|opacity\|animation"` → must return nothing
+3. Run the seed phrase audit: `grep -i "seed phrase\|mnemonic\|12 words\|24 words" *.html | grep -v "no seed\|never\|without"` → must return nothing
+4. Cross-check any new price, supply, APY, or Wisdom Score value against Appendix A
+5. Update Appendix B (Build Status) with what was just built
+6. Append a summary to `memory.md`
+
+### Duplication Check
+Before building any new screen, run:
+```bash
+ls "/Projects/ImageNation DEX/" | grep -i [keyword]
+```
+If it exists → Read it first. Fix or extend it. Never create a second version.
+
+### The Mama Noe Test
+Before marking any screen complete, ask: "If Mama Noe — 80, Mele Village, Vanuatu, 50% smartphone confident — opened this screen, would she understand what to do next?" If not, simplify.

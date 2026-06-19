@@ -1042,6 +1042,9 @@
         const contact = document.getElementById('contactInput')?.value?.trim() || '';
         const isPhone = contact.startsWith('+') || /^[\d\s\-()+]+$/.test(contact);
         try {
+          // Check for referral code in URL params
+          const urlRef = new URLSearchParams(window.location.search).get('ref') || '';
+
           const { data, error } = await sb.from('citizens').insert({
             citizen_name: name,
             phone_number: isPhone ? contact : null,
@@ -1049,8 +1052,9 @@
             indx_balance: 50,
             genesis_citizen: true,
             wisdom_score: 25,
-            kyc_tier: 0
-          }).select('id').single();
+            kyc_tier: 0,
+            referred_by: urlRef || null
+          }).select('id, referral_code').single();
 
           if (data?.id) {
             sessionStorage.setItem('citizen_id', data.id);
@@ -1059,6 +1063,7 @@
             sessionStorage.setItem('citizen_balance', '50');
             sessionStorage.setItem('citizen_web3_domain', slug + '.indx');
             sessionStorage.setItem('citizen_genesis', 'true');
+            if (data.referral_code) sessionStorage.setItem('citizen_referral_code', data.referral_code);
           }
 
           // Duplicate phone — citizen already exists, look them up

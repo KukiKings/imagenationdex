@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Referral Dashboard — IN$DEX</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root {
     --cyan: #00D4FF; --blue: #2B35D8; --purple: #8B3FE8;
@@ -12,14 +13,15 @@
     --surface3: #22263A; --text: #F0F2FF; --text2: #A0A8C8;
     --text-muted: #5A6080;
   }
-  * { margin:0; padding:0; box-sizing:border-box; }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   body { background:var(--black); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; max-width:430px; margin:0 auto; min-height:100vh; }
   .topbar { background:var(--surface); border-bottom:1px solid rgba(255,255,255,0.06); padding:14px 16px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:100; }
-  .back-btn { width:36px; height:36px; border:none; background:var(--surface2); border-radius:10px; color:var(--text); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
-  .topbar-title { font-size:16px; font-weight:600; }
-  .content { padding:16px; padding-bottom:100px; }
+  .back-btn { width:36px; height:36px; border:none; background:var(--surface2); border-radius:10px; color:var(--text); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; text-decoration:none; }
+  .topbar-title { font-size:16px; font-weight:600; flex:1; }
+  .topbar-badge { font-size:11px; font-weight:700; background:#00E5A018; color:var(--green); border:1px solid #00E5A033; border-radius:8px; padding:3px 9px; }
+  .content { padding:16px; padding-bottom:40px; }
 
-  /* Stats row */
+  /* Stats */
   .stats-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px; }
   .stat-card { background:var(--surface); border-radius:14px; padding:14px 12px; text-align:center; }
   .stat-val { font-size:24px; font-weight:800; margin-bottom:4px; }
@@ -33,10 +35,11 @@
   .link-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
   .link-row { display:flex; gap:8px; align-items:center; }
   .link-box { flex:1; background:var(--surface2); border-radius:10px; padding:12px 14px; font-size:13px; color:var(--cyan); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .copy-btn { padding:12px 16px; background:linear-gradient(135deg,var(--blue),var(--purple)); border:none; border-radius:10px; color:#fff; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; }
+  .copy-btn { padding:12px 16px; background:linear-gradient(135deg,var(--blue),var(--purple)); border:none; border-radius:10px; color:#fff; font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap; transition:opacity 0.2s; }
+  .copy-btn:active { opacity:0.8; }
   .share-row { display:flex; gap:8px; margin-top:10px; }
-  .share-btn { flex:1; padding:10px; background:var(--surface2); border:none; border-radius:10px; color:var(--text2); font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:color 0.2s; }
-  .share-btn:hover { color:var(--text); }
+  .share-btn { flex:1; padding:10px; background:var(--surface2); border:none; border-radius:10px; color:var(--text2); font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:color 0.2s,background 0.2s; }
+  .share-btn:active { color:var(--text); background:var(--surface3); }
 
   /* Reward rates */
   .reward-card { background:linear-gradient(135deg,rgba(43,53,216,0.2),rgba(139,63,232,0.2)); border:1px solid rgba(139,63,232,0.3); border-radius:14px; padding:16px; margin-bottom:16px; }
@@ -60,9 +63,10 @@
   .tree-node { text-align:center; }
   .tree-avatar { width:40px; height:40px; border-radius:50%; background:var(--surface2); display:flex; align-items:center; justify-content:center; font-size:16px; margin:0 auto 5px; border:2px solid var(--surface3); }
   .tree-avatar.active { border-color:var(--green); }
-  .tree-name { font-size:11px; color:var(--text2); }
+  .tree-name { font-size:11px; color:var(--text2); max-width:60px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .tree-indx { font-size:10px; color:var(--green); }
   .tree-more { font-size:12px; color:var(--text-muted); text-align:center; margin-top:10px; }
+  .tree-empty { font-size:13px; color:var(--text-muted); text-align:center; padding:20px 0; }
 
   /* Activity */
   .activity-item { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
@@ -72,49 +76,59 @@
   .activity-name { font-size:13px; font-weight:500; }
   .activity-event { font-size:12px; color:var(--text-muted); }
   .activity-reward { font-size:13px; font-weight:700; color:var(--green); }
+  .activity-empty { font-size:13px; color:var(--text-muted); text-align:center; padding:20px 0; }
 
-  .toast { position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(60px); background:var(--surface2); color:var(--text); padding:12px 20px; border-radius:12px; font-size:13px; font-weight:500; transition:transform 0.3s; z-index:200; white-space:nowrap; border:1px solid rgba(0,229,160,0.3); }
+  /* Loading skeleton */
+  .skeleton { background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%); background-size:200% 100%; animation:shimmer 1.2s infinite; border-radius:8px; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+  /* Toast */
+  .toast { position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--surface2); color:var(--text); padding:12px 20px; border-radius:12px; font-size:13px; font-weight:500; transition:transform 0.3s; z-index:200; white-space:nowrap; border:1px solid rgba(0,229,160,0.3); pointer-events:none; }
   .toast.show { transform:translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <button class="back-btn" onclick="history.back()">←</button>
-  <span class="topbar-title">Referral Dashboard</span>
+  <a class="back-btn" href="citizen-dashboard.html">←</a>
+  <span class="topbar-title">Referrals</span>
+  <span class="topbar-badge" id="earnedBadge">0 INDX earned</span>
 </div>
 
 <div class="content">
 
+  <!-- Stats -->
   <div class="stats-row">
     <div class="stat-card">
-      <div class="stat-val cyan">12</div>
+      <div class="stat-val cyan" id="statReferred">–</div>
       <div class="stat-label">Citizens</div>
     </div>
     <div class="stat-card">
-      <div class="stat-val green">347</div>
+      <div class="stat-val green" id="statEarned">–</div>
       <div class="stat-label">INDX Earned</div>
     </div>
     <div class="stat-card">
-      <div class="stat-val gold">50</div>
-      <div class="stat-label">Pending</div>
+      <div class="stat-val gold" id="statPending">25</div>
+      <div class="stat-label">Per Referral</div>
     </div>
   </div>
 
+  <!-- Referral Link -->
   <div class="link-card">
     <div class="link-label">Your Referral Link</div>
     <div class="link-row">
-      <div class="link-box" id="refLink">index.finance/join/aj-henry-x7k2</div>
+      <div class="link-box" id="refLinkDisplay">Loading…</div>
       <button class="copy-btn" onclick="copyLink()">Copy</button>
     </div>
     <div class="share-row">
-      <button class="share-btn" onclick="shareVia('sms')">💬 SMS</button>
       <button class="share-btn" onclick="shareVia('whatsapp')">📱 WhatsApp</button>
-      <button class="share-btn" onclick="shareVia('telegram')">✈️ Telegram</button>
-      <button class="share-btn" onclick="shareVia('qr')">📲 QR Code</button>
+      <button class="share-btn" onclick="shareVia('sms')">💬 SMS</button>
+      <button class="share-btn" onclick="shareVia('native')">↑ Share</button>
+      <button class="share-btn" onclick="shareVia('qr')">📲 QR</button>
     </div>
   </div>
 
+  <!-- How you earn -->
   <div class="reward-card">
     <div class="reward-title">How you earn INDX</div>
     <div class="reward-row">
@@ -126,7 +140,7 @@
       <span class="reward-amount">+25 INDX</span>
     </div>
     <div class="reward-row">
-      <span class="reward-event">Friend reaches WS 50</span>
+      <span class="reward-event">Friend reaches Wisdom Score 50</span>
       <span class="reward-amount">+50 INDX</span>
     </div>
     <div class="reward-row">
@@ -135,71 +149,25 @@
     </div>
   </div>
 
+  <!-- Network -->
   <div class="section-label">Your Network</div>
   <div class="tree-card">
     <div class="tree-you">
       <div class="tree-node-you">👤</div>
-      <div class="tree-you-name">AJ Henry</div>
-      <div class="tree-you-sub">12 citizens referred</div>
+      <div class="tree-you-name" id="treeYouName">–</div>
+      <div class="tree-you-sub" id="treeYouSub">Loading…</div>
     </div>
     <div class="tree-line"></div>
-    <div class="tree-level">
-      <div class="tree-node">
-        <div class="tree-avatar active">🌏</div>
-        <div class="tree-name">Maria S.</div>
-        <div class="tree-indx">+75 INDX</div>
-      </div>
-      <div class="tree-node">
-        <div class="tree-avatar active">🌺</div>
-        <div class="tree-name">Tua F.</div>
-        <div class="tree-indx">+50 INDX</div>
-      </div>
-      <div class="tree-node">
-        <div class="tree-avatar active">🥥</div>
-        <div class="tree-name">Lani K.</div>
-        <div class="tree-indx">+50 INDX</div>
-      </div>
-      <div class="tree-node">
-        <div class="tree-avatar">👤</div>
-        <div class="tree-name">James T.</div>
-        <div class="tree-indx" style="color:var(--gold)">Pending</div>
-      </div>
+    <div class="tree-level" id="treeLevel">
+      <div class="tree-empty">Loading your network…</div>
     </div>
-    <div class="tree-more">+8 more citizens in your network</div>
+    <div class="tree-more" id="treeMore" style="display:none;"></div>
   </div>
 
+  <!-- Recent Activity -->
   <div class="section-label">Recent Activity</div>
-  <div class="activity-item">
-    <div class="activity-icon">✅</div>
-    <div class="activity-info">
-      <div class="activity-name">Maria Santos</div>
-      <div class="activity-event">Sent first payment · 2 hours ago</div>
-    </div>
-    <div class="activity-reward">+25 INDX</div>
-  </div>
-  <div class="activity-item">
-    <div class="activity-icon">🎯</div>
-    <div class="activity-info">
-      <div class="activity-name">Tua Faleolo</div>
-      <div class="activity-event">Reached Wisdom Score 50 · Yesterday</div>
-    </div>
-    <div class="activity-reward">+50 INDX</div>
-  </div>
-  <div class="activity-item">
-    <div class="activity-icon">✅</div>
-    <div class="activity-info">
-      <div class="activity-name">Lani Kealoha</div>
-      <div class="activity-event">Verified account · 3 days ago</div>
-    </div>
-    <div class="activity-reward">+25 INDX</div>
-  </div>
-  <div class="activity-item">
-    <div class="activity-icon">⏳</div>
-    <div class="activity-info">
-      <div class="activity-name">James Thompson</div>
-      <div class="activity-event">Joined · awaiting verification</div>
-    </div>
-    <div class="activity-reward" style="color:var(--gold)">+25 pending</div>
+  <div id="activityList">
+    <div class="activity-empty">Loading activity…</div>
   </div>
 
 </div>
@@ -207,29 +175,154 @@
 <div class="toast" id="toast"></div>
 
 <script>
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const BASE_URL = 'https://imagenationdex.com';
+
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  const citizenId = sessionStorage.getItem('citizen_id');
+  const citizenName = sessionStorage.getItem('citizen_name') || 'Sovereign';
+  let refCode = '';
+  let refLink = '';
+
+  function timeAgo(ts) {
+    const diff = (Date.now() - new Date(ts)) / 1000;
+    if (diff < 3600) return Math.floor(diff/60) + ' min ago';
+    if (diff < 86400) return Math.floor(diff/3600) + ' hours ago';
+    return Math.floor(diff/86400) + ' days ago';
+  }
+
+  function initials(name) {
+    return (name || '?').split(' ').map(w => w[0]).join('').toUpperCase().slice(0,2);
+  }
+
+  function avatarEmoji(idx) {
+    const emojis = ['🌏','🌺','🥥','🌴','🦋','🌊','🐠','🌸','🌻','🎯'];
+    return emojis[idx % emojis.length];
+  }
+
+  async function loadReferralData() {
+    if (!citizenId) {
+      showFallback();
+      return;
+    }
+
+    // Fetch referral stats via RPC
+    const { data, error } = await sb.rpc('get_referral_stats', { p_citizen_id: citizenId });
+
+    if (error || !data) {
+      showFallback();
+      return;
+    }
+
+    refCode = data.referral_code || '';
+    refLink = `${BASE_URL}/join?ref=${refCode}`;
+    const totalReferred = parseInt(data.total_referred) || 0;
+    const indxEarned = parseInt(data.indx_earned) || 0;
+    const recent = data.recent_referrals || [];
+
+    // Store referral code in sessionStorage for use in onboarding
+    sessionStorage.setItem('citizen_referral_code', refCode);
+
+    // Stats
+    document.getElementById('statReferred').textContent = totalReferred;
+    document.getElementById('statEarned').textContent = indxEarned;
+    document.getElementById('earnedBadge').textContent = indxEarned + ' INDX earned';
+
+    // Link
+    document.getElementById('refLinkDisplay').textContent = `imagenationdex.com/join?ref=${refCode}`;
+
+    // Tree — you
+    document.getElementById('treeYouName').textContent = citizenName;
+    document.getElementById('treeYouSub').textContent =
+      totalReferred === 0 ? 'No referrals yet — share your link!' :
+      totalReferred + ' citizen' + (totalReferred === 1 ? '' : 's') + ' referred';
+
+    // Tree — network nodes
+    const treeLevel = document.getElementById('treeLevel');
+    if (recent.length === 0) {
+      treeLevel.innerHTML = '<div class="tree-empty">Share your link to build your network.</div>';
+    } else {
+      const show = recent.slice(0, 5);
+      treeLevel.innerHTML = show.map((r, i) => `
+        <div class="tree-node">
+          <div class="tree-avatar ${r.wisdom_score >= 50 ? 'active' : ''}">${avatarEmoji(i)}</div>
+          <div class="tree-name">${(r.citizen_name || 'Citizen').split(' ')[0]}</div>
+          <div class="tree-indx">${r.wisdom_score >= 50 ? '+75 INDX' : '+25 INDX'}</div>
+        </div>
+      `).join('');
+      if (totalReferred > 5) {
+        const more = document.getElementById('treeMore');
+        more.style.display = '';
+        more.textContent = `+${totalReferred - 5} more in your network`;
+      }
+    }
+
+    // Activity list
+    const activityList = document.getElementById('activityList');
+    if (recent.length === 0) {
+      activityList.innerHTML = '<div class="activity-empty">No referrals yet. Share your link and start earning.</div>';
+    } else {
+      activityList.innerHTML = recent.map(r => {
+        const isActive = r.wisdom_score >= 50;
+        const reward = isActive ? '+75 INDX' : '+25 INDX';
+        const event = isActive ? 'Joined + reached Wisdom Score 50' : 'Joined via your referral';
+        return `
+          <div class="activity-item">
+            <div class="activity-icon">${isActive ? '✅' : '⏳'}</div>
+            <div class="activity-info">
+              <div class="activity-name">${r.citizen_name || 'New Citizen'}</div>
+              <div class="activity-event">${event} · ${timeAgo(r.created_at)}</div>
+            </div>
+            <div class="activity-reward" style="color:${isActive ? 'var(--green)' : 'var(--gold)'}">${reward}</div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  function showFallback() {
+    // No session — show generic prompt
+    refCode = 'JOIN';
+    refLink = `${BASE_URL}/join`;
+    document.getElementById('refLinkDisplay').textContent = 'imagenationdex.com/join';
+    document.getElementById('statReferred').textContent = '0';
+    document.getElementById('statEarned').textContent = '0';
+    document.getElementById('treeYouName').textContent = 'You';
+    document.getElementById('treeYouSub').textContent = 'Log in to see your referral code';
+    document.getElementById('treeLevel').innerHTML = '<div class="tree-empty">Log in to view your network.</div>';
+    document.getElementById('activityList').innerHTML = '<div class="activity-empty">Log in to view referral activity.</div>';
+  }
+
+  // ── SHARE ──
   function copyLink() {
-    const link = document.getElementById('refLink').textContent;
-    navigator.clipboard.writeText('https://' + link).then(() => {
+    navigator.clipboard.writeText(refLink).then(() => {
       showToast('Link copied. Share it with someone who needs financial access.');
-    }).catch(() => {
-      showToast('Link copied.');
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy', 2000);
     });
   }
 
   function shareVia(channel) {
-    const link = 'https://index.finance/join/aj-henry-x7k2';
-    const msg = "I'm using IN$DEX — instant, free money transfers. No bank needed. Join here: " + link;
-    const urls = {
-      sms: `sms:?body=${encodeURIComponent(msg)}`,
-      whatsapp: `https://wa.me/?text=${encodeURIComponent(msg)}`,
-      telegram: `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('Join IN$DEX — instant money transfers, no bank needed.')}`,
-      qr: null
-    };
-    if (channel === 'qr') {
-      showToast('QR code — coming soon.');
-      return;
+    const msg = `I'm using IN$DEX — instant money transfers, no bank needed. Join free and get 50 INDX: ${refLink}`;
+    if (channel === 'whatsapp') {
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    } else if (channel === 'sms') {
+      window.location.href = `sms:?body=${encodeURIComponent(msg)}`;
+    } else if (channel === 'native') {
+      if (navigator.share) {
+        navigator.share({ title: 'Join IN$DEX', text: 'Get 50 free INDX — no bank needed.', url: refLink });
+      } else {
+        copyLink();
+      }
+    } else if (channel === 'qr') {
+      // Open QR via Google Charts API (no backend needed)
+      const qrUrl = `https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=${encodeURIComponent(refLink)}&choe=UTF-8`;
+      window.open(qrUrl, '_blank');
     }
-    window.open(urls[channel], '_blank');
   }
 
   function showToast(msg) {
@@ -238,6 +331,9 @@
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 3000);
   }
+
+  // ── INIT ──
+  loadReferralData();
 </script>
 </body>
 </html>
