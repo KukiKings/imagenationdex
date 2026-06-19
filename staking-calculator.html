@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Staking Calculator · IN$DEX</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+    --black:#090A10; --green:#00E5A0; --gold:#FFB800;
+    --red:#FF4D6D; --surface:#12141F; --surface2:#1A1D2E;
+    --surface3:#22263A; --text:#EAEAEA; --text-muted:#7A7F99;
+    --border:rgba(255,255,255,0.07); --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;display:flex;justify-content:center;}
+  .app{width:100%;max-width:430px;min-height:100vh;position:relative;overflow-x:hidden;}
+
+  /* TOPBAR */
+  .topbar{position:sticky;top:0;z-index:100;background:rgba(9,10,16,0.92);backdrop-filter:blur(12px);padding:16px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);}
+  .back-btn{width:36px;height:36px;border-radius:50%;background:var(--surface2);border:none;color:var(--text);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+  .topbar-title{font-size:17px;font-weight:700;}
+  .topbar-sub{font-size:12px;color:var(--text-muted);margin-left:auto;}
+  .info-btn{width:32px;height:32px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--cyan);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+
+  /* HERO */
+  .hero{margin:20px;border-radius:20px;background:linear-gradient(135deg,#0A0D1F 0%,#0D1235 50%,#0A1820 100%);border:1px solid rgba(0,212,255,0.15);padding:24px;position:relative;overflow:hidden;}
+  .hero::before{content:'';position:absolute;top:-50px;right:-50px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(0,212,255,0.1) 0%,transparent 70%);pointer-events:none;}
+  .hero-label{font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;}
+  .hero-result{font-size:44px;font-weight:900;color:var(--cyan);letter-spacing:-0.03em;line-height:1;}
+  .hero-range{font-size:13px;color:var(--text-muted);margin-top:4px;}
+  .hero-range span{color:var(--green);font-weight:700;}
+  .hero-divider{height:1px;background:var(--border);margin:18px 0;}
+  .hero-stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .hs{text-align:center;}
+  .hs-val{font-size:20px;font-weight:800;margin-bottom:2px;}
+  .hs-label{font-size:11px;color:var(--text-muted);}
+
+  /* INPUTS */
+  .section{padding:0 20px;margin-bottom:20px;}
+  .section-title{font-size:13px;font-weight:700;color:var(--text-muted);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:12px;}
+
+  .input-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:12px;}
+  .input-label{font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:8px;}
+  .amount-row{display:flex;align-items:center;gap:8px;}
+  .amount-field{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:22px;font-weight:800;color:var(--text);outline:none;width:100%;}
+  .amount-field:focus{border-color:rgba(0,212,255,0.4);}
+  .amount-sym{font-size:14px;font-weight:700;color:var(--text-muted);white-space:nowrap;}
+  .amount-usd{font-size:12px;color:var(--text-muted);margin-top:6px;}
+  .quick-btns{display:flex;gap:6px;margin-top:10px;}
+  .qb{padding:6px 12px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.15s;}
+  .qb:hover{border-color:var(--cyan);color:var(--cyan);}
+
+  /* LOCK TIERS */
+  .tiers{display:flex;flex-direction:column;gap:8px;}
+  .tier{background:var(--surface);border:2px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:space-between;}
+  .tier.active{border-color:var(--cyan);background:rgba(0,212,255,0.05);}
+  .tier-left{display:flex;flex-direction:column;gap:2px;}
+  .tier-name{font-size:14px;font-weight:700;}
+  .tier-desc{font-size:11px;color:var(--text-muted);}
+  .tier-right{text-align:right;}
+  .tier-apy{font-size:16px;font-weight:900;color:var(--green);}
+  .tier-apy-label{font-size:10px;color:var(--text-muted);}
+  .tier-check{width:22px;height:22px;border-radius:50%;background:var(--cyan);display:none;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#000;margin-left:10px;flex-shrink:0;}
+  .tier.active .tier-check{display:flex;}
+
+  /* PROJECTION TIMEFRAMES */
+  .time-tabs{display:flex;gap:6px;margin-bottom:16px;}
+  .tt{flex:1;padding:9px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);font-size:13px;font-weight:700;text-align:center;cursor:pointer;transition:all 0.15s;}
+  .tt.active{background:var(--cyan);border-color:var(--cyan);color:#000;}
+
+  /* RESULTS CARD */
+  .results-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:12px;}
+  .rc-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);}
+  .rc-row:last-child{border-bottom:none;}
+  .rc-label{font-size:13px;color:var(--text-muted);}
+  .rc-val{font-size:14px;font-weight:700;}
+  .rc-range{font-size:11px;color:var(--text-muted);margin-top:2px;text-align:right;}
+
+  /* COMPOUND COMPARISON */
+  .compare-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:12px;}
+  .compare-header{padding:14px 18px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:13px;font-weight:700;}
+  .compare-body{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+  .compare-col{padding:18px;text-align:center;}
+  .compare-col:first-child{border-right:1px solid var(--border);}
+  .compare-type{font-size:11px;color:var(--text-muted);font-weight:600;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em;}
+  .compare-total{font-size:24px;font-weight:900;margin-bottom:2px;}
+  .compare-gain{font-size:12px;font-weight:700;}
+  .compare-bar-wrap{padding:0 18px 18px;display:flex;flex-direction:column;gap:8px;}
+  .bar-row{display:flex;align-items:center;gap:10px;}
+  .bar-label{font-size:11px;color:var(--text-muted);width:70px;flex-shrink:0;}
+  .bar-track{flex:1;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:4px;transition:width 0.6s ease;}
+  .compound-bonus{text-align:center;padding:12px 18px;font-size:13px;color:var(--gold);font-weight:700;border-top:1px solid var(--border);}
+
+  /* DISCLAIMER */
+  .disclaimer{margin:0 20px 20px;background:rgba(122,127,153,0.07);border:1px solid rgba(122,127,153,0.2);border-radius:14px;padding:14px 16px;display:flex;gap:10px;align-items:flex-start;}
+  .disc-icon{font-size:16px;flex-shrink:0;margin-top:1px;}
+  .disc-text{font-size:12px;color:var(--text-muted);line-height:1.6;}
+  .disc-text strong{color:var(--text);}
+
+  /* WISDOM GATE */
+  .wisdom-gate{margin:0 20px 20px;background:rgba(139,63,232,0.07);border:1px solid rgba(139,63,232,0.25);border-radius:14px;padding:14px 16px;display:flex;gap:10px;align-items:flex-start;}
+  .wg-icon{font-size:18px;flex-shrink:0;}
+  .wg-text{font-size:13px;line-height:1.5;}
+  .wg-title{font-weight:700;color:var(--purple);margin-bottom:3px;}
+  .wg-desc{font-size:12px;color:var(--text-muted);}
+  .wg-link{color:var(--cyan);text-decoration:none;font-weight:600;}
+
+  /* CTA */
+  .cta-bar{padding:16px 20px 36px;}
+  .cta-btn{width:100%;padding:17px;border-radius:14px;background:var(--cyan);border:none;color:#000;font-size:16px;font-weight:800;cursor:pointer;letter-spacing:0.01em;}
+  .cta-btn:active{opacity:0.9;}
+  .cta-sub{text-align:center;font-size:12px;color:var(--text-muted);margin-top:10px;}
+
+  /* TOOLTIP OVERLAY */
+  #tipOverlay{position:fixed;inset:0;z-index:999;display:none;align-items:flex-end;justify-content:center;padding:0 0 90px;background:rgba(0,0,0,0.6);}
+  #tipOverlay.show{display:flex;}
+  .tip-card{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:24px;width:calc(100% - 40px);max-width:380px;}
+  .tip-title{font-size:16px;font-weight:800;margin-bottom:10px;}
+  .tip-body{font-size:14px;color:var(--text-muted);line-height:1.7;}
+  .tip-body strong{color:var(--text);}
+  .tip-close{width:100%;padding:14px;border-radius:12px;background:var(--surface3);border:1px solid var(--border);color:var(--text);font-size:15px;font-weight:700;cursor:pointer;margin-top:18px;}
+
+  /* TOAST */
+  #toast{position:fixed;bottom:110px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:12px;font-size:14px;z-index:400;pointer-events:none;opacity:0;transition:opacity 0.3s;white-space:nowrap;}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <button class="back-btn" onclick="history.back()">←</button>
+    <div>
+      <div class="topbar-title">Staking Calculator</div>
+    </div>
+    <div class="info-btn" onclick="showTip('variable')">ⓘ</div>
+  </div>
+
+  <!-- HERO RESULT -->
+  <div class="hero">
+    <div class="hero-label">Estimated Total After <span id="heroYears">1 Year</span></div>
+    <div class="hero-result" id="heroTotal">500 INDX</div>
+    <div class="hero-range">Range: <span id="heroLow">—</span> to <span id="heroHigh">—</span> INDX</div>
+    <div class="hero-divider"></div>
+    <div class="hero-stats">
+      <div class="hs">
+        <div class="hs-val" id="heroGainIndx" style="color:var(--green);">+0</div>
+        <div class="hs-label">Est. Gain (INDX)</div>
+      </div>
+      <div class="hs">
+        <div class="hs-val" id="heroGainUsd" style="color:var(--gold);">$0</div>
+        <div class="hs-label">Est. Gain (USD @ $0.24)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AMOUNT INPUT -->
+  <div class="section">
+    <div class="section-title">Amount to Stake</div>
+    <div class="input-card">
+      <div class="input-label">INDX Amount</div>
+      <div class="amount-row">
+        <input class="amount-field" type="number" id="amountInput" placeholder="500" value="500" oninput="calc()" min="1">
+        <span class="amount-sym">INDX</span>
+      </div>
+      <div class="amount-usd" id="amountUsd">≈ $120.00 USD at $0.24</div>
+      <div class="quick-btns">
+        <button class="qb" onclick="setAmt(100)">100</button>
+        <button class="qb" onclick="setAmt(500)">500</button>
+        <button class="qb" onclick="setAmt(1000)">1,000</button>
+        <button class="qb" onclick="setAmt(5000)">5,000</button>
+        <button class="qb" onclick="setAmt(10000)">10K</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOCK PERIOD -->
+  <div class="section">
+    <div class="section-title">Lock Period</div>
+    <div class="tiers">
+      <div class="tier" id="tier-flex" onclick="selectTier('flex',3,5,'No minimum','10% of Fund income')">
+        <div class="tier-left">
+          <div class="tier-name">Flex</div>
+          <div class="tier-desc">Unstake anytime · 10% of Fund income</div>
+        </div>
+        <div class="tier-right">
+          <div class="tier-apy">3–5%</div>
+          <div class="tier-apy-label">Est. range</div>
+        </div>
+        <div class="tier-check">✓</div>
+      </div>
+      <div class="tier active" id="tier-30" onclick="selectTier('30',4,7,'30-day lock','20% of Fund income')">
+        <div class="tier-left">
+          <div class="tier-name">30 Days</div>
+          <div class="tier-desc">30-day lock · 20% of Fund income</div>
+        </div>
+        <div class="tier-right">
+          <div class="tier-apy">4–7%</div>
+          <div class="tier-apy-label">Est. range</div>
+        </div>
+        <div class="tier-check">✓</div>
+      </div>
+      <div class="tier" id="tier-90" onclick="selectTier('90',6,9,'90-day lock','30% of Fund income')">
+        <div class="tier-left">
+          <div class="tier-name">90 Days</div>
+          <div class="tier-desc">90-day lock · 30% of Fund income</div>
+        </div>
+        <div class="tier-right">
+          <div class="tier-apy">6–9%</div>
+          <div class="tier-apy-label">Est. range</div>
+        </div>
+        <div class="tier-check">✓</div>
+      </div>
+      <div class="tier" id="tier-365" onclick="selectTier('365',9,13,'365-day lock','40% of Fund income')">
+        <div class="tier-left">
+          <div class="tier-name">365 Days</div>
+          <div class="tier-desc">365-day lock · 40% of Fund income · Sovereign tier</div>
+        </div>
+        <div class="tier-right">
+          <div class="tier-apy" style="color:var(--gold);">9–13%</div>
+          <div class="tier-apy-label">Est. range</div>
+        </div>
+        <div class="tier-check">✓</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIMEFRAME -->
+  <div class="section">
+    <div class="section-title">Projection Timeframe</div>
+    <div class="time-tabs">
+      <div class="tt active" id="tt1" onclick="setYears(1)">1 yr</div>
+      <div class="tt" id="tt3" onclick="setYears(3)">3 yr</div>
+      <div class="tt" id="tt5" onclick="setYears(5)">5 yr</div>
+      <div class="tt" id="tt10" onclick="setYears(10)">10 yr</div>
+    </div>
+
+    <!-- RESULTS -->
+    <div class="results-card">
+      <div class="rc-row">
+        <span class="rc-label">Starting amount</span>
+        <div>
+          <div class="rc-val" id="rcStart">500 INDX</div>
+          <div class="rc-range" id="rcStartUsd">$120.00 USD</div>
+        </div>
+      </div>
+      <div class="rc-row">
+        <span class="rc-label">Est. yield earned</span>
+        <div>
+          <div class="rc-val" style="color:var(--green);" id="rcYieldIndx">+0 INDX</div>
+          <div class="rc-range" id="rcYieldRange">Range: — to — INDX</div>
+        </div>
+      </div>
+      <div class="rc-row">
+        <span class="rc-label">With compounding</span>
+        <div>
+          <div class="rc-val" style="color:var(--gold);" id="rcCompound">0 INDX</div>
+          <div class="rc-range" id="rcCompoundBonus">+0 INDX more than simple</div>
+        </div>
+      </div>
+      <div class="rc-row">
+        <span class="rc-label">Total (simple)</span>
+        <div>
+          <div class="rc-val" id="rcTotal">500 INDX</div>
+          <div class="rc-range" id="rcTotalUsd">≈ $0 USD</div>
+        </div>
+      </div>
+      <div class="rc-row">
+        <span class="rc-label">Total (compounded)</span>
+        <div>
+          <div class="rc-val" style="color:var(--gold);font-size:16px;" id="rcTotalCompound">500 INDX</div>
+          <div class="rc-range" id="rcTotalCompoundUsd">≈ $0 USD</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPOUND COMPARISON -->
+  <div class="section">
+    <div class="section-title">Simple vs Compound</div>
+    <div class="compare-card">
+      <div class="compare-header">How compounding grows your stake over <span id="compareYearsLabel">1 year</span></div>
+      <div class="compare-body">
+        <div class="compare-col">
+          <div class="compare-type">Simple</div>
+          <div class="compare-total" id="cmpSimple" style="color:var(--text);">500</div>
+          <div class="compare-gain" id="cmpSimpleGain" style="color:var(--text-muted);">+0 INDX</div>
+        </div>
+        <div class="compare-col">
+          <div class="compare-type">Compounded ✨</div>
+          <div class="compare-total" id="cmpCompound" style="color:var(--gold);">500</div>
+          <div class="compare-gain" id="cmpCompoundGain" style="color:var(--gold);">+0 INDX</div>
+        </div>
+      </div>
+      <div class="compare-bar-wrap">
+        <div class="bar-row">
+          <div class="bar-label" style="font-size:10px;">Simple</div>
+          <div class="bar-track"><div class="bar-fill" id="barSimple" style="width:70%;background:var(--surface3);"></div></div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label" style="font-size:10px;">Compound</div>
+          <div class="bar-track"><div class="bar-fill" id="barCompound" style="width:85%;background:linear-gradient(90deg,var(--green),var(--gold));"></div></div>
+        </div>
+      </div>
+      <div class="compound-bonus">Auto-compound earns you <span id="bonusIndx">0 INDX</span> more</div>
+    </div>
+  </div>
+
+  <!-- WISDOM SCORE GATE -->
+  <div class="wisdom-gate">
+    <div class="wg-icon">🏛</div>
+    <div class="wg-text">
+      <div class="wg-title">Sovereign Yield requires Wisdom Score 100</div>
+      <div class="wg-desc">30-day, 90-day, and 365-day staking unlocks at score 100. Flex staking is available to all citizens. <a class="wg-link" href="wisdom-score.html">Check your score →</a></div>
+    </div>
+  </div>
+
+  <!-- DISCLAIMER -->
+  <div class="disclaimer">
+    <div class="disc-icon">⚡</div>
+    <div class="disc-text">
+      <strong>Yield is variable, not guaranteed.</strong> These projections are estimates based on current Civilisation Fund income levels. In high-volume months you earn toward the top of the range. In quiet months you earn toward the bottom. All rewards are real — paid from platform revenue, never from newly created tokens.
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="cta-bar">
+    <button class="cta-btn" onclick="goStake()">Start Staking →</button>
+    <div class="cta-sub">No minimum. Withdraw anytime on Flex. Lock periods apply on 30/90/365 tiers.</div>
+  </div>
+
+</div>
+
+<!-- TOOLTIP OVERLAY -->
+<div id="tipOverlay" onclick="hideTip()">
+  <div class="tip-card" onclick="event.stopPropagation()">
+    <div class="tip-title" id="tipTitle">How yield works</div>
+    <div class="tip-body" id="tipBody">Loading…</div>
+    <button class="tip-close" onclick="hideTip()">Got it</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  const INDX_PRICE_USD = 0.24;
+
+  const TIPS = {
+    variable: {
+      title: 'Why is yield variable?',
+      body: `<strong>Fixed APY promises fail.</strong> Anchor Protocol promised 20% APY on Terra — it collapsed. Celsius promised high yields — it collapsed.<br><br>IN$DEX only pays what it actually earns. The Civilisation Fund receives 2% of every transaction on the network. That income is distributed to stakers every day.<br><br><strong>High volume month → higher yield.</strong> Quiet month → lower yield. Always real. Never promised beyond what exists.<br><br>The range shown is based on current Fund income levels — not a guarantee.`
+    },
+    fund: {
+      title: 'What is the Civilisation Fund?',
+      body: `Every transaction on IN$DEX contributes 2% to the Civilisation Fund under the 98/2 Civilisation Law.<br><br>The Fund has three jobs:<br>• Pay staking yield to citizens<br>• Execute buybacks if INDX price drops 15%+<br>• Hold a 10% emergency reserve for citizen protection<br><br>You can verify Fund balances on-chain at any time.`
+    }
+  };
+
+  // State
+  let selectedTier = { key:'30', apyLow:4, apyHigh:7, label:'30-day lock', fundDesc:'20% of Fund income' };
+  let projYears = 1;
+
+  function selectTier(key, low, high, label, fundDesc) {
+    document.querySelectorAll('.tier').forEach(t => t.classList.remove('active'));
+    document.getElementById('tier-' + key).classList.add('active');
+    selectedTier = { key, apyLow:low, apyHigh:high, label, fundDesc };
+    calc();
+  }
+
+  function setYears(y) {
+    projYears = y;
+    ['1','3','5','10'].forEach(n => {
+      document.getElementById('tt' + n).classList.toggle('active', n == y);
+    });
+    document.getElementById('compareYearsLabel').textContent = y + (y === 1 ? ' year' : ' years');
+    document.getElementById('heroYears').textContent = y + (y === 1 ? ' Year' : ' Years');
+    calc();
+  }
+
+  function setAmt(v) {
+    document.getElementById('amountInput').value = v;
+    calc();
+  }
+
+  function calc() {
+    const amt = parseFloat(document.getElementById('amountInput').value) || 0;
+    const { apyLow, apyHigh } = selectedTier;
+    const days = projYears * 365;
+
+    // Mid APY for headline
+    const apyMid = (apyLow + apyHigh) / 2 / 100;
+    const apyLowD = apyLow / 100;
+    const apyHighD = apyHigh / 100;
+
+    // Simple interest
+    const simpleGainMid = amt * apyMid * projYears;
+    const simpleGainLow = amt * apyLowD * projYears;
+    const simpleGainHigh = amt * apyHighD * projYears;
+    const simpleTotalMid = amt + simpleGainMid;
+
+    // Compound (daily)
+    const compoundTotalMid = amt * Math.pow(1 + apyMid / 365, days);
+    const compoundTotalLow = amt * Math.pow(1 + apyLowD / 365, days);
+    const compoundTotalHigh = amt * Math.pow(1 + apyHighD / 365, days);
+    const compoundGainMid = compoundTotalMid - amt;
+    const compoundBonus = compoundTotalMid - simpleTotalMid;
+
+    // USD values
+    const gainUsd = compoundGainMid * INDX_PRICE_USD;
+
+    // Hero
+    document.getElementById('heroTotal').textContent = fmt(compoundTotalMid) + ' INDX';
+    document.getElementById('heroLow').textContent = fmt(compoundTotalLow);
+    document.getElementById('heroHigh').textContent = fmt(compoundTotalHigh);
+    document.getElementById('heroGainIndx').textContent = '+' + fmt(compoundGainMid);
+    document.getElementById('heroGainUsd').textContent = '$' + (gainUsd).toFixed(2);
+
+    // Amount USD
+    document.getElementById('amountUsd').textContent = '≈ $' + (amt * INDX_PRICE_USD).toFixed(2) + ' USD at $0.24';
+
+    // Results rows
+    document.getElementById('rcStart').textContent = fmt(amt) + ' INDX';
+    document.getElementById('rcStartUsd').textContent = '$' + (amt * INDX_PRICE_USD).toFixed(2) + ' USD';
+    document.getElementById('rcYieldIndx').textContent = '+' + fmt(simpleGainMid) + ' INDX';
+    document.getElementById('rcYieldRange').textContent = 'Range: ' + fmt(simpleGainLow) + ' to ' + fmt(simpleGainHigh) + ' INDX';
+    document.getElementById('rcCompound').textContent = fmt(compoundTotalMid) + ' INDX';
+    document.getElementById('rcCompoundBonus').textContent = '+' + fmt(compoundBonus) + ' INDX more than simple';
+    document.getElementById('rcTotal').textContent = fmt(simpleTotalMid) + ' INDX';
+    document.getElementById('rcTotalUsd').textContent = '≈ $' + (simpleTotalMid * INDX_PRICE_USD).toFixed(0) + ' USD';
+    document.getElementById('rcTotalCompound').textContent = fmt(compoundTotalMid) + ' INDX';
+    document.getElementById('rcTotalCompoundUsd').textContent = '≈ $' + (compoundTotalMid * INDX_PRICE_USD).toFixed(0) + ' USD';
+
+    // Comparison
+    document.getElementById('cmpSimple').textContent = fmt(simpleTotalMid);
+    document.getElementById('cmpSimpleGain').textContent = '+' + fmt(simpleGainMid) + ' INDX';
+    document.getElementById('cmpCompound').textContent = fmt(compoundTotalMid);
+    document.getElementById('cmpCompoundGain').textContent = '+' + fmt(compoundGainMid) + ' INDX';
+    document.getElementById('bonusIndx').textContent = fmt(compoundBonus) + ' INDX';
+
+    // Bars (compound always wider)
+    const total = compoundTotalMid;
+    document.getElementById('barSimple').style.width = Math.max(10, (simpleTotalMid / total) * 88) + '%';
+    document.getElementById('barCompound').style.width = '95%';
+  }
+
+  function fmt(n) {
+    if (n >= 1000000) return (n / 1000000).toFixed(2) + 'M';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+    return n.toFixed(1);
+  }
+
+  function showTip(key) {
+    const t = TIPS[key] || TIPS.variable;
+    document.getElementById('tipTitle').textContent = t.title;
+    document.getElementById('tipBody').innerHTML = t.body;
+    document.getElementById('tipOverlay').classList.add('show');
+  }
+  function hideTip() {
+    document.getElementById('tipOverlay').classList.remove('show');
+  }
+
+  function goStake() {
+    window.location.href = 'staking.html';
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.opacity = '1';
+    setTimeout(() => t.style.opacity = '0', 2500);
+  }
+
+  // Init
+  calc();
+</script>
+</body>
+</html>
