@@ -660,21 +660,32 @@ async function executeSend() {
       <div style="font-size:13px;color:var(--text-muted)">Broadcasting to Solana</div>
     </div>`;
 
-  // ── Supabase INSERT ──
+  // ── transfer_indx RPC (atomic: balance + 98/2 + transaction + wisdom) ──
   const citizenId = sessionStorage.getItem('citizen_id');
   const amtIndx = selectedToken === 'INDX' ? parseFloat(amountStr) : parseFloat(usd) / 0.24;
-  try {
-    await sb.from('transactions').insert({
-      citizen_id:           citizenId || null,
-      amount_indx:          parseFloat(amtIndx.toFixed(4)),
-      direction:            'send',
-      counterparty_address: recipientPhone || recipientName || 'unknown',
-      status:               'complete'
-    });
-    // Update sessionStorage balance
+  if (citizenId) {
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/transfer_indx', {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          p_sender_id:         citizenId,
+          p_amount:            parseFloat(amtIndx.toFixed(4)),
+          p_recipient_address: recipientPhone || recipientName || 'unknown'
+        })
+      });
+      const result = await res.json();
+      if (result && result.new_balance !== undefined) sessionStorage.setItem('citizen_balance', String(Math.round(result.new_balance)));
+      if (result && result.new_wisdom   !== undefined) sessionStorage.setItem('citizen_wisdom',  String(result.new_wisdom));
+    } catch(e) {
+      // Fallback: optimistic balance update
+      const prevBal = parseInt(sessionStorage.getItem('citizen_balance') || '0');
+      sessionStorage.setItem('citizen_balance', String(Math.max(0, prevBal - Math.round(amtIndx))));
+    }
+  } else {
     const prevBal = parseInt(sessionStorage.getItem('citizen_balance') || '0');
     sessionStorage.setItem('citizen_balance', String(Math.max(0, prevBal - Math.round(amtIndx))));
-  } catch(e) { /* silent never block the payment flow */ }
+  }
 
   setTimeout(() => {
     const flag = selectedCorridor ? selectedCorridor.flag : '🌏';

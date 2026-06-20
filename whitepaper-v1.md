@@ -222,42 +222,59 @@ That is the mission. That is IN$DEX.
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-06-19 (Session 19)
+> Last updated: 2026-06-20 (Session 22)
 
 ### Supabase Backend (live — project ref: zljgthfzbalsunuoohcd)
 - ✅ `waitlist` table — anon INSERT, RLS on
-- ✅ `citizens` table — anon INSERT, auth SELECT/UPDATE own row
+- ✅ `citizens` table — anon INSERT, auth SELECT/UPDATE own row; `referred_by` column (TEXT) stores inbound ref code
 - ✅ `transactions` table — anon + auth INSERT, auth SELECT own rows
 - ✅ `staking_positions` table — anon INSERT, auth SELECT/UPDATE own rows
 - ✅ `security_events` table — append-only, Law 7 compliant
+- ✅ `referrals` table — referrer_id, referred_id, referral_code (UNIQUE), status, created_at, completed_at; RLS on
+- ✅ `governance_proposals` table — MemeDAO live; 3 seed proposals (active, wisdom_gate=50, quorum=100)
 - ✅ `get_waitlist_count()` RPC — public counter (waitlist + citizens)
 - ✅ `get_citizen_by_phone(phone)` RPC — login phone fallback
 - ✅ `link_citizen_auth(phone, auth_id)` RPC — links anon citizen to auth session
+- ✅ `award_wisdom(p_citizen_id, p_points, p_reason)` RPC — SECURITY DEFINER, LEAST(200, current+points), logs T0 to security_events, returns new score
+- ✅ `get_or_create_referral_code(p_citizen_id)` RPC — returns existing or generates 8-char uppercase unique code
+- ✅ `complete_referral(p_referral_code, p_referred_citizen_id)` RPC — FOR UPDATE lock, self-referral check, awards +10 wisdom to referrer
+- ✅ `transfer_indx(p_sender_id, p_amount, p_recipient_address, p_note)` RPC — balance check, 98/2 law enforced atomically, records transaction, awards +2 wisdom; returns {success, amount_sent, civ_fee, net_amount, new_balance, new_wisdom}
+- ✅ `get_referral_stats(p_citizen_id)` RPC — returns {referral_code, total_referred, completed_referrals, indx_earned, recent_referrals[]}
+- ✅ `cast_governance_vote` RPC — wisdom gate 50+, one vote per citizen per proposal
 - ✅ `create-payment-intent` Edge Function — Stripe PaymentIntent creation (ACTIVE, needs STRIPE_SECRET_KEY secret)
 - ✅ `siindex-chat` Edge Function — SIINDEX conversational AI, streaming SSE, Claude Haiku backend (ACTIVE, needs ANTHROPIC_API_KEY secret)
 - ✅ `siindex-voice-tts` Edge Function — ElevenLabs TTS, Phase 2 voice (ACTIVE, graceful fallback until ELEVENLABS_API_KEY added in September)
 
 ### App Screens — Supabase Wired
-- ✅ `onboarding-flow.html` — INSERT citizens, set sessionStorage
+- ✅ `onboarding-flow.html` — INSERT citizens, set sessionStorage; detects ?ref= param, calls complete_referral after INSERT
 - ✅ `login.html` — OTP verify, phone fallback, sessionStorage on success
-- ✅ `citizen-dashboard.html` — reads sessionStorage for wisdom/balance/domain
-- ✅ `genesis-offer.html` — real waitlist count via RPC
+- ✅ `citizen-dashboard.html` — reads sessionStorage for wisdom/balance/domain; SIINDEX chat FAB added
+- ✅ `genesis-offer.html` — real waitlist count via RPC; expiry check (post-24 Sep 2026 shows "Genesis period ended" state)
 - ✅ `home-v2.html` — real waitlist count via RPC
 - ✅ `history.html` — live transactions SELECT, date grouping
-- ✅ `staking.html` — INSERT staking_positions, APY ranges canonical
-- ✅ `send.html` — INSERT transactions on send
+- ✅ `staking.html` — INSERT staking_positions, APY ranges canonical; awards +8 wisdom via award_wisdom RPC
+- ✅ `send.html` — transfer_indx RPC (replaces direct INSERT); 98/2 enforced at DB; updates balance + wisdom in sessionStorage
+- ✅ `governance.html` — MemeDAO live; loads proposals from Supabase; cast_governance_vote RPC; awards +5 wisdom per vote
+- ✅ `referral.html` — loads real referral code + stats via get_referral_stats RPC; dynamic share URLs; leaderboard with live "You" row
+- ✅ `referral-dashboard.html` — get_referral_stats RPC; referral network tree + activity list live
 
 ### App Screens — Complete (not wired to live data, no action needed)
 All 100+ screens exist and are clean at $0.24 USD, no A$, no seed phrase. Key screens:
-`sovereign-academy.html` (6 tracks, 19 lessons, 140 Wisdom Points) · `staking-calculator.html` · `buy-indx.html` · `receive.html` · `bill-pay.html` · `withdraw.html` · `dex-swap.html` · `marketplace.html` · `nft-marketplace.html` · `referral-dashboard.html` · `security-center.html` · `notifications-setup.html` · `governance.html` · `wisdom-score.html` · `portfolio.html` · `profile.html`
+`sovereign-academy.html` (6 tracks, 19 lessons, 140 Wisdom Points) · `staking-calculator.html` · `buy-indx.html` · `receive.html` · `bill-pay.html` · `withdraw.html` · `dex-swap.html` · `marketplace.html` · `nft-marketplace.html` · `security-center.html` · `notifications-setup.html` · `wisdom-score.html` · `portfolio.html` · `profile.html`
 
-### Pending (not yet built or wired)
-- ✅ `profile.html` — sessionStorage wired (citizen_name, wisdom, web3_domain) — initProfile() at line 784
-- ✅ `wisdom-score.html` — sessionStorage wired (citizen_wisdom → SCORE, initYouRow() for leaderboard)
+### sessionStorage Keys (canonical — all screens must use these)
+`citizen_id` · `citizen_name` · `citizen_web3_domain` · `citizen_wisdom` · `citizen_balance` · `citizen_genesis` · `citizen_referral_code`
+
+### Pending / September
+- ✅ `profile.html` — sessionStorage wired (citizen_name, wisdom, web3_domain)
+- ✅ `wisdom-score.html` — sessionStorage wired; dynamic milestone cards from live score
 - ✅ `portfolio.html` — sessionStorage wired (citizen_balance → INDX totals at $0.24 USD)
 - ✅ `buy-indx.html` — PayID + USDC + Stripe flows built. Edge Function deployed. Needs: STRIPE_SECRET_KEY in Supabase secrets + STRIPE_PK in HTML + real PayID address from AJ's bank
-- ✅ `siindex-chat.html` — SIINDEX conversational AI chat screen. Streaming word-by-word responses. Interview mode (?mode=interview). Phase 2 voice toggle built in (silent until ELEVENLABS_API_KEY added). Public URL: imagenationdex.com/siindex-chat + imagenationdex.com/siindex-chat?mode=interview
-- ✅ Vercel deployment — imagenationdex live, GitHub auto-deploy active (2026-06-19)
+- ✅ `siindex-chat.html` — SIINDEX conversational AI chat screen. Streaming word-by-word responses. Interview mode (?mode=interview). Phase 2 voice toggle built in (silent until ELEVENLABS_API_KEY added).
+- ✅ Vercel deployment — imagenationdex.com live, GitHub auto-deploy active (2026-06-19)
+- ⬜ Add ELEVENLABS_API_KEY + STRIPE_SECRET_KEY to Supabase secrets (September)
+- ⬜ Replace `pk_test_REPLACE_WITH_YOUR_STRIPE_PUBLISHABLE_KEY` in buy-indx.html (September)
+- ⬜ Add real PayID address to buy-indx.html (September)
 - ⬜ Solana INDX token mint — **Human Validation Zone, AJ signs in Phantom** (last step before launch)
 
 ### L99 Launch Target

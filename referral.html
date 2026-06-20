@@ -253,26 +253,74 @@
 <div class="toast" id="toast"></div>
 
 <script>
+const SUPABASE_URL  = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+
+let CITIZEN_REF_CODE = '';
+let CITIZEN_REF_LINK = 'https://imagenationdex.com/join';
+
 const LEADERBOARD = [
   { rank:1,  name:'James Tuilagi',  domain:'jamestuilagi',  referred:42, earned:2100, color:'linear-gradient(135deg,#FFD700,#FFA500)' },
   { rank:2,  name:'Sione Fale',     domain:'sionefale',     referred:38, earned:1900, color:'linear-gradient(135deg,#C0C0C0,#A0A0A0)' },
   { rank:3,  name:'Ana Reyes',      domain:'anareyes',      referred:31, earned:1550, color:'linear-gradient(135deg,#CD7F32,#A05020)' },
   { rank:4,  name:'David Chen',     domain:'davidchen',     referred:27, earned:1350, color:'linear-gradient(135deg,#0099BB,#00D4FF)' },
-  { rank:5,  name:'Maria Santos',   domain:'mariasantos',   referred:0,  earned:0,    color:'linear-gradient(135deg,#0099BB,#00D4FF)', isYou:true },
 ];
 
-window.addEventListener('DOMContentLoaded', () => {
+async function sbPost(path, body) {
+  const r = await fetch(SUPABASE_URL + path, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_ANON,
+      'Authorization': 'Bearer ' + SUPABASE_ANON,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+  return r.ok ? r.json() : null;
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
   renderLeaderboard();
-  // animate stats
-  setTimeout(() => {
-    animateCount('totalReferred', 0, 0, 800);
-    animateCount('totalEarned', 0, 0, 800);
-    document.getElementById('rankVal').textContent = '#5';
-  }, 300);
+
+  const citizenId = sessionStorage.getItem('citizen_id');
+  const citizenName = sessionStorage.getItem('citizen_name') || 'You';
+
+  if (citizenId) {
+    try {
+      const stats = await sbPost('/rest/v1/rpc/get_referral_stats', { p_citizen_id: citizenId });
+      if (stats && stats.referral_code) {
+        CITIZEN_REF_CODE = stats.referral_code;
+        CITIZEN_REF_LINK = 'https://imagenationdex.com/join?ref=' + CITIZEN_REF_CODE;
+        sessionStorage.setItem('citizen_referral_code', CITIZEN_REF_CODE);
+
+        document.getElementById('refLink').textContent = 'imagenationdex.com/join?ref=' + CITIZEN_REF_CODE;
+
+        const total    = parseInt(stats.total_referred) || 0;
+        const earned   = parseInt(stats.indx_earned) || 0;
+        const myRank   = total > 0 ? '#?' : '#';
+
+        animateCount('totalReferred', 0, total, 800);
+        animateCount('totalEarned', 0, earned, 800);
+        document.getElementById('rankVal').textContent = myRank;
+
+        // Inject "You" card into leaderboard if not already there
+        const youCard = { rank: '-', name: citizenName, domain: citizenName.toLowerCase().replace(/\s+/g,''), referred: total, earned: earned, color: 'linear-gradient(135deg,#0099BB,#00D4FF)', isYou: true };
+        renderLeaderboard([...LEADERBOARD, youCard]);
+        return;
+      }
+    } catch(e) { /* fall through to defaults */ }
+  }
+
+  // No session or RPC failed — show zeros
+  animateCount('totalReferred', 0, 0, 800);
+  animateCount('totalEarned', 0, 0, 800);
+  document.getElementById('rankVal').textContent = '#';
 });
 
-function renderLeaderboard() {
-  document.getElementById('leaderboard').innerHTML = LEADERBOARD.map(l => `
+function renderLeaderboard(list) {
+  const rows = list || LEADERBOARD;
+  document.getElementById('leaderboard').innerHTML = rows.map(l => `
+
     <div class="leaderboard-item" style="${l.isYou ? 'border:1px solid var(--cyan-border);background:var(--cyan-bg);' : ''}">
       <div class="lb-rank">${l.rank === 1 ? '🥇' : l.rank === 2 ? '🥈' : l.rank === 3 ? '🥉' : l.rank}</div>
       <div class="lb-avatar" style="background:${l.color}">${l.name[0]}</div>
@@ -298,8 +346,8 @@ function animateCount(id, from, to, duration) {
 }
 
 function copyLink() {
-  const link = document.getElementById('refLink').textContent;
-  navigator.clipboard?.writeText('https://' + link).catch(()=>{});
+  const link = CITIZEN_REF_LINK || ('https://' + document.getElementById('refLink').textContent);
+  navigator.clipboard?.writeText(link).catch(()=>{});
   const btn = document.getElementById('copyLinkBtn');
   btn.textContent = 'Copied! ✓';
   btn.style.background = 'var(--green)';
@@ -315,25 +363,22 @@ function toggleQR(el) {
 }
 
 function shareVia(platform) {
-  const link = 'https://app.insdex.com/join/mariasantos';
+  const link = CITIZEN_REF_LINK;
   const msg = encodeURIComponent('I just joined IN$DEX the first sovereign digital republic. No bank needed. 98% of everything you earn stays yours. Join with my link and we both get 50 INDX free: ' + link);
-  const urls = {
-    whatsapp: 'https://wa.me/?text=' + msg,
-    sms: 'sms:?body=' + msg,
-    facebook: 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(link),
-    more: null
-  };
+  if (platform === 'whatsapp') { window.open('https://wa.me/?text=' + msg, '_blank'); return; }
+  if (platform === 'sms')      { window.open('sms:?body=' + msg, '_blank'); return; }
+  if (platform === 'facebook') { window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(link), '_blank'); return; }
   if (platform === 'more') {
     if (navigator.share) {
       navigator.share({ title:'Join IN$DEX', text:'Get 50 INDX free when you join.', url: link });
     } else { showToast('Copy your link and share it anywhere'); }
     return;
   }
-  showToast('Opening ' + platform + '…');
+  showToast('Opening ' + platform + '...');
 }
 
 function shareNow() {
-  const link = 'https://app.insdex.com/join/mariasantos';
+  const link = CITIZEN_REF_LINK;
   if (navigator.share) {
     navigator.share({ title:'Join IN$DEX Get 50 INDX Free', text:'Join the Sovereign Republic. No bank needed.', url: link });
   } else {
