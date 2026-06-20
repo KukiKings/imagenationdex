@@ -222,7 +222,7 @@ That is the mission. That is IN$DEX.
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-06-20 (Session 22)
+> Last updated: 2026-06-20 (Session 27)
 
 ### Supabase Backend (live — project ref: zljgthfzbalsunuoohcd)
 - ✅ `waitlist` table — anon INSERT, RLS on
@@ -271,11 +271,17 @@ All 100+ screens exist and are clean at $0.24 USD, no A$, no seed phrase. Key sc
 - ✅ `portfolio.html` — sessionStorage wired (citizen_balance → INDX totals at $0.24 USD)
 - ✅ `buy-indx.html` — PayID + USDC + Stripe flows built. Edge Function deployed. Needs: STRIPE_SECRET_KEY in Supabase secrets + STRIPE_PK in HTML + real PayID address from AJ's bank
 - ✅ `siindex-chat.html` — SIINDEX conversational AI chat screen. Streaming word-by-word responses. Interview mode (?mode=interview). Phase 2 voice toggle built in (silent until ELEVENLABS_API_KEY added).
+- ✅ `launch.html` — launch day conversion screen. Email/SMS on Sep 24 links here. Personalised via ?name=Maria&ref=CODE. Shows full package, live spot counter, 3-step explainer. CTA → onboarding-flow.html.
 - ✅ Vercel deployment — imagenationdex.com live, GitHub auto-deploy active (2026-06-19)
+- ✅ `app-lock.html` — **Session 27 rewrite**: PIN replaced with Face ID / biometric primary. Domain entry as fallback. No PIN. No keypad. Matches "no PIN, no username" identity model.
+- ✅ `create-pin.html` — **Session 27 rewrite**: Renamed conceptually to "Set Up Face ID". PIN creation flow removed. Shows why no PIN, Face ID setup, "Skip for now" fallback.
+- ✅ `receive.html` — **Session 27 fix**: Fake canvas QR replaced with real scannable QR (qrcode.js CDN). QR now encodes `https://imagenationdex.com/pay?to={slug}` — not wallet address. Tourists who scan Mama Noe's QR land on pay.html. Hint added: "Anyone who scans this joins IN$DEX and pays you instantly."
+- ✅ `pay.html` — **Session 27 NEW**: Tourist-scans-QR landing page. ?to={slug} param. Loads citizen profile from Supabase. If visitor is a citizen → send payment (pre-filled). If not a citizen → shows free Genesis package + "Join IN$DEX Free — Then Pay →" CTA → onboarding-flow.html?ref={slug}. Confirms 98/2 Law in payment sheet. This is the Mama Noe last-mile screen.
 - ⬜ Add ELEVENLABS_API_KEY + STRIPE_SECRET_KEY to Supabase secrets (September)
 - ⬜ Replace `pk_test_REPLACE_WITH_YOUR_STRIPE_PUBLISHABLE_KEY` in buy-indx.html (September)
 - ⬜ Add real PayID address to buy-indx.html (September)
 - ⬜ Solana INDX token mint — **Human Validation Zone, AJ signs in Phantom** (last step before launch)
+- ⬜ Verifiable Receipt NFT (Triangular Fusion Engine Layer 1) — Phase 3, Sep 1–23
 
 ### L99 Launch Target
 **24 September 2026**
@@ -291,7 +297,7 @@ All 100+ screens exist and are clean at $0.24 USD, no A$, no seed phrase. Key sc
 | No price stated in original | **$0.24 USD genesis price** | Set in Session 13 (Task #71). Replaces old $0.35 working price. |
 | "Micro INDX airdrop on signup" | **50 INDX genesis welcome bonus** | Canonical amount set in onboarding-flow.html INSERT and citizen-dashboard.html |
 | "3 steps to onboard" | **Phone + name + portal activation** | 3 steps confirmed: (1) phone/OTP, (2) name/domain, (3) portal activation |
-| "0 KYC required" | **Progressive KYC — Tier 0 = phone + liveness only** | Tier 0 requires no documents, but liveness scan is mandatory |
+| "0 KYC required" | **Progressive KYC — Tier 0 = phone + name only (MVP)** | Tier 0 requires no documents, no liveness scan for MVP. Liveness is Tier 1 post-launch. Onboarding copy updated to reflect this accurately. |
 
 ---
 
