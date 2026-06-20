@@ -51,6 +51,17 @@
 
 ---
 
+## Wave 2 — Post-Launch Features
+**Q1 2027 onwards | Deepening the token economy**
+
+- **Sovereign Lending** — Citizens deposit INDX, borrowers post USDC collateral, depositors earn 98% of interest. SIINDEX monitors liquidation 24/7. Integrated with MarginFi/Kamino on Solana. *(Spec: specs/sovereign-lending-spec.md)*
+- CryptoCards physical rollout — Pacific Island first
+- Voice wallet activation (SIINDEX spoken commands)
+- Web3 domain marketplace (trade/transfer yourname.IN$DEX)
+- Multi-language platform (Tok Pisin, Fijian, Samoan)
+
+---
+
 ## Targets
 
 | Metric | Target |
