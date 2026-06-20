@@ -768,11 +768,13 @@
             <div class="domain-dot"></div>
             <div class="domain-sub-note">This is your wallet. Your ID. Your bank.</div>
           </div>
+          <div id="domainError" style="display:none;margin-top:10px;padding:10px 14px;background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.3);border-radius:10px;font-size:13px;color:#FF4D6D;text-align:center;line-height:1.4;"></div>
         </div>
 
         <div class="field-group">
           <label class="field-label" for="nameInput">Your Name</label>
           <input class="field-input" id="nameInput" type="text" placeholder="e.g. Maria Santos" autocomplete="name" oninput="updateDomain()" style="font-size:18px;">
+          <div style="font-size:11px;color:var(--text-muted);margin-top:6px;padding-left:2px;">Spaces and special characters are removed to create your address.</div>
         </div>
 
         <div class="field-group">
@@ -963,13 +965,18 @@
   function updateDomain() {
     const name = document.getElementById('nameInput').value.trim();
     const domainEl = document.getElementById('domainName');
+    const errEl = document.getElementById('domainError');
+    // Clear any domain collision error when user edits
+    if (errEl) { errEl.style.display = 'none'; }
     if (name.length > 0) {
       const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) || 'sovereign';
       domainEl.innerHTML = slug + '<span>.IN$DEX</span>';
       domainEl.classList.remove('placeholder');
+      domainEl.style.color = ''; // reset red from collision state
     } else {
       domainEl.innerHTML = 'yourname<span>.IN$DEX</span>';
       domainEl.classList.add('placeholder');
+      domainEl.style.color = '';
     }
     checkIdentityForm();
   }
@@ -1115,14 +1122,38 @@
             }
           }
 
-          // Duplicate phone citizen already exists, look them up
-          if (error?.code === '23505' && isPhone) {
-            const { data: existing } = await sb
-              .from('citizens').select('id, citizen_name')
-              .eq('phone_number', contact).single();
-            if (existing?.id) {
-              sessionStorage.setItem('citizen_id', existing.id);
-              sessionStorage.setItem('citizen_name', existing.citizen_name || name);
+          // ── DUPLICATE HANDLING ──
+          if (error?.code === '23505') {
+            const detail = error.message || error.details || '';
+            const isDomainCollision = detail.includes('web3_domain') || (!isPhone);
+
+            if (isDomainCollision) {
+              // Domain taken — suggest a numbered variant and send back to screen 2
+              const suggestion = slug.replace(/\d+$/, '') + (parseInt((slug.match(/\d+$/) || ['1'])[0]) + 1 || 2);
+              const errEl = document.getElementById('domainError');
+              if (errEl) {
+                errEl.style.display = 'block';
+                errEl.innerHTML = `<strong>${slug}.IN$DEX is already claimed.</strong><br>Try: <em style="color:#00D4FF;">${suggestion}.IN$DEX</em> — edit your name below.`;
+              }
+              // Update the domain hero to show the taken state
+              const domainEl = document.getElementById('domainName');
+              if (domainEl) {
+                domainEl.innerHTML = slug + '<span>.IN$DEX</span>';
+                domainEl.style.color = '#FF4D6D';
+              }
+              goToScreen(2, true);
+              return; // skip goToScreen(3)
+            }
+
+            // Duplicate phone — look up existing citizen and carry on
+            if (isPhone) {
+              const { data: existing } = await sb
+                .from('citizens').select('id, citizen_name')
+                .eq('phone_number', contact).single();
+              if (existing?.id) {
+                sessionStorage.setItem('citizen_id', existing.id);
+                sessionStorage.setItem('citizen_name', existing.citizen_name || name);
+              }
             }
           }
         } catch(e) { /* silent fail never block onboarding */ }
