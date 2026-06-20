@@ -222,7 +222,7 @@ That is the mission. That is IN$DEX.
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-06-20 (Session 27)
+> Last updated: 2026-06-21 (Session 31)
 
 ### Supabase Backend (live — project ref: zljgthfzbalsunuoohcd)
 - ✅ `waitlist` table — anon INSERT, RLS on
@@ -244,11 +244,20 @@ That is the mission. That is IN$DEX.
 - ✅ `create-payment-intent` Edge Function — Stripe PaymentIntent creation (ACTIVE, needs STRIPE_SECRET_KEY secret)
 - ✅ `siindex-chat` Edge Function — SIINDEX conversational AI, streaming SSE, Claude Haiku backend (ACTIVE, needs ANTHROPIC_API_KEY secret)
 - ✅ `siindex-voice-tts` Edge Function — ElevenLabs TTS, Phase 2 voice (ACTIVE, graceful fallback until ELEVENLABS_API_KEY added in September)
+- ✅ `listings` table — P2P marketplace listings; seller_id FK, price_indx, category, status (active/sold/draft/removed), RLS on; indexes on seller/status/category
+- ✅ `create_listing(seller_id, title, desc, price_indx, category)` RPC — INSERT listing, awards +5 wisdom to seller
+- ✅ `get_listings(category, limit, offset)` RPC — browse active listings with seller name/domain; category filter
+- ✅ `get_my_listings(citizen_id)` RPC — seller's own listings all statuses
+- ✅ `purchase_listing(buyer_id, listing_id)` RPC — 98/2 Law enforced atomically; deducts buyer, credits seller 98%, records transactions both sides, awards wisdom, marks sold
 
 ### App Screens — Supabase Wired
+- ✅ `marketplace.html` — **Session 28**: live listings from get_listings RPC; demo fallback if DB empty; category filter; purchase_listing RPC on buy; "List Something" → create-listing.html; price bug fixed (was ×0.50, now ×0.24)
+- ✅ `create-listing.html` — **Session 28**: wired to create_listing RPC; INDX/USD price converter fixed; awards +5 wisdom on publish; redirect to listing-detail on success
+- ✅ `my-listings.html` — **Session 28**: wired to get_my_listings RPC; live stats (active/sold/earned); dynamic listing cards with status badges; 98/2 breakdown in order sheet
 - ✅ `onboarding-flow.html` — INSERT citizens, set sessionStorage; detects ?ref= param, calls complete_referral after INSERT
 - ✅ `login.html` — OTP verify, phone fallback, sessionStorage on success
-- ✅ `citizen-dashboard.html` — reads sessionStorage for wisdom/balance/domain; SIINDEX chat FAB added
+- ✅ `citizen-dashboard.html` — **Session 30c WIRING AUDIT**: Fixed bottom nav Pay → sovereignpay.html (was toast). Added income stream cards: Staking, Data Vault, Earn Feed, Tokenize. Quick actions now include Stake + Tokenize. Simple view now includes Stake & Earn, Tokenize, Data Vault, Refer & Earn. "All streams →" link to income-streams.html. All 7 sovereign income streams now visible from dashboard.
+- ✅ `marketplace.html` — **Session 30c**: RWA banner now links to tokenize.html with correct label "Tokenize Anything · Music · Concert Tickets · Business · Products"
 - ✅ `genesis-offer.html` — real waitlist count via RPC; expiry check (post-24 Sep 2026 shows "Genesis period ended" state)
 - ✅ `home-v2.html` — real waitlist count via RPC
 - ✅ `history.html` — live transactions SELECT, date grouping
@@ -258,9 +267,16 @@ That is the mission. That is IN$DEX.
 - ✅ `referral.html` — loads real referral code + stats via get_referral_stats RPC; dynamic share URLs; leaderboard with live "You" row
 - ✅ `referral-dashboard.html` — get_referral_stats RPC; referral network tree + activity list live
 
+- ✅ `tokenize.html` — **Session 30 NEW**: "Tokenize Anything" hub screen. 4 paths: Music & Artist (→ music-nft.html), Concert Tickets (→ music-nft.html?tab=tickets), Business (→ business-nft.html), Products (→ create-listing.html). How-it-works 4-step section. 98/2 Law badge. All paths explained with badges.
+- ✅ `music-nft.html` — **Session 30 NEW**: Music & Artist NFT creator screen. 3 tabs: Releases (album/single NFT mint), Tickets (concert NFT with date/venue/tiers/giveaway toggle), Merch (merchandise NFT tokenization). Artist banner with sessionStorage. Mint bottom sheet for all types. Success overlay with NFT token ID. INDX_PRICE = 0.24. Awards +10 wisdom per mint.
+- ✅ `business-nft.html` — **Session 30 NEW**: Business tokenization screen. Logo picker, business name, owner .IN$DEX domain, business web3 domain, website URL, location, description, 6-category grid. NFT certificate overlay on submit (business name, owner, category, location, date, NFT ID). Awards +15 wisdom. 98/2 Law enforced.
+- ✅ `create-listing.html` — **Session 30 UPDATE**: Real photo upload wired. Hidden `<input type="file" accept="image/*" capture="environment">`. FileReader → base64 data URL → preview in slot img. Up to 5 photos. Main photo badge on slot 0. Remove X. Base64 passed as `p_image_url` to create_listing RPC (Supabase Storage upload Phase 2).
+- ✅ `feed.html` — **Session 30 REBUILD**: Social earning hub (Stream 3). Earn summary (today's INDX + USD), earn method pills (Watch/Create/Like/Data), Data Vault nudge, Upload CTA. 4 content cards (Mama Noe, SIINDEX, Maria Santos, AJ Henry) with Watch & Earn (8-second simulated watch → +0.5 INDX), like/tip (+0.1 INDX), share. Watch overlay with live progress bar + earnings counter. All earnings update citizen_balance in sessionStorage. INDX_PRICE = 0.24.
+- ✅ `data-vault.html` — **Session 30 NEW**: Sovereign data dashboard (Stream 2). Vault hero (earnings + access/approved/blocked stats). Activate banner (inactive state). Privacy/Sovereignty Score bar. 5 data category toggles (Location, Purchase, Interests, Marketplace, Social) with per-category price setting via bottom sheet. Access log (MarketResearch.ai, LocalShop PNG, AdNetwork blocked). ZK-proof explainer. All earnings update citizen_balance in sessionStorage. 98/2 Law applies on all data sales.
+
 ### App Screens — Complete (not wired to live data, no action needed)
 All 100+ screens exist and are clean at $0.24 USD, no A$, no seed phrase. Key screens:
-`sovereign-academy.html` (6 tracks, 19 lessons, 140 Wisdom Points) · `staking-calculator.html` · `buy-indx.html` · `receive.html` · `bill-pay.html` · `withdraw.html` · `dex-swap.html` · `marketplace.html` · `nft-marketplace.html` · `security-center.html` · `notifications-setup.html` · `wisdom-score.html` · `portfolio.html` · `profile.html`
+`sovereign-academy.html` (6 tracks, 19 lessons, 140 Wisdom Points) · `staking-calculator.html` · `buy-indx.html` · `receive.html` · `bill-pay.html` · `withdraw.html` · `dex-swap.html` · `nft-marketplace.html` · `security-center.html` · `notifications-setup.html` · `wisdom-score.html` · `portfolio.html` · `profile.html`
 
 ### sessionStorage Keys (canonical — all screens must use these)
 `citizen_id` · `citizen_name` · `citizen_web3_domain` · `citizen_wisdom` · `citizen_balance` · `citizen_genesis` · `citizen_referral_code`
@@ -282,6 +298,18 @@ All 100+ screens exist and are clean at $0.24 USD, no A$, no seed phrase. Key sc
 - ⬜ Add real PayID address to buy-indx.html (September)
 - ⬜ Solana INDX token mint — **Human Validation Zone, AJ signs in Phantom** (last step before launch)
 - ⬜ Verifiable Receipt NFT (Triangular Fusion Engine Layer 1) — Phase 3, Sep 1–23
+
+- ✅ `lending_positions` table — **Session 31 NEW**: deposit/borrow types, RLS on, status (active/closed/liquidated), collateral_ratio tracking, interest_accrued; indexes on citizen/status/type
+- ✅ `interest_accruals` table — **Session 31 NEW**: append-only (Law 7 compliant), 98/2 split recorded on every accrual (gross_indx, civ_fund_cut, net_to_citizen); no UPDATE/DELETE policies
+- ✅ `deposit_to_pool(p_citizen_id, p_amount_indx)` RPC — debits citizen balance, creates deposit position, logs T0 security event
+- ✅ `withdraw_from_pool(p_citizen_id, p_position_id, p_amount_indx)` RPC — returns principal + 98% interest, logs accrual, closes/reduces position
+- ✅ `borrow_from_pool(p_citizen_id, p_usdc_collateral, p_borrow_indx)` RPC — collateral ratio hard-checked (≥150% or BLOCKED), creates borrow position, credits INDX, logs T0
+- ✅ `repay_loan(p_citizen_id, p_position_id, p_amount_indx)` RPC — 98/2 on interest owed, returns USDC collateral on full close, logs loan_closed event
+- ✅ `get_lending_positions(p_citizen_id)` RPC — returns deposits[] and borrows[] with daily yield/interest, APY, collateral ratio
+- ✅ `accrue_lending_interest()` RPC — daily accrual on all active positions; T2 alert at <120%, T3 auto-liquidation at <110%; 98/2 enforced atomically
+- ✅ `sovereign-lending.html` — **Session 31 WIRED**: Supabase live. deposit_to_pool RPC on deposit, withdraw_from_pool on withdraw. Position loaded from DB on init. Yield preview calculator. 98/2 Law badge.
+- ✅ `lending-dashboard.html` — **Session 31 WIRED**: Supabase live. borrow_from_pool after 7-point SIINDEX pre-flight. repay_loan on partial/full repay. Live collateral health gauge. T2/T3 thresholds displayed.
+- ✅ `siindex-lending-monitor` SKILL — **Session 31 NEW**: Daily accrual, 15-min health check, T2 alert protocol, T3 auto-liquidation rules, weekly pool report to AJ. At `/SIINDEX-Skills/siindex-lending-monitor/SKILL.md`
 
 ### L99 Launch Target
 **24 September 2026**

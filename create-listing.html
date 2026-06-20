@@ -303,8 +303,13 @@
 </div>
 
 <script>
+  const SUPA_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMwNjM3MjUsImV4cCI6MjA1ODYzOTcyNX0.SRSVRhNYKBRuFqMBpBaFyshFAVafxqBiPGj6N2ZwYGo';
+  const INDX_PRICE = 0.24;
+
   let selectedCat = '';
   let selectedCond = '';
+  let publishedListingId = null;
   let deliveryOpts = { pickup: true, sovereign: false, post: false };
 
   function updateTitle() {
@@ -334,32 +339,63 @@
   }
 
   function calcPrice() {
-    const aud = parseFloat(document.getElementById('audInput').value) || 0;
-    const indx = Math.round(aud / 0.50);
+    const usd = parseFloat(document.getElementById('audInput').value) || 0;
+    const indx = +(usd / INDX_PRICE).toFixed(2);
     document.getElementById('indxPreview').textContent = indx.toLocaleString();
     document.getElementById('indxInput').value = indx || '';
-    document.getElementById('audPreview').textContent = aud.toFixed(2);
+    document.getElementById('audPreview').textContent = usd.toFixed(2);
   }
 
   function calcPriceFromIndx() {
     const indx = parseFloat(document.getElementById('indxInput').value) || 0;
-    const aud = indx * 0.24;
-    document.getElementById('audPreview').textContent = aud.toFixed(2);
-    document.getElementById('audInput').value = aud || '';
+    const usd = +(indx * INDX_PRICE).toFixed(2);
+    document.getElementById('audPreview').textContent = usd.toFixed(2);
+    document.getElementById('audInput').value = usd || '';
     document.getElementById('indxPreview').textContent = indx.toLocaleString();
   }
 
+  // Hidden file input for real photo capture
+  const _fileInput = document.createElement('input');
+  _fileInput.type = 'file';
+  _fileInput.accept = 'image/*';
+  _fileInput.capture = 'environment'; // prefer rear camera on mobile
+  _fileInput.style.display = 'none';
+  document.body.appendChild(_fileInput);
+  let _activeSlot = 0;
+  const _photoData = {}; // slot index → base64 data URL
+
   function triggerUpload(idx) {
-    // In production: trigger native file picker
-    // For demo: simulate with placeholder colours
     const slot = document.getElementById('slot' + idx);
     if (slot.classList.contains('has-img')) return;
-    const colours = ['#1A1D25','#22252F','#2A2D38','#1A1D25','#22252F'];
-    const emojis = ['🖼️','📸','🌄','🏠','✨'];
-    slot.innerHTML = `<div style="width:100%;height:100%;background:${colours[idx]};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:28px">${emojis[idx]}</div>`;
-    if (idx === 0) slot.innerHTML += `<div class="photo-main-badge">Main</div>`;
-    slot.innerHTML += `<div class="remove-x" onclick="removePhoto(event,${idx})">✕</div>`;
-    slot.classList.add('has-img');
+    _activeSlot = idx;
+    _fileInput.value = '';
+    _fileInput.onchange = () => {
+      const file = _fileInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target.result;
+        _photoData[idx] = dataUrl;
+        slot.innerHTML = '';
+        const img = document.createElement('img');
+        img.src = dataUrl;
+        slot.appendChild(img);
+        if (idx === 0) {
+          const badge = document.createElement('div');
+          badge.className = 'photo-main-badge';
+          badge.textContent = 'Main';
+          slot.appendChild(badge);
+        }
+        const x = document.createElement('div');
+        x.className = 'remove-x';
+        x.textContent = '✕';
+        x.onclick = (ev) => removePhoto(ev, idx);
+        slot.appendChild(x);
+        slot.classList.add('has-img');
+      };
+      reader.readAsDataURL(file);
+    };
+    _fileInput.click();
   }
 
   function removePhoto(e, idx) {
@@ -370,24 +406,62 @@
     slot.onclick = () => triggerUpload(idx);
   }
 
-  function publishListing() {
-    const title = document.getElementById('titleInput').value.trim();
-    const price = document.getElementById('audInput').value;
-    if (!title) { showToast('Add a title for your listing'); return; }
-    if (!price) { showToast('Set a price for your listing'); return; }
-    if (!selectedCat) { showToast('Choose a category'); return; }
+  async function publishListing() {
+    const title    = document.getElementById('titleInput').value.trim();
+    const desc     = document.getElementById('descInput').value.trim();
+    const indxVal  = parseFloat(document.getElementById('indxInput').value) || 0;
+    const usdVal   = parseFloat(document.getElementById('audInput').value) || 0;
+
+    if (!title)    { showToast('Add a title for your listing'); return; }
+    if (!indxVal)  { showToast('Set a price for your listing'); return; }
+    if (!selectedCat)  { showToast('Choose a category'); return; }
     if (!selectedCond) { showToast('Select item condition'); return; }
+
+    const sellerId = sessionStorage.getItem('citizen_id');
+    if (!sellerId) { showToast('Please log in to post a listing'); return; }
 
     const btn = document.getElementById('publishBtn');
     btn.textContent = 'Publishing…';
     btn.disabled = true;
 
-    setTimeout(() => {
-      const indxAmt = document.getElementById('indxInput').value || '0';
-      document.getElementById('successSub').textContent =
-        `"${title}" is now live at $${parseFloat(price).toFixed(2)} (${indxAmt} INDX). Your 98% is protected by escrow.`;
-      document.getElementById('successOverlay').classList.add('show');
-    }, 1600);
+    try {
+      const res = await fetch(`${SUPA_URL}/rest/v1/rpc/create_listing`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPA_KEY,
+          Authorization: 'Bearer ' + SUPA_KEY,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          p_seller_id:  sellerId,
+          p_title:      title,
+          p_description: desc || selectedCond + ' · ' + (Object.keys(deliveryOpts).filter(k => deliveryOpts[k]).join(', ')),
+          p_price_indx: indxVal,
+          p_category:   selectedCat,
+          p_image_url:  _photoData[0] || null  // base64 main photo; Supabase Storage upload in Phase 2
+        })
+      });
+
+      const data = await res.json();
+      if (data && data.success) {
+        publishedListingId = data.listing_id;
+        // Update sessionStorage wisdom
+        const curWisdom = parseInt(sessionStorage.getItem('citizen_wisdom') || '0');
+        sessionStorage.setItem('citizen_wisdom', curWisdom + 5);
+
+        document.getElementById('successSub').textContent =
+          `"${title}" is live at ${indxVal} INDX ($${usdVal.toFixed(2)}). You keep 98% of every sale.`;
+        document.getElementById('successOverlay').classList.add('show');
+      } else {
+        showToast(data?.error || 'Could not publish. Try again.');
+        btn.textContent = 'Publish Listing';
+        btn.disabled = false;
+      }
+    } catch(e) {
+      showToast('Connection error. Check your network.');
+      btn.textContent = 'Publish Listing';
+      btn.disabled = false;
+    }
   }
 
   function saveDraft() {
@@ -395,7 +469,11 @@
   }
 
   function viewListing() {
-    window.location.href = 'listing-detail.html';
+    if (publishedListingId) {
+      window.location.href = 'listing-detail.html?id=' + publishedListingId;
+    } else {
+      window.location.href = 'my-listings.html';
+    }
   }
 
   function createAnother() {

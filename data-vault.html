@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IN$DEX Data Vault</title>
+<style>
+:root {
+  --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+  --black:#090A10; --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+  --border:rgba(255,255,255,0.07); --text:#F0F2FF; --text-muted:#7A82A0;
+  --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+  --nav-h:72px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none;}
+.shell{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;}
+.scroll-body{flex:1;overflow-y:auto;padding-bottom:calc(var(--nav-h)+16px);-webkit-overflow-scrolling:touch;}
+.scroll-body::-webkit-scrollbar{display:none;}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;gap:12px;padding:16px 20px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(9,10,16,0.92);backdrop-filter:blur(20px);z-index:10;}
+.back-btn{width:36px;height:36px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;flex-shrink:0;}
+.back-btn:active{background:var(--surface2);}
+.topbar-title{font-size:18px;font-weight:800;flex:1;}
+.topbar-title span{color:var(--gold);}
+.topbar-badge{background:rgba(0,229,160,0.12);border:1px solid rgba(0,229,160,0.2);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;color:var(--green);}
+
+/* ── VAULT STATUS HERO ── */
+.vault-hero{margin:16px 20px;background:linear-gradient(135deg,rgba(255,184,0,0.12),rgba(43,53,216,0.15));border:1px solid rgba(255,184,0,0.25);border-radius:20px;padding:22px 20px;}
+.vh-label{font-size:12px;color:var(--text-muted);font-weight:600;margin-bottom:6px;}
+.vh-earned{font-size:36px;font-weight:900;color:var(--gold);letter-spacing:-0.03em;margin-bottom:4px;}
+.vh-sub{font-size:13px;color:var(--text-muted);margin-bottom:18px;}
+.vh-stats{display:flex;gap:12px;}
+.vh-stat{flex:1;background:rgba(0,0,0,0.3);border-radius:12px;padding:12px;}
+.vh-stat-val{font-size:18px;font-weight:800;margin-bottom:2px;}
+.vh-stat-label{font-size:11px;color:var(--text-muted);}
+
+/* ── SECTION ── */
+.section{padding:0 20px;margin-bottom:20px;}
+.sec-title{font-size:14px;font-weight:700;margin-bottom:12px;}
+
+/* ── DATA TYPES ── */
+.data-type-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;}
+.dt-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.dt-body{flex:1;}
+.dt-name{font-size:14px;font-weight:700;margin-bottom:2px;}
+.dt-desc{font-size:12px;color:var(--text-muted);}
+.dt-earn{font-size:13px;color:var(--gold);font-weight:700;margin-top:4px;}
+.dt-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
+.toggle-wrap{display:flex;align-items:center;gap:6px;}
+.toggle-label{font-size:11px;color:var(--text-muted);}
+.toggle{width:42px;height:24px;border-radius:99px;background:var(--surface3);border:none;cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0;}
+.toggle.on{background:var(--green);}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform 0.2s;}
+.toggle.on::after{transform:translateX(18px);}
+.dt-price{font-size:12px;color:var(--cyan);font-weight:600;cursor:pointer;}
+
+/* ── ACCESS LOG ── */
+.access-log-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;}
+.al-logo{width:38px;height:38px;border-radius:10px;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.al-body{flex:1;}
+.al-name{font-size:13px;font-weight:700;margin-bottom:2px;}
+.al-detail{font-size:12px;color:var(--text-muted);}
+.al-right{text-align:right;}
+.al-earn{font-size:14px;font-weight:800;color:var(--green);}
+.al-time{font-size:11px;color:var(--text-muted);margin-top:2px;}
+.al-status{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;margin-top:4px;}
+.al-status.approved{background:rgba(0,229,160,0.1);color:var(--green);}
+.al-status.pending{background:rgba(255,184,0,0.1);color:var(--gold);}
+.al-status.blocked{background:rgba(255,77,109,0.1);color:var(--red);}
+
+/* ── ACTIVATE BANNER ── */
+.activate-banner{margin:0 20px 20px;background:linear-gradient(135deg,rgba(139,63,232,0.2),rgba(43,53,216,0.2));border:1.5px solid rgba(139,63,232,0.35);border-radius:18px;padding:22px 20px;text-align:center;}
+.ab-icon{font-size:40px;margin-bottom:12px;}
+.ab-title{font-size:17px;font-weight:800;margin-bottom:8px;}
+.ab-desc{font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:16px;}
+.ab-cta{background:linear-gradient(135deg,var(--purple),var(--blue));border:none;border-radius:14px;padding:14px 24px;font-size:15px;font-weight:800;color:#fff;cursor:pointer;width:100%;}
+.ab-cta:active{opacity:0.85;}
+.ab-note{font-size:11px;color:var(--text-muted);margin-top:10px;}
+
+/* ── PRIVACY SCORE ── */
+.privacy-score{margin:0 20px 20px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 20px;}
+.ps-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.ps-title{font-size:14px;font-weight:700;}
+.ps-score{font-size:22px;font-weight:900;color:var(--green);}
+.ps-bar-wrap{height:6px;background:var(--surface3);border-radius:99px;overflow:hidden;margin-bottom:10px;}
+.ps-bar{height:100%;background:linear-gradient(90deg,var(--purple),var(--green));border-radius:99px;}
+.ps-detail{font-size:12px;color:var(--text-muted);}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;height:var(--nav-h);background:rgba(9,10,16,0.92);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;padding:0 8px;z-index:50;}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 12px;cursor:pointer;border-radius:12px;flex:1;}
+.nav-item:active{background:var(--surface);}
+.nav-icon{font-size:22px;line-height:1;}
+.nav-label{font-size:10px;font-weight:600;color:var(--text-muted);}
+.nav-item.active .nav-label{color:var(--cyan);}
+.nav-center{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;cursor:pointer;}
+.nav-center-btn{width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#2B35D8,#00D4FF);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 20px rgba(0,212,255,0.3);margin-top:-18px;}
+.nav-center:active .nav-center-btn{transform:scale(0.93);}
+.nav-center .nav-label{font-size:10px;font-weight:600;color:var(--text-muted);}
+
+/* ── PRICE SHEET ── */
+.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+.sheet-overlay.show{opacity:1;pointer-events:all;}
+.price-sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:430px;background:var(--surface2);border-radius:24px 24px 0 0;padding:24px 24px 40px;z-index:101;transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);}
+.price-sheet.show{transform:translateX(-50%) translateY(0);}
+.ps-handle{width:36px;height:4px;background:var(--surface3);border-radius:99px;margin:0 auto 20px;}
+.ps-sheet-title{font-size:17px;font-weight:800;margin-bottom:6px;}
+.ps-sheet-sub{font-size:13px;color:var(--text-muted);margin-bottom:20px;}
+.price-input-wrap{background:var(--surface3);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:8px;margin-bottom:16px;border:1px solid var(--border);}
+.price-currency{font-size:14px;font-weight:700;color:var(--text-muted);}
+.price-input{background:none;border:none;font-size:22px;font-weight:800;color:var(--text);flex:1;outline:none;width:100%;}
+.price-per{font-size:12px;color:var(--text-muted);}
+.price-save-btn{background:linear-gradient(135deg,var(--blue),var(--cyan));border:none;border-radius:14px;padding:14px;font-size:15px;font-weight:800;color:#fff;cursor:pointer;width:100%;}
+.price-save-btn:active{opacity:0.85;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:calc(var(--nav-h)+12px);left:50%;transform:translateX(-50%) translateY(20px);max-width:320px;width:calc(100% - 40px);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:13px;color:var(--text);text-align:center;opacity:0;transition:opacity 0.3s,transform 0.3s;z-index:400;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="scroll-body">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="back-btn" onclick="history.back()">←</div>
+      <div class="topbar-title">Data <span>Vault</span></div>
+      <div class="topbar-badge" id="vaultStatusBadge">Inactive</div>
+    </div>
+
+    <!-- VAULT HERO -->
+    <div class="vault-hero">
+      <div class="vh-label">Total data earnings</div>
+      <div class="vh-earned" id="vaultEarned">0 INDX</div>
+      <div class="vh-sub" id="vaultEarnedUsd">≈ $0.00 USD · Activate to start earning</div>
+      <div class="vh-stats">
+        <div class="vh-stat">
+          <div class="vh-stat-val" id="accessCount">0</div>
+          <div class="vh-stat-label">Access requests</div>
+        </div>
+        <div class="vh-stat">
+          <div class="vh-stat-val" id="approvedCount">0</div>
+          <div class="vh-stat-label">Approved</div>
+        </div>
+        <div class="vh-stat">
+          <div class="vh-stat-val" id="blockedCount">0</div>
+          <div class="vh-stat-label">Blocked</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACTIVATE BANNER (shown when inactive) -->
+    <div class="activate-banner" id="activateBanner">
+      <div class="ab-icon">🔒</div>
+      <div class="ab-title">Activate your Data Vault</div>
+      <div class="ab-desc">Facebook, Google, and TikTok sell your data every single day. You get nothing. IN$DEX reverses this — your data, your price, your wallet. Your data never leaves your device.</div>
+      <button class="ab-cta" onclick="activateVault()">Activate Now — Start Earning</button>
+      <div class="ab-note">🔐 Zero-knowledge proof · Your data never leaves your device · Cancel anytime</div>
+    </div>
+
+    <!-- PRIVACY SCORE -->
+    <div class="privacy-score" id="privacySection" style="display:none">
+      <div class="ps-header">
+        <div class="ps-title">Sovereignty Score</div>
+        <div class="ps-score" id="privScore">82</div>
+      </div>
+      <div class="ps-bar-wrap"><div class="ps-bar" id="privBar" style="width:82%"></div></div>
+      <div class="ps-detail">Your data is more sovereign than 82% of IN$DEX citizens. Turn on more categories to increase your score and earnings.</div>
+    </div>
+
+    <!-- DATA TYPES -->
+    <div class="section" id="dataTypesSection" style="display:none">
+      <div class="sec-title">Your data — you control the price</div>
+
+      <div class="data-type-card">
+        <div class="dt-icon" style="background:rgba(0,212,255,0.1);">📍</div>
+        <div class="dt-body">
+          <div class="dt-name">Location Data</div>
+          <div class="dt-desc">Where you go, when you shop</div>
+          <div class="dt-earn" id="earn-location">Earn: 2 INDX / month</div>
+        </div>
+        <div class="dt-right">
+          <div class="toggle-wrap">
+            <span class="toggle-label" id="lbl-location">Off</span>
+            <button class="toggle" id="tog-location" onclick="toggleData(this,'location')"></button>
+          </div>
+          <div class="dt-price" onclick="openPriceSheet('location','Location Data')">Set price ›</div>
+        </div>
+      </div>
+
+      <div class="data-type-card">
+        <div class="dt-icon" style="background:rgba(0,229,160,0.1);">🛒</div>
+        <div class="dt-body">
+          <div class="dt-name">Purchase History</div>
+          <div class="dt-desc">What you buy and how often</div>
+          <div class="dt-earn" id="earn-purchase">Earn: 3 INDX / month</div>
+        </div>
+        <div class="dt-right">
+          <div class="toggle-wrap">
+            <span class="toggle-label" id="lbl-purchase">Off</span>
+            <button class="toggle" id="tog-purchase" onclick="toggleData(this,'purchase')"></button>
+          </div>
+          <div class="dt-price" onclick="openPriceSheet('purchase','Purchase History')">Set price ›</div>
+        </div>
+      </div>
+
+      <div class="data-type-card">
+        <div class="dt-icon" style="background:rgba(139,63,232,0.1);">🎯</div>
+        <div class="dt-body">
+          <div class="dt-name">Interests & Preferences</div>
+          <div class="dt-desc">Topics, content, and categories you engage with</div>
+          <div class="dt-earn" id="earn-interests">Earn: 1.5 INDX / month</div>
+        </div>
+        <div class="dt-right">
+          <div class="toggle-wrap">
+            <span class="toggle-label" id="lbl-interests">Off</span>
+            <button class="toggle" id="tog-interests" onclick="toggleData(this,'interests')"></button>
+          </div>
+          <div class="dt-price" onclick="openPriceSheet('interests','Interests & Preferences')">Set price ›</div>
+        </div>
+      </div>
+
+      <div class="data-type-card">
+        <div class="dt-icon" style="background:rgba(255,184,0,0.1);">💬</div>
+        <div class="dt-body">
+          <div class="dt-name">Marketplace Behaviour</div>
+          <div class="dt-desc">Listings you view, sellers you follow</div>
+          <div class="dt-earn" id="earn-market">Earn: 1 INDX / month</div>
+        </div>
+        <div class="dt-right">
+          <div class="toggle-wrap">
+            <span class="toggle-label" id="lbl-market">Off</span>
+            <button class="toggle" id="tog-market" onclick="toggleData(this,'market')"></button>
+          </div>
+          <div class="dt-price" onclick="openPriceSheet('market','Marketplace Behaviour')">Set price ›</div>
+        </div>
+      </div>
+
+      <div class="data-type-card">
+        <div class="dt-icon" style="background:rgba(255,77,109,0.1);">❤️</div>
+        <div class="dt-body">
+          <div class="dt-name">Social Engagement</div>
+          <div class="dt-desc">Content you like, share, and watch</div>
+          <div class="dt-earn" id="earn-social">Earn: 2 INDX / month</div>
+        </div>
+        <div class="dt-right">
+          <div class="toggle-wrap">
+            <span class="toggle-label" id="lbl-social">Off</span>
+            <button class="toggle" id="tog-social" onclick="toggleData(this,'social')"></button>
+          </div>
+          <div class="dt-price" onclick="openPriceSheet('social','Social Engagement')">Set price ›</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACCESS LOG -->
+    <div class="section" id="accessLogSection" style="display:none">
+      <div class="sec-title">Who accessed your data</div>
+
+      <div class="access-log-card">
+        <div class="al-logo">📊</div>
+        <div class="al-body">
+          <div class="al-name">MarketResearch.ai</div>
+          <div class="al-detail">Requested: Purchase History · 30 days</div>
+          <div class="al-status approved">Approved</div>
+        </div>
+        <div class="al-right">
+          <div class="al-earn">+3 INDX</div>
+          <div class="al-time">2 hours ago</div>
+        </div>
+      </div>
+
+      <div class="access-log-card">
+        <div class="al-logo">🏪</div>
+        <div class="al-body">
+          <div class="al-name">LocalShop PNG</div>
+          <div class="al-detail">Requested: Location Data · 7 days</div>
+          <div class="al-status pending">Pending approval</div>
+        </div>
+        <div class="al-right">
+          <div class="al-earn">+2 INDX</div>
+          <div class="al-time">Just now</div>
+        </div>
+      </div>
+
+      <div class="access-log-card">
+        <div class="al-logo">🎯</div>
+        <div class="al-body">
+          <div class="al-name">AdNetwork Global</div>
+          <div class="al-detail">Requested: Interests · 90 days</div>
+          <div class="al-status blocked">Blocked</div>
+        </div>
+        <div class="al-right">
+          <div class="al-earn">—</div>
+          <div class="al-time">Yesterday</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ZK PROOF INFO -->
+    <div class="section" id="zkSection" style="display:none">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 18px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:8px;">🔐 Zero-Knowledge Proof Protection</div>
+        <div style="font-size:12px;color:var(--text-muted);line-height:1.6;">Your data never leaves your device. Companies receive a cryptographic proof that you match their criteria — without seeing your actual data. This is ZK-proof. You get paid. They get insights. You stay private.</div>
+      </div>
+    </div>
+
+    <div style="height:12px"></div>
+  </div><!-- /scroll-body -->
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <div class="nav-item" onclick="window.location.href='citizen-dashboard.html'">
+      <div class="nav-icon">🏠</div><div class="nav-label">Home</div>
+    </div>
+    <div class="nav-item" onclick="window.location.href='marketplace.html'">
+      <div class="nav-icon">🛒</div><div class="nav-label">Market</div>
+    </div>
+    <div class="nav-center" onclick="window.location.href='sovereignpay.html'">
+      <div class="nav-center-btn">💸</div>
+      <div class="nav-label">Pay</div>
+    </div>
+    <div class="nav-item active" onclick="window.location.href='feed.html'">
+      <div class="nav-icon">⚡</div><div class="nav-label">Earn</div>
+    </div>
+    <div class="nav-item" onclick="window.location.href='search.html'">
+      <div class="nav-icon">🔍</div><div class="nav-label">Search</div>
+    </div>
+  </div>
+</div><!-- /shell -->
+
+<!-- PRICE SHEET -->
+<div class="sheet-overlay" id="sheetOverlay" onclick="closePriceSheet()"></div>
+<div class="price-sheet" id="priceSheet">
+  <div class="ps-handle"></div>
+  <div class="ps-sheet-title" id="psTitle">Set your price</div>
+  <div class="ps-sheet-sub">Companies will pay this amount in INDX to access your data. You can change it anytime.</div>
+  <div class="price-input-wrap">
+    <div class="price-currency">INDX</div>
+    <input class="price-input" id="priceInput" type="number" min="0.1" step="0.1" value="2" placeholder="0.0">
+    <div class="price-per">/ month</div>
+  </div>
+  <button class="price-save-btn" onclick="savePrice()">Save Price</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const INDX_PRICE = 0.24;
+let vaultActive = false;
+let activePriceKey = '';
+let dataEarned = parseFloat(sessionStorage.getItem('vault_earned') || '0');
+let dataStats = JSON.parse(sessionStorage.getItem('vault_stats') || '{"access":0,"approved":0,"blocked":0}');
+let dataToggles = JSON.parse(sessionStorage.getItem('vault_toggles') || '{}');
+let dataPrices = JSON.parse(sessionStorage.getItem('vault_prices') || '{}');
+
+// Check if vault was previously activated
+if (sessionStorage.getItem('vault_active') === '1') {
+  vaultActive = true;
+  showVaultActive();
+}
+
+updateHeroStats();
+
+function updateHeroStats() {
+  document.getElementById('vaultEarned').textContent = dataEarned.toFixed(1) + ' INDX';
+  document.getElementById('vaultEarnedUsd').textContent = '≈ $' + (dataEarned * INDX_PRICE).toFixed(2) + ' USD' + (vaultActive ? ' · Earning actively' : ' · Activate to start earning');
+  document.getElementById('accessCount').textContent = dataStats.access;
+  document.getElementById('approvedCount').textContent = dataStats.approved;
+  document.getElementById('blockedCount').textContent = dataStats.blocked;
+}
+
+function activateVault() {
+  vaultActive = true;
+  sessionStorage.setItem('vault_active', '1');
+  // Simulate initial earnings
+  dataEarned += 0.5;
+  dataStats.access = 3; dataStats.approved = 1; dataStats.blocked = 1;
+  sessionStorage.setItem('vault_earned', dataEarned);
+  sessionStorage.setItem('vault_stats', JSON.stringify(dataStats));
+  // Update balance
+  const bal = parseFloat(sessionStorage.getItem('citizen_balance') || '0');
+  sessionStorage.setItem('citizen_balance', (bal + 0.5).toFixed(6));
+  showVaultActive();
+  updateHeroStats();
+  showToast('🔒 Data Vault activated! You are now earning from your data.');
+}
+
+function showVaultActive() {
+  document.getElementById('activateBanner').style.display = 'none';
+  document.getElementById('privacySection').style.display = 'block';
+  document.getElementById('dataTypesSection').style.display = 'block';
+  document.getElementById('accessLogSection').style.display = 'block';
+  document.getElementById('zkSection').style.display = 'block';
+  document.getElementById('vaultStatusBadge').textContent = 'Active';
+  document.getElementById('vaultStatusBadge').style.background = 'rgba(0,229,160,0.12)';
+  document.getElementById('vaultStatusBadge').style.color = 'var(--green)';
+  document.getElementById('vaultStatusBadge').style.borderColor = 'rgba(0,229,160,0.2)';
+  // Restore toggle states
+  Object.keys(dataToggles).forEach(key => {
+    if (dataToggles[key]) {
+      const tog = document.getElementById('tog-' + key);
+      const lbl = document.getElementById('lbl-' + key);
+      if (tog) { tog.classList.add('on'); lbl.textContent = 'On'; }
+    }
+  });
+}
+
+function toggleData(btn, key) {
+  const isOn = btn.classList.toggle('on');
+  const lbl = document.getElementById('lbl-' + key);
+  lbl.textContent = isOn ? 'On' : 'Off';
+  dataToggles[key] = isOn;
+  sessionStorage.setItem('vault_toggles', JSON.stringify(dataToggles));
+  if (isOn) {
+    const reward = dataPrices[key] || getDefaultPrice(key);
+    dataEarned += reward;
+    dataStats.access++; dataStats.approved++;
+    sessionStorage.setItem('vault_earned', dataEarned);
+    sessionStorage.setItem('vault_stats', JSON.stringify(dataStats));
+    const bal = parseFloat(sessionStorage.getItem('citizen_balance') || '0');
+    sessionStorage.setItem('citizen_balance', (bal + reward).toFixed(6));
+    updateHeroStats();
+    showToast('+' + reward + ' INDX · First payment received');
+  } else {
+    showToast('Data category disabled — buyers can no longer access this');
+  }
+}
+
+function getDefaultPrice(key) {
+  const defaults = {location:2,purchase:3,interests:1.5,market:1,social:2};
+  return defaults[key] || 1;
+}
+
+function openPriceSheet(key, label) {
+  activePriceKey = key;
+  document.getElementById('psTitle').textContent = 'Set price for: ' + label;
+  document.getElementById('priceInput').value = dataPrices[key] || getDefaultPrice(key);
+  document.getElementById('sheetOverlay').classList.add('show');
+  document.getElementById('priceSheet').classList.add('show');
+}
+
+function closePriceSheet() {
+  document.getElementById('sheetOverlay').classList.remove('show');
+  document.getElementById('priceSheet').classList.remove('show');
+}
+
+function savePrice() {
+  const val = parseFloat(document.getElementById('priceInput').value) || 1;
+  dataPrices[activePriceKey] = val;
+  sessionStorage.setItem('vault_prices', JSON.stringify(dataPrices));
+  const earnEl = document.getElementById('earn-' + activePriceKey);
+  if (earnEl) earnEl.textContent = 'Earn: ' + val + ' INDX / month';
+  closePriceSheet();
+  showToast('Price saved — ' + val + ' INDX / month for this data type');
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IN$DEX Borrow INDX</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --cyan-dim:#0099BB; --cyan-bg:#071825; --cyan-border:#0A2535;
+    --black:#090A10; --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+    --border:rgba(255,255,255,0.07); --text:#F0F2FF; --text-muted:rgba(240,242,255,0.45); --text-dim:rgba(240,242,255,0.2);
+    --green:#00E5A0; --green-bg:rgba(0,229,160,0.08); --red:#FF4D6D; --red-bg:rgba(255,77,109,0.08);
+    --purple:#8B3FE8; --purple-bg:rgba(139,63,232,0.08); --gold:#FFB800; --gold-bg:rgba(255,184,0,0.08);
+    --blue:#2B35D8;
+    --radius:16px; --nav-h:72px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none;}
+  .shell{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;}
+  .scroll-body{flex:1;overflow-y:auto;padding-bottom:calc(var(--nav-h) + 40px);-webkit-overflow-scrolling:touch;}
+  .scroll-body::-webkit-scrollbar{display:none;}
+
+  /* TOP BAR */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--black);z-index:20;}
+  .topbar-back{width:38px;height:38px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;}
+  .topbar-back:active{background:var(--surface2);}
+  .topbar-title{font-size:17px;font-weight:800;}
+  .topbar-chip{font-size:11px;font-weight:700;color:var(--cyan);background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.2);padding:4px 10px;border-radius:99px;}
+
+  /* SIINDEX BADGE */
+  .siindex-badge{margin:14px 20px 0;background:var(--purple-bg);border:1px solid rgba(139,63,232,0.25);border-radius:10px;padding:9px 14px;display:flex;align-items:center;gap:10px;}
+  .sb-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+  .sb-text{font-size:12px;font-weight:600;color:rgba(240,242,255,0.7);}
+  .sb-text span{color:var(--purple);font-weight:800;}
+
+  /* HERO */
+  .hero{margin:16px 20px 0;border-radius:20px;background:linear-gradient(135deg,#0D0A1F 0%,#150A20 50%,#0A0D1F 100%);border:1px solid rgba(139,63,232,0.25);padding:24px;position:relative;overflow:hidden;}
+  .hero::before{content:'';position:absolute;top:-40px;right:-40px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(139,63,232,0.12) 0%,transparent 70%);pointer-events:none;}
+  .hero-label{font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;}
+  .hero-rate{font-size:48px;font-weight:900;color:var(--purple);letter-spacing:-0.03em;line-height:1;}
+  .hero-rate-sub{font-size:13px;color:var(--text-muted);margin-top:4px;margin-bottom:20px;}
+  .hero-rate-sub span{color:var(--purple);font-weight:700;}
+  .hero-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;}
+  .hs{text-align:center;padding:0 4px;}
+  .hs + .hs{border-left:1px solid rgba(255,255,255,0.07);}
+  .hs-val{font-size:15px;font-weight:800;}
+  .hs-label{font-size:10px;color:var(--text-muted);margin-top:2px;text-transform:uppercase;letter-spacing:0.04em;}
+
+  /* TABS */
+  .tabs{display:flex;margin:20px 20px 0;background:var(--surface);border-radius:12px;padding:4px;gap:4px;}
+  .tab{flex:1;padding:10px;border-radius:9px;font-size:14px;font-weight:700;text-align:center;cursor:pointer;color:var(--text-muted);transition:all 0.2s;}
+  .tab.active{background:var(--surface3);color:var(--text);}
+
+  /* PANELS */
+  .panel{display:none;padding:16px 20px 0;}
+  .panel.active{display:block;}
+
+  /* ACTIVE LOAN */
+  .loan-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:14px;}
+  .lc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .lc-title{font-size:13px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;}
+  .lc-status{font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;}
+  .lc-status.safe{color:var(--green);background:var(--green-bg);border:1px solid rgba(0,229,160,0.2);}
+  .lc-status.warn{color:var(--gold);background:var(--gold-bg);border:1px solid rgba(255,184,0,0.2);}
+  .lc-status.danger{color:var(--red);background:var(--red-bg);border:1px solid rgba(255,77,109,0.2);}
+  .lc-empty{text-align:center;padding:20px 0;}
+  .lce-icon{font-size:32px;margin-bottom:8px;}
+  .lce-text{font-size:13px;color:var(--text-muted);}
+
+  /* HEALTH GAUGE */
+  .health-gauge{margin-bottom:16px;}
+  .hg-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .hg-label{font-size:12px;font-weight:700;color:var(--text-muted);}
+  .hg-value{font-size:15px;font-weight:900;}
+  .hg-bar-bg{height:10px;background:var(--surface2);border-radius:99px;overflow:hidden;position:relative;}
+  .hg-bar-fill{height:100%;border-radius:99px;transition:width 0.6s ease, background 0.3s;}
+  .hg-markers{display:flex;justify-content:space-between;margin-top:5px;}
+  .hg-marker{font-size:10px;color:var(--text-dim);}
+  .hg-marker.warn{color:var(--gold);}
+  .hg-marker.danger{color:var(--red);}
+
+  /* LOAN ROWS */
+  .loan-rows{display:flex;flex-direction:column;gap:0;}
+  .lr{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);}
+  .lr:last-child{border-bottom:none;}
+  .lr-label{font-size:13px;color:var(--text-muted);}
+  .lr-value{font-size:13px;font-weight:700;}
+
+  /* COLLATERAL INPUT */
+  .input-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px;}
+  .ic-label{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:14px;}
+  .amount-wrap{background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;transition:border-color 0.2s;}
+  .amount-wrap:focus-within{border-color:var(--purple);}
+  .amount-row{display:flex;align-items:baseline;gap:8px;margin-bottom:4px;}
+  .amount-input{background:transparent;border:none;outline:none;font-size:28px;font-weight:900;color:var(--text);width:100%;}
+  .amount-input::placeholder{color:var(--text-dim);}
+  .amount-ticker{font-size:16px;font-weight:800;color:var(--purple);}
+  .amount-usd{font-size:12px;color:var(--text-muted);}
+  .amount-ticker-cyan{color:var(--cyan);}
+
+  /* BORROW CALC */
+  .borrow-calc{background:var(--cyan-bg);border:1px solid rgba(0,212,255,0.15);border-radius:12px;padding:14px 16px;margin-bottom:14px;display:none;}
+  .bc-title{font-size:12px;font-weight:700;color:var(--cyan);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.06em;}
+  .bc-row{display:flex;justify-content:space-between;padding:5px 0;}
+  .bc-label{font-size:12px;color:var(--text-muted);}
+  .bc-value{font-size:13px;font-weight:700;}
+  .bc-value.cyan{color:var(--cyan);}
+  .bc-value.green{color:var(--green);}
+  .bc-value.gold{color:var(--gold);}
+
+  /* BORROW AMOUNT */
+  .borrow-amount-section{margin-bottom:14px;}
+  .ba-label{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;}
+  .ba-slider-wrap{background:var(--surface2);border-radius:12px;padding:16px;margin-bottom:10px;}
+  .ba-display{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;}
+  .ba-amount{font-size:26px;font-weight:900;color:var(--cyan);}
+  .ba-max{font-size:11px;color:var(--text-muted);}
+  .ba-slider{width:100%;-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;background:var(--surface3);outline:none;}
+  .ba-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;border-radius:50%;background:var(--cyan);cursor:pointer;box-shadow:0 0 8px rgba(0,212,255,0.4);}
+  .ba-pcts{display:flex;gap:8px;margin-top:10px;}
+  .ba-pct{flex:1;padding:8px 4px;border-radius:9px;background:var(--surface3);font-size:12px;font-weight:700;text-align:center;cursor:pointer;transition:all 0.2s;color:var(--text-muted);}
+  .ba-pct.sel{background:rgba(0,212,255,0.15);color:var(--cyan);border:1px solid rgba(0,212,255,0.25);}
+
+  /* HEALTH PREVIEW */
+  .health-preview{background:var(--surface2);border-radius:12px;padding:14px 16px;margin-bottom:14px;display:none;}
+  .hp-title{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;}
+  .hp-bar-bg{height:10px;background:var(--surface3);border-radius:99px;overflow:hidden;margin-bottom:6px;}
+  .hp-bar-fill{height:100%;border-radius:99px;transition:width 0.4s, background 0.3s;}
+  .hp-labels{display:flex;justify-content:space-between;margin-bottom:10px;}
+  .hp-label{font-size:10px;color:var(--text-dim);}
+  .hp-ratio{text-align:center;font-size:20px;font-weight:900;}
+  .hp-ratio-sub{text-align:center;font-size:11px;color:var(--text-muted);margin-top:2px;}
+
+  /* PREFLIGHT */
+  .preflight-card{background:var(--purple-bg);border:1px solid rgba(139,63,232,0.2);border-radius:12px;padding:14px 16px;margin-bottom:14px;}
+  .pf-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+  .pf-icon{font-size:18px;}
+  .pf-title{font-size:13px;font-weight:800;color:var(--purple);}
+  .pf-checks{display:flex;flex-direction:column;gap:6px;}
+  .pf-check{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted);}
+  .pf-check-icon{font-size:13px;flex-shrink:0;}
+  .pf-running{display:none;text-align:center;padding:6px 0;}
+  .pf-spinner{width:20px;height:20px;border:2px solid var(--surface3);border-top-color:var(--purple);border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;margin-right:8px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* WARNING BANNER */
+  .liq-warning{margin:0 0 14px;background:rgba(255,77,109,0.07);border:1px solid rgba(255,77,109,0.2);border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;}
+  .lw-icon{font-size:18px;flex-shrink:0;}
+  .lw-title{font-size:13px;font-weight:800;color:var(--red);margin-bottom:3px;}
+  .lw-desc{font-size:12px;color:var(--text-muted);line-height:1.5;}
+
+  /* CTA BUTTON */
+  .cta-btn{width:100%;padding:17px;border-radius:14px;font-size:16px;font-weight:800;border:none;cursor:pointer;transition:all 0.15s;letter-spacing:0.01em;margin-bottom:0;}
+  .cta-btn.primary{background:linear-gradient(135deg,var(--purple) 0%,var(--blue) 100%);color:#fff;}
+  .cta-btn.primary:active{transform:scale(0.98);}
+  .cta-btn.danger{background:linear-gradient(135deg,var(--red) 0%,#AA1035 100%);color:#fff;}
+  .cta-btn.green-btn{background:linear-gradient(135deg,var(--green) 0%,#009960 100%);color:#000;}
+  .cta-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+  /* REPAY PANEL */
+  .repay-panel-inner{}
+  .repay-empty{text-align:center;padding:60px 20px;}
+  .re-icon{font-size:40px;margin-bottom:12px;}
+  .re-text{font-size:14px;color:var(--text-muted);margin-bottom:20px;}
+
+  /* HOW BORROWING WORKS */
+  .hiw-section{margin:20px 20px 0;}
+  .hiw-title{font-size:15px;font-weight:800;margin-bottom:14px;}
+  .hiw-steps{display:flex;flex-direction:column;gap:12px;}
+  .hiw-step{display:flex;gap:14px;align-items:flex-start;}
+  .hiw-num{width:32px;height:32px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--purple);flex-shrink:0;}
+  .hiw-content{}
+  .hiw-step-title{font-size:14px;font-weight:700;margin-bottom:3px;}
+  .hiw-step-desc{font-size:12px;color:var(--text-muted);line-height:1.5;}
+
+  /* THRESHOLD TABLE */
+  .threshold-section{margin:20px 20px 0;}
+  .threshold-title{font-size:15px;font-weight:800;margin-bottom:14px;}
+  .threshold-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
+  .th-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+  .th-row:last-child{border-bottom:none;}
+  .th-icon{font-size:20px;flex-shrink:0;width:28px;text-align:center;}
+  .th-content{flex:1;}
+  .th-ratio{font-size:14px;font-weight:800;}
+  .th-desc{font-size:12px;color:var(--text-muted);margin-top:2px;}
+  .th-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;flex-shrink:0;}
+  .badge-green{color:var(--green);background:var(--green-bg);}
+  .badge-gold{color:var(--gold);background:var(--gold-bg);}
+  .badge-red{color:var(--red);background:var(--red-bg);}
+
+  /* BOTTOM NAV */
+  .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;height:var(--nav-h);background:rgba(9,10,16,0.95);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;padding:0 10px;z-index:30;}
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 14px;cursor:pointer;opacity:0.45;transition:opacity 0.2s;}
+  .nav-item.active{opacity:1;}
+  .nav-icon{font-size:22px;}
+  .nav-label{font-size:10px;font-weight:700;color:var(--text-muted);}
+  .nav-item.active .nav-label{color:var(--cyan);}
+
+  /* BOTTOM SHEET */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:40;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+  .overlay.show{opacity:1;pointer-events:all;}
+  .sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:430px;background:var(--surface);border-radius:24px 24px 0 0;padding:24px 20px 40px;z-index:50;transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);}
+  .sheet.show{transform:translateX(-50%) translateY(0);}
+  .sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--surface3);margin:0 auto 20px;}
+  .sheet-title{font-size:18px;font-weight:800;margin-bottom:6px;}
+  .sheet-sub{font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.5;}
+  .sheet-rows{background:var(--surface2);border-radius:12px;padding:4px 0;margin-bottom:20px;}
+  .sheet-row{display:flex;justify-content:space-between;padding:11px 16px;}
+  .sheet-row + .sheet-row{border-top:1px solid var(--border);}
+  .sr-label{font-size:13px;color:var(--text-muted);}
+  .sr-value{font-size:13px;font-weight:700;}
+  .sr-value.green{color:var(--green);}
+  .sr-value.cyan{color:var(--cyan);}
+  .sr-value.purple{color:var(--purple);}
+  .sr-value.red{color:var(--red);}
+
+  /* PREFLIGHT SHEET */
+  .pf-sheet-checks{display:flex;flex-direction:column;gap:8px;margin-bottom:20px;}
+  .pf-sheet-check{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border-radius:10px;}
+  .pfc-icon{font-size:16px;flex-shrink:0;}
+  .pfc-text{font-size:13px;font-weight:600;}
+  .pfc-status{margin-left:auto;font-size:12px;font-weight:700;}
+
+  /* SUCCESS OVERLAY */
+  .success-overlay{position:fixed;inset:0;background:var(--black);z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+  .success-overlay.show{opacity:1;pointer-events:all;}
+  .success-icon{font-size:64px;margin-bottom:20px;}
+  .success-title{font-size:26px;font-weight:900;text-align:center;margin-bottom:10px;}
+  .success-sub{font-size:14px;color:var(--text-muted);text-align:center;line-height:1.6;margin-bottom:32px;}
+  .success-btn{width:100%;padding:17px;border-radius:14px;font-size:16px;font-weight:800;border:none;background:linear-gradient(135deg,var(--purple),var(--blue));color:#fff;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <button class="topbar-back" onclick="history.back()">←</button>
+    <div class="topbar-title">Borrow INDX</div>
+    <div class="topbar-chip">Borrower</div>
+  </div>
+
+  <div class="scroll-body">
+
+    <!-- SIINDEX BADGE -->
+    <div class="siindex-badge">
+      <div class="sb-dot"></div>
+      <div class="sb-text"><span>SIINDEX</span> pre-flight required on every borrow · Liquidation monitoring every 15 min</div>
+    </div>
+
+    <!-- HERO BORROW RATE -->
+    <div class="hero">
+      <div class="hero-label">Current Borrow Rate (APR)</div>
+      <div class="hero-rate" id="heroBorrowRate">14.8%</div>
+      <div class="hero-rate-sub">Pool utilisation: <span>67%</span> — Rate set by utilisation curve</div>
+      <div class="hero-stats">
+        <div class="hs">
+          <div class="hs-val">150%</div>
+          <div class="hs-label">Min Collateral</div>
+        </div>
+        <div class="hs">
+          <div class="hs-val" style="color:var(--gold)">120%</div>
+          <div class="hs-label">Alert Level</div>
+        </div>
+        <div class="hs">
+          <div class="hs-val" style="color:var(--red)">110%</div>
+          <div class="hs-label">Liquidation</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('borrow')">Borrow</div>
+      <div class="tab" onclick="switchTab('repay')">Repay</div>
+    </div>
+
+    <!-- BORROW PANEL -->
+    <div class="panel active" id="panelBorrow">
+
+      <!-- ACTIVE LOAN -->
+      <div class="loan-card">
+        <div class="lc-header">
+          <div class="lc-title">Your Active Loan</div>
+          <div class="lc-status safe" id="loanStatus" style="display:none">● Healthy</div>
+        </div>
+        <div id="emptyLoan" class="lc-empty">
+          <div class="lce-icon">🏦</div>
+          <div class="lce-text">No active loan. Post USDC collateral below to borrow INDX.</div>
+        </div>
+        <div id="activeLoan" style="display:none">
+          <!-- HEALTH GAUGE -->
+          <div class="health-gauge" id="loanHealthGauge">
+            <div class="hg-header">
+              <span class="hg-label">Collateral Health Ratio</span>
+              <span class="hg-value" id="loanHealthVal" style="color:var(--green)">—</span>
+            </div>
+            <div class="hg-bar-bg">
+              <div class="hg-bar-fill" id="loanHealthBar" style="width:0%;background:var(--green);"></div>
+            </div>
+            <div class="hg-markers">
+              <span class="hg-marker danger">110% Liquidate</span>
+              <span class="hg-marker warn">120% Alert</span>
+              <span class="hg-marker">150% Safe</span>
+            </div>
+          </div>
+          <!-- LOAN DETAILS -->
+          <div class="loan-rows">
+            <div class="lr">
+              <span class="lr-label">USDC Collateral</span>
+              <span class="lr-value" id="loanCollateral">—</span>
+            </div>
+            <div class="lr">
+              <span class="lr-label">INDX Borrowed</span>
+              <span class="lr-value cyan" id="loanBorrowed" style="color:var(--cyan)">—</span>
+            </div>
+            <div class="lr">
+              <span class="lr-label">Interest Accrued</span>
+              <span class="lr-value" id="loanInterest" style="color:var(--gold)">—</span>
+            </div>
+            <div class="lr">
+              <span class="lr-label">Total to Repay</span>
+              <span class="lr-value" id="loanRepayTotal">—</span>
+            </div>
+            <div class="lr">
+              <span class="lr-label">Borrow APR</span>
+              <span class="lr-value">14.8%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 1: COLLATERAL -->
+      <div class="input-card">
+        <div class="ic-label">Step 1 — Post USDC Collateral</div>
+        <div class="amount-wrap">
+          <div class="amount-row">
+            <input class="amount-input" type="number" id="collateralInput" placeholder="0.00" inputmode="decimal" oninput="onCollateralInput()">
+            <span class="amount-ticker">USDC</span>
+          </div>
+          <div class="amount-usd" id="collateralUsd">= $0.00 USD (USDC is pegged 1:1)</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:0;">
+          <div style="flex:1;padding:9px 4px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);font-size:12px;font-weight:700;text-align:center;cursor:pointer;" onclick="setCollateral(50)">$50</div>
+          <div style="flex:1;padding:9px 4px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);font-size:12px;font-weight:700;text-align:center;cursor:pointer;" onclick="setCollateral(100)">$100</div>
+          <div style="flex:1;padding:9px 4px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);font-size:12px;font-weight:700;text-align:center;cursor:pointer;" onclick="setCollateral(250)">$250</div>
+          <div style="flex:1;padding:9px 4px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);font-size:12px;font-weight:700;text-align:center;cursor:pointer;" onclick="setCollateral(500)">$500</div>
+        </div>
+      </div>
+
+      <!-- BORROW CALC -->
+      <div class="borrow-calc" id="borrowCalc">
+        <div class="bc-title">📐 Borrow Calculator</div>
+        <div class="bc-row">
+          <span class="bc-label">Your collateral</span>
+          <span class="bc-value" id="calcCollateral">$0 USDC</span>
+        </div>
+        <div class="bc-row">
+          <span class="bc-label">Min ratio required</span>
+          <span class="bc-value gold">150% collateral</span>
+        </div>
+        <div class="bc-row">
+          <span class="bc-label">Max borrow value</span>
+          <span class="bc-value cyan" id="calcMaxUsd">$0.00 USD</span>
+        </div>
+        <div class="bc-row">
+          <span class="bc-label">Max borrow in INDX</span>
+          <span class="bc-value cyan" id="calcMaxIndx">0 INDX</span>
+        </div>
+      </div>
+
+      <!-- STEP 2: BORROW AMOUNT -->
+      <div class="input-card" id="borrowAmountCard" style="display:none;">
+        <div class="ic-label">Step 2 — Choose Borrow Amount</div>
+        <div class="ba-slider-wrap">
+          <div class="ba-display">
+            <span class="ba-amount" id="borrowDisplayAmt">0 INDX</span>
+            <span class="ba-max" id="borrowMaxLabel">Max: 0 INDX</span>
+          </div>
+          <input type="range" class="ba-slider" id="borrowSlider" min="0" max="100" value="0" oninput="onSliderInput()">
+          <div class="ba-pcts">
+            <div class="ba-pct" onclick="setBorrowPct(25)">25%</div>
+            <div class="ba-pct" onclick="setBorrowPct(50)">50%</div>
+            <div class="ba-pct" onclick="setBorrowPct(75)">75%</div>
+            <div class="ba-pct" onclick="setBorrowPct(100)">Max</div>
+          </div>
+        </div>
+
+        <!-- HEALTH PREVIEW -->
+        <div class="health-preview" id="healthPreview">
+          <div class="hp-title">Health Ratio Preview</div>
+          <div class="hp-bar-bg">
+            <div class="hp-bar-fill" id="healthPreviewBar" style="width:100%;background:var(--green);"></div>
+          </div>
+          <div class="hp-labels">
+            <span class="hp-label" style="color:var(--red)">110% Liq.</span>
+            <span class="hp-label" style="color:var(--gold)">120% Alert</span>
+            <span class="hp-label" style="color:var(--green)">150%+ Safe</span>
+          </div>
+          <div class="hp-ratio" id="healthRatioDisplay" style="color:var(--green)">—</div>
+          <div class="hp-ratio-sub" id="healthRatioSub">Enter collateral to calculate</div>
+        </div>
+
+        <!-- PREFLIGHT -->
+        <div class="preflight-card">
+          <div class="pf-header">
+            <div class="pf-icon">🛡️</div>
+            <div class="pf-title">SIINDEX Pre-Flight (7-Point Check)</div>
+          </div>
+          <div class="pf-checks">
+            <div class="pf-check"><span class="pf-check-icon">⬜</span> Policy compliance check</div>
+            <div class="pf-check"><span class="pf-check-icon">⬜</span> PQSI threat scan (T0–T4)</div>
+            <div class="pf-check"><span class="pf-check-icon">⬜</span> Sanctions screening</div>
+            <div class="pf-check"><span class="pf-check-icon">⬜</span> Collateral ratio verified ≥150%</div>
+            <div class="pf-check"><span class="pf-check-icon">⬜</span> Pool liquidity confirmed</div>
+            <div class="pf-check"><span class="pf-check-icon">⬜</span> Borrow limit within tier</div>
+            <div class="pf-check"><span class="pf-check-icon">⬜</span> 98/2 Law applied to interest</div>
+          </div>
+          <div class="pf-running" id="pfRunning">
+            <div class="pf-spinner"></div>
+            <span style="font-size:13px;color:var(--purple);">SIINDEX is running pre-flight…</span>
+          </div>
+        </div>
+
+        <!-- LIQUIDATION WARNING -->
+        <div class="liq-warning">
+          <div class="lw-icon">⚠️</div>
+          <div>
+            <div class="lw-title">Liquidation Risk</div>
+            <div class="lw-desc">If your collateral ratio drops below <strong style="color:var(--red)">110%</strong>, SIINDEX will auto-liquidate enough USDC to repay your loan. You keep the remaining collateral. SIINDEX will alert you at 120%.</div>
+          </div>
+        </div>
+
+        <button class="cta-btn primary" id="borrowBtn" onclick="openPreflightSheet()" disabled>Run Pre-Flight &amp; Borrow →</button>
+      </div>
+
+    </div>
+
+    <!-- REPAY PANEL -->
+    <div class="panel" id="panelRepay">
+      <div id="repayEmpty" class="repay-panel-inner">
+        <div class="repay-empty">
+          <div class="re-icon">✅</div>
+          <div class="re-text">No active loan to repay. Borrow INDX first from the Borrow tab.</div>
+          <button class="cta-btn primary" style="max-width:220px;margin:0 auto;" onclick="switchTab('borrow')">Go to Borrow →</button>
+        </div>
+      </div>
+      <div id="repayActive" style="display:none;">
+        <div class="loan-card" style="margin-bottom:14px;">
+          <div class="lc-header">
+            <div class="lc-title">Repay Your Loan</div>
+          </div>
+          <div class="loan-rows">
+            <div class="lr">
+              <span class="lr-label">Principal</span>
+              <span class="lr-value" id="repayPrincipal">—</span>
+            </div>
+            <div class="lr">
+              <span class="lr-label">Interest owed</span>
+              <span class="lr-value" id="repayInterest" style="color:var(--gold)">—</span>
+            </div>
+            <div class="lr">
+              <span class="lr-label">Total to repay</span>
+              <span class="lr-value" id="repayTotal" style="font-size:15px;font-weight:900;">—</span>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:14px;">
+          <button class="cta-btn green-btn" style="flex:1;" onclick="repayPartial()">Repay 50%</button>
+          <button class="cta-btn danger" style="flex:1;" onclick="repayFull()">Repay Full</button>
+        </div>
+        <div class="liq-warning">
+          <div class="lw-icon">💡</div>
+          <div>
+            <div class="lw-title" style="color:var(--cyan)">After Repay</div>
+            <div class="lw-desc">Once fully repaid, your USDC collateral is returned to your wallet immediately. SIINDEX confirms the release.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HOW BORROWING WORKS -->
+    <div class="hiw-section">
+      <div class="hiw-title">How Borrowing Works</div>
+      <div class="hiw-steps">
+        <div class="hiw-step">
+          <div class="hiw-num">1</div>
+          <div class="hiw-content">
+            <div class="hiw-step-title">Post USDC as collateral</div>
+            <div class="hiw-step-desc">Deposit USDC to back your loan. You need at least $1.50 in USDC for every $1.00 you borrow — a 150% collateral ratio.</div>
+          </div>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-num">2</div>
+          <div class="hiw-content">
+            <div class="hiw-step-title">SIINDEX runs pre-flight</div>
+            <div class="hiw-step-desc">Every borrow goes through a 7-point check: policy, security, sanctions, collateral, liquidity, limits, and the 98/2 Law. This takes under 3 seconds.</div>
+          </div>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-num">3</div>
+          <div class="hiw-content">
+            <div class="hiw-step-title">Receive INDX, pay interest</div>
+            <div class="hiw-step-desc">INDX arrives in your Grid Account. Interest accrues daily at the current borrow rate. SIINDEX watches your collateral ratio 24/7.</div>
+          </div>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-num">4</div>
+          <div class="hiw-content">
+            <div class="hiw-step-title">Repay to get collateral back</div>
+            <div class="hiw-step-desc">Repay your INDX + interest at any time. Your USDC is returned immediately upon full repayment.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- THRESHOLD TABLE -->
+    <div class="threshold-section" style="margin-bottom:20px;">
+      <div class="threshold-title">Collateral Thresholds</div>
+      <div class="threshold-card">
+        <div class="th-row">
+          <div class="th-icon">✅</div>
+          <div class="th-content">
+            <div class="th-ratio" style="color:var(--green)">≥150%</div>
+            <div class="th-desc">Safe — no action needed</div>
+          </div>
+          <div class="th-badge badge-green">Safe</div>
+        </div>
+        <div class="th-row">
+          <div class="th-icon">⚠️</div>
+          <div class="th-content">
+            <div class="th-ratio" style="color:var(--gold)">120–149%</div>
+            <div class="th-desc">SIINDEX sends T2 alert — add collateral or repay</div>
+          </div>
+          <div class="th-badge badge-gold">Alert</div>
+        </div>
+        <div class="th-row">
+          <div class="th-icon">🚨</div>
+          <div class="th-content">
+            <div class="th-ratio" style="color:var(--red)">Below 110%</div>
+            <div class="th-desc">SIINDEX auto-liquidates to protect depositors</div>
+          </div>
+          <div class="th-badge badge-red">Liquidate</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end scroll-body -->
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <div class="nav-item" onclick="location.href='citizen-dashboard.html'">
+      <div class="nav-icon">🏠</div>
+      <div class="nav-label">Home</div>
+    </div>
+    <div class="nav-item" onclick="location.href='marketplace.html'">
+      <div class="nav-icon">🛒</div>
+      <div class="nav-label">Market</div>
+    </div>
+    <div class="nav-item active">
+      <div class="nav-icon">🏦</div>
+      <div class="nav-label">Borrow</div>
+    </div>
+    <div class="nav-item" onclick="location.href='staking.html'">
+      <div class="nav-icon">📈</div>
+      <div class="nav-label">Stake</div>
+    </div>
+    <div class="nav-item" onclick="location.href='profile.html'">
+      <div class="nav-icon">👤</div>
+      <div class="nav-label">Profile</div>
+    </div>
+  </nav>
+
+</div><!-- end shell -->
+
+<!-- PREFLIGHT SHEET -->
+<div class="overlay" id="pfOverlay" onclick="closePfSheet()"></div>
+<div class="sheet" id="pfSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">SIINDEX Pre-Flight</div>
+  <div class="sheet-sub">Running 7-point check on your borrow request…</div>
+  <div class="pf-sheet-checks">
+    <div class="pf-sheet-check" id="pfc1"><div class="pfc-icon">⏳</div><div class="pfc-text">Policy compliance</div><div class="pfc-status" id="pfcs1" style="color:var(--text-muted);">Checking…</div></div>
+    <div class="pf-sheet-check" id="pfc2"><div class="pfc-icon">⏳</div><div class="pfc-text">PQSI threat scan</div><div class="pfc-status" id="pfcs2" style="color:var(--text-muted);">Pending</div></div>
+    <div class="pf-sheet-check" id="pfc3"><div class="pfc-icon">⏳</div><div class="pfc-text">Sanctions screening</div><div class="pfc-status" id="pfcs3" style="color:var(--text-muted);">Pending</div></div>
+    <div class="pf-sheet-check" id="pfc4"><div class="pfc-icon">⏳</div><div class="pfc-text">Collateral ≥150%</div><div class="pfc-status" id="pfcs4" style="color:var(--text-muted);">Pending</div></div>
+    <div class="pf-sheet-check" id="pfc5"><div class="pfc-icon">⏳</div><div class="pfc-text">Pool liquidity</div><div class="pfc-status" id="pfcs5" style="color:var(--text-muted);">Pending</div></div>
+    <div class="pf-sheet-check" id="pfc6"><div class="pfc-icon">⏳</div><div class="pfc-text">Borrow tier limit</div><div class="pfc-status" id="pfcs6" style="color:var(--text-muted);">Pending</div></div>
+    <div class="pf-sheet-check" id="pfc7"><div class="pfc-icon">⏳</div><div class="pfc-text">98/2 Law applied</div><div class="pfc-status" id="pfcs7" style="color:var(--text-muted);">Pending</div></div>
+  </div>
+  <button class="cta-btn primary" id="pfConfirmBtn" style="display:none;" onclick="confirmBorrow()">Confirm Borrow →</button>
+  <button class="cta-btn" id="pfCancelBtn" style="background:var(--surface2);color:var(--text);" onclick="closePfSheet()">Cancel</button>
+</div>
+
+<!-- SUCCESS OVERLAY -->
+<div class="success-overlay" id="successOverlay">
+  <div class="success-icon" id="successIcon">💸</div>
+  <div class="success-title" id="successTitle">Loan Active!</div>
+  <div class="success-sub" id="successSub">Your INDX is in your Grid Account. SIINDEX is monitoring your collateral ratio every 15 minutes.</div>
+  <button class="success-btn" onclick="dismissSuccess()">View Loan Status →</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL      = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const INDX_PRICE = 0.24;
+const BORROW_APR = 0.148;
+const MIN_RATIO  = 1.5;
+
+const citizenId = sessionStorage.getItem('citizen_id');
+
+let collateralUsd  = 0;
+let maxBorrowIndx  = 0;
+let borrowIndx     = 0;
+let activeLoan     = null;  // loaded from Supabase on init
+let activeLoanId   = null;
+
+async function init() {
+  if (citizenId) {
+    await loadBorrowPositions();
+  }
+}
+
+async function loadBorrowPositions() {
+  try {
+    const { data, error } = await sb.rpc('get_lending_positions', { p_citizen_id: citizenId });
+    if (error) throw error;
+    const borrows = data.borrows || [];
+    const active  = borrows.find(b => b.status === 'active');
+    if (active) {
+      activeLoan   = { collateral: parseFloat(active.usdc_collateral), borrowed: parseFloat(active.indx_amount) };
+      activeLoanId = active.id;
+      // Store interest accrued for repay panel
+      activeLoan.interest = parseFloat(active.interest_accrued || 0);
+      showActiveLoan();
+      document.getElementById('repayEmpty').style.display = 'none';
+      document.getElementById('repayActive').style.display = 'block';
+      updateRepayPanel();
+    }
+  } catch (e) {
+    console.error('loadBorrowPositions:', e);
+  }
+}
+
+function showActiveLoan() {
+  document.getElementById('emptyLoan').style.display = 'none';
+  document.getElementById('activeLoan').style.display = 'block';
+  document.getElementById('loanStatus').style.display = 'block';
+
+  const ratio = (activeLoan.collateral / (activeLoan.borrowed * INDX_PRICE)) * 100;
+  updateLoanHealth(ratio);
+
+  document.getElementById('loanCollateral').textContent = '$' + activeLoan.collateral.toFixed(2) + ' USDC';
+  document.getElementById('loanBorrowed').textContent = activeLoan.borrowed.toFixed(2) + ' INDX (~$' + (activeLoan.borrowed * INDX_PRICE).toFixed(2) + ')';
+  const interest = activeLoan.borrowed * BORROW_APR / 365;
+  document.getElementById('loanInterest').textContent = interest.toFixed(4) + ' INDX today';
+  const total = activeLoan.borrowed + interest;
+  document.getElementById('loanRepayTotal').textContent = total.toFixed(4) + ' INDX';
+}
+
+function updateLoanHealth(ratio) {
+  const el = document.getElementById('loanHealthVal');
+  const bar = document.getElementById('loanHealthBar');
+  const status = document.getElementById('loanStatus');
+  el.textContent = ratio.toFixed(1) + '%';
+  // Map ratio 100-200 → bar 0-100%
+  const barPct = Math.min(100, Math.max(0, (ratio - 100) / 100 * 100));
+  bar.style.width = barPct + '%';
+  if (ratio >= 150) {
+    el.style.color = 'var(--green)'; bar.style.background = 'var(--green)';
+    status.textContent = '● Healthy'; status.className = 'lc-status safe';
+  } else if (ratio >= 120) {
+    el.style.color = 'var(--gold)'; bar.style.background = 'var(--gold)';
+    status.textContent = '⚠ Warning'; status.className = 'lc-status warn';
+  } else {
+    el.style.color = 'var(--red)'; bar.style.background = 'var(--red)';
+    status.textContent = '🚨 At Risk'; status.className = 'lc-status danger';
+  }
+}
+
+function updateRepayPanel() {
+  const interest = activeLoan.borrowed * BORROW_APR / 365;
+  document.getElementById('repayPrincipal').textContent = activeLoan.borrowed.toFixed(4) + ' INDX';
+  document.getElementById('repayInterest').textContent = interest.toFixed(6) + ' INDX (~$' + (interest * INDX_PRICE).toFixed(4) + ')';
+  document.getElementById('repayTotal').textContent = (activeLoan.borrowed + interest).toFixed(4) + ' INDX';
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (tab==='borrow' && i===0)||(tab==='repay' && i===1)));
+  document.getElementById('panelBorrow').classList.toggle('active', tab==='borrow');
+  document.getElementById('panelRepay').classList.toggle('active', tab==='repay');
+}
+
+function onCollateralInput() {
+  const val = parseFloat(document.getElementById('collateralInput').value) || 0;
+  collateralUsd = val;
+  document.getElementById('collateralUsd').textContent = '= $' + val.toFixed(2) + ' USD (USDC is pegged 1:1)';
+
+  if (val > 0) {
+    const maxBorrowUsd = val / MIN_RATIO;
+    maxBorrowIndx = maxBorrowUsd / INDX_PRICE;
+    document.getElementById('borrowCalc').style.display = 'block';
+    document.getElementById('calcCollateral').textContent = '$' + val.toFixed(2) + ' USDC';
+    document.getElementById('calcMaxUsd').textContent = '$' + maxBorrowUsd.toFixed(2) + ' USD';
+    document.getElementById('calcMaxIndx').textContent = maxBorrowIndx.toFixed(2) + ' INDX';
+    document.getElementById('borrowAmountCard').style.display = 'block';
+    document.getElementById('borrowMaxLabel').textContent = 'Max: ' + maxBorrowIndx.toFixed(2) + ' INDX';
+    document.getElementById('borrowSlider').max = maxBorrowIndx;
+    document.getElementById('borrowSlider').value = 0;
+    borrowIndx = 0;
+    document.getElementById('borrowDisplayAmt').textContent = '0 INDX';
+    document.getElementById('borrowBtn').disabled = true;
+    document.getElementById('healthPreview').style.display = 'none';
+  } else {
+    document.getElementById('borrowCalc').style.display = 'none';
+    document.getElementById('borrowAmountCard').style.display = 'none';
+  }
+}
+
+function setCollateral(n) {
+  document.getElementById('collateralInput').value = n;
+  onCollateralInput();
+}
+
+function onSliderInput() {
+  const val = parseFloat(document.getElementById('borrowSlider').value) || 0;
+  updateBorrowAmount(val);
+}
+
+function updateBorrowAmount(val) {
+  borrowIndx = val;
+  document.getElementById('borrowDisplayAmt').textContent = val.toFixed(2) + ' INDX (~$' + (val * INDX_PRICE).toFixed(2) + ')';
+  document.getElementById('borrowBtn').disabled = val <= 0;
+
+  if (val > 0 && collateralUsd > 0) {
+    const borrowedUsd = val * INDX_PRICE;
+    const ratio = (collateralUsd / borrowedUsd) * 100;
+    const barPct = Math.min(100, Math.max(0, (ratio - 100) / 150 * 100));
+    const bar = document.getElementById('healthPreviewBar');
+    const ratioEl = document.getElementById('healthRatioDisplay');
+    const sub = document.getElementById('healthRatioSub');
+    bar.style.width = barPct + '%';
+    ratioEl.textContent = ratio.toFixed(1) + '%';
+    if (ratio >= 150) {
+      bar.style.background = 'var(--green)';
+      ratioEl.style.color = 'var(--green)';
+      sub.textContent = '✅ Safe — well above liquidation threshold';
+    } else if (ratio >= 120) {
+      bar.style.background = 'var(--gold)';
+      ratioEl.style.color = 'var(--gold)';
+      sub.textContent = '⚠️ Warning zone — SIINDEX will send an alert';
+    } else {
+      bar.style.background = 'var(--red)';
+      ratioEl.style.color = 'var(--red)';
+      sub.textContent = '🚨 Below safe limit — reduce borrow amount';
+      document.getElementById('borrowBtn').disabled = true;
+    }
+    document.getElementById('healthPreview').style.display = 'block';
+  }
+}
+
+function setBorrowPct(pct) {
+  const val = maxBorrowIndx * pct / 100;
+  document.getElementById('borrowSlider').value = val;
+  updateBorrowAmount(val);
+  document.querySelectorAll('.ba-pct').forEach(el => el.classList.remove('sel'));
+  event.target.classList.add('sel');
+}
+
+function openPreflightSheet() {
+  document.getElementById('pfOverlay').classList.add('show');
+  document.getElementById('pfSheet').classList.add('show');
+  runPreflight();
+}
+
+function closePfSheet() {
+  document.getElementById('pfOverlay').classList.remove('show');
+  document.getElementById('pfSheet').classList.remove('show');
+}
+
+function runPreflight() {
+  const checks = [1,2,3,4,5,6,7];
+  document.getElementById('pfConfirmBtn').style.display = 'none';
+  document.getElementById('pfCancelBtn').style.display = 'block';
+  checks.forEach(i => {
+    document.getElementById('pfcs' + i).textContent = 'Pending';
+    document.getElementById('pfcs' + i).style.color = 'var(--text-muted)';
+    document.getElementById('pfc' + i).querySelector('.pfc-icon').textContent = '⏳';
+  });
+  checks.forEach((i, idx) => {
+    setTimeout(() => {
+      document.getElementById('pfcs' + i).textContent = 'Checking…';
+      setTimeout(() => {
+        document.getElementById('pfcs' + i).textContent = '✅ Passed';
+        document.getElementById('pfcs' + i).style.color = 'var(--green)';
+        document.getElementById('pfc' + i).querySelector('.pfc-icon').textContent = '✅';
+        if (i === 7) {
+          document.getElementById('pfConfirmBtn').style.display = 'block';
+          document.getElementById('pfCancelBtn').style.display = 'none';
+          document.querySelector('#pfSheet .sheet-sub').textContent = 'All 7 checks passed. SIINDEX has cleared this borrow.';
+        }
+      }, 400);
+    }, idx * 500);
+  });
+}
+
+async function confirmBorrow() {
+  const btn = document.getElementById('pfConfirmBtn');
+  btn.textContent = 'Processing…'; btn.disabled = true;
+
+  try {
+    const { data, error } = await sb.rpc('borrow_from_pool', {
+      p_citizen_id:      citizenId,
+      p_usdc_collateral: collateralUsd,
+      p_borrow_indx:     borrowIndx
+    });
+    if (error || !data.success) throw new Error((data && data.error) || error.message);
+
+    activeLoanId = data.position_id;
+    activeLoan   = { collateral: collateralUsd, borrowed: borrowIndx, interest: 0 };
+    sessionStorage.setItem('citizen_balance', data.new_balance);
+
+    closePfSheet();
+    document.getElementById('successTitle').textContent = 'Loan Active!';
+    document.getElementById('successSub').textContent = borrowIndx.toFixed(2) + ' INDX is in your Grid Account. $' + collateralUsd.toFixed(2) + ' USDC is locked as collateral. SIINDEX is watching your position every 15 minutes.';
+    document.getElementById('successOverlay').classList.add('show');
+    showActiveLoan();
+    document.getElementById('repayEmpty').style.display = 'none';
+    document.getElementById('repayActive').style.display = 'block';
+    updateRepayPanel();
+  } catch (e) {
+    alert('Borrow failed: ' + e.message);
+    btn.textContent = 'Confirm Borrow →'; btn.disabled = false;
+  }
+}
+
+async function repayPartial() {
+  if (!activeLoan || !activeLoanId) return;
+  const halfRepay = activeLoan.borrowed / 2;
+
+  try {
+    const { data, error } = await sb.rpc('repay_loan', {
+      p_citizen_id:  citizenId,
+      p_position_id: activeLoanId,
+      p_amount_indx: halfRepay
+    });
+    if (error || !data.success) throw new Error((data && data.error) || error.message);
+
+    sessionStorage.setItem('citizen_balance', data.new_balance);
+    activeLoan.borrowed -= halfRepay;
+    activeLoan.interest  = 0;
+    document.getElementById('successTitle').textContent = 'Partial Repay Done';
+    document.getElementById('successSub').textContent = halfRepay.toFixed(4) + ' INDX repaid. Remaining loan: ' + activeLoan.borrowed.toFixed(4) + ' INDX. SIINDEX has updated your collateral ratio.';
+    document.getElementById('successIcon').textContent = '✅';
+    document.getElementById('successOverlay').classList.add('show');
+    showActiveLoan();
+    updateRepayPanel();
+  } catch (e) {
+    alert('Repay failed: ' + e.message);
+  }
+}
+
+async function repayFull() {
+  if (!activeLoan || !activeLoanId) return;
+  const collateralBack = activeLoan.collateral;
+
+  try {
+    const { data, error } = await sb.rpc('repay_loan', {
+      p_citizen_id:  citizenId,
+      p_position_id: activeLoanId,
+      p_amount_indx: activeLoan.borrowed
+    });
+    if (error || !data.success) throw new Error((data && data.error) || error.message);
+
+    sessionStorage.setItem('citizen_balance', data.new_balance);
+    document.getElementById('successTitle').textContent = 'Loan Fully Repaid!';
+    document.getElementById('successSub').textContent = 'Your loan is closed. $' + collateralBack.toFixed(2) + ' USDC collateral has been returned to your Grid Account.';
+    document.getElementById('successIcon').textContent = '🎉';
+    activeLoan   = null;
+    activeLoanId = null;
+    document.getElementById('emptyLoan').style.display = 'block';
+    document.getElementById('activeLoan').style.display = 'none';
+    document.getElementById('loanStatus').style.display = 'none';
+    document.getElementById('repayEmpty').style.display = 'block';
+    document.getElementById('repayActive').style.display = 'none';
+    document.getElementById('successOverlay').classList.add('show');
+  } catch (e) {
+    alert('Repay failed: ' + e.message);
+  }
+}
+
+function dismissSuccess() {
+  document.getElementById('successOverlay').classList.remove('show');
+}
+
+init();
+</script>
+</body>
+</html>

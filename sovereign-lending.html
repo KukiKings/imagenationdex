@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IN$DEX Sovereign Lending</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --cyan-dim:#0099BB; --cyan-bg:#071825; --cyan-border:#0A2535;
+    --black:#090A10; --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+    --border:rgba(255,255,255,0.07); --text:#F0F2FF; --text-muted:rgba(240,242,255,0.45); --text-dim:rgba(240,242,255,0.2);
+    --green:#00E5A0; --green-bg:rgba(0,229,160,0.08); --red:#FF4D6D; --red-bg:rgba(255,77,109,0.08);
+    --purple:#8B3FE8; --purple-bg:rgba(139,63,232,0.08); --gold:#FFB800; --gold-bg:rgba(255,184,0,0.08);
+    --blue:#2B35D8;
+    --radius:16px; --nav-h:72px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none;}
+  .shell{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;}
+  .scroll-body{flex:1;overflow-y:auto;padding-bottom:calc(var(--nav-h) + 40px);-webkit-overflow-scrolling:touch;}
+  .scroll-body::-webkit-scrollbar{display:none;}
+
+  /* TOP BAR */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--black);z-index:20;}
+  .topbar-back{width:38px;height:38px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;}
+  .topbar-back:active{background:var(--surface2);}
+  .topbar-title{font-size:17px;font-weight:800;}
+  .topbar-info{width:38px;height:38px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;}
+
+  /* SIINDEX BADGE */
+  .siindex-badge{margin:14px 20px 0;background:rgba(139,63,232,0.1);border:1px solid rgba(139,63,232,0.25);border-radius:10px;padding:9px 14px;display:flex;align-items:center;gap:10px;}
+  .sb-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+  .sb-text{font-size:12px;font-weight:600;color:rgba(240,242,255,0.7);}
+  .sb-text span{color:var(--purple);font-weight:800;}
+
+  /* HERO */
+  .hero{margin:16px 20px 0;border-radius:20px;background:linear-gradient(135deg,#0A0D1F 0%,#0D1135 50%,#0A0E20 100%);border:1px solid rgba(0,212,255,0.2);padding:24px;position:relative;overflow:hidden;}
+  .hero::before{content:'';position:absolute;top:-50px;right:-50px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(0,212,255,0.1) 0%,transparent 70%);pointer-events:none;}
+  .hero::after{content:'';position:absolute;bottom:-30px;left:-30px;width:100px;height:100px;border-radius:50%;background:radial-gradient(circle,rgba(139,63,232,0.08) 0%,transparent 70%);pointer-events:none;}
+  .hero-label{font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;}
+  .hero-apy{font-size:52px;font-weight:900;color:var(--cyan);letter-spacing:-0.03em;line-height:1;}
+  .hero-apy-sub{font-size:13px;color:var(--text-muted);margin-top:4px;margin-bottom:20px;}
+  .hero-apy-sub span{color:var(--cyan);font-weight:700;}
+  .hero-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;}
+  .hs{text-align:center;padding:0 4px;}
+  .hs + .hs{border-left:1px solid rgba(255,255,255,0.07);}
+  .hs-val{font-size:15px;font-weight:800;}
+  .hs-label{font-size:10px;color:var(--text-muted);margin-top:2px;text-transform:uppercase;letter-spacing:0.04em;}
+
+  /* UTILISATION BAR */
+  .util-section{margin:16px 20px 0;}
+  .util-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .util-title{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;}
+  .util-pct{font-size:13px;font-weight:800;color:var(--gold);}
+  .util-bar-bg{height:8px;background:var(--surface2);border-radius:99px;overflow:hidden;}
+  .util-bar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--green) 0%,var(--gold) 60%,var(--red) 90%);transition:width 0.8s ease;width:67%;}
+  .util-labels{display:flex;justify-content:space-between;margin-top:5px;}
+  .ul-label{font-size:10px;color:var(--text-dim);}
+
+  /* TABS */
+  .tabs{display:flex;margin:20px 20px 0;background:var(--surface);border-radius:12px;padding:4px;gap:4px;}
+  .tab{flex:1;padding:10px;border-radius:9px;font-size:14px;font-weight:700;text-align:center;cursor:pointer;color:var(--text-muted);transition:all 0.2s;}
+  .tab.active{background:var(--surface3);color:var(--text);}
+
+  /* PANELS */
+  .panel{display:none;padding:16px 20px 0;}
+  .panel.active{display:block;}
+
+  /* YOUR POSITION */
+  .position-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:14px;}
+  .pc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .pc-title{font-size:13px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;}
+  .pc-badge{font-size:11px;font-weight:700;color:var(--green);background:var(--green-bg);border:1px solid rgba(0,229,160,0.2);padding:3px 9px;border-radius:99px;}
+  .pc-rows{display:flex;flex-direction:column;gap:10px;}
+  .pc-row{display:flex;justify-content:space-between;align-items:center;}
+  .pc-label{font-size:13px;color:var(--text-muted);}
+  .pc-value{font-size:14px;font-weight:700;}
+  .pc-value.green{color:var(--green);}
+  .pc-value.cyan{color:var(--cyan);}
+  .pc-empty{text-align:center;padding:20px 0;}
+  .pce-icon{font-size:32px;margin-bottom:8px;}
+  .pce-text{font-size:13px;color:var(--text-muted);}
+
+  /* AMOUNT INPUT */
+  .input-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px;}
+  .ic-label{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:14px;}
+  .amount-wrap{background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px;transition:border-color 0.2s;}
+  .amount-wrap:focus-within{border-color:var(--cyan);}
+  .amount-row{display:flex;align-items:baseline;gap:8px;margin-bottom:4px;}
+  .amount-input{background:transparent;border:none;outline:none;font-size:30px;font-weight:900;color:var(--text);width:100%;}
+  .amount-input::placeholder{color:var(--text-dim);}
+  .amount-ticker{font-size:16px;font-weight:800;color:var(--cyan);}
+  .amount-usd{font-size:12px;color:var(--text-muted);}
+  .bal-row{display:flex;justify-content:space-between;margin-bottom:12px;font-size:12px;color:var(--text-muted);}
+  .use-max{color:var(--cyan);font-weight:700;cursor:pointer;}
+
+  /* QUICK AMOUNTS */
+  .quick{display:flex;gap:8px;margin-bottom:16px;}
+  .qa{flex:1;padding:9px 4px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);font-size:12px;font-weight:700;text-align:center;cursor:pointer;transition:all 0.2s;}
+  .qa:active,.qa.sel{background:var(--cyan-bg);border-color:var(--cyan);color:var(--cyan);}
+
+  /* PROJECTED YIELD */
+  .yield-preview{background:var(--green-bg);border:1px solid rgba(0,229,160,0.2);border-radius:12px;padding:14px 16px;margin-bottom:16px;display:none;}
+  .yp-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .yp-row:last-child{margin-bottom:0;}
+  .yp-label{font-size:12px;color:var(--text-muted);}
+  .yp-value{font-size:13px;font-weight:800;color:var(--green);}
+
+  /* LAW BADGE */
+  .law-badge{background:var(--gold-bg);border:1px solid rgba(255,184,0,0.2);border-radius:12px;padding:12px 16px;margin-bottom:14px;display:flex;gap:10px;align-items:flex-start;}
+  .lb-icon{font-size:18px;flex-shrink:0;}
+  .lb-text{font-size:12px;color:var(--text-muted);line-height:1.5;}
+  .lb-text strong{color:var(--gold);font-weight:800;}
+
+  /* CTA BUTTON */
+  .cta-btn{width:100%;padding:17px;border-radius:14px;font-size:16px;font-weight:800;border:none;cursor:pointer;transition:all 0.15s;letter-spacing:0.01em;}
+  .cta-btn.primary{background:linear-gradient(135deg,var(--cyan) 0%,var(--blue) 100%);color:#000;}
+  .cta-btn.primary:active{transform:scale(0.98);}
+  .cta-btn.danger{background:linear-gradient(135deg,var(--red) 0%,#AA1035 100%);color:#fff;}
+  .cta-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+  /* HOW IT WORKS */
+  .hiw-section{margin:20px 20px 0;}
+  .hiw-title{font-size:15px;font-weight:800;margin-bottom:14px;}
+  .hiw-steps{display:flex;flex-direction:column;gap:12px;}
+  .hiw-step{display:flex;gap:14px;align-items:flex-start;}
+  .hiw-num{width:32px;height:32px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--cyan);flex-shrink:0;}
+  .hiw-content{}
+  .hiw-step-title{font-size:14px;font-weight:700;margin-bottom:3px;}
+  .hiw-step-desc{font-size:12px;color:var(--text-muted);line-height:1.5;}
+
+  /* POOL STATS */
+  .stats-section{margin:20px 20px 0;}
+  .stats-title{font-size:15px;font-weight:800;margin-bottom:14px;}
+  .stats-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
+  .stat-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);}
+  .stat-row:last-child{border-bottom:none;}
+  .stat-label{font-size:13px;color:var(--text-muted);}
+  .stat-value{font-size:13px;font-weight:700;}
+
+  /* BOTTOM NAV */
+  .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;height:var(--nav-h);background:rgba(9,10,16,0.95);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;padding:0 10px;z-index:30;}
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 14px;cursor:pointer;opacity:0.45;transition:opacity 0.2s;}
+  .nav-item.active{opacity:1;}
+  .nav-icon{font-size:22px;}
+  .nav-label{font-size:10px;font-weight:700;color:var(--text-muted);}
+  .nav-item.active .nav-label{color:var(--cyan);}
+
+  /* BOTTOM SHEET OVERLAY */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:40;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+  .overlay.show{opacity:1;pointer-events:all;}
+  .sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:430px;background:var(--surface);border-radius:24px 24px 0 0;padding:24px 20px 40px;z-index:50;transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);}
+  .sheet.show{transform:translateX(-50%) translateY(0);}
+  .sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--surface3);margin:0 auto 20px;}
+  .sheet-title{font-size:18px;font-weight:800;margin-bottom:6px;}
+  .sheet-sub{font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.5;}
+  .sheet-rows{background:var(--surface2);border-radius:12px;padding:4px 0;margin-bottom:20px;}
+  .sheet-row{display:flex;justify-content:space-between;padding:11px 16px;}
+  .sheet-row + .sheet-row{border-top:1px solid var(--border);}
+  .sr-label{font-size:13px;color:var(--text-muted);}
+  .sr-value{font-size:13px;font-weight:700;}
+  .sr-value.green{color:var(--green);}
+  .sr-value.cyan{color:var(--cyan);}
+
+  /* SUCCESS OVERLAY */
+  .success-overlay{position:fixed;inset:0;background:var(--black);z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+  .success-overlay.show{opacity:1;pointer-events:all;}
+  .success-icon{font-size:64px;margin-bottom:20px;}
+  .success-title{font-size:26px;font-weight:900;text-align:center;margin-bottom:10px;}
+  .success-sub{font-size:14px;color:var(--text-muted);text-align:center;line-height:1.6;margin-bottom:32px;}
+  .success-btn{width:100%;padding:17px;border-radius:14px;font-size:16px;font-weight:800;border:none;background:linear-gradient(135deg,var(--cyan),var(--blue));color:#000;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <button class="topbar-back" onclick="history.back()">←</button>
+    <div class="topbar-title">Sovereign Lending</div>
+    <button class="topbar-info" onclick="showInfo()">ℹ</button>
+  </div>
+
+  <div class="scroll-body">
+
+    <!-- SIINDEX BADGE -->
+    <div class="siindex-badge">
+      <div class="sb-dot"></div>
+      <div class="sb-text"><span>SIINDEX</span> is monitoring this pool 24/7 · Next scan in 14 min</div>
+    </div>
+
+    <!-- HERO APY CARD -->
+    <div class="hero">
+      <div class="hero-label">Current Depositor APY</div>
+      <div class="hero-apy" id="heroApy">11.2%</div>
+      <div class="hero-apy-sub">Pool utilisation: <span id="heroUtil">67%</span> — High demand → Higher yield</div>
+      <div class="hero-stats">
+        <div class="hs">
+          <div class="hs-val" id="statPool">2.85M</div>
+          <div class="hs-label">Pool Size</div>
+        </div>
+        <div class="hs">
+          <div class="hs-val" id="statDepositors">1,247</div>
+          <div class="hs-label">Depositors</div>
+        </div>
+        <div class="hs">
+          <div class="hs-val" style="color:var(--green)" id="statEarned">$8,420</div>
+          <div class="hs-label">Paid Out Today</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UTILISATION BAR -->
+    <div class="util-section">
+      <div class="util-header">
+        <div class="util-title">Pool Utilisation</div>
+        <div class="util-pct">67% — High</div>
+      </div>
+      <div class="util-bar-bg">
+        <div class="util-bar-fill" id="utilFill"></div>
+      </div>
+      <div class="util-labels">
+        <span class="ul-label">0% — Low APY</span>
+        <span class="ul-label" style="color:var(--gold)">90% Kink</span>
+        <span class="ul-label" style="color:var(--red)">100%</span>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('deposit')">Deposit</div>
+      <div class="tab" onclick="switchTab('withdraw')">Withdraw</div>
+    </div>
+
+    <!-- DEPOSIT PANEL -->
+    <div class="panel active" id="panelDeposit">
+
+      <!-- YOUR POSITION -->
+      <div class="position-card">
+        <div class="pc-header">
+          <div class="pc-title">Your Position</div>
+          <div class="pc-badge" id="positionBadge" style="display:none">● Earning</div>
+        </div>
+        <div id="emptyPosition" class="pc-empty">
+          <div class="pce-icon">💰</div>
+          <div class="pce-text">Deposit INDX below to start earning yield</div>
+        </div>
+        <div id="activePosition" class="pc-rows" style="display:none">
+          <div class="pc-row">
+            <span class="pc-label">Your Deposit</span>
+            <span class="pc-value cyan" id="posDeposit">—</span>
+          </div>
+          <div class="pc-row">
+            <span class="pc-label">Yield Today</span>
+            <span class="pc-value green" id="posToday">—</span>
+          </div>
+          <div class="pc-row">
+            <span class="pc-label">Total Earned</span>
+            <span class="pc-value green" id="posTotal">—</span>
+          </div>
+          <div class="pc-row">
+            <span class="pc-label">Your Share</span>
+            <span class="pc-value" id="posShare">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- AMOUNT INPUT -->
+      <div class="input-card">
+        <div class="ic-label">Deposit Amount</div>
+        <div class="amount-wrap">
+          <div class="amount-row">
+            <input class="amount-input" type="number" id="depositInput" placeholder="0" inputmode="decimal" oninput="onDepositInput()">
+            <span class="amount-ticker">INDX</span>
+          </div>
+          <div class="amount-usd" id="depositUsd">≈ $0.00 USD</div>
+        </div>
+        <div class="bal-row">
+          <span>Balance: <span id="balanceDisplay">—</span> INDX</span>
+          <span class="use-max" onclick="useMax()">Use Max</span>
+        </div>
+        <div class="quick">
+          <div class="qa" onclick="setAmount(100)">100</div>
+          <div class="qa" onclick="setAmount(250)">250</div>
+          <div class="qa" onclick="setAmount(500)">500</div>
+          <div class="qa" onclick="setAmount(1000)">1,000</div>
+        </div>
+        <!-- PROJECTED YIELD -->
+        <div class="yield-preview" id="yieldPreview">
+          <div class="yp-row">
+            <span class="yp-label">Daily yield (est.)</span>
+            <span class="yp-value" id="previewDaily">—</span>
+          </div>
+          <div class="yp-row">
+            <span class="yp-label">Monthly yield (est.)</span>
+            <span class="yp-value" id="previewMonthly">—</span>
+          </div>
+          <div class="yp-row">
+            <span class="yp-label">Yearly yield (est.)</span>
+            <span class="yp-value" id="previewYearly">—</span>
+          </div>
+        </div>
+        <!-- 98/2 LAW NOTICE -->
+        <div class="law-badge">
+          <div class="lb-icon">⚖️</div>
+          <div class="lb-text"><strong>98/2 Civilisation Law:</strong> You keep <strong>98%</strong> of all interest earned. 2% goes to the Civilisation Fund. This is immutable — SIINDEX cannot change it.</div>
+        </div>
+        <button class="cta-btn primary" id="depositBtn" onclick="openDepositSheet()" disabled>Lend INDX →</button>
+      </div>
+
+    </div>
+
+    <!-- WITHDRAW PANEL -->
+    <div class="panel" id="panelWithdraw">
+      <div class="input-card">
+        <div class="ic-label">Withdraw Amount</div>
+        <div class="amount-wrap">
+          <div class="amount-row">
+            <input class="amount-input" type="number" id="withdrawInput" placeholder="0" inputmode="decimal" oninput="onWithdrawInput()">
+            <span class="amount-ticker">INDX</span>
+          </div>
+          <div class="amount-usd" id="withdrawUsd">≈ $0.00 USD</div>
+        </div>
+        <div class="bal-row">
+          <span>Your deposit: <span id="withdrawDepositDisplay">0</span> INDX</span>
+          <span class="use-max" onclick="useMaxWithdraw()">Withdraw All</span>
+        </div>
+        <div class="quick">
+          <div class="qa" onclick="setWithdraw(25)">25%</div>
+          <div class="qa" onclick="setWithdraw(50)">50%</div>
+          <div class="qa" onclick="setWithdraw(75)">75%</div>
+          <div class="qa" onclick="setWithdraw(100)">100%</div>
+        </div>
+        <div class="law-badge" style="margin-bottom:14px;">
+          <div class="lb-icon">ℹ️</div>
+          <div class="lb-text">Your principal is always available to withdraw. If pool liquidity is low, partial withdrawal may be processed first.</div>
+        </div>
+        <button class="cta-btn danger" id="withdrawBtn" onclick="openWithdrawSheet()" disabled>Withdraw INDX</button>
+      </div>
+    </div>
+
+    <!-- HOW IT WORKS -->
+    <div class="hiw-section">
+      <div class="hiw-title">How Sovereign Lending Works</div>
+      <div class="hiw-steps">
+        <div class="hiw-step">
+          <div class="hiw-num">1</div>
+          <div class="hiw-content">
+            <div class="hiw-step-title">Deposit your INDX</div>
+            <div class="hiw-step-desc">Your tokens go into the Sovereign Lending Pool. You keep full ownership — they're never sold or locked permanently.</div>
+          </div>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-num">2</div>
+          <div class="hiw-content">
+            <div class="hiw-step-title">Borrowers pay interest</div>
+            <div class="hiw-step-desc">People who want to borrow INDX use your tokens and pay interest daily. The more demand, the higher your yield.</div>
+          </div>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-num">3</div>
+          <div class="hiw-content">
+            <div class="hiw-step-title">You earn 98% of the interest</div>
+            <div class="hiw-step-desc">Every day, 98% of the interest paid goes directly to depositors like you. 2% goes to the Civilisation Fund. SIINDEX handles everything else.</div>
+          </div>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-num">4</div>
+          <div class="hiw-content">
+            <div class="hiw-step-title">Withdraw any time</div>
+            <div class="hiw-step-desc">You can withdraw your INDX whenever you need it — as long as the pool has available liquidity.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- POOL STATS -->
+    <div class="stats-section" style="margin-bottom:20px;">
+      <div class="stats-title">Pool Stats</div>
+      <div class="stats-card">
+        <div class="stat-row">
+          <span class="stat-label">Total Pool Size</span>
+          <span class="stat-value">2,847,500 INDX</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Total Borrowed</span>
+          <span class="stat-value">1,907,825 INDX</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Available Liquidity</span>
+          <span class="stat-value" style="color:var(--green)">939,675 INDX</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Utilisation Rate</span>
+          <span class="stat-value" style="color:var(--gold)">67%</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Interest Rate (APR)</span>
+          <span class="stat-value" style="color:var(--cyan)">11.2%</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Protocol</span>
+          <span class="stat-value">MarginFi · Solana</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Price Oracle</span>
+          <span class="stat-value">Pyth Network</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">INDX Price</span>
+          <span class="stat-value">$0.24 USD</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end scroll-body -->
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <div class="nav-item" onclick="location.href='citizen-dashboard.html'">
+      <div class="nav-icon">🏠</div>
+      <div class="nav-label">Home</div>
+    </div>
+    <div class="nav-item" onclick="location.href='marketplace.html'">
+      <div class="nav-icon">🛒</div>
+      <div class="nav-label">Market</div>
+    </div>
+    <div class="nav-item active">
+      <div class="nav-icon">🏦</div>
+      <div class="nav-label">Lend</div>
+    </div>
+    <div class="nav-item" onclick="location.href='staking.html'">
+      <div class="nav-icon">📈</div>
+      <div class="nav-label">Stake</div>
+    </div>
+    <div class="nav-item" onclick="location.href='profile.html'">
+      <div class="nav-icon">👤</div>
+      <div class="nav-label">Profile</div>
+    </div>
+  </nav>
+
+</div><!-- end shell -->
+
+<!-- DEPOSIT CONFIRM SHEET -->
+<div class="overlay" id="depositOverlay" onclick="closeSheets()"></div>
+<div class="sheet" id="depositSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Confirm Deposit</div>
+  <div class="sheet-sub">SIINDEX will pre-flight this transaction. Your yield starts accruing immediately after confirmation.</div>
+  <div class="sheet-rows">
+    <div class="sheet-row">
+      <span class="sr-label">Depositing</span>
+      <span class="sr-value cyan" id="confirmAmt">—</span>
+    </div>
+    <div class="sheet-row">
+      <span class="sr-label">Current APY</span>
+      <span class="sr-value green">11.2%</span>
+    </div>
+    <div class="sheet-row">
+      <span class="sr-label">Est. daily yield</span>
+      <span class="sr-value green" id="confirmDaily">—</span>
+    </div>
+    <div class="sheet-row">
+      <span class="sr-label">Your share goes to</span>
+      <span class="sr-value">98% to you · 2% Civ Fund</span>
+    </div>
+    <div class="sheet-row">
+      <span class="sr-label">Lock period</span>
+      <span class="sr-value">None — withdraw any time</span>
+    </div>
+    <div class="sheet-row">
+      <span class="sr-label">Protocol</span>
+      <span class="sr-value">MarginFi · Solana Mainnet</span>
+    </div>
+  </div>
+  <button class="cta-btn primary" onclick="confirmDeposit()">Confirm &amp; Lend →</button>
+</div>
+
+<!-- WITHDRAW CONFIRM SHEET -->
+<div class="overlay" id="withdrawOverlay" onclick="closeSheets()"></div>
+<div class="sheet" id="withdrawSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Confirm Withdrawal</div>
+  <div class="sheet-sub">Withdrawing stops yield accrual on the withdrawn amount. Your earned yield to date is not affected.</div>
+  <div class="sheet-rows">
+    <div class="sheet-row">
+      <span class="sr-label">Withdrawing</span>
+      <span class="sr-value cyan" id="confirmWithdrawAmt">—</span>
+    </div>
+    <div class="sheet-row">
+      <span class="sr-label">Yield earned today</span>
+      <span class="sr-value green" id="confirmWithdrawYield">—</span>
+    </div>
+    <div class="sheet-row">
+      <span class="sr-label">Pool availability</span>
+      <span class="sr-value green">Available</span>
+    </div>
+  </div>
+  <button class="cta-btn danger" onclick="confirmWithdraw()">Confirm Withdrawal</button>
+</div>
+
+<!-- SUCCESS OVERLAY -->
+<div class="success-overlay" id="successOverlay">
+  <div class="success-icon">✅</div>
+  <div class="success-title" id="successTitle">Deposit Confirmed!</div>
+  <div class="success-sub" id="successSub">Your INDX is now in the Sovereign Lending Pool. SIINDEX will send your yield daily. You can withdraw any time.</div>
+  <button class="success-btn" onclick="dismissSuccess()">Back to Lending →</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL     = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const INDX_PRICE = 0.24;
+const APY = 0.112;
+
+const citizenId      = sessionStorage.getItem('citizen_id');
+const citizenBalance = parseFloat(sessionStorage.getItem('citizen_balance') || '0');
+const depositInput   = document.getElementById('depositInput');
+const withdrawInput  = document.getElementById('withdrawInput');
+
+let myDeposit    = 0;
+let myPositionId = null;
+let totalEarned  = 0;
+
+async function init() {
+  document.getElementById('balanceDisplay').textContent = citizenBalance.toLocaleString(undefined, {maximumFractionDigits: 2});
+
+  if (citizenId) {
+    await loadPositions();
+  } else {
+    // No session — show empty state
+    updatePositionCard();
+  }
+}
+
+async function loadPositions() {
+  try {
+    const { data, error } = await sb.rpc('get_lending_positions', { p_citizen_id: citizenId });
+    if (error) throw error;
+
+    const deposits = data.deposits || [];
+    const activeDeposit = deposits.find(d => d.status === 'active');
+
+    if (activeDeposit) {
+      myDeposit    = parseFloat(activeDeposit.indx_amount);
+      myPositionId = activeDeposit.id;
+      totalEarned  = parseFloat(activeDeposit.interest_accrued || 0);
+    }
+    document.getElementById('withdrawDepositDisplay').textContent = myDeposit.toLocaleString(undefined, {maximumFractionDigits: 2});
+    updatePositionCard();
+  } catch (e) {
+    console.error('loadPositions:', e);
+    updatePositionCard();
+  }
+}
+
+function updatePositionCard() {
+  if (myDeposit > 0) {
+    document.getElementById('emptyPosition').style.display = 'none';
+    document.getElementById('activePosition').style.display = 'flex';
+    document.getElementById('positionBadge').style.display = 'block';
+    const todayYield = myDeposit * APY / 365;
+    document.getElementById('posDeposit').textContent = myDeposit.toLocaleString(undefined, {maximumFractionDigits: 2}) + ' INDX';
+    document.getElementById('posToday').textContent = '+' + todayYield.toFixed(4) + ' INDX (~$' + (todayYield * INDX_PRICE).toFixed(2) + ')';
+    document.getElementById('posTotal').textContent = '+' + totalEarned.toFixed(6) + ' INDX';
+    const share = (myDeposit / 2847500 * 100).toFixed(4);
+    document.getElementById('posShare').textContent = share + '% of pool';
+  } else {
+    document.getElementById('emptyPosition').style.display = 'block';
+    document.getElementById('activePosition').style.display = 'none';
+    document.getElementById('positionBadge').style.display = 'none';
+  }
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (tab==='deposit' && i===0) || (tab==='withdraw' && i===1)));
+  document.getElementById('panelDeposit').classList.toggle('active', tab==='deposit');
+  document.getElementById('panelWithdraw').classList.toggle('active', tab==='withdraw');
+}
+
+function onDepositInput() {
+  const val = parseFloat(depositInput.value) || 0;
+  document.getElementById('depositUsd').textContent = '≈ $' + (val * INDX_PRICE).toFixed(2) + ' USD';
+  document.getElementById('depositBtn').disabled = val <= 0 || val > citizenBalance;
+  if (val > 0) {
+    const daily = val * APY / 365;
+    const monthly = daily * 30;
+    const yearly = val * APY;
+    document.getElementById('previewDaily').textContent = '+' + daily.toFixed(4) + ' INDX (~$' + (daily * INDX_PRICE).toFixed(2) + ')';
+    document.getElementById('previewMonthly').textContent = '+' + monthly.toFixed(2) + ' INDX (~$' + (monthly * INDX_PRICE).toFixed(2) + ')';
+    document.getElementById('previewYearly').textContent = '+' + yearly.toFixed(2) + ' INDX (~$' + (yearly * INDX_PRICE).toFixed(2) + ')';
+    document.getElementById('yieldPreview').style.display = 'block';
+  } else {
+    document.getElementById('yieldPreview').style.display = 'none';
+  }
+}
+
+function onWithdrawInput() {
+  const val = parseFloat(withdrawInput.value) || 0;
+  document.getElementById('withdrawUsd').textContent = '≈ $' + (val * INDX_PRICE).toFixed(2) + ' USD';
+  document.getElementById('withdrawBtn').disabled = val <= 0 || val > myDeposit;
+}
+
+function useMax() { depositInput.value = citizenBalance; onDepositInput(); }
+function useMaxWithdraw() { withdrawInput.value = myDeposit; onWithdrawInput(); }
+
+function setAmount(n) {
+  depositInput.value = n; onDepositInput();
+  document.querySelectorAll('.quick .qa').forEach(q => q.classList.toggle('sel', parseInt(q.textContent.replace(',','')) === n));
+}
+
+function setWithdraw(pct) {
+  withdrawInput.value = (myDeposit * pct / 100).toFixed(2); onWithdrawInput();
+}
+
+function openDepositSheet() {
+  const val = parseFloat(depositInput.value) || 0;
+  document.getElementById('confirmAmt').textContent = val.toLocaleString() + ' INDX (~$' + (val * INDX_PRICE).toFixed(2) + ')';
+  document.getElementById('confirmDaily').textContent = '+' + (val * APY / 365).toFixed(4) + ' INDX';
+  document.getElementById('depositOverlay').classList.add('show');
+  document.getElementById('depositSheet').classList.add('show');
+}
+
+function openWithdrawSheet() {
+  const val = parseFloat(withdrawInput.value) || 0;
+  document.getElementById('confirmWithdrawAmt').textContent = val.toLocaleString() + ' INDX (~$' + (val * INDX_PRICE).toFixed(2) + ')';
+  document.getElementById('confirmWithdrawYield').textContent = '+' + (myDeposit * APY / 365).toFixed(4) + ' INDX (kept)';
+  document.getElementById('withdrawOverlay').classList.add('show');
+  document.getElementById('withdrawSheet').classList.add('show');
+}
+
+function closeSheets() {
+  document.querySelectorAll('.overlay, .sheet').forEach(el => el.classList.remove('show'));
+}
+
+async function confirmDeposit() {
+  const val = parseFloat(depositInput.value) || 0;
+  const btn = document.getElementById('depositBtn');
+  btn.textContent = 'Processing…'; btn.disabled = true;
+
+  try {
+    const { data, error } = await sb.rpc('deposit_to_pool', {
+      p_citizen_id: citizenId,
+      p_amount_indx: val
+    });
+    if (error || !data.success) throw new Error((data && data.error) || error.message);
+
+    // Update sessionStorage balance
+    sessionStorage.setItem('citizen_balance', data.new_balance);
+    myDeposit += val;
+    myPositionId = data.position_id;
+    closeSheets();
+    document.getElementById('successTitle').textContent = 'Deposit Confirmed!';
+    document.getElementById('successSub').textContent = val.toLocaleString() + ' INDX is now in the Sovereign Lending Pool. SIINDEX is monitoring your position 24/7. Yield starts accruing now.';
+    document.getElementById('successOverlay').classList.add('show');
+    depositInput.value = '';
+    onDepositInput();
+    updatePositionCard();
+    document.getElementById('withdrawDepositDisplay').textContent = myDeposit.toLocaleString(undefined, {maximumFractionDigits: 2});
+  } catch (e) {
+    alert('Deposit failed: ' + e.message);
+  } finally {
+    btn.textContent = 'Lend INDX →'; btn.disabled = false;
+  }
+}
+
+async function confirmWithdraw() {
+  const val = parseFloat(withdrawInput.value) || 0;
+  const btn = document.getElementById('withdrawBtn');
+  btn.textContent = 'Processing…'; btn.disabled = true;
+
+  if (!myPositionId) {
+    alert('No active deposit position found. Please refresh and try again.');
+    btn.textContent = 'Withdraw INDX'; btn.disabled = false;
+    return;
+  }
+
+  try {
+    const { data, error } = await sb.rpc('withdraw_from_pool', {
+      p_citizen_id:  citizenId,
+      p_position_id: myPositionId,
+      p_amount_indx: val
+    });
+    if (error || !data.success) throw new Error((data && data.error) || error.message);
+
+    // Update sessionStorage balance with returned principal + 98% yield
+    const newBal = parseFloat(sessionStorage.getItem('citizen_balance') || '0') + data.total_received;
+    sessionStorage.setItem('citizen_balance', newBal.toFixed(6));
+    myDeposit = Math.max(0, myDeposit - val);
+    if (myDeposit === 0) myPositionId = null;
+    closeSheets();
+    document.getElementById('successTitle').textContent = 'Withdrawal Complete';
+    document.getElementById('successSub').textContent = val.toLocaleString() + ' INDX + ' + parseFloat(data.interest_earned).toFixed(4) + ' INDX yield returned to your wallet.';
+    document.getElementById('successOverlay').classList.add('show');
+    withdrawInput.value = '';
+    onWithdrawInput();
+    updatePositionCard();
+    document.getElementById('withdrawDepositDisplay').textContent = myDeposit.toLocaleString(undefined, {maximumFractionDigits: 2});
+  } catch (e) {
+    alert('Withdrawal failed: ' + e.message);
+  } finally {
+    btn.textContent = 'Withdraw INDX'; btn.disabled = false;
+  }
+}
+
+function dismissSuccess() { document.getElementById('successOverlay').classList.remove('show'); }
+
+function showInfo() {
+  alert('Sovereign Lending lets you earn yield on your INDX tokens. Powered by MarginFi on Solana. SIINDEX monitors pool health 24/7. 98/2 Law: you always keep 98% of interest earned.');
+}
+
+init();
+</script>
+</body>
+</html>
