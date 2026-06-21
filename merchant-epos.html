@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IN$DEX ePOS · Instant Payment Terminal</title>
+<style>
+:root {
+  --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+  --black:#090A10; --green:#00E5A0; --gold:#FFB800;
+  --red:#FF4D6D; --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+  --border:rgba(255,255,255,0.07); --text:#F0F2FF; --text2:#A0A8C8; --muted:#5A6080;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none;}
+
+.shell{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;gap:12px;padding:16px 20px 12px;position:sticky;top:0;background:var(--black);z-index:50;border-bottom:1px solid var(--border);}
+.back-btn{width:36px;height:36px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;flex-shrink:0;}
+.topbar-title{font-size:16px;font-weight:800;}
+.topbar-badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;background:rgba(0,229,160,0.12);color:var(--green);border:1px solid rgba(0,229,160,0.2);margin-left:auto;}
+
+/* STEP INDICATOR */
+.step-bar{display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 24px;}
+.step-dot{width:8px;height:8px;border-radius:50%;background:var(--surface3);transition:all 0.3s;}
+.step-dot.active{background:var(--cyan);width:24px;border-radius:4px;}
+.step-dot.done{background:var(--green);}
+
+/* SCREENS */
+.screen{display:none;flex:1;flex-direction:column;padding:0 0 40px;}
+.screen.active{display:flex;}
+
+/* ── STEP 0: WELCOME ── */
+.welcome-hero{padding:32px 24px 24px;text-align:center;}
+.welcome-avatar{width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--purple));display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 16px;box-shadow:0 0 0 8px rgba(0,212,255,0.08);}
+.welcome-from{font-size:13px;color:var(--text2);margin-bottom:6px;}
+.welcome-title{font-size:26px;font-weight:900;line-height:1.2;margin-bottom:10px;}
+.welcome-title span{background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.welcome-sub{font-size:14px;color:var(--text2);line-height:1.6;}
+
+.feature-list{margin:0 24px 24px;background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+.feature-item{display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--border);}
+.feature-item:last-child{border-bottom:none;}
+.feature-icon{font-size:22px;width:36px;text-align:center;flex-shrink:0;}
+.feature-body{}
+.feature-title{font-size:14px;font-weight:700;margin-bottom:2px;}
+.feature-sub{font-size:12px;color:var(--text2);}
+
+.welcome-btn{margin:0 24px;padding:18px;border-radius:16px;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;color:#000;font-size:17px;font-weight:800;cursor:pointer;width:calc(100% - 48px);}
+
+/* ── STEP 1: SETUP ── */
+.setup-header{padding:24px 24px 16px;text-align:center;}
+.setup-title{font-size:22px;font-weight:900;margin-bottom:6px;}
+.setup-sub{font-size:13px;color:var(--text2);line-height:1.5;}
+.setup-form{padding:0 24px;}
+.form-group{margin-bottom:16px;}
+.form-label{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;display:block;}
+.form-input{width:100%;padding:15px 16px;background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;color:var(--text);font-size:16px;font-family:inherit;outline:none;transition:border-color 0.2s;}
+.form-input:focus{border-color:var(--cyan);}
+.form-input::placeholder{color:var(--muted);}
+.setup-note{font-size:12px;color:var(--muted);text-align:center;padding:12px 24px;line-height:1.5;}
+.setup-btn{margin:0 24px;padding:18px;border-radius:16px;background:linear-gradient(135deg,var(--green),var(--cyan));border:none;color:#000;font-size:17px;font-weight:800;cursor:pointer;width:calc(100% - 48px);}
+
+/* ── STEP 2: AMOUNT ENTRY ── */
+.terminal-header{padding:24px 24px 16px;text-align:center;}
+.terminal-label{font-size:13px;color:var(--text2);margin-bottom:8px;font-weight:600;}
+.terminal-customer{font-size:18px;font-weight:800;margin-bottom:4px;}
+.amount-display{background:var(--surface);border:1px solid var(--border);border-radius:20px;margin:0 24px 20px;padding:24px;text-align:center;}
+.amount-main{font-size:52px;font-weight:900;letter-spacing:-1px;min-height:64px;display:flex;align-items:center;justify-content:center;gap:4px;}
+.amount-currency{font-size:24px;font-weight:800;color:var(--text2);margin-top:8px;}
+.amount-indx{font-size:15px;color:var(--cyan);margin-top:6px;font-weight:700;}
+.amount-cursor{display:inline-block;width:3px;height:52px;background:var(--cyan);border-radius:2px;animation:blink 1s step-end infinite;margin-left:2px;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 24px;margin-bottom:16px;}
+.num-key{background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:18px 8px;font-size:22px;font-weight:700;cursor:pointer;text-align:center;transition:all 0.12s;user-select:none;}
+.num-key:active{background:var(--surface3);transform:scale(0.95);}
+.num-key.clear{background:rgba(255,77,109,0.08);border-color:rgba(255,77,109,0.2);color:var(--red);font-size:14px;font-weight:800;}
+.num-key.decimal{font-size:26px;font-weight:900;}
+.num-key.backspace{font-size:20px;}
+
+.charge-btn{margin:0 24px;padding:18px;border-radius:16px;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;color:#000;font-size:17px;font-weight:800;cursor:pointer;width:calc(100% - 48px);}
+.charge-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+/* ── STEP 3: QR INVOICE ── */
+.invoice-header{padding:24px 24px 12px;text-align:center;}
+.invoice-title{font-size:20px;font-weight:900;margin-bottom:6px;}
+.invoice-sub{font-size:13px;color:var(--text2);}
+.invoice-qr{margin:0 24px 20px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:24px;text-align:center;}
+.invoice-amount{font-size:36px;font-weight:900;margin-bottom:4px;}
+.invoice-indx{font-size:15px;color:var(--cyan);font-weight:700;margin-bottom:16px;}
+
+.waiting-ring{width:12px;height:12px;border-radius:50%;background:var(--cyan);display:inline-block;animation:pulse-ring 1.4s ease-in-out infinite;margin-right:6px;}
+@keyframes pulse-ring{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(1.4);opacity:0.6;}}
+.waiting-text{font-size:13px;color:var(--text2);display:flex;align-items:center;justify-content:center;margin-top:16px;}
+
+.cancel-link{text-align:center;padding:16px 24px;font-size:13px;color:var(--muted);cursor:pointer;text-decoration:underline;}
+
+/* ── STEP 4: CONFIRMED ── */
+.confirmed-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center;}
+.confirmed-ring{width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--cyan));display:flex;align-items:center;justify-content:center;font-size:44px;margin:0 auto 24px;box-shadow:0 0 0 16px rgba(0,229,160,0.08),0 0 0 32px rgba(0,229,160,0.04);}
+.confirmed-label{font-size:14px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;}
+.confirmed-amount{font-size:44px;font-weight:900;margin-bottom:6px;}
+.confirmed-indx{font-size:16px;color:var(--cyan);font-weight:700;margin-bottom:20px;}
+.confirmed-sub{font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:32px;max-width:300px;}
+
+.confirmed-wallet{background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:20px;width:100%;}
+.cw-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;}
+.cw-val{font-size:22px;font-weight:800;color:var(--green);}
+.cw-sub{font-size:12px;color:var(--text2);margin-top:2px;}
+
+.confirmed-cta{width:100%;padding:18px;border-radius:16px;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;color:#000;font-size:17px;font-weight:800;cursor:pointer;margin-bottom:12px;}
+.confirmed-secondary{width:100%;padding:16px;border-radius:16px;background:transparent;border:1.5px solid var(--border);color:var(--text2);font-size:14px;font-weight:700;cursor:pointer;}
+
+/* SIINDEX BANNER */
+.siindex-bar{background:var(--surface2);border-top:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text2);}
+.si-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;animation:pulse-ring 2s ease-in-out infinite;}
+
+/* TOAST */
+.toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(20px);max-width:320px;width:calc(100% - 40px);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:13px;color:var(--text);text-align:center;opacity:0;transition:opacity 0.3s,transform 0.3s;z-index:400;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="back-btn" onclick="handleBack()">←</div>
+    <div class="topbar-title" id="topbarTitle">IN$DEX ePOS</div>
+    <div class="topbar-badge" id="topbarBadge">Free Terminal</div>
+  </div>
+
+  <!-- STEP DOTS -->
+  <div class="step-bar">
+    <div class="step-dot active" id="dot0"></div>
+    <div class="step-dot" id="dot1"></div>
+    <div class="step-dot" id="dot2"></div>
+    <div class="step-dot" id="dot3"></div>
+  </div>
+
+  <!-- ── STEP 0: WELCOME ── -->
+  <div class="screen active" id="screen0">
+    <div class="welcome-hero">
+      <div class="welcome-avatar">🏪</div>
+      <div class="welcome-from" id="welcomeFrom">Someone wants to pay you via IN$DEX</div>
+      <h1 class="welcome-title">Your phone is about to become an <span>ePOS terminal.</span></h1>
+      <p class="welcome-sub">No card reader. No hardware. No monthly fees. Just your phone — and this QR.</p>
+    </div>
+
+    <div class="feature-list">
+      <div class="feature-item">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-body">
+          <div class="feature-title">Ready in 60 seconds</div>
+          <div class="feature-sub">Phone number only. No documents, no bank account.</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">🌏</div>
+        <div class="feature-body">
+          <div class="feature-title">Accept any currency, anywhere</div>
+          <div class="feature-sub">INDX, USDC, SOL — converts at live rates, instantly.</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">💸</div>
+        <div class="feature-body">
+          <div class="feature-title">Zero monthly fees</div>
+          <div class="feature-sub">98% of every payment goes straight to you. 2% to the Civilisation Fund.</div>
+        </div>
+      </div>
+      <div class="feature-item">
+        <div class="feature-icon">📲</div>
+        <div class="feature-body">
+          <div class="feature-title">Share your QR to get paid by anyone</div>
+          <div class="feature-sub">Your personal payment link works forever, offline too.</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="welcome-btn" onclick="goStep(1)">Set up my terminal — it's free →</button>
+  </div>
+
+  <!-- ── STEP 1: QUICK SETUP ── -->
+  <div class="screen" id="screen1">
+    <div class="setup-header">
+      <div class="setup-title">Quick setup</div>
+      <div class="setup-sub">Tell us who you are. Takes under a minute.</div>
+    </div>
+    <div class="setup-form">
+      <div class="form-group">
+        <label class="form-label">Your name or business</label>
+        <input type="text" class="form-input" id="merchantName" placeholder="e.g. Sione's Market" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mobile number</label>
+        <input type="tel" class="form-input" id="merchantPhone" placeholder="+679 xxx xxxx" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Your Web3 domain (optional)</label>
+        <input type="text" class="form-input" id="merchantDomain" placeholder="e.g. siones.IN$DEX" autocomplete="off">
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;">This is how people send you money. You can claim it now or later.</div>
+      </div>
+    </div>
+    <div class="setup-note">Your biometric identity is stored on THIS device only. No data leaves your phone.</div>
+    <button class="setup-btn" onclick="activateTerminal()">Activate my terminal →</button>
+  </div>
+
+  <!-- ── STEP 2: AMOUNT ENTRY ── -->
+  <div class="screen" id="screen2">
+    <div class="terminal-header">
+      <div class="terminal-label">How much does</div>
+      <div class="terminal-customer" id="customerLabel">your customer</div>
+      <div class="terminal-label">owe you?</div>
+    </div>
+
+    <div class="amount-display">
+      <div class="amount-main">
+        <span class="amount-currency">$</span>
+        <span id="amountDisplay">0</span>
+        <span class="amount-cursor" id="cursor"></span>
+      </div>
+      <div class="amount-indx" id="amountIndx">≈ 0 INDX</div>
+    </div>
+
+    <div class="numpad">
+      <div class="num-key" onclick="numPress('1')">1</div>
+      <div class="num-key" onclick="numPress('2')">2</div>
+      <div class="num-key" onclick="numPress('3')">3</div>
+      <div class="num-key" onclick="numPress('4')">4</div>
+      <div class="num-key" onclick="numPress('5')">5</div>
+      <div class="num-key" onclick="numPress('6')">6</div>
+      <div class="num-key" onclick="numPress('7')">7</div>
+      <div class="num-key" onclick="numPress('8')">8</div>
+      <div class="num-key" onclick="numPress('9')">9</div>
+      <div class="num-key clear" onclick="numClear()">CLR</div>
+      <div class="num-key" onclick="numPress('0')">0</div>
+      <div class="num-key backspace" onclick="numBack()">⌫</div>
+    </div>
+
+    <button class="charge-btn" id="chargeBtn" onclick="generateInvoice()" disabled>Generate Payment QR →</button>
+  </div>
+
+  <!-- ── STEP 3: INVOICE QR ── -->
+  <div class="screen" id="screen3">
+    <div class="invoice-header">
+      <div class="invoice-title">Show this to your customer</div>
+      <div class="invoice-sub">They scan this with their IN$DEX app to pay you instantly.</div>
+    </div>
+
+    <div class="invoice-qr">
+      <div class="invoice-amount" id="invoiceAmount">$0.00</div>
+      <div class="invoice-indx" id="invoiceIndx">≈ 0 INDX</div>
+
+      <!-- Invoice QR — animated cyan/purple version -->
+      <svg width="200" height="200" viewBox="0 0 100 100" style="margin:0 auto;display:block;">
+        <rect width="100" height="100" rx="8" fill="#12141F" stroke="#2A2D38"/>
+        <rect x="8" y="8" width="28" height="28" rx="3" fill="none" stroke="#00D4FF" stroke-width="3"/>
+        <rect x="64" y="8" width="28" height="28" rx="3" fill="none" stroke="#00D4FF" stroke-width="3"/>
+        <rect x="8" y="64" width="28" height="28" rx="3" fill="none" stroke="#00D4FF" stroke-width="3"/>
+        <rect x="13" y="13" width="18" height="18" rx="2" fill="#00D4FF"/>
+        <rect x="69" y="13" width="18" height="18" rx="2" fill="#00D4FF"/>
+        <rect x="13" y="69" width="18" height="18" rx="2" fill="#00D4FF"/>
+        <!-- data modules -->
+        <rect x="40" y="8" width="6" height="6" rx="1" fill="#8B3FE8"/>
+        <rect x="48" y="8" width="6" height="6" rx="1" fill="#00D4FF"/>
+        <rect x="56" y="8" width="6" height="6" rx="1" fill="#8B3FE8"/>
+        <rect x="40" y="16" width="6" height="6" rx="1" fill="#00D4FF"/>
+        <rect x="56" y="16" width="6" height="6" rx="1" fill="#8B3FE8"/>
+        <rect x="48" y="24" width="6" height="6" rx="1" fill="#00D4FF"/>
+        <rect x="8" y="38" width="6" height="6" rx="1" fill="#8B3FE8"/>
+        <rect x="16" y="46" width="6" height="6" rx="1" fill="#00D4FF"/>
+        <rect x="8" y="54" width="6" height="6" rx="1" fill="#8B3FE8"/>
+        <rect x="38" y="38" width="6" height="6" rx="1" fill="#00D4FF"/>
+        <rect x="46" y="38" width="6" height="6" rx="1" fill="#8B3FE8"/>
+        <rect x="54" y="38" width="6" height="6" rx="1" fill="#00D4FF"/>
+        <rect x="62" y="46" width="6" height="6" rx="1" fill="#8B3FE8"/>
+        <rect x="38" y="54" width="6" height="6" rx="1" fill="#00D4FF"/>
+        <rect x="54" y="54" width="6" height="6" rx="1" fill="#8B3FE8"/>
+        <rect x="70" y="38" width="6" height="6" rx="1" fill="#00D4FF"/>
+        <rect x="78" y="46" width="6" height="6" rx="1" fill="#8B3FE8"/>
+        <rect x="86" y="38" width="6" height="6" rx="1" fill="#00D4FF"/>
+        <rect x="70" y="54" width="6" height="6" rx="1" fill="#8B3FE8"/>
+        <rect x="86" y="54" width="6" height="6" rx="1" fill="#00D4FF"/>
+        <rect x="38" y="62" width="6" height="6" rx="1" fill="#8B3FE8"/>
+        <rect x="46" y="70" width="6" height="6" rx="1" fill="#00D4FF"/>
+        <rect x="54" y="62" width="6" height="6" rx="1" fill="#8B3FE8"/>
+        <rect x="62" y="70" width="6" height="6" rx="1" fill="#00D4FF"/>
+        <rect x="70" y="62" width="6" height="6" rx="1" fill="#8B3FE8"/>
+        <rect x="78" y="70" width="6" height="6" rx="1" fill="#00D4FF"/>
+        <rect x="86" y="78" width="6" height="6" rx="1" fill="#8B3FE8"/>
+        <text x="50" y="97" text-anchor="middle" fill="#6B7080" font-size="5.5" id="qrDomainLabel">siones.IN$DEX</text>
+      </svg>
+
+      <div class="waiting-text">
+        <span class="waiting-ring"></span>
+        Waiting for payment...
+      </div>
+    </div>
+
+    <div class="cancel-link" onclick="goStep(2)">← Change amount</div>
+
+    <div class="siindex-bar">
+      <div class="si-dot"></div>
+      <div>SIINDEX: 7-point pre-flight passed · Transaction protected · 98/2 Law active. Standing by.</div>
+    </div>
+  </div>
+
+  <!-- ── STEP 4: CONFIRMED ── -->
+  <div class="screen" id="screen4">
+    <div class="confirmed-wrap">
+      <div class="confirmed-ring">✅</div>
+      <div class="confirmed-label">Payment Received</div>
+      <div class="confirmed-amount" id="confirmedAmount">$0.00</div>
+      <div class="confirmed-indx" id="confirmedIndx">0 INDX credited to your wallet</div>
+      <p class="confirmed-sub" id="confirmedMsg">You just accepted your first IN$DEX payment. Your phone is now a sovereign payment terminal.</p>
+
+      <div class="confirmed-wallet">
+        <div class="cw-label">Your IN$DEX balance</div>
+        <div class="cw-val" id="confirmedBalance">0 INDX</div>
+        <div class="cw-sub" id="confirmedBalUsd">≈ $0.00 USD</div>
+      </div>
+
+      <button class="confirmed-cta" onclick="goToDashboard()">Go to my wallet →</button>
+      <button class="confirmed-secondary" onclick="acceptAnother()">Accept another payment</button>
+    </div>
+  </div>
+
+</div><!-- /shell -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+const INDX_PRICE = 0.24;
+let currentStep = 0;
+let amountStr = '';
+let merchantName = '';
+let fromName = '';
+let earnedIndx = 0;
+
+// Read URL params
+const params = new URLSearchParams(window.location.search);
+fromName = params.get('from') || '';
+const isDemo = params.get('demo') === '1';
+
+// Personalise welcome
+if (fromName) {
+  const cap = fromName.charAt(0).toUpperCase() + fromName.slice(1);
+  document.getElementById('welcomeFrom').textContent = cap + ' wants to pay you via IN$DEX';
+  document.getElementById('customerLabel').textContent = cap;
+}
+
+function goStep(n) {
+  document.querySelectorAll('.screen').forEach((s,i) => {
+    s.classList.toggle('active', i === n);
+  });
+  document.querySelectorAll('.step-dot').forEach((d,i) => {
+    d.classList.remove('active','done');
+    if (i === n) d.classList.add('active');
+    else if (i < n) d.classList.add('done');
+  });
+  currentStep = n;
+
+  if (n === 2) {
+    document.getElementById('topbarTitle').textContent = 'Enter Amount';
+    document.getElementById('topbarBadge').textContent = 'ePOS Active';
+  } else if (n === 3) {
+    document.getElementById('topbarTitle').textContent = 'Invoice QR';
+    document.getElementById('topbarBadge').textContent = 'Awaiting Payment';
+    startPaymentTimer();
+  } else if (n === 4) {
+    document.getElementById('topbarTitle').textContent = 'Payment Received';
+    document.getElementById('topbarBadge').textContent = '✓ Confirmed';
+  }
+}
+
+function activateTerminal() {
+  merchantName = document.getElementById('merchantName').value.trim() || 'your business';
+  const phone = document.getElementById('merchantPhone').value.trim();
+
+  if (!merchantName || merchantName === 'your business') {
+    showToast('Enter your name or business name to continue');
+    return;
+  }
+  if (!phone) {
+    showToast('Enter your mobile number to continue');
+    return;
+  }
+
+  showToast('⚡ Activating your terminal...');
+  const domainInput = document.getElementById('merchantDomain');
+  if (!domainInput.value) {
+    const slug = merchantName.toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,12);
+    domainInput.value = slug + '.IN$DEX';
+  }
+
+  // Store in session
+  sessionStorage.setItem('merchant_name', merchantName);
+  sessionStorage.setItem('merchant_domain', domainInput.value);
+
+  setTimeout(() => {
+    showToast('✅ Terminal activated! You\'re ready to accept payments.');
+    setTimeout(() => goStep(2), 800);
+  }, 1200);
+}
+
+// NUMPAD
+function numPress(v) {
+  if (amountStr === '0') amountStr = '';
+  if (amountStr.includes('.') && amountStr.split('.')[1].length >= 2) return;
+  if (amountStr.length >= 7) return;
+  amountStr += v;
+  updateAmountDisplay();
+}
+
+function numBack() {
+  amountStr = amountStr.slice(0,-1);
+  updateAmountDisplay();
+}
+
+function numClear() {
+  amountStr = '';
+  updateAmountDisplay();
+}
+
+function updateAmountDisplay() {
+  const val = amountStr || '0';
+  document.getElementById('amountDisplay').textContent = val;
+  const usdAmt = parseFloat(val) || 0;
+  const indxAmt = usdAmt / INDX_PRICE;
+  document.getElementById('amountIndx').textContent = '≈ ' + indxAmt.toFixed(2) + ' INDX';
+  document.getElementById('chargeBtn').disabled = usdAmt <= 0;
+}
+
+function generateInvoice() {
+  const usdAmt = parseFloat(amountStr) || 0;
+  if (usdAmt <= 0) { showToast('Enter an amount first'); return; }
+
+  const indxAmt = usdAmt / INDX_PRICE;
+  document.getElementById('invoiceAmount').textContent = '$' + usdAmt.toFixed(2);
+  document.getElementById('invoiceIndx').textContent = '≈ ' + indxAmt.toFixed(2) + ' INDX';
+
+  const domain = sessionStorage.getItem('merchant_domain') || (merchantName.toLowerCase().replace(/[^a-z0-9]/g,'') + '.IN$DEX');
+  document.getElementById('qrDomainLabel').textContent = domain;
+
+  earnedIndx = indxAmt * 0.98; // 98/2 law
+  goStep(3);
+}
+
+let paymentTimer;
+function startPaymentTimer() {
+  clearTimeout(paymentTimer);
+  // Demo: auto-complete after 3.5 seconds
+  paymentTimer = setTimeout(confirmPayment, 3500);
+}
+
+function confirmPayment() {
+  const usdAmt = parseFloat(amountStr) || 0;
+  const received98 = (usdAmt * 0.98).toFixed(2);
+  const totalIndx = (earnedIndx).toFixed(2);
+  const totalBalIndx = (parseFloat(sessionStorage.getItem('merchant_balance') || '0') + earnedIndx).toFixed(2);
+
+  document.getElementById('confirmedAmount').textContent = '$' + received98;
+  document.getElementById('confirmedIndx').textContent = totalIndx + ' INDX credited to your wallet';
+  document.getElementById('confirmedBalance').textContent = totalBalIndx + ' INDX';
+  document.getElementById('confirmedBalUsd').textContent = '≈ $' + (parseFloat(totalBalIndx) * INDX_PRICE).toFixed(2) + ' USD';
+
+  const isFirst = !sessionStorage.getItem('merchant_first_payment');
+  if (isFirst) {
+    sessionStorage.setItem('merchant_first_payment', '1');
+    document.getElementById('confirmedMsg').textContent = 'You just accepted your first IN$DEX payment. Your phone is now a sovereign payment terminal. Share your QR to get paid by anyone, anytime — for free.';
+  } else {
+    const cname = fromName ? (fromName.charAt(0).toUpperCase() + fromName.slice(1)) : 'Your customer';
+    document.getElementById('confirmedMsg').textContent = cname + '\'s payment arrived in full. 2% flowed to the Civilisation Fund. The rest is yours.';
+  }
+
+  sessionStorage.setItem('merchant_balance', totalBalIndx);
+  goStep(4);
+}
+
+function goToDashboard() {
+  // If they already have a citizen session, go to dashboard; otherwise go to biometric KYC
+  if (sessionStorage.getItem('citizen_id')) {
+    window.location.href = 'citizen-dashboard.html';
+  } else {
+    window.location.href = 'biometric-kyc.html?source=epos&merchant=1';
+  }
+}
+
+function acceptAnother() {
+  amountStr = '';
+  updateAmountDisplay();
+  goStep(2);
+}
+
+function handleBack() {
+  if (currentStep > 0 && currentStep < 4) {
+    goStep(currentStep - 1);
+  } else {
+    history.back();
+  }
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+</script>
+</body>
+</html>
