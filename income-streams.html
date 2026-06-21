@@ -28,7 +28,7 @@
   .earn-hero{margin:16px 20px;padding:20px;background:linear-gradient(135deg,#0A1F18,#071825);border:1px solid rgba(0,229,160,0.2);border-radius:20px;text-align:center;}
   .earn-today-label{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;}
   .earn-today{font-size:46px;font-weight:900;color:var(--green);line-height:1;margin-bottom:4px;}
-  .earn-today-aud{font-size:15px;color:var(--text-muted);margin-bottom:16px;}
+  .earn-today-usd{font-size:15px;color:var(--text-muted);margin-bottom:16px;}
   .earn-stats{display:flex;justify-content:space-around;}
   .es{text-align:center;}
   .es-val{font-size:18px;font-weight:800;color:var(--cyan);}
@@ -92,7 +92,7 @@
     <div class="back-btn" onclick="window.history.back()">←</div>
     <div style="flex:1;">
       <div style="font-size:18px;font-weight:800;">Income Streams</div>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">7 ways your money works for you</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">8 ways your money works for you</div>
     </div>
     <div style="font-size:13px;font-weight:700;color:var(--cyan);cursor:pointer;" onclick="showToast('Withdrawing earnings…')">Withdraw</div>
   </div>
@@ -166,6 +166,33 @@
           <div class="sc-bar-wrap"><div class="sc-bar" style="width:0%;background:var(--cyan);" id="bar-node"></div></div>
           <div class="sc-detail-row"><span>Monthly target (240 INDX)</span><span>76%</span></div>
           <button class="sc-action-btn" style="background:var(--cyan);color:#000;" onclick="window.location.href='light-node.html'">Node Dashboard →</button>
+        </div>
+      </div>
+
+      <!-- SOVEREIGN LENDING -->
+      <div class="stream-card active-stream" onclick="toggleDetail('lending')">
+        <div class="sc-header">
+          <div class="sc-icon" style="background:rgba(0,212,255,0.08);">🏦</div>
+          <div class="sc-body">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="sc-name">Sovereign Lending</div>
+              <div class="status-dot sd-active"></div>
+            </div>
+            <div class="sc-sub">Lend INDX · earn 11.2% APY</div>
+          </div>
+          <div class="sc-right">
+            <div class="sc-earning" style="color:var(--cyan);" id="lendingTodayEarn">+0.00 INDX</div>
+            <div class="sc-rate">today</div>
+          </div>
+        </div>
+        <div class="sc-body-detail" id="detail-lending" style="display:none;">
+          <div class="sc-detail-row"><span>Deposited</span><span id="lendingDeposited">— INDX</span></div>
+          <div class="sc-detail-row"><span>Current APY</span><span style="color:var(--cyan);">11.2%</span></div>
+          <div class="sc-detail-row"><span>Daily yield</span><span id="lendingDailyYield" style="color:var(--cyan);">—</span></div>
+          <div class="sc-detail-row"><span>Interest accrued</span><span id="lendingAccrued" style="color:var(--cyan);">—</span></div>
+          <div class="sc-bar-wrap"><div class="sc-bar" style="width:0%;background:var(--cyan);" id="bar-lending"></div></div>
+          <div class="sc-detail-row"><span>Pool utilisation</span><span>67% — High yield zone</span></div>
+          <button class="sc-action-btn" style="background:var(--cyan);color:#000;" onclick="window.location.href='sovereign-lending.html'">Manage Lending →</button>
         </div>
       </div>
 
@@ -342,10 +369,39 @@
 <div id="toast" style="position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1A1D25;border:1px solid #2A2D38;color:#EAEAEA;padding:10px 20px;border-radius:12px;font-size:14px;z-index:300;pointer-events:none;opacity:0;transition:opacity 0.3s;white-space:nowrap;"></div>
 
 <script>
-  // Animate total counter
+  const INDX_PRICE = 0.24;
+  const APY_LENDING = 0.112;
+
   window.addEventListener('DOMContentLoaded', () => {
-    animateCount('totalEarned', 0, 312, 1200);
-    animateCount('todayVal', 0, 18, 800, '+');
+    // Pull lending position from sessionStorage if citizen has one
+    const lendingDeposit = parseFloat(sessionStorage.getItem('citizen_lending_deposit') || '0');
+    const lendingAccrued = parseFloat(sessionStorage.getItem('citizen_lending_accrued') || '0');
+
+    if (lendingDeposit > 0) {
+      const daily = lendingDeposit * APY_LENDING / 365;
+      document.getElementById('lendingTodayEarn').textContent = '+' + daily.toFixed(4) + ' INDX';
+      document.getElementById('lendingDeposited').textContent = lendingDeposit.toLocaleString(undefined, {maximumFractionDigits:2}) + ' INDX';
+      document.getElementById('lendingDailyYield').textContent = '+' + daily.toFixed(4) + ' INDX (~$' + (daily * INDX_PRICE).toFixed(2) + ')';
+      document.getElementById('lendingAccrued').textContent = '+' + lendingAccrued.toFixed(6) + ' INDX';
+      setTimeout(() => {
+        const barEl = document.getElementById('bar-lending');
+        if (barEl) barEl.style.width = '67%';
+      }, 400);
+    } else {
+      document.getElementById('lendingTodayEarn').textContent = 'Deposit to earn';
+      document.getElementById('lendingTodayEarn').style.color = 'var(--text-muted)';
+      document.getElementById('lendingDeposited').textContent = 'None yet';
+    }
+
+    // Roll lending daily into total earned
+    const lendingToday = lendingDeposit > 0 ? lendingDeposit * APY_LENDING / 365 : 0;
+    const totalBase = 312 + Math.floor(lendingToday);
+    const todayBase = 18 + Math.floor(lendingToday);
+    const totalUsd = (totalBase * INDX_PRICE).toFixed(2);
+    document.getElementById('totalUsd').textContent = '≈ $' + totalUsd + ' USD';
+
+    animateCount('totalEarned', 0, totalBase, 1200);
+    animateCount('todayVal', 0, todayBase, 800, '+');
     setTimeout(animateBars, 400);
   });
 

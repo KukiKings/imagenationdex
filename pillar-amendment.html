@@ -293,9 +293,32 @@
     <button class="done-btn" onclick="document.getElementById('overlay').classList.remove('show')">Done</button>
   </div>
 </div>
+<!-- WISDOM GATE OVERLAY -->
+<div id="wisdomGate" style="display:none;position:fixed;inset:0;background:rgba(9,10,16,0.92);z-index:80;display:none;align-items:center;justify-content:center;padding:40px;">
+  <div style="background:#1A1D2E;border:1px solid rgba(255,184,0,0.3);border-radius:20px;padding:28px;max-width:340px;text-align:center;">
+    <div style="font-size:48px;margin-bottom:14px;">⚡</div>
+    <div style="font-size:18px;font-weight:900;margin-bottom:8px;">Wisdom Score Required</div>
+    <div style="font-size:13px;color:rgba(240,242,255,0.6);line-height:1.6;margin-bottom:20px;">
+      Governance voting requires a Wisdom Score of 50 or above.<br>
+      Complete onboarding steps to earn your score.
+    </div>
+    <button onclick="document.getElementById('wisdomGate').style.display='none'" style="width:100%;padding:14px;border-radius:12px;background:linear-gradient(135deg,#FFB800,#AA7800);border:none;color:#000;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:10px;">Earn Wisdom Score</button>
+    <button onclick="document.getElementById('wisdomGate').style.display='none'" style="width:100%;padding:12px;border-radius:12px;background:transparent;border:1px solid rgba(255,255,255,0.1);color:rgba(240,242,255,0.5);font-size:14px;cursor:pointer;">Not Now</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+  const SUPABASE_URL      = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const citizenId      = sessionStorage.getItem('citizen_id');
+  const citizenWisdom  = parseInt(sessionStorage.getItem('citizen_wisdom') || '0', 10);
+  const WISDOM_GATE    = 50;
+  const VOTE_REWARD    = 5; // INDX
+
   const PILLARS = [
     'Sovereignty The Republic answers to no external authority',
     'Identity Every citizen is sovereign over their own data and identity',
@@ -333,10 +356,50 @@
     if (name === 'pillars') renderPillars();
   }
 
-  function castVote(cardId, side) {
+  async function castVote(cardId, side) {
+    // Wisdom Score gate
+    if (citizenWisdom < WISDOM_GATE) {
+      document.getElementById('wisdomGate').style.display = 'flex';
+      return;
+    }
     const card = document.getElementById(cardId);
     card.querySelectorAll('.vote-btn').forEach(b => { b.classList.add('voted'); b.disabled = true; });
-    document.getElementById('overlay').classList.add('show');
+
+    if (!citizenId) {
+      // Demo mode
+      document.getElementById('overlay').classList.add('show');
+      showToast(`✅ Vote recorded · +${VOTE_REWARD} INDX earned`);
+      return;
+    }
+
+    try {
+      // Cast governance vote
+      const amendmentId = cardId.replace('card-','amendment_');
+      const { error: voteErr } = await sb.rpc('cast_governance_vote', {
+        p_citizen_id:   citizenId,
+        p_proposal_id:  amendmentId,
+        p_vote:         side   // 'for' | 'against'
+      });
+      if (voteErr) console.warn('cast_governance_vote:', voteErr.message);
+
+      // Award wisdom for voting (5 INDX equivalent)
+      const { error: wisdomErr } = await sb.rpc('award_wisdom', {
+        p_citizen_id:  citizenId,
+        p_action:      'governance_vote',
+        p_points:      5
+      });
+      if (wisdomErr) console.warn('award_wisdom:', wisdomErr.message);
+
+      // Update sessionStorage wisdom score
+      const newWisdom = citizenWisdom + 5;
+      sessionStorage.setItem('citizen_wisdom', newWisdom);
+
+      document.getElementById('overlay').classList.add('show');
+      showToast(`✅ Vote recorded · +${VOTE_REWARD} INDX earned`);
+    } catch (e) {
+      showToast('❌ Vote failed: ' + (e.message || 'unknown error'));
+      card.querySelectorAll('.vote-btn').forEach(b => { b.classList.remove('voted'); b.disabled = false; });
+    }
   }
 
   function submitProposal() {

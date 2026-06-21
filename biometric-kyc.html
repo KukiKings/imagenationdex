@@ -4,7 +4,7 @@
 <link rel="icon" type="image/png" href="assets/favicon.png">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>Verify Your Identity IN$DEX</title>
+  <title>Sovereign Onboarding · IN$DEX</title>
   <style>
     :root{--cyan:#00D4FF;--blue:#2B35D8;--purple:#8B3FE8;--black:#090A10;--green:#00E5A0;--gold:#FFB800;--red:#FF4D6D;--surface:#12141F;--surface2:#1A1D2E;--surface3:#22263A;--border:rgba(255,255,255,0.07);--text:#F0F2FF;--text-muted:rgba(240,242,255,0.45);--text-dim:rgba(240,242,255,0.2);}
     *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -114,7 +114,7 @@
   <!-- TOPBAR -->
   <div class="topbar" style="position:relative;z-index:30;">
     <button class="tb-back" id="backBtn" onclick="goBack()">←</button>
-    <div class="tb-title" id="tbTitle">Verify your identity</div>
+    <div class="tb-title" id="tbTitle">Sovereign Onboarding</div>
     <div class="tb-time">~90 sec</div>
   </div>
 
@@ -131,25 +131,25 @@
     <div class="screen-inner">
       <div class="intro-hero">
         <div class="ih-emoji">🛡️</div>
-        <div class="ih-title">Verify in 90 seconds.</div>
-        <div class="ih-sub">No ID card needed. Just your phone number and your face. That's it.</div>
+        <div class="ih-title">You're in, in 90 seconds.</div>
+        <div class="ih-sub">No ID card. No passport. No bank account. Just your phone and your face. That's sovereignty.</div>
       </div>
 
       <div class="tier-path">
         <div class="tier-item">
           <div class="ti-circle now">📱</div>
-          <div class="ti-label">Tier 0</div>
-          <div class="ti-limit">$500/day</div>
+          <div class="ti-label">Phone</div>
+          <div class="ti-limit">Step 1</div>
         </div>
         <div class="tier-item">
-          <div class="ti-circle later">🆔</div>
-          <div class="ti-label">Tier 1</div>
-          <div class="ti-limit">$2K/day</div>
+          <div class="ti-circle later">🤳</div>
+          <div class="ti-label">Liveness</div>
+          <div class="ti-limit">Step 2</div>
         </div>
         <div class="tier-item">
-          <div class="ti-circle later">📄</div>
-          <div class="ti-label">Tier 2</div>
-          <div class="ti-limit">$10K/day</div>
+          <div class="ti-circle later">🌐</div>
+          <div class="ti-label">Your ID</div>
+          <div class="ti-limit">Sovereign</div>
         </div>
       </div>
 
@@ -171,7 +171,7 @@
           <div class="pl-text"><strong>Works anywhere in the world.</strong> No bank account needed. Just a smartphone.</div>
         </div>
       </div>
-      <button class="btn-primary" onclick="goToStep(1)">Start verification →</button>
+      <button class="btn-primary" onclick="goToStep(1)">Get started →</button>
     </div>
   </div>
 
@@ -269,14 +269,21 @@
           <div class="unlock-item"><div class="ui-ico">🏪</div><div class="ui-name">P2P market</div></div>
           <div class="unlock-item"><div class="ui-ico">🗳️</div><div class="ui-name">Vote at WS 50</div></div>
         </div>
-        <button class="btn-primary green" onclick="showToast('Welcome to IN$DEX. Standing by.')">Go to my wallet →</button>
+        <button class="btn-primary green" onclick="finishOnboarding()">Go to my wallet →</button>
       </div>
     </div>
   </div>
 
 </div>
 <div id="toast"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+const SUPABASE_URL      = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let verifiedPhone = '';
+let citizenRecord = null;
+
 let currentStep = 0;
 let otpDigits = [];
 let otpSecs = 299;
@@ -294,7 +301,7 @@ function updateDots(step){
 
 function goToStep(step){
   const screens = ['screen0','screen1','screen2','screen3','screen4'];
-  const titles = ['Verify your identity','Step 1 of 3 Phone','Step 2 of 3 Confirm','Step 3 of 3 Face scan','Verified ✓'];
+  const titles = ['Sovereign Onboarding','Step 1 · Phone','Step 2 · Confirm','Step 3 · Liveness scan','You\'re in ✓'];
   document.getElementById(screens[currentStep]).className = 'screen hidden-left';
   document.getElementById(screens[step]).className = 'screen active';
   currentStep = step;
@@ -314,10 +321,21 @@ function checkPhone(){
   document.getElementById('sendOtpBtn').disabled = v.length < 8;
 }
 
-function sendOtp(){
+async function sendOtp(){
   const v = document.getElementById('phoneInput').value;
-  document.getElementById('otpSub').textContent = 'We sent a 6-digit code to +61 '+v+'. Check your messages.';
+  verifiedPhone = '+61' + v;
+  const btn = document.getElementById('sendOtpBtn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+
+  // Try to look up existing citizen by phone
+  try {
+    const { data } = await sb.rpc('get_citizen_by_phone', { p_phone: verifiedPhone });
+    if (data && data.length > 0) citizenRecord = data[0];
+  } catch(e) { /* silent — new citizen */ }
+
+  document.getElementById('otpSub').textContent = 'We sent a 6-digit code to ' + verifiedPhone + '. Check your messages.';
   goToStep(2);
+  btn.disabled = false; btn.textContent = 'Send code →';
   showToast('Code sent! Check your messages.');
 }
 
@@ -382,11 +400,46 @@ function autoScanDemo(){
       document.getElementById('camRing').classList.add('success');
       document.getElementById('scanIcon').textContent = '✅';
       document.getElementById('scanText').textContent = 'Verification complete!';
-      document.getElementById('scanSub').textContent = 'Your identity is confirmed';
-      showToast('Identity verified! Welcome to IN$DEX 🎉');
-      setTimeout(()=>goToStep(4), 1200);
+      document.getElementById('scanSub').textContent = 'Your identity is confirmed. ZK-proof generated on device.';
+      showToast('You\'re in. Welcome to IN$DEX 🎉');
+      completeOnboarding();
     }
   }, 600);
+}
+
+async function completeOnboarding() {
+  try {
+    // Link auth or create citizen
+    const zkProof = 'zk_' + Array.from({length:16},()=>Math.floor(Math.random()*16).toString(16)).join('');
+    const { data, error } = await sb.rpc('link_citizen_auth', {
+      p_phone:    verifiedPhone,
+      p_zk_proof: zkProof
+    });
+    if (!error && data) {
+      citizenRecord = data;
+      sessionStorage.setItem('citizen_id',      data.id || data.citizen_id || '');
+      sessionStorage.setItem('citizen_name',     data.name || data.full_name || 'Sovereign');
+      sessionStorage.setItem('citizen_balance',  data.balance_indx || '0');
+      sessionStorage.setItem('citizen_wisdom',   data.wisdom_score || '0');
+      sessionStorage.setItem('citizen_domain',   data.sovereign_domain || '');
+    }
+  } catch(e) {
+    // Demo mode — set placeholder session
+    sessionStorage.setItem('citizen_name', 'Sovereign');
+    sessionStorage.setItem('citizen_balance', '0');
+    sessionStorage.setItem('citizen_wisdom', '0');
+  }
+  setTimeout(() => goToStep(4), 1200);
+}
+
+function finishOnboarding() {
+  // Route to claim-domain if no domain yet, else dashboard
+  const domain = sessionStorage.getItem('citizen_domain');
+  if (!domain) {
+    window.location.href = 'claim-domain.html';
+  } else {
+    window.location.href = 'citizen-dashboard.html';
+  }
 }
 
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}

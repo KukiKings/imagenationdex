@@ -205,8 +205,8 @@
         </div>
       </div>
       <div class="bal-right">
-        <div class="bal-amount">1,240 INDX</div>
-        <div class="bal-usd">≈ $434.00 USD</div>
+        <div class="bal-amount" id="cardIndxBal">— INDX</div>
+        <div class="bal-usd" id="cardUsdBal">≈ $—.— USD</div>
       </div>
     </div>
     <div class="bal-item">
@@ -396,7 +396,54 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+  const SUPABASE_URL      = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const INDX_PRICE = 0.24;
+  const citizenId   = sessionStorage.getItem('citizen_id');
+  const citizenName = sessionStorage.getItem('citizen_name') || 'citizen';
+
+  function loadBalance() {
+    const bal = parseFloat(sessionStorage.getItem('citizen_balance') || '0');
+    const usd = (bal * INDX_PRICE).toFixed(2);
+    document.getElementById('cardIndxBal').textContent = bal.toLocaleString() + ' INDX';
+    document.getElementById('cardUsdBal').textContent = '≈ $' + parseFloat(usd).toLocaleString() + ' USD';
+  }
+
+  async function loadTxHistory() {
+    if (!citizenId) return;
+    try {
+      const { data, error } = await sb
+        .from('transactions')
+        .select('created_at, type, amount_indx, note, status')
+        .or(`sender_id.eq.${citizenId},recipient_id.eq.${citizenId}`)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      if (error || !data || !data.length) return;
+      const container = document.getElementById('txHistoryList');
+      if (!container) return;
+      container.innerHTML = '';
+      data.forEach(tx => {
+        const isOut = tx.type === 'transfer' && tx.sender_id === citizenId;
+        const sign = isOut ? '-' : '+';
+        const color = isOut ? '#FF4D6D' : '#00E5A0';
+        const date = new Date(tx.created_at).toLocaleDateString('en-AU', { day:'2-digit', month:'short' });
+        container.insertAdjacentHTML('beforeend', `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+            <div>
+              <div style="font-size:13px;font-weight:700;">${tx.note || tx.type}</div>
+              <div style="font-size:11px;color:rgba(240,242,255,0.45);">${date} · ${tx.status || 'settled'}</div>
+            </div>
+            <div style="font-size:14px;font-weight:800;color:${color};">${sign}${parseFloat(tx.amount_indx).toFixed(2)} INDX</div>
+          </div>`);
+      });
+    } catch(e) { /* silent fail */ }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => { loadBalance(); loadTxHistory(); });
+
   let frozen = false;
   let flipped = false;
   let cardType = 'virtual';

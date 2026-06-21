@@ -254,7 +254,7 @@
     <div class="hero">
       <div class="hero-label">Current Borrow Rate (APR)</div>
       <div class="hero-rate" id="heroBorrowRate">14.8%</div>
-      <div class="hero-rate-sub">Pool utilisation: <span>67%</span> — Rate set by utilisation curve</div>
+      <div class="hero-rate-sub" id="heroBorrowSub">Pool utilisation: <span>67%</span> — Rate set by utilisation curve</div>
       <div class="hero-stats">
         <div class="hs">
           <div class="hs-val">150%</div>
@@ -609,8 +609,44 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const INDX_PRICE = 0.24;
-const BORROW_APR = 0.148;
+let BORROW_APR = 0.148; // updated from lending-pool-stats edge function
 const MIN_RATIO  = 1.5;
+
+const EDGE_FN_URL = 'https://zljgthfzbalsunuoohcd.supabase.co/functions/v1/lending-pool-stats';
+
+async function fetchPoolStats() {
+  try {
+    const res = await fetch(EDGE_FN_URL);
+    if (!res.ok) return;
+    const json = await res.json();
+    const pool = json.pool;
+    if (!pool) return;
+
+    BORROW_APR = pool.borrow_apr / 100;
+    const util = pool.utilisation_pct;
+
+    // Update hero rate display
+    const heroRateEl = document.getElementById('heroBorrowRate');
+    if (heroRateEl) heroRateEl.textContent = pool.borrow_apr.toFixed(1) + '%';
+
+    const heroSubEl = document.getElementById('heroBorrowSub');
+    if (heroSubEl) heroSubEl.innerHTML = 'Pool utilisation: <span>' + util.toFixed(1) + '%</span> — Rate set by demand';
+
+    // Update hero stats
+    const heroLiqEl = document.getElementById('heroLiquidity');
+    if (heroLiqEl) {
+      const avail = (pool.total_deposited - pool.total_borrowed);
+      heroLiqEl.textContent = avail >= 1000 ? (avail/1000).toFixed(1) + 'K' : avail.toFixed(0);
+    }
+    const heroBorrowersEl = document.getElementById('heroBorrowers');
+    if (heroBorrowersEl) heroBorrowersEl.textContent = pool.borrowers.toLocaleString();
+
+    // If active loan is shown, refresh interest display with live rate
+    if (activeLoan) { showActiveLoan(); updateRepayPanel(); }
+  } catch (e) {
+    console.warn('fetchPoolStats failed (using defaults):', e);
+  }
+}
 
 const citizenId = sessionStorage.getItem('citizen_id');
 
@@ -621,6 +657,7 @@ let activeLoan     = null;  // loaded from Supabase on init
 let activeLoanId   = null;
 
 async function init() {
+  fetchPoolStats(); // non-blocking live rate fetch
   if (citizenId) {
     await loadBorrowPositions();
   }

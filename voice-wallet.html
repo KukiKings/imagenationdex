@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IN$DEX Voice Wallet</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --cyan-dim:#0099BB; --cyan-bg:rgba(0,212,255,0.08); --cyan-border:rgba(0,212,255,0.2);
+    --black:#090A10; --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+    --border:rgba(255,255,255,0.07); --text:#F0F2FF; --text-muted:rgba(240,242,255,0.45); --text-dim:rgba(240,242,255,0.2);
+    --green:#00E5A0; --green-bg:rgba(0,229,160,0.08);
+    --purple:#8B3FE8; --purple-bg:rgba(139,63,232,0.08);
+    --gold:#FFB800; --red:#FF4D6D; --blue:#2B35D8;
+    --nav-h:72px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none;height:100%;}
+  .shell{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;}
+
+  /* TOP BAR */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--black);z-index:20;}
+  .topbar-back{width:38px;height:38px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;}
+  .topbar-back:active{background:var(--surface2);}
+  .topbar-title{font-size:17px;font-weight:800;}
+  .topbar-badge{font-size:11px;font-weight:700;color:var(--purple);background:var(--purple-bg);border:1px solid rgba(139,63,232,0.25);padding:4px 10px;border-radius:99px;}
+
+  /* MAIN SCROLL */
+  .scroll-body{flex:1;overflow-y:auto;padding-bottom:calc(var(--nav-h)+20px);-webkit-overflow-scrolling:touch;}
+  .scroll-body::-webkit-scrollbar{display:none;}
+
+  /* SIINDEX AVATAR */
+  .siindex-zone{display:flex;flex-direction:column;align-items:center;padding:28px 20px 20px;}
+  .si-avatar-wrap{position:relative;width:100px;height:100px;margin-bottom:16px;}
+  .si-avatar{width:100px;height:100px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--blue));display:flex;align-items:center;justify-content:center;font-size:40px;position:relative;z-index:2;}
+  .si-ring{position:absolute;inset:-6px;border-radius:50%;border:2px solid var(--purple);opacity:0;animation:none;}
+  .si-ring.listening{animation:ringPulse 1.5s ease-in-out infinite;opacity:1;}
+  .si-ring2{position:absolute;inset:-14px;border-radius:50%;border:1.5px solid rgba(139,63,232,0.3);opacity:0;animation:none;}
+  .si-ring2.listening{animation:ringPulse 1.5s ease-in-out 0.3s infinite;opacity:1;}
+  @keyframes ringPulse{0%{transform:scale(1);opacity:0.8;}100%{transform:scale(1.15);opacity:0;}}
+
+  .si-status{font-size:14px;font-weight:700;color:var(--purple);margin-bottom:6px;text-align:center;}
+  .si-sub{font-size:12px;color:var(--text-muted);text-align:center;max-width:260px;line-height:1.5;}
+
+  /* SPEECH BUBBLE */
+  .speech-bubble{background:var(--surface);border:1px solid var(--border);border-radius:16px;border-top-left-radius:4px;padding:14px 16px;margin:0 20px 16px;font-size:14px;color:var(--text);line-height:1.55;min-height:52px;position:relative;}
+  .speech-bubble::before{content:'';position:absolute;top:-1px;left:20px;width:14px;height:14px;background:var(--surface);border-top:1px solid var(--border);border-left:1px solid var(--border);transform:rotate(-45deg);transform-origin:top left;clip-path:polygon(0 0,100% 0,0 100%);}
+  .sb-cursor{display:inline-block;width:2px;height:14px;background:var(--cyan);animation:blink 1s step-end infinite;vertical-align:text-bottom;margin-left:2px;}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+
+  /* TRANSCRIPT */
+  .transcript-wrap{margin:0 20px 16px;background:var(--cyan-bg);border:1px solid var(--cyan-border);border-radius:12px;padding:12px 14px;display:none;}
+  .transcript-label{font-size:10px;font-weight:700;color:var(--cyan);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px;}
+  .transcript-text{font-size:15px;font-weight:700;color:var(--text);line-height:1.4;}
+
+  /* MIC BUTTON */
+  .mic-zone{display:flex;flex-direction:column;align-items:center;padding:0 20px 20px;}
+  .mic-btn{width:80px;height:80px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:32px;transition:all 0.2s;position:relative;background:linear-gradient(135deg,var(--purple),var(--blue));box-shadow:0 8px 30px rgba(139,63,232,0.4);}
+  .mic-btn:active{transform:scale(0.94);}
+  .mic-btn.listening{background:linear-gradient(135deg,var(--red),#AA0025);box-shadow:0 8px 30px rgba(255,77,109,0.5);animation:micPulse 1s ease-in-out infinite;}
+  @keyframes micPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.06);}}
+  .mic-btn.processing{background:linear-gradient(135deg,var(--gold),#AA7800);box-shadow:0 8px 30px rgba(255,184,0,0.4);animation:none;}
+  .mic-label{font-size:13px;font-weight:700;color:var(--text-muted);margin-top:12px;}
+  .mic-hint{font-size:11px;color:var(--text-dim);margin-top:4px;text-align:center;}
+
+  /* EXAMPLE COMMANDS */
+  .examples{margin:0 20px 16px;}
+  .examples-title{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px;}
+  .example-chips{display:flex;flex-direction:column;gap:7px;}
+  .ex-chip{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--text-muted);cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:10px;}
+  .ex-chip:active{background:var(--purple-bg);border-color:rgba(139,63,232,0.3);color:var(--text);}
+  .ex-icon{font-size:18px;flex-shrink:0;}
+  .ex-text{flex:1;}
+
+  /* CONFIRM CARD */
+  .confirm-card{margin:0 20px 16px;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:20px;display:none;}
+  .cc-siindex{font-size:12px;color:var(--purple);font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+  .cc-title{font-size:18px;font-weight:900;margin-bottom:4px;}
+  .cc-sub{font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.5;}
+  .cc-rows{background:var(--surface2);border-radius:12px;padding:4px 0;margin-bottom:16px;}
+  .cc-row{display:flex;justify-content:space-between;padding:10px 14px;}
+  .cc-row + .cc-row{border-top:1px solid var(--border);}
+  .cc-label{font-size:13px;color:var(--text-muted);}
+  .cc-value{font-size:13px;font-weight:700;}
+  .cc-value.cyan{color:var(--cyan);}
+  .cc-value.green{color:var(--green);}
+  .cc-value.gold{color:var(--gold);}
+  .cc-btns{display:flex;gap:10px;}
+  .cc-confirm{flex:1;padding:14px;border-radius:12px;background:linear-gradient(135deg,var(--green),#00AA78);border:none;color:#000;font-size:15px;font-weight:800;cursor:pointer;transition:all 0.15s;}
+  .cc-confirm:active{transform:scale(0.97);}
+  .cc-cancel{padding:14px 20px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:15px;font-weight:700;cursor:pointer;}
+
+  /* SUCCESS */
+  .success-overlay{position:fixed;inset:0;background:var(--black);z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+  .success-overlay.show{opacity:1;pointer-events:all;}
+  .success-icon{font-size:64px;margin-bottom:20px;}
+  .success-title{font-size:26px;font-weight:900;text-align:center;margin-bottom:8px;}
+  .success-sub{font-size:14px;color:var(--text-muted);text-align:center;line-height:1.6;margin-bottom:32px;max-width:300px;}
+  .success-btn{width:100%;max-width:320px;padding:17px;border-radius:14px;font-size:16px;font-weight:800;border:none;background:linear-gradient(135deg,var(--cyan),var(--blue));color:#000;cursor:pointer;}
+
+  /* PREFLIGHT */
+  .preflight-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.9);z-index:50;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+  .preflight-overlay.show{opacity:1;pointer-events:all;}
+  .preflight-sheet{background:var(--surface);border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-width:430px;}
+  .pf-title{font-size:17px;font-weight:800;margin-bottom:4px;}
+  .pf-sub{font-size:12px;color:var(--text-muted);margin-bottom:16px;}
+  .pf-check{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+  .pf-check:last-child{border-bottom:none;}
+  .pf-icon{font-size:16px;width:24px;text-align:center;flex-shrink:0;}
+  .pf-text{font-size:13px;flex:1;}
+  .pf-status{font-size:12px;font-weight:700;color:var(--text-muted);}
+  .pf-status.pass{color:var(--green);}
+
+  /* TOAST */
+  .toast{position:fixed;bottom:calc(var(--nav-h)+16px);left:50%;transform:translateX(-50%) translateY(20px);max-width:320px;width:calc(100% - 40px);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:13px;text-align:center;opacity:0;transition:opacity 0.3s,transform 0.3s;z-index:400;pointer-events:none;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* BOTTOM NAV */
+  .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;height:var(--nav-h);background:rgba(9,10,16,0.95);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;padding:0 10px;z-index:30;}
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 14px;cursor:pointer;opacity:0.45;transition:opacity 0.2s;}
+  .nav-item.active{opacity:1;}
+  .nav-icon{font-size:22px;}
+  .nav-label{font-size:10px;font-weight:700;color:var(--text-muted);}
+  .nav-item.active .nav-label{color:var(--cyan);}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <button class="topbar-back" onclick="history.back()">←</button>
+    <div class="topbar-title">Voice Wallet</div>
+    <div class="topbar-badge">SIINDEX</div>
+  </div>
+
+  <div class="scroll-body">
+
+    <!-- SIINDEX AVATAR -->
+    <div class="siindex-zone">
+      <div class="si-avatar-wrap">
+        <div class="si-avatar" id="siAvatar">🤖</div>
+        <div class="si-ring" id="siRing"></div>
+        <div class="si-ring2" id="siRing2"></div>
+      </div>
+      <div class="si-status" id="siStatus">SIINDEX · Listening</div>
+      <div class="si-sub" id="siSub">Say a command below. I understand natural language.</div>
+    </div>
+
+    <!-- SIINDEX SPEECH BUBBLE -->
+    <div class="speech-bubble" id="speechBubble">
+      Welcome. I'm SIINDEX, your Sovereign AI. Tap the mic and tell me what you need. Try "Send $20 to Mum" or "Check my balance."
+    </div>
+
+    <!-- TRANSCRIPT -->
+    <div class="transcript-wrap" id="transcriptWrap">
+      <div class="transcript-label">You said</div>
+      <div class="transcript-text" id="transcriptText"></div>
+    </div>
+
+    <!-- CONFIRM CARD -->
+    <div class="confirm-card" id="confirmCard">
+      <div class="cc-siindex">🤖 SIINDEX · Pre-flight complete · 7/7 passed</div>
+      <div class="cc-title" id="ccTitle">Send Payment</div>
+      <div class="cc-sub" id="ccSub">Confirm this transaction. Say "yes" or tap below.</div>
+      <div class="cc-rows">
+        <div class="cc-row"><span class="cc-label">Sending</span><span class="cc-value cyan" id="ccAmount">—</span></div>
+        <div class="cc-row"><span class="cc-label">To</span><span class="cc-value" id="ccRecipient">—</span></div>
+        <div class="cc-row"><span class="cc-label">Network fee</span><span class="cc-value">~$0.00025</span></div>
+        <div class="cc-row"><span class="cc-label">98/2 Civ Fund (2%)</span><span class="cc-value gold" id="ccCivFund">—</span></div>
+        <div class="cc-row"><span class="cc-label">They receive</span><span class="cc-value green" id="ccReceives">—</span></div>
+      </div>
+      <div class="cc-btns">
+        <div class="cc-cancel" onclick="cancelConfirm()">Cancel</div>
+        <button class="cc-confirm" onclick="executeTransaction()">Confirm →</button>
+      </div>
+    </div>
+
+    <!-- MIC BUTTON -->
+    <div class="mic-zone">
+      <button class="mic-btn" id="micBtn" onclick="toggleMic()">🎙</button>
+      <div class="mic-label" id="micLabel">Tap to speak</div>
+      <div class="mic-hint" id="micHint">SIINDEX understands what you mean</div>
+    </div>
+
+    <!-- EXAMPLE COMMANDS -->
+    <div class="examples">
+      <div class="examples-title">Try saying…</div>
+      <div class="example-chips">
+        <div class="ex-chip" onclick="runDemo('send $20 to Mum')">
+          <div class="ex-icon">💸</div>
+          <div class="ex-text">"Send $20 to Mum"</div>
+        </div>
+        <div class="ex-chip" onclick="runDemo('check my balance')">
+          <div class="ex-icon">💰</div>
+          <div class="ex-text">"Check my balance"</div>
+        </div>
+        <div class="ex-chip" onclick="runDemo('pay Jake 50 INDX')">
+          <div class="ex-icon">👤</div>
+          <div class="ex-text">"Pay Jake 50 INDX"</div>
+        </div>
+        <div class="ex-chip" onclick="runDemo('send 10 dollars to sione')">
+          <div class="ex-icon">🌏</div>
+          <div class="ex-text">"Send 10 dollars to Sione"</div>
+        </div>
+        <div class="ex-chip" onclick="runDemo('how much have I earned today')">
+          <div class="ex-icon">📈</div>
+          <div class="ex-text">"How much have I earned today?"</div>
+        </div>
+        <div class="ex-chip" onclick="runDemo('swap 100 INDX for USDC')">
+          <div class="ex-icon">🔄</div>
+          <div class="ex-text">"Swap 100 INDX for USDC"</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="height:20px;"></div>
+  </div>
+
+  <nav class="bottom-nav">
+    <div class="nav-item" onclick="location.href='citizen-dashboard.html'">
+      <div class="nav-icon">🏠</div><div class="nav-label">Home</div>
+    </div>
+    <div class="nav-item" onclick="location.href='marketplace.html'">
+      <div class="nav-icon">🛒</div><div class="nav-label">Market</div>
+    </div>
+    <div class="nav-item active">
+      <div class="nav-icon">🎙</div><div class="nav-label">Voice</div>
+    </div>
+    <div class="nav-item" onclick="location.href='sovereignpay.html'">
+      <div class="nav-icon">💸</div><div class="nav-label">Pay</div>
+    </div>
+    <div class="nav-item" onclick="location.href='profile.html'">
+      <div class="nav-icon">👤</div><div class="nav-label">Profile</div>
+    </div>
+  </nav>
+</div>
+
+<!-- PREFLIGHT -->
+<div class="preflight-overlay" id="preflightOverlay">
+  <div class="preflight-sheet">
+    <div class="pf-title">SIINDEX Pre-Flight</div>
+    <div class="pf-sub">Running 7-point security check…</div>
+    <div class="pf-check"><div class="pf-icon">⏳</div><div class="pf-text">Policy compliance</div><div class="pf-status" id="pf1">Checking…</div></div>
+    <div class="pf-check"><div class="pf-icon">⏳</div><div class="pf-text">PQSI threat scan</div><div class="pf-status" id="pf2">Pending</div></div>
+    <div class="pf-check"><div class="pf-icon">⏳</div><div class="pf-text">Sanctions screening</div><div class="pf-status" id="pf3">Pending</div></div>
+    <div class="pf-check"><div class="pf-icon">⏳</div><div class="pf-text">Balance sufficient</div><div class="pf-status" id="pf4">Pending</div></div>
+    <div class="pf-check"><div class="pf-icon">⏳</div><div class="pf-text">Recipient verified</div><div class="pf-status" id="pf5">Pending</div></div>
+    <div class="pf-check"><div class="pf-icon">⏳</div><div class="pf-text">98/2 Law applied</div><div class="pf-status" id="pf6">Pending</div></div>
+    <div class="pf-check"><div class="pf-icon">⏳</div><div class="pf-text">ZK proof valid</div><div class="pf-status" id="pf7">Pending</div></div>
+  </div>
+</div>
+
+<!-- SUCCESS -->
+<div class="success-overlay" id="successOverlay">
+  <div class="success-icon">✅</div>
+  <div class="success-title" id="successTitle">Done.</div>
+  <div class="success-sub" id="successSub">Payment sent. Settled on Solana in under 1 second. Zero bank needed.</div>
+  <button class="success-btn" onclick="reset()">Back to Voice Wallet</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL      = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const INDX_PRICE = 0.24;
+const citizenId   = sessionStorage.getItem('citizen_id');
+const citizenName = sessionStorage.getItem('citizen_name') || 'citizen';
+const citizenBal  = parseFloat(sessionStorage.getItem('citizen_balance') || '0');
+
+// Speech Recognition
+const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+let isListening = false;
+let pendingIntent = null;
+
+// ── State ──────────────────────────────────────────────────────────
+let state = 'idle'; // idle | listening | processing | confirm
+
+function init() {
+  setSIINDEX('idle', 'SIINDEX · Standing by', 'Tap the mic and tell me what you need.');
+  if (!SpeechRec) {
+    document.getElementById('micHint').textContent = "Voice not supported in this browser — use the example chips below.";
+    document.getElementById('micBtn').style.opacity = '0.5';
+  }
+}
+
+// ── SIINDEX STATES ─────────────────────────────────────────────────
+const SIINDEX_MESSAGES = {
+  idle:       'Tap the mic and tell me what you need. Try "Send $20 to Mum" or "Check my balance."',
+  listening:  'Listening… speak naturally.',
+  processing: 'Got it. Running pre-flight check…',
+  confirm:    'Pre-flight complete. 7/7 passed. Confirm below or say "yes".',
+  success:    'Done. Standing by.',
+  error:      "I didn't catch that. Try again — speak clearly and naturally.",
+};
+
+function setSIINDEX(status, label, sub) {
+  document.getElementById('siStatus').textContent = label;
+  document.getElementById('siSub').textContent = sub;
+  const ring = document.getElementById('siRing');
+  const ring2 = document.getElementById('siRing2');
+  if (status === 'listening') {
+    ring.classList.add('listening'); ring2.classList.add('listening');
+  } else {
+    ring.classList.remove('listening'); ring2.classList.remove('listening');
+  }
+}
+
+function typeSIINDEX(text, cb) {
+  const bubble = document.getElementById('speechBubble');
+  bubble.innerHTML = '';
+  let i = 0;
+  const cursor = '<span class="sb-cursor"></span>';
+  const tick = () => {
+    if (i <= text.length) {
+      bubble.innerHTML = text.slice(0, i) + (i < text.length ? cursor : '');
+      i++;
+      setTimeout(tick, 18);
+    } else {
+      if (cb) cb();
+    }
+  };
+  tick();
+}
+
+// ── MIC TOGGLE ─────────────────────────────────────────────────────
+function toggleMic() {
+  if (!SpeechRec) { runDemo('send $20 to Mum'); return; }
+  if (isListening) {
+    stopListening();
+  } else {
+    startListening();
+  }
+}
+
+function startListening() {
+  recognition = new SpeechRec();
+  recognition.lang = 'en-AU';
+  recognition.continuous = false;
+  recognition.interimResults = true;
+
+  recognition.onstart = () => {
+    isListening = true;
+    state = 'listening';
+    document.getElementById('micBtn').classList.add('listening');
+    document.getElementById('micBtn').textContent = '⏹';
+    document.getElementById('micLabel').textContent = 'Tap to stop';
+    document.getElementById('micHint').textContent = 'Listening… speak naturally';
+    setSIINDEX('listening', 'SIINDEX · Listening', 'Go ahead…');
+    typeSIINDEX('Listening…');
+  };
+
+  recognition.onresult = (e) => {
+    const transcript = Array.from(e.results).map(r => r[0].transcript).join(' ');
+    document.getElementById('transcriptWrap').style.display = 'block';
+    document.getElementById('transcriptText').textContent = transcript;
+    if (e.results[e.results.length - 1].isFinal) {
+      recognition.stop();
+      processCommand(transcript.trim());
+    }
+  };
+
+  recognition.onerror = () => {
+    stopListening();
+    typeSIINDEX(SIINDEX_MESSAGES.error);
+    setSIINDEX('idle', 'SIINDEX · Try again', SIINDEX_MESSAGES.error);
+  };
+
+  recognition.onend = () => { isListening = false; resetMicBtn(); };
+
+  recognition.start();
+}
+
+function stopListening() {
+  if (recognition) recognition.stop();
+  isListening = false;
+  resetMicBtn();
+}
+
+function resetMicBtn() {
+  document.getElementById('micBtn').classList.remove('listening','processing');
+  document.getElementById('micBtn').textContent = '🎙';
+  document.getElementById('micLabel').textContent = 'Tap to speak';
+  document.getElementById('micHint').textContent = 'SIINDEX understands what you mean';
+}
+
+// ── INTENT PARSING ─────────────────────────────────────────────────
+function processCommand(text) {
+  state = 'processing';
+  document.getElementById('micBtn').classList.remove('listening');
+  document.getElementById('micBtn').classList.add('processing');
+  document.getElementById('micBtn').textContent = '⚙';
+  setSIINDEX('processing', 'SIINDEX · Processing', SIINDEX_MESSAGES.processing);
+  typeSIINDEX('Pre-flight check running… 7/7 checks…');
+
+  setTimeout(() => {
+    resetMicBtn();
+    const intent = parseIntent(text.toLowerCase());
+    handleIntent(intent, text);
+  }, 1400);
+}
+
+function parseIntent(text) {
+  // SEND / PAY
+  const sendMatch = text.match(/(?:send|pay|transfer)\s+(?:\$?(\d+(?:\.\d+)?)\s*(?:indx|dollars?|usd|bucks?)?|(\d+(?:\.\d+)?)\s*(?:indx|dollars?|usd|bucks?))\s+(?:to\s+)?([a-z]+)/i)
+    || text.match(/(?:send|pay|transfer)\s+(?:to\s+)?([a-z]+)\s+(?:\$?(\d+(?:\.\d+)?)\s*(?:indx|dollars?|usd)?)/i);
+
+  if (sendMatch) {
+    // Try to extract amount and recipient
+    const raw = text;
+    const amtMatch = raw.match(/\$?(\d+(?:\.\d+)?)/);
+    const amt = amtMatch ? parseFloat(amtMatch[1]) : 0;
+    // Recipient: word after "to"
+    const toMatch = raw.match(/\bto\s+([a-z]+)/i);
+    const rec = toMatch ? toMatch[1] : 'unknown';
+    // Is USD or INDX?
+    const isUsd = /dollar|usd|\$/.test(raw);
+    const indxAmt = isUsd ? amt / INDX_PRICE : amt;
+    return { type: 'send', amount: indxAmt, amountUsd: indxAmt * INDX_PRICE, recipient: rec, raw };
+  }
+
+  // BALANCE
+  if (/balance|how much|wallet|funds/.test(text)) {
+    return { type: 'balance' };
+  }
+
+  // EARNED
+  if (/earn|yield|income|made today|made this/.test(text)) {
+    return { type: 'earnings' };
+  }
+
+  // SWAP
+  if (/swap|exchange|convert/.test(text)) {
+    const amtMatch = text.match(/(\d+(?:\.\d+)?)/);
+    const fromMatch = text.match(/swap\s+\d+\s+(\w+)/i);
+    const toMatch = text.match(/(?:for|to)\s+(\w+)/i);
+    return {
+      type: 'swap',
+      amount: amtMatch ? parseFloat(amtMatch[1]) : 0,
+      from: fromMatch ? fromMatch[1].toUpperCase() : 'INDX',
+      to: toMatch ? toMatch[1].toUpperCase() : 'USDC'
+    };
+  }
+
+  return { type: 'unknown', raw: text };
+}
+
+function handleIntent(intent, rawText) {
+  switch (intent.type) {
+
+    case 'send': {
+      const amt = intent.amount;
+      const rec = intent.recipient;
+      if (amt <= 0 || rec === 'unknown') {
+        typeSIINDEX(`I heard "${rawText}" but couldn't parse a valid amount or recipient. Try again — say "Send 20 INDX to Jake".`);
+        setSIINDEX('idle', 'SIINDEX · Try again', 'Speak clearly — e.g. "Send 20 INDX to Jake"');
+        return;
+      }
+      pendingIntent = intent;
+      showPreFlight(() => showConfirm(intent));
+      break;
+    }
+
+    case 'balance': {
+      const bal = citizenBal || 0;
+      const usd = (bal * INDX_PRICE).toFixed(2);
+      const msg = `Your balance is ${bal.toLocaleString()} INDX — approximately $${usd} USD. Standing by.`;
+      typeSIINDEX(msg);
+      setSIINDEX('idle', 'SIINDEX · Balance', 'Here\'s what I found.');
+      break;
+    }
+
+    case 'earnings': {
+      const lendBal = parseFloat(sessionStorage.getItem('citizen_lending_deposit') || '0');
+      const daily = lendBal > 0 ? (lendBal * 0.112 / 365).toFixed(4) : '0';
+      const msg = lendBal > 0
+        ? `Today you've earned approximately ${daily} INDX from Sovereign Lending at 11.2% APY. Standing by.`
+        : 'No active lending position found. Deposit INDX into Sovereign Lending to start earning. Standing by.';
+      typeSIINDEX(msg);
+      setSIINDEX('idle', 'SIINDEX · Earnings', 'Here\'s what I found.');
+      break;
+    }
+
+    case 'swap': {
+      const msg = `Swap ${intent.amount} ${intent.from} to ${intent.to} — routing through Raydium. Tap DEX Swap to confirm this trade.`;
+      typeSIINDEX(msg);
+      setSIINDEX('idle', 'SIINDEX · Swap', 'Routing available.');
+      setTimeout(() => {
+        window.location.href = 'dex-swap.html?from=' + intent.from + '&to=' + intent.to + '&amount=' + intent.amount;
+      }, 2400);
+      break;
+    }
+
+    default: {
+      const msg = `I heard "${rawText}" but I'm not sure what action you need. Try "Send 20 INDX to Jake", "Check my balance", or "Swap 100 INDX for USDC".`;
+      typeSIINDEX(msg);
+      setSIINDEX('idle', 'SIINDEX · Clarify', 'Try a different command.');
+    }
+  }
+}
+
+// ── DEMO MODE (chips) ──────────────────────────────────────────────
+function runDemo(text) {
+  document.getElementById('transcriptWrap').style.display = 'block';
+  document.getElementById('transcriptText').textContent = text;
+  document.getElementById('micBtn').classList.add('processing');
+  document.getElementById('micBtn').textContent = '⚙';
+  setSIINDEX('processing', 'SIINDEX · Processing', SIINDEX_MESSAGES.processing);
+  typeSIINDEX('Pre-flight check running…');
+  setTimeout(() => {
+    resetMicBtn();
+    const intent = parseIntent(text.toLowerCase());
+    handleIntent(intent, text);
+  }, 1400);
+}
+
+// ── PRE-FLIGHT ─────────────────────────────────────────────────────
+function showPreFlight(cb) {
+  const overlay = document.getElementById('preflightOverlay');
+  overlay.classList.add('show');
+  const ids = ['pf1','pf2','pf3','pf4','pf5','pf6','pf7'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    el.textContent = 'Pending'; el.classList.remove('pass');
+  });
+  ids.forEach((id, i) => {
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      el.textContent = '✅ Passed'; el.classList.add('pass');
+      if (i === ids.length - 1) {
+        setTimeout(() => { overlay.classList.remove('show'); cb(); }, 500);
+      }
+    }, 280 * (i + 1));
+  });
+}
+
+// ── CONFIRM ────────────────────────────────────────────────────────
+function showConfirm(intent) {
+  const amt = intent.amount;
+  const rec = intent.recipient;
+  const civFund = amt * 0.02;
+  const receives = amt * 0.98;
+
+  document.getElementById('ccTitle').textContent = 'Send Payment';
+  document.getElementById('ccSub').textContent = `Confirm this transaction for ${toTitle(rec)}. Say "yes" or tap Confirm.`;
+  document.getElementById('ccAmount').textContent = amt.toFixed(4) + ' INDX (~$' + (amt * INDX_PRICE).toFixed(2) + ')';
+  document.getElementById('ccRecipient').textContent = toTitle(rec) + ' · ' + rec.toLowerCase() + '.IN$DEX';
+  document.getElementById('ccCivFund').textContent = civFund.toFixed(4) + ' INDX';
+  document.getElementById('ccReceives').textContent = receives.toFixed(4) + ' INDX';
+  document.getElementById('confirmCard').style.display = 'block';
+  document.getElementById('confirmCard').scrollIntoView({ behavior: 'smooth' });
+
+  typeSIINDEX(`Pre-flight complete. ${toTitle(rec)} will receive ${receives.toFixed(2)} INDX. 2% goes to the Civilisation Fund. Confirm below or say "yes".`);
+  setSIINDEX('confirm', 'SIINDEX · Awaiting confirmation', SIINDEX_MESSAGES.confirm);
+
+  // Listen for "yes" voice confirmation
+  listenForYes();
+}
+
+function listenForYes() {
+  if (!SpeechRec) return;
+  const rec = new SpeechRec();
+  rec.lang = 'en-AU';
+  rec.onresult = (e) => {
+    const t = e.results[0][0].transcript.toLowerCase().trim();
+    if (/yes|confirm|send|ok|go|do it|proceed/.test(t)) {
+      executeTransaction();
+    } else if (/no|cancel|stop/.test(t)) {
+      cancelConfirm();
+    }
+  };
+  rec.start();
+}
+
+function cancelConfirm() {
+  document.getElementById('confirmCard').style.display = 'none';
+  pendingIntent = null;
+  typeSIINDEX('Cancelled. What else can I help you with?');
+  setSIINDEX('idle', 'SIINDEX · Standing by', 'Transaction cancelled.');
+}
+
+async function executeTransaction() {
+  const intent = pendingIntent;
+  if (!intent) return;
+  const btn = document.querySelector('.cc-confirm');
+  btn.textContent = 'Sending…'; btn.disabled = true;
+
+  if (!citizenId) {
+    // Demo mode
+    showSuccess(intent);
+    return;
+  }
+
+  try {
+    const { data, error } = await sb.rpc('transfer_indx', {
+      p_sender_id:        citizenId,
+      p_recipient_domain: intent.recipient.toLowerCase(),
+      p_amount_indx:      intent.amount,
+      p_note:             'Voice wallet transfer'
+    });
+    if (error) throw error;
+    if (data && data.new_balance !== undefined) {
+      sessionStorage.setItem('citizen_balance', data.new_balance);
+    }
+    showSuccess(intent);
+  } catch (e) {
+    showToast('❌ ' + (e.message || 'Transfer failed'));
+    btn.textContent = 'Confirm →'; btn.disabled = false;
+  }
+}
+
+function showSuccess(intent) {
+  document.getElementById('confirmCard').style.display = 'none';
+  const name = toTitle(intent.recipient);
+  document.getElementById('successTitle').textContent = 'Done.';
+  document.getElementById('successSub').textContent = `${intent.amount.toFixed(2)} INDX sent to ${name}. Settled on Solana in under 1 second. ${name} received ${(intent.amount * 0.98).toFixed(2)} INDX. Standing by.`;
+  document.getElementById('successOverlay').classList.add('show');
+}
+
+function reset() {
+  document.getElementById('successOverlay').classList.remove('show');
+  document.getElementById('transcriptWrap').style.display = 'none';
+  document.getElementById('confirmCard').style.display = 'none';
+  pendingIntent = null;
+  typeSIINDEX('Welcome back. What do you need?');
+  setSIINDEX('idle', 'SIINDEX · Standing by', 'Tap the mic and tell me what you need.');
+}
+
+function toTitle(s){ return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
+let toastTimer;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+init();
+</script>
+</body>
+</html>

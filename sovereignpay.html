@@ -335,7 +335,15 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+const SUPABASE_URL      = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const citizenId   = sessionStorage.getItem('citizen_id');
+const citizenName = sessionStorage.getItem('citizen_name');
+
 const CONTACTS = [
   { name:'Jake Nuku',     domain:'jakenuku',    color:'linear-gradient(135deg,#0099BB,#00D4FF)' },
   { name:'Ana Reyes',     domain:'anareyes',    color:'linear-gradient(135deg,#8B5CF6,#2563EB)' },
@@ -348,6 +356,13 @@ let requestVal = '0';
 let recipientFound = false;
 
 window.addEventListener('DOMContentLoaded', () => {
+  // Load balance from session
+  const bal = parseFloat(sessionStorage.getItem('citizen_balance') || '50');
+  const balEl = document.querySelector('.br-val');
+  const balUsdEl = document.querySelector('.br-usd');
+  if (balEl) balEl.textContent = bal.toLocaleString(undefined, {maximumFractionDigits:2}) + ' INDX';
+  if (balUsdEl) balUsdEl.textContent = '≈ $' + (bal * INDX_PRICE_USD).toFixed(2) + ' USD';
+
   renderRecent();
   // Pre-fill from QR scanner redirect: ?to=username&amount=X&note=Y
   const params = new URLSearchParams(window.location.search);
@@ -458,13 +473,54 @@ function updateSendBtn() {
   }
 }
 
-function confirmSend() {
-  const amt = document.getElementById('sendAmount').value;
-  const name = document.getElementById('rpName').textContent;
-  document.getElementById('successTitle').textContent = 'Sent!';
-  document.getElementById('successSub').textContent = amt + ' INDX sent to ' + name + '. Settled on Solana in under 1 second. Zero bank needed.';
-  document.getElementById('successTx').textContent = randomTx();
-  document.getElementById('successOverlay').classList.add('active');
+async function confirmSend() {
+  const amt   = parseFloat(document.getElementById('sendAmount').value) || 0;
+  const name  = document.getElementById('rpName').textContent;
+  const domain = document.getElementById('rpDomain').textContent.split('.IN$DEX')[0];
+  const note  = document.getElementById('sendNote').value.trim();
+  const btn   = document.getElementById('sendBtn');
+
+  if (!citizenId) {
+    // Demo mode — no session
+    document.getElementById('successTitle').textContent = 'Sent!';
+    document.getElementById('successSub').textContent = amt + ' INDX sent to ' + name + '. Settled on Solana in under 1 second. Zero bank needed.';
+    document.getElementById('successTx').textContent = randomTx();
+    document.getElementById('successOverlay').classList.add('active');
+    return;
+  }
+
+  btn.textContent = 'Sending…'; btn.disabled = true;
+
+  try {
+    const { data, error } = await sb.rpc('transfer_indx', {
+      p_sender_id:          citizenId,
+      p_recipient_domain:   domain,
+      p_amount_indx:        amt,
+      p_note:               note || null
+    });
+
+    if (error) throw error;
+    if (data && !data.success) throw new Error(data.error || 'Transfer failed');
+
+    // Update sessionStorage balance
+    if (data && data.new_balance !== undefined) {
+      sessionStorage.setItem('citizen_balance', data.new_balance);
+      // Update balance display
+      const balEl = document.querySelector('.br-val');
+      if (balEl) balEl.textContent = parseFloat(data.new_balance).toFixed(2) + ' INDX';
+    }
+
+    const txHash = (data && data.tx_hash) || randomTx();
+    document.getElementById('successTitle').textContent = 'Sent!';
+    document.getElementById('successSub').textContent = amt + ' INDX sent to ' + name + '. Settled on Solana in under 1 second. Zero bank needed.';
+    document.getElementById('successTx').textContent = txHash.length > 12 ? txHash.slice(0,4) + '…' + txHash.slice(-4) : txHash;
+    document.getElementById('successOverlay').classList.add('active');
+  } catch (e) {
+    showToast('❌ ' + (e.message || 'Transfer failed. Try again.'));
+  } finally {
+    btn.textContent = 'Send Payment →'; btn.disabled = false;
+    updateSendBtn();
+  }
 }
 
 // ── REQUEST / KEYPAD ──

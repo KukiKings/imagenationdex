@@ -231,7 +231,13 @@
 
 <div id="toast" style="position:fixed;bottom:40px;left:50%;transform:translateX(-50%);background:#1A1D25;border:1px solid #2A2D38;color:#EAEAEA;padding:10px 20px;border-radius:12px;font-size:14px;z-index:300;pointer-events:none;opacity:0;transition:opacity 0.3s;white-space:nowrap;"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+  const SUPABASE_URL      = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc3NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const citizenId = sessionStorage.getItem('citizen_id');
+
   const TAKEN = ['admin','index','sol','indx','sovereign','test','john','james','maria','alice','sam','support','help'];
   let currentDomain = '';
   let checkTimer = null;
@@ -293,21 +299,40 @@
     input.focus();
   }
 
-  function claimDomain() {
+  async function claimDomain() {
     if (!currentDomain) return;
     const btn = document.getElementById('claimBtn');
-    btn.textContent = '⏳ Minting your domain on Solana…';
-    btn.className = 'claim-btn';
+    btn.disabled = true;
+    btn.textContent = '⏳ Reserving your domain…';
 
-    setTimeout(() => {
+    if (!citizenId) {
+      // Demo mode
+      setTimeout(() => {
+        sessionStorage.setItem('citizen_domain', currentDomain + '.IN$DEX');
+        document.getElementById('successDomain').textContent = currentDomain + '.IN$DEX';
+        document.getElementById('successOverlay').classList.add('show');
+      }, 1400);
+      return;
+    }
+
+    try {
+      const { data, error } = await sb.rpc('claim_sovereign_domain', {
+        p_citizen_id: citizenId,
+        p_domain:     currentDomain
+      });
+      if (error) throw error;
+      sessionStorage.setItem('citizen_domain', currentDomain + '.IN$DEX');
       document.getElementById('successDomain').textContent = currentDomain + '.IN$DEX';
       document.getElementById('successOverlay').classList.add('show');
-    }, 1400);
+    } catch(e) {
+      showToast('❌ ' + (e.message || 'Domain claim failed'));
+      btn.disabled = false;
+      btn.textContent = '🎁 Claim ' + currentDomain + '.IN$DEX FREE';
+    }
   }
 
   function goToDashboard() {
-    const name = localStorage.getItem('userName') || '';
-    window.location.href = 'citizen-dashboard.html' + (name ? '?name='+encodeURIComponent(name) : '');
+    window.location.href = 'citizen-dashboard.html';
   }
 
   function shareSuccess() {
@@ -322,9 +347,9 @@
     toastTimer = setTimeout(() => t.style.opacity = '0', 2600);
   }
 
-  // Pre-fill if user name is saved
+  // Pre-fill from sessionStorage citizen name
   window.addEventListener('DOMContentLoaded', () => {
-    const savedName = localStorage.getItem('userName');
+    const savedName = sessionStorage.getItem('citizen_name') || sessionStorage.getItem('userName') || '';
     if (savedName) {
       const suggest = savedName.toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,20);
       const input = document.getElementById('domainInput');

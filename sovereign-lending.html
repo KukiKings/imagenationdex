@@ -195,7 +195,7 @@
     <div class="hero">
       <div class="hero-label">Current Depositor APY</div>
       <div class="hero-apy" id="heroApy">11.2%</div>
-      <div class="hero-apy-sub">Pool utilisation: <span id="heroUtil">67%</span> — High demand → Higher yield</div>
+      <div class="hero-apy-sub" id="heroApySub">Pool utilisation: <span id="heroUtil">67%</span> — High demand → Higher yield</div>
       <div class="hero-stats">
         <div class="hs">
           <div class="hs-val" id="statPool">2.85M</div>
@@ -216,7 +216,7 @@
     <div class="util-section">
       <div class="util-header">
         <div class="util-title">Pool Utilisation</div>
-        <div class="util-pct">67% — High</div>
+        <div class="util-pct" id="utilHeader">67% — High</div>
       </div>
       <div class="util-bar-bg">
         <div class="util-bar-fill" id="utilFill"></div>
@@ -382,23 +382,23 @@
       <div class="stats-card">
         <div class="stat-row">
           <span class="stat-label">Total Pool Size</span>
-          <span class="stat-value">2,847,500 INDX</span>
+          <span class="stat-value" id="psSizeVal">2,847,500 INDX</span>
         </div>
         <div class="stat-row">
           <span class="stat-label">Total Borrowed</span>
-          <span class="stat-value">1,907,825 INDX</span>
+          <span class="stat-value" id="psBorrowedVal">1,907,825 INDX</span>
         </div>
         <div class="stat-row">
           <span class="stat-label">Available Liquidity</span>
-          <span class="stat-value" style="color:var(--green)">939,675 INDX</span>
+          <span class="stat-value" id="psAvailVal" style="color:var(--green)">939,675 INDX</span>
         </div>
         <div class="stat-row">
           <span class="stat-label">Utilisation Rate</span>
-          <span class="stat-value" style="color:var(--gold)">67%</span>
+          <span class="stat-value" id="psUtilVal" style="color:var(--gold)">67%</span>
         </div>
         <div class="stat-row">
           <span class="stat-label">Interest Rate (APR)</span>
-          <span class="stat-value" style="color:var(--cyan)">11.2%</span>
+          <span class="stat-value" id="psAprVal" style="color:var(--cyan)">14.8%</span>
         </div>
         <div class="stat-row">
           <span class="stat-label">Protocol</span>
@@ -456,7 +456,7 @@
     </div>
     <div class="sheet-row">
       <span class="sr-label">Current APY</span>
-      <span class="sr-value green">11.2%</span>
+      <span class="sr-value green" id="confirmSheetApy">11.2%</span>
     </div>
     <div class="sheet-row">
       <span class="sr-label">Est. daily yield</span>
@@ -516,7 +516,55 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const INDX_PRICE = 0.24;
-const APY = 0.112;
+let APY = 0.112; // updated from lending-pool-stats edge function
+let poolTotalDeposited = 2847500;
+
+const EDGE_FN_URL = 'https://zljgthfzbalsunuoohcd.supabase.co/functions/v1/lending-pool-stats';
+
+async function fetchPoolStats() {
+  try {
+    const res = await fetch(EDGE_FN_URL);
+    if (!res.ok) return;
+    const json = await res.json();
+    const pool = json.pool;
+    if (!pool) return;
+
+    // Update live APY for yield calculations
+    APY = pool.deposit_apy / 100;
+    const borrowAPR = pool.borrow_apr / 100;
+    const util = pool.utilisation_pct;
+    poolTotalDeposited = pool.total_deposited || poolTotalDeposited;
+
+    // Hero
+    document.getElementById('heroApy').textContent = pool.deposit_apy.toFixed(1) + '%';
+    document.getElementById('heroUtil').textContent = util.toFixed(1) + '%';
+
+    // Hero stats
+    const poolSizeM = (poolTotalDeposited / 1e6).toFixed(2);
+    document.getElementById('statPool').textContent = poolSizeM + 'M';
+    document.getElementById('statDepositors').textContent = pool.depositors.toLocaleString();
+
+    // Utilisation bar + header
+    document.getElementById('utilFill').style.width = Math.min(util, 100) + '%';
+    document.getElementById('utilHeader').textContent = util.toFixed(1) + '% — ' + (util >= 90 ? 'Critical' : util >= 67 ? 'High' : util >= 40 ? 'Medium' : 'Low');
+
+    // Pool stats section
+    const available = poolTotalDeposited - pool.total_borrowed;
+    document.getElementById('psSizeVal').textContent = poolTotalDeposited.toLocaleString(undefined, {maximumFractionDigits:0}) + ' INDX';
+    document.getElementById('psBorrowedVal').textContent = pool.total_borrowed.toLocaleString(undefined, {maximumFractionDigits:0}) + ' INDX';
+    document.getElementById('psAvailVal').textContent = available.toLocaleString(undefined, {maximumFractionDigits:0}) + ' INDX';
+    document.getElementById('psUtilVal').textContent = util.toFixed(1) + '%';
+    document.getElementById('psAprVal').textContent = borrowAPR.toFixed(1) + '%';
+
+    // Confirm sheet APY
+    document.getElementById('confirmSheetApy').textContent = pool.deposit_apy.toFixed(1) + '%';
+
+    // Hero APY sub
+    document.getElementById('heroApySub').innerHTML = 'Pool utilisation: <span>' + util.toFixed(1) + '%</span> — ' + (util >= 67 ? 'High demand → Higher yield' : 'Growing pool — earn as it fills');
+  } catch (e) {
+    console.warn('fetchPoolStats failed (using defaults):', e);
+  }
+}
 
 const citizenId      = sessionStorage.getItem('citizen_id');
 const citizenBalance = parseFloat(sessionStorage.getItem('citizen_balance') || '0');
@@ -530,10 +578,12 @@ let totalEarned  = 0;
 async function init() {
   document.getElementById('balanceDisplay').textContent = citizenBalance.toLocaleString(undefined, {maximumFractionDigits: 2});
 
+  // Fetch live pool stats first (non-blocking — updates UI once resolved)
+  fetchPoolStats();
+
   if (citizenId) {
     await loadPositions();
   } else {
-    // No session — show empty state
     updatePositionCard();
   }
 }
