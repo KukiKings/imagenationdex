@@ -581,7 +581,7 @@ const DEMO_LISTINGS = [
   { id:'d6', emoji:'🥭', title:'Mango Box (10kg)',      seller_name:'Sione Fale',    seller_domain:'sionefale.indx',   category:'Food',     price_indx:40,   description:'Premium Kensington Pride mangoes. 10kg, hand-picked, delivered.' },
 ];
 
-let allListings  = [];
+let allListings  = DEMO_LISTINGS; // show immediately; updated from Supabase if available
 let activeCategory = 'all';
 let activeListing  = null;
 
@@ -593,8 +593,12 @@ function listEmoji(l) {
 }
 
 // ── INIT ──
-window.addEventListener('DOMContentLoaded', async () => {
-  await loadListings();
+window.addEventListener('DOMContentLoaded', () => {
+  // Render demo listings immediately — no waiting
+  renderFeatured();
+  renderGrid(allListings);
+  // Then try to update from Supabase in background
+  loadListings();
 });
 
 async function loadListings() {
@@ -602,15 +606,19 @@ async function loadListings() {
     const res = await fetch(`${SUPA_URL}/rest/v1/rpc/get_listings`, {
       method: 'POST',
       headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ p_limit: 100, p_offset: 0 })
+      body: JSON.stringify({ p_limit: 100, p_offset: 0 }),
+      signal: AbortSignal.timeout(5000) // 5s timeout
     });
     const data = await res.json();
-    allListings = (Array.isArray(data) && data.length > 0) ? data : DEMO_LISTINGS;
+    if (Array.isArray(data) && data.length > 0) {
+      allListings = data;
+      renderFeatured();
+      renderGrid(allListings);
+    }
+    // else: demo listings stay — already rendered
   } catch(e) {
-    allListings = DEMO_LISTINGS;
+    // Demo listings already showing — silent fail
   }
-  renderFeatured();
-  renderGrid(allListings);
 }
 
 // ── RENDER FEATURED (first 4) ──
