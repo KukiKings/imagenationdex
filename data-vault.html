@@ -301,6 +301,51 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
       </div>
     </div>
 
+    <!-- SWAP YOUR DATA EARNINGS -->
+    <div class="section" id="swapSection" style="display:none">
+      <div class="sec-title">Swap Your Data Earnings</div>
+      <div style="background:var(--surface2);border:1px solid rgba(0,212,255,0.15);border-radius:20px;padding:20px;">
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Your data earns INDX. Swap it for any digital asset — instantly.</div>
+
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:8px;">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">From (your data earnings)</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="font-size:24px;font-weight:900;color:var(--gold)" id="swapFromAmt">0</div>
+            <div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 12px;">
+              <span>🪙</span>
+              <span style="font-size:14px;font-weight:700;">INDX</span>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px" id="swapFromUsd">≈ $0.00 USD</div>
+        </div>
+
+        <div style="text-align:center;font-size:20px;color:var(--cyan);margin:4px 0;">⇅</div>
+
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:16px;">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">To (choose your asset)</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="font-size:24px;font-weight:900;color:var(--green)" id="swapToAmt">0</div>
+            <select id="swapAsset" style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:14px;font-weight:700;color:var(--text);cursor:pointer;" onchange="recalcSwap()">
+              <option value="USDC" data-rate="0.24">USDC</option>
+              <option value="SOL" data-rate="0.00148">SOL</option>
+              <option value="INDX" data-rate="1">INDX (keep)</option>
+              <option value="BTC" data-rate="0.0000035">BTC</option>
+              <option value="ETH" data-rate="0.000072">ETH</option>
+            </select>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px" id="swapToUsd">≈ $0.00 USD</div>
+        </div>
+
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;padding:10px;background:rgba(0,229,160,0.06);border-radius:10px;border:1px solid rgba(0,229,160,0.1);">
+          🛡️ 98/2 Civilisation Law applied · 2% to Civilisation Fund · Data never leaves your device
+        </div>
+
+        <button onclick="executeDataSwap()" style="width:100%;padding:16px;background:linear-gradient(135deg,var(--cyan),var(--blue));border:none;border-radius:14px;font-size:16px;font-weight:800;color:#fff;cursor:pointer;">
+          Swap Data Earnings →
+        </button>
+      </div>
+    </div>
+
     <!-- ZK PROOF INFO -->
     <div class="section" id="zkSection" style="display:none">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 18px;">
@@ -395,7 +440,9 @@ function showVaultActive() {
   document.getElementById('privacySection').style.display = 'block';
   document.getElementById('dataTypesSection').style.display = 'block';
   document.getElementById('accessLogSection').style.display = 'block';
+  document.getElementById('swapSection').style.display = 'block';
   document.getElementById('zkSection').style.display = 'block';
+  recalcSwap();
   document.getElementById('vaultStatusBadge').textContent = 'Active';
   document.getElementById('vaultStatusBadge').style.background = 'rgba(0,229,160,0.12)';
   document.getElementById('vaultStatusBadge').style.color = 'var(--green)';
@@ -457,6 +504,31 @@ function savePrice() {
   if (earnEl) earnEl.textContent = 'Earn: ' + val + ' INDX / month';
   closePriceSheet();
   showToast('Price saved — ' + val + ' INDX / month for this data type');
+}
+
+function recalcSwap() {
+  const sel = document.getElementById('swapAsset');
+  const rate = parseFloat(sel.options[sel.selectedIndex].dataset.rate);
+  const asset = sel.value;
+  const indxAmt = dataEarned;
+  const toAmt = indxAmt * rate * 0.98; // 98/2 law
+  document.getElementById('swapFromAmt').textContent = indxAmt.toFixed(2);
+  document.getElementById('swapFromUsd').textContent = '≈ $' + (indxAmt * INDX_PRICE).toFixed(2) + ' USD';
+  document.getElementById('swapToAmt').textContent = asset === 'INDX' ? indxAmt.toFixed(2) : toAmt.toFixed(asset === 'BTC' ? 8 : asset === 'ETH' ? 6 : 4);
+  document.getElementById('swapToUsd').textContent = '≈ $' + (indxAmt * INDX_PRICE * 0.98).toFixed(2) + ' USD';
+}
+
+function executeDataSwap() {
+  if (dataEarned <= 0) { showToast('No data earnings to swap yet — activate more data categories'); return; }
+  const asset = document.getElementById('swapAsset').value;
+  const earned = dataEarned;
+  showToast('⚡ Swapping ' + earned.toFixed(2) + ' INDX → ' + asset + ' · 7-point pre-flight...');
+  setTimeout(() => {
+    if (asset !== 'INDX') { dataEarned = 0; sessionStorage.setItem('vault_earned', '0'); }
+    updateHeroStats();
+    recalcSwap();
+    showToast('✅ Done. Your data earnings swapped to ' + asset + '. Standing by.');
+  }, 2200);
 }
 
 let toastTimer;
