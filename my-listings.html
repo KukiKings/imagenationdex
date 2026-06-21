@@ -268,6 +268,82 @@
 <div class="toast" id="toast"></div>
 
 <script>
+  const SUPA_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMwNjM3MjUsImV4cCI6MjA1ODYzOTcyNX0.SRSVRhNYKBRuFqMBpBaFyshFAVafxqBiPGj6N2ZwYGo';
+  const INDX_PRICE = 0.24;
+
+  const STATUS_BADGE = { active:'active', sold:'sold', draft:'paused', removed:'paused' };
+  const STATUS_LABEL = { active:'Active', sold:'Sold', draft:'Draft', removed:'Removed' };
+  const CAT_EMOJI    = { Services:'🛠️', Food:'🍽️', Digital:'💾', RWA:'💎', Crafts:'🎨', Clothing:'👕', Electronics:'📱', Other:'📦', goods:'📦' };
+
+  let myListings = [];
+
+  window.addEventListener('DOMContentLoaded', async () => {
+    const citizenId = sessionStorage.getItem('citizen_id');
+    if (citizenId) await loadMyListings(citizenId);
+  });
+
+  async function loadMyListings(citizenId) {
+    try {
+      const res = await fetch(`${SUPA_URL}/rest/v1/rpc/get_my_listings`, {
+        method: 'POST',
+        headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_citizen_id: citizenId })
+      });
+      myListings = await res.json() || [];
+    } catch(e) {
+      myListings = [];
+    }
+    renderMyListings();
+  }
+
+  function renderMyListings() {
+    const container = document.getElementById('content-listings');
+    const active  = myListings.filter(l => l.status === 'active');
+    const sold    = myListings.filter(l => l.status === 'sold');
+    const earned  = sold.reduce((s, l) => s + (l.price_indx * 0.98), 0);
+
+    // Update stats
+    const statBoxes = document.querySelectorAll('.stat-box .stat-num');
+    if (statBoxes[0]) statBoxes[0].textContent = active.length;
+    if (statBoxes[1]) statBoxes[1].textContent = sold.length;
+    if (statBoxes[2]) statBoxes[2].textContent = earned.toFixed(1);
+
+    if (!myListings.length) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🏪</div>
+          <div class="empty-title">No listings yet</div>
+          <div class="empty-sub">List a service, digital product, or physical item. You keep 98% of every sale — 2% goes to the Civilisation.</div>
+          <button class="empty-btn" onclick="window.location.href='create-listing.html'">+ Create First Listing</button>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = myListings.map(l => {
+      const emoji = CAT_EMOJI[l.category] || '🛒';
+      const badge = STATUS_BADGE[l.status] || 'paused';
+      const label = STATUS_LABEL[l.status] || l.status;
+      const usd   = (l.price_indx * INDX_PRICE).toFixed(2);
+      return `
+        <div class="listing-item" onclick="openOrderSheet('${l.title.replace(/'/g,"\\'")}', '${l.price_indx}', '${label}', '${(l.description||'').slice(0,60).replace(/'/g,"\\'")}')">
+          <div class="listing-thumb">${emoji}</div>
+          <div class="listing-body">
+            <div class="listing-title">${l.title}</div>
+            <div class="listing-meta">
+              <div class="listing-price">${l.price_indx} INDX</div>
+              <div class="listing-status ${badge}">${label}</div>
+              <div class="listing-views">≈ $${usd}</div>
+            </div>
+          </div>
+          <div class="listing-actions">
+            <div class="action-btn edit" onclick="event.stopPropagation(); showToast('✏️ Edit coming Wave 1')">Edit</div>
+            ${l.status==='active' ? `<div class="action-btn pause" onclick="event.stopPropagation(); showToast('⏸ Pause coming Wave 1')">Pause</div>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
   function switchTab(tab) {
     ['listings','orders','earnings'].forEach(t => {
       document.getElementById('tab-'+t).classList.toggle('active', t===tab);
@@ -277,12 +353,13 @@
 
   function openOrderSheet(title, price, status, detail) {
     document.getElementById('orderSheetTitle').textContent = title;
+    const p = parseFloat(price) || 0;
     document.getElementById('orderSheetRows').innerHTML = `
-      <div class="detail-row"><div class="lbl">Price</div><div class="val" style="color:var(--cyan)">${price}</div></div>
+      <div class="detail-row"><div class="lbl">Price</div><div class="val" style="color:var(--cyan)">${p} INDX ≈ $${(p*INDX_PRICE).toFixed(2)}</div></div>
       <div class="detail-row"><div class="lbl">Status</div><div class="val">${status}</div></div>
-      <div class="detail-row"><div class="lbl">Info</div><div class="val">${detail}</div></div>
-      <div class="detail-row"><div class="lbl">Your cut (98%)</div><div class="val" style="color:var(--green)">+${(parseFloat(price)*0.98).toFixed(1)} INDX</div></div>
-      <div class="detail-row"><div class="lbl">Civilisation Fee</div><div class="val" style="color:var(--red)">-${(parseFloat(price)*0.02).toFixed(2)} INDX</div></div>
+      <div class="detail-row"><div class="lbl">Description</div><div class="val">${detail}</div></div>
+      <div class="detail-row"><div class="lbl">Your cut (98%)</div><div class="val" style="color:var(--green)">+${(p*0.98).toFixed(2)} INDX</div></div>
+      <div class="detail-row"><div class="lbl">Civilisation Fee</div><div class="val" style="color:var(--red)">-${(p*0.02).toFixed(2)} INDX</div></div>
     `;
     document.getElementById('orderOverlay').classList.add('open');
   }
