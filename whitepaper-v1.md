@@ -148,6 +148,147 @@ That is the mission. That is IN$DEX.
 
 ---
 
+## Section 8 — Data Sovereignty
+
+> "Your data has been leaked, sold, and abused for decades — without your knowledge, without your consent, without a cent returning to you. IN$DEX ends that. On-chain. Permanently."
+> — AJ Henry, Founder
+
+### The Problem
+
+Every person on earth generates valuable data every day — their location, spending patterns, health indicators, browsing habits, and social connections. For decades, corporations have captured this data, monetised it, and paid nothing back to the people who created it. Worse, when those corporations are breached, the victims — ordinary citizens — bear the consequences: identity theft, fraud, and irreversible personal exposure.
+
+The scale is staggering. The average person's data is sold to 376 third-party brokers per year. Data breaches expose billions of records annually. Companies face regulatory fines that rarely reach the affected individuals. The people who created the data receive nothing.
+
+IN$DEX flips this entirely.
+
+### The IN$DEX Data Sovereignty Framework
+
+Data Sovereignty is not a feature in IN$DEX. It is a foundational right — built into the protocol, enforced on-chain, and operated by SIINDEX. Citizens own their data absolutely. They decide who holds it, who can use it, and what they are paid for it. When companies fail to protect it, the protocol automatically triggers compensation.
+
+Six mechanisms make this real:
+
+---
+
+**8.1 — Data Breach Claims**
+
+When a company holding citizen data is breached, that citizen is entitled to compensation. IN$DEX enforces this automatically through the Data Liability Pool.
+
+Companies who seek access to citizen data must stake INDX tokens into the Data Liability Pool before access is granted. A verified breach triggers an automatic payout — no claim form, no legal battle, no waiting.
+
+Breach Compensation Tiers (canonical — do not alter):
+| Tier | Description | Payout |
+|---|---|---|
+| T1 | Minor exposure (email, name) | 5 INDX |
+| T2 | Significant exposure (phone, partial financial) | 15 INDX |
+| T3 | Severe exposure (full identity, financial records) | 50 INDX |
+| T4 | Critical exposure (biometrics, health, full profile) | 200 INDX |
+
+All payouts are subject to the 98/2 Civilisation Law: citizens receive 98% of the claimed amount; 2% funds the Civilisation Fund.
+
+Breach verification uses SIINDEX's PQSI tri-layer scanning, cross-referenced against a live global breach database. Claims are ZK-proof verified — citizen identity is confirmed without exposing any personal data.
+
+Legal grounding: GDPR Art.82, CCPA §1798.150, AU Privacy Act 1988 s.13G.
+
+---
+
+**8.2 — Data Consent Ledger**
+
+An immutable on-chain record of every company that holds any data about a citizen — across every interaction, every permission ever granted, every data category shared.
+
+Every citizen can:
+- See exactly which companies hold their data and what categories are held
+- Filter by risk level (high / medium / low)
+- Expand any company record to see the full scope of data held
+- Initiate revocation directly from any record
+
+The Consent Ledger is append-only. No company, no intermediary, and no SIINDEX action can delete or alter a record once written. The citizen's data ownership history is permanent and portable.
+
+---
+
+**8.3 — Data Revocation Protocol**
+
+The legal and technical right to demand deletion — enforced on-chain, legally framed, and unanswerable.
+
+When a citizen revokes a company's access to their data, IN$DEX generates a Sovereign Data Revocation Certificate — a signed, ZK-proof anchored document recorded on the Solana blockchain.
+
+The certificate is legally admissible under:
+- GDPR Article 17 (Right to Erasure) and Article 18 (Right to Restriction)
+- CCPA §1798.105 (Right to Delete)
+- AU Privacy Act 1988 s.17 (Correction and deletion)
+
+If a company acknowledges but fails to comply within the statutory window (30 days for GDPR, 45 days for CCPA), the Revocation Protocol automatically escalates to a Data Breach Claim at T3 severity — triggering a 50 INDX payout without any further citizen action required.
+
+---
+
+**8.4 — Data Sale Royalties**
+
+When companies sell citizen data to third parties, those citizens are owed a royalty — automatically. IN$DEX enforces this through the Data Royalty Protocol.
+
+The Data Royalty Pool collects royalty payments from companies that purchase citizen data packages. Payments are distributed to the relevant citizens in the same transaction, governed by the 98/2 Civilisation Law.
+
+Citizens see a real-time ledger of every company that purchased their data, what category was purchased, the sale date, and the INDX amount received. Royalty claims are verifiable on-chain. Payout is instant.
+
+---
+
+**8.5 — Sovereign Data NFT**
+
+Every IN$DEX citizen can mint their digital identity as an SPL NFT on Solana. The Sovereign Data NFT transforms a citizen's data profile from a passive resource others exploit into an active, licensable, income-generating sovereign asset.
+
+NFT capabilities:
+- **View licence** — free access for non-commercial, read-only purposes
+- **Use licence** — 5 INDX/month, maximum 3-month duration
+- **Resell licence** — 25 INDX/month + 20% royalty on downstream sales
+
+Licences are time-locked and revocable. The citizen retains full ownership of the underlying data at all times. The NFT is a licence instrument — not a transfer of ownership.
+
+Citizen identity (name, domain, Wisdom Score) is rendered directly on the NFT. Optional data layers (location, spending patterns) can be toggled on or off at any time.
+
+---
+
+**8.6 — Data Monetisation Marketplace**
+
+An active marketplace where citizens sell specific, anonymised data packages directly to verified institutional buyers — researchers, NGOs, universities, and corporations with verified institutional credentials.
+
+How it works:
+1. Verified buyers post buy requests specifying data type, compensation (in INDX), and duration
+2. SIINDEX calculates each citizen's match score based on their profile
+3. Citizens review the request, the buyer's credentials, and the data scope — then decide whether to sell
+4. On confirmation, data is anonymised and transmitted; INDX is transferred instantly (98/2 applies)
+5. Citizens can withdraw consent at any time — access is terminated immediately
+
+All marketplace buyers must be verified institutions. No advertising networks, no data brokers, no anonymous buyers. The marketplace is SIINDEX-monitored and PQSI-scanned.
+
+---
+
+### Data Sovereignty Hub
+
+All six mechanisms are unified in the Data Sovereignty Hub — a single screen accessible from every citizen's dashboard. The hub surfaces:
+- Live breach count and claimable INDX
+- Total royalties earned
+- Active Consent Ledger entries
+- Sovereign NFT status
+- Marketplace match alerts
+
+The Hub is the citizen's permanent command centre for their data rights. Nothing in it can be hidden, restricted, or overridden by any company or third party.
+
+---
+
+### Protocol Constants (canonical — do not alter)
+
+| Constant | Value |
+|---|---|
+| Data Liability Pool staking requirement | Enforced by smart contract before data access granted |
+| Breach payout T1 | 5 INDX (citizen receives 4.9 INDX after 98/2) |
+| Breach payout T2 | 15 INDX (citizen receives 14.7 INDX after 98/2) |
+| Breach payout T3 | 50 INDX (citizen receives 49 INDX after 98/2) |
+| Breach payout T4 | 200 INDX (citizen receives 196 INDX after 98/2) |
+| Revocation → breach escalation | T3 auto-triggered at 30-day non-compliance |
+| NFT Use licence | 5 INDX/month, max 3 months |
+| NFT Resell licence | 25 INDX/month + 20% royalty on downstream sales |
+| 98/2 law | Applies to every payout — breach, royalty, marketplace sale, NFT licence |
+
+---
+
 ## APPENDIX A — Canonical Constants
 > These values are final. Every screen, document, and build must match exactly. If something conflicts with this section, this section wins.
 > Last verified: 2026-06-19 (Session 18). All 100+ app screens confirmed clean.
@@ -310,6 +451,17 @@ All 100+ screens exist and are clean at $0.24 USD, no A$, no seed phrase. Key sc
 - ✅ `sovereign-lending.html` — **Session 31 WIRED**: Supabase live. deposit_to_pool RPC on deposit, withdraw_from_pool on withdraw. Position loaded from DB on init. Yield preview calculator. 98/2 Law badge.
 - ✅ `lending-dashboard.html` — **Session 31 WIRED**: Supabase live. borrow_from_pool after 7-point SIINDEX pre-flight. repay_loan on partial/full repay. Live collateral health gauge. T2/T3 thresholds displayed.
 - ✅ `siindex-lending-monitor` SKILL — **Session 31 NEW**: Daily accrual, 15-min health check, T2 alert protocol, T3 auto-liquidation rules, weekly pool report to AJ. At `/SIINDEX-Skills/siindex-lending-monitor/SKILL.md`
+
+### Data Sovereignty Module — Complete (Session 32)
+> Section 8 canonized. All 7 screens built. 98/2 enforced throughout.
+
+- ✅ `data-sovereignty-hub.html` — **Session 32 NEW**: Master hub for Section 8. Hero "Your Data. Your Rules. Your Money." 4 stats grid (breaches / INDX earned / revocations / NFT). 6 feature tiles linking all sub-screens. 98/2 Law banner. SIINDEX status bar.
+- ✅ `data-breach-claim.html` — **Session 32 NEW**: T1/T2/T3/T4 breach tiers (5/15/50/200 INDX). HaveIBeenPwned-style scanner. 4 demo breach results (Optus T3, LinkedIn T2, Facebook T2, Adobe T1 pre-claimed). 3-step ZK-proof claim animation. 98/2 on every claim. GDPR Art.82 / CCPA §1798.150 / AU Privacy Act legal framing.
+- ✅ `data-consent-ledger.html` — **Session 32 NEW**: 14 companies, colour-coded by risk. Filter tabs (All / High / Medium / Low / Revoked). Expandable company cards with data-chip breakdown. Revoke → data-revocation.html with ?company= param. Add Company bottom sheet.
+- ✅ `data-revocation.html` — **Session 32 NEW**: 3-step composer (Select Company → Data Scope → Certificate). ?company= URL param auto-selects and advances. Sovereign Data Revocation Certificate with ZK-proof anchor (TX hash). 4-step send animation. Tracking tab with escalation logic → data-breach-claim.html on overdue. GDPR Art.17 / CCPA §1798.105 / AU Privacy Act 1988 s.17.
+- ✅ `data-royalty.html` — **Session 32 NEW**: 4 hero stats (23× sold / 12.40 INDX / last sale / next payout). Withdraw flow with 98/2 breakdown. 10-item royalty history (Facebook, Telstra, Google, etc.). CSS data breakdown bars (Behavioural 35%, Location 26%, Financial 17%, Health 13%, Demographics 9%).
+- ✅ `data-sovereign-nft.html` — **Session 32 NEW**: Sovereign Data NFT mint screen. Holographic CSS animation. 3 licence tiers (View free / Use 5 INDX/month / Resell 25 INDX/month + 20% royalty). Active licence tracking. 4-step mint animation. Add Licence bottom sheet. Earnings summary.
+- ✅ `data-marketplace.html` — **Session 32 NEW**: Active data buy-requests marketplace. 4 verified institutional buyers (World Bank 98% match / Auckland University 94% / GSMA Foundation 87% / WHO Regional Office 71%). 98/2 on every sale. Confirm sheet with anonymisation guarantee, on-chain logging notice, and withdraw-consent clause. "My Sales" tab with active sale tracking and consent withdrawal.
 
 ### L99 Launch Target
 **24 September 2026**

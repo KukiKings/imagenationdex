@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Data Consent Ledger · IN$DEX</title>
+<style>
+:root{
+  --cyan:#00D4FF;--blue:#2B35D8;--purple:#8B3FE8;--black:#090A10;--green:#00E5A0;
+  --gold:#FFB800;--red:#FF4D6D;--surface:#12141F;--surface2:#1A1D2E;--surface3:#22263A;
+  --border:rgba(255,255,255,0.07);--text:#F0F2FF;--text2:#A0A8C8;--muted:#5A6080;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none;}
+.shell{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;padding-bottom:80px;}
+
+.topbar{display:flex;align-items:center;gap:12px;padding:16px 20px 12px;position:sticky;top:0;background:var(--black);z-index:50;border-bottom:1px solid var(--border);}
+.back-btn{width:36px;height:36px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;flex-shrink:0;text-decoration:none;color:var(--text);}
+.topbar-title{font-size:17px;font-weight:800;}
+.add-btn{margin-left:auto;padding:8px 14px;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;border-radius:20px;color:#000;font-size:12px;font-weight:800;cursor:pointer;}
+
+/* SUMMARY */
+.summary-bar{margin:16px 24px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;}
+.sb-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.sb-title{font-size:15px;font-weight:800;}
+.sb-sync{font-size:11px;color:var(--muted);}
+.risk-chips{display:flex;gap:8px;}
+.risk-chip{font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;}
+.risk-chip.high{background:rgba(255,77,109,0.12);color:var(--red);border:1px solid rgba(255,77,109,0.2);}
+.risk-chip.medium{background:rgba(255,184,0,0.1);color:var(--gold);border:1px solid rgba(255,184,0,0.2);}
+.risk-chip.low{background:rgba(0,229,160,0.1);color:var(--green);border:1px solid rgba(0,229,160,0.2);}
+
+/* FILTER TABS */
+.filter-tabs{display:flex;gap:6px;padding:0 24px 16px;overflow-x:auto;scrollbar-width:none;}
+.filter-tabs::-webkit-scrollbar{display:none;}
+.ftab{padding:7px 14px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;background:var(--surface2);border:1px solid var(--border);color:var(--text2);transition:all 0.2s;}
+.ftab.active{background:linear-gradient(135deg,rgba(0,212,255,0.15),rgba(139,63,232,0.1));border-color:var(--cyan);color:var(--cyan);}
+
+/* COMPANY LIST */
+.list-section{padding:0 24px;}
+.list-group-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;padding-top:4px;}
+
+.company-card{background:var(--surface2);border:1.5px solid var(--border);border-radius:16px;margin-bottom:10px;overflow:hidden;cursor:pointer;transition:border-color 0.2s;}
+.company-card.high{border-left:3px solid var(--red);}
+.company-card.medium{border-left:3px solid var(--gold);}
+.company-card.low{border-left:3px solid var(--green);}
+.company-card.revoked{opacity:0.5;border-left:3px solid var(--muted);}
+.company-card:active{opacity:0.85;}
+
+.cc-main{display:flex;align-items:center;gap:12px;padding:14px 14px 14px 16px;}
+.cc-icon{font-size:26px;width:40px;text-align:center;flex-shrink:0;}
+.cc-body{flex:1;}
+.cc-name{font-size:15px;font-weight:800;margin-bottom:2px;}
+.cc-name.revoked{text-decoration:line-through;color:var(--muted);}
+.cc-meta{font-size:11px;color:var(--text2);}
+.cc-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+.risk-badge{font-size:10px;font-weight:700;padding:3px 7px;border-radius:20px;}
+.rb-high{background:rgba(255,77,109,0.12);color:var(--red);}
+.rb-medium{background:rgba(255,184,0,0.1);color:var(--gold);}
+.rb-low{background:rgba(0,229,160,0.1);color:var(--green);}
+.rb-revoked{background:rgba(90,96,128,0.15);color:var(--muted);}
+.cc-active{font-size:10px;color:var(--muted);}
+
+.cc-tags{display:flex;flex-wrap:wrap;gap:5px;padding:0 14px 12px 16px;}
+.tag{font-size:10px;padding:2px 7px;background:var(--surface3);border-radius:10px;color:var(--text2);}
+.tag.breach{background:rgba(255,77,109,0.08);color:var(--red);}
+.tag.sold{background:rgba(255,184,0,0.08);color:var(--gold);}
+.tag.tracking{background:rgba(139,63,232,0.08);color:#B47FFF;}
+
+.cc-detail{display:none;padding:0 14px 14px 16px;border-top:1px solid var(--border);}
+.cc-detail.open{display:block;}
+.detail-label{font-size:11px;color:var(--muted);margin-top:10px;margin-bottom:4px;text-transform:uppercase;font-weight:700;letter-spacing:0.05em;}
+.data-chips{display:flex;flex-wrap:wrap;gap:5px;}
+.data-chip{font-size:11px;padding:3px 8px;background:var(--surface3);border-radius:10px;color:var(--text2);}
+.detail-actions{display:flex;gap:8px;margin-top:12px;}
+.revoke-btn{flex:1;padding:11px;border-radius:12px;background:linear-gradient(135deg,var(--red),var(--purple));border:none;color:#fff;font-size:13px;font-weight:800;cursor:pointer;}
+.view-breach-btn{flex:1;padding:11px;border-radius:12px;background:var(--surface3);border:1px solid var(--border);color:var(--cyan);font-size:13px;font-weight:700;cursor:pointer;}
+
+/* ADD SHEET */
+.overlay{position:fixed;inset:0;background:rgba(9,10,16,0.92);z-index:200;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+.overlay.show{opacity:1;pointer-events:all;}
+.sheet{background:var(--surface);border-radius:24px 24px 0 0;padding:24px;width:100%;max-width:430px;margin:0 auto;max-height:85vh;overflow-y:auto;}
+.sheet-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;}
+.sheet-title{font-size:18px;font-weight:800;margin-bottom:6px;}
+.sheet-sub{font-size:13px;color:var(--muted);margin-bottom:20px;}
+.form-label{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:7px;display:block;}
+.form-input{width:100%;padding:14px 16px;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;font-family:inherit;outline:none;margin-bottom:14px;}
+.form-input:focus{border-color:var(--cyan);}
+.cat-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px;}
+.cat-chip{padding:7px 12px;border-radius:20px;font-size:12px;font-weight:700;background:var(--surface2);border:1px solid var(--border);color:var(--text2);cursor:pointer;}
+.cat-chip.selected{background:rgba(0,212,255,0.1);border-color:var(--cyan);color:var(--cyan);}
+.sheet-btn{width:100%;padding:16px;border-radius:14px;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;color:#000;font-size:16px;font-weight:800;cursor:pointer;}
+
+/* SIINDEX BAR */
+.siindex-bar{margin:16px 24px 0;background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:12px 16px;display:flex;align-items:flex-start;gap:10px;}
+.si-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;margin-top:4px;animation:sipulse 2s ease-in-out infinite;}
+@keyframes sipulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+.si-text{font-size:12px;color:var(--text2);line-height:1.5;}
+
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--surface);border-top:1px solid var(--border);display:flex;z-index:100;}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 14px;text-decoration:none;}
+.nav-icon{font-size:20px;}
+.nav-label{font-size:10px;font-weight:700;color:var(--muted);}
+.nav-item.active .nav-label{color:var(--cyan);}
+
+.toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(20px);max-width:320px;width:calc(100% - 40px);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:13px;color:var(--text);text-align:center;opacity:0;transition:opacity 0.3s,transform 0.3s;z-index:400;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <a class="back-btn" href="data-sovereignty-hub.html">←</a>
+    <div class="topbar-title">Consent Ledger</div>
+    <button class="add-btn" onclick="showAddSheet()">+ Add</button>
+  </div>
+
+  <div class="summary-bar">
+    <div class="sb-row">
+      <div class="sb-title">14 companies hold your data</div>
+      <div class="sb-sync">Synced 2h ago</div>
+    </div>
+    <div class="risk-chips">
+      <div class="risk-chip high">3 High Risk</div>
+      <div class="risk-chip medium">6 Medium</div>
+      <div class="risk-chip low">4 Low</div>
+      <div class="risk-chip" style="background:rgba(90,96,128,0.15);color:var(--muted);border:1px solid var(--border);">1 Revoked</div>
+    </div>
+  </div>
+
+  <div class="filter-tabs">
+    <div class="ftab active" onclick="filterCards('all',this)">All (14)</div>
+    <div class="ftab" onclick="filterCards('high',this)">High Risk (3)</div>
+    <div class="ftab" onclick="filterCards('medium',this)">Medium (6)</div>
+    <div class="ftab" onclick="filterCards('low',this)">Low (4)</div>
+    <div class="ftab" onclick="filterCards('revoked',this)">Revoked (1)</div>
+  </div>
+
+  <div class="list-section">
+
+    <div class="list-group-label" data-group="high">⚠️ High Risk</div>
+
+    <!-- TELSTRA -->
+    <div class="company-card high" data-risk="high" onclick="toggleDetail(this)">
+      <div class="cc-main">
+        <div class="cc-icon">📱</div>
+        <div class="cc-body">
+          <div class="cc-name">Telstra</div>
+          <div class="cc-meta">Telco · Granted Jan 2018 · Active 3 days ago</div>
+        </div>
+        <div class="cc-right">
+          <div class="risk-badge rb-high">HIGH</div>
+          <div class="cc-active">↗ 3d ago</div>
+        </div>
+      </div>
+      <div class="cc-tags">
+        <span class="tag">Phone</span><span class="tag">Address</span><span class="tag">Usage</span><span class="tag">Payment</span>
+        <span class="tag breach">Breach 2022</span><span class="tag sold">Sold to 3rd parties</span>
+      </div>
+      <div class="cc-detail">
+        <div class="detail-label">Data they hold</div>
+        <div class="data-chips">
+          <span class="data-chip">📱 Phone number</span><span class="data-chip">🏠 Home address</span>
+          <span class="data-chip">📊 Usage patterns</span><span class="data-chip">💳 Payment history</span>
+          <span class="data-chip">🪪 Account ID</span>
+        </div>
+        <div class="detail-actions">
+          <button class="revoke-btn" onclick="revokeCompany('Telstra',event)">Revoke Access →</button>
+          <button class="view-breach-btn" onclick="window.location.href='data-breach-claim.html'">View Breach</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- FACEBOOK -->
+    <div class="company-card high" data-risk="high" onclick="toggleDetail(this)">
+      <div class="cc-main">
+        <div class="cc-icon">👥</div>
+        <div class="cc-body">
+          <div class="cc-name">Facebook / Meta</div>
+          <div class="cc-meta">Social · Granted Mar 2015 · Active today</div>
+        </div>
+        <div class="cc-right">
+          <div class="risk-badge rb-high">HIGH</div>
+          <div class="cc-active">↗ Today</div>
+        </div>
+      </div>
+      <div class="cc-tags">
+        <span class="tag">Email</span><span class="tag">Phone</span><span class="tag">Location</span><span class="tag">Friends</span>
+        <span class="tag tracking">Continuous tracking</span><span class="tag sold">Ad profiling</span>
+      </div>
+      <div class="cc-detail">
+        <div class="detail-label">Data they hold</div>
+        <div class="data-chips">
+          <span class="data-chip">📧 Email</span><span class="data-chip">📱 Phone</span>
+          <span class="data-chip">📍 Location history</span><span class="data-chip">👥 Friend network</span>
+          <span class="data-chip">🌐 Browsing (off-platform)</span><span class="data-chip">❤️ Interests + reactions</span>
+        </div>
+        <div class="detail-actions">
+          <button class="revoke-btn" onclick="revokeCompany('Facebook',event)">Revoke Access →</button>
+          <button class="view-breach-btn" onclick="window.location.href='data-breach-claim.html'">View Breach</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GOOGLE -->
+    <div class="company-card high" data-risk="high" onclick="toggleDetail(this)">
+      <div class="cc-main">
+        <div class="cc-icon">🔍</div>
+        <div class="cc-body">
+          <div class="cc-name">Google</div>
+          <div class="cc-meta">Tech · Granted Aug 2012 · Active today</div>
+        </div>
+        <div class="cc-right">
+          <div class="risk-badge rb-high">HIGH</div>
+          <div class="cc-active">↗ Today</div>
+        </div>
+      </div>
+      <div class="cc-tags">
+        <span class="tag">Email</span><span class="tag">Location</span><span class="tag">Search</span>
+        <span class="tag tracking">Cross-platform tracking</span>
+      </div>
+      <div class="cc-detail">
+        <div class="detail-label">Data they hold</div>
+        <div class="data-chips">
+          <span class="data-chip">📧 Gmail</span><span class="data-chip">📍 Location history</span>
+          <span class="data-chip">🔍 Search history</span><span class="data-chip">📱 Device IDs</span>
+          <span class="data-chip">🌐 Browsing history</span><span class="data-chip">🎥 YouTube history</span>
+        </div>
+        <div class="detail-actions">
+          <button class="revoke-btn" onclick="revokeCompany('Google',event)">Revoke Access →</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="list-group-label" data-group="medium">⚡ Medium Risk</div>
+
+    <!-- CBA -->
+    <div class="company-card medium" data-risk="medium" onclick="toggleDetail(this)">
+      <div class="cc-main">
+        <div class="cc-icon">🏦</div>
+        <div class="cc-body"><div class="cc-name">Commonwealth Bank</div><div class="cc-meta">Banking · Feb 2019 · 1 week ago</div></div>
+        <div class="cc-right"><div class="risk-badge rb-medium">MEDIUM</div></div>
+      </div>
+      <div class="cc-tags"><span class="tag">Account</span><span class="tag">Transactions</span><span class="tag">Credit score</span></div>
+      <div class="cc-detail">
+        <div class="detail-label">Data they hold</div>
+        <div class="data-chips"><span class="data-chip">💳 Account details</span><span class="data-chip">💰 Transaction history</span><span class="data-chip">📊 Credit score</span><span class="data-chip">🏠 Address</span></div>
+        <div class="detail-actions"><button class="revoke-btn" onclick="revokeCompany('Commonwealth Bank',event)">Revoke Access →</button></div>
+      </div>
+    </div>
+
+    <!-- WOOLWORTHS -->
+    <div class="company-card medium" data-risk="medium" onclick="toggleDetail(this)">
+      <div class="cc-main">
+        <div class="cc-icon">🛒</div>
+        <div class="cc-body"><div class="cc-name">Woolworths Rewards</div><div class="cc-meta">Retail · Jun 2020 · 2 weeks ago</div></div>
+        <div class="cc-right"><div class="risk-badge rb-medium">MEDIUM</div></div>
+      </div>
+      <div class="cc-tags"><span class="tag">Purchase history</span><span class="tag">Location</span><span class="tag sold">Sold to FMCG brands</span></div>
+      <div class="cc-detail">
+        <div class="detail-label">Data they hold</div>
+        <div class="data-chips"><span class="data-chip">🛒 Purchase history</span><span class="data-chip">📍 Store location</span><span class="data-chip">📧 Email</span><span class="data-chip">🍎 Dietary preferences</span></div>
+        <div class="detail-actions"><button class="revoke-btn" onclick="revokeCompany('Woolworths',event)">Revoke Access →</button></div>
+      </div>
+    </div>
+
+    <!-- MEDIBANK -->
+    <div class="company-card medium" data-risk="medium" onclick="toggleDetail(this)">
+      <div class="cc-main">
+        <div class="cc-icon">🏥</div>
+        <div class="cc-body"><div class="cc-name">Medibank</div><div class="cc-meta">Health Insurance · Oct 2017 · 1 month ago</div></div>
+        <div class="cc-right"><div class="risk-badge rb-medium">MEDIUM</div></div>
+      </div>
+      <div class="cc-tags"><span class="tag">Health records</span><span class="tag">Claims</span><span class="tag breach">Breach 2022</span></div>
+      <div class="cc-detail">
+        <div class="detail-label">Data they hold</div>
+        <div class="data-chips"><span class="data-chip">🏥 Health records</span><span class="data-chip">💊 Claims history</span><span class="data-chip">🪪 Medicare number</span><span class="data-chip">📧 Email</span></div>
+        <div class="detail-actions">
+          <button class="revoke-btn" onclick="revokeCompany('Medibank',event)">Revoke Access →</button>
+          <button class="view-breach-btn" onclick="window.location.href='data-breach-claim.html'">View Breach</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- OPTUS -->
+    <div class="company-card medium" data-risk="medium" onclick="toggleDetail(this)">
+      <div class="cc-main">
+        <div class="cc-icon">📡</div>
+        <div class="cc-body"><div class="cc-name">Optus</div><div class="cc-meta">Telco · Apr 2016 · 6 months ago</div></div>
+        <div class="cc-right"><div class="risk-badge rb-medium">MEDIUM</div></div>
+      </div>
+      <div class="cc-tags"><span class="tag">Phone</span><span class="tag">ID</span><span class="tag">Address</span><span class="tag breach">Major breach 2022</span></div>
+      <div class="cc-detail">
+        <div class="detail-label">Data they hold</div>
+        <div class="data-chips"><span class="data-chip">📱 Phone</span><span class="data-chip">🪪 Driver licence</span><span class="data-chip">📅 DOB</span><span class="data-chip">🏠 Address</span></div>
+        <div class="detail-actions">
+          <button class="revoke-btn" onclick="revokeCompany('Optus',event)">Revoke Access →</button>
+          <button class="view-breach-btn" onclick="window.location.href='data-breach-claim.html'">File Claim</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SPOTIFY -->
+    <div class="company-card medium" data-risk="medium" onclick="toggleDetail(this)">
+      <div class="cc-main">
+        <div class="cc-icon">🎵</div>
+        <div class="cc-body"><div class="cc-name">Spotify</div><div class="cc-meta">Music · Nov 2018 · Yesterday</div></div>
+        <div class="cc-right"><div class="risk-badge rb-medium">MEDIUM</div></div>
+      </div>
+      <div class="cc-tags"><span class="tag">Listening habits</span><span class="tag">Location</span><span class="tag sold">Sold to record labels</span></div>
+      <div class="cc-detail">
+        <div class="detail-label">Data they hold</div>
+        <div class="data-chips"><span class="data-chip">🎵 Listening history</span><span class="data-chip">📍 Location</span><span class="data-chip">📧 Email</span><span class="data-chip">💳 Payment</span></div>
+        <div class="detail-actions"><button class="revoke-btn" onclick="revokeCompany('Spotify',event)">Revoke Access →</button></div>
+      </div>
+    </div>
+
+    <!-- AMAZON -->
+    <div class="company-card medium" data-risk="medium" onclick="toggleDetail(this)">
+      <div class="cc-main">
+        <div class="cc-icon">📦</div>
+        <div class="cc-body"><div class="cc-name">Amazon</div><div class="cc-meta">Retail · Jan 2020 · 5 days ago</div></div>
+        <div class="cc-right"><div class="risk-badge rb-medium">MEDIUM</div></div>
+      </div>
+      <div class="cc-tags"><span class="tag">Purchase history</span><span class="tag">Address</span><span class="tag tracking">Ad profiling</span></div>
+      <div class="cc-detail">
+        <div class="detail-label">Data they hold</div>
+        <div class="data-chips"><span class="data-chip">🛒 Purchase history</span><span class="data-chip">🏠 Addresses</span><span class="data-chip">💳 Payment</span><span class="data-chip">🌐 Browsing</span></div>
+        <div class="detail-actions"><button class="revoke-btn" onclick="revokeCompany('Amazon',event)">Revoke Access →</button></div>
+      </div>
+    </div>
+
+    <div class="list-group-label" data-group="low">✅ Low Risk</div>
+
+    <div class="company-card low" data-risk="low" onclick="toggleDetail(this)">
+      <div class="cc-main"><div class="cc-icon">🍎</div><div class="cc-body"><div class="cc-name">Apple</div><div class="cc-meta">Tech · Sep 2014 · 1 week ago</div></div><div class="cc-right"><div class="risk-badge rb-low">LOW</div></div></div>
+      <div class="cc-tags"><span class="tag">Device ID</span><span class="tag">App purchases</span></div>
+      <div class="cc-detail"><div class="detail-label">Data they hold</div><div class="data-chips"><span class="data-chip">📱 Device ID</span><span class="data-chip">🛒 App Store purchases</span></div><div class="detail-actions"><button class="revoke-btn" onclick="revokeCompany('Apple',event)">Revoke Access →</button></div></div>
+    </div>
+
+    <div class="company-card low" data-risk="low" onclick="toggleDetail(this)">
+      <div class="cc-main"><div class="cc-icon">🎬</div><div class="cc-body"><div class="cc-name">Netflix</div><div class="cc-meta">Streaming · May 2019 · Yesterday</div></div><div class="cc-right"><div class="risk-badge rb-low">LOW</div></div></div>
+      <div class="cc-tags"><span class="tag">Email</span><span class="tag">Viewing history</span></div>
+      <div class="cc-detail"><div class="detail-label">Data they hold</div><div class="data-chips"><span class="data-chip">📧 Email</span><span class="data-chip">🎬 Viewing history</span><span class="data-chip">💳 Payment</span></div><div class="detail-actions"><button class="revoke-btn" onclick="revokeCompany('Netflix',event)">Revoke Access →</button></div></div>
+    </div>
+
+    <div class="company-card low" data-risk="low" onclick="toggleDetail(this)">
+      <div class="cc-main"><div class="cc-icon">🚗</div><div class="cc-body"><div class="cc-name">Uber</div><div class="cc-meta">Transport · Dec 2017 · 2 weeks ago</div></div><div class="cc-right"><div class="risk-badge rb-low">LOW</div></div></div>
+      <div class="cc-tags"><span class="tag">Location</span><span class="tag">Trip history</span><span class="tag">Payment</span></div>
+      <div class="cc-detail"><div class="detail-label">Data they hold</div><div class="data-chips"><span class="data-chip">📍 Trip locations</span><span class="data-chip">🕐 Trip history</span><span class="data-chip">💳 Payment</span></div><div class="detail-actions"><button class="revoke-btn" onclick="revokeCompany('Uber',event)">Revoke Access →</button></div></div>
+    </div>
+
+    <div class="company-card low" data-risk="low" onclick="toggleDetail(this)">
+      <div class="cc-main"><div class="cc-icon">🏠</div><div class="cc-body"><div class="cc-name">Airbnb</div><div class="cc-meta">Travel · Jul 2021 · 3 months ago</div></div><div class="cc-right"><div class="risk-badge rb-low">LOW</div></div></div>
+      <div class="cc-tags"><span class="tag">ID</span><span class="tag">Address</span><span class="tag">Reviews</span></div>
+      <div class="cc-detail"><div class="detail-label">Data they hold</div><div class="data-chips"><span class="data-chip">🪪 Government ID</span><span class="data-chip">💳 Payment</span><span class="data-chip">📍 Stay locations</span></div><div class="detail-actions"><button class="revoke-btn" onclick="revokeCompany('Airbnb',event)">Revoke Access →</button></div></div>
+    </div>
+
+    <div class="list-group-label" data-group="revoked">🚫 Revoked</div>
+
+    <div class="company-card revoked" data-risk="revoked" onclick="toggleDetail(this)">
+      <div class="cc-main"><div class="cc-icon">👻</div><div class="cc-body"><div class="cc-name cc-name revoked">Snapchat</div><div class="cc-meta">Revoked 14 Jan 2025 · Certificate on-chain ✓</div></div><div class="cc-right"><div class="risk-badge rb-revoked">REVOKED</div></div></div>
+      <div class="cc-detail"><div class="detail-label">Revocation status</div><div class="data-chips"><span class="data-chip">✓ Certificate anchored on Solana</span><span class="data-chip">✓ Sent to Snapchat compliance</span></div><div class="detail-actions"><button class="view-breach-btn" style="flex:1" onclick="window.location.href='data-revocation.html'">View Certificate</button></div></div>
+    </div>
+
+    <div class="siindex-bar">
+      <div class="si-dot"></div>
+      <div class="si-text"><strong>SIINDEX:</strong> Consent ledger active. 3 high-risk companies detected. Snapchat revocation confirmed on-chain. Recommend reviewing Medibank — breach 2022 unresolved. Standing by.</div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ADD COMPANY SHEET -->
+<div class="overlay" id="addOverlay" onclick="hideAddSheet(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Add Company to Ledger</div>
+    <div class="sheet-sub">Record who holds your data. You control the ledger.</div>
+    <label class="form-label">Company name</label>
+    <input type="text" class="form-input" id="addName" placeholder="e.g. Telstra, ANZ, Woolworths">
+    <label class="form-label">Data categories they hold</label>
+    <div class="cat-chips" id="catChips">
+      <div class="cat-chip" onclick="toggleCat(this)">📧 Email</div>
+      <div class="cat-chip" onclick="toggleCat(this)">📱 Phone</div>
+      <div class="cat-chip" onclick="toggleCat(this)">🏠 Address</div>
+      <div class="cat-chip" onclick="toggleCat(this)">💳 Financial</div>
+      <div class="cat-chip" onclick="toggleCat(this)">🏥 Health</div>
+      <div class="cat-chip" onclick="toggleCat(this)">🪪 Identity</div>
+      <div class="cat-chip" onclick="toggleCat(this)">📍 Location</div>
+      <div class="cat-chip" onclick="toggleCat(this)">🌐 Browsing</div>
+      <div class="cat-chip" onclick="toggleCat(this)">📸 Biometric</div>
+    </div>
+    <button class="sheet-btn" onclick="addCompany()">Add to My Ledger →</button>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <a class="nav-item" href="citizen-dashboard.html"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></a>
+  <a class="nav-item active" href="data-sovereignty-hub.html"><span class="nav-icon">⚔️</span><span class="nav-label">Sovereignty</span></a>
+  <a class="nav-item" href="data-vault.html"><span class="nav-icon">🔐</span><span class="nav-label">Vault</span></a>
+  <a class="nav-item" href="data-marketplace.html"><span class="nav-icon">🏪</span><span class="nav-label">Market</span></a>
+  <a class="nav-item" href="data-breach-claim.html"><span class="nav-icon">🛡️</span><span class="nav-label">Protect</span></a>
+</nav>
+
+<div class="toast" id="toast"></div>
+<script>
+function toggleDetail(card){
+  const d=card.querySelector('.cc-detail');
+  d.classList.toggle('open');
+}
+function filterCards(risk,tab){
+  document.querySelectorAll('.ftab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+  document.querySelectorAll('.company-card').forEach(c=>{
+    c.style.display = (risk==='all'||c.dataset.risk===risk) ? 'block' : 'none';
+  });
+  document.querySelectorAll('.list-group-label').forEach(g=>{
+    g.style.display = (risk==='all'||g.dataset.group===risk) ? 'block' : 'none';
+  });
+}
+function revokeCompany(name,e){
+  e.stopPropagation();
+  window.location.href='data-revocation.html?company='+encodeURIComponent(name);
+}
+function showAddSheet(){document.getElementById('addOverlay').classList.add('show');}
+function hideAddSheet(e){if(e.target.id==='addOverlay')document.getElementById('addOverlay').classList.remove('show');}
+function toggleCat(chip){chip.classList.toggle('selected');}
+function addCompany(){
+  const name=document.getElementById('addName').value.trim();
+  if(!name){showToast('Enter company name');return;}
+  showToast('✅ '+name+' added to your Consent Ledger. Anchoring to Solana...');
+  setTimeout(()=>document.getElementById('addOverlay').classList.remove('show'),1500);
+}
+let toastTimer;
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),3200);}
+</script>
+</body>
+</html>

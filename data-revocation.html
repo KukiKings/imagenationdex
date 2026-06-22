@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Data Revocation · IN$DEX</title>
+<style>
+:root{
+  --cyan:#00D4FF;--blue:#2B35D8;--purple:#8B3FE8;--black:#090A10;--green:#00E5A0;
+  --gold:#FFB800;--red:#FF4D6D;--surface:#12141F;--surface2:#1A1D2E;--surface3:#22263A;
+  --border:rgba(255,255,255,0.07);--text:#F0F2FF;--text2:#A0A8C8;--muted:#5A6080;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none;}
+.shell{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;padding-bottom:80px;}
+
+.topbar{display:flex;align-items:center;gap:12px;padding:16px 20px 12px;position:sticky;top:0;background:var(--black);z-index:50;border-bottom:1px solid var(--border);}
+.back-btn{width:36px;height:36px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;flex-shrink:0;text-decoration:none;color:var(--text);}
+.topbar-title{font-size:17px;font-weight:800;}
+.tab-toggle{margin-left:auto;display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:2px;}
+.ttab{padding:5px 12px;border-radius:18px;font-size:11px;font-weight:700;cursor:pointer;color:var(--muted);}
+.ttab.active{background:var(--surface3);color:var(--cyan);}
+
+/* STEPS */
+.step-indicator{display:flex;align-items:center;padding:16px 24px;gap:0;}
+.si-step{display:flex;align-items:center;gap:6px;}
+.si-num{width:24px;height:24px;border-radius:50%;background:var(--surface3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--muted);flex-shrink:0;}
+.si-num.active{background:linear-gradient(135deg,var(--cyan),var(--purple));color:#000;}
+.si-num.done{background:var(--green);color:#000;}
+.si-label{font-size:11px;color:var(--muted);font-weight:700;}
+.si-label.active{color:var(--cyan);}
+.si-line{flex:1;height:1px;background:var(--border);margin:0 8px;}
+
+/* SCREENS */
+.screen{display:none;padding:0 24px;}
+.screen.active{display:block;}
+
+/* FORM */
+.form-label{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;display:block;margin-top:16px;}
+.form-input{width:100%;padding:14px 16px;background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;color:var(--text);font-size:15px;font-family:inherit;outline:none;transition:border-color 0.2s;margin-bottom:4px;}
+.form-input:focus{border-color:var(--cyan);}
+.form-input::placeholder{color:var(--muted);}
+select.form-input{appearance:none;cursor:pointer;}
+
+.company-list-select{margin-bottom:8px;}
+.company-option{display:flex;align-items:center;gap:12px;padding:13px 16px;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;cursor:pointer;margin-bottom:6px;transition:all 0.15s;}
+.company-option:active,.company-option.selected{border-color:var(--cyan);background:rgba(0,212,255,0.05);}
+.co-icon{font-size:20px;width:28px;text-align:center;}
+.co-name{font-size:14px;font-weight:700;flex:1;}
+.co-risk{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;}
+.risk-high{background:rgba(255,77,109,0.1);color:var(--red);}
+.risk-medium{background:rgba(255,184,0,0.1);color:var(--gold);}
+
+/* DATA CATEGORIES */
+.cat-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.cat-chip{padding:8px 14px;border-radius:20px;font-size:13px;font-weight:700;background:var(--surface2);border:1.5px solid var(--border);color:var(--text2);cursor:pointer;transition:all 0.15s;}
+.cat-chip.selected{background:rgba(255,77,109,0.1);border-color:var(--red);color:var(--red);}
+.cat-chip.all-data.selected{background:rgba(255,77,109,0.15);border-color:var(--red);}
+.warning-note{background:rgba(255,77,109,0.06);border:1px solid rgba(255,77,109,0.15);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:16px;display:none;}
+.warning-note.show{display:block;}
+
+/* CERTIFICATE PREVIEW */
+.cert-preview{background:var(--surface2);border:1.5px solid rgba(0,212,255,0.2);border-radius:16px;padding:18px;margin-bottom:16px;font-family:'Courier New',monospace;font-size:11px;color:var(--text2);line-height:1.8;}
+.cert-header{color:var(--cyan);font-weight:700;font-size:12px;margin-bottom:6px;}
+.cert-divider{border:none;border-top:1px solid rgba(0,212,255,0.15);margin:8px 0;}
+.cert-field{display:flex;gap:8px;}
+.cert-key{color:var(--muted);min-width:70px;}
+.cert-val{color:var(--text);}
+.cert-body-text{color:var(--text2);margin-top:10px;font-size:10px;line-height:1.7;}
+
+/* BUTTONS */
+.primary-btn{width:100%;padding:17px;border-radius:14px;background:linear-gradient(135deg,var(--red),var(--purple));border:none;color:#fff;font-size:16px;font-weight:800;cursor:pointer;margin-top:8px;}
+.secondary-btn{width:100%;padding:15px;border-radius:14px;background:var(--surface2);border:1.5px solid var(--border);color:var(--text2);font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;}
+
+/* SENDING OVERLAY */
+.sending-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.96);z-index:300;display:none;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;}
+.sending-overlay.show{display:flex;}
+.send-ring{width:60px;height:60px;border:3px solid var(--surface3);border-top-color:var(--red);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 24px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.send-step{font-size:14px;color:var(--muted);margin-bottom:8px;transition:color 0.3s;}
+.send-step.active{color:var(--text);}
+.send-step.done{color:var(--green);}
+
+.success-card{display:none;text-align:center;}
+.success-card.show{display:block;}
+.success-ring{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,var(--red),var(--purple));display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 20px;}
+.success-title{font-size:24px;font-weight:900;margin-bottom:8px;}
+.success-sub{font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:24px;}
+.cert-hash{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:11px;color:var(--muted);font-family:monospace;margin-bottom:20px;}
+
+/* TRACKING TAB */
+.tracking-list{padding:0 24px;}
+.track-card{background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;}
+.tc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;}
+.tc-company{font-size:15px;font-weight:800;}
+.tc-date{font-size:11px;color:var(--muted);}
+.tc-status{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;}
+.status-ack{background:rgba(0,229,160,0.1);color:var(--green);}
+.status-overdue{background:rgba(255,77,109,0.1);color:var(--red);}
+.status-sent{background:rgba(0,212,255,0.1);color:var(--cyan);}
+.tc-scope{font-size:12px;color:var(--text2);margin-bottom:10px;}
+.escalate-btn{width:100%;padding:10px;border-radius:10px;background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.2);color:var(--red);font-size:13px;font-weight:700;cursor:pointer;}
+
+/* LEGAL */
+.legal-block{margin:16px 24px 0;padding:14px;background:rgba(43,53,216,0.06);border:1px solid rgba(43,53,216,0.15);border-radius:14px;font-size:11px;color:var(--text2);line-height:1.6;}
+.legal-block strong{color:var(--cyan);}
+
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--surface);border-top:1px solid var(--border);display:flex;z-index:100;}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 14px;text-decoration:none;}
+.nav-icon{font-size:20px;}
+.nav-label{font-size:10px;font-weight:700;color:var(--muted);}
+.nav-item.active .nav-label{color:var(--cyan);}
+
+.toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(20px);max-width:320px;width:calc(100% - 40px);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:13px;color:var(--text);text-align:center;opacity:0;transition:opacity 0.3s,transform 0.3s;z-index:400;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <a class="back-btn" href="data-consent-ledger.html">←</a>
+    <div class="topbar-title">Revocation Protocol</div>
+    <div class="tab-toggle">
+      <div class="ttab active" onclick="showView('compose',this)">New</div>
+      <div class="ttab" onclick="showView('tracking',this)">Sent (3)</div>
+    </div>
+  </div>
+
+  <!-- COMPOSE VIEW -->
+  <div id="composeView">
+
+    <div class="step-indicator">
+      <div class="si-step">
+        <div class="si-num active" id="sn1">1</div>
+        <div class="si-label active" id="sl1">Company</div>
+      </div>
+      <div class="si-line"></div>
+      <div class="si-step">
+        <div class="si-num" id="sn2">2</div>
+        <div class="si-label" id="sl2">Data Scope</div>
+      </div>
+      <div class="si-line"></div>
+      <div class="si-step">
+        <div class="si-num" id="sn3">3</div>
+        <div class="si-label" id="sl3">Certificate</div>
+      </div>
+    </div>
+
+    <!-- STEP 1 -->
+    <div class="screen active" id="step1">
+      <label class="form-label">Select company</label>
+      <div class="company-list-select">
+        <div class="company-option" onclick="selectCompany(this,'Telstra','📱','high')">
+          <div class="co-icon">📱</div><div class="co-name">Telstra</div><div class="co-risk risk-high">HIGH</div>
+        </div>
+        <div class="company-option" onclick="selectCompany(this,'Facebook / Meta','👥','high')">
+          <div class="co-icon">👥</div><div class="co-name">Facebook / Meta</div><div class="co-risk risk-high">HIGH</div>
+        </div>
+        <div class="company-option" onclick="selectCompany(this,'Google','🔍','high')">
+          <div class="co-icon">🔍</div><div class="co-name">Google</div><div class="co-risk risk-high">HIGH</div>
+        </div>
+        <div class="company-option" onclick="selectCompany(this,'Commonwealth Bank','🏦','medium')">
+          <div class="co-icon">🏦</div><div class="co-name">Commonwealth Bank</div><div class="co-risk risk-medium">MEDIUM</div>
+        </div>
+        <div class="company-option" onclick="selectCompany(this,'Woolworths','🛒','medium')">
+          <div class="co-icon">🛒</div><div class="co-name">Woolworths</div><div class="co-risk risk-medium">MEDIUM</div>
+        </div>
+        <div class="company-option" onclick="selectCompany(this,'Medibank','🏥','medium')">
+          <div class="co-icon">🏥</div><div class="co-name">Medibank</div><div class="co-risk risk-medium">MEDIUM</div>
+        </div>
+        <div class="company-option" onclick="selectCompany(this,'Optus','📡','medium')">
+          <div class="co-icon">📡</div><div class="co-name">Optus</div><div class="co-risk risk-medium">MEDIUM</div>
+        </div>
+        <div class="company-option" onclick="selectCompany(this,'Spotify','🎵','medium')">
+          <div class="co-icon">🎵</div><div class="co-name">Spotify</div><div class="co-risk risk-medium">MEDIUM</div>
+        </div>
+        <div class="company-option" onclick="selectCompany(this,'Amazon','📦','medium')">
+          <div class="co-icon">📦</div><div class="co-name">Amazon</div><div class="co-risk risk-medium">MEDIUM</div>
+        </div>
+      </div>
+      <label class="form-label">Or type any company name</label>
+      <input type="text" class="form-input" id="customCompany" placeholder="e.g. Any company...">
+      <button class="primary-btn" onclick="goToStep2()">Next: Choose Data Scope →</button>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="screen" id="step2">
+      <div style="padding-top:8px;margin-bottom:12px;">
+        <div style="font-size:18px;font-weight:900;" id="s2company">Telstra</div>
+        <div style="font-size:13px;color:var(--text2);">Select what data to revoke</div>
+      </div>
+      <div class="cat-grid">
+        <div class="cat-chip all-data" onclick="toggleAllData(this)">🌐 All Data</div>
+        <div class="cat-chip" onclick="toggleCat(this)">📧 Email</div>
+        <div class="cat-chip" onclick="toggleCat(this)">📱 Phone</div>
+        <div class="cat-chip" onclick="toggleCat(this)">🏠 Address</div>
+        <div class="cat-chip" onclick="toggleCat(this)">💳 Financial</div>
+        <div class="cat-chip" onclick="toggleCat(this)">🏥 Health</div>
+        <div class="cat-chip" onclick="toggleCat(this)">🪪 Identity</div>
+        <div class="cat-chip" onclick="toggleCat(this)">📍 Location</div>
+        <div class="cat-chip" onclick="toggleCat(this)">🌐 Browsing</div>
+        <div class="cat-chip" onclick="toggleCat(this)">📸 Biometric</div>
+      </div>
+      <div class="warning-note" id="allDataWarning">
+        ⚠️ This will revoke ALL data this company holds about you. They must delete everything, permanently.
+      </div>
+      <button class="primary-btn" onclick="goToStep3()">Preview Certificate →</button>
+      <button class="secondary-btn" onclick="goStep(1)">← Back</button>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="screen" id="step3">
+      <div style="padding-top:8px;margin-bottom:14px;">
+        <div style="font-size:14px;color:var(--text2);margin-bottom:4px;">Review before sending</div>
+        <div style="font-size:18px;font-weight:900;">Sovereign Revocation Certificate</div>
+      </div>
+
+      <div class="cert-preview">
+        <div class="cert-header">SOVEREIGN DATA REVOCATION CERTIFICATE</div>
+        <div class="cert-divider"></div>
+        <div class="cert-field"><span class="cert-key">Citizen:</span><span class="cert-val" id="certCitizen">Loading...</span></div>
+        <div class="cert-field"><span class="cert-key">Domain:</span><span class="cert-val" id="certDomain">Loading...</span></div>
+        <div class="cert-field"><span class="cert-key">Issued:</span><span class="cert-val" id="certDate">Loading...</span></div>
+        <div class="cert-field"><span class="cert-key">Company:</span><span class="cert-val" id="certCompany">Loading...</span></div>
+        <div class="cert-field"><span class="cert-key">Scope:</span><span class="cert-val" id="certScope">Loading...</span></div>
+        <div class="cert-field"><span class="cert-key">Chain:</span><span class="cert-val">Solana · ZK-proof signed · Immutable</span></div>
+        <div class="cert-field"><span class="cert-key">Legal:</span><span class="cert-val">GDPR Art.17 | CCPA §1798.105 | AU Privacy Act 1988</span></div>
+        <div class="cert-divider"></div>
+        <div class="cert-body-text">This notice constitutes formal revocation of consent for the processing of the data categories listed above. Any continued use of this data after this timestamp constitutes wilful breach, actionable under applicable law. This certificate is cryptographically signed and anchored to the Solana blockchain as immutable evidence.</div>
+      </div>
+
+      <button class="primary-btn" onclick="sendRevocation()">Send On-Chain →</button>
+      <button class="secondary-btn" onclick="goStep(2)">← Edit</button>
+    </div>
+
+  </div>
+
+  <!-- TRACKING VIEW -->
+  <div id="trackingView" style="display:none;">
+    <div class="tracking-list" style="padding-top:16px;">
+
+      <div class="track-card">
+        <div class="tc-top">
+          <div>
+            <div class="tc-company">Snapchat</div>
+            <div class="tc-date">Sent 14 Jan 2025</div>
+          </div>
+          <div class="tc-status status-ack">✓ Acknowledged</div>
+        </div>
+        <div class="tc-scope">Scope: All Data · Deleted within 30 days per GDPR Art.17</div>
+      </div>
+
+      <div class="track-card">
+        <div class="tc-top">
+          <div>
+            <div class="tc-company">Optus</div>
+            <div class="tc-date">Sent 3 Feb 2025</div>
+          </div>
+          <div class="tc-status status-overdue">⚠️ Overdue</div>
+        </div>
+        <div class="tc-scope">Scope: ID documents, financial data, phone · No response in 47 days</div>
+        <button class="escalate-btn" onclick="window.location.href='data-breach-claim.html'">Escalate to Breach Claim →</button>
+      </div>
+
+      <div class="track-card">
+        <div class="tc-top">
+          <div>
+            <div class="tc-company">Woolworths</div>
+            <div class="tc-date">Sent 20 Mar 2025</div>
+          </div>
+          <div class="tc-status status-sent">Sent · Awaiting</div>
+        </div>
+        <div class="tc-scope">Scope: Purchase history, location · 14 days to respond</div>
+      </div>
+
+    </div>
+
+    <div class="legal-block">
+      <strong>Response timeframes:</strong> Under GDPR, companies must respond within <strong>30 days</strong>. Under CCPA, within <strong>45 days</strong>. Under the Australian Privacy Act, within <strong>30 days</strong>. Overdue responses can be escalated to a Breach Claim for wilful non-compliance.
+    </div>
+  </div>
+
+</div>
+
+<!-- SENDING OVERLAY -->
+<div class="sending-overlay" id="sendingOverlay">
+  <div id="sendingSteps">
+    <div class="send-ring"></div>
+    <div class="send-step active" id="ss1">ZK-signing your revocation certificate...</div>
+    <div class="send-step" id="ss2">Anchoring to Solana blockchain...</div>
+    <div class="send-step" id="ss3">Broadcasting to company compliance endpoint...</div>
+    <div class="send-step" id="ss4">Logging to your Consent Ledger...</div>
+  </div>
+  <div class="success-card" id="successCard">
+    <div class="success-ring">🚫</div>
+    <div class="success-title">Revocation Sent.</div>
+    <div class="success-sub" id="successSub">Your certificate is anchored on Solana and broadcast to the company's compliance team. They have 30 days to respond and delete your data.</div>
+    <div class="cert-hash" id="certHash">TX: 7xK9...mP4Q · Solana · Block #401,283,947</div>
+    <button onclick="window.location.href='data-revocation.html'" style="width:100%;padding:16px;border-radius:14px;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;color:#000;font-size:16px;font-weight:800;cursor:pointer;">Done. Standing by. →</button>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <a class="nav-item" href="citizen-dashboard.html"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></a>
+  <a class="nav-item active" href="data-sovereignty-hub.html"><span class="nav-icon">⚔️</span><span class="nav-label">Sovereignty</span></a>
+  <a class="nav-item" href="data-vault.html"><span class="nav-icon">🔐</span><span class="nav-label">Vault</span></a>
+  <a class="nav-item" href="data-marketplace.html"><span class="nav-icon">🏪</span><span class="nav-label">Market</span></a>
+  <a class="nav-item" href="data-breach-claim.html"><span class="nav-icon">🛡️</span><span class="nav-label">Protect</span></a>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let selectedCompany = '';
+let selectedCategories = [];
+let currentStep = 1;
+
+// Pre-fill from URL param
+const params = new URLSearchParams(window.location.search);
+const preCompany = params.get('company');
+if(preCompany) {
+  setTimeout(()=>{
+    document.querySelectorAll('.company-option').forEach(o=>{
+      if(o.querySelector('.co-name').textContent===preCompany) {
+        o.click();
+        setTimeout(()=>goToStep2(), 300);
+      }
+    });
+    if(!selectedCompany) {
+      document.getElementById('customCompany').value = preCompany;
+      selectedCompany = preCompany;
+    }
+  }, 100);
+}
+
+function selectCompany(el, name, icon, risk) {
+  document.querySelectorAll('.company-option').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedCompany = name;
+}
+
+function goToStep2() {
+  const custom = document.getElementById('customCompany').value.trim();
+  if(custom) selectedCompany = custom;
+  if(!selectedCompany) { showToast('Select or enter a company name'); return; }
+  document.getElementById('s2company').textContent = selectedCompany;
+  goStep(2);
+}
+
+function goStep(n) {
+  document.querySelectorAll('.screen').forEach((s,i)=>s.classList.toggle('active', i===n-1));
+  currentStep = n;
+  [1,2,3].forEach(i=>{
+    const num = document.getElementById('sn'+i);
+    const lbl = document.getElementById('sl'+i);
+    num.className = 'si-num' + (i<n?' done':i===n?' active':'');
+    lbl.className = 'si-label' + (i===n?' active':'');
+    if(i<n) num.textContent='✓'; else num.textContent=i;
+  });
+}
+
+function toggleAllData(chip) {
+  chip.classList.toggle('selected');
+  const isAll = chip.classList.contains('selected');
+  document.getElementById('allDataWarning').classList.toggle('show', isAll);
+  if(isAll) {
+    document.querySelectorAll('.cat-chip:not(.all-data)').forEach(c=>c.classList.add('selected'));
+  }
+}
+
+function toggleCat(chip) {
+  chip.classList.toggle('selected');
+  const selected = document.querySelectorAll('.cat-chip.selected:not(.all-data)').length;
+  const total = document.querySelectorAll('.cat-chip:not(.all-data)').length;
+  const allChip = document.querySelector('.cat-chip.all-data');
+  if(selected < total) allChip.classList.remove('selected');
+}
+
+function goToStep3() {
+  selectedCategories = [];
+  document.querySelectorAll('.cat-chip.selected').forEach(c=>{
+    const text = c.textContent.replace(/^[^\s]+\s/,'');
+    selectedCategories.push(text);
+  });
+  if(selectedCategories.length===0){showToast('Select at least one data category');return;}
+  const citizen = sessionStorage.getItem('citizen_name') || 'Arthur Henry';
+  const domain = sessionStorage.getItem('citizen_domain') || 'arthur.IN$DEX';
+  document.getElementById('certCitizen').textContent = citizen;
+  document.getElementById('certDomain').textContent = domain;
+  document.getElementById('certDate').textContent = new Date().toLocaleString();
+  document.getElementById('certCompany').textContent = selectedCompany;
+  document.getElementById('certScope').textContent = selectedCategories.join(', ');
+  goStep(3);
+}
+
+function sendRevocation() {
+  const overlay = document.getElementById('sendingOverlay');
+  const steps = document.getElementById('sendingSteps');
+  const success = document.getElementById('successCard');
+  overlay.classList.add('show');
+  steps.style.display='block'; success.classList.remove('show');
+  const s1=document.getElementById('ss1'),s2=document.getElementById('ss2'),s3=document.getElementById('ss3'),s4=document.getElementById('ss4');
+  [s2,s3,s4].forEach(s=>s.classList.remove('active','done'));
+  setTimeout(()=>{s1.textContent='✓ ZK-signed.';s1.className='send-step done';s2.className='send-step active';},900);
+  setTimeout(()=>{s2.textContent='✓ Anchored to Solana.';s2.className='send-step done';s3.className='send-step active';},1800);
+  setTimeout(()=>{s3.textContent='✓ Broadcast to compliance.';s3.className='send-step done';s4.className='send-step active';},2700);
+  setTimeout(()=>{s4.textContent='✓ Logged to Consent Ledger.';s4.className='send-step done';},3400);
+  setTimeout(()=>{
+    steps.style.display='none';
+    document.getElementById('successSub').textContent = `Revocation certificate for ${selectedCompany} anchored on Solana and sent to their compliance team. They have 30 days to respond and delete your data. Any continued use after this timestamp constitutes wilful breach.`;
+    const hash = 'TX: ' + Math.random().toString(36).substr(2,4).toUpperCase() + '...' + Math.random().toString(36).substr(2,4).toUpperCase() + ' · Solana · Block #' + (400000000 + Math.floor(Math.random()*2000000)).toLocaleString();
+    document.getElementById('certHash').textContent = hash;
+    success.classList.add('show');
+  }, 4000);
+}
+
+function showView(view, tab) {
+  document.querySelectorAll('.ttab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+  document.getElementById('composeView').style.display = view==='compose'?'block':'none';
+  document.getElementById('trackingView').style.display = view==='tracking'?'block':'none';
+}
+
+let toastTimer;
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),3200);}
+</script>
+</body>
+</html>
