@@ -128,7 +128,7 @@ Global onboarding push. RWA marketplace expansion. SIINDEX full autonomy. Target
 
 AJ Henry is a Digital Civilisation Builder with 8 years in cryptocurrency and 35 years working on the ground — in warehouses, kitchens, and communities that traditional finance has never served. He built IN$DEX because he watched centralised systems fail ordinary people for decades. The origin moment: on holiday in the Cook Islands, a girl selling coconuts couldn't make change for a $50 note. He thought — what if she just scanned a QR code?
 
-His work centres on creating self-sustaining sovereign ecosystems through decentralised intelligence and immutable economic mechanics. Key architectural contributions to IN$DEX include the Quantum Sovereignty Stack (biometric onboarding, .INDX domains, Wisdom Score identity), the Sovereignty Automation Army (SIINDEX AI agent swarm), the Triangular Fusion Engine (Skills × Assets × Data), the 14 Pillars of Sovereignty framework, and the Sovereign Skill Graph.
+His work centres on creating self-sustaining sovereign ecosystems through decentralised intelligence and immutable economic mechanics. Key architectural contributions to IN$DEX include the Quantum Sovereignty Stack (biometric onboarding, yourname.IN$DEX Web3 domains, Wisdom Score identity), the Sovereignty Automation Army (SIINDEX AI agent swarm), the Triangular Fusion Engine (Skills × Assets × Data), the 14 Pillars of Sovereignty framework, and the Sovereign Skill Graph.
 
 AJ is the founder of Kuki Kings XV, a blockchain-powered streetwear brand celebrating Pacific Island culture. Based in Dandenong North, Melbourne, Australia.
 
