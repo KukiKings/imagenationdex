@@ -856,19 +856,67 @@ footer { background:var(--surface); border-top:1px solid rgba(255,255,255,0.06);
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       const btn = document.getElementById('micBtn');
       const status = document.getElementById('voiceStatus');
-      if (!SR) { addSIMsg("Voice recognition works best in Chrome. Try opening this page there."); return; }
+
+      if (!SR) {
+        addSIMsg("Voice input works in Chrome and Edge. Open this page there to speak to me.");
+        return;
+      }
+
+      // Prevent double-tap
+      if (btn.classList.contains('listening')) return;
+
       const rec = new SR();
-      rec.lang = 'en-US'; rec.interimResults = false; rec.maxAlternatives = 1;
+      rec.lang = 'en-US';
+      rec.interimResults = false;
+      rec.maxAlternatives = 1;
+      rec.continuous = false;
+
+      let gotResult = false;
+
       btn.classList.add('listening');
-      status.textContent = 'Listening...'; status.classList.add('active');
+      status.textContent = 'Listening — speak now...';
+      status.classList.add('active');
+
       rec.onresult = function(e) {
+        gotResult = true;
         const txt = e.results[0][0].transcript;
         addUserMsg(txt);
         setTimeout(() => siRespond(txt), 700);
       };
-      rec.onend = function() { btn.classList.remove('listening'); status.textContent = 'Tap to speak to SIINDEX'; status.classList.remove('active'); };
-      rec.onerror = function() { btn.classList.remove('listening'); status.textContent = 'Tap to speak to SIINDEX'; status.classList.remove('active'); addSIMsg("I didn't catch that. Try again."); };
-      rec.start();
+
+      rec.onend = function() {
+        btn.classList.remove('listening');
+        status.textContent = 'Tap to speak to SIINDEX';
+        status.classList.remove('active');
+        if (!gotResult) {
+          addSIMsg("I didn't hear anything. Tap the mic and speak clearly after tapping.");
+        }
+      };
+
+      rec.onerror = function(e) {
+        gotResult = true; // suppress onend message
+        btn.classList.remove('listening');
+        status.textContent = 'Tap to speak to SIINDEX';
+        status.classList.remove('active');
+        if (e.error === 'not-allowed' || e.error === 'permission-denied') {
+          addSIMsg("Microphone access was blocked. Allow mic permission in your browser settings, then try again.");
+        } else if (e.error === 'no-speech') {
+          addSIMsg("I didn't catch that. Tap the mic and speak right after tapping.");
+        } else if (e.error === 'network') {
+          addSIMsg("No network connection for voice. Check your connection and try again.");
+        } else {
+          addSIMsg("Voice input isn't available right now. Try Chrome on desktop or Android.");
+        }
+      };
+
+      try {
+        rec.start();
+      } catch(err) {
+        btn.classList.remove('listening');
+        status.textContent = 'Tap to speak to SIINDEX';
+        status.classList.remove('active');
+        addSIMsg("Couldn't start voice input. Try Chrome or Edge.");
+      }
     }
 
     function siRespond(t) {
