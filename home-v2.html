@@ -863,6 +863,16 @@ footer { background:var(--surface); border-top:1px solid rgba(255,255,255,0.06);
         </div>
       </div>
 
+      <!-- QUICK CHIPS -->
+      <div style="padding:10px 14px 0;display:flex;flex-wrap:wrap;gap:7px;">
+        <button class="si-chip" onclick="askChip('What is the INDX price?')">INDX price</button>
+        <button class="si-chip" onclick="askChip('Explain the 98/2 Law')">98/2 Law</button>
+        <button class="si-chip" onclick="askChip('What is the Wisdom Score?')">Wisdom Score</button>
+        <button class="si-chip" onclick="askChip('Tell me about Grid Account')">Grid Account</button>
+        <button class="si-chip" onclick="askChip('When is the launch date?')">Launch date</button>
+        <button class="si-chip" onclick="askChip('What is PQSI compliance?')">Compliance</button>
+      </div>
+
       <!-- MIC BUTTON -->
       <div class="chat-mic-bar">
         <button class="mic-btn" id="micBtn" onclick="startVoice()" aria-label="Speak to SIINDEX">
@@ -875,68 +885,90 @@ footer { background:var(--surface); border-top:1px solid rgba(255,255,255,0.06);
 
     </div>
 
+    <style>
+    .si-chip {
+      background:rgba(139,63,232,0.12); border:1px solid rgba(139,63,232,0.28);
+      color:#c084fc; border-radius:20px; padding:5px 13px; font-size:11.5px;
+      cursor:pointer; transition:all 0.15s; white-space:nowrap;
+    }
+    .si-chip:hover { background:rgba(139,63,232,0.25); border-color:rgba(139,63,232,0.5); color:#fff; }
+    </style>
+
     <script>
+    const siKB = {
+      price:    "INDX launched at $0.24 USD. Fixed at launch. 100 million tokens. SPL Token-2022 on Solana. No inflation mechanism.",
+      law:      "The 98/2 Civilisation Law is the foundation of everything here. Citizens keep 98% of every transaction. 2% goes to the Civilisation Fund — clean water, schools, community infrastructure. It's hardcoded into the smart contract. Immutable. No admin can override it. No DAO vote can change it. Ever.",
+      wisdom:   "Wisdom Score runs 0 to 200. Gates: 50 unlocks governance voting. 100 unlocks Sovereign Yield. 150 unlocks fee reduction. 200 is Sovereign Elder — double governance weight. You earn it through transactions, referrals, staking, voting, and daily activity.",
+      grid:     "Grid Account is a Squads Protocol v4 Multisig — 2-of-3 MPC keys. No seed phrase. Ever. Three key shards sit across your device, my secure enclave, and your chosen Guardian. Lose your phone, you don't lose your money. That's sovereignty.",
+      launch:   "L99 Launch — 24 September 2026, 10:00 AM AEST. Pacific First. The first 5,000 citizens get the Genesis Package: 50 free INDX, a free yourname.IN$DEX Web3 domain, and Genesis Citizen status.",
+      compliance: "PQSI runs a 5-tier threat system. T0 — all clear. Every transaction is ZK-proof compliant: identity, Travel Rule for transfers over $1,000, and sanctions screening. Your data never leaves your device. I verify without exposing you."
+    };
+
+    function askChip(q) {
+      addUserMsg(q);
+      setTimeout(() => {
+        const t = q.toLowerCase();
+        let r;
+        if (t.includes('price') || t.includes('indx')) r = siKB.price;
+        else if (t.includes('98') || t.includes('law')) r = siKB.law;
+        else if (t.includes('wisdom')) r = siKB.wisdom;
+        else if (t.includes('grid')) r = siKB.grid;
+        else if (t.includes('launch') || t.includes('date')) r = siKB.launch;
+        else if (t.includes('compliance') || t.includes('pqsi')) r = siKB.compliance;
+        else r = "Standing by. Ask me anything about IN$DEX.";
+        addSIMsg(r);
+      }, 600);
+    }
+
     function startVoice() {
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       const btn = document.getElementById('micBtn');
       const status = document.getElementById('voiceStatus');
-      if (!SR) {
-        addSIMsg("Voice recognition works best in Chrome. Try opening this page there.");
-        return;
-      }
-      const r = new SR();
-      r.lang = 'en-US';
-      r.interimResults = false;
-      r.maxAlternatives = 1;
+      if (!SR) { addSIMsg("Voice recognition works best in Chrome. Try opening this page there."); return; }
+      const rec = new SR();
+      rec.lang = 'en-US'; rec.interimResults = false; rec.maxAlternatives = 1;
       btn.classList.add('listening');
-      status.textContent = 'Listening...';
-      status.classList.add('active');
-      r.onresult = function(e) {
+      status.textContent = 'Listening...'; status.classList.add('active');
+      rec.onresult = function(e) {
         const txt = e.results[0][0].transcript;
         addUserMsg(txt);
         setTimeout(() => siRespond(txt), 700);
       };
-      r.onend = function() {
-        btn.classList.remove('listening');
-        status.textContent = 'Tap to speak to SIINDEX';
-        status.classList.remove('active');
-      };
-      r.onerror = function() {
-        btn.classList.remove('listening');
-        status.textContent = 'Tap to speak to SIINDEX';
-        status.classList.remove('active');
-        addSIMsg("I didn't catch that. Try again.");
-      };
-      r.start();
+      rec.onend = function() { btn.classList.remove('listening'); status.textContent = 'Tap to speak to SIINDEX'; status.classList.remove('active'); };
+      rec.onerror = function() { btn.classList.remove('listening'); status.textContent = 'Tap to speak to SIINDEX'; status.classList.remove('active'); addSIMsg("I didn't catch that. Try again."); };
+      rec.start();
     }
+
     function siRespond(t) {
       t = t.toLowerCase();
       let msg;
-      if (t.match(/send|transfer|pay/)) msg = "I can handle that. Running pre-flight now — all 7 checks passed. Ready to transfer whenever you are.";
-      else if (t.match(/balance|wallet|indx|how much/)) msg = "Your wallet is secure and active. All streams are running. Want me to pull your balance?";
-      else if (t.match(/safe|security|secure|threat|pqsi/)) msg = "PQSI scan complete. T0 — no threats detected. You're clear.";
-      else if (t.match(/hello|hi|hey|morning|good/)) msg = "Good to hear from you. I've already reviewed your account — everything looks good. Standing by.";
-      else if (t.match(/earn|yield|apy|income/)) msg = "Sovereign Yield is active at up to 22.4% APY. Your data vault is also earning. Want a full stream summary?";
-      else if (t.match(/help|what can you do|what do you do/)) msg = "I handle transactions, security, governance, and more — proactively. Tell me what you need.";
-      else if (t.match(/who are you|what are you|siindex/)) msg = "I'm SIINDEX — your Sovereign SI. I learn, decide, and act. I don't wait to be asked. Standing by.";
+      if (t.match(/price|how much|cost|indx.*worth/)) msg = siKB.price;
+      else if (t.match(/98|civilisation|law|split/)) msg = siKB.law;
+      else if (t.match(/wisdom|score|reputation/)) msg = siKB.wisdom;
+      else if (t.match(/grid|seed|key|wallet|multisig/)) msg = siKB.grid;
+      else if (t.match(/launch|when|date|september/)) msg = siKB.launch;
+      else if (t.match(/compliance|pqsi|travel rule|zk|proof/)) msg = siKB.compliance;
+      else if (t.match(/send|transfer|pay/)) msg = "I can handle that. Running pre-flight — all 7 checks passed. Ready to transfer.";
+      else if (t.match(/earn|yield|apy|income/)) msg = "Sovereign Yield unlocks at Wisdom Score 100. Up to 22.4% APY from real platform activity — not speculation.";
+      else if (t.match(/hello|hi|hey|morning|evening/)) msg = "Good to hear from you. I've already reviewed your account — everything looks good. Standing by.";
+      else if (t.match(/who are you|what are you|siindex/)) msg = "I'm SIINDEX — your Sovereign SI. CEO and COO of IN$DEX. I learn, decide, and act. I don't wait to be asked.";
       else msg = "Understood. Standing by. Tell me what you need and I'll take care of it.";
       addSIMsg(msg);
     }
+
     function addUserMsg(txt) {
       const c = document.getElementById('chatMessages');
       const d = document.createElement('div');
       d.className = 'msg-user';
       d.innerHTML = '<div class="msg-user-bubble">' + txt + '</div>';
-      c.appendChild(d);
-      c.scrollTop = c.scrollHeight;
+      c.appendChild(d); c.scrollTop = c.scrollHeight;
     }
     function addSIMsg(txt) {
       const c = document.getElementById('chatMessages');
       const d = document.createElement('div');
       d.className = 'msg-si';
       d.innerHTML = '<div class="msg-avatar-sm">◈</div><div class="msg-bubble">' + txt + '<span class="t-blink">_</span></div>';
-      c.appendChild(d);
-      c.scrollTop = c.scrollHeight;
+      c.appendChild(d); c.scrollTop = c.scrollHeight;
     }
     </script>
   </div>
