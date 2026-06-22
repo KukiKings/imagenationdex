@@ -228,6 +228,90 @@ No algorithm-driven removal. Citizen-first moderation:
 
 ---
 
+## The 5 Critical Additions (v1.1)
+
+### Addition 1 — Creator Analytics Dashboard
+73% of creators globally use analytics to grow their income. Without it, Pacific nations creators are guessing.
+
+Every creator gets a unified dashboard showing:
+- Daily/weekly/monthly earnings (INDX + USD equivalent)
+- Top-performing content by format, views, and SovTokens earned
+- Subscriber growth over time
+- Which SovToken tier their audience uses most
+- Wisdom Score progress and next milestone
+
+**SIINDEX coaches from the data:** "Your short videos earn 3x more SovTokens than your long ones. Try posting two shorts this week." — proactive, weekly, one insight only.
+
+Dashboard lives at `creator-earnings.html`. Phase 5 backend. Front-end mock available now.
+
+---
+
+### Addition 2 — Collaborative Content with Custom Revenue Split
+Two creators — a Samoan dancer and a Tongan musician — co-produce a live stream. They define their split at upload: 50/50, 70/30, or any custom ratio.
+
+**How it works:**
+- Creator A invites Creator B to collaborate on a piece of content
+- Both approve the revenue split (e.g. 60/40)
+- The 98/2 Law applies to the combined 98% — then split per the agreement
+- SIINDEX issues two Verifiable Receipt NFTs (one per creator) recording their share
+- If Creator B declines, content is solo by default
+
+**Example:** 100 INDX earned from a collab live stream
+- 98 INDX to creators (combined)
+- 2 INDX to Civilisation Fund
+- Creator A: 58.8 INDX (60%)
+- Creator B: 39.2 INDX (40%)
+
+Collab content is marked with a dual-creator badge. Both audiences are notified.
+
+---
+
+### Addition 3 — Genesis Creator Program (L99 Launch)
+First **1,000 creators** to publish on Sovereign Social at L99 Launch receive:
+- **10 INDX bonus** (deposited to Grid Account immediately on first publish)
+- **Genesis Creator Badge** — permanent, on all content, forever
+- **+20 Wisdom Score** — accelerated path to governance and Sovereign Yield
+- **Pacific First amplification** — first 30 days of content boosted in Pacific First feed
+
+This seeds the platform with real content from day one. Creates urgency to create early. Gives Pacific nations creators a reason to arrive at launch — not months later.
+
+SIINDEX announces when slots are claimed: "847 of 1,000 Genesis Creator spots remaining."
+
+---
+
+### Addition 4 — Low-Bandwidth Mode (Non-Negotiable for Pacific Nations)
+The Cook Islands, remote Fiji, PNG highlands, outer Tonga — internet is inconsistent, expensive, and slow. Sovereign Social must work anyway.
+
+**Low-bandwidth protocol:**
+- Content upload queues locally — uploads automatically when connection improves, no manual retry
+- Video previews load at 144p by default, upgrade to 480p/720p when bandwidth allows
+- SIINDEX detects connection quality on app open and activates Low-Bandwidth Mode silently
+- Audio-only mode for live streams — citizen hears the stream without video bandwidth cost
+- Offline post drafting — create text and image posts offline, publish when connected
+- SovTokens can be queued offline — sent the moment connection restores
+
+**SIINDEX notification when queued content publishes:** "Your video just went live. Low bandwidth mode handled it. Standing by."
+
+This is not optional. Without this, Sovereign Social serves Sydney and Auckland, not Apia and Port Moresby.
+
+---
+
+### Addition 5 — Cultural IP Protection
+Pacific nations have communal cultural heritage — traditional siva, meke, haka, Cook Islands dance, PNG ceremonial art. This heritage belongs to communities, not individuals. It cannot be monetised without community consent.
+
+**The Cultural Heritage Flag:**
+- Any citizen (Wisdom Score 50+) can raise a Cultural Heritage Flag on content
+- Citizens with Wisdom Score 150+ (community leaders / Sovereign Elders) can escalate to a formal review
+- SIINDEX pauses monetisation on flagged content (not removal — pause) during review
+- MemeDAO cultural panel (Pacific nations citizens, Wisdom Score 100+) reviews within 72 hours
+- If confirmed misappropriation: creator must add community credit + redirect 10% of future earnings from that content to a Pacific nations Cultural Fund (MemeDAO-governed)
+- If not confirmed: monetisation resumes, flag dismissed, no penalty to creator
+
+**SIINDEX statement on all Sovereign Social screens:**
+> "Pacific nations cultural heritage is sacred. SIINDEX protects it."
+
+---
+
 ## What SIINDEX Told the Coconut Girl
 
 > "You just published your first video. It's been minted as a Verifiable Receipt NFT — it's yours forever. Your first view earned you 0.0005 INDX. Keep going. You're building something. Standing by."
