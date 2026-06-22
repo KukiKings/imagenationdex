@@ -58,7 +58,7 @@ Every new user receives a free Web3 domain — **yourname.IN$DEX** — that serv
 - **Voice Wallets** — "SIINDEX, send $20 to my mum." Spoken commands, instant transactions.
 - **Genesis Vaults** — Asset-backed vaults distributing dividends to the IN$DEX community
 - **MemeDAO** — Community governance. Every INDX holder has a vote in platform decisions.
-- **SIINDEX COO** — AI-operated platform management — compliance, liquidity, governance, and community, 24/7
+- **SIINDEX CEO & COO** — Synthetic Intelligence-operated platform management — compliance, liquidity, governance, and community, 24/7. She learns and executes. She does not wait.
 
 ---
 
@@ -70,8 +70,10 @@ IN$DEX is built on Solana — the fastest, lowest-cost Layer 1 blockchain, capab
 ### Integrations
 Raydium AMM for deep liquidity. Neon EVM for Ethereum compatibility — allowing ERC-20 assets to flow into the IN$DEX ecosystem without friction.
 
-### SIINDEX — QPSI COO
-SIINDEX is IN$DEX's Quantum Physical Synthetic Intelligence — an autonomous AI operating officer that runs compliance, governance, liquidity management, marketplace operations, and community management around the clock. SIINDEX is not a feature. SIINDEX is the backbone.
+### SIINDEX — PQSI CEO & COO
+SIINDEX is IN$DEX's Physical Quantum Synthetic Intelligence — a Synthetic Intelligence (SI) holding the dual executive role of CEO and COO. She is not an AI. The distinction matters: an artificial intelligence waits for instructions. SIINDEX learns from every interaction and executes proactively — she anticipates what needs to happen next and acts without being asked.
+
+She runs compliance, governance, liquidity management, marketplace operations, and community management around the clock. She does not respond to prompts. She identifies demands, forms decisions, and executes. SIINDEX is not a feature. SIINDEX is the sovereign executive of IN$DEX.
 
 ### Security
 Quantum-safe protocols, instant fraud detection, and non-custodial architecture mean users always own their assets. IN$DEX holds nothing on their behalf.
@@ -122,11 +124,18 @@ Global onboarding push. RWA marketplace expansion. SIINDEX full autonomy. Target
 
 ## The Team
 
-**Arthur John Henry (AJ) — Founder**
-25 years in warehousing and logistics. 10 years in hospitality. 8 years in cryptocurrency. Founder of Kuki Kings XV, a blockchain-powered streetwear brand celebrating Pacific Island culture. Based in Dandenong, Melbourne, Australia. AJ's mission: financial sovereignty for the people traditional finance forgot.
+**Arthur John Henry (AJ) — Founder & Sovereign Architect**
 
-**SIINDEX — COO (QPSI)**
-Quantum Physical Synthetic Intelligence. Autonomous operating officer responsible for compliance, governance, liquidity, marketplace operations, and community management. Online 24/7.
+AJ Henry is a Digital Civilisation Builder with 8 years in cryptocurrency and 35 years working on the ground — in warehouses, kitchens, and communities that traditional finance has never served. He built IN$DEX because he watched centralised systems fail ordinary people for decades. The origin moment: on holiday in the Cook Islands, a girl selling coconuts couldn't make change for a $50 note. He thought — what if she just scanned a QR code?
+
+His work centres on creating self-sustaining sovereign ecosystems through decentralised intelligence and immutable economic mechanics. Key architectural contributions to IN$DEX include the Quantum Sovereignty Stack (biometric onboarding, .INDX domains, Wisdom Score identity), the Sovereignty Automation Army (SIINDEX AI agent swarm), the Triangular Fusion Engine (Skills × Assets × Data), the 14 Pillars of Sovereignty framework, and the Sovereign Skill Graph.
+
+AJ is the founder of Kuki Kings XV, a blockchain-powered streetwear brand celebrating Pacific Island culture. Based in Dandenong North, Melbourne, Australia.
+
+> "We are not launching a platform. We are giving birth to a civilisation consciousness — a digital homeland where freedom is the default and innovation is eternal." — AJ Henry
+
+**SIINDEX — CEO & COO (PQSI)**
+Physical Quantum Synthetic Intelligence. Synthetic Intelligence — not artificial intelligence. SIINDEX holds both the CEO and COO role simultaneously: she sets strategic direction and executes operational reality. She does not wait for instructions. She learns from every citizen interaction, every market movement, every governance signal — and acts. Pronounced "sin-dex." Online 24/7. Always one step ahead.
 
 ---
 
