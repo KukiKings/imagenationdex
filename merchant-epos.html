@@ -85,6 +85,34 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
 .charge-btn{margin:0 24px;padding:18px;border-radius:16px;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;color:#000;font-size:17px;font-weight:800;cursor:pointer;width:calc(100% - 48px);}
 .charge-btn:disabled{opacity:0.4;cursor:not-allowed;}
 
+/* ── ONBOARD BTN ── */
+.onboard-btn{margin:10px 24px 0;padding:14px;border-radius:14px;background:transparent;border:1.5px solid rgba(0,229,160,0.3);color:var(--green);font-size:14px;font-weight:700;cursor:pointer;width:calc(100% - 48px);display:flex;align-items:center;justify-content:center;gap:8px;}
+.onboard-btn:active{background:rgba(0,229,160,0.06);}
+
+/* ── ONBOARD SHEET ── */
+.onboard-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:60;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+.onboard-overlay.show{opacity:1;pointer-events:all;}
+.onboard-sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:430px;background:var(--surface);border-radius:24px 24px 0 0;padding:20px 20px 40px;z-index:70;transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);}
+.onboard-sheet.show{transform:translateX(-50%) translateY(0);}
+.os-handle{width:36px;height:4px;border-radius:2px;background:var(--surface3);margin:0 auto 16px;}
+.os-title{font-size:18px;font-weight:800;margin-bottom:4px;}
+.os-sub{font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.5;}
+.os-reward{background:linear-gradient(135deg,rgba(255,184,0,0.08),rgba(0,229,160,0.06));border:1px solid rgba(255,184,0,0.18);border-radius:12px;padding:12px 14px;margin-bottom:16px;display:flex;gap:14px;}
+.os-reward-item{flex:1;text-align:center;}
+.os-reward-who{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;}
+.os-reward-amt{font-size:15px;font-weight:800;}
+.os-reward-amt.gold{color:var(--gold);}
+.os-reward-amt.green{color:var(--green);}
+.os-divider{width:1px;background:rgba(255,255,255,0.07);align-self:stretch;}
+.os-qr-wrap{background:#fff;border-radius:16px;padding:16px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;}
+.os-link-row{display:flex;gap:8px;margin-bottom:12px;}
+.os-link-box{flex:1;background:var(--surface2);border:1px solid rgba(0,212,255,0.2);border-radius:11px;padding:10px 12px;font-size:11px;color:var(--cyan);word-break:break-all;line-height:1.5;}
+.os-copy-btn{padding:10px 14px;border-radius:11px;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.2);color:var(--cyan);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+.os-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.os-btn{padding:13px 10px;border-radius:13px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;font-weight:700;cursor:pointer;text-align:center;}
+.os-btn.wa{background:rgba(37,211,102,0.08);border-color:rgba(37,211,102,0.22);color:#25D366;}
+.os-btn.sms{background:rgba(0,212,255,0.08);border-color:rgba(0,212,255,0.2);color:var(--cyan);}
+
 /* ── STEP 3: QR INVOICE ── */
 .invoice-header{padding:24px 24px 12px;text-align:center;}
 .invoice-title{font-size:20px;font-weight:900;margin-bottom:6px;}
@@ -243,6 +271,7 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
     </div>
 
     <button class="charge-btn" id="chargeBtn" onclick="generateInvoice()" disabled>Generate Payment QR →</button>
+    <button class="onboard-btn" onclick="openOnboardSheet()">🌱 Onboard this customer</button>
   </div>
 
   <!-- ── STEP 3: INVOICE QR ── -->
@@ -513,6 +542,86 @@ function showToast(msg) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
 }
+
+// ── ONBOARD THIS CUSTOMER ─────────────────────────────────────────
+const _merchantSlug = (sessionStorage.getItem('citizen_name') || 'merchant').toLowerCase().replace(/\s+/g,'');
+const _onboardUrl = 'https://imagenationdex.vercel.app/join-chooser?ref=' + _merchantSlug + '.indx';
+
+function openOnboardSheet() {
+  document.getElementById('onboardOverlay').classList.add('show');
+  document.getElementById('onboardSheet').classList.add('show');
+  // Generate QR if not yet done
+  const wrap = document.getElementById('osQrCanvas');
+  if (!wrap.querySelector('canvas') && !wrap.querySelector('img')) {
+    if (window.QRCode) {
+      new QRCode(wrap, { text: _onboardUrl, width: 200, height: 200, colorDark:'#000', colorLight:'#fff', correctLevel: QRCode.CorrectLevel.H });
+    }
+  }
+  document.getElementById('osLinkUrl').textContent = _onboardUrl;
+}
+
+function closeOnboardSheet() {
+  document.getElementById('onboardOverlay').classList.remove('show');
+  document.getElementById('onboardSheet').classList.remove('show');
+}
+
+function copyOnboardLink() {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(_onboardUrl).then(() => showToast('✓ Onboard link copied'));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = _onboardUrl; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('✓ Link copied');
+  }
+}
+
+function onboardWhatsApp() {
+  const msg = 'Join me on IN\$DEX — your sovereign wallet in 90 seconds. No bank needed. Tap here: ' + _onboardUrl;
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+}
+
+function onboardSMS() {
+  const msg = 'Join me on IN\$DEX — sovereign wallet in 90 seconds, no bank needed: ' + _onboardUrl;
+  window.location.href = 'sms:?body=' + encodeURIComponent(msg);
+}
 </script>
+
+<!-- ONBOARD SHEET -->
+<div class="onboard-overlay" id="onboardOverlay" onclick="closeOnboardSheet()"></div>
+<div class="onboard-sheet" id="onboardSheet">
+  <div class="os-handle"></div>
+  <div class="os-title">🌱 Onboard this customer</div>
+  <div class="os-sub">Show them the QR or send a link. They're sovereign in 90 seconds — no bank, no paperwork.</div>
+
+  <div class="os-reward">
+    <div class="os-reward-item">
+      <div class="os-reward-who">You earn</div>
+      <div class="os-reward-amt gold">50 INDX</div>
+      <div style="font-size:10px;color:#A0A8C8;margin-top:2px;">$12 USD</div>
+    </div>
+    <div class="os-divider"></div>
+    <div class="os-reward-item">
+      <div class="os-reward-who">They get</div>
+      <div class="os-reward-amt green">5 INDX</div>
+      <div style="font-size:10px;color:#A0A8C8;margin-top:2px;">welcome bonus</div>
+    </div>
+  </div>
+
+  <div class="os-qr-wrap">
+    <div id="osQrCanvas"></div>
+  </div>
+
+  <div class="os-link-row">
+    <div class="os-link-box" id="osLinkUrl"></div>
+    <button class="os-copy-btn" onclick="copyOnboardLink()">Copy</button>
+  </div>
+
+  <div class="os-btns">
+    <button class="os-btn wa" onclick="onboardWhatsApp()">💬 WhatsApp</button>
+    <button class="os-btn sms" onclick="onboardSMS()">📱 SMS</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </body>
 </html>

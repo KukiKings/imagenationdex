@@ -24,6 +24,23 @@
   .topbar-title{font-size:17px;font-weight:700;}
   .topbar-right{width:38px;}
 
+  /* PROGRESS STRIP */
+  .progress-strip{padding:12px 20px 0;}
+  .ps-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .ps-step-label{font-size:12px;font-weight:800;color:var(--cyan);}
+  .ps-time{font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:4px;}
+  .ps-dots{display:flex;gap:6px;}
+  .ps-dot{height:5px;border-radius:99px;background:var(--surface3);transition:all 0.4s;}
+  .ps-dot.done{background:var(--green);}
+  .ps-dot.active{background:var(--cyan);flex:2;}
+  .ps-dot.pending{flex:1;}
+  .ps-bar-bg{height:5px;background:var(--surface2);border-radius:99px;overflow:hidden;margin-top:6px;}
+  .ps-bar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--cyan),var(--green));width:33%;transition:width 0.5s ease;}
+  .ps-steps-row{display:flex;justify-content:space-between;margin-top:5px;}
+  .ps-label{font-size:10px;color:var(--text-muted);flex:1;text-align:center;}
+  .ps-label.active{color:var(--cyan);font-weight:700;}
+  .ps-label.done{color:var(--green);}
+
   /* HERO */
   .hero{padding:28px 20px 0;text-align:center;}
   .hero-label{display:inline-flex;align-items:center;gap:6px;background:var(--green-bg);border:1px solid var(--green);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;color:var(--green);margin-bottom:16px;}
@@ -125,6 +142,22 @@
     <div class="topbar-back" onclick="window.history.back()">←</div>
     <div class="topbar-title">Instant Onboard</div>
     <div class="topbar-right"></div>
+  </div>
+
+  <!-- PROGRESS STRIP -->
+  <div class="progress-strip">
+    <div class="ps-meta">
+      <div class="ps-step-label" id="psStepLabel">Step 1 of 3</div>
+      <div class="ps-time">⏱ Under 90 seconds</div>
+    </div>
+    <div class="ps-bar-bg">
+      <div class="ps-bar-fill" id="psBarFill"></div>
+    </div>
+    <div class="ps-steps-row">
+      <div class="ps-label active" id="psL1">Arrive</div>
+      <div class="ps-label" id="psL2">Verify</div>
+      <div class="ps-label" id="psL3">Wallet ready</div>
+    </div>
   </div>
 
   <div class="scroll-body">
@@ -372,14 +405,36 @@
   }
   startScanWatch();
 
+  // ── PROGRESS BAR ─────────────────────────────────────────────────
+  function setProgressStep(n) {
+    const pct = n === 1 ? '33%' : n === 2 ? '66%' : '100%';
+    const labels = ['Arrive','Verify','Wallet ready'];
+    document.getElementById('psBarFill').style.width = pct;
+    document.getElementById('psStepLabel').textContent = 'Step ' + n + ' of 3';
+    for (let i = 1; i <= 3; i++) {
+      const el = document.getElementById('psL' + i);
+      el.className = 'ps-label' + (i < n ? ' done' : i === n ? ' active' : '');
+    }
+  }
+
+  // Check if arriving from join-chooser with a referral code
+  const _refCode = sessionStorage.getItem('referral_code');
+  const _refBonus = parseInt(sessionStorage.getItem('referral_bonus') || '0');
+  if (_refCode) {
+    // Show a welcome toast once
+    setTimeout(() => showToast('🎟 Referral code ' + _refCode + ' applied — welcome bonus incoming!'), 800);
+  }
+
   function triggerSMSOnboard() {
     const phone = document.getElementById('phoneInput').value.trim();
     if (!phone) { showToast('Enter their mobile number first'); return; }
     showToast('Onboard link sent via SMS ✓');
+    setProgressStep(2);
     setTimeout(() => showSuccess('New Citizen', 'citizen.IN$DEX'), 4000);
   }
 
   function showSuccess(name, domain) {
+    setProgressStep(3);
     const usd = (sendAmountINDX * INDX_RATE).toFixed(2);
     document.getElementById('sName').textContent = name;
     document.getElementById('sDomain').textContent = domain;
