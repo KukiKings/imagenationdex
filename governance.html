@@ -108,6 +108,31 @@
   .btn-primary{background:linear-gradient(135deg,var(--blue),var(--purple));color:#fff;border:none;border-radius:14px;padding:16px;font-size:15px;font-weight:700;width:100%;cursor:pointer;}
   .btn-primary:disabled{opacity:0.4;cursor:not-allowed;}
 
+  /* SEARCH */
+  .search-wrap{padding:8px 16px 4px;}
+  .search-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:10px 40px 10px 16px;font-size:14px;color:var(--text);outline:none;transition:border-color 0.2s;}
+  .search-input:focus{border-color:var(--purple);}
+  .search-wrap-inner{position:relative;}
+  .search-clear{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;display:none;padding:4px;}
+  .search-count{font-size:11px;color:var(--text-muted);padding:4px 16px 0;display:none;}
+
+  /* QUORUM */
+  .quorum-wrap{padding:0 16px 12px;}
+  .quorum-row{display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:4px;}
+  .quorum-track{height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;}
+  .quorum-fill{height:100%;background:var(--cyan);border-radius:2px;transition:width 0.5s;}
+  .quorum-met{color:var(--green);}
+
+  /* VOTE WEIGHT */
+  .vote-weight{font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(139,63,232,0.12);border:1px solid rgba(139,63,232,0.2);color:var(--purple);margin-left:8px;display:inline-block;}
+
+  /* VOTE STATS */
+  .vote-stats-card{margin:0 16px 12px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;display:none;}
+  .vs-row{display:flex;gap:0;}
+  .vs-stat{flex:1;text-align:center;}
+  .vs-val{font-size:18px;font-weight:800;}
+  .vs-label{font-size:10px;color:var(--text-muted);margin-top:2px;}
+
   /* TOAST */
   #toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface2);border:1px solid var(--border2);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;opacity:0;transition:all 0.3s;z-index:200;white-space:nowrap;pointer-events:none;}
 
@@ -156,6 +181,15 @@
   <div class="tab" onclick="switchTab(this,'mine')">My Votes</div>
 </div>
 
+<!-- SEARCH -->
+<div class="search-wrap">
+  <div class="search-wrap-inner">
+    <input class="search-input" id="searchInput" placeholder="🔍  Search proposals..." oninput="filterProposals(this.value)" type="text">
+    <button class="search-clear" id="searchClear" onclick="clearSearch()">✕</button>
+  </div>
+</div>
+<div class="search-count" id="searchCount"></div>
+
 <!-- STATS -->
 <div class="stats-row">
   <div class="stat-card">
@@ -176,6 +210,28 @@
 <div class="gve-card">
   <div class="gve-title">⚡ GVE Loop Governance Value Engine</div>
   <div class="gve-desc">Your votes shape IN$DEX. High-participation votes unlock bonus INDX rewards. Proposals that pass earn their author +10 Wisdom Score. Every citizen's voice matters equally.</div>
+</div>
+
+<!-- VOTE STATS CARD -->
+<div class="vote-stats-card" id="voteStatsCard">
+  <div class="vs-row">
+    <div class="vs-stat">
+      <div class="vs-val" id="vsTotalVotes" style="color:var(--cyan);">0</div>
+      <div class="vs-label">Votes Cast</div>
+    </div>
+    <div class="vs-stat">
+      <div class="vs-val" id="vsForVotes" style="color:var(--green);">0</div>
+      <div class="vs-label">Voted For</div>
+    </div>
+    <div class="vs-stat">
+      <div class="vs-val" id="vsAgainstVotes" style="color:var(--red);">0</div>
+      <div class="vs-label">Against</div>
+    </div>
+    <div class="vs-stat">
+      <div class="vs-val" id="vsWisdomEarned" style="color:var(--gold);">0</div>
+      <div class="vs-label">WS Earned</div>
+    </div>
+  </div>
 </div>
 
 <!-- ACTIVE PROPOSALS -->
@@ -367,9 +423,13 @@ function renderCard(p) {
   const total  = (p.votes_for || 0) + (p.votes_against || 0);
   const forPct = total > 0 ? Math.round((p.votes_for / total) * 100) : 50;
   const voted  = myVotes[p.id];
+  const quorumRequired = p.quorum_required || 100;
+  const quorumPct = Math.min(100, Math.round((total / quorumRequired) * 100));
+  const quorumMet = total >= quorumRequired;
+  const voteWeight = (1 + WISDOM_SCORE / 200).toFixed(1);
 
   const voteHtml = voted
-    ? `<div class="voted-label">✅ You voted <strong>${voted === 'for' ? 'For' : 'Against'}</strong> this proposal</div>`
+    ? `<div class="voted-label">✅ You voted <strong>${voted === 'for' ? 'For' : 'Against'}</strong> this proposal<span class="vote-weight">${voteWeight}× weight</span></div>`
     : `<div class="vote-buttons" id="btn_${p.id}">
         <button class="vote-btn for" onclick="castVote('${p.id}','for')">✓ Vote For</button>
         <button class="vote-btn against" onclick="castVote('${p.id}','against')">✗ Vote Against</button>
@@ -396,6 +456,13 @@ function renderCard(p) {
         <span id="votes_${p.id}">${total.toLocaleString()} votes cast</span>
         <span>${timeLeft(p.ends_at)}</span>
       </div>
+    </div>
+    <div class="quorum-wrap">
+      <div class="quorum-row">
+        <span>Quorum ${quorumPct}% of ${quorumRequired} votes needed</span>
+        <span class="${quorumMet ? 'quorum-met' : ''}">${quorumMet ? '✓ Met' : total + ' cast'}</span>
+      </div>
+      <div class="quorum-track"><div class="quorum-fill" style="width:${quorumPct}%;"></div></div>
     </div>
     ${voteHtml}
   </div>`;
@@ -424,6 +491,7 @@ async function loadProposals() {
     document.querySelectorAll('.stat-val')[0].textContent = proposals.length;
     document.querySelectorAll('.stat-val')[2].textContent = Object.keys(myVotes).length;
     container.innerHTML = proposals.map(renderCard).join('');
+    renderVoteStats();
   } catch(e) {
     container.innerHTML = '<div class="empty-state"><div class="empty-icon">⚖️</div><div class="empty-title">Couldn\'t load proposals</div><div class="empty-desc">Check your connection and try again.</div></div>';
   }
@@ -589,6 +657,49 @@ async function submitProposal() {
   } catch(e) {
     showToast('Could not submit try again');
   }
+}
+
+// ── PROPOSAL SEARCH / FILTER ──────────────────────────────────────────
+function filterProposals(query) {
+  const q = query.trim().toLowerCase();
+  const cards = document.querySelectorAll('#proposalsContainer .proposal-card');
+  const clearBtn = document.getElementById('searchClear');
+  const countEl  = document.getElementById('searchCount');
+  clearBtn.style.display = q ? 'block' : 'none';
+  let visible = 0;
+  cards.forEach(card => {
+    const title = (card.querySelector('.proposal-title')?.textContent || '').toLowerCase();
+    const desc  = (card.querySelector('.proposal-desc')?.textContent  || '').toLowerCase();
+    const match = !q || title.includes(q) || desc.includes(q);
+    card.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+  if (q && cards.length > 0) {
+    countEl.style.display = 'block';
+    countEl.textContent = visible + ' of ' + cards.length + ' proposals match';
+  } else {
+    countEl.style.display = 'none';
+  }
+}
+function clearSearch() {
+  const input = document.getElementById('searchInput');
+  input.value = '';
+  filterProposals('');
+  input.focus();
+}
+
+// ── VOTE STATS CARD ───────────────────────────────────────────────────
+function renderVoteStats() {
+  const votes = Object.values(myVotes);
+  if (!votes.length) return;
+  const forCount     = votes.filter(v => v === 'for').length;
+  const againstCount = votes.filter(v => v === 'against').length;
+  const wisdomEarned = votes.length * 5; // +5 per vote
+  document.getElementById('vsTotalVotes').textContent   = votes.length;
+  document.getElementById('vsForVotes').textContent     = forCount;
+  document.getElementById('vsAgainstVotes').textContent = againstCount;
+  document.getElementById('vsWisdomEarned').textContent = wisdomEarned;
+  document.getElementById('voteStatsCard').style.display = 'block';
 }
 
 // ── TIPS ──

@@ -603,6 +603,40 @@
   .nav-center:active .nav-center-btn { transform: scale(0.93); }
   .nav-center .nav-label { font-size: 10px; font-weight: 600; color: var(--text-muted); }
 
+  /* ── PRICE IMPACT WARNING ── */
+  .impact-banner{display:none;padding:10px 14px;border-radius:10px;font-size:12px;font-weight:700;margin-top:8px;align-items:center;gap:8px;line-height:1.4;}
+  .impact-banner.show{display:flex;}
+  .impact-warn{background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.25);color:#FFB800;}
+  .impact-danger{background:rgba(231,76,60,0.08);border:1px solid rgba(231,76,60,0.3);color:#E74C3C;}
+
+  /* ── ROUTE VIZ ── */
+  .route-viz{padding:0 16px 12px;display:none;}
+  .route-viz.show{display:block;}
+  .route-path{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:6px;}
+  .route-token{font-size:12px;font-weight:800;color:var(--text);}
+  .route-via{font-size:10px;color:var(--cyan);padding:2px 8px;border-radius:6px;background:var(--cyan-bg);border:1px solid rgba(0,212,255,0.2);}
+  .route-arrow{font-size:11px;color:var(--text-muted);}
+  .route-split{font-size:11px;color:var(--text-muted);}
+
+  /* ── SWAP HISTORY SHEET ── */
+  .history-sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:430px;background:var(--surface);border-top:1px solid var(--border);border-radius:24px 24px 0 0;padding:0 0 40px;z-index:101;transition:transform 0.4s cubic-bezier(0.4,0,0.2,1);max-height:80dvh;display:flex;flex-direction:column;}
+  .history-sheet.active{transform:translateX(-50%) translateY(0);}
+  .hist-header{padding:14px 20px 12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+  .hist-title{font-size:16px;font-weight:800;}
+  .hist-close{background:none;border:none;font-size:20px;color:var(--text-muted);cursor:pointer;}
+  .hist-list{overflow-y:auto;flex:1;}
+  .hist-item{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border);}
+  .hist-pair{font-size:14px;font-weight:700;}
+  .hist-meta{font-size:11px;color:var(--text-muted);margin-top:2px;}
+  .hist-amt{text-align:right;}
+  .hist-out{font-size:14px;font-weight:700;color:var(--green);}
+  .hist-in{font-size:11px;color:var(--text-muted);}
+  .hist-empty{padding:40px;text-align:center;color:var(--text-muted);font-size:14px;}
+
+  /* ── FAV STAR ── */
+  .fav-star{font-size:18px;cursor:pointer;padding:2px 6px;opacity:0.4;transition:opacity 0.2s;}
+  .fav-star.active{opacity:1;}
+
   /* ── TOAST ── */
   .toast {
     position: fixed;
@@ -667,7 +701,7 @@
     <div class="header">
       <div class="header-title" style="display:flex;align-items:center;gap:10px;"><img src="./logo.svg" alt="IN$DEX" style="height:36px;width:auto;" onerror="this.style.display='none'">Sov<span>Swap</span></div>
       <div class="header-right">
-        <div class="icon-btn" id="historyBtn" onclick="showToast('📋 Swap history coming Wave 1')">📋</div>
+        <div class="icon-btn" id="historyBtn" onclick="openHistory()">📋</div>
         <div class="icon-btn" id="settingsBtn" onclick="openSlippage()">⚙️</div>
       </div>
     </div>
@@ -756,6 +790,9 @@
         <div class="fee-val" id="feeBadge"></div>
       </div>
 
+      <!-- PRICE IMPACT WARNING BANNER -->
+      <div class="impact-banner" id="impactBanner"></div>
+
       <!-- SWAP DETAILS -->
       <div class="swap-details" id="swapDetails" style="display:none">
         <div class="slippage-row">
@@ -781,9 +818,13 @@
           <div class="detail-label">Network Fee</div>
           <div class="detail-value gold">~$0.00025</div>
         </div>
-        <div class="detail-row" style="border-bottom:none">
+        <div class="detail-row">
           <div class="detail-label">Route</div>
           <div class="detail-value" id="detailRoute" style="font-size:12px;color:var(--text-muted)">Raydium → INDX Pool</div>
+        </div>
+        <div class="route-viz" id="routeViz">
+          <div class="route-path" id="routePath"></div>
+          <div class="route-split" id="routeSplit"></div>
         </div>
       </div>
 
@@ -823,6 +864,17 @@
   </div>
 
 </div><!-- /shell -->
+
+<!-- ── SWAP HISTORY SHEET ── -->
+<div class="sheet-overlay" id="histOverlay" onclick="closeHistory()"></div>
+<div class="history-sheet" id="historySheet">
+  <div class="sheet-handle" style="margin:14px auto 0;width:36px;height:4px;border-radius:99px;background:var(--border);"></div>
+  <div class="hist-header">
+    <div class="hist-title">📋 Swap History</div>
+    <button class="hist-close" onclick="closeHistory()">✕</button>
+  </div>
+  <div class="hist-list" id="histList"></div>
+</div>
 
 <!-- ── CONFIRM SHEET ── -->
 <div class="sheet-overlay" id="sheetOverlay" onclick="closeConfirm()"></div>
@@ -884,6 +936,56 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// ── SWAP HISTORY ──────────────────────────────────────────────────────
+const MAX_HIST = 20;
+function logSwap(fromSym, fromAmt, toSym, toAmt) {
+  let h = JSON.parse(localStorage.getItem('indx_swap_hist') || '[]');
+  h.unshift({ from: fromSym, fromAmt, to: toSym, toAmt, ts: Date.now() });
+  localStorage.setItem('indx_swap_hist', JSON.stringify(h.slice(0, MAX_HIST)));
+}
+function openHistory() {
+  const h = JSON.parse(localStorage.getItem('indx_swap_hist') || '[]');
+  const list = document.getElementById('histList');
+  if (!h.length) {
+    list.innerHTML = '<div class="hist-empty">No swaps yet.<br>Your history appears here after your first swap.</div>';
+  } else {
+    list.innerHTML = h.map(s => {
+      const d = new Date(s.ts);
+      const label = d.toLocaleDateString('en-AU', { day:'numeric', month:'short' }) + ' ' + d.toLocaleTimeString('en-AU', { hour:'2-digit', minute:'2-digit' });
+      return `<div class="hist-item">
+        <div>
+          <div class="hist-pair">${s.from} → ${s.to}</div>
+          <div class="hist-meta">${label}</div>
+        </div>
+        <div class="hist-amt">
+          <div class="hist-out">+${parseFloat(s.toAmt).toFixed(4)} ${s.to}</div>
+          <div class="hist-in">${parseFloat(s.fromAmt).toFixed(4)} ${s.from}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('histOverlay').classList.add('active');
+  document.getElementById('historySheet').classList.add('active');
+}
+function closeHistory() {
+  document.getElementById('histOverlay').classList.remove('active');
+  document.getElementById('historySheet').classList.remove('active');
+}
+
+// ── TOKEN FAVORITES ────────────────────────────────────────────────────
+function getFavs() { return JSON.parse(localStorage.getItem('indx_fav_tokens') || '[]'); }
+function toggleFav(symbol, event) {
+  event.stopPropagation();
+  let favs = getFavs();
+  const idx = favs.indexOf(symbol);
+  if (idx >= 0) favs.splice(idx, 1);
+  else favs.push(symbol);
+  localStorage.setItem('indx_fav_tokens', JSON.stringify(favs));
+  renderPicker(document.getElementById('tokenSearch').value
+    ? TOKENS.filter(t => t.symbol.toLowerCase().includes(document.getElementById('tokenSearch').value.toLowerCase()) || t.name.toLowerCase().includes(document.getElementById('tokenSearch').value.toLowerCase()))
+    : TOKENS);
+}
+
 // ── TOKEN DATA ──
 const TOKENS = [
   { symbol:'SOL',  name:'Solana',          cls:'sol',  logo:'◎',   balance:'12.45',  usdBal:'$2,490',  price:200,   change:+2.1  },
@@ -940,6 +1042,8 @@ function calcOutput() {
     swapBtn.textContent = 'Enter an amount';
     detailsEl.style.display = 'none';
     feeBadge.textContent = '';
+    document.getElementById('impactBanner').classList.remove('show');
+    document.getElementById('routeViz').classList.remove('show');
     return;
   }
 
@@ -963,10 +1067,49 @@ function calcOutput() {
   detailsEl.style.display = 'block';
   const rate = (1 / fromToken.price) * toToken.price;
   document.getElementById('detailRate').textContent = '1 ' + fromToken.symbol + ' = ' + (fromToken.price / toToken.price).toFixed(4) + ' ' + toToken.symbol;
-  document.getElementById('detailImpact').textContent = input < 100 ? '< 0.01%' : (input < 1000 ? '~0.05%' : '~0.2%');
-  document.getElementById('detailImpact').className = 'detail-value green';
+  // Price impact (based on USD value of swap)
+  const impactPct = usdIn < 100 ? 0.01 : usdIn < 500 ? 0.05 : usdIn < 2000 ? 0.3 : usdIn < 10000 ? 1.2 : 3.5;
+  const impactEl = document.getElementById('detailImpact');
+  const bannerEl = document.getElementById('impactBanner');
+  bannerEl.className = 'impact-banner';
+  if (impactPct < 0.1) {
+    impactEl.textContent = '< 0.1%';
+    impactEl.className = 'detail-value green';
+    bannerEl.classList.remove('show');
+  } else if (impactPct < 1) {
+    impactEl.textContent = '~' + impactPct.toFixed(2) + '%';
+    impactEl.className = 'detail-value';
+    impactEl.style.color = 'var(--cyan)';
+    bannerEl.classList.remove('show');
+  } else if (impactPct < 3) {
+    impactEl.textContent = '⚠ ~' + impactPct.toFixed(1) + '%';
+    impactEl.className = 'detail-value';
+    impactEl.style.color = '#FFB800';
+    bannerEl.innerHTML = '⚠️ <span>High price impact (~' + impactPct.toFixed(1) + '%). Consider splitting into smaller orders.</span>';
+    bannerEl.classList.add('show', 'impact-warn');
+  } else {
+    impactEl.textContent = '🚨 ~' + impactPct.toFixed(1) + '%';
+    impactEl.className = 'detail-value red';
+    bannerEl.innerHTML = '🚨 <span>Very high impact (~' + impactPct.toFixed(1) + '%). This swap may move the market. Split into smaller orders.</span>';
+    bannerEl.classList.add('show', 'impact-danger');
+  }
   const minReceived = rawOut * (1 - slippage/100);
   document.getElementById('detailMin').textContent = minReceived.toFixed(4) + ' ' + toToken.symbol;
+
+  // Route visualization
+  const routeViz = document.getElementById('routeViz');
+  const routePath = document.getElementById('routePath');
+  const routeSplit = document.getElementById('routeSplit');
+  routeViz.classList.add('show');
+  // Determine route hops: if stablecoins involved, route via USDC bridge; otherwise direct
+  const needsBridge = !['USDC','USDT'].includes(fromToken.symbol) && !['USDC','USDT'].includes(toToken.symbol) && fromToken.symbol !== 'INDX' && toToken.symbol !== 'INDX';
+  if (needsBridge) {
+    routePath.innerHTML = `<span class="route-token">${fromToken.symbol}</span><span class="route-arrow">→</span><span class="route-via">Raydium</span><span class="route-arrow">→</span><span class="route-token">USDC</span><span class="route-arrow">→</span><span class="route-via">IN$DEX Pool</span><span class="route-arrow">→</span><span class="route-token">${toToken.symbol}</span>`;
+    routeSplit.textContent = usdIn > 1000 ? '70% Raydium · 30% Orca (split for best price)' : 'Single route · best available';
+  } else {
+    routePath.innerHTML = `<span class="route-token">${fromToken.symbol}</span><span class="route-arrow">→</span><span class="route-via">Raydium CLMM</span><span class="route-arrow">→</span><span class="route-token">${toToken.symbol}</span>`;
+    routeSplit.textContent = 'Direct pool · lowest fees';
+  }
 
   // Confirm sheet
   document.getElementById('cfFrom').textContent = input + ' ' + fromToken.symbol;
@@ -1088,7 +1231,16 @@ function drawChart(period) {
 // ── TOKEN PICKER ──
 function renderPicker(tokens) {
   const list = document.getElementById('pickerList');
-  list.innerHTML = tokens.map(t => `
+  const favs = getFavs();
+  // Sort: favorites first
+  const sorted = [...tokens].sort((a, b) => {
+    const aFav = favs.includes(a.symbol) ? 0 : 1;
+    const bFav = favs.includes(b.symbol) ? 0 : 1;
+    return aFav - bFav;
+  });
+  list.innerHTML = sorted.map(t => {
+    const isFav = favs.includes(t.symbol);
+    return `
     <div class="picker-item ${t === fromToken || t === toToken ? 'selected' : ''}" onclick="selectToken('${t.symbol}')">
       <div class="token-logo ${t.cls}">${t.logo}</div>
       <div class="picker-info">
@@ -1099,8 +1251,9 @@ function renderPicker(tokens) {
         <div class="picker-bal-val">${t.balance}</div>
         <div class="picker-bal-usd">${t.usdBal}</div>
       </div>
-    </div>
-  `).join('');
+      <div class="fav-star ${isFav ? 'active' : ''}" onclick="toggleFav('${t.symbol}', event)">${isFav ? '★' : '☆'}</div>
+    </div>`;
+  }).join('');
 }
 
 function filterTokens(q) {
@@ -1158,6 +1311,7 @@ function executeSwap() {
   setTimeout(() => {
     const input = document.getElementById('fromAmount').value;
     const out = document.getElementById('outputAmount').textContent;
+    logSwap(fromToken.symbol, input, toToken.symbol, out);
     document.getElementById('successTitle').textContent = 'Swap Complete ✓';
     document.getElementById('successSub').textContent = `${input} ${fromToken.symbol} → ${out} ${toToken.symbol}\n98% of value stays in your portal.`;
     document.getElementById('successTx').textContent = randomTx();
