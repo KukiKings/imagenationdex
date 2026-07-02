@@ -103,6 +103,33 @@
   .btn-primary:active{transform:scale(0.97);opacity:0.9;}
   .btn-primary:disabled{opacity:0.35;cursor:not-allowed;transform:none;}
 
+  /* ── GOD MODE ADDITIONS ── */
+
+  /* Smart greeting */
+  .greeting-bar{padding:8px 20px 0;font-size:14px;color:var(--text-muted);}
+  .greeting-bar strong{color:var(--text);}
+
+  /* Share address button */
+  .share-addr-btn{
+    width:100%;padding:12px;border-radius:12px;
+    background:rgba(0,212,255,0.07);border:1px solid var(--cyan-border);
+    color:var(--cyan);font-size:13px;font-weight:700;
+    cursor:pointer;margin-bottom:12px;
+    transition:background 0.2s;
+  }
+  .share-addr-btn:active{background:rgba(0,212,255,0.15);}
+
+  /* Deposit history */
+  .deposit-history{margin-bottom:16px;}
+  .dh-title{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;}
+  .dh-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
+  .dh-item:last-child{border-bottom:none;}
+  .dh-ico{width:34px;height:34px;border-radius:10px;background:var(--green-bg);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+  .dh-body{flex:1;}
+  .dh-name{font-size:13px;font-weight:700;}
+  .dh-date{font-size:11px;color:var(--text-muted);}
+  .dh-amt{font-size:13px;font-weight:800;color:var(--green);}
+
   /* SUCCESS */
   .success-overlay{display:none;position:fixed;inset:0;background:var(--black);z-index:300;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:40px;text-align:center;}
   .success-overlay.active{display:flex;}
@@ -126,6 +153,9 @@
 <body>
 <div class="shell">
   <div class="scroll-body">
+
+    <!-- GREETING BAR (God Mode Feature 3) -->
+    <div class="greeting-bar" id="greetingBar"></div>
 
     <!-- HEADER -->
     <div class="header">
@@ -205,6 +235,12 @@
         <div class="info-row">
           <div class="info-icon">⚡</div>
           <div class="info-text"><strong>Instant settlement.</strong> INDX lands in your portal within 60 seconds. Powered by Grid Accounts no custodian holds your funds.</div>
+        </div>
+
+        <!-- God Mode Feature 2: Deposit history -->
+        <div class="deposit-history" id="depositHistory" style="display:none;margin-top:16px;">
+          <div class="dh-title">Recent Deposits</div>
+          <div id="depositHistoryList"></div>
         </div>
 
         <button class="btn-primary" id="cardBtn" onclick="confirmDeposit('card')">Deposit Now →</button>
@@ -332,6 +368,9 @@
           <strong>⚠️ Send only SOL to this address.</strong> Sending other tokens may result in permanent loss. Minimum deposit: 0.1 SOL.
         </div>
 
+        <!-- God Mode Feature 4: Share deposit address -->
+        <button class="share-addr-btn" onclick="shareDepositAddress()">↑ Share My Deposit Address</button>
+
         <div class="info-row">
           <div class="info-icon">⚡</div>
           <div class="info-text"><strong>1–2 block confirmations</strong> (~0.8 seconds on Solana). INDX credited automatically at live rate.</div>
@@ -358,6 +397,58 @@
 let activeMethod = 'card';
 const INDX_PRICE_USD = 0.24; // $0.24 per INDX
 
+// ── GOD MODE: FEATURE 3 — Smart greeting from sessionStorage ──
+(function showGreeting() {
+  const name = sessionStorage.getItem('citizen_name');
+  const bar = document.getElementById('greetingBar');
+  if (name) {
+    const hour = new Date().getHours();
+    const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+    bar.innerHTML = greet + ', <strong>' + name + '</strong>.';
+  }
+  // Also update balance pill from sessionStorage
+  const bal = parseInt(sessionStorage.getItem('citizen_balance') || '50');
+  const balEl = document.querySelector('.bp-val');
+  const usdEl = document.querySelector('.bp-usd');
+  if (balEl) balEl.textContent = bal.toLocaleString() + ' INDX';
+  if (usdEl) usdEl.textContent = '≈ $' + (bal * INDX_PRICE_USD).toFixed(2) + ' USD';
+})();
+
+// ── GOD MODE: FEATURE 1 — Amount persistence across method switches ──
+let persistedAmount = parseFloat(localStorage.getItem('indx_deposit_last_amount') || '0');
+
+// ── GOD MODE: FEATURE 1 — Restore persisted amount ──
+(function restoreAmount() {
+  const stored = localStorage.getItem('indx_deposit_last_amount');
+  if (stored && parseFloat(stored) > 0) {
+    const inp = document.getElementById('cardAmount');
+    if (inp) { inp.value = stored; calcCardEquiv(); }
+  }
+})();
+
+// ── GOD MODE: FEATURE 2 — Deposit history from localStorage ──
+(function loadDepositHistory() {
+  const history = JSON.parse(localStorage.getItem('indx_deposit_history') || '[]');
+  if (history.length > 0) {
+    const container = document.getElementById('depositHistoryList');
+    const icons = { card:'💳', bank:'🏦', crypto:'🔗' };
+    history.slice(-3).reverse().forEach(item => {
+      const el = document.createElement('div');
+      el.className = 'dh-item';
+      el.innerHTML = `
+        <div class="dh-ico">${icons[item.method] || '💵'}</div>
+        <div class="dh-body">
+          <div class="dh-name">${item.methodLabel}</div>
+          <div class="dh-date">${item.date}</div>
+        </div>
+        <div class="dh-amt">+${item.indx} INDX</div>
+      `;
+      container.appendChild(el);
+    });
+    document.getElementById('depositHistory').style.display = 'block';
+  }
+})();
+
 function setMethod(el, method) {
   document.querySelectorAll('.method-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
@@ -375,7 +466,11 @@ function calcCardEquiv() {
 
 function setCardAmt(val) {
   const inp = document.getElementById('cardAmount');
-  if (inp) { inp.value = val; calcCardEquiv(); }
+  if (inp) {
+    inp.value = val;
+    calcCardEquiv();
+    localStorage.setItem('indx_deposit_last_amount', String(val));
+  }
 }
 
 function selectProvider(el) {
@@ -418,6 +513,41 @@ function confirmDeposit(method) {
   };
   document.getElementById('successSub').textContent = msgs[method] || msgs.card;
   document.getElementById('successOverlay').classList.add('active');
+
+  // ── GOD MODE: FEATURE 2 — Save to deposit history ──
+  const amt = parseFloat(document.getElementById('cardAmount')?.value || 0);
+  if (amt > 0) {
+    const indx = Math.floor(amt / INDX_PRICE_USD);
+    const history = JSON.parse(localStorage.getItem('indx_deposit_history') || '[]');
+    const labels = { card: 'Card Deposit', bank: 'Bank Transfer', crypto: 'Crypto Deposit' };
+    history.push({
+      method,
+      methodLabel: labels[method] || method,
+      indx: indx.toLocaleString(),
+      amount: amt,
+      date: new Date().toLocaleDateString('en-US', { day:'numeric', month:'short', year:'numeric' })
+    });
+    // Keep last 10
+    if (history.length > 10) history.shift();
+    localStorage.setItem('indx_deposit_history', JSON.stringify(history));
+  }
+}
+
+// ── GOD MODE: FEATURE 4 — Share deposit address ──
+function shareDepositAddress() {
+  const addr = document.getElementById('cryptoAddress').textContent;
+  const shareData = {
+    title: 'My IN$DEX Deposit Address',
+    text: 'Send SOL or USDC to my IN$DEX Grid Account:',
+    url: addr
+  };
+  if (navigator.share) {
+    navigator.share(shareData).catch(() => {
+      navigator.clipboard.writeText(addr).then(() => showToast('Address copied to clipboard'));
+    });
+  } else {
+    navigator.clipboard.writeText(addr).then(() => showToast('Address copied to clipboard'));
+  }
 }
 
 function closeSuccess() {

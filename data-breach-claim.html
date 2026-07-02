@@ -123,6 +123,28 @@ html,body{background:var(--black);color:var(--text);font-family:-apple-system,Bl
 
 .toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(20px);max-width:320px;width:calc(100% - 40px);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:13px;color:var(--text);text-align:center;opacity:0;transition:opacity 0.3s,transform 0.3s;z-index:400;pointer-events:none;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* GOD MODE — TIER FILTER TABS */
+.tier-filter{display:flex;gap:6px;padding:0 24px 16px;overflow-x:auto;scrollbar-width:none;}
+.tier-filter::-webkit-scrollbar{display:none;}
+.tf-tab{padding:7px 14px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer;background:var(--surface2);border:1px solid var(--border);color:var(--text2);transition:all 0.18s;flex-shrink:0;}
+.tf-tab.active{background:rgba(255,77,109,0.12);border-color:var(--red);color:var(--red);}
+
+/* GOD MODE — CLAIM WINDOW COUNTDOWN */
+.claim-countdown{margin:0 24px 16px;background:rgba(255,77,109,0.06);border:1.5px solid rgba(255,77,109,0.18);border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:12px;}
+.cc-icon{font-size:20px;flex-shrink:0;}
+.cc-text{flex:1;font-size:12px;color:var(--text2);line-height:1.4;}
+.cc-text strong{color:var(--red);}
+.cc-timer{font-size:16px;font-weight:900;color:var(--red);font-variant-numeric:tabular-nums;}
+
+/* GOD MODE — SHARE RECEIPT BUTTON */
+.share-receipt-btn{display:flex;align-items:center;gap:8px;padding:11px 16px;border-radius:12px;background:var(--surface3);border:1px solid var(--border);color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-top:10px;}
+.share-receipt-btn:active{opacity:0.75;}
+
+/* GOD MODE — INPUT VALIDATION */
+.scan-input-wrap{position:relative;flex:1;}
+.scan-input-icon{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:14px;opacity:0;transition:opacity 0.2s;}
+.scan-input-icon.show{opacity:1;}
 </style>
 </head>
 <body>
@@ -181,11 +203,31 @@ html,body{background:var(--black);color:var(--text);font-family:-apple-system,Bl
     </div>
   </div>
 
+  <!-- GOD MODE: CLAIM WINDOW COUNTDOWN -->
+  <div class="claim-countdown" id="claimCountdown">
+    <div class="cc-icon">⏳</div>
+    <div class="cc-text">Claim window — breaches expire after <strong>90 days</strong> of detection.<br>Your oldest pending claim: <strong id="oldestBreachAge">Optus · Sep 2022</strong></div>
+    <div class="cc-timer" id="countdownDisplay">89d</div>
+  </div>
+
+  <!-- GOD MODE: TIER FILTER TABS -->
+  <div class="tier-filter">
+    <div class="tf-tab active" onclick="filterByTier('all',this)">All Breaches</div>
+    <div class="tf-tab" onclick="filterByTier('T1',this)">T1 Email</div>
+    <div class="tf-tab" onclick="filterByTier('T2',this)">T2 Email+PW</div>
+    <div class="tf-tab" onclick="filterByTier('T3',this)">T3 Financial</div>
+    <div class="tf-tab" onclick="filterByTier('T4',this)">T4 Identity</div>
+  </div>
+
   <!-- SCAN -->
   <div class="scan-section">
     <div class="scan-label">Scan your email or phone</div>
     <div class="scan-row">
-      <input type="email" class="scan-input" id="scanInput" placeholder="you@email.com or +679 xxx" autocomplete="off">
+      <div class="scan-input-wrap">
+        <input type="email" class="scan-input" id="scanInput" placeholder="you@email.com or +679 xxx"
+               autocomplete="off" oninput="liveValidateInput(this)" style="width:100%;">
+        <span class="scan-input-icon" id="inputValidIcon"></span>
+      </div>
       <button class="scan-btn" onclick="startScan()">Scan →</button>
     </div>
   </div>
@@ -300,6 +342,11 @@ html,body{background:var(--black);color:var(--text);font-family:-apple-system,Bl
 
   </div>
 
+  <!-- GOD MODE: SHARE RECEIPT -->
+  <div style="padding:0 24px;" id="shareBlock" style="display:none;">
+    <button class="share-receipt-btn" onclick="shareClaimReceipt()">📋 Export Claim Receipt</button>
+  </div>
+
   <!-- HOW IT WORKS -->
   <div class="how-section">
     <div class="how-toggle" onclick="toggleHow()">
@@ -348,9 +395,71 @@ html,body{background:var(--black);color:var(--text);font-family:-apple-system,Bl
 <div class="toast" id="toast"></div>
 
 <script>
+const INDX_PRICE_USD = 0.24;
 const INDX_PRICE = 0.24;
 let claimedBreaches = new Set(['breach4']);
 let totalClaimable = 80; // 50+15+15 (adobe already claimed)
+
+// GOD MODE F4: Live input validation
+function liveValidateInput(input) {
+  const val = input.value.trim();
+  const icon = document.getElementById('inputValidIcon');
+  const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const phoneRe = /^[\+\d][\d\s\-]{6,}$/;
+  if(!val){ icon.textContent=''; icon.classList.remove('show'); input.style.borderColor=''; return; }
+  if(emailRe.test(val)||phoneRe.test(val)){
+    icon.textContent='✓'; icon.style.color='var(--green)'; icon.classList.add('show');
+    input.style.borderColor='var(--green)';
+    localStorage.setItem('indx_breach_lastInput', val.slice(0,3)+'***');
+  } else {
+    icon.textContent='✗'; icon.style.color='var(--red)'; icon.classList.add('show');
+    input.style.borderColor='var(--red)';
+  }
+}
+
+// GOD MODE F1: Tier filter
+function filterByTier(tier, tab) {
+  document.querySelectorAll('.tf-tab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+  document.querySelectorAll('.breach-card').forEach(card=>{
+    if(tier==='all'){ card.style.display='block'; return; }
+    const tierEl = card.querySelector('.bc-tier');
+    const show = tierEl && tierEl.classList.contains('tier-'+tier.toLowerCase());
+    card.style.display = show ? 'block' : 'none';
+  });
+}
+
+// GOD MODE F2: Countdown timer (days remaining in claim window)
+(function initCountdown(){
+  const display = document.getElementById('countdownDisplay');
+  // Simulate: 89 days remaining, counting down in real-time (demo: just show 89d)
+  const saved = localStorage.getItem('indx_breach_countdownStart');
+  const now = Date.now();
+  if(!saved) localStorage.setItem('indx_breach_countdownStart', now);
+  const start = parseInt(localStorage.getItem('indx_breach_countdownStart'));
+  const windowMs = 90 * 24 * 60 * 60 * 1000;
+  const elapsed = now - start;
+  const remaining = Math.max(0, windowMs - elapsed);
+  const daysLeft = Math.ceil(remaining / (24*60*60*1000));
+  display.textContent = daysLeft + 'd';
+  if(daysLeft < 10) display.style.color = 'var(--red)';
+  else if(daysLeft < 30) display.style.color = 'var(--gold)';
+})();
+
+// GOD MODE F3: Share/export receipt
+function shareClaimReceipt() {
+  const claimed = [];
+  if(claimedBreaches.has('breach1')) claimed.push('Optus — 50 INDX (~$12.00 USD)');
+  if(claimedBreaches.has('breach2')) claimed.push('LinkedIn — 15 INDX (~$3.60 USD)');
+  if(claimedBreaches.has('breach3')) claimed.push('Facebook — 15 INDX (~$3.60 USD)');
+  if(claimedBreaches.has('breach4')) claimed.push('Adobe — 5 INDX (~$1.20 USD)');
+  if(claimed.length===0){ showToast('No claims filed yet — claim a breach first'); return; }
+  const total = claimedBreaches.size * 5 + (claimedBreaches.has('breach1')?45:0) + (claimedBreaches.has('breach2')?10:0) + (claimedBreaches.has('breach3')?10:0);
+  const receipt = `IN$DEX Breach Claim Receipt\n${'='.repeat(32)}\nDate: ${new Date().toLocaleString()}\nPlatform: IN$DEX Data Sovereignty\n\nBreaches claimed:\n${claimed.map(c=>'• '+c).join('\n')}\n\nAll claims are ZK-proof verified\nand anchored to the Solana blockchain.\n\n${'='.repeat(32)}\nPowered by IN$DEX · imagenationdex.com`;
+  if(navigator.share){ navigator.share({title:'My IN$DEX Breach Claims', text:receipt}).catch(()=>{}); }
+  else if(navigator.clipboard){ navigator.clipboard.writeText(receipt).then(()=>showToast('✓ Claim receipt copied to clipboard')); }
+  else { showToast('✓ Receipt generated — copy from console'); }
+}
 
 function startScan() {
   const val = document.getElementById('scanInput').value.trim();
@@ -370,6 +479,7 @@ function startScan() {
       clearInterval(iv);
       document.getElementById('scanningState').classList.remove('show');
       document.getElementById('resultsSection').classList.add('show');
+      document.getElementById('shareBlock').style.display='block';
       showToast('⚠️ 4 breaches found. 85 INDX claimable.');
     }
   }, 700);

@@ -122,6 +122,24 @@
   .rs-title{font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;}
   .rs-see-all{font-size:12px;color:var(--cyan);cursor:pointer;}
 
+  /* GOD MODE — SEARCH */
+  /* 2. Voice search */
+  .search-mic{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:18px;cursor:pointer;color:var(--text-muted);width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:color 0.2s;}
+  .search-mic.listening{color:var(--red);animation:micPulse 1s ease-in-out infinite;}
+  @keyframes micPulse{0%,100%{opacity:1;transform:translateY(-50%) scale(1);}50%{opacity:0.5;transform:translateY(-50%) scale(1.15);}}
+  /* Input accommodates either mic or clear icon */
+  /* 3. Trending drift flash */
+  @keyframes trendUp{0%{color:var(--green);}100%{color:var(--text-muted);}}
+  .trend-meta-flash{animation:trendUp 1.2s ease;}
+  /* 4. Share results button */
+  .search-share-wrap{padding:0 20px 12px;display:none;}
+  .search-share-wrap.show{display:block;}
+  .search-share-btn{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text-muted);transition:border-color 0.2s;}
+  .search-share-btn:active{border-color:var(--cyan);color:var(--cyan);}
+  /* Toast */
+  .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:10px 18px;font-size:13px;font-weight:600;z-index:400;opacity:0;transition:all 0.3s;pointer-events:none;white-space:nowrap;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
   /* NAV */
   .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;height:var(--nav-h);background:rgba(9,10,16,0.97);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;padding:0 8px 10px;z-index:100;}
   .nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:8px 12px;border-radius:12px;transition:background 0.2s;flex:1;}
@@ -140,9 +158,11 @@
       <div class="back-btn" onclick="window.history.back()">←</div>
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
-        <input class="search-input" type="search" id="searchInput" placeholder="Listings, tokens, citizens…"
-          oninput="onSearch()" autofocus autocomplete="off">
-        <span class="search-clear" id="clearBtn" onclick="clearSearch()">✕</span>
+        <input class="search-input" id="searchInput" type="search" placeholder="Listings, tokens, citizens…"
+          oninput="onSearch()" autofocus autocomplete="off" style="padding-right:44px;">
+        <span class="search-clear" id="clearBtn" onclick="clearSearch()" style="right:12px;">✕</span>
+        <!-- GOD MODE: voice search mic -->
+        <span class="search-mic" id="micBtn" onclick="startVoice()" title="Voice search">🎤</span>
       </div>
     </div>
   </div>
@@ -197,7 +217,7 @@
             <div class="trend-icon">🎨</div>
             <div>
               <div class="trend-name">Handmade Crafts</div>
-              <div class="trend-meta">142 new listings this week</div>
+              <div class="trend-meta" id="tMeta1">142 new listings this week</div>
             </div>
             <div class="trend-badge tb-listing">LISTING</div>
           </div>
@@ -206,7 +226,7 @@
             <div class="trend-icon">◎</div>
             <div>
               <div class="trend-name">INDX</div>
-              <div class="trend-meta">+12.4% · $0.24 USD genesis</div>
+              <div class="trend-meta" id="tMeta2">+12.4% · $0.24 USD genesis</div>
             </div>
             <div class="trend-badge tb-token">TOKEN</div>
           </div>
@@ -215,7 +235,7 @@
             <div class="trend-icon">🗳️</div>
             <div>
               <div class="trend-name">Fee Reduction Proposal</div>
-              <div class="trend-meta">847 votes · 2 days left</div>
+              <div class="trend-meta" id="tMeta3">847 votes · 2 days left</div>
             </div>
             <div class="trend-badge tb-gov">GOVERNANCE</div>
           </div>
@@ -224,7 +244,7 @@
             <div class="trend-icon">🌐</div>
             <div>
               <div class="trend-name">Sovereign Delivery</div>
-              <div class="trend-meta">New courier network launched</div>
+              <div class="trend-meta" id="tMeta4">New courier network launched</div>
             </div>
             <div class="trend-badge tb-listing">LISTING</div>
           </div>
@@ -233,7 +253,7 @@
             <div class="trend-icon">👑</div>
             <div>
               <div class="trend-name">Aiko Tanaka</div>
-              <div class="trend-meta">Top citizen · WS 194</div>
+              <div class="trend-meta" id="tMeta5">Top citizen · WS 194</div>
             </div>
             <div class="trend-badge tb-citizen">CITIZEN</div>
           </div>
@@ -282,6 +302,12 @@
         <div id="governance-results"></div>
       </div>
 
+      <!-- GOD MODE: share results -->
+      <div class="search-share-wrap" id="shareWrap">
+        <button class="search-share-btn" onclick="shareResults()">
+          <span>🔗</span><span>Share these results</span>
+        </button>
+      </div>
       <div style="height:20px;"></div>
     </div>
 
@@ -312,11 +338,126 @@
       <div class="nav-icon">👤</div><div class="nav-label">Profile</div>
     </div>
   </div>
+  <div class="toast" id="toast"></div>
 </div>
 
 <script>
+  const INDX_PRICE_USD = 0.24;
   let currentFilter = 'all';
   let searchTimer;
+
+  // ── GOD MODE — SEARCH ────────────────────────────────────────
+
+  // 1. RECENT SEARCHES — localStorage persistence
+  const RECENT_KEY = 'indx_search_recent';
+  const MAX_RECENT = 8;
+
+  function loadRecent() {
+    const saved = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+    const list = document.getElementById('recentList');
+    if (!saved.length) {
+      list.innerHTML = '<div style="font-size:13px;color:var(--text-dim);padding:8px 14px;">No recent searches</div>';
+      return;
+    }
+    list.innerHTML = saved.map(q => `
+      <div class="recent-item" onclick="doSearch(${JSON.stringify(q)})">
+        <span class="ri-icon">🕐</span>
+        <span class="ri-text">${q}</span>
+        <span class="ri-remove" onclick="removeRecent(event,this)">✕</span>
+      </div>`).join('');
+  }
+
+  function addToRecent(q) {
+    if (!q || q.length < 2) return;
+    let saved = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+    saved = saved.filter(s => s !== q);
+    saved.unshift(q);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(saved.slice(0, MAX_RECENT)));
+    loadRecent();
+  }
+
+  // 2. VOICE SEARCH
+  function startVoice() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { showToast('Voice search not supported on this browser'); return; }
+    const rec = new SR();
+    rec.lang = 'en-NZ';
+    rec.continuous = false;
+    rec.interimResults = false;
+    const micBtn = document.getElementById('micBtn');
+    micBtn.classList.add('listening');
+    showToast('🎤 Listening…');
+    try { rec.start(); } catch(e) { micBtn.classList.remove('listening'); return; }
+    rec.onresult = (e) => {
+      const q = e.results[0][0].transcript.trim();
+      micBtn.classList.remove('listening');
+      if (q) { document.getElementById('searchInput').value = q; onSearch(); }
+    };
+    rec.onerror = rec.onend = () => micBtn.classList.remove('listening');
+  }
+
+  // 3. TRENDING METRICS LIVE DRIFT
+  const trendState = {
+    listings: 142, indxPct: 12.4, votes: 847, couriers: 23, ws: 194
+  };
+
+  function driftTrending() {
+    // Listings count
+    trendState.listings += Math.floor(Math.random() * 3);
+    const m1 = document.getElementById('tMeta1');
+    if (m1) { m1.textContent = trendState.listings + ' new listings this week'; m1.classList.add('trend-meta-flash'); setTimeout(() => m1.classList.remove('trend-meta-flash'), 1200); }
+
+    // INDX price change %
+    trendState.indxPct = Math.max(0.1, trendState.indxPct + (Math.random() - 0.45) * 0.4);
+    const m2 = document.getElementById('tMeta2');
+    if (m2) { m2.textContent = '+' + trendState.indxPct.toFixed(1) + '% · $0.24 USD genesis'; m2.classList.add('trend-meta-flash'); setTimeout(() => m2.classList.remove('trend-meta-flash'), 1200); }
+
+    // Governance votes
+    trendState.votes += Math.floor(Math.random() * 4);
+    const m3 = document.getElementById('tMeta3');
+    if (m3) { m3.textContent = trendState.votes + ' votes · 2 days left'; m3.classList.add('trend-meta-flash'); setTimeout(() => m3.classList.remove('trend-meta-flash'), 1200); }
+
+    // Courier count
+    trendState.couriers += Math.random() > 0.7 ? 1 : 0;
+    const m4 = document.getElementById('tMeta4');
+    if (m4) m4.textContent = trendState.couriers + ' active courier nodes';
+
+    // Top citizen WS
+    trendState.ws += Math.random() > 0.8 ? 1 : 0;
+    const m5 = document.getElementById('tMeta5');
+    if (m5) m5.textContent = 'Top citizen · WS ' + trendState.ws;
+
+    setTimeout(driftTrending, 22000 + Math.random() * 13000);
+  }
+
+  // 4. URL PARAM PRE-FILL + SHARE RESULTS
+  function checkUrlParams() {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get('q');
+    if (q) {
+      document.getElementById('searchInput').value = q;
+      onSearch();
+    }
+  }
+
+  function shareResults() {
+    const q = document.getElementById('searchInput').value.trim();
+    if (!q) return;
+    const url = location.origin + location.pathname + '?q=' + encodeURIComponent(q);
+    if (navigator.share) {
+      navigator.share({ title: 'IN$DEX Search', text: `Search for "${q}" on IN$DEX`, url });
+    } else {
+      navigator.clipboard.writeText(url).then(() => showToast('🔗 Search link copied!'));
+    }
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2400);
+  }
+  // ── END GOD MODE ─────────────────────────────────────────────
 
   const DATA = {
     listings: [
@@ -364,7 +505,9 @@
 
   function onSearch() {
     const q = document.getElementById('searchInput').value.trim();
+    // GOD MODE PATCH — toggle mic vs clear, show/hide share
     document.getElementById('clearBtn').style.display = q ? 'block' : 'none';
+    document.getElementById('micBtn').style.display  = q ? 'none'  : 'flex';
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => {
       if (q.length >= 1) {
@@ -378,10 +521,13 @@
     }, 220);
   }
 
+  // GOD MODE PATCH
   function doSearch(q) {
     document.getElementById('searchInput').value = q;
     document.getElementById('clearBtn').style.display = 'block';
+    document.getElementById('micBtn').style.display = 'none';
     document.getElementById('searchInput').focus();
+    addToRecent(q);
     onSearch();
   }
 
@@ -403,6 +549,8 @@
 
     document.getElementById('resultsState').classList.toggle('show', hasResults);
     document.getElementById('emptyState').classList.toggle('show', !hasResults);
+    // GOD MODE PATCH — show share button when results exist
+    document.getElementById('shareWrap').classList.toggle('show', hasResults);
     if (!hasResults) {
       document.getElementById('emptySubtext').textContent = `No results for "${q}". Try different keywords.`;
       return;
@@ -467,25 +615,45 @@
     return text.replace(re, '<span style="color:var(--cyan);font-weight:700;">$1</span>');
   }
 
+  // GOD MODE PATCH
   function clearSearch() {
     document.getElementById('searchInput').value = '';
     document.getElementById('clearBtn').style.display = 'none';
+    document.getElementById('micBtn').style.display = 'flex';
     document.getElementById('defaultState').style.display = 'block';
     document.getElementById('resultsState').classList.remove('show');
     document.getElementById('emptyState').classList.remove('show');
+    document.getElementById('shareWrap').classList.remove('show');
   }
 
+  // GOD MODE PATCH
   function clearRecent() {
+    localStorage.removeItem(RECENT_KEY);
     document.getElementById('recentList').innerHTML = '<div style="font-size:13px;color:var(--text-dim);padding:8px 14px;">No recent searches</div>';
   }
 
+  // GOD MODE PATCH
   function removeRecent(e, el) {
     e.stopPropagation();
+    const text = el.closest('.recent-item').querySelector('.ri-text').textContent;
+    let saved = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+    saved = saved.filter(s => s !== text);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(saved));
     el.closest('.recent-item').remove();
+    if (!saved.length) {
+      document.getElementById('recentList').innerHTML = '<div style="font-size:13px;color:var(--text-dim);padding:8px 14px;">No recent searches</div>';
+    }
   }
 
   // Auto-focus
   window.addEventListener('load', () => setTimeout(() => document.getElementById('searchInput').focus(), 100));
+
+  // GOD MODE: DOMContentLoaded init
+  document.addEventListener('DOMContentLoaded', () => {
+    loadRecent();
+    checkUrlParams();
+    setTimeout(driftTrending, 8000); // start drift after 8s
+  });
 </script>
 </body>
 </html>

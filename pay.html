@@ -122,6 +122,17 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
 /* ── TOAST ── */
 .toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--surface2);border:1px solid rgba(0,229,160,0.3);color:var(--text);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:500;transition:transform 0.3s;z-index:300;white-space:nowrap;}
 .toast.show{transform:translateX(-50%) translateY(0);}
+
+/* GOD MODE — QUICK AMOUNT CHIPS */
+.quick-chips{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+.qc-chip{padding:7px 14px;border-radius:20px;background:var(--surface2);border:1px solid var(--surface3);font-size:13px;font-weight:700;color:var(--text2);cursor:pointer;transition:all 0.18s;}
+.qc-chip:active,.qc-chip.qc-active{background:rgba(0,212,255,0.1);border-color:var(--cyan);color:var(--cyan);}
+
+/* GOD MODE — NOTE SUGGESTIONS */
+.note-suggestions{display:flex;gap:6px;margin-top:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;}
+.note-suggestions::-webkit-scrollbar{display:none;}
+.ns-chip{flex-shrink:0;padding:5px 12px;border-radius:16px;background:var(--surface2);border:1px solid var(--surface3);font-size:12px;color:var(--text2);cursor:pointer;white-space:nowrap;}
+.ns-chip:active{background:var(--surface3);border-color:var(--cyan);}
 </style>
 </head>
 <body>
@@ -158,11 +169,20 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
         <div class="amount-ticker">INDX</div>
       </div>
       <div class="amount-convert" id="amountConvert">≈ <span>$0.00 USD</span></div>
+      <!-- GOD MODE — QUICK AMOUNT CHIPS -->
+      <div class="quick-chips" id="quickChips">
+        <div class="qc-chip" onclick="setQuickIndx(5,this)">$5</div>
+        <div class="qc-chip" onclick="setQuickIndx(10,this)">$10</div>
+        <div class="qc-chip" onclick="setQuickIndx(25,this)">$25</div>
+        <div class="qc-chip" onclick="setQuickIndx(50,this)">$50</div>
+      </div>
     </div>
 
     <!-- NOTE -->
     <div class="note-wrap" id="noteSection">
       <textarea class="note-input" id="noteInput" rows="2" placeholder="Add a note (optional)"></textarea>
+      <!-- GOD MODE — NOTE SUGGESTIONS -->
+      <div class="note-suggestions" id="noteSuggestions"></div>
     </div>
 
     <!-- CTA — for existing citizens -->
@@ -444,6 +464,90 @@ function showToast(msg) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
 }
+
+// ════════════════════════════════════════════════
+// GOD MODE — PAY.HTML
+// ════════════════════════════════════════════════
+(function godModePay() {
+  const INDX_PRICE_USD   = 0.24;
+  const NOTE_HISTORY_KEY = 'indx_pay_notes';
+  const PAY_CITIZEN_KEY  = 'indx_pay_citizen';
+
+  // 1. CITIZEN ID WIRING — use sessionStorage citizen_id to enable pay button immediately on init
+  //    (the async init function may not finish before user taps — this pre-enables if session exists)
+  (function wirePayBtn() {
+    const myId = sessionStorage.getItem('citizen_id');
+    if (myId) {
+      // Will be checked again after init(); this is an early enable for returning citizens
+      document.getElementById('ctaCitizen').style.display = 'block';
+    }
+  })();
+
+  // 2. QUICK AMOUNT CHIPS — convert USD to INDX
+  window.setQuickIndx = function(usd, el) {
+    const indxAmt = (usd / INDX_PRICE_USD).toFixed(0);
+    document.getElementById('amountInput').value = indxAmt;
+    updateConvert();
+    document.getElementById('payBtn').disabled = false;
+    document.querySelectorAll('.qc-chip').forEach(c => c.classList.remove('qc-active'));
+    el.classList.add('qc-active');
+    setTimeout(() => el.classList.remove('qc-active'), 800);
+  };
+
+  // Clear chip highlight on manual input
+  document.getElementById('amountInput').addEventListener('input', () => {
+    document.querySelectorAll('.qc-chip').forEach(c => c.classList.remove('qc-active'));
+  });
+
+  // 3. NOTE SUGGESTIONS — load recent notes for this recipient from localStorage
+  function loadNoteSuggestions() {
+    try {
+      const all   = JSON.parse(localStorage.getItem(NOTE_HISTORY_KEY) || '{}');
+      const notes = all[TARGET_SLUG] || [];
+      const defaults = ['Thank you 🙏', 'Rent', 'School fees', 'Groceries', 'Love you'];
+      const combined = [...new Set([...notes, ...defaults])].slice(0, 6);
+      const container = document.getElementById('noteSuggestions');
+      container.innerHTML = combined.map(n =>
+        `<div class="ns-chip" onclick="useNoteSuggestion(this.textContent)">${n}</div>`
+      ).join('');
+    } catch(e) {}
+  }
+
+  window.useNoteSuggestion = function(text) {
+    document.getElementById('noteInput').value = text;
+    showToast('Note set');
+  };
+
+  function saveNoteToHistory(note) {
+    if (!note || !TARGET_SLUG) return;
+    try {
+      const all   = JSON.parse(localStorage.getItem(NOTE_HISTORY_KEY) || '{}');
+      const notes = all[TARGET_SLUG] || [];
+      if (!notes.includes(note)) notes.unshift(note);
+      all[TARGET_SLUG] = notes.slice(0, 5);
+      localStorage.setItem(NOTE_HISTORY_KEY, JSON.stringify(all));
+    } catch(e) {}
+  }
+
+  // 4. PERSIST NOTE AFTER PAYMENT — patch confirmPayment to save note
+  const origConfirm = window.confirmPayment;
+  window.confirmPayment = async function() {
+    const note = document.getElementById('noteInput').value.trim();
+    if (note) saveNoteToHistory(note);
+    await origConfirm();
+  };
+
+  // Wait for TARGET_SLUG to be set (it's set by the async init function)
+  // Poll briefly then load suggestions
+  let attempts = 0;
+  const waitForSlug = setInterval(() => {
+    attempts++;
+    if (TARGET_SLUG || attempts > 20) {
+      clearInterval(waitForSlug);
+      loadNoteSuggestions();
+    }
+  }, 100);
+})();
 </script>
 </body>
 </html>

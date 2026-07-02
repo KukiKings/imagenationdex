@@ -106,6 +106,16 @@
     .btn-primary.green{background:var(--green);}
 
     #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+
+    /* ── GOD MODE: PHONE FORMATTER / RESEND TIMER ── */
+    .resend-countdown { font-size:12px; color:var(--text-muted); text-align:center; display:block; margin-top:8px; }
+    .resend-countdown span { color: var(--gold); font-weight:700; }
+
+    /* ── GOD MODE: SESSION RESUME BANNER ── */
+    .resume-banner { display:none; align-items:center; gap:10px; background:rgba(0,229,160,0.08); border:1px solid rgba(0,229,160,0.2); border-radius:14px; padding:14px 16px; margin:0 16px 16px; }
+    .resume-banner.show { display:flex; }
+    .resume-banner-text { flex:1; font-size:13px; color:var(--green); line-height:1.5; }
+    .resume-banner-btn { font-size:12px; font-weight:800; background:var(--green); color:#000; border:none; border-radius:8px; padding:6px 12px; cursor:pointer; white-space:nowrap; }
   </style>
 </head>
 <body>
@@ -116,6 +126,13 @@
     <button class="tb-back" id="backBtn" onclick="goBack()">←</button>
     <div class="tb-title" id="tbTitle">Sovereign Onboarding</div>
     <div class="tb-time">~90 sec</div>
+  </div>
+
+  <!-- GOD MODE F4: Session resume banner -->
+  <div class="resume-banner" id="resumeBanner">
+    <div style="font-size:20px;">👋</div>
+    <div class="resume-banner-text">Welcome back, <strong id="resumeName">Citizen</strong>. Your account is already set up.</div>
+    <button class="resume-banner-btn" onclick="window.location.href='citizen-dashboard.html'">Go to wallet →</button>
   </div>
 
   <!-- STEP DOTS -->
@@ -208,7 +225,8 @@
           <div class="otp-box" id="otp5"></div>
         </div>
         <div class="otp-hint">Code expires in <span id="otpTimer" style="color:var(--gold);font-weight:700;">4:59</span></div>
-        <div class="resend-link" onclick="showToast('New code sent to your number')">Didn't get it? Resend →</div>
+        <div class="resend-link" id="resendLink" onclick="triggerResend()" style="display:none;">Didn't get it? Resend →</div>
+        <div class="resend-countdown" id="resendCountdown">Resend available in <span id="resendSecs">60</span>s</div>
       </div>
       <!-- Simulated keypad -->
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
@@ -276,7 +294,7 @@
 
 </div>
 <div id="toast"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
 const SUPABASE_URL      = 'https://zljgthfzbalsunuoohcd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
@@ -443,6 +461,95 @@ function finishOnboarding() {
 }
 
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}
+
+// ══════════════════════════════════════════════
+// GOD MODE ADDITIONS — biometric-kyc
+// ══════════════════════════════════════════════
+const INDX_PRICE_USD = 0.24;
+
+// F1: OTP auto-submit — already triggers goToStep(3) at 6 digits, this adds instant visual feedback
+// Patch otpKey to flash all boxes green before transition
+const _origOtpKey = otpKey;
+otpKey = function(k) {
+  _origOtpKey(k);
+  if (otpDigits.length === 6) {
+    for (let i = 0; i < 6; i++) {
+      const box = document.getElementById('otp' + i);
+      if (box) {
+        box.style.background = 'rgba(0,229,160,0.12)';
+        box.style.borderColor = 'rgba(0,229,160,0.5)';
+      }
+    }
+  }
+};
+
+// F2: Phone number auto-formatter — groups as 04XX XXX XXX
+document.addEventListener('DOMContentLoaded', () => {
+  const phoneIn = document.getElementById('phoneInput');
+  if (phoneIn) {
+    phoneIn.addEventListener('input', function() {
+      let raw = this.value.replace(/\D/g, '');
+      if (raw.length > 10) raw = raw.slice(0, 10);
+      // Format: XXXX XXX XXX
+      let formatted = raw;
+      if (raw.length > 4 && raw.length <= 7) {
+        formatted = raw.slice(0,4) + ' ' + raw.slice(4);
+      } else if (raw.length > 7) {
+        formatted = raw.slice(0,4) + ' ' + raw.slice(4,7) + ' ' + raw.slice(7);
+      }
+      // Only update if cursor is at end (avoid mid-edit reformatting issues)
+      const atEnd = this.selectionStart === this.value.length;
+      if (atEnd) this.value = formatted;
+      document.getElementById('sendOtpBtn').disabled = raw.length < 8;
+    });
+  }
+
+  // F3: Resend cooldown — patch into sendOtp flow
+  const _origSendOtp = window.sendOtp;
+  window.sendOtp = function() {
+    _origSendOtp();
+    startResendCooldown();
+  };
+
+  // F4: Session resume check
+  const existingId = sessionStorage.getItem('citizen_id');
+  const existingName = sessionStorage.getItem('citizen_name');
+  if (existingId && existingName) {
+    const banner = document.getElementById('resumeBanner');
+    const nameEl = document.getElementById('resumeName');
+    if (banner && nameEl) {
+      nameEl.textContent = existingName;
+      banner.classList.add('show');
+    }
+  }
+});
+
+// F3: Resend cooldown timer
+let _resendCountdown = null;
+function startResendCooldown() {
+  let secs = 60;
+  const countEl = document.getElementById('resendCountdown');
+  const linkEl = document.getElementById('resendLink');
+  const secsEl = document.getElementById('resendSecs');
+  if (!countEl) return;
+  if (linkEl) linkEl.style.display = 'none';
+  countEl.style.display = 'block';
+  clearInterval(_resendCountdown);
+  _resendCountdown = setInterval(() => {
+    secs--;
+    if (secsEl) secsEl.textContent = secs;
+    if (secs <= 0) {
+      clearInterval(_resendCountdown);
+      countEl.style.display = 'none';
+      if (linkEl) linkEl.style.display = 'block';
+    }
+  }, 1000);
+}
+
+function triggerResend() {
+  showToast('New code sent to your number');
+  startResendCooldown();
+}
 </script>
 </body>
 </html>

@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SI Memory — Persistent Memory & Knowledge Graph</title>
+  <style>
+    :root {
+      --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+      --black:#090A10; --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+      --border:#252836; --border2:#2E3348;
+      --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+      --text:#F0F2FF; --text2:#9CA3B8; --muted:#5A6178;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    html,body{min-height:100%;background:var(--black);color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
+      max-width:430px;margin:0 auto;overflow-x:hidden;}
+
+    /* ── HEADER ── */
+    .header{display:flex;align-items:center;gap:12px;padding:20px 20px 14px;position:sticky;top:0;
+      background:rgba(9,10,16,0.92);backdrop-filter:blur(16px);z-index:50;
+      border-bottom:1px solid var(--border);}
+    .back-btn{width:38px;height:38px;border-radius:50%;background:var(--surface2);
+      border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+      font-size:18px;cursor:pointer;flex-shrink:0;}
+    .header-body{flex:1;}
+    .header-title{font-size:17px;font-weight:800;letter-spacing:-0.01em;}
+    .header-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+    .si-badge{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:800;
+      color:var(--purple);background:rgba(139,63,232,0.08);border:1px solid rgba(139,63,232,0.2);
+      border-radius:20px;padding:5px 10px;white-space:nowrap;}
+    .si-dot{width:6px;height:6px;border-radius:50%;background:var(--purple);
+      animation:siPulse 2s ease-in-out infinite;}
+    @keyframes siPulse{0%,100%{opacity:1;box-shadow:0 0 6px var(--purple);}50%{opacity:0.4;box-shadow:none;}}
+
+    /* ── HERO ── */
+    .hero{margin:16px;background:linear-gradient(135deg,rgba(139,63,232,0.12),rgba(43,53,216,0.10));
+      border:1px solid rgba(139,63,232,0.22);border-radius:20px;padding:20px;position:relative;overflow:hidden;}
+    .hero-blob{position:absolute;width:220px;height:220px;top:-80px;right:-60px;border-radius:50%;
+      background:radial-gradient(circle,rgba(139,63,232,0.22) 0%,transparent 70%);
+      animation:hblob 22s ease-in-out infinite alternate;pointer-events:none;}
+    @keyframes hblob{0%{border-radius:60% 40% 44% 56%/50% 62% 38% 50%;}100%{border-radius:44% 56% 60% 40%/60% 40% 44% 56%;}}
+    .hero-tag{font-size:10px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:var(--purple);margin-bottom:8px;}
+    .hero-title{font-size:22px;font-weight:900;letter-spacing:-0.02em;line-height:1.2;margin-bottom:10px;}
+    .hero-title span{color:var(--purple);}
+    .hero-desc{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:18px;}
+    .hero-stats{display:flex;gap:16px;}
+    .h-stat{text-align:center;}
+    .h-stat-val{font-size:20px;font-weight:900;color:var(--purple);}
+    .h-stat-lbl{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;}
+
+    /* ── SECTION LABEL ── */
+    .section-label{padding:18px 16px 8px;font-size:11px;font-weight:800;
+      letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);}
+
+    /* ── MEMORY TABS ── */
+    .mem-tabs{display:flex;gap:6px;padding:0 16px;overflow-x:auto;scrollbar-width:none;margin-bottom:12px;}
+    .mem-tabs::-webkit-scrollbar{display:none;}
+    .mem-tab{flex-shrink:0;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:700;
+      cursor:pointer;background:var(--surface2);border:1px solid var(--border2);color:var(--muted);
+      transition:all 0.2s;}
+    .mem-tab.active{background:rgba(139,63,232,0.14);border-color:rgba(139,63,232,0.3);color:var(--purple);}
+
+    /* ── MEMORY SEARCH ── */
+    .mem-search-wrap{padding:0 16px 10px;}
+    .mem-search-inner{display:flex;align-items:center;gap:10px;background:var(--surface);
+      border:1.5px solid var(--border2);border-radius:12px;padding:10px 14px;transition:border-color 0.2s;}
+    .mem-search-inner:focus-within{border-color:var(--purple);}
+    .mem-search-icon{font-size:14px;color:var(--muted);}
+    .mem-search-input{flex:1;background:transparent;border:none;outline:none;font-size:13px;
+      color:var(--text);font-family:inherit;}
+    .mem-search-input::placeholder{color:var(--muted);}
+
+    /* ── MEMORY CARDS ── */
+    .mem-list{padding:0 16px;display:flex;flex-direction:column;gap:8px;}
+    .mem-card{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;
+      overflow:hidden;cursor:pointer;transition:border-color 0.2s;}
+    .mem-card.expanded{border-color:rgba(139,63,232,0.35);}
+    .mem-card-head{display:flex;align-items:flex-start;gap:12px;padding:13px 14px;}
+    .mem-icon{width:36px;height:36px;border-radius:10px;background:var(--surface2);
+      border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;
+      font-size:16px;flex-shrink:0;}
+    .mem-card.expanded .mem-icon{background:rgba(139,63,232,0.1);border-color:rgba(139,63,232,0.2);}
+    .mem-main{flex:1;min-width:0;}
+    .mem-fact{font-size:13px;font-weight:700;line-height:1.4;margin-bottom:4px;}
+    .mem-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+    .mem-layer{font-size:9px;font-weight:800;color:var(--purple);text-transform:uppercase;letter-spacing:0.08em;}
+    .mem-conf{font-size:9px;font-weight:700;color:var(--green);}
+    .mem-date{font-size:9px;color:var(--muted);}
+    .mem-chevron{font-size:15px;color:var(--muted);transition:transform 0.2s;flex-shrink:0;margin-top:2px;}
+    .mem-card.expanded .mem-chevron{transform:rotate(90deg);color:var(--purple);}
+    .mem-body{display:none;padding:0 14px 13px;border-top:1px solid var(--border);margin:0 14px;padding-top:12px;}
+    .mem-card.expanded .mem-body{display:block;animation:fadeUp 0.18s ease both;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:none;}}
+    .mem-detail{font-size:12.5px;color:var(--text2);line-height:1.65;margin-bottom:10px;}
+    .mem-usage{font-size:11px;color:var(--muted);}
+    .mem-usage span{color:var(--purple);font-weight:700;}
+    .mem-empty{text-align:center;padding:30px 20px;color:var(--muted);font-size:13px;}
+
+    /* ── KNOWLEDGE GRAPH ── */
+    .graph-wrap{margin:0 16px;background:var(--surface);border:1px solid var(--border2);
+      border-radius:18px;overflow:hidden;position:relative;}
+    .graph-canvas-wrap{position:relative;}
+    #kgCanvas{display:block;width:100%;cursor:grab;}
+    #kgCanvas:active{cursor:grabbing;}
+    .graph-legend{display:flex;gap:12px;flex-wrap:wrap;padding:10px 14px;
+      border-top:1px solid var(--border);}
+    .legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);font-weight:700;}
+    .legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+    .graph-hint{text-align:center;font-size:10px;color:var(--muted);padding:6px 14px 10px;border-top:1px solid var(--border);}
+    .selected-label{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
+      background:rgba(9,10,16,0.88);border:1px solid rgba(139,63,232,0.3);border-radius:8px;
+      padding:5px 12px;font-size:11px;font-weight:700;color:var(--purple);
+      pointer-events:none;white-space:nowrap;opacity:0;transition:opacity 0.2s;}
+    .selected-label.visible{opacity:1;}
+
+    /* ── QUERY SIMULATOR ── */
+    .queries-wrap{padding:0 16px;display:flex;flex-direction:column;gap:8px;}
+    .query-card{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;
+      overflow:hidden;cursor:pointer;transition:border-color 0.2s;}
+    .query-card.done{border-color:rgba(0,229,160,0.2);}
+    .query-card.running{border-color:rgba(0,212,255,0.3);}
+    .query-head{display:flex;align-items:center;gap:12px;padding:13px 14px;}
+    .query-icon{font-size:18px;flex-shrink:0;}
+    .query-q{font-size:13px;font-weight:700;flex:1;line-height:1.35;}
+    .query-status{font-size:10px;font-weight:800;flex-shrink:0;}
+    .qs-pending{color:var(--muted);}
+    .qs-done{color:var(--green);}
+    .qs-running{color:var(--cyan);}
+    .query-body{display:none;padding:0 14px 14px;border-top:1px solid var(--border);margin:0 14px;padding-top:12px;}
+    .query-card.done .query-body,.query-card.running .query-body{display:block;}
+    .query-thinking{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--cyan);margin-bottom:10px;}
+    .think-dots span{display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--cyan);
+      animation:tdot 1.2s ease-in-out infinite;}
+    .think-dots span:nth-child(2){animation-delay:0.2s;}
+    .think-dots span:nth-child(3){animation-delay:0.4s;}
+    @keyframes tdot{0%,80%,100%{transform:scale(0.5);opacity:0.4;}40%{transform:scale(1);opacity:1;}}
+    .query-answer{font-size:12.5px;color:var(--text2);line-height:1.65;margin-bottom:10px;}
+    .query-sources{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;}
+    .query-source{font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;
+      background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.15);color:var(--green);}
+    .query-conf{font-size:11px;font-weight:700;color:var(--purple);}
+
+    /* ── TIMELINE FEED ── */
+    .timeline-wrap{margin:0 16px 16px;}
+    .timeline-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+    .tl-dot{width:6px;height:6px;border-radius:50%;background:var(--purple);
+      animation:siPulse 1.8s ease-in-out infinite;}
+    .tl-title{font-size:12px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:0.1em;}
+    .tl-pause-btn{margin-left:auto;font-size:10px;font-weight:700;color:var(--muted);
+      background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:3px 8px;cursor:pointer;}
+    .tl-list{display:flex;flex-direction:column;gap:6px;}
+    .tl-entry{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+      padding:10px 14px;cursor:pointer;transition:border-color 0.2s;}
+    .tl-entry:hover{border-color:var(--border2);}
+    .tl-entry.new-entry{animation:tlSlide 0.3s ease both;}
+    @keyframes tlSlide{from{opacity:0;transform:translateY(-7px);}to{opacity:1;transform:none;}}
+    .tl-top{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+    .tl-mem-type{font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px;
+      background:rgba(139,63,232,0.1);border:1px solid rgba(139,63,232,0.2);color:var(--purple);}
+    .tl-agent{font-size:9px;color:var(--muted);font-weight:700;}
+    .tl-time{font-size:9px;color:var(--muted);margin-left:auto;}
+    .tl-fact{font-size:12px;color:var(--text2);line-height:1.4;margin-bottom:4px;}
+    .tl-meta{display:flex;gap:8px;}
+    .tl-conf{font-size:9px;font-weight:700;color:var(--green);}
+    .tl-layer{font-size:9px;color:var(--muted);}
+    .tl-copy-hint{font-size:9px;color:var(--muted);opacity:0;transition:opacity 0.2s;}
+    .tl-entry:hover .tl-copy-hint{opacity:1;}
+
+    /* ── BOTTOM NAV ── */
+    .bottom-nav{display:flex;align-items:center;justify-content:space-around;
+      padding:10px 8px calc(10px + env(safe-area-inset-bottom));
+      background:rgba(9,10,16,0.95);border-top:1px solid var(--border);
+      position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+      width:100%;max-width:430px;z-index:50;}
+    .nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;
+      flex:1;padding:6px 4px;cursor:pointer;text-decoration:none;-webkit-user-select:none;}
+    .nav-icon{font-size:20px;line-height:1;}
+    .nav-label{font-size:10px;font-weight:600;color:var(--muted);letter-spacing:0.02em;}
+    .nav-item.active .nav-label{color:var(--cyan);}
+    .nav-item.active .nav-icon{filter:drop-shadow(0 0 5px var(--cyan));}
+
+    /* ── TOAST ── */
+    #toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(16px);
+      background:var(--surface2);border:1px solid var(--border2);border-radius:12px;
+      padding:10px 18px;font-size:13px;font-weight:600;opacity:0;transition:all 0.3s;
+      pointer-events:none;z-index:999;white-space:nowrap;max-width:88vw;text-align:center;}
+    #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+    .scroll-pad{height:88px;}
+  </style>
+</head>
+<body>
+
+<script>
+(function(){
+  if(localStorage.getItem('indx_founder_access')!=='true'){
+    window.location.replace('citizen-dashboard.html');
+  }
+})();
+</script>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="back-btn" onclick="history.back()">←</div>
+  <div class="header-body">
+    <div class="header-title">Persistent Memory</div>
+    <div class="header-sub">4-Type Memory · Living Knowledge Graph</div>
+  </div>
+  <div class="si-badge"><div class="si-dot"></div><span id="memCountBadge">0</span> NODES</div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-blob"></div>
+  <div class="hero-tag">Sovereign Intelligence · Memory Engine</div>
+  <div class="hero-title">What SIINDEX <span>Remembers</span></div>
+  <div class="hero-desc">Four sovereign memory types form SIINDEX's persistent intelligence. Every fact, decision, and learned workflow lives here — growing continuously across every interaction.</div>
+  <div class="hero-stats">
+    <div class="h-stat"><div class="h-stat-val" id="heroNodes">0</div><div class="h-stat-lbl">Nodes</div></div>
+    <div class="h-stat"><div class="h-stat-val" id="heroRels">0</div><div class="h-stat-lbl">Relationships</div></div>
+    <div class="h-stat"><div class="h-stat-val" id="heroConf">98%</div><div class="h-stat-lbl">Avg Confidence</div></div>
+  </div>
+</div>
+
+<!-- MEMORY TYPES -->
+<div class="section-label">Memory Types</div>
+<div class="mem-tabs">
+  <div class="mem-tab active" data-tab="executive" onclick="switchTab('executive')">⭐ Executive</div>
+  <div class="mem-tab" data-tab="operational" onclick="switchTab('operational')">⚡ Operational</div>
+  <div class="mem-tab" data-tab="knowledge" onclick="switchTab('knowledge')">🧠 Knowledge</div>
+  <div class="mem-tab" data-tab="procedural" onclick="switchTab('procedural')">📐 Procedural</div>
+</div>
+<div class="mem-search-wrap">
+  <div class="mem-search-inner">
+    <div class="mem-search-icon">⌕</div>
+    <input class="mem-search-input" id="memSearchInput" type="text" placeholder="Search memories…" oninput="filterMem(this.value)">
+  </div>
+</div>
+<div class="mem-list" id="memList"></div>
+
+<!-- KNOWLEDGE GRAPH -->
+<div class="section-label">Living Knowledge Graph</div>
+<div class="graph-wrap">
+  <div class="graph-canvas-wrap">
+    <canvas id="kgCanvas" height="300"></canvas>
+    <div class="selected-label" id="selectedLabel"></div>
+  </div>
+  <div class="graph-legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#00D4FF"></div>Concepts</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#8B3FE8"></div>Memory</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#00E5A0"></div>Agents</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#FFB800"></div>Decisions</div>
+  </div>
+  <div class="graph-hint">Tap a node to highlight connections · Drag to reposition</div>
+</div>
+
+<!-- QUERIES -->
+<div class="section-label">Cross-Source Query Simulator</div>
+<div class="queries-wrap" id="queriesWrap"></div>
+
+<!-- TIMELINE -->
+<div class="section-label">Memory Timeline</div>
+<div class="timeline-wrap">
+  <div class="timeline-header">
+    <div class="tl-dot"></div>
+    <div class="tl-title">Live Memory Formation</div>
+    <button class="tl-pause-btn" id="tlPauseBtn" onclick="toggleTlPause()">⏸ Pause</button>
+  </div>
+  <div class="tl-list" id="tlList"></div>
+</div>
+
+<div class="scroll-pad"></div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <a href="citizen-dashboard.html" class="nav-item"><span class="nav-icon">⌂</span><span class="nav-label">Home</span></a>
+  <a href="siindex-os.html" class="nav-item"><span class="nav-icon">◈</span><span class="nav-label">SI OS</span></a>
+  <a href="siindex-agents.html" class="nav-item"><span class="nav-icon">👥</span><span class="nav-label">Agents</span></a>
+  <a href="siindex-memory.html" class="nav-item active"><span class="nav-icon">🕸️</span><span class="nav-label">Memory</span></a>
+  <a href="siindex-brain.html" class="nav-item"><span class="nav-icon">◉</span><span class="nav-label">SI Brain</span></a>
+</nav>
+
+<div id="toast"></div>
+
+<script>
+// ── MEMORY DATA ──
+const MEMORY_DATA = {
+  executive: [
+    {icon:'🎯', fact:'IN$DEX founding mandate: financial sovereignty for the unbanked — immutable priority', layer:'L1 · Executive Goal', conf:100, date:'Founding Day', usage:14287, detail:'The single most referenced fact in all of SIINDEX\'s memory. Every strategic decision is evaluated against this mandate before execution. If an action does not advance financial sovereignty for the unbanked, it is deprioritised.'},
+    {icon:'⭐', fact:'Grand Synchronicity target: INDX reaches $2.50 by 24 Sep 2026', layer:'L1 · Executive Goal', conf:100, date:'Session 1', usage:8934, detail:'The Grand Synchronicity is the founding milestone: INDX token reaching $2.50 — a 10× return from genesis price of $0.24 — by AJ\'s sovereign date of 24 September 2026. All treasury and marketing decisions are calibrated against this target.'},
+    {icon:'💎', fact:'Genesis price: $0.24 INDX — immutable floor, locked until Grand Synchronicity', layer:'L1 · Executive Goal', conf:100, date:'Genesis Block', usage:6741, detail:'INDX genesis price is $0.24. This is the entry price for all founding citizens and early participants. The price floor is protected by the treasury reserve and enforced in all buy-indx.html transaction flows.'},
+    {icon:'⚖️', fact:'2% Civilisation Law: immutable fee on all transactions — 98% to creator, 2% to fund', layer:'L10 · Governance', conf:100, date:'Protocol Day 0', usage:5523, detail:'The most enforced policy in the system. Every transaction in the IN$DEX ecosystem routes 2% to the Civilisation Fund. This fee is immutable — it cannot be disabled, bypassed, or reduced by any agent, operator, or governance vote.'},
+    {icon:'🌏', fact:'Primary market: Pacific Islands unbanked population — 1.4B globally unbanked', layer:'L1 · Executive Goal', conf:98, date:'Session 2', usage:3812, detail:'Mama Noe in Vanuatu is the founding archetype: a woman with a smartphone who cannot accept digital payments. The 1.4B unbanked represent IN$DEX\'s core addressable market, with Pacific Islands as the strategic beachhead given AJ\'s cultural roots.'},
+  ],
+  operational: [
+    {icon:'⚡', fact:'Current build queue: siindex-memory.html in progress → siindex-brain.html Round 2 → siindex-dev.html Round 3', layer:'L2 · Strategic Planner', conf:100, date:'Now', usage:1, detail:'Active operational memory representing the current session\'s build sequence. This entry expires at session end and is replaced with the next queue state.'},
+    {icon:'✅', fact:'Last audit: siindex-agents.html — ALL CLEAN. Price check passed. AUD check passed. Recovery word check passed.', layer:'L8 · Evaluation Engine', conf:100, date:'Session 67b', usage:3, detail:'The most recent audit result in operational memory. Stored to avoid re-running unchanged files and to track compliance history across build sessions.'},
+    {icon:'🚀', fact:'Live deployments: siindex-os.html, siindex-agents.html — pushed to imagenationdex.com', layer:'L7 · Tool Execution', conf:100, date:'Session 67', usage:8, detail:'Both new screens from Session 67 are deployed and live. siindex-os.html (10-Layer Stack) and siindex-agents.html (12 Specialist Agents) are accessible at imagenationdex.com.'},
+    {icon:'🔄', fact:'Autonomous Improvement Loop #247 running — current phase: Execute', layer:'L9 · Learning Engine', conf:94, date:'Active', usage:247, detail:'The Autonomous Improvement Loop is always running. Each cycle produces at least one durable improvement to SIINDEX\'s operating procedures, stored to Procedural Memory for all future sessions.'},
+  ],
+  knowledge: [
+    {icon:'⛓️', fact:'Solana: 65K TPS, ~0.00025 SOL avg fee, 150-block blockhash expiry, 1232-byte tx limit', layer:'L4 · Knowledge Graph', conf:97, date:'Session 63', usage:2841, detail:'Core Solana protocol facts. The 150-block blockhash expiry (~60 seconds at 400ms/block) is particularly critical for transaction timing. The 1232-byte transaction size limit constrains instruction complexity.'},
+    {icon:'🔑', fact:'PDAs: deterministically derived from program ID + seeds, canonical bump decrements 255→0', layer:'L4 · Knowledge Graph', conf:99, date:'Session 66', usage:1203, detail:'Program Derived Addresses have no private key. The canonical bump is the first valid bump starting from 255 and decrementing. PDAs allow programs to sign for accounts — the foundation of most Solana program architecture.'},
+    {icon:'🪙', fact:'USDC SPL mint: EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v — verified mainnet', layer:'L4 · Knowledge Graph', conf:100, date:'Session 65', usage:982, detail:'The canonical USDC mint address on Solana mainnet. Used in all Solana Pay QR generation and USDC payment flows across buy-indx.html. Verified against Circle\'s official documentation.'},
+    {icon:'🌊', fact:'Pacific remittance market: $12B annually — primary opportunity for INDX adoption', layer:'L4 · Knowledge Graph', conf:91, date:'Session 60', usage:744, detail:'Research Agent finding. Pacific remittances represent a $12B annual market currently dominated by high-fee legacy systems (Western Union: 7-11% fees). INDX can deliver sub-1% cross-border value transfer instantly.'},
+    {icon:'📈', fact:'Solana DEX volume: +34% month-over-month — market conditions favorable for INDX', layer:'L4 · Knowledge Graph', conf:88, date:'Session 67', usage:312, detail:'Research Agent market intelligence from most recent scan. Rising DEX volume indicates increasing Solana DeFi participation — a positive signal for INDX adoption and liquidity depth.'},
+    {icon:'🔗', fact:'CPI max depth: 5 — programs can cross-program-invoke up to 5 levels deep', layer:'L4 · Knowledge Graph', conf:99, date:'Session 67', usage:427, detail:'Cross-Program Invocations are limited to 5 levels of nesting. This constraint shapes how SIINDEX\'s on-chain programs compose with Raydium, SPL Token, and other programs.'},
+  ],
+  procedural: [
+    {icon:'🎮', fact:'God Mode playbook: Tavily research → pre-flight → read screen → 4-feature gap analysis → CSS → HTML → JS → audit → update records', layer:'L9 · Learning Engine', conf:100, date:'Session 60', usage:8, detail:'The canonical God Mode build procedure, learned and refined across 8 full God Mode rounds. Every step in this sequence exists because skipping it caused a problem in a prior session. The procedure is now immutable.'},
+    {icon:'🔍', fact:'Audit command pattern: 3-check sequence — price constant · AUD currency · recovery word refs · all must return empty', layer:'L9 · Learning Engine', conf:100, date:'Session 61', usage:24, detail:'The three-check audit sequence that gates every HTML screen before git push. Learned after a wrong price value slipped through in Session 59. Now runs automatically after every God Mode build.'},
+    {icon:'🔐', fact:'Founder gate pattern: localStorage indx_founder_access !== "true" → location.replace redirect', layer:'L9 · Learning Engine', conf:100, date:'Session 62', usage:18, detail:'The standard founder access control pattern used across all SIINDEX intelligence screens. Applied at the top of every protected screen\'s script block, before any DOM renders.'},
+    {icon:'⚠️', fact:'Never add a second DOMContentLoaded listener — find existing one and append to it', layer:'L9 · Learning Engine', conf:100, date:'Session 63', usage:12, detail:'Gotcha learned when a second DOMContentLoaded fired before the first\'s handlers completed, causing race conditions in the buy-indx.html PQSI pre-flight. Now a non-negotiable rule in every God Mode build.'},
+    {icon:'🎨', fact:'CSS variables only — no hardcoded hex in styles. JS color strings allowed for canvas operations.', layer:'L9 · Learning Engine', conf:100, date:'Session 65', usage:9, detail:'Brand color discipline learned after a one-off hex value caused a theming inconsistency in siindex-design.html. CSS classes use only var(--cyan) etc. JS canvas operations may use literal values.'},
+  ]
+};
+
+const EXPLORE_KEY = 'indx_memory_explored';
+const QUERIES_KEY = 'indx_memory_queries';
+const MEM_STATS_KEY = 'indx_memory_stats';
+
+let exploredTypes = new Set(JSON.parse(localStorage.getItem(EXPLORE_KEY) || '[]'));
+let queriesDone = new Set(JSON.parse(localStorage.getItem(QUERIES_KEY) || '[]'));
+let activeTab = 'executive';
+let expandedMem = null;
+
+// Live stats
+let memStats = JSON.parse(localStorage.getItem(MEM_STATS_KEY) || 'null');
+if (!memStats) {
+  const now = Date.now();
+  memStats = { nodes: 3842, rels: 11240, lastTs: now };
+} else {
+  const elapsed = Math.floor((Date.now() - memStats.lastTs) / 1000);
+  memStats.nodes += Math.floor(elapsed * 0.08);
+  memStats.rels += Math.floor(elapsed * 0.22);
+  memStats.lastTs = Date.now();
+}
+
+function saveStats() { localStorage.setItem(MEM_STATS_KEY, JSON.stringify(memStats)); }
+
+function updateStatDisplay() {
+  document.getElementById('heroNodes').textContent = memStats.nodes.toLocaleString();
+  document.getElementById('heroRels').textContent = memStats.rels.toLocaleString();
+  document.getElementById('memCountBadge').textContent = (memStats.nodes).toLocaleString();
+}
+
+setInterval(() => {
+  memStats.nodes += Math.floor(Math.random() * 3);
+  memStats.rels += Math.floor(Math.random() * 7);
+  memStats.lastTs = Date.now();
+  saveStats();
+  updateStatDisplay();
+}, 4000);
+
+// ── MEMORY TABS ──
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.mem-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.getElementById('memSearchInput').value = '';
+  renderMem(MEMORY_DATA[tab]);
+  exploredTypes.add(tab);
+  localStorage.setItem(EXPLORE_KEY, JSON.stringify([...exploredTypes]));
+}
+
+function filterMem(q) {
+  const items = MEMORY_DATA[activeTab];
+  if (!q.trim()) { renderMem(items); return; }
+  const lq = q.toLowerCase();
+  renderMem(items.filter(m => m.fact.toLowerCase().includes(lq) || m.detail.toLowerCase().includes(lq) || m.layer.toLowerCase().includes(lq)));
+}
+
+function renderMem(items) {
+  const list = document.getElementById('memList');
+  if (!items.length) { list.innerHTML = '<div class="mem-empty">No memories match your search.</div>'; return; }
+  list.innerHTML = items.map((m, i) => `
+    <div class="mem-card" id="mc-${activeTab}-${i}" onclick="toggleMem('${activeTab}',${i})">
+      <div class="mem-card-head">
+        <div class="mem-icon">${m.icon}</div>
+        <div class="mem-main">
+          <div class="mem-fact">${m.fact}</div>
+          <div class="mem-meta">
+            <div class="mem-layer">${m.layer}</div>
+            <div class="mem-conf">✓ ${m.conf}%</div>
+            <div class="mem-date">${m.date}</div>
+          </div>
+        </div>
+        <div class="mem-chevron">›</div>
+      </div>
+      <div class="mem-body">
+        <div class="mem-detail">${m.detail}</div>
+        <div class="mem-usage">Accessed <span>${m.usage.toLocaleString()}</span> times across all sessions</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleMem(tab, i) {
+  const card = document.getElementById(`mc-${tab}-${i}`);
+  if (!card) return;
+  const wasOpen = card.classList.contains('expanded');
+  document.querySelectorAll('.mem-card.expanded').forEach(c => c.classList.remove('expanded'));
+  if (!wasOpen) { card.classList.add('expanded'); expandedMem = i; }
+  else expandedMem = null;
+}
+
+// ── KNOWLEDGE GRAPH ──
+const KG_NODES = [
+  {id:'siindex', label:'SIINDEX', type:'agent', r:20, x:0, y:0, vx:0, vy:0},
+  {id:'exec-mem', label:'Exec Memory', type:'memory', r:14, x:0, y:0, vx:0, vy:0},
+  {id:'op-mem', label:'Op Memory', type:'memory', r:12, x:0, y:0, vx:0, vy:0},
+  {id:'know-mem', label:'Knowledge', type:'memory', r:14, x:0, y:0, vx:0, vy:0},
+  {id:'proc-mem', label:'Procedural', type:'memory', r:12, x:0, y:0, vx:0, vy:0},
+  {id:'founder', label:'AJ / Founder', type:'decision', r:13, x:0, y:0, vx:0, vy:0},
+  {id:'solana', label:'Solana', type:'concept', r:13, x:0, y:0, vx:0, vy:0},
+  {id:'indx', label:'INDX Token', type:'decision', r:12, x:0, y:0, vx:0, vy:0},
+  {id:'pacific', label:'Pacific Islands', type:'concept', r:11, x:0, y:0, vx:0, vy:0},
+  {id:'gs', label:'Grand Sync', type:'decision', r:12, x:0, y:0, vx:0, vy:0},
+  {id:'civ-law', label:'Civ Law 2%', type:'decision', r:11, x:0, y:0, vx:0, vy:0},
+  {id:'marketplace', label:'Marketplace', type:'concept', r:11, x:0, y:0, vx:0, vy:0},
+  {id:'pda', label:'PDAs', type:'concept', r:10, x:0, y:0, vx:0, vy:0},
+  {id:'god-mode', label:'God Mode', type:'agent', r:10, x:0, y:0, vx:0, vy:0},
+];
+const KG_EDGES = [
+  ['siindex','exec-mem','holds'],['siindex','op-mem','holds'],['siindex','know-mem','holds'],['siindex','proc-mem','holds'],
+  ['siindex','founder','reports to'],['siindex','indx','governs'],['siindex','civ-law','enforces'],
+  ['founder','exec-mem','defines'],['founder','gs','targets'],['founder','pacific','serves'],
+  ['exec-mem','gs','tracks'],['exec-mem','civ-law','mandates'],
+  ['know-mem','solana','indexes'],['know-mem','pacific','indexes'],['know-mem','marketplace','indexes'],['know-mem','pda','indexes'],
+  ['proc-mem','god-mode','codifies'],['proc-mem','exec-mem','feeds'],
+  ['solana','pda','provides'],['solana','indx','hosts'],
+  ['gs','indx','milestone for'],['pacific','marketplace','uses'],
+  ['god-mode','know-mem','reads'],
+];
+
+const TYPE_COLORS = { concept:'#00D4FF', memory:'#8B3FE8', agent:'#00E5A0', decision:'#FFB800' };
+
+let kgCanvas, kgCtx, kgW, kgH, kgDpr;
+let dragNode = null, dragOffX = 0, dragOffY = 0;
+let selectedNode = null;
+let kgAnimId = null;
+
+function initKG() {
+  kgCanvas = document.getElementById('kgCanvas');
+  kgCtx = kgCanvas.getContext('2d');
+  const rect = kgCanvas.getBoundingClientRect();
+  kgDpr = Math.min(window.devicePixelRatio || 1, 2);
+  kgW = rect.width;
+  kgH = 300;
+  kgCanvas.width = kgW * kgDpr;
+  kgCanvas.height = kgH * kgDpr;
+  kgCanvas.style.height = kgH + 'px';
+  kgCtx.scale(kgDpr, kgDpr);
+
+  // Init positions in circle
+  const cx = kgW / 2, cy = kgH / 2;
+  KG_NODES[0].x = cx; KG_NODES[0].y = cy;
+  KG_NODES.slice(1).forEach((n, i) => {
+    const angle = (i / (KG_NODES.length - 1)) * Math.PI * 2;
+    const r = Math.min(kgW, kgH) * 0.36;
+    n.x = cx + Math.cos(angle) * r;
+    n.y = cy + Math.sin(angle) * r;
+  });
+
+  // Run simulation pre-steps
+  for (let s = 0; s < 80; s++) simStep();
+
+  // Touch/mouse events
+  kgCanvas.addEventListener('mousedown', kgPointerDown);
+  kgCanvas.addEventListener('mousemove', kgPointerMove);
+  kgCanvas.addEventListener('mouseup', kgPointerUp);
+  kgCanvas.addEventListener('touchstart', e => { e.preventDefault(); kgPointerDown(e.touches[0]); }, {passive:false});
+  kgCanvas.addEventListener('touchmove', e => { e.preventDefault(); kgPointerMove(e.touches[0]); }, {passive:false});
+  kgCanvas.addEventListener('touchend', e => { e.preventDefault(); kgPointerUp(e.changedTouches[0]); }, {passive:false});
+
+  kgLoop();
+}
+
+function getNodeAt(px, py) {
+  return KG_NODES.find(n => Math.hypot(n.x - px, n.y - py) < n.r + 6) || null;
+}
+
+function kgPointerDown(e) {
+  const rect = kgCanvas.getBoundingClientRect();
+  const px = (e.clientX - rect.left), py = (e.clientY - rect.top);
+  const node = getNodeAt(px, py);
+  if (node) { dragNode = node; dragOffX = px - node.x; dragOffY = py - node.y; }
+}
+
+function kgPointerMove(e) {
+  if (!dragNode) return;
+  const rect = kgCanvas.getBoundingClientRect();
+  dragNode.x = (e.clientX - rect.left) - dragOffX;
+  dragNode.y = (e.clientY - rect.top) - dragOffY;
+  dragNode.vx = 0; dragNode.vy = 0;
+}
+
+function kgPointerUp(e) {
+  if (dragNode) {
+    const rect = kgCanvas.getBoundingClientRect();
+    const px = (e.clientX - rect.left), py = (e.clientY - rect.top);
+    const wasDrag = Math.hypot(dragNode.x - (px - dragOffX + dragNode.x), dragNode.y - (py - dragOffY + dragNode.y)) < 4;
+    if (Math.abs(px - (dragNode.x + dragOffX)) < 6 && Math.abs(py - (dragNode.y + dragOffY)) < 6) {
+      // It was a tap, not a drag
+      selectedNode = selectedNode === dragNode ? null : dragNode;
+      const lbl = document.getElementById('selectedLabel');
+      if (selectedNode) {
+        const connections = KG_EDGES.filter(e2 => e2[0] === selectedNode.id || e2[1] === selectedNode.id);
+        lbl.textContent = `${selectedNode.label} · ${connections.length} connections`;
+        lbl.classList.add('visible');
+      } else {
+        lbl.classList.remove('visible');
+      }
+    }
+    dragNode = null;
+  }
+}
+
+function simStep() {
+  const cx = kgW / 2, cy = kgH / 2;
+  // Repulsion
+  for (let i = 0; i < KG_NODES.length; i++) {
+    for (let j = i + 1; j < KG_NODES.length; j++) {
+      const a = KG_NODES[i], b = KG_NODES[j];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const d = Math.max(Math.hypot(dx, dy), 1);
+      const f = 1800 / (d * d);
+      const fx = (dx / d) * f, fy = (dy / d) * f;
+      a.vx -= fx; a.vy -= fy;
+      b.vx += fx; b.vy += fy;
+    }
+  }
+  // Springs
+  KG_EDGES.forEach(([aid, bid]) => {
+    const a = KG_NODES.find(n => n.id === aid);
+    const b = KG_NODES.find(n => n.id === bid);
+    if (!a || !b) return;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const d = Math.max(Math.hypot(dx, dy), 1);
+    const target = (a.r + b.r) * 2.8;
+    const f = (d - target) * 0.035;
+    const fx = (dx / d) * f, fy = (dy / d) * f;
+    a.vx += fx; a.vy += fy;
+    b.vx -= fx; b.vy -= fy;
+  });
+  // Center gravity
+  KG_NODES.forEach(n => {
+    n.vx += (cx - n.x) * 0.006;
+    n.vy += (cy - n.y) * 0.006;
+    // Damping
+    n.vx *= 0.78; n.vy *= 0.78;
+    if (n !== dragNode) {
+      n.x += n.vx; n.y += n.vy;
+    }
+    // Bounds
+    n.x = Math.max(n.r + 4, Math.min(kgW - n.r - 4, n.x));
+    n.y = Math.max(n.r + 4, Math.min(kgH - n.r - 4, n.y));
+  });
+}
+
+function kgDraw() {
+  kgCtx.clearRect(0, 0, kgW, kgH);
+
+  // Edges
+  KG_EDGES.forEach(([aid, bid, rel]) => {
+    const a = KG_NODES.find(n => n.id === aid);
+    const b = KG_NODES.find(n => n.id === bid);
+    if (!a || !b) return;
+    const isHighlighted = selectedNode && (selectedNode.id === aid || selectedNode.id === bid);
+    kgCtx.beginPath();
+    kgCtx.moveTo(a.x, a.y);
+    kgCtx.lineTo(b.x, b.y);
+    kgCtx.strokeStyle = isHighlighted ? 'rgba(139,63,232,0.7)' : 'rgba(46,51,72,0.8)';
+    kgCtx.lineWidth = isHighlighted ? 1.5 : 0.8;
+    kgCtx.stroke();
+  });
+
+  // Nodes
+  KG_NODES.forEach(n => {
+    const col = TYPE_COLORS[n.type] || '#00D4FF';
+    const isSelected = selectedNode === n;
+    const isConnected = selectedNode && KG_EDGES.some(e2 => (e2[0] === selectedNode.id && e2[1] === n.id) || (e2[1] === selectedNode.id && e2[0] === n.id));
+
+    // Glow
+    if (isSelected || isConnected) {
+      kgCtx.beginPath();
+      kgCtx.arc(n.x, n.y, n.r + 5, 0, Math.PI * 2);
+      const grd = kgCtx.createRadialGradient(n.x, n.y, n.r, n.x, n.y, n.r + 8);
+      grd.addColorStop(0, col + '55');
+      grd.addColorStop(1, col + '00');
+      kgCtx.fillStyle = grd;
+      kgCtx.fill();
+    }
+
+    // Node circle
+    kgCtx.beginPath();
+    kgCtx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+    kgCtx.fillStyle = isSelected ? col : (selectedNode && !isConnected ? col + '44' : col + 'CC');
+    kgCtx.fill();
+    kgCtx.strokeStyle = isSelected ? '#fff' : col;
+    kgCtx.lineWidth = isSelected ? 2 : 1;
+    kgCtx.stroke();
+
+    // Label
+    kgCtx.fillStyle = selectedNode && !isSelected && !isConnected ? 'rgba(90,97,120,0.6)' : 'rgba(240,242,255,0.9)';
+    kgCtx.font = `bold ${Math.max(8, n.r * 0.55)}px -apple-system,sans-serif`;
+    kgCtx.textAlign = 'center';
+    kgCtx.textBaseline = 'middle';
+    // Split long labels
+    const words = n.label.split(' ');
+    if (words.length > 1 && n.r < 15) {
+      kgCtx.font = `bold 7px -apple-system,sans-serif`;
+      kgCtx.fillText(words[0], n.x, n.y - 4);
+      kgCtx.fillText(words.slice(1).join(' '), n.x, n.y + 4);
+    } else {
+      kgCtx.font = `bold ${Math.max(8, n.r * 0.6)}px -apple-system,sans-serif`;
+      kgCtx.fillText(n.label.length > 10 ? n.label.slice(0, 9) + '…' : n.label, n.x, n.y);
+    }
+  });
+}
+
+function kgLoop() {
+  simStep();
+  kgDraw();
+  kgAnimId = requestAnimationFrame(kgLoop);
+}
+
+// ── QUERY SIMULATOR ──
+const QUERIES = [
+  {
+    icon:'🌏', q:'What do we know about Pacific remittance?',
+    answer:'Pacific remittance market is valued at $12B annually with fees averaging 7–11% via legacy providers. INDX targets sub-1% cross-border transfer for Cook Islands, Vanuatu, Fiji, Samoa, and Tonga — a combined TAM of ~$2.1B annually. Market Agent identifies this as the primary acquisition catalyst for the first 100,000 citizens.',
+    sources:['Research Agent','Knowledge Memory','Marketing Agent'],
+    conf:91
+  },
+  {
+    icon:'🎯', q:'What is SIINDEX\'s core mandate?',
+    answer:'SIINDEX holds a dual executive mandate: (1) Financial sovereignty for the unbanked — zero KYC, 3-step onboarding, instant P2P transactions for anyone with a smartphone. (2) Creator economy sovereignty — meme-to-value pipeline via MemeDAO, NFT minting, and INDX token governance. Both pillars are immutable and cannot be deprioritised.',
+    sources:['Executive Memory','Executive Agent','L1 Goal Engine'],
+    conf:100
+  },
+  {
+    icon:'⛓️', q:'How does Solana fee calculation work?',
+    answer:'Base fee: 5,000 lamports per signature (50% burned, 50% to validator). Priority fee: optional compute unit price × CU requested. Default CU budget: 200K/instruction, 1.4M max/transaction. Typical transfer: 1 signature = 0.000005 SOL (~$0.001 at current prices). IN$DEX users effectively pay $0 in transaction fees.',
+    sources:['Knowledge Memory','CTO Agent','L7 Tool Execution'],
+    conf:99
+  },
+  {
+    icon:'⭐', q:'What is the Grand Synchronicity status?',
+    answer:'Grand Synchronicity target: INDX reaches $2.50 by 24 September 2026 — 83 days remaining. Current genesis price: $0.24. Required appreciation: 10.4×. Treasury reserve health: 94.2% — above minimum floor. Marketing Agent has shortlisted 6 Solana KOL partners for a Pacific-first campaign ahead of the target date.',
+    sources:['Treasury Agent','Executive Memory','Marketing Agent'],
+    conf:100
+  },
+  {
+    icon:'🔄', q:'What was learned in the last improvement loop?',
+    answer:'Improvement Loop #247 produced 3 durable procedural improvements: (1) Canvas force-directed graphs should run 80 pre-simulation steps before first render to prevent jarring initial layout. (2) CSS variable assignment via element.style.background fails for custom property values — use literal hex in JS. (3) DOMContentLoaded listeners must always append to existing blocks, never create new ones.',
+    sources:['Procedural Memory','Learning Engine','Evaluation Engine'],
+    conf:97
+  },
+  {
+    icon:'🔑', q:'How are PDAs derived on Solana?',
+    answer:'PDAs are derived via: findProgramAddressSync([...seeds], programId) — which iterates bump from 255 down, hashing seeds + bump + programId via SHA256, until a result falls off the ed25519 curve. The first valid result is the canonical PDA + bump. PDAs have no private key; only the owning program can sign for them via CPIs up to 5 levels deep.',
+    sources:['Knowledge Memory','CTO Agent','L5 Reasoning Models'],
+    conf:99
+  },
+];
+
+let runningQuery = null;
+
+function buildQueries() {
+  const wrap = document.getElementById('queriesWrap');
+  wrap.innerHTML = QUERIES.map((q, i) => {
+    const isDone = queriesDone.has(i);
+    const sourcesHtml = q.sources.map(s => `<div class="query-source">${s}</div>`).join('');
+    return `
+      <div class="query-card${isDone ? ' done' : ''}" id="qc-${i}" onclick="runQuery(${i})">
+        <div class="query-head">
+          <div class="query-icon">${q.icon}</div>
+          <div class="query-q">${q.q}</div>
+          <div class="query-status ${isDone ? 'qs-done' : 'qs-pending'}" id="qstatus-${i}">${isDone ? '✓' : '→'}</div>
+        </div>
+        <div class="query-body" id="qbody-${i}">
+          ${isDone
+            ? `<div class="query-answer">${q.answer}</div>
+               <div class="query-sources">${sourcesHtml}</div>
+               <div class="query-conf">Confidence: ${q.conf}%</div>`
+            : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function runQuery(i) {
+  if (runningQuery !== null) return;
+  const card = document.getElementById(`qc-${i}`);
+  const body = document.getElementById(`qbody-${i}`);
+  const status = document.getElementById(`qstatus-${i}`);
+  const q = QUERIES[i];
+  if (queriesDone.has(i)) {
+    // Toggle collapse
+    card.classList.toggle('done');
+    return;
+  }
+  runningQuery = i;
+  card.classList.add('running');
+  status.className = 'query-status qs-running';
+  status.textContent = '…';
+  body.innerHTML = `
+    <div class="query-thinking">
+      <span>Traversing knowledge graph</span>
+      <div class="think-dots"><span></span><span></span><span></span></div>
+    </div>`;
+
+  setTimeout(() => {
+    queriesDone.add(i);
+    localStorage.setItem(QUERIES_KEY, JSON.stringify([...queriesDone]));
+    const sourcesHtml = q.sources.map(s => `<div class="query-source">${s}</div>`).join('');
+    body.innerHTML = `
+      <div class="query-answer">${q.answer}</div>
+      <div class="query-sources">${sourcesHtml}</div>
+      <div class="query-conf">Confidence: ${q.conf}%</div>`;
+    card.classList.remove('running');
+    card.classList.add('done');
+    status.className = 'query-status qs-done';
+    status.textContent = '✓';
+    runningQuery = null;
+    showToast(`✓ Query complete · ${q.conf}% confidence`);
+    if (queriesDone.size === QUERIES.length) {
+      setTimeout(() => showToast('🏆 All 6 queries answered — knowledge graph fully traversed'), 1200);
+    }
+  }, 1400);
+}
+
+// ── TIMELINE FEED ──
+const TL_AGENTS = ['Learning Engine','Research Agent','CTO Agent','Engineering Agent','Treasury Agent','Security Agent'];
+const TL_TYPES = ['Executive','Operational','Knowledge','Procedural'];
+const TL_FACTS = [
+  'Solana slot height updated — epoch 742 confirmed at 99.4% uptime',
+  'INDX price drifted +0.003 — within normal volatility band',
+  'New Solana Token-2022 feature indexed: transfer hook accounts',
+  'God Mode playbook iteration 8 stored — canvas pre-step optimisation added',
+  'Pacific remittance data refreshed — Samoa corridor: $340M/yr identified',
+  'Session 67b build context updated — siindex-memory.html in progress',
+  'Audit pattern reinforced: grep -v cubic-bezier excludes animation values',
+  'PDA canonical bump derivation verified against latest anchor-lang docs',
+  'Grand Synchronicity tracker updated — 83 days, reserve health 94.2%',
+  'New procedural pattern: knowledge graph canvas 80-step pre-simulation',
+  'Civilisation Law enforcement confirmed: 847 transactions, zero exceptions',
+  'CPI depth limit cross-referenced against Solana runtime v1.18 release notes',
+];
+
+let tlEntries = [];
+let tlPaused = false;
+const MAX_TL = 7;
+
+function formatTime() {
+  const d = new Date();
+  return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0');
+}
+
+function addTlEntry() {
+  if (tlPaused) return;
+  const fact = TL_FACTS[Math.floor(Math.random() * TL_FACTS.length)];
+  const agent = TL_AGENTS[Math.floor(Math.random() * TL_AGENTS.length)];
+  const type = TL_TYPES[Math.floor(Math.random() * TL_TYPES.length)];
+  const conf = 86 + Math.floor(Math.random() * 14);
+  const layer = ['L3','L4','L5','L9'][Math.floor(Math.random()*4)];
+  tlEntries.unshift({ fact, agent, type, conf, layer, time: formatTime() });
+  if (tlEntries.length > MAX_TL) tlEntries.pop();
+  renderTl();
+}
+
+function renderTl() {
+  document.getElementById('tlList').innerHTML = tlEntries.map((e, idx) => `
+    <div class="tl-entry${idx===0?' new-entry':''}" onclick="copyTl(${idx})">
+      <div class="tl-top">
+        <div class="tl-mem-type">${e.type}</div>
+        <div class="tl-agent">${e.agent}</div>
+        <div class="tl-time">${e.time}</div>
+      </div>
+      <div class="tl-fact">${e.fact}</div>
+      <div class="tl-meta">
+        <div class="tl-conf">✓ ${e.conf}%</div>
+        <div class="tl-layer">· ${e.layer}</div>
+        <div class="tl-copy-hint">tap to copy</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function copyTl(i) {
+  const e = tlEntries[i];
+  navigator.clipboard.writeText(`[${e.time}] ${e.type} Memory · ${e.agent}: ${e.fact} (${e.conf}% conf, ${e.layer})`).catch(()=>{});
+  showToast('Memory entry copied');
+}
+
+function toggleTlPause() {
+  tlPaused = !tlPaused;
+  document.getElementById('tlPauseBtn').textContent = tlPaused ? '▶ Resume' : '⏸ Pause';
+}
+
+// Seed timeline
+for (let i = 0; i < 5; i++) {
+  const fact = TL_FACTS[(TL_FACTS.length - 1 - i) % TL_FACTS.length];
+  const agent = TL_AGENTS[i % TL_AGENTS.length];
+  const type = TL_TYPES[i % TL_TYPES.length];
+  const conf = 86 + Math.floor(Math.random() * 14);
+  const layer = ['L3','L4','L5','L9'][i % 4];
+  const d = new Date(Date.now() - (4-i)*48000);
+  const t = d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0');
+  tlEntries.push({ fact, agent, type, conf, layer, time: t });
+}
+
+// ── TOAST ──
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── INIT ──
+document.addEventListener('DOMContentLoaded', () => {
+  updateStatDisplay();
+  renderMem(MEMORY_DATA.executive);
+  buildQueries();
+  renderTl();
+  // Init KG after layout
+  requestAnimationFrame(() => { requestAnimationFrame(initKG); });
+  setInterval(addTlEntry, 5000);
+});
+</script>
+</body>
+</html>

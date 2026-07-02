@@ -99,6 +99,27 @@
     .oi-btn.cancel{color:var(--red);}
 
     #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+
+  /* GOD MODE — limit orders */
+  .of-input-wrap.price-near{border-color:var(--gold);animation:pricePulse 1.2s infinite;}
+  @keyframes pricePulse{0%,100%{box-shadow:0 0 0 0 rgba(255,184,0,0);}50%{box-shadow:0 0 0 4px rgba(255,184,0,0.18);}}
+  .fill-market-btn{display:inline-block;font-size:11px;font-weight:700;color:var(--cyan);background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.18);border-radius:6px;padding:3px 9px;cursor:pointer;margin-left:8px;vertical-align:middle;}
+  .fill-market-btn:active{background:rgba(0,212,255,0.18);}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:40;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+  .overlay.show{opacity:1;pointer-events:all;}
+  .bottom-sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:430px;background:var(--surface);border-radius:24px 24px 0 0;padding:24px 20px 40px;z-index:50;transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);}
+  .bottom-sheet.show{transform:translateX(-50%) translateY(0);}
+  .bs-handle{width:36px;height:4px;background:var(--surface3);border-radius:2px;margin:0 auto 18px;}
+  .bs-title{font-size:17px;font-weight:800;margin-bottom:4px;}
+  .bs-sub{font-size:12px;color:var(--text-muted);margin-bottom:18px;}
+  .hist-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);}
+  .hist-item:last-child{border-bottom:none;}
+  .hist-side{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;}
+  .hist-side.buy{background:rgba(0,229,160,0.1);color:var(--green);}
+  .hist-side.sell{background:rgba(255,77,109,0.1);color:var(--red);}
+  .hist-detail{font-size:12px;color:var(--text-muted);text-align:right;}
+  .hist-detail strong{color:var(--text);font-weight:700;}
+  .alert-chip{font-size:10px;font-weight:700;color:var(--gold);background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.18);border-radius:5px;padding:2px 6px;margin-left:6px;cursor:pointer;}
   </style>
 </head>
 <body>
@@ -130,10 +151,10 @@
     </div>
     <div class="order-form" id="orderForm">
       <!-- TARGET PRICE -->
-      <div class="of-label">Target price (per INDX)</div>
-      <div class="of-input-wrap">
+      <div class="of-label">Target price (per INDX) <span class="fill-market-btn" onclick="fillMarketPrice()">Fill Market</span></div>
+      <div class="of-input-wrap" id="priceWrap">
         <span style="font-size:14px;color:var(--text-muted);">$</span>
-        <input class="of-input" type="number" id="targetPrice" placeholder="0.000" step="0.001" oninput="updateSummary()">
+        <input class="of-input" type="number" id="targetPrice" placeholder="0.000" step="0.001" oninput="updateSummary();checkPriceProximity();">
       </div>
       <div class="of-hint" id="priceHint">Current price: $0.24 · Order fills when price hits your target</div>
 
@@ -179,12 +200,25 @@
   </div>
 
   <!-- OPEN ORDERS -->
-  <div class="section-title">Your open orders (<span id="openCount">3</span>)</div>
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;padding-right:16px;">
+    <span>Your open orders (<span id="openCount">3</span>)</span>
+    <span style="font-size:12px;font-weight:700;color:var(--cyan);cursor:pointer;" onclick="openHistorySheet()">History ›</span>
+  </div>
   <div class="orders-list" id="ordersList"></div>
 
 </div>
 
 <div id="toast"></div>
+
+<!-- ORDER HISTORY SHEET -->
+<div class="overlay" id="histOverlay" onclick="closeHistorySheet()"></div>
+<div class="bottom-sheet" id="histSheet">
+  <div class="bs-handle"></div>
+  <div class="bs-title">Order History</div>
+  <div class="bs-sub">Last 5 executed orders</div>
+  <div id="histList"></div>
+  <button style="width:100%;padding:14px;border-radius:12px;background:var(--surface2);border:none;color:var(--text-muted);font-size:14px;font-weight:700;cursor:pointer;margin-top:12px;" onclick="closeHistorySheet()">Close</button>
+</div>
 
 <script>
   let side = 'buy';
@@ -285,9 +319,9 @@
 
   // ── OPEN ORDERS ──────────────────────────────────────────────────
   const openOrders = [
-    { id:1, side:'buy', price:0.490, amt:500, filled:0, expiry:'6h left' },
-    { id:2, side:'sell', price:0.545, amt:200, filled:62, expiry:'2d left' },
-    { id:3, side:'buy', price:0.480, amt:1000, filled:15, expiry:'GTC' },
+    { id:1, side:'buy', price:0.222, amt:500, filled:0, expiry:'6h left' },
+    { id:2, side:'sell', price:0.262, amt:200, filled:62, expiry:'2d left' },
+    { id:3, side:'buy', price:0.228, amt:1000, filled:15, expiry:'GTC' },
   ];
 
   function buildOrders() {
@@ -328,6 +362,106 @@
 
   buildDepth();
   buildOrders();
+
+  // ── GOD MODE 1: FILL MARKET PRICE ────────────────────────────────
+  function fillMarketPrice() {
+    document.getElementById('targetPrice').value = currentPrice.toFixed(3);
+    updateSummary();
+    checkPriceProximity();
+    showToast('Market price filled: $' + currentPrice.toFixed(3));
+  }
+
+  // ── GOD MODE 2: PRICE PROXIMITY PULSE ────────────────────────────
+  function checkPriceProximity() {
+    const price = parseFloat(document.getElementById('targetPrice').value) || 0;
+    const wrap = document.getElementById('priceWrap');
+    if (price > 0) {
+      const diff = Math.abs(price - currentPrice) / currentPrice;
+      if (diff <= 0.01) {
+        wrap.classList.add('price-near');
+      } else {
+        wrap.classList.remove('price-near');
+      }
+    } else {
+      wrap.classList.remove('price-near');
+    }
+  }
+  // Also check proximity on live price ticks
+  const _origSetInterval = setInterval;
+  setInterval(() => { checkPriceProximity(); }, 3000);
+
+  // ── GOD MODE 3: PRICE ALERTS ──────────────────────────────────────
+  const priceAlerts = [];
+  function setPriceAlert(price, direction) {
+    priceAlerts.push({ price, direction });
+    showToast('Alert set: notify when INDX ' + (direction === 'above' ? '▲ above' : '▼ below') + ' $' + price.toFixed(3));
+    localStorage.setItem('indx_limitorders_alerts', JSON.stringify(priceAlerts));
+  }
+  setInterval(() => {
+    priceAlerts.forEach(a => {
+      if (a.direction === 'above' && currentPrice >= a.price && !a.triggered) {
+        a.triggered = true;
+        showToast('Alert: INDX hit $' + a.price.toFixed(3) + ' ▲');
+      } else if (a.direction === 'below' && currentPrice <= a.price && !a.triggered) {
+        a.triggered = true;
+        showToast('Alert: INDX hit $' + a.price.toFixed(3) + ' ▼');
+      }
+    });
+  }, 3500);
+
+  // Inject alert chips into depth bars
+  const _origBuildDepth = buildDepth;
+  function buildDepthWithAlerts() {
+    _origBuildDepth();
+    setTimeout(() => {
+      document.querySelectorAll('.db-price').forEach(el => {
+        const priceVal = parseFloat(el.textContent.replace('$',''));
+        if (!el.querySelector('.alert-chip')) {
+          const chip = document.createElement('span');
+          chip.className = 'alert-chip';
+          chip.textContent = '🔔';
+          chip.title = 'Set price alert';
+          chip.onclick = (e) => {
+            e.stopPropagation();
+            const dir = priceVal > currentPrice ? 'above' : 'below';
+            setPriceAlert(priceVal, dir);
+          };
+          el.appendChild(chip);
+        }
+      });
+    }, 100);
+  }
+  buildDepthWithAlerts();
+
+  // ── GOD MODE 4: ORDER HISTORY SHEET ──────────────────────────────
+  const orderHistory = [
+    { side:'buy',  price:0.236, amt:200,  filled:100, time:'2h ago' },
+    { side:'sell', price:0.258, amt:500,  filled:100, time:'1d ago' },
+    { side:'buy',  price:0.231, amt:1000, filled:100, time:'2d ago' },
+    { side:'sell', price:0.252, amt:300,  filled:100, time:'3d ago' },
+    { side:'buy',  price:0.239, amt:750,  filled:100, time:'5d ago' },
+  ];
+
+  function openHistorySheet() {
+    document.getElementById('histList').innerHTML = orderHistory.map(h => `
+      <div class="hist-item">
+        <div>
+          <span class="hist-side ${h.side}">${h.side === 'buy' ? '📈 Buy' : '📉 Sell'}</span>
+          <span style="font-size:11px;color:var(--text-muted);margin-left:6px;">${h.time}</span>
+        </div>
+        <div class="hist-detail">
+          <strong>${h.amt.toLocaleString()} INDX</strong> @ $${h.price.toFixed(3)}<br>
+          Total: $${(h.amt * h.price).toFixed(2)}
+        </div>
+      </div>`).join('');
+    document.getElementById('histOverlay').classList.add('show');
+    document.getElementById('histSheet').classList.add('show');
+  }
+
+  function closeHistorySheet() {
+    document.getElementById('histOverlay').classList.remove('show');
+    document.getElementById('histSheet').classList.remove('show');
+  }
 
   function showToast(msg) {
     const t = document.getElementById('toast');

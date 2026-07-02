@@ -223,6 +223,19 @@
   .pfc-text{font-size:13px;font-weight:600;}
   .pfc-status{margin-left:auto;font-size:12px;font-weight:700;}
 
+  /* GOD MODE — lending-dashboard */
+  .stress-card{background:rgba(255,77,109,0.05);border:1px solid rgba(255,77,109,0.15);border-radius:12px;padding:14px 16px;margin-bottom:14px;}
+  .sc-title{font-size:12px;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;}
+  .sc-subtitle{font-size:11px;color:var(--text-muted);margin-bottom:10px;}
+  .sc-slider{width:100%;-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;background:linear-gradient(90deg,var(--green),var(--gold),var(--red));outline:none;margin-bottom:10px;cursor:pointer;}
+  .sc-slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;cursor:pointer;box-shadow:0 0 6px rgba(255,77,109,0.5);}
+  .sc-scenario{font-size:13px;font-weight:700;margin-bottom:4px;}
+  .sc-ratio{font-size:20px;font-weight:900;margin-bottom:4px;transition:color 0.3s;}
+  .sc-status{font-size:11px;color:var(--text-muted);}
+  .hero-spark-wrap{margin-top:12px;}
+  .interest-tick-row{border-top:1px solid var(--border);padding:9px 0;display:flex;justify-content:space-between;align-items:center;}
+  .itl{font-size:13px;color:var(--text-muted);}
+  .itv{font-size:11px;font-weight:700;color:var(--gold);font-family:monospace;}
   /* SUCCESS OVERLAY */
   .success-overlay{position:fixed;inset:0;background:var(--black);z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;opacity:0;pointer-events:none;transition:opacity 0.3s;}
   .success-overlay.show{opacity:1;pointer-events:all;}
@@ -255,6 +268,11 @@
       <div class="hero-label">Current Borrow Rate (APR)</div>
       <div class="hero-rate" id="heroBorrowRate">14.8%</div>
       <div class="hero-rate-sub" id="heroBorrowSub">Pool utilisation: <span>67%</span> — Rate set by utilisation curve</div>
+      <!-- F1: Utilization sparkline -->
+      <div class="hero-spark-wrap">
+        <svg id="heroSparkSvg" viewBox="0 0 280 28" preserveAspectRatio="none" style="width:100%;height:28px;"></svg>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-top:2px;"><span>0% util</span><span id="heroSparkNow" style="color:var(--purple);font-weight:700;">67% now</span><span>100%</span></div>
+      </div>
       <div class="hero-stats">
         <div class="hs">
           <div class="hs-val">150%</div>
@@ -319,6 +337,11 @@
             <div class="lr">
               <span class="lr-label">Interest Accrued</span>
               <span class="lr-value" id="loanInterest" style="color:var(--gold)">—</span>
+            </div>
+            <!-- F4: Interest accrual ticker -->
+            <div class="interest-tick-row" id="interestTickerRow" style="display:none">
+              <span class="itl">Live accruing</span>
+              <span class="itv" id="interestTicker">+0.000000 INDX</span>
             </div>
             <div class="lr">
               <span class="lr-label">Total to Repay</span>
@@ -401,6 +424,16 @@
           </div>
           <div class="hp-ratio" id="healthRatioDisplay" style="color:var(--green)">—</div>
           <div class="hp-ratio-sub" id="healthRatioSub">Enter collateral to calculate</div>
+        </div>
+
+        <!-- F3: PRICE STRESS TEST -->
+        <div class="stress-card">
+          <div class="sc-title">💥 Price Stress Test</div>
+          <div class="sc-subtitle">If INDX drops X%, how does your collateral ratio change?</div>
+          <input type="range" class="sc-slider" id="stressSlider" min="5" max="80" value="20" oninput="updateStress()">
+          <div class="sc-scenario" id="scScenario">INDX drops 20% → $0.192</div>
+          <div class="sc-ratio" id="scRatio" style="color:var(--text-muted);">Enter collateral + borrow amount first</div>
+          <div class="sc-status" id="scStatus"></div>
         </div>
 
         <!-- PREFLIGHT -->
@@ -602,7 +635,7 @@
   <button class="success-btn" onclick="dismissSuccess()">View Loan Status →</button>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
 const SUPABASE_URL      = 'https://zljgthfzbalsunuoohcd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
@@ -934,6 +967,97 @@ async function repayFull() {
 function dismissSuccess() {
   document.getElementById('successOverlay').classList.remove('show');
 }
+
+// ── GOD MODE — lending-dashboard.html ──
+
+// F1: Utilization sparkline
+const UTIL_HIST=[42,45,48,52,55,58,61,63,65,67,66,68,69,67,68,70,68,67,69,67];
+function drawHeroSparkline(){
+  const svg=document.getElementById('heroSparkSvg');if(!svg)return;
+  const max=Math.max(...UTIL_HIST),min=Math.min(...UTIL_HIST);
+  const W=280,H=28;
+  const pts=UTIL_HIST.map((v,i)=>({x:(i/(UTIL_HIST.length-1))*W,y:H-((v-min)/(max-min||1))*(H-6)-3}));
+  const line=pts.map((p,i)=>(i?'L':'M')+p.x.toFixed(1)+' '+p.y.toFixed(1)).join(' ');
+  const last=pts[pts.length-1];
+  svg.innerHTML=`<defs><linearGradient id="spGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#8B3FE8" stop-opacity=".3"/><stop offset="100%" stop-color="#8B3FE8" stop-opacity="0"/></linearGradient></defs><path d="${line}L${W} ${H} L0 ${H} Z" fill="url(#spGrad)"/><path d="${line}" fill="none" stroke="#8B3FE8" stroke-width="1.5" stroke-linecap="round"/><circle cx="${last.x.toFixed(1)}" cy="${last.y.toFixed(1)}" r="3" fill="#8B3FE8"/>`;
+}
+function scheduleRateDrift(){
+  setInterval(()=>{
+    const last=UTIL_HIST[UTIL_HIST.length-1];
+    const next=Math.max(40,Math.min(95,last+(Math.random()-0.48)*2));
+    UTIL_HIST.push(next);UTIL_HIST.shift();
+    BORROW_APR=0.05+(next/100)*0.2;
+    const rateEl=document.getElementById('heroBorrowRate');
+    if(rateEl)rateEl.textContent=(BORROW_APR*100).toFixed(1)+'%';
+    const subEl=document.getElementById('heroBorrowSub');
+    if(subEl)subEl.innerHTML='Pool utilisation: <span>'+next.toFixed(1)+'%</span> — Rate set by demand';
+    const nowEl=document.getElementById('heroSparkNow');
+    if(nowEl)nowEl.textContent=next.toFixed(1)+'% now';
+    drawHeroSparkline();
+  },20000);
+}
+
+// F2: localStorage draft persistence
+// GOD MODE PATCH — save draft on collateral input
+const _origOCI=onCollateralInput;
+onCollateralInput=function(){
+  _origOCI();
+  const v=document.getElementById('collateralInput').value;
+  if(v)localStorage.setItem('indx_lend_draft',v);
+};
+function loadLendDraft(){
+  const v=localStorage.getItem('indx_lend_draft');
+  if(v&&parseFloat(v)>0){
+    const el=document.getElementById('collateralInput');
+    if(el&&!el.value){el.value=v;onCollateralInput();}
+  }
+}
+
+// F3: Price stress test
+function updateStress(){
+  const pct=parseInt(document.getElementById('stressSlider').value);
+  const newPrice=0.24*(1-pct/100);
+  const scen=document.getElementById('scScenario');
+  const ratioEl=document.getElementById('scRatio');
+  const statusEl=document.getElementById('scStatus');
+  if(scen)scen.textContent='INDX drops '+pct+'% → $'+newPrice.toFixed(4);
+  if(collateralUsd>0&&borrowIndx>0){
+    const ratio=(collateralUsd/(borrowIndx*newPrice))*100;
+    if(ratioEl)ratioEl.textContent='Ratio: '+ratio.toFixed(1)+'%';
+    if(ratio>=150){if(ratioEl)ratioEl.style.color='var(--green)';if(statusEl)statusEl.textContent='✅ Still safe above 150%';}
+    else if(ratio>=120){if(ratioEl)ratioEl.style.color='var(--gold)';if(statusEl)statusEl.textContent='⚠️ Alert zone — SIINDEX notifies you';}
+    else if(ratio>=110){if(ratioEl)ratioEl.style.color='var(--red)';if(statusEl)statusEl.textContent='🚨 Danger — add collateral immediately';}
+    else{if(ratioEl)ratioEl.style.color='var(--red)';if(statusEl)statusEl.textContent='💀 Below 110% — auto-liquidation triggered';}
+  } else {
+    if(ratioEl){ratioEl.textContent='Enter collateral + borrow amount first';ratioEl.style.color='var(--text-muted)';}
+    if(statusEl)statusEl.textContent='';
+  }
+}
+
+// F4: Interest accrual live ticker
+let _interestTickerInterval=null;
+function startInterestTicker(borrowed){
+  if(_interestTickerInterval)clearInterval(_interestTickerInterval);
+  let _accrued=0;
+  const perSec=borrowed*BORROW_APR/365/86400;
+  document.getElementById('interestTickerRow').style.display='flex';
+  _interestTickerInterval=setInterval(()=>{
+    _accrued+=perSec;
+    const el=document.getElementById('interestTicker');
+    if(el)el.textContent='+'+_accrued.toFixed(6)+' INDX (~$'+(_accrued*0.24).toFixed(4)+')';
+  },1000);
+}
+// GOD MODE PATCH — start ticker when active loan shown
+const _origShowActiveLoan=showActiveLoan;
+showActiveLoan=function(){
+  _origShowActiveLoan();
+  if(activeLoan&&activeLoan.borrowed>0)startInterestTicker(activeLoan.borrowed);
+};
+
+// Init God Mode
+drawHeroSparkline();
+scheduleRateDrift();
+setTimeout(loadLendDraft,200);
 
 init();
 </script>

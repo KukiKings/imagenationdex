@@ -123,6 +123,18 @@
     .pending-name{font-size:13px;font-weight:700;color:var(--gold);}
     .pending-sub{font-size:11px;color:var(--text-muted);margin-top:2px;}
     .pending-cancel{margin-left:auto;font-size:11px;color:var(--red);font-weight:700;cursor:pointer;padding:4px 8px;border-radius:8px;border:1px solid rgba(255,77,109,0.2);flex-shrink:0;}
+
+    /* GOD MODE — QUICK AMOUNT PRESETS */
+    .quick-presets{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+    .qp-chip{padding:7px 14px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);font-size:13px;font-weight:700;color:var(--text-muted);cursor:pointer;transition:all 0.18s;}
+    .qp-chip:active,.qp-chip.qp-active{background:rgba(0,212,255,0.12);border-color:var(--cyan);color:var(--cyan);}
+
+    /* GOD MODE — CUMULATIVE SAVINGS BANNER */
+    .savings-counter{background:linear-gradient(135deg,rgba(0,229,160,0.1),rgba(0,212,255,0.06));border:1px solid rgba(0,229,160,0.2);border-radius:12px;padding:12px 14px;margin-bottom:12px;display:none;align-items:center;gap:12px;}
+    .savings-counter.show{display:flex;}
+    .sc-icon{font-size:24px;flex-shrink:0;}
+    .sc-text{font-size:12px;color:var(--text-muted);line-height:1.5;}
+    .sc-amount{font-size:18px;font-weight:900;color:var(--green);}
   </style>
 </head>
 <body>
@@ -172,12 +184,28 @@
       <div class="wb-attr">Fee data: World Bank Remittance Prices Worldwide Q3 2025 · sendmoneypacific.org</div>
       <div class="corridor-note" id="corridorNote"></div>
 
+      <!-- GOD MODE — CUMULATIVE SAVINGS BANNER -->
+      <div class="savings-counter" id="savingsCounter">
+        <div class="sc-icon">🏆</div>
+        <div>
+          <div class="sc-amount" id="savingsCounterAmt">$0</div>
+          <div class="sc-text">saved vs banks — all time</div>
+        </div>
+      </div>
+
       <!-- AMOUNT -->
       <div class="amt-card">
         <div class="ac-label">You send (USD)</div>
+        <!-- GOD MODE — QUICK PRESETS -->
+        <div class="quick-presets">
+          <div class="qp-chip" onclick="setPreset(50,this)">$50</div>
+          <div class="qp-chip" onclick="setPreset(100,this)">$100</div>
+          <div class="qp-chip" onclick="setPreset(200,this)">$200</div>
+          <div class="qp-chip" onclick="setPreset(500,this)">$500</div>
+        </div>
         <div class="ac-input-row">
           <div class="ac-currency">💵 USD</div>
-          <input class="ac-input" type="number" id="sendAmt" placeholder="100" oninput="updateFX()">
+          <input class="ac-input" type="number" id="sendAmt" placeholder="100" oninput="updateFX();clearPresets();">
         </div>
       </div>
 
@@ -359,7 +387,7 @@
 </div>
 
 <div id="toast"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
 const SUPABASE_URL      = 'https://zljgthfzbalsunuoohcd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
@@ -645,6 +673,118 @@ function cancelPending() {
 }
 
 updateFX();
+
+// ════════════════════════════════════════════════
+// GOD MODE — REMITTANCE.HTML
+// ════════════════════════════════════════════════
+const INDX_PRICE_USD = 0.24;
+const REMIT_DRAFT_KEY    = 'indx_remittance_draft';
+const REMIT_SAVINGS_KEY  = 'indx_remittance_savings';
+
+// 1. AMOUNT PERSISTENCE — restore last amount + corridor from localStorage
+(function restoreLastSession() {
+  try {
+    const raw = localStorage.getItem(REMIT_DRAFT_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (Date.now() - (d.ts || 0) > 7 * 24 * 3600 * 1000) { localStorage.removeItem(REMIT_DRAFT_KEY); return; }
+    if (d.amt > 0) {
+      document.getElementById('sendAmt').value = d.amt;
+      updateFX();
+    }
+    if (d.activeKey) {
+      const set = (d.fromRegion === 'NZ') ? nzCorridors : corridors;
+      const chips = document.querySelectorAll('.corridor-chip');
+      chips.forEach(c => {
+        if (c.textContent.trim() === d.activeKey) {
+          c.click();
+        }
+      });
+    }
+  } catch(e) {}
+})();
+
+function persistRemitState() {
+  const amt = parseFloat(document.getElementById('sendAmt').value) || 0;
+  const draft = { amt, activeKey, fromRegion, ts: Date.now() };
+  localStorage.setItem(REMIT_DRAFT_KEY, JSON.stringify(draft));
+}
+document.getElementById('sendAmt').addEventListener('input', persistRemitState);
+
+// 2. CUMULATIVE SAVINGS COUNTER
+function loadSavingsCounter() {
+  try {
+    const total = parseFloat(localStorage.getItem(REMIT_SAVINGS_KEY) || '0');
+    if (total >= 0.01) {
+      document.getElementById('savingsCounterAmt').textContent = '$' + total.toFixed(2) + ' USD';
+      document.getElementById('savingsCounter').classList.add('show');
+    }
+  } catch(e) {}
+}
+function addToSavings(amt) {
+  try {
+    const prev = parseFloat(localStorage.getItem(REMIT_SAVINGS_KEY) || '0');
+    localStorage.setItem(REMIT_SAVINGS_KEY, (prev + amt).toFixed(2));
+    loadSavingsCounter();
+  } catch(e) {}
+}
+
+// Patch showSuccess to add savings to cumulative total
+const origShowSuccess = showSuccess;
+window.showSuccess = function(amt, name, detail, indxAmt) {
+  origShowSuccess(amt, name, detail, indxAmt);
+  const wuPct = wuFee[activeKey] || 0.060;
+  const savedAmt = parseFloat((amt * (wuPct - 0.008)).toFixed(2));
+  if (savedAmt > 0) addToSavings(savedAmt);
+  persistRemitState();
+};
+
+// 3. SMART CORRIDOR AUTO-SUGGEST — match saved recipients' country
+(function suggestCorridorFromSaved() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('savedRecipients') || '[]');
+    if (!saved.length) return;
+    // Country keywords to corridor key mappings
+    const countryMap = {
+      'Philippines':  '🇦🇺→🇵🇭', 'GCash': '🇦🇺→🇵🇭', 'Manila': '🇦🇺→🇵🇭',
+      'Fiji':         '🇦🇺→🇫🇯', 'M-PAiSA': '🇦🇺→🇫🇯',
+      'Samoa':        '🇦🇺→🇼🇸', 'MyCash': '🇦🇺→🇼🇸',
+      'Tonga':        '🇦🇺→🇹🇴',
+      'India':        '🇦🇺→🇮🇳',
+      'Cook':         '🇦🇺→🇨🇰',
+    };
+    const last = saved[0];
+    const detail = (last.detail || '').toLowerCase();
+    const name   = (last.name   || '').toLowerCase();
+    for (const [keyword, key] of Object.entries(countryMap)) {
+      if (detail.includes(keyword.toLowerCase()) || name.includes(keyword.toLowerCase())) {
+        // Auto-click the matching corridor chip
+        const chips = document.querySelectorAll('.corridor-chip');
+        chips.forEach(c => {
+          if (c.textContent.trim() === key) {
+            c.click();
+            showToast('Corridor matched to ' + last.name);
+          }
+        });
+        break;
+      }
+    }
+  } catch(e) {}
+})();
+
+// 4. QUICK PRESETS
+function setPreset(amt, el) {
+  document.getElementById('sendAmt').value = amt;
+  document.querySelectorAll('.qp-chip').forEach(c => c.classList.remove('qp-active'));
+  el.classList.add('qp-active');
+  updateFX();
+  persistRemitState();
+}
+function clearPresets() {
+  document.querySelectorAll('.qp-chip').forEach(c => c.classList.remove('qp-active'));
+}
+
+loadSavingsCounter();
 </script>
 </body>
 </html>

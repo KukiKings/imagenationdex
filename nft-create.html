@@ -89,6 +89,32 @@
   .mint-btn{width:100%;padding:17px;border-radius:16px;background:linear-gradient(135deg,var(--purple),var(--blue));border:none;color:#fff;font-size:17px;font-weight:800;cursor:pointer;letter-spacing:0.01em;}
   .mint-btn:active{opacity:0.9;}
 
+  /* ROYALTY EARNINGS CALCULATOR */
+  .royalty-calc{margin:0 24px 16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;}
+  .rc-title{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;}
+  .rc-slider-wrap{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .rc-slider{flex:1;-webkit-appearance:none;height:4px;border-radius:2px;background:var(--surface3);outline:none;}
+  .rc-slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--purple);cursor:pointer;}
+  .rc-slider-label{font-size:12px;color:var(--text-muted);width:60px;text-align:right;white-space:nowrap;}
+  .rc-earnings-row{display:flex;justify-content:space-between;align-items:center;}
+  .rc-earn-label{font-size:12px;color:var(--text-muted);}
+  .rc-earn-val{font-size:16px;font-weight:800;color:var(--green);}
+  .rc-earn-sub{font-size:10px;color:var(--text-muted);}
+
+  /* NAME COUNTER + SLUG */
+  .field-slug{font-size:11px;color:var(--cyan);margin-top:4px;font-family:'SF Mono',monospace;}
+  .field-counter{font-size:11px;color:var(--text-muted);text-align:right;margin-top:3px;}
+
+  /* DRAFT SAVE INDICATOR */
+  .draft-bar{display:flex;align-items:center;gap:6px;padding:6px 24px;font-size:11px;color:var(--text-muted);}
+  .draft-dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
+
+  /* SUPPLY TIER BADGE */
+  .supply-tier{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;margin-top:4px;}
+  .supply-tier.unique{background:rgba(255,184,0,0.15);color:var(--gold);}
+  .supply-tier.limited{background:rgba(139,63,232,0.15);color:var(--purple);}
+  .supply-tier.open{background:rgba(0,212,255,0.12);color:var(--cyan);}
+
   /* MINTING OVERLAY */
   .overlay{position:fixed;inset:0;background:var(--black);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s;}
   .overlay.show{opacity:1;pointer-events:all;}
@@ -109,6 +135,9 @@
     <div class="tb-title">Create NFT</div>
     <div class="tb-step" id="stepLabel">Step 1 of 3</div>
   </div>
+
+  <!-- DRAFT SAVE INDICATOR -->
+  <div class="draft-bar"><div class="draft-dot" id="draftDot" style="background:var(--text-muted)"></div><span id="draftStatus">Draft unsaved</span></div>
 
   <!-- PROGRESS -->
   <div class="progress-bar">
@@ -146,7 +175,11 @@
     <div class="form-wrap">
       <div class="field">
         <div class="field-label">NFT Name</div>
-        <input type="text" id="nftName" placeholder="e.g. Island Breeze Vol.1" oninput="updatePreview()"/>
+        <input type="text" id="nftName" placeholder="e.g. Island Breeze Vol.1" oninput="updatePreview();updateNameMeta()" maxlength="50"/>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+          <div class="field-slug" id="nftSlug">slug: island-breeze-vol-1</div>
+          <div class="field-counter" id="nftNameCount">0/50</div>
+        </div>
       </div>
       <div class="field">
         <div class="field-label">Description</div>
@@ -155,8 +188,9 @@
       <div class="field-row">
         <div class="field">
           <div class="field-label">Edition size</div>
-          <input type="number" id="nftSupply" value="100" min="1" max="10000" oninput="updatePreview()"/>
+          <input type="number" id="nftSupply" value="100" min="1" max="10000" oninput="updatePreview();updateSupplyTier()"/>
           <div class="field-hint">How many copies to mint</div>
+          <div class="supply-tier limited" id="supplyTier">Limited Edition</div>
         </div>
         <div class="field">
           <div class="field-label">Price (INDX)</div>
@@ -228,6 +262,27 @@
       </div>
     </div>
 
+    <!-- ROYALTY EARNINGS CALCULATOR -->
+    <div class="royalty-calc">
+      <div class="rc-title">Earnings Estimator</div>
+      <div class="rc-slider-wrap">
+        <input type="range" class="rc-slider" id="salesSlider" min="0" max="100" value="50" oninput="updateRoyaltyCalc()"/>
+        <div class="rc-slider-label" id="salesPct">50% sold</div>
+      </div>
+      <div class="rc-earnings-row">
+        <div>
+          <div class="rc-earn-label">Primary sale earnings</div>
+          <div class="rc-earn-val" id="primaryEarnings">$120 USD</div>
+          <div class="rc-earn-sub" id="primaryEarnSub">50 of 100 editions · 98% yours</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="rc-earn-label">Royalty on resales</div>
+          <div class="rc-earn-val" id="royaltyEarnings">+$12 USD</div>
+          <div class="rc-earn-sub">If 50% resold at same price</div>
+        </div>
+      </div>
+    </div>
+
     <!-- FEES + MINT -->
     <div class="mint-wrap">
       <div class="fee-box">
@@ -252,7 +307,78 @@
 </div>
 
 <script>
-  const INDX_RATE = 0.24;
+  const INDX_PRICE_USD = 0.24;
+  const INDX_RATE = INDX_PRICE_USD;
+  const DRAFT_KEY = 'indx_nftcreate_draft';
+  let draftTimer;
+
+  // FEATURE 1: localStorage draft auto-save
+  function saveDraft() {
+    const draft = {
+      name: document.getElementById('nftName').value,
+      desc: document.getElementById('nftDesc').value,
+      supply: document.getElementById('nftSupply').value,
+      price: document.getElementById('nftPrice').value,
+      royalty: document.getElementById('nftRoyalty').value
+    };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    document.getElementById('draftDot').style.background = 'var(--green)';
+    document.getElementById('draftStatus').textContent = 'Draft saved';
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(() => {
+      document.getElementById('draftDot').style.background = 'var(--text-muted)';
+      document.getElementById('draftStatus').textContent = 'Draft saved';
+    }, 1500);
+  }
+
+  function restoreDraft() {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (!saved) return;
+      const d = JSON.parse(saved);
+      if (d.name) document.getElementById('nftName').value = d.name;
+      if (d.desc) document.getElementById('nftDesc').value = d.desc;
+      if (d.supply) document.getElementById('nftSupply').value = d.supply;
+      if (d.price) document.getElementById('nftPrice').value = d.price;
+      if (d.royalty) document.getElementById('nftRoyalty').value = d.royalty;
+      document.getElementById('draftStatus').textContent = 'Draft restored';
+      updatePreview(); updateNameMeta(); updateSupplyTier(); updateRoyaltyCalc();
+    } catch(e) {}
+  }
+
+  // FEATURE 2: Name counter + slug preview
+  function updateNameMeta() {
+    const val = document.getElementById('nftName').value;
+    document.getElementById('nftNameCount').textContent = val.length + '/50';
+    const slug = val.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') || 'untitled';
+    document.getElementById('nftSlug').textContent = 'slug: ' + slug;
+    clearTimeout(draftTimer); draftTimer = setTimeout(saveDraft, 1200);
+  }
+
+  // FEATURE 3: Supply tier label
+  function updateSupplyTier() {
+    const supply = parseInt(document.getElementById('nftSupply').value) || 0;
+    const el = document.getElementById('supplyTier');
+    if (supply === 1) { el.className = 'supply-tier unique'; el.textContent = 'Unique (1 of 1)'; }
+    else if (supply <= 100) { el.className = 'supply-tier limited'; el.textContent = 'Limited Edition'; }
+    else { el.className = 'supply-tier open'; el.textContent = 'Open Edition'; }
+    clearTimeout(draftTimer); draftTimer = setTimeout(saveDraft, 1200);
+  }
+
+  // FEATURE 4: Royalty earnings calculator
+  function updateRoyaltyCalc() {
+    const pct = parseInt(document.getElementById('salesSlider').value) || 0;
+    const supply = parseInt(document.getElementById('nftSupply').value) || 100;
+    const price = parseFloat(document.getElementById('nftPrice').value) || 10;
+    const royaltyPct = parseInt(document.getElementById('nftRoyalty').value) || 10;
+    const sold = Math.round(supply * pct / 100);
+    const primary = sold * price * INDX_PRICE_USD * 0.98;
+    const royalty = sold * price * INDX_PRICE_USD * (royaltyPct / 100) * 0.5;
+    document.getElementById('salesPct').textContent = pct + '% sold';
+    document.getElementById('primaryEarnings').textContent = '$' + primary.toFixed(2) + ' USD';
+    document.getElementById('primaryEarnSub').textContent = sold + ' of ' + supply + ' editions · 98% yours';
+    document.getElementById('royaltyEarnings').textContent = '+$' + royalty.toFixed(2) + ' USD';
+  }
 
   function selectCat(el, type) {
     document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
@@ -286,6 +412,8 @@
     document.getElementById('previewSupply').textContent = `${supply.toLocaleString()} editions`;
     document.getElementById('previewRoyalty').textContent = `${royalty}%`;
     document.getElementById('priceUsd').textContent = `≈ $${(price * INDX_RATE).toFixed(2)} USD each`;
+    updateRoyaltyCalc();
+    clearTimeout(draftTimer); draftTimer = setTimeout(saveDraft, 1200);
   }
 
   function startMint() {
@@ -317,9 +445,15 @@
     });
   }
 
-  // Init
-  document.getElementById('nftName').value = 'Island Breeze Vol.1';
+  // Init — restore draft or set defaults
+  restoreDraft();
+  if (!document.getElementById('nftName').value) {
+    document.getElementById('nftName').value = 'Island Breeze Vol.1';
+  }
   updatePreview();
+  updateNameMeta();
+  updateSupplyTier();
+  updateRoyaltyCalc();
 </script>
 </body>
 </html>

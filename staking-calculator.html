@@ -125,6 +125,38 @@
 
   /* TOAST */
   #toast{position:fixed;bottom:110px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:12px;font-size:14px;z-index:400;pointer-events:none;opacity:0;transition:opacity 0.3s;white-space:nowrap;}
+
+  /* ── GOD MODE ADDITIONS ── */
+
+  /* Price scenario slider */
+  .scenario-card{margin:0 20px 20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
+  .scenario-label{font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:12px;}
+  .scenario-slider{width:100%;-webkit-appearance:none;appearance:none;height:4px;background:var(--surface3);border-radius:2px;outline:none;margin-bottom:10px;}
+  .scenario-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;border-radius:50%;background:var(--gold);cursor:pointer;}
+  .scenario-row{display:flex;justify-content:space-between;align-items:center;}
+  .scenario-multiplier{font-size:22px;font-weight:900;color:var(--gold);}
+  .scenario-gain{font-size:13px;color:var(--green);}
+
+  /* Wisdom gate inline badge */
+  .tier-wisdom-badge{
+    font-size:10px;font-weight:700;
+    background:rgba(139,63,232,0.12);color:var(--purple);
+    border:1px solid rgba(139,63,232,0.25);
+    border-radius:6px;padding:2px 7px;margin-left:6px;
+  }
+  .tier-locked{opacity:0.45;pointer-events:none;}
+
+  /* Milestone toast styling */
+  .milestone-toast{
+    position:fixed;top:80px;left:50%;transform:translateX(-50%) scale(0.9);
+    background:linear-gradient(135deg,#1A1400,#0F1A0A);
+    border:1.5px solid var(--gold);border-radius:14px;
+    padding:12px 20px;text-align:center;z-index:500;
+    opacity:0;transition:all 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    pointer-events:none;white-space:nowrap;
+  }
+  .milestone-toast.show{opacity:1;transform:translateX(-50%) scale(1);}
+  .milestone-toast strong{color:var(--gold);}
 </style>
 </head>
 <body>
@@ -318,6 +350,22 @@
     </div>
   </div>
 
+  <!-- PRICE SCENARIO (God Mode Feature 2) -->
+  <div class="scenario-card" id="scenarioCard">
+    <div class="scenario-label">What if INDX price changes?</div>
+    <input type="range" class="scenario-slider" id="priceSlider" min="1" max="20" value="1" step="0.5" oninput="updateScenario()">
+    <div class="scenario-row">
+      <div>
+        <div class="scenario-multiplier" id="scenarioMult">1×</div>
+        <div style="font-size:11px;color:var(--text-muted);">Price multiplier · Base $0.24</div>
+      </div>
+      <div style="text-align:right;">
+        <div class="scenario-gain" id="scenarioGainUsd">$0.00</div>
+        <div style="font-size:11px;color:var(--text-muted);">Est. USD gain at exit</div>
+      </div>
+    </div>
+  </div>
+
   <!-- DISCLAIMER -->
   <div class="disclaimer">
     <div class="disc-icon">⚡</div>
@@ -344,6 +392,7 @@
 </div>
 
 <div id="toast"></div>
+<div class="milestone-toast" id="milestoneBanner"></div>
 
 <script>
   const INDX_PRICE_USD = 0.24;
@@ -473,8 +522,116 @@
     setTimeout(() => t.style.opacity = '0', 2500);
   }
 
+  // ── GOD MODE: FEATURE 1 — Save/restore last calculation scenario ──
+  (function restoreLastScenario() {
+    const saved = JSON.parse(localStorage.getItem('indx_staking_last_scenario') || 'null');
+    if (saved) {
+      const inp = document.getElementById('amountInput');
+      if (saved.amount) inp.value = saved.amount;
+      if (saved.tierKey) {
+        const tierFns = {
+          flex:[3,5,'No minimum','10% of Fund income'],
+          30:[4,7,'30-day lock','20% of Fund income'],
+          90:[6,9,'90-day lock','30% of Fund income'],
+          365:[9,13,'365-day lock','40% of Fund income']
+        };
+        const t = tierFns[saved.tierKey];
+        if (t) selectTier(saved.tierKey, ...t);
+      }
+      if (saved.years) setYears(saved.years);
+    }
+  })();
+
+  // Patch calc to save scenario
+  const _origCalc = calc;
+  calc = function() {
+    _origCalc();
+    const scenario = {
+      amount: document.getElementById('amountInput').value,
+      tierKey: selectedTier.key,
+      years: projYears
+    };
+    localStorage.setItem('indx_staking_last_scenario', JSON.stringify(scenario));
+    checkMilestones();
+  };
+
+  // ── GOD MODE: FEATURE 2 — Price scenario slider ──
+  function updateScenario() {
+    const mult = parseFloat(document.getElementById('priceSlider').value);
+    const amt = parseFloat(document.getElementById('amountInput').value) || 0;
+    const { apyLow, apyHigh } = selectedTier;
+    const apyMid = (apyLow + apyHigh) / 2 / 100;
+    const days = projYears * 365;
+    const compTotal = amt * Math.pow(1 + apyMid / 365, days);
+    const gainINDX = compTotal - amt;
+    const exitPrice = INDX_PRICE_USD * mult;
+    const gainUsd = gainINDX * exitPrice;
+
+    document.getElementById('scenarioMult').textContent = mult + '×';
+    document.getElementById('scenarioGainUsd').textContent = '$' + gainUsd.toFixed(2) + ' USD';
+    document.getElementById('scenarioCard').style.borderColor =
+      mult >= 5 ? 'rgba(255,184,0,0.5)' : 'var(--border)';
+  }
+
+  // ── GOD MODE: FEATURE 3 — Milestone toasts ──
+  let shownMilestones = new Set(JSON.parse(localStorage.getItem('indx_staking_milestones') || '[]'));
+  function checkMilestones() {
+    const amt = parseFloat(document.getElementById('amountInput').value) || 0;
+    const { apyLow, apyHigh } = selectedTier;
+    const apyMid = (apyLow + apyHigh) / 2 / 100;
+    const days = projYears * 365;
+    const gain = (amt * Math.pow(1 + apyMid / 365, days) - amt) * INDX_PRICE_USD;
+
+    const milestones = [
+      [10,   '🎉 First $10 USD yield milestone!'],
+      [100,  '🏆 $100 USD yield unlocked!'],
+      [500,  '🔥 $500 USD — Sovereign tier range!'],
+      [1000, '👑 $1,000 USD yield — Genesis Staker level!']
+    ];
+
+    for (const [threshold, msg] of milestones) {
+      const key = 'ms_' + threshold;
+      if (gain >= threshold && !shownMilestones.has(key)) {
+        shownMilestones.add(key);
+        localStorage.setItem('indx_staking_milestones', JSON.stringify([...shownMilestones]));
+        showMilestone(msg);
+        break;
+      }
+    }
+  }
+
+  function showMilestone(msg) {
+    const el = document.getElementById('milestoneBanner');
+    el.innerHTML = '<strong>' + msg + '</strong>';
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3500);
+  }
+
+  // ── GOD MODE: FEATURE 4 — Wisdom Score gate from sessionStorage ──
+  (function applyWisdomGates() {
+    const wisdom = parseInt(sessionStorage.getItem('citizen_wisdom') || '0');
+    const tierGate = 100; // Sovereign Yield gate
+    if (wisdom < tierGate) {
+      // Lock non-flex tiers visually
+      ['30','90','365'].forEach(key => {
+        const el = document.getElementById('tier-' + key);
+        if (el) {
+          el.classList.add('tier-locked');
+          const nameEl = el.querySelector('.tier-name');
+          if (nameEl && !nameEl.querySelector('.tier-wisdom-badge')) {
+            const badge = document.createElement('span');
+            badge.className = 'tier-wisdom-badge';
+            badge.textContent = 'WS 100';
+            nameEl.appendChild(badge);
+          }
+        }
+      });
+    }
+  })();
+
   // Init
   calc();
+  updateScenario();
 </script>
 </body>
 </html>

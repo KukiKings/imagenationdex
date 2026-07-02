@@ -452,9 +452,40 @@
   .nav-item.active{opacity:1;}
   .nav-icon{font-size:20px;}
   .nav-label{font-size:10px;font-weight:600;color:#F0F2FF;}
+
+  /* ═══ GOD MODE — Profile Cybertron ═══ */
+  #cyberCanvasProf{position:fixed;inset:0;z-index:0;pointer-events:none;}
+  body{background:rgba(9,10,16,0.92);position:relative;z-index:1;}
+  /* Avatar holographic shimmer */
+  .avatar{position:relative;overflow:hidden;}
+  .avatar-holo{position:absolute;width:250%;height:250%;top:-75%;left:-75%;border-radius:50%;
+    background:conic-gradient(from 0deg,rgba(0,212,255,0) 0deg,rgba(0,212,255,0.22) 50deg,
+      rgba(139,63,232,0.18) 100deg,rgba(255,184,0,0.12) 150deg,rgba(0,229,160,0.16) 200deg,
+      rgba(43,53,216,0.18) 260deg,rgba(0,212,255,0.20) 310deg,rgba(0,212,255,0) 360deg);
+    animation:avHoloSpin 8s linear infinite;
+    pointer-events:none;mix-blend-mode:screen;z-index:4;}
+  @keyframes avHoloSpin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+  /* Wisdom count-up */
+  .wisdom-score-num{transition:color 0.4s;}
+  /* Activity feed */
+  .activity-feed-section{margin:0 20px 24px;}
+  .activity-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface2);
+    border:1px solid var(--border);border-radius:10px;margin-bottom:6px;animation:slideInAct 0.35s ease both;}
+  @keyframes slideInAct{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:none;}}
+  .act-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+  .act-icon.send{background:rgba(255,77,109,0.12);}
+  .act-icon.recv{background:rgba(0,229,160,0.12);}
+  .act-icon.swap{background:rgba(0,212,255,0.10);}
+  .act-body{flex:1;}
+  .act-label{font-size:12px;font-weight:600;color:var(--text);}
+  .act-time{font-size:10px;color:var(--text-dim);margin-top:1px;}
+  .act-amt{font-size:12px;font-weight:800;}
+  .act-amt.neg{color:#FF4D6D;} .act-amt.pos{color:#00E5A0;} .act-amt.neu{color:#00D4FF;}
 </style>
 </head>
 <body>
+
+<canvas id="cyberCanvasProf" aria-hidden="true"></canvas>
 
 <!-- HEADER -->
 <div class="header">
@@ -466,7 +497,7 @@
 <!-- PROFILE HERO -->
 <div class="profile-hero">
   <div class="avatar-wrap">
-    <div class="avatar" id="avatarEl" onclick="openEditSheet()">👤</div>
+    <div class="avatar" id="avatarEl" onclick="openEditSheet()">👤<div class="avatar-holo"></div></div>
     <div class="avatar-edit" onclick="openEditSheet()">✏️</div>
   </div>
   <div class="profile-name" id="profileName">Maria Santos</div>
@@ -532,6 +563,10 @@
     <div class="lbl">Items Listed</div>
   </div>
 </div>
+
+<!-- RECENT ACTIVITY FEED -->
+<div class="section-title" id="activityTitle" style="display:none;">Recent Activity</div>
+<div class="activity-feed-section" id="activityFeed"></div>
 
 <!-- SOVEREIGN ID CARD -->
 <div class="section-title">Sovereign Identity</div>
@@ -618,6 +653,23 @@
       <div class="menu-label">My NFTs & Assets</div>
       <div class="menu-sub">Gallery of minted NFTs and RWA tokens</div>
     </div>
+    <div class="menu-arrow">›</div>
+  </div>
+  <div class="menu-row" onclick="window.location.href='business-network.html'">
+    <div class="menu-icon blue" style="background:linear-gradient(135deg,rgba(43,53,216,0.2),rgba(0,212,255,0.2));">🤝</div>
+    <div class="menu-body">
+      <div class="menu-label">Business Network</div>
+      <div class="menu-sub">Collab pipeline · LinkedIn, X, YouTube, IN$DEX</div>
+    </div>
+    <div class="menu-arrow">›</div>
+  </div>
+  <div class="menu-row" onclick="window.location.href='skill-point-nft.html'">
+    <div class="menu-icon purple" style="background:linear-gradient(135deg,rgba(0,212,255,0.15),rgba(139,63,232,0.15));">🏅</div>
+    <div class="menu-body">
+      <div class="menu-label">Skill Point NFTs</div>
+      <div class="menu-sub">Your Sovereign Skill Graph · 24 minted</div>
+    </div>
+    <div class="menu-badge-dot" style="width:8px;height:8px;border-radius:50%;background:var(--cyan);margin-right:8px;"></div>
     <div class="menu-arrow">›</div>
   </div>
   <div class="menu-row" onclick="window.location.href='governance.html'">
@@ -871,6 +923,119 @@
   document.getElementById('editOverlay').addEventListener('click', function(e) {
     if (e.target === this) closeEditSheet();
   });
+
+  // ══ GOD MODE JS ══════════════════════════════════════════════
+  // Feature 1: Cybertron hex canvas
+  (function initProfCanvas() {
+    const cv = document.getElementById('cyberCanvasProf');
+    if (!cv) return;
+    const ctx = cv.getContext('2d');
+    const COLORS = ['#00D4FF','#2B35D8','#8B3FE8','#00E5A0','#FFB800'];
+    let W, H, pts;
+    const FRAME_MS = 1000/22, N = 22;
+    let lastT = 0;
+    function resize() {
+      W = cv.width = window.innerWidth;
+      H = cv.height = window.innerHeight;
+      pts = Array.from({length:N}, () => ({
+        x:Math.random()*W, y:Math.random()*H,
+        vx:(Math.random()-0.5)*0.44, vy:(Math.random()-0.5)*0.44,
+        r:1.8+Math.random()*2.2,
+        color:COLORS[Math.floor(Math.random()*COLORS.length)],
+        phase:Math.random()*Math.PI*2
+      }));
+    }
+    window.addEventListener('resize', resize); resize();
+    function draw(ts) {
+      requestAnimationFrame(draw);
+      if (ts-lastT < FRAME_MS) return; lastT = ts;
+      ctx.clearRect(0,0,W,H);
+      pts.forEach(p => {
+        p.x+=p.vx; p.y+=p.vy; p.phase+=0.02;
+        if(p.x<0||p.x>W)p.vx*=-1; if(p.y<0||p.y>H)p.vy*=-1;
+        const op=0.15+0.10*Math.sin(p.phase);
+        ctx.save(); ctx.translate(p.x,p.y); ctx.beginPath();
+        for(let i=0;i<6;i++){const a=i*Math.PI/3-Math.PI/6;i===0?ctx.moveTo(p.r*Math.cos(a),p.r*Math.sin(a)):ctx.lineTo(p.r*Math.cos(a),p.r*Math.sin(a));}
+        ctx.closePath(); ctx.fillStyle=p.color+Math.round(op*255).toString(16).padStart(2,'0'); ctx.fill(); ctx.restore();
+      });
+      for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
+        const d=Math.hypot(pts[i].x-pts[j].x,pts[i].y-pts[j].y);
+        if(d<125){ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);
+          ctx.strokeStyle=`rgba(0,212,255,${(1-d/125)*0.10})`;ctx.lineWidth=0.5;ctx.stroke();}
+      }
+    }
+    requestAnimationFrame(draw);
+  })();
+
+  // Feature 3: Wisdom score count-up animation
+  (function animateWisdomCount() {
+    const el = document.querySelector('.wisdom-score-num');
+    if (!el) return;
+    const wisdom = parseInt(sessionStorage.getItem('citizen_wisdom') || '0');
+    let cur = 0;
+    const total = wisdom;
+    if (total === 0) return;
+    const dur = 1200; // ms
+    const start = performance.now();
+    function step(now) {
+      const p = Math.min(1, (now - start) / dur);
+      const ease = 1 - Math.pow(1 - p, 3);
+      cur = Math.round(total * ease);
+      el.innerHTML = cur + ' <span>/ 200</span>';
+      if (p < 1) requestAnimationFrame(step);
+    }
+    setTimeout(() => requestAnimationFrame(step), 350);
+  })();
+
+  // Feature 4: Recent activity feed from localStorage
+  (function initActivityFeed() {
+    const feed = document.getElementById('activityFeed');
+    const title = document.getElementById('activityTitle');
+    if (!feed) return;
+    const payHist  = JSON.parse(localStorage.getItem('indx_pay_hist')  || '[]');
+    const swapHist = JSON.parse(localStorage.getItem('indx_swap_hist') || '[]');
+    // Merge and sort by timestamp
+    const events = [
+      ...payHist.map(p  => ({ type:'send', icon:'💸', label:'Sent to ' + p.name, amt:'-'+p.amt+' INDX', cls:'neg', ts:p.ts })),
+      ...swapHist.map(s => ({ type:'swap', icon:'⚡', label:'Swapped ' + s.from + ' → ' + s.to, amt:s.received+' '+s.to, cls:'neu', ts:s.ts }))
+    ].sort((a,b) => b.ts - a.ts).slice(0, 6);
+
+    if (!events.length) {
+      // Show sample events if no real data
+      const samples = [
+        { icon:'💸', label:'Sent to Jake Nuku', amt:'-25 INDX', cls:'neg', ts:Date.now()-120000 },
+        { icon:'⚡', label:'Swapped SOL → INDX', amt:'+10.4 INDX', cls:'pos', ts:Date.now()-3600000 },
+        { icon:'📥', label:'Received from AJ', amt:'+5 INDX', cls:'pos', ts:Date.now()-7200000 },
+      ];
+      title.style.display = 'block';
+      feed.innerHTML = samples.map(e => renderAct(e)).join('');
+      return;
+    }
+    title.style.display = 'block';
+    feed.innerHTML = events.map(e => renderAct(e)).join('');
+  })();
+
+  function renderAct(e) {
+    const ago = relActTime(e.ts);
+    const iconCls = e.type === 'send' ? 'send' : e.type === 'recv' ? 'recv' : 'swap';
+    return `<div class="activity-item">
+      <div class="act-icon ${iconCls}">${e.icon}</div>
+      <div class="act-body">
+        <div class="act-label">${e.label}</div>
+        <div class="act-time">${ago}</div>
+      </div>
+      <div class="act-amt ${e.cls}">${e.amt}</div>
+    </div>`;
+  }
+  function relActTime(ts) {
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 60) return 'just now';
+    const m = Math.floor(s/60);
+    if (m < 60) return m + 'm ago';
+    const h = Math.floor(m/60);
+    if (h < 24) return h + 'h ago';
+    return Math.floor(h/24) + 'd ago';
+  }
 </script>
 
 <div class="bottom-nav-spacer"></div>

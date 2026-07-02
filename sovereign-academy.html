@@ -712,6 +712,23 @@
   </div>
 </div>
 
+<!-- ── TRACK COMPLETE SP-NFT OVERLAY ── -->
+<div class="complete-overlay" id="trackNFTOverlay" style="z-index:1100;">
+  <div class="complete-card">
+    <div class="complete-icon" id="trackNFTIcon">🎓</div>
+    <div class="complete-title">Track Complete!</div>
+    <div class="complete-sub" id="trackNFTName" style="font-size:15px;font-weight:700;margin-bottom:4px;"></div>
+    <div class="complete-sub" style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">You've unlocked the <strong style="color:var(--cyan);">Academy Graduate SP-NFT</strong> — a permanent on-chain record of your sovereign education.</div>
+    <div class="reward-box" style="background:linear-gradient(135deg,rgba(0,212,255,0.08),rgba(139,63,232,0.08));border:1px solid rgba(139,63,232,0.3);">
+      <div class="reward-label">SKILL POINT NFT UNLOCKED</div>
+      <div class="reward-value" style="font-size:28px;">🏅</div>
+      <div class="reward-desc">Academy Graduate · Learning Category · +8 Wisdom pts</div>
+    </div>
+    <button class="btn-primary" id="trackNFTMintBtn" style="background:linear-gradient(135deg,var(--cyan),var(--purple));">Mint SP-NFT Now</button>
+    <button class="btn-secondary" onclick="document.getElementById('trackNFTOverlay').classList.remove('active');openTrack(activeTrack.id);">Mint Later</button>
+  </div>
+</div>
+
 <!-- ── BOTTOM NAV ── -->
 <div class="bottom-nav">
   <a class="nav-item" href="citizen-dashboard.html">
@@ -1223,6 +1240,7 @@ let wisdomScore = parseInt(sessionStorage.getItem('citizen_wisdom') || '0');
 let activeTrack = null;
 let activeLessonIdx = null;
 let activeStepIdx = 0;
+let pendingTrackNFT = null;
 let quizAnswered = false;
 
 // ── RENDER TRACKS ──
@@ -1401,11 +1419,18 @@ function completeLessonFlow() {
     localStorage.setItem('academy_completed', JSON.stringify(completed));
     wisdomScore += xpEarned;
     sessionStorage.setItem('citizen_wisdom', String(wisdomScore));
+
+    // Check if entire track is now complete
+    const trackDone = activeTrack.lessons_data.every((_, idx) => !!completed[activeTrack.id + '_' + idx]);
+    const nftAlreadyMinted = localStorage.getItem('academy_nft_' + activeTrack.id);
+    if (trackDone && !nftAlreadyMinted) {
+      pendingTrackNFT = activeTrack;
+    }
   }
 
   document.getElementById('lessonScreen').classList.remove('active');
   document.getElementById('completeTitle').textContent = alreadyDone ? 'Already earned!' : 'Lesson Complete!';
-  document.getElementById('completeSub').textContent = lesson.title + ' ' + activeTrack.name;
+  document.getElementById('completeSub').textContent = lesson.title + ' · ' + activeTrack.name;
   document.getElementById('completeReward').textContent = alreadyDone ? '0 pts (already earned)' : '+' + xpEarned + ' pts';
   document.getElementById('completeTotal').textContent = 'Wisdom Score: ' + wisdomScore + ' / 200';
   document.getElementById('completeOverlay').classList.add('active');
@@ -1416,7 +1441,48 @@ function dismissComplete() {
   document.getElementById('lessonModal').classList.remove('active');
   document.body.style.overflow = '';
   renderTracks();
-  openTrack(activeTrack.id);
+
+  if (pendingTrackNFT) {
+    const track = pendingTrackNFT;
+    pendingTrackNFT = null;
+    showTrackNFT(track);
+  } else {
+    openTrack(activeTrack.id);
+  }
+}
+
+function showTrackNFT(track) {
+  const el = document.getElementById('trackNFTOverlay');
+  document.getElementById('trackNFTIcon').textContent = track.icon;
+  document.getElementById('trackNFTName').textContent = track.name;
+  document.getElementById('trackNFTMintBtn').onclick = function() { mintTrackNFT(track); };
+  el.classList.add('active');
+}
+
+function mintTrackNFT(track) {
+  localStorage.setItem('academy_nft_' + track.id, '1');
+  document.getElementById('trackNFTOverlay').classList.remove('active');
+  // Pass NFT data to skill-point-nft.html via sessionStorage
+  const pending = JSON.parse(sessionStorage.getItem('sp_nft_pending') || '[]');
+  pending.push({ name: 'Academy Graduate: ' + track.name, icon: '🎓', cat: 'Learning', wisdomPts: 8 });
+  sessionStorage.setItem('sp_nft_pending', JSON.stringify(pending));
+  showAcademyToast('🏅 SP-NFT queued! Mint it in Skill Point NFTs.', function() {
+    window.location.href = 'skill-point-nft.html';
+  });
+}
+
+function showAcademyToast(msg, onClick) {
+  let t = document.getElementById('academyToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'academyToast';
+    t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--surface3);border:1px solid rgba(139,63,232,0.4);border-radius:12px;padding:12px 18px;font-size:13px;font-weight:600;color:var(--text);z-index:9999;cursor:pointer;max-width:360px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.4);';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.display = 'block';
+  if (onClick) t.onclick = onClick;
+  setTimeout(() => { t.style.display = 'none'; }, 5000);
 }
 
 function closeLesson() {

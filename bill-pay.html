@@ -99,6 +99,32 @@
     .pay-bar{position:sticky;bottom:0;padding:12px 16px 24px;background:var(--black);border-top:1px solid var(--border);}
 
     #toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+
+    /* GOD MODE — AMOUNT PRESETS */
+    .amt-presets{display:flex;gap:6px;margin-bottom:10px;}
+    .ap-chip{padding:6px 12px;border-radius:16px;background:var(--surface3);border:1px solid var(--border);font-size:12px;font-weight:700;color:var(--text-muted);cursor:pointer;transition:all 0.18s;}
+    .ap-chip:active,.ap-chip.ap-active{background:rgba(0,212,255,0.1);border-color:var(--cyan);color:var(--cyan);}
+
+    /* GOD MODE — LAST BILLER QUICK TAP */
+    .last-biller-bar{display:none;align-items:center;gap:10px;margin:0 16px 14px;padding:11px 14px;background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.15);border-radius:12px;cursor:pointer;}
+    .last-biller-bar.show{display:flex;}
+    .lbb-icon{font-size:22px;}
+    .lbb-text{flex:1;font-size:13px;font-weight:600;}
+    .lbb-sub{font-size:11px;color:var(--text-muted);}
+    .lbb-cta{font-size:12px;font-weight:700;color:var(--cyan);}
+
+    /* GOD MODE — CONFIRM SHEET */
+    .confirm-overlay-bp{position:fixed;inset:0;background:rgba(9,10,16,0.92);z-index:200;opacity:0;pointer-events:none;transition:opacity 0.25s;display:flex;align-items:flex-end;justify-content:center;}
+    .confirm-overlay-bp.show{opacity:1;pointer-events:all;}
+    .confirm-sheet-bp{background:var(--surface);border-radius:24px 24px 0 0;padding:28px 20px 48px;width:100%;max-width:430px;}
+    .cs-handle-bp{width:40px;height:4px;border-radius:2px;background:var(--surface3);margin:0 auto 20px;}
+    .cs-title-bp{font-size:18px;font-weight:900;text-align:center;margin-bottom:6px;}
+    .cs-sub-bp{font-size:13px;color:var(--text-muted);text-align:center;margin-bottom:20px;}
+    .cs-summary-bp{background:var(--surface2);border-radius:12px;padding:14px;margin-bottom:18px;}
+    .csr-bp{display:flex;justify-content:space-between;font-size:13px;padding:5px 0;}
+    .csr-lbl{color:var(--text-muted);}
+    .btn-confirm-bp{width:100%;padding:16px;border-radius:14px;background:var(--cyan);border:none;color:#000;font-size:16px;font-weight:900;cursor:pointer;margin-bottom:10px;}
+    .btn-cancel-bp{width:100%;padding:13px;border-radius:12px;background:transparent;border:1px solid var(--border);color:var(--text-muted);font-size:14px;cursor:pointer;}
   </style>
 </head>
 <body>
@@ -120,6 +146,16 @@
         <div class="bb-lbl">≈ $634.88</div>
         <div class="bb-rate">1 INDX = $0.24</div>
       </div>
+    </div>
+
+    <!-- GOD MODE — LAST BILLER QUICK TAP -->
+    <div class="last-biller-bar" id="lastBillerBar" onclick="quickPayLastBiller()">
+      <div class="lbb-icon" id="lbbIcon">⚡</div>
+      <div class="lbb-text">
+        <div id="lbbName">AGL Energy</div>
+        <div class="lbb-sub">Pay again</div>
+      </div>
+      <div class="lbb-cta">1-tap pay →</div>
     </div>
 
     <!-- SEARCH -->
@@ -155,9 +191,16 @@
       <input class="pp-input" type="text" id="ppRef" placeholder="e.g. 9412 7800 1234" oninput="updatePaySummary()">
 
       <div class="pp-label">Amount (USD)</div>
+      <!-- GOD MODE — AMOUNT PRESETS -->
+      <div class="amt-presets">
+        <div class="ap-chip" onclick="setAmt(50,this)">$50</div>
+        <div class="ap-chip" onclick="setAmt(100,this)">$100</div>
+        <div class="ap-chip" onclick="setAmt(150,this)">$150</div>
+        <div class="ap-chip" onclick="setAmt(200,this)">$200</div>
+      </div>
       <div class="amount-wrap">
         <span style="font-size:16px;color:var(--text-muted);">$</span>
-        <input class="amt-input" type="number" id="ppAmt" placeholder="0.00" step="0.01" oninput="updatePaySummary()">
+        <input class="amt-input" type="number" id="ppAmt" placeholder="0.00" step="0.01" oninput="updatePaySummary();clearAmtChips();">
       </div>
 
       <div class="pp-label">Pay with</div>
@@ -217,6 +260,25 @@
 </div>
 
 <div id="toast"></div>
+
+<!-- GOD MODE — CONFIRM SHEET -->
+<div class="confirm-overlay-bp" id="confirmOverlayBp" onclick="if(event.target===this)closePayConfirm()">
+  <div class="confirm-sheet-bp">
+    <div class="cs-handle-bp"></div>
+    <div class="cs-title-bp">Confirm Payment</div>
+    <div class="cs-sub-bp" id="csBpSub">Review before sending</div>
+    <div class="cs-summary-bp">
+      <div class="csr-bp"><span class="csr-lbl">Biller</span><span id="csBpBiller" style="font-weight:700;"></span></div>
+      <div class="csr-bp"><span class="csr-lbl">Reference</span><span id="csBpRef" style="font-weight:700;"></span></div>
+      <div class="csr-bp"><span class="csr-lbl">Amount</span><span id="csBpAmt" style="font-weight:700;"></span></div>
+      <div class="csr-bp"><span class="csr-lbl">You pay</span><span id="csBpToken" style="color:var(--cyan);font-weight:700;"></span></div>
+      <div class="csr-bp"><span class="csr-lbl">98/2 fee</span><span id="csBpFee" style="color:var(--gold);"></span></div>
+      <div class="csr-bp"><span class="csr-lbl">Recurring</span><span id="csBpSched"></span></div>
+    </div>
+    <button class="btn-confirm-bp" onclick="executePayConfirmed()">Confirm &amp; Pay</button>
+    <button class="btn-cancel-bp" onclick="closePayConfirm()">Cancel</button>
+  </div>
+</div>
 
 <script>
   const BILLERS = [
@@ -329,6 +391,116 @@
   }
 
   renderBillers();
+
+  // ════════════════════════════════════════════════
+  // GOD MODE — BILL-PAY.HTML
+  // ════════════════════════════════════════════════
+  const INDX_PRICE_USD = 0.24;
+  const LAST_BILLER_KEY  = 'indx_billpay_last';
+  const BALANCE_KEY_BP   = 'indx_billpay_balance';
+
+  // 1. BALANCE SYNC — pull from sessionStorage and update balance bar
+  (function syncBalance() {
+    const bal = parseInt(sessionStorage.getItem('citizen_balance') || '0');
+    if (bal > 0) {
+      document.querySelector('.bb-val').textContent = bal.toLocaleString() + ' INDX';
+      document.querySelector('.bb-lbl').textContent = 'Your INDX balance';
+      // Update USD estimate
+      const usdVal = (bal * INDX_PRICE_USD).toFixed(2);
+      document.querySelectorAll('.balance-bar .bb-lbl')[1] && (document.querySelectorAll('.balance-bar div')[1].querySelector('.bb-lbl').textContent = '≈ $' + usdVal);
+    }
+  })();
+
+  // 2. LAST BILLER QUICK TAP
+  function loadLastBiller() {
+    try {
+      const raw = localStorage.getItem(LAST_BILLER_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (!d || !d.id) return;
+      const bar = document.getElementById('lastBillerBar');
+      document.getElementById('lbbIcon').textContent = d.icon || '⚡';
+      document.getElementById('lbbName').textContent = 'Pay ' + d.name + ' again';
+      bar.classList.add('show');
+      bar._billerId = d.id;
+    } catch(e) {}
+  }
+
+  function quickPayLastBiller() {
+    try {
+      const raw = localStorage.getItem(LAST_BILLER_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      selectBiller(d.id);
+      if (d.ref)  { document.getElementById('ppRef').value = d.ref; }
+      if (d.amt)  { document.getElementById('ppAmt').value = d.amt; }
+      updatePaySummary();
+      showToast('Last biller loaded — review and pay');
+    } catch(e) {}
+  }
+
+  function saveLastBiller(billerObj, ref, amt) {
+    try {
+      localStorage.setItem(LAST_BILLER_KEY, JSON.stringify({
+        id: billerObj.id, icon: billerObj.icon, name: billerObj.name, ref, amt
+      }));
+    } catch(e) {}
+  }
+
+  // 3. AMOUNT PRESETS
+  function setAmt(val, el) {
+    document.getElementById('ppAmt').value = val;
+    document.querySelectorAll('.ap-chip').forEach(c => c.classList.remove('ap-active'));
+    el.classList.add('ap-active');
+    updatePaySummary();
+  }
+  function clearAmtChips() {
+    document.querySelectorAll('.ap-chip').forEach(c => c.classList.remove('ap-active'));
+  }
+
+  // 4. PAY CONFIRMATION OVERLAY — intercept doPay() with confirm step
+  const origDoPay = doPay;
+  window.doPay = function() {
+    const amt  = parseFloat(document.getElementById('ppAmt').value);
+    const ref  = document.getElementById('ppRef').value.trim();
+    const name = selectedBiller ? selectedBiller.name : 'biller';
+    if (!amt || amt <= 0) { showToast('Enter an amount'); return; }
+    if (!ref) { showToast('Enter a reference number'); return; }
+
+    const rate    = { indx: INDX_PRICE_USD, usdc: 1.00, sol: 142.00 }[payMethod];
+    const sym     = { indx:'INDX', usdc:'USDC', sol:'SOL' }[payMethod];
+    const tokenAmt = (amt / rate).toFixed(2);
+    const fee     = (parseFloat(tokenAmt) * 0.02).toFixed(2);
+
+    document.getElementById('csBpSub').textContent    = 'Confirm your bill payment';
+    document.getElementById('csBpBiller').textContent = (selectedBiller ? selectedBiller.icon + ' ' : '') + name;
+    document.getElementById('csBpRef').textContent    = ref;
+    document.getElementById('csBpAmt').textContent    = '$' + amt.toFixed(2) + ' USD';
+    document.getElementById('csBpToken').textContent  = tokenAmt + ' ' + sym;
+    document.getElementById('csBpFee').textContent    = fee + ' ' + sym;
+    document.getElementById('csBpSched').textContent  = schedOn ? 'Monthly auto-pay on' : 'One-time only';
+
+    document.getElementById('confirmOverlayBp').classList.add('show');
+  };
+
+  function closePayConfirm() {
+    document.getElementById('confirmOverlayBp').classList.remove('show');
+  }
+
+  function executePayConfirmed() {
+    const amt  = parseFloat(document.getElementById('ppAmt').value);
+    const ref  = document.getElementById('ppRef').value.trim();
+    const name = selectedBiller ? selectedBiller.name : 'biller';
+    closePayConfirm();
+    showToast('✓ $' + amt.toFixed(2) + ' paid to ' + name + (schedOn ? ' · Monthly auto-pay set' : ''));
+    if (selectedBiller) saveLastBiller(selectedBiller, ref, amt);
+    loadLastBiller();
+    document.getElementById('ppAmt').value = '';
+    document.getElementById('ppRef').value = '';
+    updatePaySummary();
+  }
+
+  loadLastBiller();
 </script>
 </body>
 </html>

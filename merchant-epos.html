@@ -150,6 +150,37 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
 /* TOAST */
 .toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(20px);max-width:320px;width:calc(100% - 40px);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:13px;color:var(--text);text-align:center;opacity:0;transition:opacity 0.3s,transform 0.3s;z-index:400;pointer-events:none;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* GOD MODE — MERCHANT EPOS */
+/* F1: Quick amount presets */
+.amount-presets{display:flex;gap:8px;padding:0 24px 16px;flex-wrap:wrap;}
+.preset-chip{padding:8px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;color:var(--text2);transition:all 0.15s;}
+.preset-chip:active{background:var(--surface3);transform:scale(0.95);}
+.preset-chip.frequent{border-color:rgba(0,212,255,0.3);color:var(--cyan);}
+
+/* F2: Transaction history sheet */
+.history-sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:80;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+.history-sheet-overlay.open{opacity:1;pointer-events:all;}
+.history-sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:430px;background:var(--surface);border-radius:24px 24px 0 0;padding:20px 20px 40px;z-index:90;transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);max-height:70vh;overflow-y:auto;}
+.history-sheet.open{transform:translateX(-50%) translateY(0);}
+.hs-handle{width:36px;height:4px;background:var(--surface3);border-radius:2px;margin:0 auto 16px;}
+.hs-title{font-size:17px;font-weight:800;margin-bottom:4px;}
+.hs-sub{font-size:12px;color:var(--text2);margin-bottom:16px;}
+.hs-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.hs-item:last-child{border-bottom:none;}
+.hs-icon{width:36px;height:36px;border-radius:10px;background:rgba(0,229,160,0.1);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.hs-info{flex:1;}
+.hs-amt{font-size:13px;font-weight:700;color:var(--green);}
+.hs-detail{font-size:11px;color:var(--text2);}
+.hs-time{font-size:11px;color:var(--muted);}
+.hs-empty{text-align:center;padding:24px;font-size:13px;color:var(--text2);}
+
+/* F3: Shake animation for invalid input */
+@keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-8px);}40%{transform:translateX(8px);}60%{transform:translateX(-6px);}80%{transform:translateX(4px);}}
+.shake{animation:shake 0.4s ease;}
+
+/* F4: History button in topbar */
+.history-btn{padding:6px 12px;border-radius:20px;background:var(--surface);border:1px solid var(--border);color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;margin-left:auto;}
 </style>
 </head>
 <body>
@@ -160,6 +191,7 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
     <div class="back-btn" onclick="handleBack()">←</div>
     <div class="topbar-title" id="topbarTitle">IN$DEX ePOS</div>
     <div class="topbar-badge" id="topbarBadge">Free Terminal</div>
+    <button class="history-btn" onclick="openHistorySheet()" title="Transaction history">📋</button>
   </div>
 
   <!-- STEP DOTS -->
@@ -230,7 +262,7 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
       </div>
       <div class="form-group">
         <label class="form-label">Your Web3 domain (optional)</label>
-        <input type="text" class="form-input" id="merchantDomain" placeholder="e.g. siones.IN$DEX" autocomplete="off">
+        <input type="text" class="form-input" id="merchantDomain" placeholder="e.g. siones.IN$DEX" autocomplete="off" oninput="this.value=this.value.toLowerCase()">
         <div style="font-size:11px;color:var(--muted);margin-top:6px;">This is how people send you money. You can claim it now or later.</div>
       </div>
     </div>
@@ -253,6 +285,16 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
         <span class="amount-cursor" id="cursor"></span>
       </div>
       <div class="amount-indx" id="amountIndx">≈ 0 INDX</div>
+    </div>
+
+    <!-- F1: Quick amount presets -->
+    <div class="amount-presets" id="amountPresets">
+      <div class="preset-chip" onclick="setPreset(1)">$1</div>
+      <div class="preset-chip" onclick="setPreset(2)">$2</div>
+      <div class="preset-chip" onclick="setPreset(5)">$5</div>
+      <div class="preset-chip" onclick="setPreset(10)">$10</div>
+      <div class="preset-chip" onclick="setPreset(20)">$20</div>
+      <div class="preset-chip" onclick="setPreset(50)">$50</div>
     </div>
 
     <div class="numpad">
@@ -361,6 +403,15 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
 
 </div><!-- /shell -->
 
+<!-- F2: TRANSACTION HISTORY SHEET -->
+<div class="history-sheet-overlay" id="historyOverlay" onclick="closeHistorySheet()"></div>
+<div class="history-sheet" id="historySheet">
+  <div class="hs-handle"></div>
+  <div class="hs-title">Transaction History</div>
+  <div class="hs-sub" id="hsSubLabel">Recent payments received</div>
+  <div id="hsList"><div class="hs-empty">No transactions yet. Accept your first payment.</div></div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -370,6 +421,8 @@ let amountStr = '';
 let merchantName = '';
 let fromName = '';
 let earnedIndx = 0;
+
+const INDX_PRICE_USD = 0.24;
 
 // Read URL params
 const params = new URLSearchParams(window.location.search);
@@ -381,6 +434,99 @@ if (fromName) {
   const cap = fromName.charAt(0).toUpperCase() + fromName.slice(1);
   document.getElementById('welcomeFrom').textContent = cap + ' wants to pay you via IN$DEX';
   document.getElementById('customerLabel').textContent = cap;
+}
+
+// ── F4: Auto-fill from sessionStorage ───────────────────────────
+(function autoFill() {
+  const savedName = localStorage.getItem('indx_epos_merchant_name') || sessionStorage.getItem('citizen_name') || '';
+  const savedDomain = localStorage.getItem('indx_epos_merchant_domain') || sessionStorage.getItem('citizen_web3_domain') || '';
+  const savedPhone = localStorage.getItem('indx_epos_merchant_phone') || '';
+  if (savedName) {
+    const nameEl = document.getElementById('merchantName');
+    if (nameEl) nameEl.value = savedName;
+  }
+  if (savedDomain) {
+    const domEl = document.getElementById('merchantDomain');
+    if (domEl) domEl.value = savedDomain;
+  }
+  if (savedPhone) {
+    const phoneEl = document.getElementById('merchantPhone');
+    if (phoneEl) phoneEl.value = savedPhone;
+  }
+  // If all pre-filled, skip to step 2
+  if (savedName && savedPhone) {
+    merchantName = savedName;
+    setTimeout(() => goStep(2), 0);
+  }
+})();
+
+// ── F1: Quick amount presets with frequency tracking ─────────────
+const freqAmounts = JSON.parse(localStorage.getItem('indx_epos_freq_amounts') || '{}');
+
+function setPreset(amount) {
+  amountStr = amount.toString();
+  updateAmountDisplay();
+  // Track frequency
+  freqAmounts[amount] = (freqAmounts[amount] || 0) + 1;
+  localStorage.setItem('indx_epos_freq_amounts', JSON.stringify(freqAmounts));
+  renderPresets();
+}
+
+function renderPresets() {
+  // Mark the top 2 most-used as "frequent"
+  const sorted = Object.entries(freqAmounts).sort((a,b) => b[1]-a[1]).slice(0,2).map(e => parseFloat(e[0]));
+  document.querySelectorAll('.preset-chip').forEach(chip => {
+    const val = parseFloat(chip.textContent.replace('$',''));
+    chip.classList.toggle('frequent', sorted.includes(val));
+  });
+}
+renderPresets();
+
+// ── F2: Transaction history persistence ─────────────────────────
+const eposTxHistory = JSON.parse(localStorage.getItem('indx_epos_tx_history') || '[]');
+
+function saveTransaction(usdAmt, indxAmt) {
+  eposTxHistory.unshift({
+    usd: usdAmt,
+    indx: indxAmt,
+    ts: Date.now(),
+    merchant: merchantName || localStorage.getItem('indx_epos_merchant_name') || 'Merchant'
+  });
+  localStorage.setItem('indx_epos_tx_history', JSON.stringify(eposTxHistory.slice(0,20)));
+  // Track for presets
+  freqAmounts[usdAmt] = (freqAmounts[usdAmt] || 0) + 1;
+  localStorage.setItem('indx_epos_freq_amounts', JSON.stringify(freqAmounts));
+  renderPresets();
+}
+
+function openHistorySheet() {
+  const list = document.getElementById('hsList');
+  const sub = document.getElementById('hsSubLabel');
+  if (eposTxHistory.length === 0) {
+    list.innerHTML = '<div class="hs-empty">No transactions yet. Accept your first payment.</div>';
+    sub.textContent = 'No transactions yet';
+  } else {
+    sub.textContent = eposTxHistory.length + ' transaction' + (eposTxHistory.length === 1 ? '' : 's');
+    list.innerHTML = eposTxHistory.map(tx => {
+      const d = new Date(tx.ts);
+      const timeStr = d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+      return `<div class="hs-item">
+        <div class="hs-icon">💰</div>
+        <div class="hs-info">
+          <div class="hs-amt">+$${parseFloat(tx.usd).toFixed(2)} received</div>
+          <div class="hs-detail">${parseFloat(tx.indx).toFixed(2)} INDX · 98/2 Law applied</div>
+        </div>
+        <div class="hs-time">${timeStr}</div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('historyOverlay').classList.add('open');
+  document.getElementById('historySheet').classList.add('open');
+}
+
+function closeHistorySheet() {
+  document.getElementById('historyOverlay').classList.remove('open');
+  document.getElementById('historySheet').classList.remove('open');
 }
 
 function goStep(n) {
@@ -429,7 +575,12 @@ function activateTerminal() {
 
   // Store in session
   sessionStorage.setItem('merchant_name', merchantName);
-  sessionStorage.setItem('merchant_domain', domainInput.value);
+  sessionStorage.setItem('merchant_domain', domainInput.value.toLowerCase());
+  // F4: persist for auto-fill
+  localStorage.setItem('indx_epos_merchant_name', merchantName);
+  localStorage.setItem('indx_epos_merchant_domain', domainInput.value.toLowerCase());
+  const phoneVal = document.getElementById('merchantPhone').value.trim();
+  if (phoneVal) localStorage.setItem('indx_epos_merchant_phone', phoneVal);
 
   setTimeout(() => {
     showToast('✅ Terminal activated! You\'re ready to accept payments.');
@@ -467,7 +618,13 @@ function updateAmountDisplay() {
 
 function generateInvoice() {
   const usdAmt = parseFloat(amountStr) || 0;
-  if (usdAmt <= 0) { showToast('Enter an amount first'); return; }
+  if (usdAmt <= 0) {
+    // F3: Shake animation
+    const dispEl = document.querySelector('.amount-display');
+    if (dispEl) { dispEl.classList.add('shake'); setTimeout(() => dispEl.classList.remove('shake'), 400); }
+    showToast('Enter an amount first');
+    return;
+  }
 
   const indxAmt = usdAmt / INDX_PRICE;
   document.getElementById('invoiceAmount').textContent = '$' + usdAmt.toFixed(2);
@@ -508,6 +665,7 @@ function confirmPayment() {
   }
 
   sessionStorage.setItem('merchant_balance', totalBalIndx);
+  saveTransaction(usdAmt, totalIndx);
   goStep(4);
 }
 
@@ -622,6 +780,6 @@ function onboardSMS() {
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous"></script>
 </body>
 </html>

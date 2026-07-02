@@ -341,6 +341,29 @@
     color: var(--red);
   }
 
+  /* ── GOD MODE: PROJECTION CARD ── */
+  .projection-card{margin:20px 20px 0;background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:16px;}
+  .proj-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .proj-title{font-size:13px;font-weight:700;color:var(--text);}
+  .proj-rate{font-size:11px;color:var(--text-dim);}
+  .proj-bars{display:flex;align-items:flex-end;gap:4px;height:48px;margin-bottom:8px;}
+  .proj-bar{flex:1;border-radius:3px 3px 0 0;min-height:3px;position:relative;}
+  .proj-bar.actual{background:linear-gradient(180deg,var(--cyan),var(--blue));}
+  .proj-bar.forecast{background:rgba(0,212,255,0.18);border:1px dashed rgba(0,212,255,0.3);}
+  .proj-days{display:flex;justify-content:space-between;font-size:9px;color:var(--text-dim);}
+  .proj-totals{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+  .proj-box{background:var(--surface3);border-radius:10px;padding:10px;text-align:center;}
+  .proj-box-val{font-size:16px;font-weight:800;color:var(--cyan);margin-bottom:2px;}
+  .proj-box-lbl{font-size:9px;color:var(--text-dim);}
+
+  /* ── GOD MODE: PEER COUNT ── */
+  .peer-strip{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:var(--text-dim);}
+  .peer-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite;flex-shrink:0;}
+
+  /* ── GOD MODE: SHARE NODE BUTTON ── */
+  .share-node-btn{margin:20px 20px 0;width:calc(100% - 40px);padding:14px;border-radius:14px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;}
+  .share-node-btn:active{background:rgba(0,212,255,0.1);border-color:rgba(0,212,255,0.3);color:var(--cyan);}
+
   /* TOAST */
   .toast {
     position: fixed;
@@ -474,6 +497,10 @@
   <div class="node-status-text" id="nodeStatusText">Offline</div>
   <div class="node-earning-rate"><span id="earnRate">0</span> INDX/day</div>
   <div class="node-earning-sub" id="earnSub">Activate your node to start earning</div>
+  <div class="peer-strip" id="peerStrip" style="justify-content:center;display:none;">
+    <div class="peer-dot"></div>
+    <span id="peerCount">12</span> peers connected · Sovereign Mesh
+  </div>
 </div>
 
 <!-- TOGGLE -->
@@ -599,6 +626,29 @@
   <div class="text">Your node uses <strong>minimal battery and data</strong>. It runs a lightweight Solana validator thread and shares encrypted routing proofs no personal data is ever exposed.</div>
 </div>
 
+<!-- GOD MODE: WEEKLY PROJECTION CARD -->
+<div class="projection-card" id="projectionCard">
+  <div class="proj-header">
+    <div class="proj-title">📈 Weekly Forecast</div>
+    <div class="proj-rate" id="projRate">— INDX/day avg</div>
+  </div>
+  <div class="proj-bars" id="projBars"></div>
+  <div class="proj-days" id="projDays"></div>
+  <div class="proj-totals">
+    <div class="proj-box">
+      <div class="proj-box-val" id="projWeekTotal">—</div>
+      <div class="proj-box-lbl">Projected this week</div>
+    </div>
+    <div class="proj-box">
+      <div class="proj-box-val" id="projWeekUsd">—</div>
+      <div class="proj-box-lbl">≈ USD value</div>
+    </div>
+  </div>
+</div>
+
+<!-- GOD MODE: SHARE NODE BUTTON -->
+<button class="share-node-btn" onclick="shareNode()">🔗 Share my Node stats</button>
+
 <!-- ACTIVATE / DEACTIVATE BUTTON -->
 <button class="activate-btn" id="activateBtn" onclick="openActivation()">
   ⚡ Activate Light Node
@@ -659,11 +709,130 @@
 <div class="toast" id="toast"></div>
 
 <script>
+  const INDX_PRICE_USD = 0.24;
+
+  // ── GOD MODE: NODE STATE PERSISTENCE ──
+  const NODE_ACTIVE_KEY = 'indx_node_active';
+  const NODE_START_KEY  = 'indx_node_start_ts';
+  const NODE_TOTAL_KEY  = 'indx_node_total';
+  const NODE_TODAY_KEY  = 'indx_node_today_' + new Date().toDateString();
+
+  function getNodePersisted() {
+    return {
+      active: localStorage.getItem(NODE_ACTIVE_KEY) === '1',
+      startTs: parseInt(localStorage.getItem(NODE_START_KEY) || '0'),
+      total: parseFloat(localStorage.getItem(NODE_TOTAL_KEY) || '0'),
+      todayEarned: parseFloat(localStorage.getItem(NODE_TODAY_KEY) || '0'),
+    };
+  }
+  function persistNode(active, total, todayAmt) {
+    localStorage.setItem(NODE_ACTIVE_KEY, active ? '1' : '0');
+    if (active && !localStorage.getItem(NODE_START_KEY)) localStorage.setItem(NODE_START_KEY, String(Date.now()));
+    if (!active) localStorage.removeItem(NODE_START_KEY);
+    localStorage.setItem(NODE_TOTAL_KEY, total.toFixed(6));
+    localStorage.setItem(NODE_TODAY_KEY, todayAmt.toFixed(6));
+  }
+
+  // Compute earned-while-away INDX
+  function computeAwayEarnings(startTs) {
+    if (!startTs) return 0;
+    const hoursAway = Math.min((Date.now() - startTs) / 3600000, 24); // cap at 24h
+    const rate = 5.5 / 24; // avg 5.5 INDX/day = ~0.229/hr
+    return hoursAway * rate;
+  }
+
   let nodeActive = false;
   let earningInterval = null;
   let todayTotal = 0;
   let totalAllTime = 0;
   const RATE_PER_TICK = 0.003; // INDX per tick (simulated)
+
+  // GOD MODE PATCH — restore persisted state on load
+  (function restoreNodeState() {
+    const p = getNodePersisted();
+    todayTotal = p.todayEarned;
+    totalAllTime = p.total;
+    if (p.active) {
+      const awayEarned = computeAwayEarnings(p.startTs);
+      if (awayEarned > 0) {
+        todayTotal += awayEarned;
+        totalAllTime += awayEarned;
+        persistNode(true, totalAllTime, todayTotal);
+        localStorage.removeItem(NODE_START_KEY);
+        localStorage.setItem(NODE_START_KEY, String(Date.now()));
+      }
+      // Activate silently without overlay
+      setTimeout(() => {
+        nodeActive = false; // allow activateNode to proceed
+        activateNodeSilent();
+        if (awayEarned > 0) showToast('⚡ Earned ' + awayEarned.toFixed(2) + ' INDX while away!');
+      }, 500);
+    }
+    if (todayTotal > 0 || totalAllTime > 0) {
+      document.getElementById('todayEarnings').textContent = todayTotal.toFixed(3);
+      document.getElementById('totalEarned').textContent = totalAllTime.toFixed(3);
+    }
+  })();
+
+  // ── GOD MODE: LIVE PEER COUNT ──
+  let peerCount = 12;
+  function startPeerTicker() {
+    const peerEl = document.getElementById('peerCount');
+    const peerStrip = document.getElementById('peerStrip');
+    if (peerStrip) peerStrip.style.display = 'flex';
+    setInterval(() => {
+      const drift = Math.floor(Math.random() * 5) - 2;
+      peerCount = Math.max(8, Math.min(28, peerCount + drift));
+      if (peerEl) peerEl.textContent = peerCount;
+    }, 5000);
+  }
+  function stopPeerTicker() {
+    const peerStrip = document.getElementById('peerStrip');
+    if (peerStrip) peerStrip.style.display = 'none';
+  }
+
+  // ── GOD MODE: WEEKLY PROJECTION ──
+  function renderProjection(dailyRate) {
+    const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const today = new Date().getDay(); // 0=Sun
+    const todayIdx = today === 0 ? 6 : today - 1; // Mon-based
+    const bars = document.getElementById('projBars');
+    const dayLabels = document.getElementById('projDays');
+    const weekTotal = dailyRate * 7;
+    const usd = (weekTotal * INDX_PRICE_USD).toFixed(2);
+    document.getElementById('projRate').textContent = dailyRate.toFixed(1) + ' INDX/day avg';
+    document.getElementById('projWeekTotal').textContent = weekTotal.toFixed(1) + ' INDX';
+    document.getElementById('projWeekUsd').textContent = '≈ $' + usd;
+    if (!bars || !dayLabels) return;
+    bars.innerHTML = '';
+    dayLabels.innerHTML = '';
+    days.forEach((d, i) => {
+      const isToday = i === todayIdx;
+      const isPast = i < todayIdx;
+      const val = isPast ? dailyRate * (0.7 + Math.random() * 0.6) : (isToday ? todayTotal : dailyRate);
+      const maxVal = dailyRate * 1.6;
+      const h = Math.max(4, (val / maxVal) * 48);
+      const barDiv = document.createElement('div');
+      barDiv.className = 'proj-bar ' + (isPast || isToday ? 'actual' : 'forecast');
+      barDiv.style.height = h + 'px';
+      if (isToday) barDiv.style.opacity = '1';
+      bars.appendChild(barDiv);
+      dayLabels.innerHTML += `<span>${d}</span>`;
+    });
+  }
+
+  // ── GOD MODE: SHARE NODE ──
+  function shareNode() {
+    const days = localStorage.getItem(NODE_START_KEY) ? Math.ceil((Date.now() - parseInt(localStorage.getItem(NODE_START_KEY) || Date.now())) / 86400000) : 0;
+    const earned = totalAllTime.toFixed(1);
+    const msg = `My IN$DEX Light Node has been online${days > 0 ? ' for ' + days + ' day' + (days !== 1 ? 's' : '') : ''} · earned ${earned} INDX passively · ranked #847 in the Pacific region.\n\nYour phone can do this too: imagenationdex.com`;
+    if (navigator.share) {
+      navigator.share({ title:'My IN$DEX Light Node', text: msg, url:'https://imagenationdex.com' });
+    } else {
+      navigator.clipboard?.writeText(msg).catch(()=>{});
+      showToast('✓ Node stats copied!');
+    }
+  }
 
   // Build uptime chart
   function buildUptimeChart() {
@@ -693,6 +862,9 @@
     nodeActive = false;
     clearInterval(earningInterval);
     earningInterval = null;
+    // GOD MODE PATCH — persist deactivated state
+    persistNode(false, totalAllTime, todayTotal);
+    stopPeerTicker();
 
     document.getElementById('mainToggle').classList.remove('on');
     document.getElementById('statusDot').classList.remove('active');
@@ -709,26 +881,35 @@
     showToast('📡 Node disconnected');
   }
 
-  function activateNode() {
-    nodeActive = true;
-
+  function _activateNodeUI() {
     document.getElementById('mainToggle').classList.add('on');
     document.getElementById('statusDot').classList.add('active');
     document.getElementById('nodeStatusText').textContent = 'Online · Earning';
     document.getElementById('nodeStatusText').classList.add('active');
     document.getElementById('earnRate').textContent = '3–8';
-    document.getElementById('earnSub').textContent = 'Sovereign Mesh connected · 12 peers';
     document.getElementById('orbInner').textContent = '⚡';
     document.getElementById('toggleSub').textContent = 'Running · Battery saver on';
-
     document.getElementById('activateBtn').innerHTML = '⏹ Deactivate Node';
     document.getElementById('activateBtn').classList.add('on');
-
     document.getElementById('uptimePct').textContent = '100%';
     document.getElementById('uptimeHrs').textContent = 'Running now';
     document.getElementById('nodeRank').textContent = '#847';
-    document.getElementById('dailyBar').style.width = '5%';
-    document.getElementById('dailyPct').textContent = '5%';
+  }
+
+  function activateNode() {
+    nodeActive = true;
+    _activateNodeUI();
+    // GOD MODE PATCH — update earnSub with live peer count ref, persist, start peer ticker
+    document.getElementById('earnSub').textContent = 'Sovereign Mesh · ' + peerCount + ' peers';
+    persistNode(true, totalAllTime, todayTotal);
+    startPeerTicker();
+
+    const startPct = Math.min(100, (todayTotal / 8) * 100);
+    document.getElementById('dailyBar').style.width = startPct.toFixed(1) + '%';
+    document.getElementById('dailyPct').textContent = startPct.toFixed(0) + '%';
+
+    // GOD MODE PATCH — render projection
+    renderProjection(5.5);
 
     // Simulate live earnings
     earningInterval = setInterval(() => {
@@ -739,6 +920,33 @@
       document.getElementById('totalEarned').textContent = totalAllTime.toFixed(3);
       document.getElementById('dailyBar').style.width = pct.toFixed(1) + '%';
       document.getElementById('dailyPct').textContent = pct.toFixed(0) + '%';
+      // Persist every 10 ticks
+      if (Math.round(todayTotal * 1000) % 30 === 0) persistNode(true, totalAllTime, todayTotal);
+    }, 2000);
+  }
+
+  // GOD MODE: silent activation (no overlay, used on page restore)
+  function activateNodeSilent() {
+    if (nodeActive) return;
+    nodeActive = true;
+    _activateNodeUI();
+    document.getElementById('earnSub').textContent = 'Sovereign Mesh · ' + peerCount + ' peers · Restored';
+    startPeerTicker();
+    renderProjection(5.5);
+    const startPct = Math.min(100, (todayTotal / 8) * 100);
+    document.getElementById('dailyBar').style.width = startPct.toFixed(1) + '%';
+    document.getElementById('dailyPct').textContent = startPct.toFixed(0) + '%';
+    document.getElementById('todayEarnings').textContent = todayTotal.toFixed(3);
+    document.getElementById('totalEarned').textContent = totalAllTime.toFixed(3);
+    earningInterval = setInterval(() => {
+      todayTotal += RATE_PER_TICK;
+      totalAllTime += RATE_PER_TICK;
+      const pct = Math.min(100, (todayTotal / 8) * 100);
+      document.getElementById('todayEarnings').textContent = todayTotal.toFixed(3);
+      document.getElementById('totalEarned').textContent = totalAllTime.toFixed(3);
+      document.getElementById('dailyBar').style.width = pct.toFixed(1) + '%';
+      document.getElementById('dailyPct').textContent = pct.toFixed(0) + '%';
+      if (Math.round(todayTotal * 1000) % 30 === 0) persistNode(true, totalAllTime, todayTotal);
     }, 2000);
   }
 

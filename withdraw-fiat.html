@@ -55,6 +55,32 @@
     .btn-withdraw{width:100%;padding:16px;border-radius:14px;background:var(--green);border:none;color:#000;font-size:16px;font-weight:900;cursor:pointer;}
     .btn-withdraw:disabled{opacity:0.35;cursor:not-allowed;}
     #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+
+    /* ── GOD MODE ADDITIONS ── */
+    /* Animated USD counter */
+    #audPreview{font-size:14px;color:var(--text-muted);transition:color 0.3s;}
+    #audPreview.updated{color:var(--green);}
+
+    /* Confirm safety sheet */
+    .safety-overlay{display:none;position:fixed;inset:0;background:rgba(9,10,16,0.92);z-index:100;align-items:flex-end;justify-content:center;}
+    .safety-overlay.open{display:flex;}
+    .safety-sheet{background:var(--surface);border-radius:24px 24px 0 0;padding:28px 24px 40px;width:100%;max-width:430px;animation:slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+    @keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+    .ss-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;}
+    .ss-title{font-size:18px;font-weight:800;margin-bottom:4px;}
+    .ss-sub{font-size:13px;color:var(--text-muted);margin-bottom:18px;}
+    .ss-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:14px;}
+    .ss-row:last-of-type{border-bottom:none;}
+    .ss-lbl{color:var(--text-muted);}
+    .ss-val{font-weight:700;}
+    .ss-btn{width:100%;padding:16px;border-radius:14px;background:var(--green);border:none;color:#000;font-size:15px;font-weight:900;cursor:pointer;margin-top:16px;}
+    .ss-cancel{width:100%;padding:12px;background:transparent;border:none;color:var(--text-muted);font-size:14px;cursor:pointer;margin-top:4px;}
+
+    /* Saved recipient badge */
+    .saved-recipient{display:flex;align-items:center;gap:8px;background:rgba(0,229,160,0.06);border:1px solid rgba(0,229,160,0.18);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:13px;}
+    .sr-label{color:var(--text-muted);font-size:11px;}
+    .sr-val{font-weight:700;color:var(--green);}
+    .sr-use{font-size:11px;color:var(--cyan);cursor:pointer;margin-left:auto;font-weight:700;}
   </style>
 </head>
 <body>
@@ -93,6 +119,15 @@
       <!-- METHOD DETAILS -->
       <div class="form-card" id="payidForm">
         <div class="fc-title">Instant transfer details</div>
+        <!-- God Mode: saved recipient recall -->
+        <div class="saved-recipient" id="savedRecipientHint" style="display:none;">
+          <span>📋</span>
+          <div>
+            <div class="sr-label">Last used</div>
+            <div class="sr-val" id="savedRecipientVal">—</div>
+          </div>
+          <div class="sr-use" onclick="useSavedRecipient()">Use →</div>
+        </div>
         <div class="field"><label>Your phone, email, or mobile wallet ID</label><input type="text" id="payidVal" placeholder="e.g. GCash, M-Pesa, UPI, PayID…" oninput="updateSummary()"></div>
         <div class="delivery-card">⚡ <strong style="color:var(--green);">Instant settlement</strong> funds arrive in your mobile wallet or bank account within 60 seconds. Supports GCash, M-Pesa, OPay, UPI, PayID and more.</div>
       </div>
@@ -143,7 +178,7 @@
         </div>
       </div>
 
-      <button class="btn-withdraw" id="withdrawBtn" onclick="doWithdraw()" disabled>Cash Out</button>
+      <button class="btn-withdraw" id="withdrawBtn" onclick="openSafetySheet()" disabled>Cash Out</button>
 
       <!-- HISTORY -->
       <div style="font-size:12px;font-weight:800;color:var(--text-muted);text-transform:uppercase;margin:20px 0 10px;">Recent withdrawals</div>
@@ -162,10 +197,47 @@
     </div>
   </div>
 </div>
+<!-- Safety Confirm Sheet (God Mode Feature 4) -->
+<div class="safety-overlay" id="safetyOverlay">
+  <div class="safety-sheet">
+    <div class="ss-handle"></div>
+    <div class="ss-title">Confirm Cash Out</div>
+    <div class="ss-sub">Review before sending. This cannot be undone.</div>
+    <div class="ss-row"><div class="ss-lbl">Sending to</div><div class="ss-val" id="ssDestination">—</div></div>
+    <div class="ss-row"><div class="ss-lbl">INDX amount</div><div class="ss-val" id="ssIndxAmt">—</div></div>
+    <div class="ss-row"><div class="ss-lbl">You receive</div><div class="ss-val" id="ssReceive" style="color:var(--green);">—</div></div>
+    <div class="ss-row"><div class="ss-lbl">Method</div><div class="ss-val" id="ssMethod">—</div></div>
+    <button class="ss-btn" onclick="confirmWithdraw()">Yes, Cash Out →</button>
+    <button class="ss-cancel" onclick="document.getElementById('safetyOverlay').classList.remove('open')">Cancel</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 <script>
+const INDX_PRICE_USD = 0.24;
 let method='payid';
-const methods={payid:{time:'~60 seconds',fee:0.008},bsb:{time:'1–2 business days',fee:0.005},cash:{time:'Same day',fee:0.01}};
+const methods={payid:{time:'~60 seconds',fee:0.008,label:'Instant Transfer'},bsb:{time:'1–2 business days',fee:0.005,label:'Bank Transfer'},cash:{time:'Same day',fee:0.01,label:'Cash Agent'}};
+
+// ── GOD MODE: FEATURE 1 — Balance from sessionStorage ──
+const citizenBalance = parseInt(sessionStorage.getItem('citizen_balance') || '1240');
+document.querySelector('.bc-bal').textContent = citizenBalance.toLocaleString() + ' INDX';
+document.querySelector('.bc-aud').textContent = '≈ $' + (citizenBalance * INDX_PRICE_USD).toFixed(2) + ' USD';
+
+// ── GOD MODE: FEATURE 2 — Load saved recipient ──
+(function loadSavedRecipient() {
+  const saved = localStorage.getItem('indx_withdrawfiat_last_payid');
+  if (saved) {
+    document.getElementById('savedRecipientVal').textContent = saved;
+    document.getElementById('savedRecipientHint').style.display = 'flex';
+  }
+})();
+
+function useSavedRecipient() {
+  const val = document.getElementById('savedRecipientVal').textContent;
+  document.getElementById('payidVal').value = val;
+  updateSummary();
+}
+
 function selectMethod(m){
   method=m;
   ['payid','bsb','cash'].forEach(id=>{
@@ -176,21 +248,57 @@ function selectMethod(m){
   document.getElementById('settlTime').style.color=m==='payid'?'var(--green)':'var(--gold)';
   updateSummary();
 }
+
 function setPct(p){
-  document.getElementById('withdrawAmt').value=(1240*p/100).toFixed(0);
+  document.getElementById('withdrawAmt').value=(citizenBalance*p/100).toFixed(0);
   updateSummary();
 }
+
+// ── GOD MODE: FEATURE 3 — Animated USD preview ──
 function updateSummary(){
   const amt=parseFloat(document.getElementById('withdrawAmt').value)||0;
-  const aud=amt*0.24;
+  const aud=amt*INDX_PRICE_USD;
   const fee=aud*methods[method].fee;
   const recv=aud-fee;
-  document.getElementById('audPreview').textContent='≈ $'+aud.toFixed(2)+' USD';
+  const previewEl = document.getElementById('audPreview');
+  previewEl.textContent='≈ $'+aud.toFixed(2)+' USD';
+  previewEl.classList.remove('updated');
+  void previewEl.offsetWidth;
+  previewEl.classList.add('updated');
+  setTimeout(()=>previewEl.classList.remove('updated'),600);
   document.getElementById('feeAmt').textContent='$'+fee.toFixed(2)+' ('+(methods[method].fee*100)+'%)';
   document.getElementById('receiveAmt').textContent='$'+recv.toFixed(2)+' USD';
-  document.getElementById('withdrawBtn').disabled=amt<=0;
+  document.getElementById('withdrawBtn').disabled=amt<=0||amt>citizenBalance;
 }
-function doWithdraw(){showToast('💵 Withdrawal initiated funds on their way');}
+
+// ── GOD MODE: FEATURE 4 — Safety confirm sheet ──
+function openSafetySheet(){
+  const amt=parseFloat(document.getElementById('withdrawAmt').value)||0;
+  if(amt<=0) return;
+  const aud=amt*INDX_PRICE_USD;
+  const fee=aud*methods[method].fee;
+  const recv=aud-fee;
+  const dest = method==='payid'
+    ? (document.getElementById('payidVal').value || 'Your mobile wallet')
+    : method==='bsb' ? 'Your bank account' : 'Cash agent';
+  document.getElementById('ssDestination').textContent = dest;
+  document.getElementById('ssIndxAmt').textContent = amt.toLocaleString() + ' INDX';
+  document.getElementById('ssReceive').textContent = '$'+recv.toFixed(2)+' USD';
+  document.getElementById('ssMethod').textContent = methods[method].label + ' · ' + methods[method].time;
+  document.getElementById('safetyOverlay').classList.add('open');
+}
+
+function confirmWithdraw(){
+  // Save last used PayID
+  const payidInput = document.getElementById('payidVal').value.trim();
+  if (method === 'payid' && payidInput) {
+    localStorage.setItem('indx_withdrawfiat_last_payid', payidInput);
+  }
+  document.getElementById('safetyOverlay').classList.remove('open');
+  doWithdraw();
+}
+
+function doWithdraw(){showToast('💵 Withdrawal initiated — funds on their way');}
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}
 </script>
 </body>

@@ -16,7 +16,9 @@
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
   html,body{height:100%;background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none;}
-  .shell{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;}
+  .shell{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;position:relative;z-index:1;}
+  /* GOD MODE: Cybertron hex canvas */
+  #cyberCanvasWS{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;}
   .scroll-body{flex:1;overflow-y:auto;padding-bottom:40px;-webkit-overflow-scrolling:touch;}
   .scroll-body::-webkit-scrollbar{display:none;}
 
@@ -106,9 +108,37 @@
   .lb-handle{font-size:11px;color:var(--text-muted);}
   .lb-score{font-size:14px;font-weight:800;color:var(--gold);}
   .lb-you{background:rgba(0,212,255,0.05);border-color:rgba(0,212,255,0.2);}
+
+  /* ── GOD MODE: WISDOM SCORE ── */
+
+  /* Feature 1: Daily login streak */
+  .streak-banner { display:flex; align-items:center; gap:12px; margin:0 20px 20px; background:linear-gradient(135deg,rgba(255,184,0,0.1),rgba(255,100,0,0.06)); border:1px solid rgba(255,184,0,0.25); border-radius:14px; padding:14px 16px; cursor:pointer; }
+  .streak-fire { font-size:26px; flex-shrink:0; }
+  .streak-body { flex:1; }
+  .streak-title { font-size:14px; font-weight:800; color:var(--text); }
+  .streak-sub { font-size:12px; color:var(--text-dim); margin-top:2px; }
+  .streak-count { font-size:24px; font-weight:900; color:var(--gold); line-height:1; }
+  .streak-label { font-size:10px; color:var(--text-dim); text-align:center; }
+
+  /* Feature 2: Share score button */
+  .share-score-btn { display:flex; align-items:center; justify-content:center; gap:8px; margin:0 20px 20px; padding:14px; background:rgba(0,212,255,0.07); border:1px solid rgba(0,212,255,0.25); border-radius:14px; font-size:14px; font-weight:700; color:var(--cyan); cursor:pointer; transition:background 0.2s; }
+  .share-score-btn:active { background:rgba(0,212,255,0.15); }
+
+  /* Feature 3: Score delta badge */
+  .score-delta { display:inline-flex; align-items:center; gap:4px; background:rgba(0,229,160,0.12); border:1px solid rgba(0,229,160,0.25); border-radius:20px; padding:4px 10px; font-size:12px; font-weight:700; color:var(--green); margin:6px auto 0; }
+  .score-delta.down { background:rgba(255,77,109,0.1); border-color:rgba(255,77,109,0.2); color:var(--red); }
+
+  /* Feature 4: Confetti celebration */
+  .confetti-piece { position:fixed; pointer-events:none; z-index:999; font-size:18px; animation:confettiFall 2s ease-in forwards; }
+  @keyframes confettiFall {
+    0%   { transform:translateY(-20px) rotate(0deg); opacity:1; }
+    80%  { opacity:1; }
+    100% { transform:translateY(100vh) rotate(720deg); opacity:0; }
+  }
 </style>
 </head>
 <body>
+<canvas id="cyberCanvasWS" aria-hidden="true"></canvas>
 <div class="shell">
 
   <div class="topbar">
@@ -121,6 +151,19 @@
   </div>
 
   <div class="scroll-body">
+
+    <!-- GOD MODE: Daily Login Streak Banner -->
+    <div class="streak-banner" id="streakBanner" onclick="showToast('Keep logging in daily to grow your streak!')">
+      <div class="streak-fire" id="streakFire">🔥</div>
+      <div class="streak-body">
+        <div class="streak-title" id="streakTitle">Day 1 streak</div>
+        <div class="streak-sub">Log in daily — 7-day streak doubles Daily Login points</div>
+      </div>
+      <div style="text-align:center;">
+        <div class="streak-count" id="streakCount">1</div>
+        <div class="streak-label">days</div>
+      </div>
+    </div>
 
     <!-- SCORE HERO -->
     <div class="score-hero">
@@ -144,6 +187,8 @@
         </div>
       </div>
       <div class="score-tier" id="scoreTierLabel">⚡ Citizen Tier 1</div>
+      <!-- GOD MODE: Score delta from last visit -->
+      <div class="score-delta" id="scoreDelta" style="display:none;"></div>
       <div style="height:8px;"></div>
       <div class="score-next" id="scoreNextText">Next milestone: <strong>Governance Vote at 50 pts</strong></div>
     </div>
@@ -312,11 +357,101 @@
       </div>
     </div>
 
+    <!-- GOD MODE: Share score button -->
+    <div class="share-score-btn" onclick="shareWisdomScore()">
+      🔗 Share my Wisdom Score
+    </div>
+
     <div style="height:20px;"></div>
   </div>
 </div>
 
 <script>
+  // ── GOD MODE: Cybertron Hex Canvas ──
+  (function(){
+    const C = document.getElementById('cyberCanvasWS');
+    if (!C) return;
+    const ctx = C.getContext('2d');
+    const N = 22, FRAME_MS = 1000 / 22;
+    let nodes = [], W, H, last = 0;
+
+    function resize() {
+      W = C.width  = window.innerWidth;
+      H = C.height = window.innerHeight;
+    }
+
+    function initNodes() {
+      nodes = [];
+      for (let i = 0; i < N; i++) {
+        nodes.push({
+          x: Math.random() * W,
+          y: Math.random() * H,
+          vx: (Math.random() - 0.5) * 0.36,
+          vy: (Math.random() - 0.5) * 0.36,
+          r: 3 + Math.random() * 2.5
+        });
+      }
+    }
+
+    function hexPath(cx, cy, size) {
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = Math.PI / 180 * (60 * i - 30);
+        i === 0 ? ctx.moveTo(cx + size * Math.cos(a), cy + size * Math.sin(a))
+                : ctx.lineTo(cx + size * Math.cos(a), cy + size * Math.sin(a));
+      }
+      ctx.closePath();
+    }
+
+    function draw(ts) {
+      requestAnimationFrame(draw);
+      if (ts - last < FRAME_MS) return;
+      last = ts;
+
+      ctx.clearRect(0, 0, W, H);
+
+      // circuit traces
+      for (let i = 0; i < N; i++) {
+        for (let j = i + 1; j < N; j++) {
+          const dx = nodes[i].x - nodes[j].x;
+          const dy = nodes[i].y - nodes[j].y;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          if (d < 160) {
+            ctx.beginPath();
+            ctx.moveTo(nodes[i].x, nodes[i].y);
+            ctx.lineTo(nodes[j].x, nodes[j].y);
+            ctx.strokeStyle = `rgba(0,212,255,${0.08 * (1 - d / 160)})`;
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+          }
+        }
+      }
+
+      // hex nodes
+      nodes.forEach(function(n) {
+        hexPath(n.x, n.y, n.r * 2.2);
+        ctx.strokeStyle = 'rgba(0,212,255,0.18)';
+        ctx.lineWidth = 0.7;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r * 0.55, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(139,63,232,0.55)';
+        ctx.fill();
+
+        // move
+        n.x += n.vx; n.y += n.vy;
+        if (n.x < 0 || n.x > W) n.vx *= -1;
+        if (n.y < 0 || n.y > H) n.vy *= -1;
+      });
+    }
+
+    resize();
+    initNodes();
+    requestAnimationFrame(draw);
+    window.addEventListener('resize', function(){ resize(); initNodes(); });
+  })();
+
   const SCORE = parseInt(sessionStorage.getItem('citizen_wisdom') || '0');
   const MAX = 200;
 
@@ -444,6 +579,111 @@
     if (!t) { t = document.createElement('div'); t.id = 'toast'; t.style.cssText = 'position:fixed;bottom:40px;left:50%;transform:translateX(-50%);background:#1A1D25;border:1px solid #2A2D38;color:#EAEAEA;padding:10px 20px;border-radius:12px;font-size:14px;z-index:300;pointer-events:none;transition:opacity 0.3s;white-space:nowrap;'; document.body.appendChild(t); }
     t.textContent = msg; t.style.opacity = '1';
     clearTimeout(toastTimer); toastTimer = setTimeout(() => t.style.opacity = '0', 2400);
+  }
+
+  // ── GOD MODE FEATURES ──
+
+  // Feature 1: Daily login streak tracker
+  (function initStreak() {
+    const TODAY = new Date().toDateString();
+    const lastLogin = localStorage.getItem('indx_wisdom_last_login');
+    let streak = parseInt(localStorage.getItem('indx_wisdom_streak') || '0');
+
+    if (lastLogin === TODAY) {
+      // Already logged in today — streak unchanged
+    } else {
+      const yesterday = new Date(Date.now() - 86400000).toDateString();
+      if (lastLogin === yesterday) {
+        streak++;
+      } else {
+        streak = 1; // streak broken
+      }
+      localStorage.setItem('indx_wisdom_last_login', TODAY);
+      localStorage.setItem('indx_wisdom_streak', String(streak));
+    }
+
+    document.getElementById('streakCount').textContent = streak;
+    document.getElementById('streakTitle').textContent = `Day ${streak} streak`;
+    const fireEl = document.getElementById('streakFire');
+    if (streak >= 7) {
+      fireEl.textContent = '🔥';
+      document.getElementById('streakBanner').style.background = 'linear-gradient(135deg,rgba(255,184,0,0.18),rgba(255,80,0,0.12))';
+    } else if (streak >= 3) {
+      fireEl.textContent = '🔥';
+    } else {
+      fireEl.textContent = '✨';
+    }
+  })();
+
+  // Feature 3: Score delta from last visit
+  (function initScoreDelta() {
+    const lastScore = parseInt(localStorage.getItem('indx_wisdom_last_score') || '-1');
+    const currentScore = SCORE;
+    localStorage.setItem('indx_wisdom_last_score', String(currentScore));
+
+    const deltaEl = document.getElementById('scoreDelta');
+    if (lastScore >= 0 && currentScore !== lastScore) {
+      const diff = currentScore - lastScore;
+      deltaEl.textContent = (diff > 0 ? '▲ +' : '▼ ') + diff + ' pts since last visit';
+      deltaEl.classList.toggle('down', diff < 0);
+      deltaEl.style.display = 'inline-flex';
+
+      // Feature 4: Confetti if score went up and crossed a milestone
+      const GATE_SCORES = [50, 100, 150, 200];
+      const crossedGate = GATE_SCORES.some(g => lastScore < g && currentScore >= g);
+      if (diff > 0 && crossedGate) {
+        launchConfetti();
+      }
+    }
+  })();
+
+  // Feature 4: Confetti burst for milestone unlock
+  function launchConfetti() {
+    const CONFETTI_CHARS = ['⚡', '🎉', '✨', '🌟', '💎', '🔥'];
+    const count = 28;
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => {
+        const el = document.createElement('div');
+        el.className = 'confetti-piece';
+        el.textContent = CONFETTI_CHARS[Math.floor(Math.random() * CONFETTI_CHARS.length)];
+        el.style.left = Math.random() * 90 + 5 + 'vw';
+        el.style.top = '-30px';
+        el.style.animationDuration = (1.2 + Math.random() * 1.2) + 's';
+        el.style.animationDelay = (Math.random() * 0.4) + 's';
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 3000);
+      }, i * 55);
+    }
+    showToast('🎉 Milestone unlocked! You earned a new tier.');
+  }
+
+  // Feature 2: Share Wisdom Score to clipboard
+  function shareWisdomScore() {
+    const name = sessionStorage.getItem('citizen_name') || 'Sovereign';
+    const domain = sessionStorage.getItem('citizen_web3_domain') || 'sovereign.indx';
+    const tierEl = document.getElementById('scoreTierLabel');
+    const tier = tierEl ? tierEl.textContent : 'Citizen';
+    const text = `My IN$DEX Wisdom Score: ${SCORE} / 200 — ${tier}\n\nJoin the Sovereign Republic at IN$DEX — the world's first DeFi platform for the unbanked.\nhttps://imagenationdex.com`;
+    if (navigator.share) {
+      navigator.share({ title: 'My IN$DEX Wisdom Score', text: text, url: 'https://imagenationdex.com' })
+        .catch(() => copyToClipboard(text));
+    } else {
+      copyToClipboard(text);
+    }
+  }
+
+  function copyToClipboard(text) {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => showToast('🔗 Score card copied to clipboard'));
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('🔗 Score card copied to clipboard');
+    }
   }
 </script>
 </body>

@@ -113,10 +113,46 @@
     .ds-val{font-size:16px;font-weight:800;}
 
     #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+
+    /* GOD MODE — MERCHANT POS */
+    /* F1: Session persistence indicator */
+    .persist-banner{background:rgba(0,229,160,0.06);border-bottom:1px solid rgba(0,229,160,0.12);padding:8px 16px;font-size:12px;color:var(--green);display:none;align-items:center;gap:6px;}
+    .persist-banner.show{display:flex;}
+    .persist-dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
+
+    /* F2: Quick-charge presets */
+    .quick-presets{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+    .qp-btn{padding:8px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;transition:all 0.15s;}
+    .qp-btn:active{background:var(--surface3);transform:scale(0.95);}
+    .qp-btn.recent{border-color:rgba(0,212,255,0.3);color:var(--cyan);}
+
+    /* F3: Success pulse ring */
+    @keyframes successRipple{0%{box-shadow:0 0 0 0 rgba(0,229,160,0.6);}100%{box-shadow:0 0 0 40px rgba(0,229,160,0);}}
+    .sa-ring.pulse{animation:successPop 0.4s ease,successRipple 0.8s ease 0.3s;}
+
+    /* F4: End-of-day summary sheet */
+    .eod-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:60;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+    .eod-overlay.open{opacity:1;pointer-events:all;}
+    .eod-sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:430px;background:var(--surface);border-radius:24px 24px 0 0;padding:20px 20px 40px;z-index:70;transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);}
+    .eod-sheet.open{transform:translateX(-50%) translateY(0);}
+    .eod-handle{width:36px;height:4px;background:var(--surface3);border-radius:2px;margin:0 auto 16px;}
+    .eod-title{font-size:18px;font-weight:800;margin-bottom:4px;}
+    .eod-sub{font-size:13px;color:var(--text-muted);margin-bottom:16px;}
+    .eod-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+    .eod-card{background:var(--surface2);border-radius:12px;padding:14px;}
+    .eod-lbl{font-size:11px;color:var(--text-muted);margin-bottom:4px;}
+    .eod-val{font-size:20px;font-weight:800;}
+    .eod-close{width:100%;padding:14px;border-radius:14px;background:var(--cyan);border:none;color:#000;font-size:14px;font-weight:800;cursor:pointer;}
   </style>
 </head>
 <body>
 <div class="phone">
+  <!-- F1: Session restore banner -->
+  <div class="persist-banner" id="persistBanner">
+    <div class="persist-dot"></div>
+    <span id="persistMsg">Session restored — 0 sales from earlier</span>
+  </div>
+
   <div class="topbar">
     <button class="tb-back" onclick="history.back()">←</button>
     <div class="tb-title">🏪 Merchant POS</div>
@@ -147,6 +183,16 @@
         <div class="ad-amount" id="displayAmt">$0</div>
         <div class="ad-sub">Enter sale amount</div>
         <div class="ad-indx" id="displayIndx">≈ 0 INDX</div>
+      </div>
+
+      <!-- F2: Quick-charge presets -->
+      <div class="quick-presets" id="quickPresets">
+        <div class="qp-btn" onclick="qpSet(1)">$1</div>
+        <div class="qp-btn" onclick="qpSet(2)">$2</div>
+        <div class="qp-btn" onclick="qpSet(5)">$5</div>
+        <div class="qp-btn" onclick="qpSet(10)">$10</div>
+        <div class="qp-btn" onclick="qpSet(20)">$20</div>
+        <div class="qp-btn" onclick="qpSet(50)">$50</div>
       </div>
 
       <input class="desc-field" type="text" id="descField" placeholder="💬 Item description (optional)">
@@ -235,21 +281,91 @@
       </div>
 
       <button style="width:100%;margin-top:16px;padding:14px;border-radius:14px;background:transparent;border:1px solid var(--border);color:var(--text-muted);font-size:14px;cursor:pointer;" onclick="showScreen('screenKeypad')">← Back to POS</button>
+      <!-- F4: End-of-day summary trigger -->
+      <button style="width:100%;margin-top:10px;padding:14px;border-radius:14px;background:linear-gradient(135deg,rgba(0,229,160,0.1),rgba(0,212,255,0.08));border:1px solid rgba(0,229,160,0.2);color:var(--green);font-size:14px;font-weight:700;cursor:pointer;" onclick="openEODSheet()">📊 End of Day Summary</button>
     </div>
 
   </div>
 </div>
 
+<!-- F4: EOD SHEET -->
+<div class="eod-overlay" id="eodOverlay" onclick="closeEODSheet()"></div>
+<div class="eod-sheet" id="eodSheet">
+  <div class="eod-handle"></div>
+  <div class="eod-title">📊 End of Day</div>
+  <div class="eod-sub" id="eodDate">Today's summary</div>
+  <div class="eod-grid">
+    <div class="eod-card"><div class="eod-lbl">Total Sales</div><div class="eod-val" id="eodSales" style="color:var(--green);">$0</div></div>
+    <div class="eod-card"><div class="eod-lbl">Transactions</div><div class="eod-val" id="eodCount">0</div></div>
+    <div class="eod-card"><div class="eod-lbl">INDX Earned</div><div class="eod-val" id="eodIndx" style="color:var(--cyan);">0</div></div>
+    <div class="eod-card"><div class="eod-lbl">Civ. Fund (2%)</div><div class="eod-val" id="eodFund" style="color:var(--gold);">0</div></div>
+  </div>
+  <div style="font-size:12px;color:var(--text-muted);text-align:center;margin-bottom:16px;">98% yours. Always. 2% builds communities.</div>
+  <button class="eod-close" onclick="closeEODSheet()">Done</button>
+</div>
+
 <div id="toast"></div>
 
 <script>
-  let rawAmt = ''; // cents string
+  let rawAmt = '';
   let qrTimer = null;
   let sessionTotal = 0;
   let sessionCount = 0;
   let sessionIndx = 0;
   const RATE = 0.24;
-  const transactions = [];
+  const INDX_PRICE_USD = 0.24;
+  let transactions = [];
+
+  // ── F1: Session persistence via localStorage ─────────────────
+  const SESSION_KEY = 'indx_pos_session';
+  const SESSION_DATE_KEY = 'indx_pos_session_date';
+  const today = new Date().toDateString();
+  const savedDate = localStorage.getItem(SESSION_DATE_KEY);
+
+  if (savedDate === today) {
+    const saved = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+    if (saved && saved.transactions && saved.transactions.length > 0) {
+      transactions = saved.transactions;
+      sessionTotal = saved.sessionTotal || 0;
+      sessionCount = saved.sessionCount || 0;
+      sessionIndx = saved.sessionIndx || 0;
+      document.getElementById('sessionTotal').textContent = '$' + sessionTotal.toFixed(2);
+      document.getElementById('sessionCount').textContent = sessionCount;
+      document.getElementById('sessionIndx').textContent = sessionIndx.toFixed(1);
+      const banner = document.getElementById('persistBanner');
+      document.getElementById('persistMsg').textContent = 'Session restored — ' + sessionCount + ' sale' + (sessionCount === 1 ? '' : 's') + ' from earlier';
+      banner.classList.add('show');
+      setTimeout(() => banner.classList.remove('show'), 4000);
+    }
+  } else {
+    localStorage.setItem(SESSION_DATE_KEY, today);
+    localStorage.removeItem(SESSION_KEY);
+  }
+
+  function persistSession() {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ transactions, sessionTotal, sessionCount, sessionIndx }));
+    localStorage.setItem(SESSION_DATE_KEY, today);
+  }
+
+  // ── F2: Quick preset amounts ─────────────────────────────────
+  const qpFreq = JSON.parse(localStorage.getItem('indx_pos_qp_freq') || '{}');
+
+  function qpSet(amount) {
+    rawAmt = amount.toString();
+    updateDisplay();
+    qpFreq[amount] = (qpFreq[amount] || 0) + 1;
+    localStorage.setItem('indx_pos_qp_freq', JSON.stringify(qpFreq));
+    renderQP();
+  }
+
+  function renderQP() {
+    const top2 = Object.entries(qpFreq).sort((a,b) => b[1]-a[1]).slice(0,2).map(e => parseFloat(e[0]));
+    document.querySelectorAll('.qp-btn').forEach(b => {
+      const v = parseFloat(b.textContent.replace('$',''));
+      b.classList.toggle('recent', top2.includes(v));
+    });
+  }
+  renderQP();
 
   // ── KEYPAD ──────────────────────────────────────────────────────
   function kp(key) {
@@ -336,7 +452,11 @@
     document.getElementById('sessionIndx').textContent = sessionIndx.toFixed(1);
 
     transactions.push({ amt, indxAmt: net.toFixed(2), desc, payer, time: new Date().toLocaleTimeString() });
+    persistSession();
     updateHistoryStats();
+    // F3: Add pulse class to success ring
+    const ring = document.querySelector('.sa-ring');
+    if (ring) { ring.classList.remove('pulse'); void ring.offsetWidth; ring.classList.add('pulse'); }
     showScreen('screenSuccess');
   }
 
@@ -390,6 +510,26 @@
     const t = document.getElementById('toast');
     t.textContent = msg; t.style.opacity = '1';
     setTimeout(() => t.style.opacity = '0', 2500);
+  }
+
+  // ── F4: End-of-day summary sheet ────────────────────────────
+  function openEODSheet() {
+    const d = new Date();
+    document.getElementById('eodDate').textContent = d.toLocaleDateString('en-AU', { weekday:'long', day:'numeric', month:'long' });
+    const total = transactions.reduce((s,t) => s + t.amt, 0);
+    const indx = transactions.reduce((s,t) => s + parseFloat(t.indxAmt), 0);
+    const fund = total / RATE * 0.02;
+    document.getElementById('eodSales').textContent = '$' + total.toFixed(2);
+    document.getElementById('eodCount').textContent = transactions.length;
+    document.getElementById('eodIndx').textContent = indx.toFixed(2);
+    document.getElementById('eodFund').textContent = fund.toFixed(2);
+    document.getElementById('eodOverlay').classList.add('open');
+    document.getElementById('eodSheet').classList.add('open');
+  }
+
+  function closeEODSheet() {
+    document.getElementById('eodOverlay').classList.remove('open');
+    document.getElementById('eodSheet').classList.remove('open');
   }
 </script>
 </body>

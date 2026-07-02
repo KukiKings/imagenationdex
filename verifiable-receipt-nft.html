@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Verifiable Receipts — IN$DEX</title>
+<style>
+  :root {
+    --cyan: #00D4FF;
+    --blue: #2B35D8;
+    --purple: #8B3FE8;
+    --black: #090A10;
+    --green: #00E5A0;
+    --gold: #FFB800;
+    --red: #FF4D6D;
+    --surface: #12141F;
+    --surface2: #1A1D2E;
+    --surface3: #22263A;
+    --text: #F0F2FF;
+    --text-dim: #8892B0;
+    --text-muted: #4A5080;
+    --border: rgba(255,255,255,0.07);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: var(--black);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100vh;
+    padding-bottom: 80px;
+  }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(9,10,16,0.95);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .back-btn {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--surface2);
+    border: none;
+    color: var(--text);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .topbar-title { font-size: 16px; font-weight: 700; flex: 1; }
+  .topbar-badge {
+    background: rgba(0,212,255,0.12);
+    border: 1px solid rgba(0,212,255,0.25);
+    border-radius: 8px;
+    padding: 3px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--cyan);
+    letter-spacing: 0.04em;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 24px 20px 20px;
+  }
+  .hero-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--cyan);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .hero-title {
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+  .hero-title span {
+    background: linear-gradient(90deg, var(--cyan), var(--purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero-sub {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    margin-bottom: 18px;
+  }
+
+  /* ── STAT ROW ── */
+  .stat-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 0;
+  }
+  .stat-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 10px;
+    text-align: center;
+  }
+  .stat-val { font-size: 20px; font-weight: 800; color: var(--cyan); }
+  .stat-label { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+  /* ── SIINDEX TIP ── */
+  .siindex-tip {
+    margin: 16px 20px 0;
+    background: linear-gradient(135deg, rgba(43,53,216,0.15), rgba(139,63,232,0.15));
+    border: 1px solid rgba(139,63,232,0.3);
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .si-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--blue), var(--purple));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+  }
+  .si-text { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+  .si-name { font-size: 11px; font-weight: 700; color: var(--purple); margin-bottom: 2px; }
+
+  /* ── SECTION ── */
+  .section { padding: 20px 20px 0; }
+  .sec-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .sec-title { font-size: 13px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+  .sec-link { font-size: 12px; color: var(--cyan); cursor: pointer; }
+
+  /* ── RECEIPT LIST ── */
+  .receipt-list { display: flex; flex-direction: column; gap: 10px; }
+  .receipt-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .receipt-card:active { opacity: 0.85; }
+  .receipt-card.highlighted { border-color: rgba(0,212,255,0.3); }
+  .receipt-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .receipt-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .receipt-meta { flex: 1; min-width: 0; }
+  .receipt-type { font-size: 13px; font-weight: 700; }
+  .receipt-time { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+  .receipt-amount {
+    font-size: 15px;
+    font-weight: 800;
+    text-align: right;
+  }
+  .receipt-amount.green { color: var(--green); }
+  .receipt-amount.red { color: var(--red); }
+  .receipt-amount.cyan { color: var(--cyan); }
+
+  /* NFT proof row */
+  .nft-proof-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+  .nft-proof-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .nft-proof-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+  }
+  .nft-proof-label { font-size: 11px; font-weight: 600; color: var(--green); }
+  .nft-proof-hash { font-size: 10px; color: var(--text-muted); font-family: monospace; }
+  .nft-view-btn {
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--cyan);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  /* ── FILTER CHIPS ── */
+  .chip-row {
+    display: flex;
+    gap: 8px;
+    padding: 0 20px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .chip-row::-webkit-scrollbar { display: none; }
+  .chip {
+    flex-shrink: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .chip.active {
+    background: rgba(0,212,255,0.12);
+    border-color: rgba(0,212,255,0.3);
+    color: var(--cyan);
+  }
+
+  /* ── EXPLAINER ── */
+  .explainer {
+    margin: 20px 20px 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+  }
+  .explainer-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .layer-list { display: flex; flex-direction: column; gap: 10px; }
+  .layer-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .layer-num {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+  .layer-num.l1 { background: rgba(0,212,255,0.15); color: var(--cyan); }
+  .layer-num.l2 { background: rgba(139,63,232,0.15); color: var(--purple); }
+  .layer-num.l3 { background: rgba(255,184,0,0.15); color: var(--gold); }
+  .layer-body {}
+  .layer-name { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+  .layer-desc { font-size: 11px; color: var(--text-dim); line-height: 1.4; }
+
+  /* ── DETAIL SHEET ── */
+  .sheet-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(9,10,16,0.7);
+    z-index: 200;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .sheet-overlay.active { opacity: 1; pointer-events: all; }
+  .sheet {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%) translateY(100%);
+    width: 100%;
+    max-width: 430px;
+    background: var(--surface2);
+    border-radius: 24px 24px 0 0;
+    padding: 20px 20px 40px;
+    z-index: 201;
+    transition: transform 0.3s ease;
+  }
+  .sheet-overlay.active .sheet { transform: translateX(-50%) translateY(0); }
+  .sheet-handle {
+    width: 36px; height: 4px;
+    background: var(--surface3);
+    border-radius: 2px;
+    margin: 0 auto 18px;
+  }
+  .sheet-title { font-size: 17px; font-weight: 800; margin-bottom: 4px; }
+  .sheet-sub { font-size: 12px; color: var(--text-dim); margin-bottom: 18px; }
+
+  .detail-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .detail-row:last-of-type { border-bottom: none; }
+  .detail-key { font-size: 12px; color: var(--text-dim); }
+  .detail-val { font-size: 12px; font-weight: 600; font-family: monospace; color: var(--text); }
+  .detail-val.cyan { color: var(--cyan); font-family: inherit; }
+  .detail-val.green { color: var(--green); font-family: inherit; }
+
+  .nft-card-display {
+    background: linear-gradient(135deg, var(--surface3), var(--surface));
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 16px;
+    padding: 18px;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .nft-card-icon { font-size: 40px; margin-bottom: 8px; }
+  .nft-card-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .nft-card-id { font-size: 10px; color: var(--text-muted); font-family: monospace; }
+
+  .btn-primary {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--cyan), var(--blue));
+    border: none;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  .btn-secondary {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+
+  /* ── FOOTER ── */
+  .law-footer {
+    text-align: center;
+    padding: 20px;
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 430px;
+    background: rgba(18,20,31,0.97);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    padding: 8px 0 12px;
+    z-index: 100;
+  }
+  .nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    padding: 4px;
+  }
+  .nav-icon { font-size: 20px; }
+  .nav-label { font-size: 10px; font-weight: 600; color: var(--text-muted); }
+  .nav-item.active .nav-label { color: var(--cyan); }
+
+  /* ── TOAST ── */
+  #vrToast {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--surface3);
+    border: 1px solid rgba(0,212,255,0.3);
+    border-radius: 12px;
+    padding: 12px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    z-index: 9999;
+    display: none;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <button class="back-btn" onclick="history.back()">‹</button>
+  <div class="topbar-title">Verifiable Receipts</div>
+  <div class="topbar-badge">VR-NFT</div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-label">Triangular Fusion Engine · Layer 1</div>
+  <div class="hero-title">Every action.<br><span>Permanently proved.</span></div>
+  <div class="hero-sub">Every transaction, publish, and vote you make is automatically minted as a Verifiable Receipt NFT — an immutable on-chain record that can never be changed, deleted, or disputed.</div>
+
+  <div class="stat-row">
+    <div class="stat-box">
+      <div class="stat-val" id="totalReceipts">47</div>
+      <div class="stat-label">Total Receipts</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" style="color:var(--green);">47</div>
+      <div class="stat-label">Verified</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" style="color:var(--purple);">3</div>
+      <div class="stat-label">Types</div>
+    </div>
+  </div>
+</div>
+
+<!-- SIINDEX TIP -->
+<div class="siindex-tip">
+  <div class="si-avatar">⬡</div>
+  <div class="si-text">
+    <div class="si-name">SIINDEX</div>
+    All 47 receipts verified on-chain. Your transaction history is tamper-proof — no exchange can alter it. If a dispute ever arises, tap any receipt to export its ZK-proof.
+  </div>
+</div>
+
+<!-- FILTER CHIPS -->
+<div class="section">
+  <div class="sec-header">
+    <div class="sec-title">Receipt History</div>
+    <div class="sec-link" onclick="showToast('📥 Export all coming soon')">Export all</div>
+  </div>
+</div>
+<div class="chip-row">
+  <div class="chip active" onclick="filterReceipts(this,'all')">All</div>
+  <div class="chip" onclick="filterReceipts(this,'transfer')">Transfers</div>
+  <div class="chip" onclick="filterReceipts(this,'content')">Content</div>
+  <div class="chip" onclick="filterReceipts(this,'governance')">Governance</div>
+  <div class="chip" onclick="filterReceipts(this,'stake')">Staking</div>
+</div>
+
+<!-- RECEIPT LIST -->
+<div class="section" style="padding-top:0;">
+  <div class="receipt-list" id="receiptList"></div>
+</div>
+
+<!-- TRIANGULAR FUSION EXPLAINER -->
+<div class="explainer">
+  <div class="explainer-title">
+    <span style="font-size:18px;">🔺</span>
+    Triangular Fusion Engine
+  </div>
+  <div class="layer-list">
+    <div class="layer-item">
+      <div class="layer-num l1">1</div>
+      <div class="layer-body">
+        <div class="layer-name" style="color:var(--cyan);">VR-NFT — Verifiable Receipt</div>
+        <div class="layer-desc">Auto-minted on every transaction. Proves what happened, when, and with whom. Immutable. Exportable. Court-admissible.</div>
+      </div>
+    </div>
+    <div class="layer-item">
+      <div class="layer-num l2">2</div>
+      <div class="layer-body">
+        <div class="layer-name" style="color:var(--purple);">SP-NFT — Skill Point</div>
+        <div class="layer-desc">Minted when verified skills are demonstrated. Builds your Sovereign Skill Graph and on-chain reputation.</div>
+      </div>
+    </div>
+    <div class="layer-item">
+      <div class="layer-num l3">3</div>
+      <div class="layer-body">
+        <div class="layer-name" style="color:var(--gold);">Wisdom Score — Reputation Layer</div>
+        <div class="layer-desc">Aggregated from SP-NFTs and activity. Gates access to Sovereign Yield, governance, and elder status.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ZK PROOF INFO -->
+<div class="explainer" style="margin-top:12px;">
+  <div class="explainer-title">
+    <span style="font-size:18px;">🔐</span>
+    ZK-Proof Privacy
+  </div>
+  <div style="font-size:12px;color:var(--text-dim);line-height:1.6;">
+    Every VR-NFT uses zero-knowledge proofs. The receipt proves a transaction occurred without revealing your identity, counterparty, or exact amount — unless you choose to share it. Your data never leaves your device.
+  </div>
+</div>
+
+<!-- LAW FOOTER -->
+<div class="law-footer">
+  ⚖️ 98/2 Civilisation Law · All receipts include Civilisation Fund allocation proof
+</div>
+
+<!-- RECEIPT DETAIL SHEET -->
+<div class="sheet-overlay" id="sheetOverlay" onclick="closeSheet()">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="nft-card-display">
+      <div class="nft-card-icon" id="sheetIcon">💸</div>
+      <div class="nft-card-name" id="sheetName">P2P Transfer</div>
+      <div class="nft-card-id" id="sheetNftId">VR-2024-0001</div>
+    </div>
+    <div class="sheet-title" id="sheetTitle">Transfer Receipt</div>
+    <div class="sheet-sub" id="sheetSub">Verified on Solana · June 22, 2026</div>
+
+    <div class="detail-row">
+      <div class="detail-key">Type</div>
+      <div class="detail-val cyan" id="sheetType">P2P Transfer</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-key">Amount</div>
+      <div class="detail-val" id="sheetAmount">$12.50</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-key">Timestamp</div>
+      <div class="detail-val" id="sheetTimestamp">2026-06-22 09:14 UTC</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-key">Block</div>
+      <div class="detail-val" id="sheetBlock">#284,447,821</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-key">ZK Proof</div>
+      <div class="detail-val green">✓ Verified</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-key">Civilisation (2%)</div>
+      <div class="detail-val" id="sheetCivil">$0.25 → Fund</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-key">TX Hash</div>
+      <div class="detail-val" id="sheetHash" style="font-size:10px;">8Hx...ZMt</div>
+    </div>
+
+    <button class="btn-primary" onclick="showToast('📤 ZK-proof export coming soon');closeSheet()">Export ZK-Proof</button>
+    <button class="btn-secondary" onclick="closeSheet()">Close</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="vrToast"></div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <div class="nav-item" onclick="window.location.href='citizen-dashboard.html'">
+    <div class="nav-icon">🏛️</div>
+    <div class="nav-label">Home</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='send.html'">
+    <div class="nav-icon">↗</div>
+    <div class="nav-label">Send</div>
+  </div>
+  <div class="nav-item active" onclick="window.location.href='verifiable-receipt-nft.html'">
+    <div class="nav-icon">🧾</div>
+    <div class="nav-label">Receipts</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='skill-point-nft.html'">
+    <div class="nav-icon">🏅</div>
+    <div class="nav-label">Skills</div>
+  </div>
+  <div class="nav-item" onclick="window.location.href='profile.html'">
+    <div class="nav-icon">👤</div>
+    <div class="nav-label">Profile</div>
+  </div>
+</nav>
+
+<script>
+const RECEIPTS = [
+  {
+    id: 'vr-0047',
+    type: 'transfer',
+    icon: '💸',
+    iconBg: 'rgba(0,212,255,0.12)',
+    name: 'P2P Transfer',
+    sub: 'To Mama Noe · Cook Islands',
+    amount: '+$42.00',
+    amountClass: 'green',
+    time: '2 hours ago',
+    date: '2026-06-22',
+    timestamp: '2026-06-22 07:42 UTC',
+    block: '#284,501,337',
+    civil: '$0.86 → Fund',
+    hash: '8Hx...3kF',
+    highlighted: true
+  },
+  {
+    id: 'vr-0046',
+    type: 'content',
+    icon: '🌊',
+    iconBg: 'rgba(139,63,232,0.12)',
+    name: 'Content Published',
+    sub: 'Sovereign Social · "Pacific Sunrise" post',
+    amount: '+1.4 INDX',
+    amountClass: 'cyan',
+    time: '5 hours ago',
+    date: '2026-06-22',
+    timestamp: '2026-06-22 04:18 UTC',
+    block: '#284,488,921',
+    civil: '0.03 INDX → Fund',
+    hash: '7Kp...9nW',
+    highlighted: false
+  },
+  {
+    id: 'vr-0045',
+    type: 'governance',
+    icon: '🏛️',
+    iconBg: 'rgba(43,53,216,0.12)',
+    name: 'Governance Vote',
+    sub: 'Amendment #12 · Pacific Reserve Fund',
+    amount: '+5 Wisdom',
+    amountClass: 'cyan',
+    time: 'Yesterday',
+    date: '2026-06-21',
+    timestamp: '2026-06-21 14:55 UTC',
+    block: '#284,412,004',
+    civil: 'N/A',
+    hash: '2Lz...8mR',
+    highlighted: false
+  },
+  {
+    id: 'vr-0044',
+    type: 'stake',
+    icon: '💎',
+    iconBg: 'rgba(0,229,160,0.1)',
+    name: 'Staking Reward',
+    sub: 'Sovereign Yield · 7-day lock',
+    amount: '+8.2 INDX',
+    amountClass: 'green',
+    time: 'Yesterday',
+    date: '2026-06-21',
+    timestamp: '2026-06-21 09:00 UTC',
+    block: '#284,388,771',
+    civil: '0.16 INDX → Fund',
+    hash: '5Rq...1sP',
+    highlighted: false
+  },
+  {
+    id: 'vr-0043',
+    type: 'transfer',
+    icon: '💸',
+    iconBg: 'rgba(0,212,255,0.12)',
+    name: 'Received Payment',
+    sub: 'From Tuluk vendor · Tonga',
+    amount: '+$18.50',
+    amountClass: 'green',
+    time: '2 days ago',
+    date: '2026-06-20',
+    timestamp: '2026-06-20 11:33 UTC',
+    block: '#284,301,148',
+    civil: '$0.37 → Fund',
+    hash: '9Dv...4xQ',
+    highlighted: false
+  },
+  {
+    id: 'vr-0042',
+    type: 'content',
+    icon: '🌊',
+    iconBg: 'rgba(139,63,232,0.12)',
+    name: 'View Reward',
+    sub: '1,240 views · "Cook Islands Way" video',
+    amount: '+0.7 INDX',
+    amountClass: 'cyan',
+    time: '2 days ago',
+    date: '2026-06-20',
+    timestamp: '2026-06-20 08:14 UTC',
+    block: '#284,288,559',
+    civil: '0.01 INDX → Fund',
+    hash: '3Wm...6bX',
+    highlighted: false
+  }
+];
+
+let activeFilter = 'all';
+let activeReceipt = null;
+
+function renderReceipts() {
+  const filtered = activeFilter === 'all'
+    ? RECEIPTS
+    : RECEIPTS.filter(r => r.type === activeFilter);
+
+  const list = document.getElementById('receiptList');
+  list.innerHTML = filtered.map(r => `
+    <div class="receipt-card${r.highlighted ? ' highlighted' : ''}" onclick="openSheet('${r.id}')">
+      <div class="receipt-top">
+        <div class="receipt-icon" style="background:${r.iconBg};">${r.icon}</div>
+        <div class="receipt-meta">
+          <div class="receipt-type">${r.name}</div>
+          <div class="receipt-time">${r.sub}</div>
+        </div>
+        <div class="receipt-amount ${r.amountClass}">${r.amount}</div>
+      </div>
+      <div class="nft-proof-row">
+        <div class="nft-proof-left">
+          <div class="nft-proof-dot"></div>
+          <div>
+            <div class="nft-proof-label">VR-NFT · On-chain</div>
+            <div class="nft-proof-hash">${r.id.toUpperCase()} · ${r.time}</div>
+          </div>
+        </div>
+        <div class="nft-view-btn">View proof</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterReceipts(el, type) {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  activeFilter = type;
+  renderReceipts();
+}
+
+function openSheet(id) {
+  const r = RECEIPTS.find(x => x.id === id);
+  if (!r) return;
+  activeReceipt = r;
+  document.getElementById('sheetIcon').textContent = r.icon;
+  document.getElementById('sheetName').textContent = r.name;
+  document.getElementById('sheetNftId').textContent = r.id.toUpperCase();
+  document.getElementById('sheetTitle').textContent = r.name + ' Receipt';
+  document.getElementById('sheetSub').textContent = 'Verified on Solana · ' + r.date;
+  document.getElementById('sheetType').textContent = r.name;
+  document.getElementById('sheetAmount').textContent = r.amount;
+  document.getElementById('sheetTimestamp').textContent = r.timestamp;
+  document.getElementById('sheetBlock').textContent = r.block;
+  document.getElementById('sheetCivil').textContent = r.civil;
+  document.getElementById('sheetHash').textContent = r.hash;
+  document.getElementById('sheetOverlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSheet() {
+  document.getElementById('sheetOverlay').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function showToast(msg) {
+  const t = document.getElementById('vrToast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 3000);
+}
+
+renderReceipts();
+</script>
+</body>
+</html>

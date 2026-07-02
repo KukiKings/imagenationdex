@@ -52,6 +52,17 @@
     .ai-detail{font-size:11px;color:var(--text-muted);margin-top:1px;}
     .ai-del{font-size:18px;color:var(--text-dim);cursor:pointer;padding:4px;}
     #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+    /* GOD MODE — price-alerts */
+    .gs-quick-btn{width:100%;padding:11px;border-radius:10px;background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.25);color:var(--gold);font-size:13px;font-weight:800;cursor:pointer;margin-bottom:8px;text-align:left;display:flex;align-items:center;gap:8px;}
+    .wc-price{font-size:16px;font-weight:900;transition:color 0.4s;}
+    .alert-notif{position:fixed;top:-90px;left:50%;transform:translateX(-50%);width:calc(100% - 32px);max-width:398px;background:var(--surface2);border:1px solid rgba(0,229,160,0.35);border-radius:16px;padding:14px;display:flex;align-items:center;gap:12px;z-index:100;transition:top 0.4s cubic-bezier(0.32,0.72,0,1);box-shadow:0 8px 32px rgba(0,0,0,0.4);}
+    .alert-notif.show{top:72px;}
+    .an-ico{font-size:24px;flex-shrink:0;}
+    .an-body{flex:1;}.an-title{font-size:13px;font-weight:800;}
+    .an-sub{font-size:11px;color:var(--text-muted);margin-top:2px;}
+    .an-dismiss{font-size:18px;color:var(--text-muted);cursor:pointer;padding:4px;}
+    .an-pulse{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;animation:pulse 1s infinite;}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.5;transform:scale(0.8);}}
   </style>
 </head>
 <body>
@@ -99,32 +110,27 @@
           <div class="notif-btn" id="nEmail" onclick="toggleNotif('nEmail')">📧 Email</div>
           <div class="notif-btn" id="nAgent" onclick="toggleNotif('nAgent')">🤖 Agent</div>
         </div>
+        <button class="gs-quick-btn" onclick="setGSTarget()">🌐 Grand Synchronicity: Set INDX $2.50 target</button>
         <button class="btn-create-alert" onclick="createAlert()">Set Alert</button>
       </div>
 
       <!-- ACTIVE ALERTS -->
       <div class="card" style="padding:14px 0;">
-        <div style="padding:0 16px 10px;font-size:12px;font-weight:800;color:var(--text-muted);text-transform:uppercase;">Active alerts (3)</div>
-        <div style="padding:0 16px;">
-          <div class="alert-item">
-            <div class="ai-ico" style="background:rgba(0,229,160,0.1);">📈</div>
-            <div class="ai-body"><div class="ai-desc">INDX rises above $0.42</div><div class="ai-detail">Push + In-app · Set 4 Jun</div></div>
-            <div class="ai-del" onclick="delAlert(this)">✕</div>
-          </div>
-          <div class="alert-item">
-            <div class="ai-ico" style="background:rgba(255,77,109,0.1);">📉</div>
-            <div class="ai-body"><div class="ai-desc">INDX falls below $0.27</div><div class="ai-detail">Push + Agent alert · Set 1 Jun</div></div>
-            <div class="ai-del" onclick="delAlert(this)">✕</div>
-          </div>
-          <div class="alert-item">
-            <div class="ai-ico" style="background:rgba(139,63,232,0.1);">📈</div>
-            <div class="ai-body"><div class="ai-desc">SOL rises above $160</div><div class="ai-detail">In-app only · Set 30 May</div></div>
-            <div class="ai-del" onclick="delAlert(this)">✕</div>
-          </div>
-        </div>
+        <div id="alertsCount" style="padding:0 16px 10px;font-size:12px;font-weight:800;color:var(--text-muted);text-transform:uppercase;">Active alerts (3)</div>
+        <div id="alertsContainer" style="padding:0 16px;"></div>
       </div>
     </div>
   </div>
+</div>
+<!-- ALERT TRIGGER NOTIFICATION -->
+<div class="alert-notif" id="alertNotif">
+  <div class="an-pulse"></div>
+  <div class="an-ico">🔔</div>
+  <div class="an-body">
+    <div class="an-title" id="anTitle">INDX rises above $0.42</div>
+    <div class="an-sub" id="anSub">Price crossed your alert target</div>
+  </div>
+  <div class="an-dismiss" onclick="dismissAlertNotif()">✕</div>
 </div>
 <div id="toast"></div>
 <script>
@@ -168,16 +174,97 @@ function updateNote(){
   document.getElementById('priceNote').textContent=`Current ${selTok} price: $${selPrice} set alert ${word} $${selPrice} to trigger on ${dir==='up'?'rise':'drop'}`;
 }
 function toggleNotif(id){document.getElementById(id).classList.toggle('active');}
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}
+
+// ── GOD MODE — price-alerts.html ──
+const AL_KEY='indx_alerts_list';
+const SEED_ALERTS=[
+  {tok:'INDX',dir:'up',price:'0.42',notif:['Push','InApp'],date:'4 Jun'},
+  {tok:'INDX',dir:'down',price:'0.27',notif:['Push','Agent'],date:'1 Jun'},
+  {tok:'SOL',dir:'up',price:'160',notif:['InApp'],date:'30 May'},
+];
+
+// F1: Alert persistence
+function loadAlerts(){try{return JSON.parse(localStorage.getItem(AL_KEY)||'null')||SEED_ALERTS;}catch(e){return SEED_ALERTS;}}
+function saveAlerts(a){localStorage.setItem(AL_KEY,JSON.stringify(a));}
+function renderAlerts(){
+  const alerts=loadAlerts();
+  document.getElementById('alertsCount').textContent=`Active alerts (${alerts.length})`;
+  document.getElementById('alertsContainer').innerHTML=alerts.map((a,i)=>`
+    <div class="alert-item">
+      <div class="ai-ico" style="background:${a.dir==='up'?'rgba(0,229,160,0.1)':'rgba(255,77,109,0.1)'};">${a.dir==='up'?'📈':'📉'}</div>
+      <div class="ai-body">
+        <div class="ai-desc">${a.tok} ${a.dir==='up'?'rises above':'falls below'} $${a.price}</div>
+        <div class="ai-detail">${a.notif.join(' + ')} · Set ${a.date}</div>
+      </div>
+      <div class="ai-del" onclick="delAlertByIdx(${i})">✕</div>
+    </div>`).join('');
+}
+function delAlertByIdx(idx){const a=loadAlerts();a.splice(idx,1);saveAlerts(a);renderAlerts();showToast('Alert removed');}
+
+// GOD MODE PATCH — createAlert saves to localStorage
 function createAlert(){
   const p=document.getElementById('alertPrice').value;
   if(!p){showToast('Enter a target price');return;}
+  const notifs=['Push','InApp','Email','Agent'].filter(n=>document.getElementById('n'+n).classList.contains('active'));
+  const alerts=loadAlerts();
+  const today=new Date().toLocaleDateString('en-AU',{day:'numeric',month:'short'});
+  alerts.unshift({tok:selTok,dir,price:p,notif:notifs.length?notifs:['InApp'],date:today});
+  saveAlerts(alerts);renderAlerts();
   showToast(`🔔 Alert set: ${selTok} ${dir==='up'?'rises above':'falls below'} $${p}`);
   document.getElementById('alertPrice').value='';
 }
-function delAlert(el){el.closest('.alert-item').remove();showToast('Alert removed');}
-function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}
-buildWatchlist();updateNote();
-setInterval(()=>{tokens[0].price=+(0.348+Math.random()*0.004).toFixed(3);buildWatchlist();},3000);
+
+// F2: Live multi-token drift (all 4 tokens)
+const TOKEN_DRIFT=[0.003,0.5,8,150]; // per-tick drift magnitudes
+function driftTokens(){
+  tokens.forEach((t,i)=>{
+    const prev=t.price;
+    const drift=(Math.random()-0.47)*TOKEN_DRIFT[i];
+    t.price=Math.max(t.price*0.9,t.price+drift);
+    t.up=t.price>=prev;
+    const pct=((t.price-t.price/(1+(Math.random()*0.04-0.02)))/t.price*100);
+    t.ch=(t.up?'+':'')+Math.abs(pct).toFixed(1)+'%';
+  });
+  // Keep INDX in $0.21-$0.28 range
+  tokens[0].price=Math.max(0.21,Math.min(0.28,tokens[0].price));
+  selPrice=tokens.find(t=>t.sym===selTok)?.price.toFixed(selTok==='INDX'?4:0)||selPrice;
+  buildWatchlist();
+  updateNote();
+}
+
+// F3: Grand Synchronicity target quick-fill
+function setGSTarget(){
+  document.querySelectorAll('.tok-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.tok-btn').classList.add('active');
+  selTok='INDX';selPrice='0.24';
+  dir='up';
+  document.getElementById('dirUp').className='dir-btn active-up';
+  document.getElementById('dirDown').className='dir-btn';
+  document.getElementById('alertPrice').value='2.50';
+  updateNote();
+  showToast('🌐 Grand Synchronicity target pre-filled');
+}
+
+// F4: Alert trigger simulator
+let _simTimer=null;
+function scheduleAlertSim(){
+  const delay=90000+Math.random()*30000;
+  _simTimer=setTimeout(()=>{
+    const alerts=loadAlerts();
+    if(!alerts.length){scheduleAlertSim();return;}
+    const a=alerts[Math.floor(Math.random()*alerts.length)];
+    document.getElementById('anTitle').textContent=`${a.tok} ${a.dir==='up'?'rises above':'falls below'} $${a.price}`;
+    document.getElementById('anSub').textContent=`Alert triggered · Price crossed $${a.price}`;
+    document.getElementById('alertNotif').classList.add('show');
+    setTimeout(()=>document.getElementById('alertNotif').classList.remove('show'),5000);
+    scheduleAlertSim();
+  },delay);
+}
+function dismissAlertNotif(){document.getElementById('alertNotif').classList.remove('show');}
+
+buildWatchlist();updateNote();renderAlerts();scheduleAlertSim();
+setInterval(driftTokens,4000);
 </script>
 </body>
 </html>

@@ -91,6 +91,17 @@
   /* TOAST */
   .toast{position:fixed;bottom:160px;left:50%;transform:translateX(-50%);background:#1E2130;border:1px solid var(--border);border-radius:12px;padding:11px 20px;font-size:13px;font-weight:600;white-space:nowrap;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;}
   .toast.show{opacity:1;}
+  /* GOD MODE — token-detail */
+  .gs-scenario-card{background:linear-gradient(135deg,rgba(255,184,0,0.07),rgba(139,63,232,0.06));border:1px solid rgba(255,184,0,0.2);border-radius:12px;padding:14px;grid-column:span 2;}
+  .gs-sc-title{font-size:11px;font-weight:800;color:var(--gold);text-transform:uppercase;margin-bottom:8px;}
+  .gs-sc-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .gs-sc-item{text-align:center;}
+  .gs-sc-lbl{font-size:10px;color:var(--text-muted);margin-bottom:2px;}
+  .gs-sc-val{font-size:15px;font-weight:900;}
+  .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);display:inline-block;margin-right:4px;animation:livePulse 1.5s infinite;}
+  @keyframes livePulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+  .trade-row-new{animation:tradeIn 0.4s ease;}
+  @keyframes tradeIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:none;}}
 </style>
 </head>
 <body>
@@ -167,6 +178,15 @@
         <div class="stat-val">$0.38</div>
         <div class="stat-sub">12 days ago</div>
       </div>
+      <!-- F4: Grand Synchronicity scenario card -->
+      <div class="gs-scenario-card">
+        <div class="gs-sc-title">🌐 Grand Synchronicity Scenario — Target $2.50</div>
+        <div class="gs-sc-grid">
+          <div class="gs-sc-item"><div class="gs-sc-lbl">Return multiple</div><div class="gs-sc-val" id="gsMultiple" style="color:var(--gold);">10.4x</div></div>
+          <div class="gs-sc-item"><div class="gs-sc-lbl">Days to launch</div><div class="gs-sc-val" id="gsDaysLeft" style="color:var(--purple);">—</div></div>
+          <div class="gs-sc-item"><div class="gs-sc-lbl">Target price</div><div class="gs-sc-val" style="color:var(--green);">$2.50</div></div>
+        </div>
+      </div>
     </div>
 
     <!-- ABOUT -->
@@ -182,7 +202,7 @@
 
     <!-- RECENT TRADES -->
     <div class="trades-section">
-      <div class="trades-title">Recent Trades</div>
+      <div class="trades-title"><span class="live-dot"></span>Live Trades</div>
       <div id="tradesFeed"></div>
     </div>
 
@@ -359,9 +379,90 @@
     setTimeout(() => t.classList.remove('show'), 2200);
   }
 
+  // ── GOD MODE — token-detail.html ──
+  const INDX_PRICE_USD = 0.24;
+  let _livePrice = INDX_PRICE_USD;
+  let _liveUp = true;
+
+  // F1: Live price drift
+  function startPriceDrift(){
+    setInterval(()=>{
+      const prev = _livePrice;
+      const drift = (Math.random() - 0.47) * 0.002;
+      _livePrice = Math.max(0.21, Math.min(0.28, _livePrice + drift));
+      _liveUp = _livePrice >= prev;
+      const pct = ((_livePrice - INDX_PRICE_USD) / INDX_PRICE_USD * 100);
+      document.getElementById('priceMain').textContent = '◎ ' + _livePrice.toFixed(4);
+      document.getElementById('priceUsd').textContent = '$' + _livePrice.toFixed(4);
+      const changeEl = document.getElementById('priceChange');
+      if(currentPeriod==='24h'){
+        changeEl.textContent = (pct>=0?'▲ +':'▼ ') + Math.abs(pct).toFixed(2)+'%';
+        changeEl.className = 'price-change ' + (_liveUp?'up':'down');
+      }
+      // Append live price to current period data and redraw
+      const d = PERIOD_DATA[currentPeriod];
+      d.prices[d.prices.length-1] = _livePrice;
+      drawChart(d.prices, d.up);
+      updateGSCard();
+    }, 4000);
+  }
+
+  // F2: Watchlist persistence
+  function loadStarred(){
+    starred = localStorage.getItem('indx_token_starred') === 'true';
+    const btn = document.getElementById('starBtn');
+    btn.textContent = starred ? '★' : '☆';
+    btn.classList.toggle('starred', starred);
+  }
+  // GOD MODE PATCH — persist on toggle
+  const _origToggleStar = toggleStar;
+  toggleStar = function(){
+    _origToggleStar();
+    localStorage.setItem('indx_token_starred', starred.toString());
+  };
+
+  // F3: Live trades feed injection
+  const TRADE_NAMES = ['phantom.sol','moe.indx','pacific.sol','aloha.indx','luna.sol','kai.indx','sol.eth','maya.indx'];
+  function injectTrade(){
+    const isBuy = Math.random() > 0.38;
+    const indxAmt = Math.round((50 + Math.random()*950) / 10) * 10;
+    const price = _livePrice.toFixed(4);
+    const time = 'just now';
+    const newTrade = {type:isBuy?'buy':'sell', amount:indxAmt+' INDX', price:'$'+price, time};
+    TRADES.unshift(newTrade);
+    if(TRADES.length > 8) TRADES.pop();
+    const feed = document.getElementById('tradesFeed');
+    const newRow = document.createElement('div');
+    newRow.className = 'trade-row trade-row-new';
+    newRow.innerHTML = `<div class="tr-type ${isBuy?'tr-buy':'tr-sell'}">${isBuy?'BUY':'SELL'}</div><div class="tr-amount">${indxAmt} INDX</div><div class="tr-price">$${price}</div><div class="tr-time">just now</div>`;
+    feed.insertBefore(newRow, feed.firstChild);
+    // Age the timestamps of older rows
+    feed.querySelectorAll('.trade-row').forEach((row, i)=>{
+      if(i===0)return;
+      const t = row.querySelector('.tr-time');
+      if(t&&t.textContent==='just now')t.textContent='<1m ago';
+    });
+    if(feed.children.length > 8) feed.removeChild(feed.lastChild);
+    setTimeout(injectTrade, 15000 + Math.random()*10000);
+  }
+
+  // F4: Grand Synchronicity scenario card
+  function updateGSCard(){
+    const multiple = (2.50 / _livePrice).toFixed(1);
+    const daysLeft = Math.max(0, Math.round((new Date('2026-09-24').getTime() - Date.now()) / 86400000));
+    const mEl = document.getElementById('gsMultiple');
+    const dEl = document.getElementById('gsDaysLeft');
+    if(mEl) mEl.textContent = multiple + 'x';
+    if(dEl) dEl.textContent = daysLeft + ' days';
+  }
+
   window.addEventListener('load', () => {
     drawChart(PERIOD_DATA['7d'].prices, true);
     renderTrades();
+    loadStarred();
+    startPriceDrift();
+    updateGSCard();
+    setTimeout(injectTrade, 15000 + Math.random()*10000);
   });
 
   window.addEventListener('resize', () => drawChart(PERIOD_DATA[currentPeriod].prices, PERIOD_DATA[currentPeriod].up));

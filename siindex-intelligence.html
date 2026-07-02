@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SIINDEX Intelligence</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+    --black:#090A10; --surface:#10121A; --surface2:#181B26; --surface3:#1E2130;
+    --border:#252836; --border2:#2E3348;
+    --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+    --text:#F0F2FF; --text2:#9CA3B8; --text-muted:#5A6178;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{min-height:100%;background:rgba(9,10,16,0.93);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;
+    max-width:430px;margin:0 auto;overflow-x:hidden;position:relative;z-index:1;}
+  #cyberCanvas{position:fixed;inset:0;z-index:0;pointer-events:none;}
+
+  /* HEADER */
+  .header{display:flex;align-items:center;gap:12px;padding:20px 20px 0;position:sticky;top:0;
+    background:rgba(9,10,16,0.90);backdrop-filter:blur(16px);z-index:50;border-bottom:1px solid var(--border);padding-bottom:14px;}
+  .back-btn{width:38px;height:38px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);
+    display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;flex-shrink:0;}
+  .header-body{flex:1;}
+  .header-title{font-size:17px;font-weight:800;letter-spacing:-0.01em;}
+  .header-sub{font-size:11px;color:var(--text-muted);margin-top:2px;}
+  .quantum-badge{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:800;
+    color:var(--cyan);background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);
+    border-radius:20px;padding:5px 10px;white-space:nowrap;}
+  .qb-dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);animation:qbPulse 1.8s ease-in-out infinite;}
+  @keyframes qbPulse{0%,100%{opacity:1;box-shadow:0 0 6px var(--cyan);}50%{opacity:0.4;box-shadow:none;}}
+
+  /* HERO HERO card */
+  .hero-card{margin:16px;background:linear-gradient(135deg,rgba(43,53,216,0.18),rgba(139,63,232,0.14));
+    border:1px solid rgba(0,212,255,0.18);border-radius:20px;padding:18px;position:relative;overflow:hidden;}
+  .hero-blob{position:absolute;width:220px;height:220px;top:-80px;right:-60px;border-radius:50%;
+    background:radial-gradient(circle,rgba(139,63,232,0.25) 0%,transparent 65%);
+    animation:hblob 18s ease-in-out infinite alternate;pointer-events:none;}
+  @keyframes hblob{
+    0%{border-radius:58% 42% 44% 56%/48% 62% 38% 52%;}
+    50%{border-radius:42% 58% 60% 40%/60% 40% 60% 40%;}
+    100%{border-radius:54% 46% 38% 62%/42% 56% 44% 58%;}
+  }
+  .hero-label{font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--purple);margin-bottom:6px;}
+  .hero-title{font-size:22px;font-weight:900;letter-spacing:-0.02em;margin-bottom:6px;}
+  .hero-title span{color:var(--cyan);}
+  .hero-desc{font-size:13px;color:var(--text2);line-height:1.55;}
+
+  /* HOW IT THINKS — 5 TABS */
+  .section{padding:0 16px 16px;}
+  .sec-title{font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+    color:var(--text-muted);margin-bottom:10px;padding:0 0 0 2px;}
+  .tab-bar{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-bottom:14px;padding-bottom:2px;}
+  .tab-bar::-webkit-scrollbar{display:none;}
+  .tab{padding:7px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;
+    color:var(--text2);white-space:nowrap;transition:all 0.2s;background:var(--surface2);
+    border:1.5px solid var(--border);}
+  .tab.active{background:var(--purple);border-color:var(--purple);color:#fff;}
+
+  /* TAB PANELS */
+  .tab-panel{display:none;animation:fadeTab 0.25s ease both;}
+  .tab-panel.active{display:block;}
+  @keyframes fadeTab{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+  /* Panel cards */
+  .panel-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;}
+  .panel-label{font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;
+    color:var(--cyan);margin-bottom:8px;}
+  .panel-body{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:14px;}
+  .panel-highlight{background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.15);
+    border-radius:10px;padding:10px 14px;font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:12px;}
+  .panel-highlight strong{color:var(--cyan);}
+
+  /* TOKENIZATION viz */
+  .token-sentence{font-size:15px;font-weight:600;line-height:2.2;margin-bottom:10px;letter-spacing:0.01em;}
+  .tok{display:inline-block;border-radius:5px;padding:2px 6px;margin:1px 2px;font-size:14px;font-weight:700;
+    cursor:default;transition:transform 0.15s;}
+  .tok:hover{transform:scale(1.08);}
+  .tok-0{background:rgba(0,212,255,0.18);color:#00D4FF;border:1px solid rgba(0,212,255,0.3);}
+  .tok-1{background:rgba(139,63,232,0.18);color:#8B3FE8;border:1px solid rgba(139,63,232,0.3);}
+  .tok-2{background:rgba(0,229,160,0.15);color:#00E5A0;border:1px solid rgba(0,229,160,0.25);}
+  .tok-3{background:rgba(255,184,0,0.15);color:#FFB800;border:1px solid rgba(255,184,0,0.25);}
+  .tok-4{background:rgba(43,53,216,0.20);color:#7B8CFF;border:1px solid rgba(43,53,216,0.35);}
+  .tok-space{font-size:9px;opacity:0.5;vertical-align:super;}
+  .token-stats{display:flex;gap:10px;margin-top:10px;}
+  .tok-stat{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;
+    padding:10px;text-align:center;}
+  .tok-stat .val{font-size:20px;font-weight:900;color:var(--cyan);}
+  .tok-stat .lbl{font-size:10px;color:var(--text-muted);margin-top:2px;}
+  .tok-notice{font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5;}
+  .sentence-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+  .s-chip{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;
+    background:var(--surface2);border:1.5px solid var(--border);color:var(--text2);transition:all 0.2s;}
+  .s-chip.active{background:rgba(0,212,255,0.12);border-color:rgba(0,212,255,0.4);color:var(--cyan);}
+
+  /* CONTEXT WINDOW viz */
+  .ctx-desk{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;}
+  .ctx-label{font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:8px;display:flex;justify-content:space-between;}
+  .ctx-label span{color:var(--cyan);}
+  .ctx-bar{height:32px;background:var(--surface3);border-radius:8px;overflow:hidden;display:flex;margin-bottom:8px;}
+  .ctx-seg{height:100%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;
+    transition:width 0.6s ease;overflow:hidden;white-space:nowrap;}
+  .ctx-seg.sys{background:rgba(139,63,232,0.5);}
+  .ctx-seg.hist{background:rgba(43,53,216,0.5);}
+  .ctx-seg.usr{background:rgba(0,212,255,0.5);}
+  .ctx-seg.free{background:rgba(37,40,54,0.7);}
+  .ctx-legend{display:flex;gap:10px;flex-wrap:wrap;}
+  .ctx-dot{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text2);}
+  .ctx-dot::before{content:'';width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+  .ctx-dot.sys::before{background:rgba(139,63,232,0.7);}
+  .ctx-dot.hist::before{background:rgba(43,53,216,0.7);}
+  .ctx-dot.usr::before{background:rgba(0,212,255,0.7);}
+  .ctx-dot.free::before{background:rgba(37,40,54,0.9);}
+  .ctx-insight{font-size:12px;color:var(--text2);background:rgba(255,184,0,0.06);
+    border:1px solid rgba(255,184,0,0.2);border-radius:8px;padding:9px 12px;line-height:1.55;}
+  .ctx-insight strong{color:var(--gold);}
+
+  /* COST viz */
+  .cost-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+  .cost-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;}
+  .cost-val{font-size:18px;font-weight:900;margin-bottom:3px;}
+  .cost-lbl{font-size:10px;color:var(--text-muted);}
+  .cost-bar-wrap{margin-bottom:12px;}
+  .cost-bar-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:5px;}
+  .cost-bar-track{height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;}
+  .cost-bar-fill{height:100%;border-radius:4px;transition:width 0.8s ease;}
+  .cost-bar-fill.input{background:linear-gradient(90deg,var(--blue),var(--cyan));}
+  .cost-bar-fill.output{background:linear-gradient(90deg,var(--purple),var(--red));}
+
+  /* PREDICTION viz */
+  .pred-output{background:var(--surface2);border:1px solid var(--border);border-radius:12px;
+    padding:12px;margin-bottom:12px;min-height:48px;}
+  .pred-token{display:inline;font-size:14px;font-weight:600;}
+  .pred-token.new{animation:tokPop 0.3s cubic-bezier(0.34,1.56,0.64,1) both;}
+  @keyframes tokPop{from{opacity:0;transform:scale(0.6);}to{opacity:1;transform:scale(1);}}
+  .pred-cursor{display:inline-block;width:2px;height:14px;background:var(--cyan);
+    vertical-align:middle;animation:blink 1s step-end infinite;}
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+  .pred-probs{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;}
+  .prob-row{display:flex;align-items:center;gap:8px;}
+  .prob-word{font-size:12px;font-weight:700;color:var(--text);width:100px;flex-shrink:0;font-family:'SF Mono',monospace;}
+  .prob-track{flex:1;height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;}
+  .prob-fill{height:100%;border-radius:3px;transition:width 0.5s ease;}
+  .prob-pct{font-size:10px;color:var(--text-muted);width:36px;text-align:right;flex-shrink:0;}
+  .pred-btn{width:100%;padding:11px;border-radius:10px;border:1px solid rgba(0,212,255,0.3);
+    background:rgba(0,212,255,0.08);color:var(--cyan);font-size:13px;font-weight:700;cursor:pointer;
+    transition:all 0.2s;}
+  .pred-btn:active{background:rgba(0,212,255,0.18);}
+
+  /* EMBEDDING viz */
+  .embed-canvas-wrap{background:var(--surface2);border:1px solid var(--border);border-radius:12px;
+    padding:8px;margin-bottom:12px;overflow:hidden;}
+  #embedCanvas{display:block;width:100%;height:180px;}
+
+  /* ═══ CAPABILITY MANAGER ═══ */
+  .cap-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .cap-header-left{font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);}
+  .cap-mode-badge{font-size:10px;font-weight:800;color:var(--green);background:rgba(0,229,160,0.1);
+    border:1px solid rgba(0,229,160,0.25);border-radius:20px;padding:4px 10px;}
+  .cap-auto-strip{display:flex;align-items:center;gap:8px;padding:9px 12px;
+    background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.18);border-radius:10px;margin-bottom:12px;}
+  .cap-auto-label{flex:1;font-size:12px;color:var(--text2);}
+  .cap-auto-toggle{position:relative;}
+  .toggle-pill{width:44px;height:26px;border-radius:13px;background:var(--border);cursor:pointer;
+    position:relative;transition:background 0.2s;flex-shrink:0;}
+  .toggle-pill.on{background:var(--cyan);}
+  .toggle-knob{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;
+    background:#fff;transition:all 0.2s;box-shadow:0 1px 4px rgba(0,0,0,0.3);}
+  .toggle-pill.on .toggle-knob{left:auto;right:3px;}
+
+  /* Detect strip */
+  .cap-detect-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);
+    border-radius:10px;padding:10px 14px;font-size:13px;color:var(--text);outline:none;margin-bottom:12px;
+    transition:border-color 0.2s;}
+  .cap-detect-input:focus{border-color:rgba(0,212,255,0.4);}
+  .cap-detect-input::placeholder{color:var(--text-muted);}
+
+  .cap-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;}
+  .cap-card{background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;
+    padding:12px 12px 10px;cursor:pointer;transition:all 0.22s;position:relative;overflow:hidden;}
+  .cap-card.on{border-color:rgba(0,212,255,0.4);background:rgba(0,212,255,0.06);}
+  .cap-card.on.active-glow{animation:capGlow 2s ease-in-out infinite alternate;}
+  @keyframes capGlow{
+    from{box-shadow:0 0 0 1px rgba(0,212,255,0.2);}
+    to{box-shadow:0 0 12px rgba(0,212,255,0.3),0 0 0 1px rgba(0,212,255,0.4);}
+  }
+  .cap-card:active{transform:scale(0.97);}
+  .cap-icon{font-size:22px;margin-bottom:6px;}
+  .cap-name{font-size:12px;font-weight:800;color:var(--text);margin-bottom:2px;}
+  .cap-sub{font-size:10px;color:var(--text-muted);line-height:1.4;}
+  .cap-status{position:absolute;top:10px;right:10px;width:8px;height:8px;border-radius:50%;
+    background:var(--border);transition:background 0.2s;}
+  .cap-card.on .cap-status{background:var(--cyan);box-shadow:0 0 6px var(--cyan);}
+  .cap-tok-badge{position:absolute;bottom:8px;right:8px;font-size:9px;font-weight:800;
+    color:var(--text-muted);background:var(--surface3);border-radius:4px;padding:1px 5px;}
+  .cap-card.on .cap-tok-badge{color:var(--cyan);}
+
+  /* Token savings */
+  .tok-savings{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;}
+  .ts-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .ts-label{font-size:12px;color:var(--text2);}
+  .ts-val{font-size:14px;font-weight:800;}
+  .ts-bar-track{height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;margin-bottom:12px;}
+  .ts-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--green),var(--cyan));transition:width 0.6s ease;}
+  .ts-insight{font-size:11px;color:var(--text-muted);line-height:1.55;}
+  .ts-insight strong{color:var(--green);}
+
+  /* Citizen Memory Viewer */
+  .mem-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .mem-title{font-size:13px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:7px;}
+  .mem-badge{font-size:9px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;
+    background:rgba(139,63,232,0.15);border:1px solid rgba(139,63,232,0.3);color:var(--purple);
+    border-radius:99px;padding:2px 8px;}
+  .mem-clear-btn{font-size:10px;font-weight:700;color:var(--red);cursor:pointer;opacity:0.7;padding:4px 8px;
+    background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.2);border-radius:8px;transition:opacity 0.2s;}
+  .mem-clear-btn:active{opacity:1;}
+  .mem-row{display:flex;align-items:flex-start;justify-content:space-between;padding:9px 0;
+    border-bottom:1px solid var(--border);gap:10px;font-size:13px;}
+  .mem-row:last-child{border-bottom:none;}
+  .mem-key{color:var(--text2);flex-shrink:0;font-size:12px;}
+  .mem-val{font-weight:600;color:var(--text);text-align:right;word-break:break-word;max-width:60%;}
+  .mem-val.accent{color:var(--cyan);}
+  .mem-val.purple{color:var(--purple);}
+  .mem-empty{font-size:12px;color:var(--text-muted);text-align:center;padding:16px 0;font-style:italic;}
+  .mem-notes-list{margin-top:4px;}
+  .mem-note-chip{display:inline-flex;align-items:center;gap:5px;background:rgba(139,63,232,0.1);
+    border:1px solid rgba(139,63,232,0.2);border-radius:8px;padding:4px 9px;font-size:11px;
+    color:var(--text2);margin:3px 3px 0 0;cursor:pointer;}
+  .mem-note-chip:active{background:rgba(139,63,232,0.2);}
+
+  /* Bottom spacer + nav */
+  .bottom-spacer{height:80px;}
+  .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;
+    background:rgba(16,18,26,0.96);backdrop-filter:blur(16px);border-top:1px solid var(--border);
+    display:flex;z-index:80;}
+  .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:3px;padding:8px 0;cursor:pointer;opacity:0.5;transition:opacity 0.2s;}
+  .nav-item.active{opacity:1;}
+  .nav-icon{font-size:20px;}
+  .nav-label{font-size:10px;font-weight:600;color:#F0F2FF;}
+
+  /* toast */
+  #toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--surface2);border:1px solid var(--border2);border-radius:12px;
+    padding:10px 18px;font-size:12px;font-weight:600;opacity:0;transition:all 0.3s;
+    z-index:200;pointer-events:none;white-space:nowrap;}
+</style>
+</head>
+<body>
+
+<canvas id="cyberCanvas" aria-hidden="true"></canvas>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="back-btn" onclick="window.history.back()">←</div>
+  <div class="header-body">
+    <div class="header-title">⚡ SIINDEX Intelligence</div>
+    <div class="header-sub">Quantum Physical Synthetic Intelligence</div>
+  </div>
+  <div class="quantum-badge"><div class="qb-dot"></div>Quantum Active</div>
+</div>
+
+<!-- HERO -->
+<div class="hero-card">
+  <div class="hero-blob"></div>
+  <div class="hero-label">How I Think</div>
+  <div class="hero-title">Inside the <span>SIINDEX</span> Mind</div>
+  <div class="hero-desc">Every word you type becomes a number, gets predicted token-by-token, within a finite window. Understand how I work — and control exactly which capabilities I use for your task.</div>
+</div>
+
+<!-- ══ SECTION 1: HOW I THINK ══ -->
+<div class="section">
+  <div class="sec-title">How I Process Your Request</div>
+  <div class="tab-bar">
+    <div class="tab active" onclick="switchThinkTab(this,'tokenize')">1 · Tokenise</div>
+    <div class="tab" onclick="switchThinkTab(this,'embed')">2 · Understand</div>
+    <div class="tab" onclick="switchThinkTab(this,'predict')">3 · Generate</div>
+    <div class="tab" onclick="switchThinkTab(this,'context')">4 · Memory</div>
+    <div class="tab" onclick="switchThinkTab(this,'cost')">5 · Cost</div>
+  </div>
+
+  <!-- TAB 1: TOKENIZE -->
+  <div class="tab-panel active panel-card" id="tpTokenize">
+    <div class="panel-label">Step 1 · Tokenisation</div>
+    <div class="panel-body">Before I think, your words disappear. Everything becomes <strong style="color:var(--cyan)">tokens</strong> — chunks of characters, not words. Spaces glue onto the next token. Rare words shatter into pieces. Numbers cost extra.</div>
+    <div class="sentence-chips">
+      <div class="s-chip active" onclick="tokenizeExample(this,'The cat sat on the mat.')">Simple</div>
+      <div class="s-chip" onclick="tokenizeExample(this,'Send 10 INDX to jake.IN$DEX')">Payment</div>
+      <div class="s-chip" onclick="tokenizeExample(this,'Swap SOL for 25.75 INDX tokens')">Swap</div>
+      <div class="s-chip" onclick="tokenizeExample(this,'What\'s my Wisdom Score?')">Query</div>
+    </div>
+    <div class="token-sentence" id="tokenDisplay"></div>
+    <div class="token-stats">
+      <div class="tok-stat"><div class="val" id="tokCount">7</div><div class="lbl">Tokens</div></div>
+      <div class="tok-stat"><div class="val" id="charCount">23</div><div class="lbl">Characters</div></div>
+      <div class="tok-stat"><div class="val" id="wordCount">6</div><div class="lbl">Words</div></div>
+    </div>
+    <div class="tok-notice">Spaces before words get glued on — " cat" and "cat" are different tokens. Emojis, numbers, and accented characters each cost more than simple letters.</div>
+  </div>
+
+  <!-- TAB 2: EMBED -->
+  <div class="tab-panel panel-card" id="tpEmbed">
+    <div class="panel-label">Step 2 · Understanding</div>
+    <div class="panel-body">Tokens become <strong style="color:var(--purple)">numbers in space</strong> — embeddings. Words with similar meaning land close together. "Send", "pay", "transfer" cluster near each other. I can reason because of geometry, not grammar.</div>
+    <div class="embed-canvas-wrap">
+      <canvas id="embedCanvas"></canvas>
+    </div>
+    <div class="panel-highlight">
+      <strong>SIINDEX in action:</strong> When you type "send INDX to Jake", the embeddings for "send" + "INDX" + "Jake" are close to <em>payment</em> patterns — so I automatically activate the Payment capability. Not rules, geometry.
+    </div>
+  </div>
+
+  <!-- TAB 3: PREDICT -->
+  <div class="tab-panel panel-card" id="tpPredict">
+    <div class="panel-label">Step 3 · Generation</div>
+    <div class="panel-body">I don't write sentences — I pick the next token, then start again. Each pick is a <strong style="color:var(--green)">probability distribution</strong> over every word I know. I sample from it. That's why lowering temperature makes me more predictable.</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">Input: "Sending 5 INDX to Ana will cost…"</div>
+    <div class="pred-output" id="predOutput"><span class="pred-cursor"></span></div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">Next token candidates:</div>
+    <div class="pred-probs" id="predProbs"></div>
+    <button class="pred-btn" onclick="runPrediction()">▶ Generate next token</button>
+  </div>
+
+  <!-- TAB 4: CONTEXT -->
+  <div class="tab-panel panel-card" id="tpContext">
+    <div class="panel-label">Step 4 · Context Window</div>
+    <div class="panel-body">My "memory" is a desk, not a brain. Every turn I re-read the <strong style="color:var(--gold)">whole conversation</strong> from scratch. When the desk fills up, the oldest messages fall off the front — I forget them entirely.</div>
+    <div class="ctx-desk">
+      <div class="ctx-label">Context window usage <span id="ctxPct">61%</span> of 128K tokens</div>
+      <div class="ctx-bar">
+        <div class="ctx-seg sys" id="ctxSys" style="width:18%">System</div>
+        <div class="ctx-seg hist" id="ctxHist" style="width:35%">History</div>
+        <div class="ctx-seg usr" id="ctxUsr" style="width:8%">You</div>
+        <div class="ctx-seg free" id="ctxFree" style="width:39%">Free</div>
+      </div>
+      <div class="ctx-legend">
+        <div class="ctx-dot sys">System prompt</div>
+        <div class="ctx-dot hist">Chat history</div>
+        <div class="ctx-dot usr">Your message</div>
+        <div class="ctx-dot free">Available</div>
+      </div>
+    </div>
+    <div class="ctx-insight">
+      <strong>⚡ SIINDEX optimises this.</strong> By switching off capabilities you don't need, I shrink the system prompt — freeing tokens for longer conversations and cutting per-turn cost. Every inactive capability saves ~200–800 tokens per call.
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="pred-btn" onclick="simulateContextGrowth()">📨 Simulate conversation growth</button>
+      <button class="pred-btn" onclick="resetContextViz()" style="background:rgba(255,77,109,0.12);border-color:rgba(255,77,109,0.3);color:var(--red);">↺ Reset</button>
+    </div>
+  </div>
+
+  <!-- TAB 5: COST -->
+  <div class="tab-panel panel-card" id="tpCost">
+    <div class="panel-label">Step 5 · Cost</div>
+    <div class="panel-body">Input tokens (your prompt + my system) cost one rate. Output tokens (my reply) cost <strong style="color:var(--red)">4–5× more</strong> — generated one at a time. Short replies cut cost and wait time simultaneously.</div>
+    <div class="cost-grid">
+      <div class="cost-card">
+        <div class="cost-val" style="color:var(--blue)" id="costIn">~$0.003</div>
+        <div class="cost-lbl">Input tokens / call</div>
+      </div>
+      <div class="cost-card">
+        <div class="cost-val" style="color:var(--red)" id="costOut">~$0.012</div>
+        <div class="cost-lbl">Output tokens / call</div>
+      </div>
+      <div class="cost-card">
+        <div class="cost-val" style="color:var(--gold)" id="costSess">~$0.19</div>
+        <div class="cost-lbl">Per session (est)</div>
+      </div>
+      <div class="cost-card">
+        <div class="cost-val" style="color:var(--green)" id="costSave">62%</div>
+        <div class="cost-lbl">Saved by routing</div>
+      </div>
+    </div>
+    <div class="cost-bar-wrap">
+      <div class="cost-bar-labels"><span style="color:var(--blue)">Input</span><span id="costInPct">20%</span></div>
+      <div class="cost-bar-track"><div class="cost-bar-fill input" id="costInBar" style="width:20%;"></div></div>
+    </div>
+    <div class="cost-bar-wrap">
+      <div class="cost-bar-labels"><span style="color:var(--red)">Output (4–5× rate)</span><span id="costOutPct">80%</span></div>
+      <div class="cost-bar-track"><div class="cost-bar-fill output" id="costOutBar" style="width:80%;"></div></div>
+    </div>
+    <div class="panel-highlight"><strong>Smart routing saves money:</strong> When SIINDEX detects a simple payment request, it drops NFT, governance, and social capabilities — cutting system prompt size and input cost per turn.</div>
+  </div>
+</div>
+
+<!-- ══ SECTION 2: CAPABILITY MANAGER ══ -->
+<div class="section">
+  <div class="cap-header">
+    <div class="cap-header-left">SIINDEX Capabilities</div>
+    <div class="cap-mode-badge" id="capModeBadge">⚡ Auto-routing ON</div>
+  </div>
+
+  <!-- Auto detect toggle -->
+  <div class="cap-auto-strip">
+    <div>
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px;">Smart Capability Routing</div>
+      <div class="cap-auto-label">SIINDEX detects your task and activates only what it needs</div>
+    </div>
+    <div class="toggle-pill on" id="autoToggle" onclick="toggleAutoMode()"><div class="toggle-knob"></div></div>
+  </div>
+
+  <!-- Detect from input -->
+  <input class="cap-detect-input" id="capDetectInput" type="text"
+    placeholder="Type what you want to do… SIINDEX routes itself"
+    oninput="autoDetectCapabilities(this.value)">
+
+  <!-- Capability grid -->
+  <div class="cap-grid" id="capGrid">
+    <!-- Injected by JS -->
+  </div>
+
+  <!-- Token savings -->
+  <div class="tok-savings">
+    <div class="ts-row">
+      <div class="ts-label">Active context tokens</div>
+      <div class="ts-val" id="tsActive" style="color:var(--cyan)">0</div>
+    </div>
+    <div class="ts-row">
+      <div class="ts-label">Tokens saved vs. full load</div>
+      <div class="ts-val" id="tsSaved" style="color:var(--green)">0</div>
+    </div>
+    <div class="ts-bar-track"><div class="ts-bar-fill" id="tsFill" style="width:0%"></div></div>
+    <div class="ts-insight" id="tsInsight">Switch off unused capabilities to save tokens and keep longer conversations in context.</div>
+  </div>
+</div>
+
+<!-- CITIZEN MEMORY VIEWER -->
+<div class="section">
+  <div class="mem-header">
+    <div class="mem-title">🧠 What SIINDEX Knows About You <span class="mem-badge">Citizen Memory</span></div>
+    <div class="mem-clear-btn" onclick="clearCitizenMemory()">Clear</div>
+  </div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;" id="memViewer">
+    <div class="mem-empty">Loading citizen memory…</div>
+  </div>
+  <div style="font-size:11px;color:var(--text-muted);margin-top:10px;line-height:1.5;">
+    This memory persists across every session. Use <strong style="color:var(--purple)">@siindex remember [fact]</strong> in your PAG to store anything. Alerts and notes accumulate here automatically.
+  </div>
+</div>
+
+<!-- FOUNDER SI TOOLS — pinned hub (gated, founder-only) -->
+<div id="founderHub" style="display:none;padding:0 16px 24px">
+  <div style="font-size:11px;color:var(--purple);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px">⚿ Founder SI Tools</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <a href="siindex-brain.html" style="text-decoration:none;background:#1A1D2E;border:1px solid rgba(139,63,232,.25);border-radius:14px;padding:14px;display:block">
+      <div style="font-size:20px;margin-bottom:6px">🧠</div>
+      <div style="font-size:13px;font-weight:700;color:#E8EAF0">SI Brain</div>
+      <div style="font-size:11px;color:rgba(232,234,240,.5);margin-top:2px">Cognitive architecture</div>
+    </a>
+    <a href="siindex-dev.html" style="text-decoration:none;background:#1A1D2E;border:1px solid rgba(139,63,232,.25);border-radius:14px;padding:14px;display:block">
+      <div style="font-size:20px;margin-bottom:6px">⚙️</div>
+      <div style="font-size:13px;font-weight:700;color:#E8EAF0">SI Dev</div>
+      <div style="font-size:11px;color:rgba(232,234,240,.5);margin-top:2px">Goal-driven development</div>
+    </a>
+    <a href="siindex-design.html" style="text-decoration:none;background:#1A1D2E;border:1px solid rgba(139,63,232,.25);border-radius:14px;padding:14px;display:block">
+      <div style="font-size:20px;margin-bottom:6px">🎨</div>
+      <div style="font-size:13px;font-weight:700;color:#E8EAF0">SI Design</div>
+      <div style="font-size:11px;color:rgba(232,234,240,.5);margin-top:2px">Autonomous UI/UX</div>
+    </a>
+    <a href="siindex-knowledge.html" style="text-decoration:none;background:#1A1D2E;border:1px solid rgba(139,63,232,.25);border-radius:14px;padding:14px;display:block">
+      <div style="font-size:20px;margin-bottom:6px">📚</div>
+      <div style="font-size:13px;font-weight:700;color:#E8EAF0">SI Knowledge</div>
+      <div style="font-size:11px;color:rgba(232,234,240,.5);margin-top:2px">Enterprise knowledge graph</div>
+    </a>
+    <a href="founders-pool.html" style="text-decoration:none;background:#1A1D2E;border:1px solid rgba(255,184,0,.2);border-radius:14px;padding:14px;display:block">
+      <div style="font-size:20px;margin-bottom:6px">🏛️</div>
+      <div style="font-size:13px;font-weight:700;color:#E8EAF0">Treasury Monitor</div>
+      <div style="font-size:11px;color:rgba(232,234,240,.5);margin-top:2px">Founders pool</div>
+    </a>
+    <a href="founder-pipeline.html" style="text-decoration:none;background:#1A1D2E;border:1px solid rgba(255,184,0,.2);border-radius:14px;padding:14px;display:block">
+      <div style="font-size:20px;margin-bottom:6px">🤝</div>
+      <div style="font-size:13px;font-weight:700;color:#E8EAF0">Partner Pipeline</div>
+      <div style="font-size:11px;color:rgba(232,234,240,.5);margin-top:2px">BD &amp; deals CRM</div>
+    </a>
+  </div>
+</div>
+
+<div class="bottom-spacer"></div>
+<div id="toast"></div>
+
+<nav class="bottom-nav">
+  <div class="nav-item" onclick="window.location.href='citizen-dashboard.html'"><div class="nav-icon">🏛️</div><div class="nav-label">Home</div></div>
+  <div class="nav-item" onclick="window.location.href='marketplace.html'"><div class="nav-icon">🛒</div><div class="nav-label">Market</div></div>
+  <div class="nav-item" onclick="window.location.href='portfolio.html'"><div class="nav-icon">📊</div><div class="nav-label">Portfolio</div></div>
+  <div class="nav-item" onclick="window.location.href='pag.html'"><div class="nav-icon">🤖</div><div class="nav-label">SIINDEX</div></div>
+  <div class="nav-item" onclick="window.location.href='profile.html'"><div class="nav-icon">👤</div><div class="nav-label">Profile</div></div>
+</nav>
+
+<script>
+const INDX_PRICE_USD = 0.24;
+
+// ═══════════════════════════════════════════════
+// CYBERTRON HEX CANVAS
+// ═══════════════════════════════════════════════
+(function initCanvas() {
+  const cv = document.getElementById('cyberCanvas');
+  const ctx = cv.getContext('2d');
+  const COLORS = ['#00D4FF','#8B3FE8','#2B35D8','#00E5A0','#FFB800'];
+  let W, H, pts;
+  const FRAME_MS = 1000/22, N = 24;
+  let lastT = 0;
+  function resize() {
+    W = cv.width = window.innerWidth;
+    H = cv.height = window.innerHeight;
+    pts = Array.from({length:N}, () => ({
+      x:Math.random()*W, y:Math.random()*H,
+      vx:(Math.random()-0.5)*0.44, vy:(Math.random()-0.5)*0.44,
+      r:1.8+Math.random()*2.4,
+      color:COLORS[Math.floor(Math.random()*COLORS.length)],
+      phase:Math.random()*Math.PI*2
+    }));
+  }
+  window.addEventListener('resize', resize); resize();
+  function draw(ts) {
+    requestAnimationFrame(draw);
+    if (ts-lastT<FRAME_MS) return; lastT=ts;
+    ctx.clearRect(0,0,W,H);
+    pts.forEach(p => {
+      p.x+=p.vx; p.y+=p.vy; p.phase+=0.02;
+      if(p.x<0||p.x>W)p.vx*=-1; if(p.y<0||p.y>H)p.vy*=-1;
+      const op=0.14+0.10*Math.sin(p.phase);
+      ctx.save(); ctx.translate(p.x,p.y); ctx.beginPath();
+      for(let i=0;i<6;i++){const a=i*Math.PI/3-Math.PI/6;i===0?ctx.moveTo(p.r*Math.cos(a),p.r*Math.sin(a)):ctx.lineTo(p.r*Math.cos(a),p.r*Math.sin(a));}
+      ctx.closePath(); ctx.fillStyle=p.color+Math.round(op*255).toString(16).padStart(2,'0'); ctx.fill(); ctx.restore();
+    });
+    for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
+      const d=Math.hypot(pts[i].x-pts[j].x,pts[i].y-pts[j].y);
+      if(d<130){ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);
+        ctx.strokeStyle=`rgba(0,212,255,${(1-d/130)*0.10})`;ctx.lineWidth=0.5;ctx.stroke();}
+    }
+  }
+  requestAnimationFrame(draw);
+})();
+
+// ═══════════════════════════════════════════════
+// TAB SWITCHING
+// ═══════════════════════════════════════════════
+function switchThinkTab(el, key) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tp'+key.charAt(0).toUpperCase()+key.slice(1)).classList.add('active');
+  if (key === 'embed') drawEmbedCanvas();
+  if (key === 'predict') initPrediction();
+  if (key === 'context') initContextViz();
+}
+
+// ═══════════════════════════════════════════════
+// TAB 1: TOKENIZATION
+// ═══════════════════════════════════════════════
+const SENTENCES = {
+  'The cat sat on the mat.': [' The',' cat',' sat',' on',' the',' mat','.'],
+  'Send 10 INDX to jake.IN$DEX': ['Send',' 10',' IND','X',' to',' jake','.IN','$','DE','X'],
+  'Swap SOL for 25.75 INDX tokens': ['Sw','ap',' SOL',' for',' 25','.','75',' IND','X',' tokens'],
+  "What's my Wisdom Score?": ['What',"'s",' my',' Wis','dom',' Score','?'],
+};
+
+function tokenizeExample(el, sentence) {
+  document.querySelectorAll('.s-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  const tokens = SENTENCES[sentence] || sentence.split(' ');
+  const display = document.getElementById('tokenDisplay');
+  display.innerHTML = tokens.map((t,i) => {
+    const cls = 'tok tok-'+(i%5);
+    const txt = t.replace(/^\s/, '<span class="tok-space">␣</span>').replace(/^ /, '');
+    const hasSpace = t.startsWith(' ');
+    return `<span class="${cls}">${hasSpace?'<span class="tok-space">␣</span>':''}${t.trimStart()}</span>`;
+  }).join('');
+  document.getElementById('tokCount').textContent = tokens.length;
+  document.getElementById('charCount').textContent = sentence.length;
+  document.getElementById('wordCount').textContent = sentence.trim().split(/\s+/).length;
+}
+
+// init tokenize
+tokenizeExample(document.querySelector('.s-chip.active'), 'The cat sat on the mat.');
+
+// ═══════════════════════════════════════════════
+// TAB 2: EMBEDDING CANVAS
+// ═══════════════════════════════════════════════
+const EMBED_WORDS = [
+  { word:'send', x:0.20, y:0.36, cluster:'payment', color:'#00D4FF' },
+  { word:'pay',  x:0.25, y:0.45, cluster:'payment', color:'#00D4FF' },
+  { word:'transfer', x:0.15, y:0.55, cluster:'payment', color:'#00D4FF' },
+  { word:'swap', x:0.40, y:0.25, cluster:'dex', color:'#8B3FE8' },
+  { word:'trade', x:0.50, y:0.20, cluster:'dex', color:'#8B3FE8' },
+  { word:'exchange', x:0.45, y:0.36, cluster:'dex', color:'#8B3FE8' },
+  { word:'INDX', x:0.75, y:0.30, cluster:'token', color:'#FFB800' },
+  { word:'SOL',  x:0.80, y:0.45, cluster:'token', color:'#FFB800' },
+  { word:'vote', x:0.20, y:0.75, cluster:'gov', color:'#00E5A0' },
+  { word:'governance', x:0.30, y:0.80, cluster:'gov', color:'#00E5A0' },
+  { word:'NFT',  x:0.65, y:0.70, cluster:'nft', color:'#FF4D6D' },
+  { word:'mint', x:0.75, y:0.78, cluster:'nft', color:'#FF4D6D' },
+];
+
+function drawEmbedCanvas() {
+  const cv = document.getElementById('embedCanvas');
+  const w = cv.offsetWidth; const h = 180;
+  cv.width = w * devicePixelRatio; cv.height = h * devicePixelRatio;
+  cv.style.width = w+'px'; cv.style.height = h+'px';
+  const ctx = cv.getContext('2d');
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  ctx.clearRect(0,0,w,h);
+
+  // Draw cluster halos
+  const clusters = {};
+  EMBED_WORDS.forEach(wrd => {
+    if (!clusters[wrd.cluster]) clusters[wrd.cluster] = {x:0,y:0,n:0,color:wrd.color};
+    clusters[wrd.cluster].x += wrd.x; clusters[wrd.cluster].y += wrd.y; clusters[wrd.cluster].n++;
+  });
+  Object.values(clusters).forEach(c => {
+    const cx=(c.x/c.n)*w; const cy=(c.y/c.n)*h;
+    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,48);
+    g.addColorStop(0,c.color+'22'); g.addColorStop(1,c.color+'00');
+    ctx.beginPath(); ctx.arc(cx,cy,48,0,Math.PI*2);
+    ctx.fillStyle=g; ctx.fill();
+  });
+
+  // Draw connection lines within same cluster
+  for (let i=0;i<EMBED_WORDS.length;i++) for(let j=i+1;j<EMBED_WORDS.length;j++) {
+    if (EMBED_WORDS[i].cluster !== EMBED_WORDS[j].cluster) continue;
+    ctx.beginPath();
+    ctx.moveTo(EMBED_WORDS[i].x*w, EMBED_WORDS[i].y*h);
+    ctx.lineTo(EMBED_WORDS[j].x*w, EMBED_WORDS[j].y*h);
+    ctx.strokeStyle=EMBED_WORDS[i].color+'33'; ctx.lineWidth=0.8; ctx.stroke();
+  }
+
+  // Draw words as dots + labels
+  EMBED_WORDS.forEach(wrd => {
+    const px=wrd.x*w, py=wrd.y*h;
+    ctx.beginPath(); ctx.arc(px,py,5,0,Math.PI*2);
+    ctx.fillStyle=wrd.color+'CC'; ctx.fill();
+    ctx.strokeStyle=wrd.color+'66'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle=wrd.color; ctx.font='bold 9px -apple-system,sans-serif';
+    ctx.fillText(wrd.word, px+7, py+3);
+  });
+}
+
+// ═══════════════════════════════════════════════
+// TAB 3: PREDICTION
+// ═══════════════════════════════════════════════
+let predText = '';
+let predRunning = false;
+const PRED_STEPS = [
+  { next:'approximately', probs:[{w:'approximately',p:34},{w:'about',p:28},{w:'roughly',p:18},{w:'just',p:11},{w:'less',p:9}] },
+  { next:'0.10', probs:[{w:'0.10',p:58},{w:'0.12',p:19},{w:'0.05',p:12},{w:'nothing',p:7},{w:'0.50',p:4}] },
+  { next:'INDX', probs:[{w:'INDX',p:78},{w:'Solana',p:10},{w:'tokens',p:7},{w:'worth',p:3},{w:'units',p:2}] },
+  { next:'in', probs:[{w:'in',p:44},{w:'at',p:30},{w:'–',p:15},{w:'+',p:7},{w:'from',p:4}] },
+  { next:'transaction', probs:[{w:'transaction',p:36},{w:'network',p:32},{w:'gas',p:18},{w:'protocol',p:9},{w:'Solana',p:5}] },
+  { next:'fees.', probs:[{w:'fees.',p:61},{w:'fees,',p:22},{w:'costs.',p:11},{w:'charges.',p:4},{w:'only.',p:2}] },
+];
+let predStep = 0;
+const PROB_COLORS = ['#00D4FF','#8B3FE8','#00E5A0','#FFB800','#9CA3B8'];
+
+function initPrediction() {
+  predText = ''; predStep = 0;
+  document.getElementById('predOutput').innerHTML = '<span class="pred-cursor"></span>';
+  renderProbBars(PRED_STEPS[0].probs);
+}
+
+function runPrediction() {
+  if (predStep >= PRED_STEPS.length) { initPrediction(); return; }
+  const step = PRED_STEPS[predStep];
+  predText += (predText ? ' ' : '') + step.next;
+  const out = document.getElementById('predOutput');
+  out.innerHTML = predText.split(' ').map((w,i) =>
+    `<span class="pred-token${i === predText.split(' ').length-1 ? ' new' : ''}">${w} </span>`
+  ).join('') + '<span class="pred-cursor"></span>';
+  renderProbBars(PRED_STEPS[Math.min(predStep+1, PRED_STEPS.length-1)].probs);
+  predStep++;
+  if (predStep >= PRED_STEPS.length) document.querySelector('.pred-btn').textContent = '↺ Reset';
+}
+
+function renderProbBars(probs) {
+  document.getElementById('predProbs').innerHTML = probs.map((p,i) => `
+    <div class="prob-row">
+      <div class="prob-word">"${p.w}"</div>
+      <div class="prob-track"><div class="prob-fill" style="width:${p.p}%;background:${PROB_COLORS[i]}88;"></div></div>
+      <div class="prob-pct">${p.p}%</div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════
+// TAB 4: CONTEXT WINDOW
+// ═══════════════════════════════════════════════
+let ctxHistory = 35;
+function initContextViz() { updateCtxViz(); }
+
+function updateCtxViz() {
+  const sys=18, hist=ctxHistory, usr=8;
+  const free=Math.max(0,100-sys-hist-usr);
+  const total=sys+hist+usr;
+  document.getElementById('ctxSys').style.width=sys+'%';
+  document.getElementById('ctxHist').style.width=hist+'%';
+  document.getElementById('ctxUsr').style.width=usr+'%';
+  document.getElementById('ctxFree').style.width=free+'%';
+  document.getElementById('ctxPct').textContent=total+'%';
+}
+
+function simulateContextGrowth() {
+  ctxHistory = Math.min(68, ctxHistory + 8);
+  updateCtxViz();
+  const pct = 18+ctxHistory+8;
+  if (pct > 80) showToast('⚠️ Context filling — oldest messages will drop off');
+  else showToast('📨 +1 exchange added to context');
+}
+
+function resetContextViz() {
+  ctxHistory = 35;
+  updateCtxViz();
+  showToast('🔄 Context window reset');
+}
+
+// ═══════════════════════════════════════════════
+// CAPABILITY MANAGER
+// ═══════════════════════════════════════════════
+const CAPABILITIES = [
+  { id:'payment',    icon:'💸', name:'Payment',     sub:'SovereignPay routing + fees', tokens:420, keywords:['send','pay','transfer','indx to','payment'] },
+  { id:'dex',        icon:'⚡', name:'DEX & Swap',  sub:'Price feeds, routing, slippage', tokens:580, keywords:['swap','trade','exchange','buy indx','sell'] },
+  { id:'nft',        icon:'🖼️', name:'NFT',         sub:'Floor prices, collections, mint', tokens:360, keywords:['nft','mint','collection','buy art','gallery'] },
+  { id:'portfolio',  icon:'📊', name:'Portfolio',   sub:'Holdings, P&L, allocations', tokens:290, keywords:['portfolio','balance','holdings','worth','how much'] },
+  { id:'governance', icon:'⚖️', name:'Governance',  sub:'Proposals, voting, wisdom', tokens:340, keywords:['vote','governance','proposal','wisdom','governance'] },
+  { id:'security',   icon:'🛡️', name:'Security',    sub:'Fraud detection, anomaly alerts', tokens:260, keywords:['security','fraud','suspicious','freeze','protect'] },
+  { id:'social',     icon:'🌍', name:'Social',      sub:'Feed, community, referrals', tokens:220, keywords:['feed','community','refer','post','follow'] },
+  { id:'node',       icon:'📡', name:'Light Node',  sub:'Node status, earnings, uptime', tokens:180, keywords:['node','light node','earning','uptime','validator'] },
+];
+
+// Load or init capability state from localStorage
+const capState = {};
+const _savedCaps = JSON.parse(localStorage.getItem('indx_cap_state') || 'null');
+CAPABILITIES.forEach(c => {
+  capState[c.id] = _savedCaps ? !!_savedCaps[c.id] : (c.id === 'payment' || c.id === 'security');
+});
+let autoMode = localStorage.getItem('indx_cap_auto') !== 'false';
+
+function renderCapGrid() {
+  const grid = document.getElementById('capGrid');
+  grid.innerHTML = CAPABILITIES.map(c => `
+    <div class="cap-card${capState[c.id] ? ' on active-glow' : ''}" id="cap_${c.id}" onclick="toggleCap('${c.id}')">
+      <div class="cap-status"></div>
+      <div class="cap-icon">${c.icon}</div>
+      <div class="cap-name">${c.name}</div>
+      <div class="cap-sub">${c.sub}</div>
+      <div class="cap-tok-badge">~${c.tokens}t</div>
+    </div>
+  `).join('');
+  updateSavings();
+}
+
+function saveCaps() {
+  localStorage.setItem('indx_cap_state', JSON.stringify(capState));
+  localStorage.setItem('indx_cap_auto', String(autoMode));
+}
+
+function toggleCap(id) {
+  if (autoMode) {
+    // Manual override — disable auto mode
+    autoMode = false;
+    document.getElementById('autoToggle').classList.remove('on');
+    document.getElementById('capModeBadge').textContent = '✋ Manual Override';
+  }
+  capState[id] = !capState[id];
+  const card = document.getElementById('cap_'+id);
+  card.classList.toggle('on', capState[id]);
+  card.classList.toggle('active-glow', capState[id]);
+  updateSavings();
+  saveCaps();
+}
+
+function toggleAutoMode() {
+  autoMode = !autoMode;
+  document.getElementById('autoToggle').classList.toggle('on', autoMode);
+  document.getElementById('capModeBadge').textContent = autoMode ? '⚡ Auto-routing ON' : '✋ Manual Override';
+  if (autoMode) {
+    // Reset to defaults
+    CAPABILITIES.forEach(c => { capState[c.id] = c.id === 'payment' || c.id === 'security'; });
+    renderCapGrid();
+  }
+  saveCaps();
+}
+
+let _prevActiveKey = '';
+let _detectTimer = null;
+function autoDetectCapabilities(text) {
+  if (!autoMode) return;
+  clearTimeout(_detectTimer);
+  _detectTimer = setTimeout(() => {
+    const q = text.toLowerCase();
+    if (!q.trim()) {
+      CAPABILITIES.forEach(c => { capState[c.id] = c.id === 'payment' || c.id === 'security'; });
+      renderCapGrid(); _prevActiveKey = ''; return;
+    }
+    // Always keep security on
+    CAPABILITIES.forEach(c => {
+      capState[c.id] = c.id === 'security' || c.keywords.some(k => q.includes(k));
+    });
+    renderCapGrid();
+    saveCaps();
+    // Toast only when active set changes
+    const activeKey = CAPABILITIES.filter(c => capState[c.id]).map(c=>c.id).sort().join(',');
+    if (activeKey !== _prevActiveKey) {
+      _prevActiveKey = activeKey;
+      const active = CAPABILITIES.filter(c => capState[c.id]);
+      if (active.length > 1) showToast('⚡ SIINDEX activated: ' + active.map(c=>c.name).join(', '));
+    }
+  }, 350);
+}
+
+function updateSavings() {
+  const FULL_TOKENS = CAPABILITIES.reduce((s,c) => s+c.tokens, 0);
+  const active = CAPABILITIES.filter(c => capState[c.id]).reduce((s,c) => s+c.tokens, 0);
+  const saved = FULL_TOKENS - active;
+  const pct = Math.round((saved/FULL_TOKENS)*100);
+  document.getElementById('tsActive').textContent = active.toLocaleString() + ' tokens';
+  document.getElementById('tsSaved').textContent = '+' + saved.toLocaleString() + ' tokens freed';
+  document.getElementById('tsFill').style.width = pct + '%';
+  const activeNames = CAPABILITIES.filter(c=>capState[c.id]).map(c=>c.name);
+  document.getElementById('tsInsight').innerHTML = activeNames.length
+    ? `<strong>${activeNames.length} of 8 capabilities active</strong> — ${pct}% of system prompt freed. SIINDEX can hold ${Math.round(saved*1.8).toLocaleString()} more chars of conversation in context.`
+    : 'All capabilities off — SIINDEX runs minimal mode.';
+  // Update cost tab
+  const costSave = document.getElementById('costSave');
+  if (costSave) costSave.textContent = pct + '%';
+}
+
+// ═══════════════════════════════════════════════
+// CITIZEN MEMORY VIEWER
+// ═══════════════════════════════════════════════
+const _MEM_KEY = 'siindex_citizen_memory';
+function renderMemViewer() {
+  const el = document.getElementById('memViewer');
+  if (!el) return;
+  const mem = JSON.parse(localStorage.getItem(_MEM_KEY) || 'null');
+  if (!mem) {
+    el.innerHTML = '<div class="mem-empty">No memory stored yet. Chat with SIINDEX in your PAG to build it up.</div>';
+    return;
+  }
+  const joinDate = mem.joined ? new Date(mem.joined).toLocaleDateString('en-AU', { day:'numeric', month:'short', year:'numeric' }) : '—';
+  const lastDate = mem.lastSession ? new Date(mem.lastSession).toLocaleString('en-AU', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : '—';
+  const notes = (mem.notes||[]);
+  const alerts = (mem.alerts||[]);
+  const rows = [
+    { key:'Name', val: mem.name || '—', cls:'' },
+    { key:'Sessions', val: (mem.sessionsCount||1) + ' total', cls:'accent' },
+    { key:'Joined', val: joinDate, cls:'' },
+    { key:'Last seen', val: lastDate, cls:'' },
+    { key:'Risk profile', val: mem.riskProfile || 'balanced', cls:'' },
+    { key:'Ambient Mode', val: mem.ambientEnabled !== false ? '✅ ON' : '⛔ OFF', cls:'' },
+    { key:'Active alerts', val: alerts.length + ' set', cls: alerts.length ? 'accent' : '' },
+    { key:'Notes stored', val: notes.length + ' items', cls: notes.length ? 'purple' : '' },
+  ];
+  let html = rows.map(r => `
+    <div class="mem-row">
+      <span class="mem-key">${r.key}</span>
+      <span class="mem-val ${r.cls}">${r.val}</span>
+    </div>
+  `).join('');
+  if (alerts.length) {
+    html += `<div class="mem-row" style="flex-direction:column;align-items:flex-start;gap:5px;">
+      <span class="mem-key">Alerts</span>
+      <div>${alerts.slice(-3).map(a => `<div class="mem-note-chip">🔔 ${a.alert.slice(0,45)}${a.alert.length>45?'…':''}</div>`).join('')}</div>
+    </div>`;
+  }
+  if (notes.length) {
+    html += `<div class="mem-row" style="flex-direction:column;align-items:flex-start;gap:5px;">
+      <span class="mem-key">Notes</span>
+      <div class="mem-notes-list">${notes.slice(-5).map(n => `<div class="mem-note-chip">💬 ${n.fact.slice(0,50)}${n.fact.length>50?'…':''}</div>`).join('')}</div>
+    </div>`;
+  }
+  el.innerHTML = html || '<div class="mem-empty">Memory object exists but is empty.</div>';
+}
+
+function clearCitizenMemory() {
+  if (!confirm('Clear all stored citizen memory? This cannot be undone.')) return;
+  localStorage.removeItem(_MEM_KEY);
+  renderMemViewer();
+  showToast('🗑️ Citizen memory cleared');
+}
+
+// Render on load, refresh on tab switch
+renderMemViewer();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) renderMemViewer(); });
+
+// TOAST
+let _tt;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.opacity='1'; t.style.transform='translateX(-50%) translateY(0)';
+  clearTimeout(_tt);
+  _tt = setTimeout(() => { t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(20px)'; }, 2600);
+}
+
+// INIT
+renderCapGrid();
+initPrediction();
+// Animate cost bars on load
+setTimeout(() => {
+  const ib = document.getElementById('costInBar');
+  const ob = document.getElementById('costOutBar');
+  if(ib){ib.style.width='20%';} if(ob){ob.style.width='80%';}
+}, 500);
+</script>
+</body>
+</html>

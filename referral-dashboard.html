@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Referral Dashboard IN$DEX</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <style>
   :root {
     --cyan: #00D4FF; --blue: #2B35D8; --purple: #8B3FE8;
@@ -86,6 +86,43 @@
   /* Toast */
   .toast { position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--surface2); color:var(--text); padding:12px 20px; border-radius:12px; font-size:13px; font-weight:500; transition:transform 0.3s; z-index:200; white-space:nowrap; border:1px solid rgba(0,229,160,0.3); pointer-events:none; }
   .toast.show { transform:translateX(-50%) translateY(0); }
+
+  /* GOD MODE — REFERRAL DASHBOARD */
+  /* F1: Share count tracker */
+  .share-count-bar { background:var(--surface); border-radius:12px; padding:12px 16px; margin-bottom:16px; display:flex; align-items:center; gap:12px; }
+  .sc-icon { font-size:22px; }
+  .sc-info { flex:1; }
+  .sc-title { font-size:13px; font-weight:700; margin-bottom:2px; }
+  .sc-sub { font-size:11px; color:var(--text-muted); }
+  .sc-count { font-size:22px; font-weight:900; color:var(--cyan); }
+
+  /* F2: Milestone progress bar */
+  .milestone-progress { background:var(--surface); border-radius:14px; padding:16px; margin-bottom:16px; }
+  .mp-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .mp-title { font-size:13px; font-weight:700; }
+  .mp-count { font-size:13px; font-weight:700; color:var(--green); }
+  .mp-bar-wrap { height:8px; background:rgba(255,255,255,0.06); border-radius:4px; overflow:hidden; margin-bottom:8px; }
+  .mp-bar-fill { height:100%; background:linear-gradient(90deg,var(--green),var(--cyan)); border-radius:4px; transition:width 0.8s ease; }
+  .mp-milestones { display:flex; justify-content:space-between; }
+  .mp-mark { font-size:10px; color:var(--text-muted); text-align:center; }
+  .mp-mark.reached { color:var(--green); font-weight:700; }
+  .mp-next-reward { font-size:12px; color:var(--gold); margin-top:8px; font-weight:600; }
+
+  /* F3: WhatsApp quick-share with name */
+  .wa-quick-btn { width:100%; padding:14px; border-radius:14px; background:rgba(37,211,102,0.1); border:1px solid rgba(37,211,102,0.25); color:#25D366; font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:8px; transition:background 0.2s; }
+  .wa-quick-btn:active { background:rgba(37,211,102,0.2); }
+
+  /* F4: QR bottom sheet */
+  .qr-sheet-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:150; opacity:0; pointer-events:none; transition:opacity 0.3s; }
+  .qr-sheet-overlay.open { opacity:1; pointer-events:all; }
+  .qr-sheet { position:fixed; bottom:0; left:50%; transform:translateX(-50%) translateY(100%); width:100%; max-width:430px; background:var(--surface); border-radius:24px 24px 0 0; padding:20px 20px 40px; z-index:160; transition:transform 0.35s cubic-bezier(0.32,0.72,0,1); text-align:center; }
+  .qr-sheet.open { transform:translateX(-50%) translateY(0); }
+  .qr-handle { width:36px; height:4px; background:var(--surface3); border-radius:2px; margin:0 auto 16px; }
+  .qr-title { font-size:17px; font-weight:800; margin-bottom:4px; }
+  .qr-sub { font-size:13px; color:var(--text2); margin-bottom:20px; }
+  .qr-canvas-wrap { background:#fff; border-radius:16px; padding:20px; display:inline-flex; margin-bottom:16px; }
+  .qr-link-label { font-size:12px; color:var(--cyan); margin-bottom:16px; word-break:break-all; }
+  .qr-close-btn { padding:14px 32px; border-radius:14px; background:var(--surface2); border:none; color:var(--text2); font-size:14px; font-weight:700; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -114,6 +151,33 @@
     </div>
   </div>
 
+  <!-- F1: Share count tracker -->
+  <div class="share-count-bar">
+    <div class="sc-icon">📤</div>
+    <div class="sc-info">
+      <div class="sc-title">Times you've shared</div>
+      <div class="sc-sub">Every share could be someone's new life.</div>
+    </div>
+    <div class="sc-count" id="shareCountDisplay">0</div>
+  </div>
+
+  <!-- F2: Milestone progress bar -->
+  <div class="milestone-progress">
+    <div class="mp-header">
+      <span class="mp-title">Referral Progress</span>
+      <span class="mp-count" id="mpCountLabel">0 referred</span>
+    </div>
+    <div class="mp-bar-wrap"><div class="mp-bar-fill" id="mpBarFill" style="width:0%"></div></div>
+    <div class="mp-milestones">
+      <div class="mp-mark" id="mp1">1</div>
+      <div class="mp-mark" id="mp5">5</div>
+      <div class="mp-mark" id="mp10">10</div>
+      <div class="mp-mark" id="mp25">25</div>
+      <div class="mp-mark" id="mp50">50</div>
+    </div>
+    <div class="mp-next-reward" id="mpNextReward">Refer your first friend to earn 25 INDX</div>
+  </div>
+
   <!-- Referral Link -->
   <div class="link-card">
     <div class="link-label">Your Referral Link</div>
@@ -121,11 +185,13 @@
       <div class="link-box" id="refLinkDisplay">Loading…</div>
       <button class="copy-btn" onclick="copyLink()">Copy</button>
     </div>
+    <!-- F3: WhatsApp quick-share with name pre-filled -->
+    <button class="wa-quick-btn" id="waQuickBtn" onclick="shareVia('whatsapp')">💬 Share on WhatsApp — 60 seconds to sovereignty</button>
     <div class="share-row">
-      <button class="share-btn" onclick="shareVia('whatsapp')">📱 WhatsApp</button>
       <button class="share-btn" onclick="shareVia('sms')">💬 SMS</button>
       <button class="share-btn" onclick="shareVia('native')">↑ Share</button>
-      <button class="share-btn" onclick="shareVia('qr')">📲 QR</button>
+      <!-- F4: QR opens inline sheet -->
+      <button class="share-btn" onclick="openQRSheet()">📲 QR Code</button>
     </div>
   </div>
 
@@ -173,9 +239,51 @@
 
 </div>
 
+<!-- F4: QR SHEET -->
+<div class="qr-sheet-overlay" id="qrSheetOverlay" onclick="closeQRSheet()"></div>
+<div class="qr-sheet" id="qrSheet">
+  <div class="qr-handle"></div>
+  <div class="qr-title">Your Referral QR</div>
+  <div class="qr-sub">Anyone who scans this gets onboarded to IN$DEX. You earn 25 INDX when they join.</div>
+  <div class="qr-canvas-wrap">
+    <svg id="qrSvg" width="200" height="200" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <!-- Inline SVG QR placeholder — real QR populated by JS -->
+      <rect width="100" height="100" rx="6" fill="#090A10"/>
+      <rect x="8" y="8" width="24" height="24" rx="3" fill="none" stroke="#00D4FF" stroke-width="2.5"/>
+      <rect x="68" y="8" width="24" height="24" rx="3" fill="none" stroke="#00D4FF" stroke-width="2.5"/>
+      <rect x="8" y="68" width="24" height="24" rx="3" fill="none" stroke="#00D4FF" stroke-width="2.5"/>
+      <rect x="12" y="12" width="16" height="16" rx="2" fill="#00D4FF"/>
+      <rect x="72" y="12" width="16" height="16" rx="2" fill="#00D4FF"/>
+      <rect x="12" y="72" width="16" height="16" rx="2" fill="#00D4FF"/>
+      <rect x="36" y="8" width="6" height="6" rx="1" fill="#8B3FE8"/>
+      <rect x="44" y="8" width="6" height="6" rx="1" fill="#00D4FF"/>
+      <rect x="52" y="16" width="6" height="6" rx="1" fill="#8B3FE8"/>
+      <rect x="60" y="8" width="6" height="6" rx="1" fill="#00D4FF"/>
+      <rect x="36" y="40" width="6" height="6" rx="1" fill="#00D4FF"/>
+      <rect x="44" y="40" width="6" height="6" rx="1" fill="#8B3FE8"/>
+      <rect x="52" y="40" width="6" height="6" rx="1" fill="#00D4FF"/>
+      <rect x="60" y="48" width="6" height="6" rx="1" fill="#8B3FE8"/>
+      <rect x="36" y="56" width="6" height="6" rx="1" fill="#00D4FF"/>
+      <rect x="68" y="40" width="6" height="6" rx="1" fill="#8B3FE8"/>
+      <rect x="76" y="48" width="6" height="6" rx="1" fill="#00D4FF"/>
+      <rect x="84" y="40" width="6" height="6" rx="1" fill="#8B3FE8"/>
+      <rect x="68" y="56" width="6" height="6" rx="1" fill="#00D4FF"/>
+      <rect x="36" y="68" width="6" height="6" rx="1" fill="#8B3FE8"/>
+      <rect x="44" y="76" width="6" height="6" rx="1" fill="#00D4FF"/>
+      <rect x="60" y="68" width="6" height="6" rx="1" fill="#8B3FE8"/>
+      <rect x="76" y="68" width="6" height="6" rx="1" fill="#00D4FF"/>
+      <rect x="84" y="76" width="6" height="6" rx="1" fill="#8B3FE8"/>
+      <text x="50" y="97" text-anchor="middle" fill="#5A6080" font-size="5" id="qrLinkLabel">imagenationdex.com/join</text>
+    </svg>
+  </div>
+  <div class="qr-link-label" id="qrLinkText">imagenationdex.com/join</div>
+  <button class="qr-close-btn" onclick="closeQRSheet()">Done</button>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
+  const INDX_PRICE_USD = 0.24;
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
   const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
   const BASE_URL = 'https://imagenationdex.com';
@@ -285,7 +393,6 @@
   }
 
   function showFallback() {
-    // No session show generic prompt
     refCode = 'JOIN';
     refLink = `${BASE_URL}/join`;
     document.getElementById('refLinkDisplay').textContent = 'imagenationdex.com/join';
@@ -295,6 +402,7 @@
     document.getElementById('treeYouSub').textContent = 'Log in to see your referral code';
     document.getElementById('treeLevel').innerHTML = '<div class="tree-empty">Log in to view your network.</div>';
     document.getElementById('activityList').innerHTML = '<div class="activity-empty">Log in to view referral activity.</div>';
+    updateMilestoneBar(0);
   }
 
   // ── SHARE ──
@@ -331,6 +439,155 @@
     t.textContent = msg;
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  // ── F1: Share count tracker ──────────────────────────────────
+  let shareCount = parseInt(localStorage.getItem('indx_referral_share_count') || '0');
+
+  function incrementShareCount() {
+    shareCount++;
+    localStorage.setItem('indx_referral_share_count', shareCount);
+    const el = document.getElementById('shareCountDisplay');
+    if (el) el.textContent = shareCount;
+  }
+
+  document.getElementById('shareCountDisplay').textContent = shareCount;
+
+  // ── F2: Milestone progress bar ──────────────────────────────
+  const REFERRAL_MILESTONES = [1, 5, 10, 25, 50];
+  const REFERRAL_REWARDS = ['25 INDX', '125 INDX', '250+ INDX', '625+ INDX', '1,250+ INDX'];
+
+  function updateMilestoneBar(referred) {
+    document.getElementById('mpCountLabel').textContent = referred + ' referred';
+    // Find next milestone
+    let nextMs = 50; let nextReward = '1,250+ INDX'; let prevMs = 0;
+    for (let i = 0; i < REFERRAL_MILESTONES.length; i++) {
+      if (referred < REFERRAL_MILESTONES[i]) {
+        nextMs = REFERRAL_MILESTONES[i];
+        nextReward = REFERRAL_REWARDS[i];
+        prevMs = i === 0 ? 0 : REFERRAL_MILESTONES[i-1];
+        break;
+      }
+    }
+    const range = nextMs - prevMs;
+    const pct = Math.min(100, ((referred - prevMs) / range) * 100);
+    const fill = document.getElementById('mpBarFill');
+    if (fill) setTimeout(() => fill.style.width = pct.toFixed(1) + '%', 200);
+    // Mark reached milestones
+    REFERRAL_MILESTONES.forEach((ms, i) => {
+      const el = document.getElementById('mp' + ms);
+      if (el) el.classList.toggle('reached', referred >= ms);
+    });
+    const nextLabel = document.getElementById('mpNextReward');
+    if (nextLabel) {
+      nextLabel.textContent = referred >= 50
+        ? '🌟 All milestones reached — Sovereign Referrer!'
+        : 'Next: ' + (nextMs - referred) + ' more to reach ' + nextMs + ' referrals (' + nextReward + ')';
+    }
+  }
+
+  // ── F3: WhatsApp quick-share with name ──────────────────────
+  function buildWAMessage() {
+    const name = citizenName !== 'Sovereign' ? citizenName.split(' ')[0] + ' is on' : 'Join';
+    return name + ' IN$DEX — sovereign wallet in 60 seconds. No bank needed. You get 5 free INDX just for joining. Tap: ' + refLink;
+  }
+
+  // Override shareVia to track share count and use name-personalised message
+  const _origShareVia = window.shareVia;
+
+  function shareVia(channel) {
+    incrementShareCount();
+    const msg = buildWAMessage();
+    if (channel === 'whatsapp') {
+      window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+    } else if (channel === 'sms') {
+      window.location.href = 'sms:?body=' + encodeURIComponent(msg);
+    } else if (channel === 'native') {
+      if (navigator.share) {
+        navigator.share({ title: 'Join IN$DEX', text: 'Get 5 free INDX — no bank needed.', url: refLink });
+      } else {
+        copyLink();
+      }
+    }
+  }
+
+  // ── F4: Inline QR sheet ──────────────────────────────────────
+  function openQRSheet() {
+    incrementShareCount();
+    const label = refLink || BASE_URL + '/join';
+    document.getElementById('qrLinkText').textContent = label.replace('https://','');
+    const labelEl = document.getElementById('qrLinkLabel');
+    if (labelEl) labelEl.textContent = label.replace('https://','');
+    document.getElementById('qrSheetOverlay').classList.add('open');
+    document.getElementById('qrSheet').classList.add('open');
+    showToast('Show this QR to anyone — they\'re sovereign in 60 seconds');
+  }
+
+  function closeQRSheet() {
+    document.getElementById('qrSheetOverlay').classList.remove('open');
+    document.getElementById('qrSheet').classList.remove('open');
+  }
+
+  // Patch loadReferralData to also update milestone bar
+  const _origLoad = loadReferralData;
+  async function loadReferralData() {
+    if (!citizenId) { showFallback(); return; }
+    const { data, error } = await sb.rpc('get_referral_stats', { p_citizen_id: citizenId });
+    if (error || !data) { showFallback(); return; }
+    refCode = data.referral_code || '';
+    refLink = `${BASE_URL}/join?ref=${refCode}`;
+    const totalReferred = parseInt(data.total_referred) || 0;
+    const indxEarned = parseInt(data.indx_earned) || 0;
+    const recent = data.recent_referrals || [];
+    sessionStorage.setItem('citizen_referral_code', refCode);
+    document.getElementById('statReferred').textContent = totalReferred;
+    document.getElementById('statEarned').textContent = indxEarned;
+    document.getElementById('earnedBadge').textContent = indxEarned + ' INDX earned';
+    document.getElementById('refLinkDisplay').textContent = `imagenationdex.com/join?ref=${refCode}`;
+    document.getElementById('treeYouName').textContent = citizenName;
+    document.getElementById('treeYouSub').textContent =
+      totalReferred === 0 ? 'No referrals yet share your link!' :
+      totalReferred + ' citizen' + (totalReferred === 1 ? '' : 's') + ' referred';
+    const treeLevel = document.getElementById('treeLevel');
+    if (recent.length === 0) {
+      treeLevel.innerHTML = '<div class="tree-empty">Share your link to build your network.</div>';
+    } else {
+      const show = recent.slice(0, 5);
+      treeLevel.innerHTML = show.map((r, i) => `
+        <div class="tree-node">
+          <div class="tree-avatar ${r.wisdom_score >= 50 ? 'active' : ''}">${avatarEmoji(i)}</div>
+          <div class="tree-name">${(r.citizen_name || 'Citizen').split(' ')[0]}</div>
+          <div class="tree-indx">${r.wisdom_score >= 50 ? '+75 INDX' : '+25 INDX'}</div>
+        </div>
+      `).join('');
+      if (totalReferred > 5) {
+        const more = document.getElementById('treeMore');
+        more.style.display = '';
+        more.textContent = `+${totalReferred - 5} more in your network`;
+      }
+    }
+    const activityList = document.getElementById('activityList');
+    if (recent.length === 0) {
+      activityList.innerHTML = '<div class="activity-empty">No referrals yet. Share your link and start earning.</div>';
+    } else {
+      activityList.innerHTML = recent.map(r => {
+        const isActive = r.wisdom_score >= 50;
+        const reward = isActive ? '+75 INDX' : '+25 INDX';
+        const event = isActive ? 'Joined + reached Wisdom Score 50' : 'Joined via your referral';
+        return `
+          <div class="activity-item">
+            <div class="activity-icon">${isActive ? '✅' : '⏳'}</div>
+            <div class="activity-info">
+              <div class="activity-name">${r.citizen_name || 'New Citizen'}</div>
+              <div class="activity-event">${event} · ${timeAgo(r.created_at)}</div>
+            </div>
+            <div class="activity-reward" style="color:${isActive ? 'var(--green)' : 'var(--gold)'}">${reward}</div>
+          </div>
+        `;
+      }).join('');
+    }
+    // F2: update milestone bar
+    updateMilestoneBar(totalReferred);
   }
 
   // ── INIT ──

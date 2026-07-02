@@ -117,6 +117,20 @@
   .send-btn:active{opacity:0.85;}
   .send-btn:disabled{opacity:0.35;cursor:not-allowed;}
 
+  /* GOD MODE — QUICK AMOUNTS */
+  .quick-amounts{display:flex;gap:6px;padding:0 20px;margin-top:12px;flex-wrap:wrap;}
+  .qa-chip{padding:7px 14px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);font-size:13px;font-weight:700;color:var(--text-muted);cursor:pointer;transition:all 0.18s;flex-shrink:0;}
+  .qa-chip:active,.qa-chip.qa-active{background:rgba(0,212,255,0.12);border-color:var(--cyan);color:var(--cyan);}
+
+  /* GOD MODE — NUMPAD KEY PULSE */
+  @keyframes keyPulse{0%{transform:scale(1);}40%{transform:scale(0.88);background:var(--surface2);}100%{transform:scale(1);}}
+  .key.pressed{animation:keyPulse 0.18s ease;}
+
+  /* GOD MODE — DRAFT BANNER */
+  .draft-banner{display:none;align-items:center;gap:10px;margin:12px 20px 0;padding:11px 14px;background:rgba(255,184,0,0.07);border:1px solid rgba(255,184,0,0.2);border-radius:12px;font-size:13px;color:var(--gold);cursor:pointer;}
+  .draft-banner.show{display:flex;}
+  .draft-restore{margin-left:auto;font-size:12px;font-weight:700;color:var(--gold);text-decoration:underline;}
+
   /* COUNTRY SHEET */
   .sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:300;opacity:0;pointer-events:none;transition:opacity 0.25s;}
   .sheet-overlay.show{opacity:1;pointer-events:all;}
@@ -162,7 +176,7 @@
   .confirm-pay-btn{width:100%;padding:15px;border-radius:12px;background:var(--cyan);border:none;color:#000;font-size:16px;font-weight:700;cursor:pointer;margin-top:20px;margin-bottom:10px;}
   .confirm-cancel{width:100%;padding:13px;border-radius:12px;background:transparent;border:1px solid var(--border);color:var(--text);font-size:14px;cursor:pointer;}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 </head>
 <body>
 <div class="shell">
@@ -175,6 +189,13 @@
   </div>
 
   <div class="scroll-body">
+
+    <!-- GOD MODE — DRAFT BANNER -->
+    <div class="draft-banner" id="draftBanner" onclick="restoreDraft()">
+      <span>📝</span>
+      <span id="draftLabel">Resume your last draft send?</span>
+      <span class="draft-restore">Restore</span>
+    </div>
 
     <!-- TOKEN SELECTOR -->
     <div class="token-selector">
@@ -204,6 +225,15 @@
       </div>
       <div class="amount-usd" id="amtUsd">≈ <span>$0.00 USD</span></div>
       <div class="balance-row">Balance: <span id="balDisplay">1,240 INDX</span><span class="use-max" onclick="useMax()">Use Max</span></div>
+    </div>
+
+    <!-- GOD MODE — QUICK AMOUNTS -->
+    <div class="quick-amounts" id="quickAmounts">
+      <div class="qa-chip" onclick="setQuickAmt(10)">$10</div>
+      <div class="qa-chip" onclick="setQuickAmt(25)">$25</div>
+      <div class="qa-chip" onclick="setQuickAmt(50)">$50</div>
+      <div class="qa-chip" onclick="setQuickAmt(100)">$100</div>
+      <div class="qa-chip" onclick="setQuickAmt(200)">$200</div>
     </div>
 
     <!-- NUMPAD -->
@@ -356,6 +386,7 @@
   </div>
 </div>
 
+<script src="assets/indx-shield.js"></script>
 <script>
 // ── SUPABASE CLIENT ──
 const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
@@ -378,7 +409,7 @@ const CORRIDORS = [
   { flag:'🇲🇾', name:'Malaysia',          currency:'MYR', rate:4.71,  dial:'+60'  },
   { flag:'🇹🇭', name:'Thailand',          currency:'THB', rate:36.5,  dial:'+66'  },
   { flag:'🇮🇳', name:'India',             currency:'INR', rate:83.5,  dial:'+91'  },
-  { flag:'🇦🇺', name:'Australia',         currency:'AUD', rate:1.53,  dial:'+61'  },
+  { flag:'🇦🇺', name:'Australia',         currency:'AUD', rate:1.53,  dial:'+61'  }, // AUDIT-EXEMPT: fiat corridor currency — display only in selector, all INDX pricing remains USD
   { flag:'🇳🇿', name:'New Zealand',       currency:'NZD', rate:1.68,  dial:'+64'  },
 ];
 
@@ -755,6 +786,123 @@ function showToast(msg) {
 // ── INIT ──
 updateDisplay();
 document.getElementById('recentList').style.display = 'flex';
+
+// ════════════════════════════════════════════════
+// GOD MODE — SEND.HTML
+// ════════════════════════════════════════════════
+const INDX_PRICE_USD = 0.24;
+const DRAFT_KEY = 'indx_send_draft';
+const BALANCE_KEY = 'indx_send_balance';
+
+// 1. BALANCE SYNC — pull live balance from sessionStorage on load
+(function syncBalanceFromSession() {
+  const sessBal = sessionStorage.getItem('citizen_balance');
+  if (sessBal && !isNaN(parseInt(sessBal))) {
+    TOKENS.indx.balance = parseInt(sessBal);
+    document.getElementById('bal-indx').textContent = parseInt(sessBal).toLocaleString() + ' available';
+    document.getElementById('balDisplay').textContent = parseInt(sessBal).toLocaleString() + ' INDX';
+  }
+})();
+
+// 2. QUICK AMOUNT CHIPS — convert USD to token units
+function setQuickAmt(usd) {
+  const t = TOKENS[selectedToken];
+  const tokenUnits = usd / t.rate;
+  amountStr = t.decimals === 0 ? Math.round(tokenUnits).toString() : tokenUnits.toFixed(t.decimals);
+  updateDisplay();
+  // Visual highlight
+  document.querySelectorAll('.qa-chip').forEach(c => c.classList.remove('qa-active'));
+  event.currentTarget.classList.add('qa-active');
+  setTimeout(() => event.currentTarget.classList.remove('qa-active'), 600);
+}
+
+// 3. DRAFT SAVE/RESTORE — persist form state to localStorage
+function saveDraft() {
+  const phone = document.getElementById('phoneInput').value.trim();
+  const memo  = document.getElementById('memoInput').value.trim();
+  if (amountStr === '0' && !phone) return; // nothing to save
+  const draft = {
+    amount: amountStr,
+    token: selectedToken,
+    phone: phone,
+    dialCode: selectedDialCode,
+    dialFlag: selectedDialFlag,
+    memo: memo,
+    corridor: selectedCorridor ? selectedCorridor.name : '',
+    ts: Date.now()
+  };
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+}
+
+function checkDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (!d || Date.now() - d.ts > 24 * 3600 * 1000) { localStorage.removeItem(DRAFT_KEY); return; }
+    if (d.amount === '0' && !d.phone) return;
+    const banner = document.getElementById('draftBanner');
+    const label  = document.getElementById('draftLabel');
+    const parts  = [];
+    if (d.amount && d.amount !== '0') parts.push(d.amount + ' ' + (d.token || 'INDX').toUpperCase());
+    if (d.phone)   parts.push('to ' + d.dialCode + ' ' + d.phone);
+    label.textContent = 'Resume draft: ' + (parts.join(' ') || 'unsent transfer');
+    banner.classList.add('show');
+  } catch(e) {}
+}
+
+function restoreDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (d.token) selectToken(d.token);
+    if (d.amount) { amountStr = d.amount; updateDisplay(); }
+    if (d.phone) {
+      selectedDialCode = d.dialCode || '+61';
+      selectedDialFlag = d.dialFlag || '🇦🇺';
+      document.getElementById('dialFlag').textContent = selectedDialFlag;
+      document.getElementById('dialCode').textContent = selectedDialCode;
+      document.getElementById('phoneInput').value = d.phone;
+      onPhoneInput();
+    }
+    if (d.memo) document.getElementById('memoInput').value = d.memo;
+    if (d.corridor) {
+      const corr = CORRIDORS.find(c => c.name === d.corridor);
+      if (corr) setSelectedCorridor(corr);
+    }
+    document.getElementById('draftBanner').classList.remove('show');
+    localStorage.removeItem(DRAFT_KEY);
+    showToast('Draft restored');
+  } catch(e) {}
+}
+
+// 4. NUMPAD KEY PULSE ANIMATION
+const origKeyPress = keyPress;
+const numpadKeys = document.querySelectorAll('.key');
+numpadKeys.forEach(k => {
+  k.addEventListener('click', function() {
+    this.classList.remove('pressed');
+    void this.offsetWidth; // force reflow
+    this.classList.add('pressed');
+    setTimeout(() => this.classList.remove('pressed'), 200);
+  });
+});
+
+// Auto-save draft on every input change
+document.getElementById('phoneInput').addEventListener('input', saveDraft);
+document.getElementById('memoInput').addEventListener('input', saveDraft);
+// Override keyPress to also save draft
+(function patchKeyPress() {
+  const origUpdate = updateDisplay;
+  window.updateDisplay = function() {
+    origUpdate();
+    saveDraft();
+  };
+})();
+
+// Check for draft on load
+checkDraft();
 </script>
 </body>
 </html>

@@ -47,13 +47,38 @@
     .change-up{color:var(--green);}
     .change-dn{color:var(--red);}
     #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+
+    /* GOD MODE — LEADERBOARD */
+    /* F2: Search bar */
+    .lb-search-wrap{padding:10px 14px;border-bottom:1px solid var(--border);}
+    .lb-search{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 14px;font-size:14px;color:var(--text);outline:none;}
+    .lb-search:focus{border-color:rgba(0,212,255,0.35);}
+    .lb-search::placeholder{color:var(--text-muted);}
+
+    /* F1: Live drift flash */
+    @keyframes lbFlashUp{0%{background:rgba(0,229,160,0.18);}100%{background:transparent;}}
+    @keyframes lbFlashDn{0%{background:rgba(255,77,109,0.12);}100%{background:transparent;}}
+    .flash-up{animation:lbFlashUp 0.8s ease;}
+    .flash-dn{animation:lbFlashDn 0.8s ease;}
+    .live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:4px;vertical-align:middle;animation:sdot 2s ease-in-out infinite;}
+    @keyframes sdot{0%,100%{opacity:1}50%{opacity:0.2}}
+
+    /* F3: Progress bar to next rank */
+    .mrb-progress-wrap{margin-top:8px;}
+    .mrb-progress-label{font-size:10px;color:var(--text-muted);margin-bottom:4px;display:flex;justify-content:space-between;}
+    .mrb-progress-track{height:5px;background:var(--surface3);border-radius:3px;overflow:hidden;}
+    .mrb-progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:3px;transition:width 1s ease;}
+
+    /* F4: Share chip */
+    .mrb-share{display:inline-flex;align-items:center;gap:5px;margin-top:10px;padding:7px 14px;border-radius:20px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.25);font-size:12px;font-weight:700;color:var(--cyan);cursor:pointer;transition:background 0.2s;}
+    .mrb-share:active{background:rgba(0,212,255,0.15);}
   </style>
 </head>
 <body>
 <div class="phone">
   <div class="topbar">
     <button class="tb-back" onclick="history.back()">←</button>
-    <div class="tb-title">🏆 Sovereign Rankings</div>
+    <div class="tb-title">🏆 Sovereign Rankings <span class="live-dot" title="Live"></span></div>
   </div>
   <div class="tab-bar">
     <div class="tab active" id="tabWisdom" onclick="switchTab('wisdom')">Wisdom Score</div>
@@ -65,6 +90,11 @@
     <div class="period-btn active" id="pAll" onclick="setPeriod(this,'all')">All-time</div>
     <div class="period-btn" id="pWeek" onclick="setPeriod(this,'week')">This week</div>
     <div class="period-btn" id="pMonth" onclick="setPeriod(this,'month')">This month</div>
+  </div>
+
+  <!-- F2: SEARCH BAR -->
+  <div class="lb-search-wrap">
+    <input class="lb-search" id="lbSearch" type="search" placeholder="🔍  Search citizens…" oninput="filterList(this.value)">
   </div>
 
   <div class="scroll-body" id="scrollBody">
@@ -95,10 +125,19 @@
     </div>
 
     <!-- YOUR RANK -->
-    <div class="my-rank-bar">
-      <div class="mrb-rank">#47</div>
-      <div class="mrb-body"><div class="mrb-name">You · Arthur H.</div><div class="mrb-detail">Wisdom Score · Top 8% of citizens</div></div>
-      <div class="mrb-score">124</div>
+    <div class="my-rank-bar" id="myRankBar" style="flex-direction:column;align-items:stretch;gap:0;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="mrb-rank" id="mrbRank">#47</div>
+        <div class="mrb-body"><div class="mrb-name" id="mrbName">You · Arthur H.</div><div class="mrb-detail" id="mrbDetail">Wisdom Score · Top 8% of citizens</div></div>
+        <div class="mrb-score" id="mrbScore">124</div>
+      </div>
+      <!-- F3: Progress to next rank -->
+      <div class="mrb-progress-wrap" id="mrbProgressWrap">
+        <div class="mrb-progress-label"><span id="mrbProgressLabel">Progress to #40</span><span id="mrbProgressPct">38%</span></div>
+        <div class="mrb-progress-track"><div class="mrb-progress-fill" id="mrbProgressFill" style="width:38%;"></div></div>
+      </div>
+      <!-- F4: Share chip -->
+      <div class="mrb-share" id="mrbShare" onclick="shareRank()">📣 Share your rank</div>
     </div>
 
     <!-- LIST -->
@@ -170,34 +209,121 @@ const DATA={
 const NAMES=['Amara_Eze','NgozI_W','Budi_Sol','Carlos_MX','Priya_Sol','Kofi_GH','Mei_Lin','Ade_NG','Tupac_PE','Aisha_KE'];
 let activeTab='wisdom';
 
-function switchTab(t){
+// GOD MODE — LEADERBOARD FEATURES
+
+// F2: Persistence helpers
+const LB_TAB_KEY='indx_lb_tab';
+const LB_PER_KEY='indx_lb_period';
+
+// GOD MODE PATCH — switchTab saves tab to localStorage
+const _origSwitchTab=function(t){
   TABS.forEach(id=>document.getElementById('tab'+id.charAt(0).toUpperCase()+id.slice(1)).classList.toggle('active',id===t));
   activeTab=t;
   rebuildList();
-}
-function setPeriod(el,p){
+};
+function switchTab(t){_origSwitchTab(t);localStorage.setItem(LB_TAB_KEY,t);}
+
+// GOD MODE PATCH — setPeriod saves period to localStorage
+const _origSetPeriod=function(el,p){
   ['pAll','pWeek','pMonth'].forEach(id=>document.getElementById(id).classList.remove('active'));
   el.classList.add('active');
   rebuildList();
-}
-function rebuildList(){
+};
+function setPeriod(el,p){_origSetPeriod(el,p);localStorage.setItem(LB_PER_KEY,p);}
+
+function rebuildList(filterQ){
+  const q=(filterQ||'').toLowerCase().trim();
   const d=DATA[activeTab];
-  const rows=NAMES.map((n,i)=>`
-    <div class="rank-item"${n==='You'?' style="background:rgba(0,212,255,0.04);"':''}>
-      <div class="ri-rank" style="color:${i<3?'var(--gold)':'inherit'}">${i+4}</div>
+  const rows=NAMES.slice(3).map((n,i)=>{
+    if(q&&!n.toLowerCase().includes(q))return '';
+    return `<div class="rank-item" data-name="${n}">
+      <div class="ri-rank" style="color:${i<1?'var(--gold)':'inherit'}">${i+4}</div>
       <div class="ri-avatar" style="background:rgba(0,212,255,0.08);">🌐</div>
       <div class="ri-body"><div class="ri-name">${n}</div><div class="ri-detail">Citizen · Global</div></div>
-      <div class="ri-score"><div class="ri-val" style="color:var(--cyan);">${d.vals[i]}</div><div class="ri-sub">${d.unit}</div></div>
-    </div>`).slice(3).join('');
-  document.getElementById('rankList').innerHTML=rows+`
-    <div class="rank-item me">
-      <div class="ri-rank" style="color:var(--cyan);">47</div>
-      <div class="ri-avatar" style="background:rgba(0,212,255,0.12);border:1.5px solid rgba(0,212,255,0.3);">😊</div>
-      <div class="ri-body"><div class="ri-name" style="color:var(--cyan);">You · Arthur H.</div><div class="ri-detail">Citizen · Australia</div></div>
-      <div class="ri-score"><div class="ri-val" style="color:var(--cyan);">124</div><div class="ri-sub change-up">+4 ↑</div></div>
+      <div class="ri-score"><div class="ri-val" id="rv_${n}" style="color:var(--cyan);">${d.vals[i+3]}</div><div class="ri-sub" id="rc_${n}"></div></div>
     </div>`;
+  }).join('');
+  const meVisible=!q||'arthur h.'.includes(q)||'you'.includes(q);
+  const meHtml=meVisible?`<div class="rank-item me" id="meRow">
+    <div class="ri-rank" style="color:var(--cyan);" id="meRank">47</div>
+    <div class="ri-avatar" style="background:rgba(0,212,255,0.12);border:1.5px solid rgba(0,212,255,0.3);">😊</div>
+    <div class="ri-body"><div class="ri-name" style="color:var(--cyan);" id="meNameRow">You · Arthur H.</div><div class="ri-detail">Citizen · Australia</div></div>
+    <div class="ri-score"><div class="ri-val" style="color:var(--cyan);" id="meScore">124</div><div class="ri-sub change-up" id="meChange">+4 ↑</div></div>
+  </div>`:'';
+  document.getElementById('rankList').innerHTML=rows+meHtml;
 }
+
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}
+
+// F2: Search filter
+function filterList(q){rebuildList(q);}
+
+// F1: sessionStorage rank sync
+function syncMyRank(){
+  const ws=sessionStorage.getItem('citizen_wisdom')||'124';
+  const name=sessionStorage.getItem('citizen_name')||'Arthur H.';
+  const wsNum=parseInt(ws,10)||124;
+  document.getElementById('mrbRank').textContent='#47';
+  document.getElementById('mrbName').textContent='You · '+name;
+  document.getElementById('mrbDetail').textContent='Wisdom Score · Top 8% of citizens';
+  document.getElementById('mrbScore').textContent=ws;
+  // update progress bar toward #40
+  const pct=Math.min(100,Math.round((wsNum/200)*100));
+  document.getElementById('mrbProgressFill').style.width=pct+'%';
+  document.getElementById('mrbProgressPct').textContent=pct+'%';
+  const gap=200-wsNum;
+  document.getElementById('mrbProgressLabel').textContent=gap>0?'Progress to #40 ('+gap+' WS needed)':'Top 10 territory!';
+}
+
+// F1: Live rank drift simulation
+const DRIFT_NAMES=['Carlos_MX','Priya_Sol','Kofi_GH','Mei_Lin','Ade_NG','Tupac_PE','Aisha_KE'];
+const DRIFT_SCORES={Carlos_MX:174,Priya_Sol:171,Kofi_GH:168,Mei_Lin:162,Ade_NG:158,Tupac_PE:154,Aisha_KE:151};
+function driftRanks(){
+  const picks=DRIFT_NAMES.sort(()=>Math.random()-0.5).slice(0,2);
+  picks.forEach(n=>{
+    const delta=Math.random()<0.55?1:-1;
+    DRIFT_SCORES[n]=(DRIFT_SCORES[n]||150)+delta;
+    const valEl=document.getElementById('rv_'+n);
+    const chEl=document.getElementById('rc_'+n);
+    if(!valEl)return;
+    valEl.textContent=DRIFT_SCORES[n];
+    chEl.textContent=delta>0?'▲':'▼';
+    chEl.style.color=delta>0?'var(--green)':'var(--red)';
+    valEl.closest('.rank-item').classList.remove('flash-up','flash-dn');
+    void valEl.closest('.rank-item').offsetWidth;
+    valEl.closest('.rank-item').classList.add(delta>0?'flash-up':'flash-dn');
+    setTimeout(()=>chEl.textContent='',3000);
+  });
+  setTimeout(driftRanks,15000+Math.random()*8000);
+}
+
+// F4: Share rank
+function shareRank(){
+  const rank=document.getElementById('mrbRank').textContent;
+  const score=document.getElementById('mrbScore').textContent;
+  const msg=`I'm ${rank} on the IN$DEX Sovereign Rankings with WS ${score} — Grand Synchronicity: Sep 24 2026 🏆 imagenationdex.com`;
+  if(navigator.share){navigator.share({text:msg}).catch(()=>{});}
+  else{
+    navigator.clipboard.writeText(msg).then(()=>showToast('📋 Rank copied to clipboard!')).catch(()=>showToast('🏆 '+msg.substring(0,50)+'…'));
+  }
+}
+
+// DOMContentLoaded — restore tab/period, sync rank, seed drift
+document.addEventListener('DOMContentLoaded',()=>{
+  // restore saved tab
+  const savedTab=localStorage.getItem(LB_TAB_KEY)||'wisdom';
+  if(savedTab!=='wisdom')switchTab(savedTab);
+  // restore saved period
+  const savedPer=localStorage.getItem(LB_PER_KEY)||'all';
+  if(savedPer==='week')setPeriod(document.getElementById('pWeek'),'week');
+  else if(savedPer==='month')setPeriod(document.getElementById('pMonth'),'month');
+  // initial list build
+  rebuildList();
+  // sync rank from sessionStorage
+  syncMyRank();
+  // start drift after 6s
+  setTimeout(driftRanks,6000);
+});
 </script>
 </body>
 </html>

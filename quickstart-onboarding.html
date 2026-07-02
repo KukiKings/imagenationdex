@@ -114,6 +114,25 @@
   .otp-row{display:flex;gap:10px;margin-bottom:16px;}
   .otp-box{flex:1;height:60px;background:var(--surface);border:1.5px solid var(--border);border-radius:14px;font-size:24px;font-weight:900;text-align:center;color:var(--cyan);outline:none;transition:border-color 0.2s;}
   .otp-box:focus{border-color:var(--cyan);}
+
+  /* ── GOD MODE: COUNTRY PICKER SHEET ── */
+  .bottom-sheet{position:fixed;inset:0;z-index:300;display:none;}
+  .bottom-sheet.show{display:block;}
+  .bs-overlay{position:absolute;inset:0;background:rgba(9,10,16,0.7);}
+  .bs-panel{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--surface);border-radius:22px 22px 0 0;padding:20px 20px 44px;max-height:75vh;overflow-y:auto;}
+  .bs-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px;}
+  .bs-title{font-size:17px;font-weight:800;margin-bottom:16px;text-align:center;}
+  .bs-search{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:12px 16px;color:var(--text);font-size:15px;outline:none;margin-bottom:12px;}
+  .bs-search:focus{border-color:var(--cyan);}
+  .country-item{display:flex;align-items:center;gap:12px;padding:13px 8px;border-bottom:1px solid var(--border);cursor:pointer;}
+  .country-item:active{background:var(--surface2);}
+  .ci-flag{font-size:22px;flex-shrink:0;width:30px;}
+  .ci-name{flex:1;font-size:14px;}
+  .ci-code{font-size:14px;font-weight:700;color:var(--cyan);}
+
+  /* ── GOD MODE: RESUME TOAST ── */
+  .resume-strip{background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.2);border-radius:14px;padding:12px 16px;margin:12px 28px 0;font-size:13px;color:var(--cyan);display:none;align-items:center;gap:10px;}
+  .resume-strip.show{display:flex;}
 </style>
 </head>
 <body>
@@ -180,7 +199,7 @@
       <div class="slide-sub">That's all we need to get you started. No email, no ID, no paperwork.</div>
 
       <div class="phone-wrap">
-        <div class="country-btn" onclick="showCountryPicker()">🌍 +61 ▾</div>
+        <div class="country-btn" id="countryBtn" onclick="showCountryPicker()">🇦🇺 +61 ▾</div>
         <input class="big-input" type="tel" id="phoneInput" placeholder="04XX XXX XXX" maxlength="15" oninput="checkPhone()" inputmode="tel" autocomplete="tel">
       </div>
       <div class="input-hint">We'll send you a one-time code to verify. No spam, ever.</div>
@@ -282,6 +301,7 @@
           <div class="bonus-amount" id="bonusAmount">+50</div>
           <div class="bonus-label">INDX Genesis Bonus</div>
           <div class="bonus-aud" id="bonusAud">≈ $12.00 USD FREE</div>
+          <!-- value updated dynamically by God Mode JS -->
         </div>
 
         <div class="summary-cards">
@@ -318,6 +338,23 @@
     </div>
 
   </div><!-- /slides-track -->
+</div>
+
+<!-- GOD MODE: Resume strip (shown when returning mid-flow) -->
+<div class="resume-strip" id="resumeStrip">
+  <span>🔄</span>
+  <span id="resumeStripText">Resuming your onboarding — picking up where you left off.</span>
+</div>
+
+<!-- GOD MODE F4: Country picker bottom sheet -->
+<div class="bottom-sheet" id="countrySheet">
+  <div class="bs-overlay" onclick="closeCountryPicker()"></div>
+  <div class="bs-panel">
+    <div class="bs-handle"></div>
+    <div class="bs-title">Select country code</div>
+    <input class="bs-search" id="countrySearch" type="text" placeholder="Search country…" oninput="filterCountries()" autocomplete="off">
+    <div id="countryList"></div>
+  </div>
 </div>
 
 <!-- Toast -->
@@ -397,12 +434,12 @@
   }
 
   // Override goTo call from name slide: just enable button
-  document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('nameCta').onclick = function() {
-      savedName = document.getElementById('nameInput').value.trim();
-      goTo(3);
-    };
-  });
+  // (merged — runs inline after DOM ready, no separate DCL needed)
+  const _nameCta = document.getElementById('nameCta');
+  if (_nameCta) _nameCta.onclick = function() {
+    savedName = document.getElementById('nameInput').value.trim();
+    goTo(3);
+  };
 
   // ── DOMAIN ──
   const TAKEN_DOMAINS = ['maria', 'admin', 'index', 'sol', 'indx', 'sovereign', 'test', 'john', 'james'];
@@ -472,7 +509,8 @@
   }
 
   function showCountryPicker() {
-    showToast('🌍 Country codes coming soon');
+    // Replaced by God Mode country sheet
+    openCountryPicker();
   }
 
   // ── TOAST ──
@@ -482,6 +520,150 @@
     t.textContent = msg; t.style.opacity = '1';
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => t.style.opacity = '0', 2600);
+  }
+
+  // ══════════════════════════════════════════════
+  // GOD MODE ADDITIONS — quickstart-onboarding
+  // ══════════════════════════════════════════════
+  const INDX_PRICE_USD = 0.24;
+
+  // F3: Fix bonus USD value dynamically from price constant
+  (function updateBonusValue() {
+    const bonusINDX = 50;
+    const usd = (bonusINDX * INDX_PRICE_USD).toFixed(2);
+    const el = document.getElementById('bonusAud');
+    if (el) el.textContent = `≈ $${usd} USD FREE`;
+  })();
+
+  // F1: localStorage resume — restore mid-flow state
+  document.addEventListener('DOMContentLoaded', () => {
+    const savedSlide = parseInt(localStorage.getItem('indx_quickstart_slide') || '0');
+    const savedName  = localStorage.getItem('indx_quickstart_name') || '';
+    const savedDomain = localStorage.getItem('indx_quickstart_domain') || '';
+
+    if (savedSlide > 0 && (savedName || savedDomain)) {
+      // Restore name
+      if (savedName) {
+        const ni = document.getElementById('nameInput');
+        if (ni) { ni.value = savedName; checkName(); }
+        savedName && (window.savedName = savedName);
+      }
+      // Restore domain
+      if (savedDomain) {
+        const di = document.getElementById('domainInput');
+        if (di) { di.value = savedDomain; checkDomain(); }
+        window.savedDomain = savedDomain;
+      }
+      // Show resume strip
+      const strip = document.getElementById('resumeStrip');
+      if (strip) strip.classList.add('show');
+      // Jump to saved slide
+      setTimeout(() => {
+        goTo(savedSlide);
+        setTimeout(() => {
+          const strip = document.getElementById('resumeStrip');
+          if (strip) strip.classList.remove('show');
+        }, 3000);
+      }, 400);
+    }
+  });
+
+  // Patch goTo to persist slide state
+  const _origGoTo = goTo;
+  goTo = function(n) {
+    _origGoTo(n);
+    localStorage.setItem('indx_quickstart_slide', n);
+  };
+
+  // Patch checkName to persist name
+  const _origCheckName = checkName;
+  checkName = function() {
+    _origCheckName();
+    const val = document.getElementById('nameInput')?.value?.trim() || '';
+    if (val.length >= 2) localStorage.setItem('indx_quickstart_name', val);
+  };
+
+  // F2: Persist claimed domain with timestamp
+  const _origClaimDomain = claimDomain;
+  claimDomain = function() {
+    _origClaimDomain();
+    if (window.savedDomain) {
+      localStorage.setItem('indx_quickstart_domain', window.savedDomain);
+      localStorage.setItem('indx_quickstart_claimed_at', Date.now().toString());
+    }
+  };
+
+  // Clear localStorage on successful app entry
+  const _origEnterApp = enterApp;
+  enterApp = function() {
+    localStorage.removeItem('indx_quickstart_slide');
+    localStorage.removeItem('indx_quickstart_name');
+    localStorage.removeItem('indx_quickstart_domain');
+    _origEnterApp();
+  };
+
+  // F4: Country code picker sheet
+  const COUNTRIES = [
+    { flag:'🇦🇺', name:'Australia', code:'+61' },
+    { flag:'🇳🇿', name:'New Zealand', code:'+64' },
+    { flag:'🇵🇬', name:'Papua New Guinea', code:'+675' },
+    { flag:'🇫🇯', name:'Fiji', code:'+679' },
+    { flag:'🇸🇧', name:'Solomon Islands', code:'+677' },
+    { flag:'🇨🇰', name:'Cook Islands', code:'+682' },
+    { flag:'🇵🇭', name:'Philippines', code:'+63' },
+    { flag:'🇮🇳', name:'India', code:'+91' },
+    { flag:'🇿🇦', name:'South Africa', code:'+27' },
+    { flag:'🇬🇭', name:'Ghana', code:'+233' },
+    { flag:'🇳🇬', name:'Nigeria', code:'+234' },
+    { flag:'🇰🇪', name:'Kenya', code:'+254' },
+    { flag:'🇧🇷', name:'Brazil', code:'+55' },
+    { flag:'🇲🇽', name:'Mexico', code:'+52' },
+    { flag:'🇨🇴', name:'Colombia', code:'+57' },
+    { flag:'🇮🇩', name:'Indonesia', code:'+62' },
+    { flag:'🇻🇳', name:'Vietnam', code:'+84' },
+    { flag:'🇺🇸', name:'United States', code:'+1' },
+    { flag:'🇬🇧', name:'United Kingdom', code:'+44' },
+    { flag:'🇨🇦', name:'Canada', code:'+1' },
+  ];
+  let _filteredCountries = [...COUNTRIES];
+
+  function renderCountryList(list) {
+    const el = document.getElementById('countryList');
+    if (!el) return;
+    el.innerHTML = list.map(c => `
+      <div class="country-item" onclick="selectCountry('${c.flag}','${c.code}')">
+        <div class="ci-flag">${c.flag}</div>
+        <div class="ci-name">${c.name}</div>
+        <div class="ci-code">${c.code}</div>
+      </div>`).join('');
+  }
+
+  function openCountryPicker() {
+    renderCountryList(COUNTRIES);
+    const sheet = document.getElementById('countrySheet');
+    if (sheet) sheet.classList.add('show');
+    setTimeout(() => {
+      const s = document.getElementById('countrySearch');
+      if (s) s.focus();
+    }, 300);
+  }
+
+  function closeCountryPicker() {
+    const sheet = document.getElementById('countrySheet');
+    if (sheet) sheet.classList.remove('show');
+  }
+
+  function filterCountries() {
+    const q = document.getElementById('countrySearch')?.value?.toLowerCase() || '';
+    const filtered = COUNTRIES.filter(c => c.name.toLowerCase().includes(q) || c.code.includes(q));
+    renderCountryList(filtered);
+  }
+
+  function selectCountry(flag, code) {
+    const btn = document.getElementById('countryBtn');
+    if (btn) btn.textContent = flag + ' ' + code + ' ▾';
+    closeCountryPicker();
+    showToast('Country set to ' + code);
   }
 </script>
 </body>

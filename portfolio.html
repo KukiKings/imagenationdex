@@ -95,6 +95,46 @@
   .toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--surface3); border:1px solid var(--border); border-radius:20px; padding:10px 20px; font-size:13px; font-weight:500; white-space:nowrap; opacity:0; transition:all 0.3s; z-index:999; pointer-events:none; }
   .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
+  /* ── GOD MODE: PORTFOLIO ── */
+
+  /* Feature 1: Balance privacy toggle */
+  .balance-eye { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.06); border:1px solid var(--border); cursor:pointer; font-size:14px; margin-left:8px; vertical-align:middle; transition:background 0.2s; flex-shrink:0; }
+  .balance-eye:active { background:rgba(0,212,255,0.15); }
+  .blurred { filter:blur(10px); user-select:none; transition:filter 0.35s; }
+  .total-header-row { display:flex; align-items:center; justify-content:center; gap:4px; }
+
+  /* Feature 2: Skeleton loader for pull-to-refresh */
+  .skeleton { background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%); background-size:200% 100%; animation:skelShimmer 1.4s infinite; border-radius:10px; }
+  @keyframes skelShimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  .pull-bar { display:flex; align-items:center; justify-content:center; gap:8px; height:44px; font-size:12px; color:var(--text-dim); transition:all 0.3s; overflow:hidden; }
+  .pull-bar.loading { color:var(--cyan); }
+  .pull-spinner { width:16px; height:16px; border:2px solid rgba(0,212,255,0.2); border-top-color:var(--cyan); border-radius:50%; animation:spin 0.7s linear infinite; display:none; }
+  .pull-bar.loading .pull-spinner { display:block; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+
+  /* Feature 3: Token detail bottom sheet */
+  .portfolio-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.72); backdrop-filter:blur(8px); z-index:100; align-items:flex-end; justify-content:center; }
+  .portfolio-overlay.open { display:flex; }
+  .portfolio-sheet { background:var(--surface); border-radius:24px 24px 0 0; padding:28px 24px 52px; width:100%; max-width:430px; animation:sheetUp 0.3s ease; }
+  @keyframes sheetUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+  .ps-handle { width:40px; height:4px; background:var(--border); border-radius:2px; margin:0 auto 24px; }
+  .ps-icon { width:64px; height:64px; border-radius:20px; display:flex; align-items:center; justify-content:center; font-size:28px; margin:0 auto 16px; }
+  .ps-name { font-size:22px; font-weight:800; text-align:center; margin-bottom:4px; }
+  .ps-price { font-size:14px; color:var(--text-dim); text-align:center; margin-bottom:24px; }
+  .ps-row { display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--border); font-size:14px; }
+  .ps-row:last-of-type { border-bottom:none; }
+  .ps-lbl { color:var(--text-dim); }
+  .ps-val { font-weight:700; }
+
+  /* Feature 4: USD calculator input */
+  .calc-wrap { margin-top:16px; background:var(--surface2); border-radius:14px; padding:14px 16px; }
+  .calc-label { font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px; }
+  .calc-row { display:flex; align-items:center; gap:10px; }
+  .calc-input { flex:1; background:var(--surface3); border:1px solid var(--border); border-radius:10px; padding:10px 12px; color:var(--text); font-size:16px; font-weight:700; outline:none; }
+  .calc-input:focus { border-color:var(--cyan); }
+  .calc-result { font-size:14px; font-weight:700; color:var(--cyan); white-space:nowrap; }
+  .ps-close { width:100%; padding:14px; border-radius:12px; border:1px solid var(--border); background:none; color:var(--text-dim); font-size:14px; cursor:pointer; margin-top:16px; }
+
   /* BOTTOM NAV */
   .bottom-nav-spacer{height:64px;}
   .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(16,18,26,0.96);backdrop-filter:blur(16px);border-top:1px solid #252836;display:flex;z-index:80;}
@@ -115,8 +155,18 @@
 </div>
 
 <!-- TOTAL VALUE -->
+<!-- GOD MODE: Pull-to-refresh bar -->
+<div class="pull-bar" id="pullBar">
+  <div class="pull-spinner" id="pullSpinner"></div>
+  <span id="pullText">↓ Pull to refresh</span>
+</div>
+
 <div class="total-card">
-  <div class="total-label">Total Portfolio Value</div>
+  <div class="total-header-row">
+    <div class="total-label" style="margin-bottom:0;">Total Portfolio Value</div>
+    <div class="balance-eye" id="eyeBtn" onclick="toggleBalanceVisibility()" title="Toggle visibility">👁</div>
+  </div>
+  <div style="height:8px;"></div>
   <div class="total-amount" id="totalAmt">1,250 INDX</div>
   <div class="total-aud" id="totalUsd">≈ $624.75 USD</div>
   <div class="total-change-row">
@@ -158,7 +208,7 @@
   <div class="section-action" onclick="window.location.href='dex-swap.html'">+ Swap</div>
 </div>
 <div class="token-list">
-  <div class="token-card" onclick="window.location.href='buy-indx.html'">
+  <div class="token-card" onclick="openTokenSheet('indx')">
     <div class="token-icon indx">⚡</div>
     <div class="token-body">
       <div class="token-name">INDX</div>
@@ -169,7 +219,7 @@
       <div class="token-change up">▲ +50 today</div>
     </div>
   </div>
-  <div class="token-card" onclick="showToast('SOL Solana native token')">
+  <div class="token-card" onclick="openTokenSheet('sol')">
     <div class="token-icon sol">◎</div>
     <div class="token-body">
       <div class="token-name">SOL</div>
@@ -180,7 +230,7 @@
       <div class="token-change flat"></div>
     </div>
   </div>
-  <div class="token-card" onclick="showToast('USDC US Dollar stablecoin')">
+  <div class="token-card" onclick="openTokenSheet('usdc')">
     <div class="token-icon usdc">$</div>
     <div class="token-body">
       <div class="token-name">USDC</div>
@@ -247,25 +297,173 @@
   <button onclick="window.location.href='withdraw.html'" style="flex:1;padding:13px;border-radius:12px;border:1px solid var(--border);background:none;color:var(--text-dim);font-size:14px;font-weight:700;cursor:pointer;">⬆️ Withdraw</button>
 </div>
 
+<!-- GOD MODE: Token Detail Sheet -->
+<div class="portfolio-overlay" id="portfolioOverlay" onclick="closeTokenSheet(event)">
+  <div class="portfolio-sheet">
+    <div class="ps-handle"></div>
+    <div class="ps-icon" id="psIcon">⚡</div>
+    <div class="ps-name" id="psName">INDX</div>
+    <div class="ps-price" id="psPrice">$0.24 USD per token</div>
+    <div class="ps-row"><div class="ps-lbl">Balance</div><div class="ps-val" id="psBal">—</div></div>
+    <div class="ps-row"><div class="ps-lbl">USD Value</div><div class="ps-val" id="psUsd">—</div></div>
+    <div class="ps-row"><div class="ps-lbl">24h Change</div><div class="ps-val" id="psChange" style="color:var(--green)">—</div></div>
+    <div class="calc-wrap">
+      <div class="calc-label">Calculator</div>
+      <div class="calc-row">
+        <input class="calc-input" type="number" id="calcInput" placeholder="Enter INDX" inputmode="decimal" oninput="onCalcInput()"/>
+        <div class="calc-result" id="calcResult">= $0.00 USD</div>
+      </div>
+    </div>
+    <button class="ps-close" onclick="closeTokenSheet()">Close</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
+  const INDX_PRICE_USD = 0.24;
+
+  // ── Init portfolio from sessionStorage ──
   (function initPortfolio() {
-    const bal  = parseInt(sessionStorage.getItem('citizen_balance') || '0');
-    const INDX_PRICE = 0.24;
-    const usdVal = (bal * INDX_PRICE).toFixed(2);
+    const bal = parseInt(sessionStorage.getItem('citizen_balance') || '1250');
+    const usdVal = (bal * INDX_PRICE_USD).toFixed(2);
 
     document.getElementById('totalAmt').textContent = bal.toLocaleString() + ' INDX';
-    document.getElementById('totalUsd').textContent = '≈ $' + parseFloat(usdVal).toLocaleString() + ' USD';
+    document.getElementById('totalUsd').textContent = '≈ $' + parseFloat(usdVal).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + ' USD';
     document.getElementById('indxBal').textContent  = bal.toLocaleString() + ' INDX';
-    document.getElementById('indxUsd').textContent  = '$' + parseFloat(usdVal).toLocaleString();
+    document.getElementById('indxUsd').textContent  = '$' + parseFloat(usdVal).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
   })();
 
+  // ── FEATURE 2: Last selected period persisted in localStorage ──
   function setPeriod(el) {
     document.querySelectorAll('.pc').forEach(c => c.classList.remove('active'));
     el.classList.add('active');
+    localStorage.setItem('indx_portfolio_period', el.textContent);
     showToast('📈 ' + el.textContent + ' chart coming Wave 1');
   }
+
+  // Restore last period on load
+  (function restorePeriod() {
+    const saved = localStorage.getItem('indx_portfolio_period');
+    if (saved) {
+      document.querySelectorAll('.pc').forEach(c => {
+        if (c.textContent === saved) {
+          document.querySelectorAll('.pc').forEach(x => x.classList.remove('active'));
+          c.classList.add('active');
+        }
+      });
+    }
+  })();
+
+  // ── FEATURE 1: Balance privacy toggle ──
+  let balanceHidden = localStorage.getItem('indx_portfolio_hidden') === '1';
+  const HIDE_TARGETS = ['totalAmt','totalUsd','indxUsd','indxBal'];
+
+  function applyBalanceVisibility() {
+    HIDE_TARGETS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('blurred', balanceHidden);
+    });
+    document.getElementById('eyeBtn').textContent = balanceHidden ? '🙈' : '👁';
+  }
+
+  function toggleBalanceVisibility() {
+    balanceHidden = !balanceHidden;
+    localStorage.setItem('indx_portfolio_hidden', balanceHidden ? '1' : '0');
+    applyBalanceVisibility();
+    showToast(balanceHidden ? '🙈 Balance hidden' : '👁 Balance visible');
+  }
+
+  applyBalanceVisibility();
+
+  // ── FEATURE 3: Pull-to-refresh simulation ──
+  let ptStartY = 0, ptPulling = false;
+  document.addEventListener('touchstart', e => {
+    if (window.scrollY <= 0) { ptStartY = e.touches[0].clientY; ptPulling = true; }
+  }, { passive:true });
+  document.addEventListener('touchmove', e => {
+    if (!ptPulling) return;
+    const dy = e.touches[0].clientY - ptStartY;
+    const bar = document.getElementById('pullBar');
+    const txt = document.getElementById('pullText');
+    if (dy > 30) { bar.style.height = Math.min(dy * 0.5, 56) + 'px'; txt.textContent = dy > 80 ? '↑ Release to refresh' : '↓ Pull to refresh'; }
+  }, { passive:true });
+  document.addEventListener('touchend', e => {
+    if (!ptPulling) return;
+    ptPulling = false;
+    const dy = e.changedTouches[0].clientY - ptStartY;
+    const bar = document.getElementById('pullBar');
+    const txt = document.getElementById('pullText');
+    if (dy > 80) {
+      bar.classList.add('loading');
+      txt.textContent = 'Refreshing…';
+      bar.style.height = '44px';
+      setTimeout(() => {
+        bar.classList.remove('loading');
+        bar.style.height = '';
+        txt.textContent = '↓ Pull to refresh';
+        showToast('✅ Portfolio refreshed');
+      }, 1400);
+    } else {
+      bar.style.height = '';
+      txt.textContent = '↓ Pull to refresh';
+    }
+  }, { passive:true });
+
+  // ── FEATURE 4: Token detail sheet ──
+  const TOKEN_DATA = {
+    indx: {
+      icon: '⚡', iconClass: 'indx',
+      name: 'INDX', price: INDX_PRICE_USD,
+      getBal: () => parseInt(sessionStorage.getItem('citizen_balance') || '1250'),
+      change: '+50 today (Genesis)',
+    },
+    sol: {
+      icon: '◎', iconClass: 'sol',
+      name: 'SOL', price: 145.00,
+      getBal: () => 0,
+      change: '—',
+    },
+    usdc: {
+      icon: '$', iconClass: 'usdc',
+      name: 'USDC', price: 1.00,
+      getBal: () => 0,
+      change: '—',
+    },
+  };
+
+  function openTokenSheet(tokenKey) {
+    const t = TOKEN_DATA[tokenKey];
+    if (!t) return;
+    const bal = t.getBal();
+    const usd = (bal * t.price).toFixed(2);
+    document.getElementById('psIcon').textContent = t.icon;
+    document.getElementById('psIcon').className = 'ps-icon token-icon ' + t.iconClass;
+    document.getElementById('psName').textContent = t.name;
+    document.getElementById('psPrice').textContent = '$' + t.price.toFixed(2) + ' USD per token';
+    document.getElementById('psBal').textContent = bal.toLocaleString() + ' ' + t.name;
+    document.getElementById('psUsd').textContent = '$' + parseFloat(usd).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}) + ' USD';
+    document.getElementById('psChange').textContent = t.change;
+    document.getElementById('calcInput').value = '';
+    document.getElementById('calcInput').dataset.price = t.price;
+    document.getElementById('calcResult').textContent = '= $0.00 USD';
+    document.getElementById('portfolioOverlay').classList.add('open');
+  }
+
+  function closeTokenSheet(e) {
+    if (!e || e.target === document.getElementById('portfolioOverlay')) {
+      document.getElementById('portfolioOverlay').classList.remove('open');
+    }
+  }
+
+  function onCalcInput() {
+    const inp = document.getElementById('calcInput');
+    const price = parseFloat(inp.dataset.price || INDX_PRICE_USD);
+    const qty = parseFloat(inp.value) || 0;
+    const usd = (qty * price).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+    document.getElementById('calcResult').textContent = '= $' + usd + ' USD';
+  }
+
   function showToast(msg) {
     const t = document.getElementById('toast');
     t.textContent = msg;

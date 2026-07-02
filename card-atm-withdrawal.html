@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IN$DEX ATM Withdrawal</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8; --black:#090A10;
+    --green:#00E5A0; --green-bg:#0A1F18; --gold:#FFB800; --red:#FF4D6D;
+    --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+    --border:#2A2D38; --text:#EAEAEA; --text-muted:#6B7080;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none;}
+  .shell{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;padding-bottom:40px;}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;position:sticky;top:0;background:var(--black);z-index:50;border-bottom:1px solid var(--border);}
+  .tb-back{width:36px;height:36px;border-radius:50%;background:var(--surface);border:none;color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .tb-title{font-size:16px;font-weight:700;}
+  .tb-right{width:36px;}
+
+  .section-title{font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;padding:0 20px;margin:24px 0 12px;}
+
+  /* LIMIT HERO */
+  .limit-hero{margin:20px 20px 0;background:linear-gradient(135deg,rgba(43,53,216,0.15),rgba(139,63,232,0.08));border:1px solid rgba(43,53,216,0.25);border-radius:20px;padding:20px;}
+  .lh-tier{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .lh-tier-badge{font-size:11px;font-weight:800;padding:4px 12px;border-radius:99px;background:rgba(0,212,255,0.1);color:var(--cyan);border:1px solid rgba(0,212,255,0.2);}
+  .lh-reset{font-size:11px;color:var(--text-muted);}
+  .lh-amounts{display:flex;gap:16px;margin-bottom:16px;}
+  .lh-stat{flex:1;background:rgba(0,0,0,0.25);border-radius:12px;padding:12px;}
+  .lh-val{font-size:20px;font-weight:900;color:var(--cyan);}
+  .lh-label{font-size:10px;color:var(--text-muted);margin-top:3px;}
+  .lh-bar-bg{height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;}
+  .lh-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--cyan),var(--purple));transition:width 0.8s;}
+  .lh-bar-label{display:flex;justify-content:space-between;margin-top:6px;}
+  .lh-bar-label span{font-size:10px;color:var(--text-muted);}
+
+  /* CARDLESS WITHDRAW */
+  .cardless-card{margin:0 20px;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:18px;margin-bottom:8px;}
+  .cc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .cc-title{font-size:15px;font-weight:800;}
+  .cc-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;background:rgba(0,229,160,0.1);color:var(--green);border:1px solid rgba(0,229,160,0.2);}
+  .cc-sub{font-size:12px;color:var(--text-muted);line-height:1.5;margin-bottom:16px;}
+  .amount-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+  .amt-btn{background:var(--surface2);border:2px solid var(--border);border-radius:12px;padding:12px 8px;font-size:15px;font-weight:800;cursor:pointer;transition:all 0.18s;text-align:center;}
+  .amt-btn:active{transform:scale(0.95);}
+  .amt-btn.active{border-color:var(--cyan);background:rgba(0,212,255,0.08);color:var(--cyan);}
+  .custom-withdraw{display:flex;align-items:center;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;gap:8px;margin-bottom:16px;transition:border-color 0.2s;}
+  .custom-withdraw.focused{border-color:var(--cyan);}
+  .cw-prefix{font-size:18px;font-weight:800;color:var(--text-muted);}
+  .cw-input{flex:1;background:none;border:none;outline:none;font-size:18px;font-weight:800;color:var(--text);font-family:inherit;}
+  .generate-btn{width:100%;padding:15px;border-radius:14px;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;color:#000;font-size:15px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;}
+  .generate-btn:disabled{opacity:0.35;cursor:not-allowed;}
+
+  /* QR CODE DISPLAY */
+  .qr-display{margin:0 20px 8px;background:var(--surface);border:1.5px solid rgba(0,212,255,0.2);border-radius:18px;padding:20px;text-align:center;display:none;}
+  .qr-display.show{display:block;}
+  .qr-title{font-size:14px;font-weight:700;margin-bottom:4px;}
+  .qr-sub{font-size:11px;color:var(--text-muted);margin-bottom:16px;}
+  .qr-amount-display{font-size:28px;font-weight:900;color:var(--cyan);margin-bottom:4px;}
+  .qr-domain{font-size:12px;color:var(--text-muted);margin-bottom:16px;}
+  .qr-svg-wrap{display:flex;justify-content:center;margin-bottom:14px;}
+  .countdown-ring{position:relative;width:80px;height:80px;margin:0 auto 12px;}
+  .countdown-ring svg{transform:rotate(-90deg);}
+  .countdown-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:flex-end;flex-direction:column;font-size:22px;font-weight:900;color:var(--cyan);line-height:1;}
+  .countdown-label{font-size:9px;color:var(--text-muted);margin-top:2px;}
+  .qr-instructions{font-size:11px;color:var(--text-muted);line-height:1.5;background:var(--surface2);border-radius:10px;padding:10px 12px;margin-bottom:12px;}
+  .cancel-qr-btn{width:100%;padding:12px;border-radius:12px;background:none;border:1px solid var(--border);color:var(--text-muted);font-size:13px;font-weight:700;cursor:pointer;}
+
+  /* PIN MANAGEMENT */
+  .pin-card{margin:0 20px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:8px;}
+  .pin-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+  .pin-row:last-child{border-bottom:none;}
+  .pin-label{font-size:13px;font-weight:700;}
+  .pin-sub{font-size:11px;color:var(--text-muted);margin-top:2px;}
+  .pin-action{font-size:12px;font-weight:700;color:var(--cyan);cursor:pointer;background:none;border:none;padding:6px 12px;border-radius:8px;background:rgba(0,212,255,0.08);}
+
+  /* ATM FINDER */
+  .atm-list{padding:0 20px;display:flex;flex-direction:column;gap:10px;margin-bottom:8px;}
+  .atm-item{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all 0.18s;}
+  .atm-item:active{opacity:0.8;}
+  .atm-item.indx{border-color:rgba(0,229,160,0.2);background:linear-gradient(135deg,rgba(0,229,160,0.04),rgba(0,212,255,0.02));}
+  .atm-icon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+  .atm-name{font-size:13px;font-weight:800;}
+  .atm-meta{font-size:11px;color:var(--text-muted);margin-top:2px;}
+  .atm-right{text-align:right;margin-left:auto;}
+  .atm-dist{font-size:13px;font-weight:700;}
+  .atm-fee{font-size:10px;color:var(--text-muted);}
+  .atm-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:99px;margin-top:4px;display:inline-block;}
+  .atm-badge.free{background:rgba(0,229,160,0.1);color:var(--green);border:1px solid rgba(0,229,160,0.2);}
+  .atm-badge.fee{background:rgba(255,184,0,0.1);color:var(--gold);border:1px solid rgba(255,184,0,0.2);}
+
+  /* HISTORY */
+  .history-list{padding:0 20px;display:flex;flex-direction:column;gap:0;}
+  .hist-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+  .hist-item:last-child{border-bottom:none;}
+  .hist-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:rgba(255,184,0,0.12);}
+  .hist-body{flex:1;}
+  .hist-name{font-size:13px;font-weight:700;}
+  .hist-meta{font-size:11px;color:var(--text-muted);}
+  .hist-amount{font-size:14px;font-weight:800;color:var(--red);}
+
+  /* OVERLAYS */
+  .overlay{position:fixed;inset:0;background:rgba(9,10,16,0.92);z-index:200;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+  .overlay.show{opacity:1;pointer-events:all;}
+  .sheet{background:var(--surface);border-radius:24px 24px 0 0;padding:24px;width:100%;max-width:430px;margin:0 auto;max-height:80vh;overflow-y:auto;}
+  .sheet-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;}
+  .sheet-title{font-size:18px;font-weight:800;margin-bottom:8px;}
+  .sheet-sub{font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.5;}
+  .sheet-btn{width:100%;padding:15px;border-radius:14px;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;color:#000;font-size:15px;font-weight:800;cursor:pointer;margin-top:8px;}
+  .pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0;}
+  .pin-key{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:18px;font-size:20px;font-weight:700;text-align:center;cursor:pointer;transition:all 0.15s;}
+  .pin-key:active{background:var(--surface3);transform:scale(0.94);}
+  .pin-dots{display:flex;justify-content:center;gap:14px;margin:16px 0;}
+  .pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);transition:all 0.2s;}
+  .pin-dot.filled{background:var(--cyan);border-color:var(--cyan);}
+
+  /* GOD MODE: ATM AMOUNT ERROR */
+  .amt-error{margin:0 20px 8px;background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.25);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--red);display:none;align-items:center;gap:8px;}
+  .amt-error.show{display:flex;}
+
+  /* GOD MODE: ATM FILTER BAR */
+  .atm-filter-bar{display:flex;align-items:center;gap:8px;padding:0 20px;margin-bottom:8px;}
+  .atm-filter-btn{flex:1;padding:9px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.18s;text-align:center;}
+  .atm-filter-btn.active{border-color:var(--cyan);background:rgba(0,212,255,0.08);color:var(--cyan);}
+
+  /* GOD MODE: HISTORY DETAIL SHEET */
+  .hist-item{cursor:pointer;}
+  .hist-item:active{opacity:0.75;}
+  .hd-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+  .hd-row:last-child{border-bottom:none;}
+  .hd-label{font-size:12px;color:var(--text-muted);}
+  .hd-val{font-size:12px;font-weight:700;}
+
+  /* GOD MODE: QR PULSE */
+  @keyframes qrPulse{0%{box-shadow:0 0 0 0 rgba(0,212,255,0.5)}70%{box-shadow:0 0 0 18px rgba(0,212,255,0)}100%{box-shadow:0 0 0 0 rgba(0,212,255,0)}}
+  .qr-display.pulse-once{animation:qrPulse 0.6s ease-out;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <button class="tb-back" onclick="history.back()">←</button>
+    <div class="tb-title">ATM Withdrawal</div>
+    <div class="tb-right"></div>
+  </div>
+
+  <!-- LIMITS HERO -->
+  <div class="limit-hero">
+    <div class="lh-tier">
+      <div class="lh-tier-badge" id="atmTierBadge">Tier 1 · $500/day</div>
+      <div class="lh-reset" id="atmReset">Resets midnight AEST</div>
+    </div>
+    <div class="lh-amounts">
+      <div class="lh-stat">
+        <div class="lh-val" id="atmRemaining">$420</div>
+        <div class="lh-label">Remaining today</div>
+      </div>
+      <div class="lh-stat">
+        <div class="lh-val" id="atmUsed">$80</div>
+        <div class="lh-label">Used today</div>
+      </div>
+      <div class="lh-stat">
+        <div class="lh-val" id="atmBalance">$48</div>
+        <div class="lh-label">Card balance</div>
+      </div>
+    </div>
+    <div class="lh-bar-bg"><div class="lh-bar-fill" id="atmBarFill" style="width:16%"></div></div>
+    <div class="lh-bar-label"><span>$80 used</span><span id="atmBarMax">$500 daily limit</span></div>
+  </div>
+
+  <!-- CARDLESS WITHDRAWAL -->
+  <div class="section-title">Generate Withdrawal Code</div>
+  <div class="cardless-card">
+    <div class="cc-header">
+      <div class="cc-title">📱 Cardless ATM Withdrawal</div>
+      <div class="cc-badge">No card needed</div>
+    </div>
+    <div class="cc-sub">Generate a one-time QR code or NFC token. Hold your phone to the ATM. Face ID replaces your PIN — no card, no physical PIN entry required.</div>
+    <div class="amount-grid">
+      <div class="amt-btn" id="atm20" onclick="selectWithdrawAmt(20)">$20</div>
+      <div class="amt-btn active" id="atm50" onclick="selectWithdrawAmt(50)">$50</div>
+      <div class="amt-btn" id="atm100" onclick="selectWithdrawAmt(100)">$100</div>
+      <div class="amt-btn" id="atm200" onclick="selectWithdrawAmt(200)">$200</div>
+      <div class="amt-btn" id="atm400" onclick="selectWithdrawAmt(400)">$400</div>
+      <div class="amt-btn" id="atmCustomBtn" onclick="focusCustomWithdraw()">Custom</div>
+    </div>
+    <div class="custom-withdraw" id="customWithdrawRow">
+      <div class="cw-prefix">$</div>
+      <input class="cw-input" id="customWithdrawInput" type="number" inputmode="decimal" placeholder="0" onfocus="onCustomWithdrawFocus()" oninput="onCustomWithdrawInput(this.value)">
+    </div>
+    <button class="generate-btn" id="generateBtn" onclick="generateWithdrawCode()">
+      <span>🏧</span> <span id="generateBtnLabel">Generate Code for $50</span>
+    </button>
+  </div>
+
+  <!-- QR DISPLAY (shown after generate) -->
+  <div class="qr-display" id="qrDisplay">
+    <div class="qr-title">Show at ATM</div>
+    <div class="qr-sub">Scan or tap your phone at the ATM terminal</div>
+    <div class="qr-amount-display" id="qrAmountDisplay">$50.00</div>
+    <div class="qr-domain" id="qrDomain">arthur.IN$DEX · USDC</div>
+    <div class="qr-svg-wrap">
+      <svg width="160" height="160" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100" height="100" rx="8" fill="#12141F" stroke="#2A2D38"/>
+        <rect x="10" y="10" width="25" height="25" rx="3" fill="none" stroke="#00D4FF" stroke-width="3"/>
+        <rect x="65" y="10" width="25" height="25" rx="3" fill="none" stroke="#00D4FF" stroke-width="3"/>
+        <rect x="10" y="65" width="25" height="25" rx="3" fill="none" stroke="#00D4FF" stroke-width="3"/>
+        <rect x="15" y="15" width="15" height="15" rx="2" fill="#00D4FF"/>
+        <rect x="70" y="15" width="15" height="15" rx="2" fill="#00D4FF"/>
+        <rect x="15" y="70" width="15" height="15" rx="2" fill="#00D4FF"/>
+        <rect x="42" y="10" width="5" height="5" rx="1" fill="#8B3FE8"/>
+        <rect x="50" y="10" width="5" height="5" rx="1" fill="#8B3FE8"/>
+        <rect x="55" y="18" width="5" height="5" rx="1" fill="#8B3FE8"/>
+        <rect x="40" y="40" width="5" height="5" rx="1" fill="#00D4FF"/>
+        <rect x="48" y="40" width="5" height="5" rx="1" fill="#00D4FF"/>
+        <rect x="55" y="48" width="5" height="5" rx="1" fill="#00D4FF"/>
+        <rect x="63" y="40" width="5" height="5" rx="1" fill="#8B3FE8"/>
+        <rect x="40" y="55" width="5" height="5" rx="1" fill="#8B3FE8"/>
+        <rect x="55" y="55" width="5" height="5" rx="1" fill="#00D4FF"/>
+        <rect x="42" y="70" width="5" height="5" rx="1" fill="#00D4FF"/>
+        <rect x="50" y="70" width="5" height="5" rx="1" fill="#8B3FE8"/>
+        <rect x="70" y="42" width="5" height="5" rx="1" fill="#8B3FE8"/>
+        <rect x="78" y="42" width="5" height="5" rx="1" fill="#00D4FF"/>
+        <text x="50" y="97" text-anchor="middle" fill="#6B7080" font-size="5">IN$DEX · One-time · PQSI Protected</text>
+      </svg>
+    </div>
+    <div class="countdown-ring">
+      <svg width="80" height="80" viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6"/>
+        <circle id="countdownCircle" cx="40" cy="40" r="34" fill="none" stroke="#00D4FF" stroke-width="6"
+          stroke-dasharray="213.6" stroke-dashoffset="0" stroke-linecap="round" style="transition:stroke-dashoffset 1s linear;"/>
+      </svg>
+      <div class="countdown-num">
+        <span id="countdownNum">60</span>
+        <span class="countdown-label">seconds</span>
+      </div>
+    </div>
+    <div class="qr-instructions">🏧 At the ATM: tap "Cardless Withdrawal" → scan QR or tap phone → cash dispenses.<br>🔒 Face ID on your phone authenticates you. No PIN entry at ATM required.</div>
+    <button class="cancel-qr-btn" onclick="cancelQR()">Cancel & Generate New</button>
+  </div>
+
+  <!-- PIN MANAGEMENT -->
+  <div class="section-title">PIN Management</div>
+  <div class="pin-card">
+    <div class="pin-row">
+      <div>
+        <div class="pin-label">ATM PIN</div>
+        <div class="pin-sub">Used for physical card withdrawals</div>
+      </div>
+      <button class="pin-action" onclick="showPinSheet('change')">Change PIN</button>
+    </div>
+    <div class="pin-row">
+      <div>
+        <div class="pin-label">View PIN</div>
+        <div class="pin-sub">Biometric auth required</div>
+      </div>
+      <button class="pin-action" onclick="showPinSheet('view')">Reveal PIN</button>
+    </div>
+    <div class="pin-row">
+      <div>
+        <div class="pin-label">PIN Attempts</div>
+        <div class="pin-sub">3 failed attempts locks card</div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--green);">0 / 3</div>
+    </div>
+  </div>
+
+  <!-- GOD MODE: AMOUNT ERROR BANNER -->
+  <div class="amt-error" id="amtErrorBanner">⚠️ <span id="amtErrorMsg">Amount exceeds card balance</span></div>
+
+  <!-- ATM FINDER -->
+  <div class="section-title">Nearest ATMs</div>
+  <div class="atm-filter-bar">
+    <button class="atm-filter-btn active" id="filterAll" onclick="setAtmFilter('all')">All ATMs</button>
+    <button class="atm-filter-btn" id="filterFree" onclick="setAtmFilter('free')">Free only</button>
+    <button class="atm-filter-btn" id="filterCardless" onclick="setAtmFilter('cardless')">Cardless</button>
+  </div>
+  <div class="atm-list">
+    <div class="atm-item indx" onclick="showToast('📍 Opening maps to BSP Bank ATM…')">
+      <div class="atm-icon" style="background:rgba(0,229,160,0.1);">🏧</div>
+      <div>
+        <div class="atm-name">BSP Bank — Avarua</div>
+        <div class="atm-meta">Cook Islands · Visa / Mastercard · INDX supported</div>
+      </div>
+      <div class="atm-right">
+        <div class="atm-dist">200m</div>
+        <div class="atm-badge free">Free</div>
+      </div>
+    </div>
+    <div class="atm-item" onclick="showToast('📍 Opening maps to ANZ ATM…')">
+      <div class="atm-icon" style="background:rgba(43,53,216,0.1);">🏧</div>
+      <div>
+        <div class="atm-name">ANZ Bank — Main Rd</div>
+        <div class="atm-meta">Cook Islands · Visa network</div>
+      </div>
+      <div class="atm-right">
+        <div class="atm-dist">0.8km</div>
+        <div class="atm-badge fee">$2 fee</div>
+      </div>
+    </div>
+    <div class="atm-item" onclick="showToast('📍 Opening maps to Coinstar ATM…')">
+      <div class="atm-icon" style="background:rgba(255,184,0,0.1);">₿</div>
+      <div>
+        <div class="atm-name">Coinstar Crypto ATM</div>
+        <div class="atm-meta">Cook Islands · BTC / USDC / ETH</div>
+      </div>
+      <div class="atm-right">
+        <div class="atm-dist">1.2km</div>
+        <div class="atm-badge fee">4.2%</div>
+      </div>
+    </div>
+    <div class="atm-item indx" onclick="showToast('📍 Faleolo Airport BSP — cardless supported')">
+      <div class="atm-icon" style="background:rgba(0,229,160,0.1);">🏧</div>
+      <div>
+        <div class="atm-name">BSP Bank — Faleolo Airport</div>
+        <div class="atm-meta">Samoa · 24hr · Cardless enabled</div>
+      </div>
+      <div class="atm-right">
+        <div class="atm-dist">Samoa</div>
+        <div class="atm-badge free">Free</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WITHDRAWAL HISTORY -->
+  <div class="section-title">Withdrawal History</div>
+  <div style="margin:0 20px 8px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:2px 16px;">
+    <div class="history-list">
+      <div class="hist-item" onclick="showHistDetail({name:'ATM Withdrawal — BSP Nadi',meta:'Fiji · FJD 46 · 2 days ago',amount:'$20.00',method:'Cardless QR',pqsi:'T0 · Cleared',ref:'TXN-4A2F9C'})">
+        <div class="hist-icon">🏧</div>
+        <div class="hist-body">
+          <div class="hist-name">ATM Withdrawal — BSP Nadi</div>
+          <div class="hist-meta">Fiji · FJD 46 · 2 days ago · PQSI T0</div>
+        </div>
+        <div class="hist-amount">−$20.00</div>
+      </div>
+      <div class="hist-item" onclick="showHistDetail({name:'ATM Withdrawal — ANZ Apia',meta:'Samoa · WST 100 · 5 days ago',amount:'$36.50',method:'Physical card',pqsi:'T0 · Cleared',ref:'TXN-7B3E1A'})">
+        <div class="hist-icon">🏧</div>
+        <div class="hist-body">
+          <div class="hist-name">ATM Withdrawal — ANZ Apia</div>
+          <div class="hist-meta">Samoa · WST 100 · 5 days ago · PQSI T0</div>
+        </div>
+        <div class="hist-amount">−$36.50</div>
+      </div>
+      <div class="hist-item" onclick="showHistDetail({name:'ATM Withdrawal — BSP Port Vila',meta:'Vanuatu · VUV 2400 · 12 days ago',amount:'$20.00',method:'Physical card',pqsi:'T0 · Cleared',ref:'TXN-2C8D4E'})">
+        <div class="hist-icon">🏧</div>
+        <div class="hist-body">
+          <div class="hist-name">ATM Withdrawal — BSP Port Vila</div>
+          <div class="hist-meta">Vanuatu · VUV 2400 · 12 days ago · PQSI T0</div>
+        </div>
+        <div class="hist-amount">−$20.00</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- GOD MODE: HISTORY DETAIL SHEET -->
+<div class="overlay" id="histOverlay" onclick="closeHistDetail(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="histDetailTitle">Withdrawal Detail</div>
+    <div style="margin-bottom:16px;">
+      <div class="hd-row"><div class="hd-label">Amount withdrawn</div><div class="hd-val" id="hdAmount" style="color:var(--red);"></div></div>
+      <div class="hd-row"><div class="hd-label">ATM / Location</div><div class="hd-val" id="hdLocation"></div></div>
+      <div class="hd-row"><div class="hd-label">Method</div><div class="hd-val" id="hdMethod"></div></div>
+      <div class="hd-row"><div class="hd-label">PQSI status</div><div class="hd-val" id="hdPqsi" style="color:var(--green);"></div></div>
+      <div class="hd-row"><div class="hd-label">Reference</div><div class="hd-val" id="hdRef" style="color:var(--text-muted);font-size:11px;"></div></div>
+    </div>
+    <button class="sheet-btn" onclick="closeHistDetail()">Done</button>
+  </div>
+</div>
+
+<!-- PIN SHEET -->
+<div class="overlay" id="pinOverlay" onclick="closePinSheet(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="pinSheetTitle">Change PIN</div>
+    <div class="sheet-sub" id="pinSheetSub">Enter your new 4-digit PIN. It will be used at ATMs when inserting your physical card.</div>
+    <div class="pin-dots" id="pinDots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-pad">
+      <div class="pin-key" onclick="pinKey('1')">1</div>
+      <div class="pin-key" onclick="pinKey('2')">2</div>
+      <div class="pin-key" onclick="pinKey('3')">3</div>
+      <div class="pin-key" onclick="pinKey('4')">4</div>
+      <div class="pin-key" onclick="pinKey('5')">5</div>
+      <div class="pin-key" onclick="pinKey('6')">6</div>
+      <div class="pin-key" onclick="pinKey('7')">7</div>
+      <div class="pin-key" onclick="pinKey('8')">8</div>
+      <div class="pin-key" onclick="pinKey('9')">9</div>
+      <div class="pin-key" style="font-size:14px;" onclick="pinKey('clear')">Clear</div>
+      <div class="pin-key" onclick="pinKey('0')">0</div>
+      <div class="pin-key" onclick="pinKey('back')">⌫</div>
+    </div>
+    <button class="sheet-btn" id="pinConfirmBtn" onclick="confirmPin()" disabled style="opacity:0.35;">Confirm PIN →</button>
+  </div>
+</div>
+
+<script>
+  const INDX_PRICE_USD = 0.24;
+  let withdrawAmt = 50;
+  let pinMode = 'change';
+  let pinEntry = '';
+  let countdownTimer = null;
+
+  function init() {
+    const wisdom = parseInt(sessionStorage.getItem('citizen_wisdom') || '75');
+    let limit = 500, tierLabel = 'Tier 1 · $500/day';
+    if (wisdom >= 200) { limit = 5000; tierLabel = 'Tier 3 · $5,000/day'; }
+    else if (wisdom >= 100) { limit = 2000; tierLabel = 'Tier 2 · $2,000/day'; }
+    document.getElementById('atmTierBadge').textContent = tierLabel;
+    document.getElementById('atmBarMax').textContent = '$' + limit.toLocaleString() + ' daily limit';
+    const domain = sessionStorage.getItem('citizen_web3_domain') || 'arthur.IN$DEX';
+    document.getElementById('qrDomain').textContent = domain + ' · USDC';
+    updateGenerateBtn();
+  }
+
+  function selectWithdrawAmt(a) {
+    withdrawAmt = a;
+    [20,50,100,200,400].forEach(v => {
+      const el = document.getElementById('atm' + v);
+      if (el) el.classList.toggle('active', v === a);
+    });
+    document.getElementById('atmCustomBtn').classList.remove('active');
+    document.getElementById('customWithdrawInput').value = '';
+    updateGenerateBtn();
+  }
+
+  function focusCustomWithdraw() {
+    [20,50,100,200,400].forEach(v => { const el = document.getElementById('atm' + v); if(el) el.classList.remove('active'); });
+    document.getElementById('atmCustomBtn').classList.add('active');
+    document.getElementById('customWithdrawInput').focus();
+  }
+
+  function onCustomWithdrawFocus() {
+    document.getElementById('customWithdrawRow').classList.add('focused');
+  }
+
+  function onCustomWithdrawInput(v) {
+    const n = parseFloat(v);
+    withdrawAmt = isNaN(n) ? 0 : n;
+    updateGenerateBtn();
+  }
+
+  function updateGenerateBtn() {
+    const btn = document.getElementById('generateBtn');
+    const lbl = document.getElementById('generateBtnLabel');
+    const max = 500;
+    const cardBal = parseFloat(sessionStorage.getItem('citizen_balance') || '48') * INDX_PRICE_USD;
+    const errBanner = document.getElementById('amtErrorBanner');
+    const errMsg = document.getElementById('amtErrorMsg');
+
+    // GOD MODE: real-time balance + limit validation
+    if (withdrawAmt <= 0) {
+      btn.disabled = true; lbl.textContent = 'Select an amount';
+      errBanner.classList.remove('show');
+    } else if (withdrawAmt > cardBal) {
+      btn.disabled = true; lbl.textContent = 'Insufficient card balance';
+      errMsg.textContent = 'Amount ($' + withdrawAmt.toFixed(2) + ') exceeds card balance ($' + cardBal.toFixed(2) + ')';
+      errBanner.classList.add('show');
+    } else if (withdrawAmt > max) {
+      btn.disabled = true; lbl.textContent = 'Exceeds daily limit';
+      errMsg.textContent = 'Amount exceeds your $' + max.toLocaleString() + ' daily limit';
+      errBanner.classList.add('show');
+    } else {
+      btn.disabled = false;
+      lbl.textContent = 'Generate Code for $' + withdrawAmt.toFixed(0);
+      errBanner.classList.remove('show');
+    }
+  }
+
+  function generateWithdrawCode() {
+    document.getElementById('qrAmountDisplay').textContent = '$' + withdrawAmt.toFixed(2);
+    const qrEl = document.getElementById('qrDisplay');
+    qrEl.classList.add('show');
+    qrEl.scrollIntoView({ behavior:'smooth' });
+    // GOD MODE: pulse animation on QR card generation
+    qrEl.classList.remove('pulse-once');
+    void qrEl.offsetWidth; // reflow to restart animation
+    qrEl.classList.add('pulse-once');
+    startCountdown(60);
+    showToast('🛡️ PQSI pre-flight: Cleared T0. Code valid 60 seconds.');
+  }
+
+  function startCountdown(secs) {
+    clearInterval(countdownTimer);
+    let remaining = secs;
+    const circle = document.getElementById('countdownCircle');
+    const numEl  = document.getElementById('countdownNum');
+    const circumference = 213.6;
+    function tick() {
+      remaining--;
+      numEl.textContent = remaining;
+      const offset = circumference * (1 - remaining / secs);
+      circle.style.strokeDashoffset = offset;
+      if (remaining <= 10) circle.style.stroke = 'var(--red)';
+      if (remaining <= 0) {
+        clearInterval(countdownTimer);
+        document.getElementById('qrDisplay').classList.remove('show');
+        showToast('⏱ Code expired. Generate a new one.');
+      }
+    }
+    countdownTimer = setInterval(tick, 1000);
+  }
+
+  function cancelQR() {
+    clearInterval(countdownTimer);
+    document.getElementById('qrDisplay').classList.remove('show');
+    document.getElementById('countdownCircle').style.stroke = 'var(--cyan)';
+    document.getElementById('countdownCircle').style.strokeDashoffset = '0';
+  }
+
+  function showPinSheet(mode) {
+    pinMode = mode;
+    pinEntry = '';
+    updatePinDots();
+    document.getElementById('pinSheetTitle').textContent = mode === 'view' ? 'Reveal PIN' : 'Change PIN';
+    document.getElementById('pinSheetSub').textContent = mode === 'view'
+      ? 'Enter your current PIN to reveal it securely.'
+      : 'Enter a new 4-digit PIN for ATM withdrawals.';
+    document.getElementById('pinOverlay').classList.add('show');
+  }
+
+  function closePinSheet(e) {
+    if (!e || e.target.id === 'pinOverlay') document.getElementById('pinOverlay').classList.remove('show');
+  }
+
+  function pinKey(k) {
+    if (k === 'clear') { pinEntry = ''; }
+    else if (k === 'back') { pinEntry = pinEntry.slice(0, -1); }
+    else if (pinEntry.length < 4) { pinEntry += k; }
+    updatePinDots();
+    document.getElementById('pinConfirmBtn').disabled = pinEntry.length < 4;
+    document.getElementById('pinConfirmBtn').style.opacity = pinEntry.length < 4 ? '0.35' : '1';
+  }
+
+  function updatePinDots() {
+    for (let i = 0; i < 4; i++) {
+      const dot = document.getElementById('pd' + i);
+      if (dot) dot.classList.toggle('filled', i < pinEntry.length);
+    }
+  }
+
+  function confirmPin() {
+    const mode = pinMode;
+    document.getElementById('pinOverlay').classList.remove('show');
+    pinEntry = '';
+    updatePinDots();
+    showToast(mode === 'view' ? '🔒 Your PIN: ****  (shown securely in app v1.0)' : '✅ PIN updated. Your new PIN is active.');
+  }
+
+  // GOD MODE: ATM filter
+  const ATM_DATA = [
+    { id:'atm-bsp-avarua',    free:true,  cardless:true  },
+    { id:'atm-anz-main',      free:false, cardless:false },
+    { id:'atm-coinstar',      free:false, cardless:false },
+    { id:'atm-bsp-faleolo',   free:true,  cardless:true  },
+  ];
+  function setAtmFilter(mode) {
+    localStorage.setItem('indx_atm_filter','atm_filter_' + mode);
+    ['All','Free','Cardless'].forEach(f => {
+      const btn = document.getElementById('filter' + f);
+      if (btn) btn.classList.toggle('active', f.toLowerCase() === mode);
+    });
+    const items = document.querySelectorAll('.atm-item');
+    items.forEach((el, i) => {
+      const d = ATM_DATA[i];
+      if (!d) return;
+      let show = true;
+      if (mode === 'free' && !d.free) show = false;
+      if (mode === 'cardless' && !d.cardless) show = false;
+      el.style.display = show ? '' : 'none';
+    });
+  }
+
+  // GOD MODE: history detail sheet
+  function showHistDetail(tx) {
+    document.getElementById('histDetailTitle').textContent = tx.name.split(' — ')[0];
+    document.getElementById('hdAmount').textContent = '−$' + tx.amount;
+    document.getElementById('hdLocation').textContent = tx.name.split(' — ')[1] || tx.name;
+    document.getElementById('hdMethod').textContent = tx.method;
+    document.getElementById('hdPqsi').textContent = tx.pqsi;
+    document.getElementById('hdRef').textContent = tx.ref;
+    document.getElementById('histOverlay').classList.add('show');
+  }
+  function closeHistDetail(e) {
+    if (!e || e.target.id === 'histOverlay') document.getElementById('histOverlay').classList.remove('show');
+  }
+
+  function showToast(msg) {
+    let t = document.getElementById('toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'toast';
+      t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#22263A;border:1px solid #2A2D38;color:#EAEAEA;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:999;max-width:360px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.4);';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg; t.style.opacity = '1';
+    clearTimeout(window._toastTimer);
+    window._toastTimer = setTimeout(() => { t.style.opacity = '0'; }, 3500);
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

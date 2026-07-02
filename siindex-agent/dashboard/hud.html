@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="refresh" content="2">
+<title>SIINDEX — Sovereign Intelligence HUD</title>
+<style>
+  :root{
+    --cyan:#00D4FF;--blue:#2B35D8;--purple:#8B3FE8;--black:#090A10;
+    --green:#00E5A0;--gold:#FFB800;--red:#FF4D6D;
+    --surface:#12141F;--surface2:#1A1D2E;--surface3:#22263A;
+    --text:#F0F2FF;--muted:rgba(240,242,255,0.45);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',monospace;height:100vh;display:flex;flex-direction:column;padding:20px;gap:14px;overflow:hidden;}
+
+  /* Top bar */
+  .topbar{display:flex;align-items:center;justify-content:space-between;}
+  .logo{font-size:22px;font-weight:900;letter-spacing:-0.5px;background:linear-gradient(135deg,var(--cyan),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .logo-sub{font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-top:2px;}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+  .status-row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--green);}
+
+  /* Cards */
+  .card{background:var(--surface);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:14px 18px;}
+  .card-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:6px;}
+  .card-val{font-size:22px;font-weight:900;}
+  .card-sub{font-size:11px;color:var(--muted);margin-top:3px;}
+
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+
+  /* Speech bubble */
+  .speech-wrap{background:linear-gradient(135deg,rgba(43,53,216,0.15),rgba(0,212,255,0.05));border:1px solid rgba(0,212,255,0.15);border-radius:14px;padding:16px 18px;flex:1;display:flex;flex-direction:column;justify-content:center;}
+  .speech-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:var(--cyan);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+  .speech-text{font-size:15px;line-height:1.6;color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+  .speech-cursor{display:inline-block;width:2px;height:16px;background:var(--cyan);vertical-align:middle;animation:blink 1s infinite;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+  /* Countdown */
+  .countdown{display:flex;align-items:center;gap:10px;}
+  .cd-num{font-size:28px;font-weight:900;color:var(--gold);}
+  .cd-unit{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:1px;text-align:center;}
+  .cd-sep{font-size:20px;color:var(--muted);padding:0 2px;}
+
+  /* Mode indicator */
+  .mode-chip{display:inline-flex;align-items:center;gap:5px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.2);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;color:var(--green);}
+  .mode-chip.listening{background:rgba(255,184,0,0.08);border-color:rgba(255,184,0,0.2);color:var(--gold);}
+  .mode-chip.thinking{background:rgba(139,63,232,0.08);border-color:rgba(139,63,232,0.2);color:var(--purple);}
+  .mode-chip.speaking{background:rgba(0,212,255,0.08);border-color:rgba(0,212,255,0.2);color:var(--cyan);}
+
+  /* Price chip */
+  .price-chip{font-size:13px;font-weight:800;color:var(--cyan);}
+  .price-change{font-size:10px;color:var(--green);}
+
+  /* Waveform (decorative) */
+  .waveform{display:flex;align-items:center;gap:2px;height:24px;}
+  .wave-bar{width:3px;border-radius:2px;background:var(--cyan);opacity:0.6;}
+  .wave-bar.active{animation:wave 0.8s ease-in-out infinite;}
+  .wave-bar:nth-child(1){animation-delay:0s;height:6px;}
+  .wave-bar:nth-child(2){animation-delay:0.1s;height:14px;}
+  .wave-bar:nth-child(3){animation-delay:0.2s;height:20px;}
+  .wave-bar:nth-child(4){animation-delay:0.1s;height:14px;}
+  .wave-bar:nth-child(5){animation-delay:0.0s;height:8px;}
+  @keyframes wave{0%,100%{transform:scaleY(0.4)}50%{transform:scaleY(1)}}
+
+  .footer{display:flex;align-items:center;justify-content:space-between;font-size:10px;color:var(--muted);}
+  .gs-label{font-size:10px;color:var(--gold);font-weight:700;}
+</style>
+</head>
+<body>
+<script>
+// Poll the state file every 2s (page auto-refresh handles this)
+// State is written by main.py to /tmp/siindex_hud.json
+async function loadState() {
+  try {
+    const r = await fetch('/siindex_state');
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+
+let state = {
+  citizen_name:   "Citizen",
+  citizen_id:     "",
+  balance_indx:   0,
+  wisdom_score:   0,
+  indx_price:     0.24,
+  mode:           "ready",
+  speech_text:    "SIINDEX online. Sovereign Intelligence active.",
+  countdown_days:  0,
+  countdown_hours: 0,
+  gs_date:        "Sep 24, 2026",
+  user_text:      "",
+};
+
+// Try to load from local server; fall back to defaults
+(async () => {
+  const s = await loadState();
+  if (s) Object.assign(state, s);
+  render();
+})();
+
+function modeLabel(m) {
+  const map = { ready:'● Ready', listening:'🎤 Listening', thinking:'◉ Thinking', speaking:'◎ Speaking' };
+  return map[m] || m;
+}
+function modeClass(m) {
+  const map = { listening:'listening', thinking:'thinking', speaking:'speaking' };
+  return map[m] || '';
+}
+
+function render() {
+  const usd = (state.balance_indx * state.indx_price).toFixed(2);
+  document.getElementById('citizenName').textContent = state.citizen_name || 'Citizen';
+  document.getElementById('citizenId').textContent   = state.citizen_id   || '—';
+  document.getElementById('balanceVal').textContent  = (state.balance_indx||0).toFixed(4) + ' INDX';
+  document.getElementById('balanceUsd').textContent  = '$' + usd + ' USD';
+  document.getElementById('wsVal').textContent       = (state.wisdom_score||0) + ' WS';
+  document.getElementById('priceVal').textContent    = '$' + (state.indx_price||0.24).toFixed(2);
+  document.getElementById('speechText').textContent  = state.speech_text || '…';
+  document.getElementById('cdDays').textContent      = state.countdown_days  || 0;
+  document.getElementById('cdHours').textContent     = state.countdown_hours || 0;
+  document.getElementById('gsDate').textContent      = state.gs_date || 'Sep 24, 2026';
+
+  const chip = document.getElementById('modeChip');
+  chip.textContent = modeLabel(state.mode);
+  chip.className   = 'mode-chip ' + modeClass(state.mode);
+
+  // waveform active while speaking or listening
+  document.querySelectorAll('.wave-bar').forEach(b => {
+    b.classList.toggle('active', state.mode === 'speaking' || state.mode === 'listening');
+  });
+}
+</script>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div>
+    <div class="logo">SIINDEX</div>
+    <div class="logo-sub">Sovereign Intelligence</div>
+  </div>
+  <div class="status-row">
+    <div class="live-dot"></div>
+    <span>PQSI Active</span>
+    <span id="modeChip" class="mode-chip">● Ready</span>
+  </div>
+</div>
+
+<!-- CITIZEN ROW -->
+<div class="card" style="display:flex;align-items:center;justify-content:space-between;">
+  <div>
+    <div class="card-label">Citizen</div>
+    <div style="font-size:17px;font-weight:800;" id="citizenName">—</div>
+    <div style="font-size:11px;color:var(--muted);" id="citizenId">—</div>
+  </div>
+  <div class="waveform">
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+  </div>
+</div>
+
+<!-- STATS ROW -->
+<div class="grid-3">
+  <div class="card">
+    <div class="card-label">INDX Balance</div>
+    <div class="card-val" style="font-size:16px;" id="balanceVal">0.0000</div>
+    <div class="card-sub" id="balanceUsd">$0.00 USD</div>
+  </div>
+  <div class="card">
+    <div class="card-label">Wisdom Score</div>
+    <div class="card-val" style="color:var(--gold);" id="wsVal">0 WS</div>
+    <div class="card-sub">Sovereign rank</div>
+  </div>
+  <div class="card">
+    <div class="card-label">INDX Price</div>
+    <div class="card-val price-chip" id="priceVal">$0.24</div>
+    <div class="card-sub price-change">Genesis price</div>
+  </div>
+</div>
+
+<!-- SPEECH BUBBLE -->
+<div class="speech-wrap">
+  <div class="speech-label">
+    <div class="live-dot" style="width:5px;height:5px;"></div>
+    SIINDEX
+  </div>
+  <div class="speech-text" id="speechText">SIINDEX online. Sovereign Intelligence active.<span class="speech-cursor"></span></div>
+</div>
+
+<!-- GRAND SYNCHRONICITY COUNTDOWN -->
+<div class="card">
+  <div style="display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <div class="card-label">Grand Synchronicity</div>
+      <div class="gs-label" id="gsDate">Sep 24, 2026</div>
+    </div>
+    <div class="countdown">
+      <div>
+        <div class="cd-num" id="cdDays">0</div>
+        <div class="cd-unit">Days</div>
+      </div>
+      <div class="cd-sep">:</div>
+      <div>
+        <div class="cd-num" id="cdHours">0</div>
+        <div class="cd-unit">Hrs</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <span>IN$DEX · imagenationdex.com</span>
+  <span>2% Civilisation Law · 98% to Citizens</span>
+  <span>PQSI T0</span>
+</div>
+</body>
+</html>

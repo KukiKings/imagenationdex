@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>IN$DEX Card Security</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8; --black:#090A10;
+    --green:#00E5A0; --green-bg:#0A1F18; --gold:#FFB800; --red:#FF4D6D;
+    --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+    --border:#2A2D38; --text:#EAEAEA; --text-muted:#6B7080;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none;}
+  .shell{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;padding-bottom:40px;}
+
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;position:sticky;top:0;background:var(--black);z-index:50;border-bottom:1px solid var(--border);}
+  .tb-back{width:36px;height:36px;border-radius:50%;background:var(--surface);border:none;color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .tb-title{font-size:16px;font-weight:700;}
+  .tb-right{width:36px;}
+  .section-title{font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;padding:0 20px;margin:24px 0 12px;}
+
+  /* FREEZE HERO */
+  .freeze-hero{margin:20px 20px 0;border-radius:22px;padding:28px 24px;text-align:center;transition:all 0.4s;position:relative;overflow:hidden;}
+  .freeze-hero.active{background:linear-gradient(135deg,rgba(0,229,160,0.08),rgba(0,212,255,0.04));border:1.5px solid rgba(0,229,160,0.25);}
+  .freeze-hero.frozen{background:linear-gradient(135deg,rgba(255,77,109,0.08),rgba(139,63,232,0.05));border:1.5px solid rgba(255,77,109,0.3);}
+  .fh-icon{font-size:48px;margin-bottom:12px;display:block;}
+  .fh-status{font-size:22px;font-weight:900;margin-bottom:6px;}
+  .fh-status.active{color:var(--green);}
+  .fh-status.frozen{color:var(--red);}
+  .fh-sub{font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.5;}
+  .freeze-toggle-btn{padding:14px 36px;border-radius:16px;border:none;font-size:15px;font-weight:900;cursor:pointer;transition:all 0.3s;}
+  .freeze-toggle-btn.active{background:var(--red);color:#fff;}
+  .freeze-toggle-btn.frozen{background:var(--green);color:#000;}
+  .fh-propagate{margin-top:14px;font-size:11px;color:var(--text-muted);}
+
+  /* PQSI ALERTS */
+  .alert-item{margin:0 20px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px;}
+  .alert-item.t0{border-color:rgba(0,229,160,0.2);background:rgba(0,229,160,0.03);}
+  .alert-item.t1{border-color:rgba(255,184,0,0.2);background:rgba(255,184,0,0.03);}
+  .alert-item.t2{border-color:rgba(255,77,109,0.3);background:rgba(255,77,109,0.05);}
+  .alert-icon{font-size:20px;flex-shrink:0;}
+  .alert-body{flex:1;}
+  .alert-title{font-size:13px;font-weight:700;margin-bottom:3px;}
+  .alert-meta{font-size:11px;color:var(--text-muted);line-height:1.4;}
+  .alert-tier{font-size:10px;font-weight:800;padding:2px 8px;border-radius:99px;display:inline-block;margin-top:5px;}
+  .alert-tier.t0{background:rgba(0,229,160,0.1);color:var(--green);border:1px solid rgba(0,229,160,0.2);}
+  .alert-tier.t1{background:rgba(255,184,0,0.1);color:var(--gold);border:1px solid rgba(255,184,0,0.2);}
+  .alert-tier.t2{background:rgba(255,77,109,0.1);color:var(--red);border:1px solid rgba(255,77,109,0.2);}
+  .alert-action{font-size:11px;font-weight:700;color:var(--cyan);cursor:pointer;background:none;border:none;padding:4px 0;margin-top:4px;display:block;}
+
+  /* GRANULAR CONTROLS */
+  .control-list{padding:0 20px;display:flex;flex-direction:column;gap:0;background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin:0 20px;}
+  .ctrl-item{display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid rgba(255,255,255,0.05);}
+  .ctrl-item:last-child{border-bottom:none;}
+  .ctrl-left{display:flex;align-items:center;gap:12px;}
+  .ctrl-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+  .ctrl-label{font-size:14px;font-weight:700;}
+  .ctrl-sub{font-size:11px;color:var(--text-muted);margin-top:2px;}
+  .ctrl-toggle{width:48px;height:28px;border-radius:14px;border:none;cursor:pointer;position:relative;transition:background 0.25s;flex-shrink:0;}
+  .ctrl-toggle.on{background:var(--green);}
+  .ctrl-toggle.off{background:var(--surface3);}
+  .ctrl-dot{position:absolute;top:4px;left:4px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform 0.25s;box-shadow:0 1px 4px rgba(0,0,0,0.3);pointer-events:none;}
+  .ctrl-toggle.on .ctrl-dot{transform:translateX(20px);}
+
+  /* LOST CARD */
+  .lost-card{margin:0 20px;border-radius:16px;overflow:hidden;}
+  .lost-btn{width:100%;padding:15px;display:flex;align-items:center;justify-content:center;gap:10px;border:none;font-size:14px;font-weight:800;cursor:pointer;border-radius:14px;margin-bottom:10px;}
+  .lost-btn.report{background:rgba(255,77,109,0.1);color:var(--red);border:1.5px solid rgba(255,77,109,0.25);}
+  .lost-btn.replace{background:rgba(43,53,216,0.1);color:#6B82FF;border:1.5px solid rgba(43,53,216,0.2);}
+
+  /* SECURITY HISTORY */
+  .sec-hist{padding:0 20px;display:flex;flex-direction:column;gap:0;background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin:0 20px;}
+  .sh-item{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+  .sh-item:last-child{border-bottom:none;}
+  .sh-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .sh-dot.green{background:var(--green);}
+  .sh-dot.gold{background:var(--gold);}
+  .sh-dot.red{background:var(--red);}
+  .sh-body{flex:1;}
+  .sh-event{font-size:12px;font-weight:700;}
+  .sh-time{font-size:10px;color:var(--text-muted);}
+
+  /* OVERLAY */
+  .overlay{position:fixed;inset:0;background:rgba(9,10,16,0.92);z-index:200;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+  .overlay.show{opacity:1;pointer-events:all;}
+  .sheet{background:var(--surface);border-radius:24px 24px 0 0;padding:24px;width:100%;max-width:430px;margin:0 auto;max-height:80vh;overflow-y:auto;}
+  .sheet-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;}
+  .sheet-title{font-size:18px;font-weight:800;margin-bottom:8px;}
+  .sheet-sub{font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.5;}
+  .sheet-btn{width:100%;padding:15px;border-radius:14px;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;color:#000;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:8px;}
+  .sheet-btn.red{background:var(--red);color:#fff;}
+  .sheet-cancel{width:100%;padding:13px;border-radius:14px;background:none;border:1px solid var(--border);color:var(--text-muted);font-size:14px;font-weight:700;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <button class="tb-back" onclick="history.back()">←</button>
+    <div class="tb-title">Card Security</div>
+    <div class="tb-right"></div>
+  </div>
+
+  <!-- FREEZE HERO -->
+  <div class="freeze-hero active" id="freezeHero">
+    <span class="fh-icon" id="freezeIcon">🟢</span>
+    <div class="fh-status active" id="freezeStatus">Card Active</div>
+    <div class="fh-sub" id="freezeSub">Your IN$DEX card is live and protected by PQSI across all payment channels.</div>
+    <button class="freeze-toggle-btn active" id="freezeToggleBtn" onclick="toggleFreeze()">Freeze Card</button>
+    <div class="fh-propagate" id="freezePropLabel">Freeze instantly propagates to Apple Pay, Google Pay & all tokenised payments</div>
+  </div>
+
+  <!-- PQSI ALERTS -->
+  <div class="section-title">PQSI Security Alerts</div>
+
+  <div class="alert-item t1" style="margin-bottom:8px;">
+    <div class="alert-icon">⚠️</div>
+    <div class="alert-body">
+      <div class="alert-title">Unusual location detected</div>
+      <div class="alert-meta">Transaction attempted from Kuala Lumpur, Malaysia — not your usual region. PQSI paused and re-routed for manual review.</div>
+      <span class="alert-tier t1">T1 · Paused pending review</span>
+      <button class="alert-action" onclick="showToast('✅ Transaction confirmed as yours. PQSI resumed normal protection.')">It was me — confirm →</button>
+    </div>
+  </div>
+
+  <div class="alert-item t0" style="margin-bottom:8px;">
+    <div class="alert-icon">✅</div>
+    <div class="alert-body">
+      <div class="alert-title">All clear — no active threats</div>
+      <div class="alert-meta">PQSI scanned 14 transactions in the last 7 days. No T2–T4 threats detected. 10-layer protection active.</div>
+      <span class="alert-tier t0">T0 · Fully protected</span>
+    </div>
+  </div>
+
+  <div class="alert-item t0" style="margin-bottom:8px;">
+    <div class="alert-icon">🔒</div>
+    <div class="alert-body">
+      <div class="alert-title">SIM swap protection active</div>
+      <div class="alert-meta">SIINDEX monitors your device ID. Any SIM swap attempt triggers instant card freeze and 2FA escalation.</div>
+      <span class="alert-tier t0">T0 · Device locked</span>
+    </div>
+  </div>
+
+  <!-- GRANULAR CONTROLS -->
+  <div class="section-title">Channel Controls</div>
+  <div class="control-list">
+    <div class="ctrl-item">
+      <div class="ctrl-left">
+        <div class="ctrl-icon" style="background:rgba(0,212,255,0.1);">🌐</div>
+        <div>
+          <div class="ctrl-label">Online Payments</div>
+          <div class="ctrl-sub">Card-not-present transactions</div>
+        </div>
+      </div>
+      <button class="ctrl-toggle on" id="ctrlOnline" onclick="toggleControl('ctrlOnline','Online payments')"><div class="ctrl-dot"></div></button>
+    </div>
+    <div class="ctrl-item">
+      <div class="ctrl-left">
+        <div class="ctrl-icon" style="background:rgba(0,229,160,0.1);">📱</div>
+        <div>
+          <div class="ctrl-label">Contactless / NFC</div>
+          <div class="ctrl-sub">Apple Pay, Google Pay, tap-to-pay</div>
+        </div>
+      </div>
+      <button class="ctrl-toggle on" id="ctrlNFC" onclick="toggleControl('ctrlNFC','Contactless payments')"><div class="ctrl-dot"></div></button>
+    </div>
+    <div class="ctrl-item">
+      <div class="ctrl-left">
+        <div class="ctrl-icon" style="background:rgba(255,184,0,0.1);">🏧</div>
+        <div>
+          <div class="ctrl-label">ATM Withdrawals</div>
+          <div class="ctrl-sub">Cash access at ATM terminals</div>
+        </div>
+      </div>
+      <button class="ctrl-toggle on" id="ctrlATM" onclick="toggleControl('ctrlATM','ATM withdrawals')"><div class="ctrl-dot"></div></button>
+    </div>
+    <div class="ctrl-item">
+      <div class="ctrl-left">
+        <div class="ctrl-icon" style="background:rgba(139,63,232,0.1);">✈️</div>
+        <div>
+          <div class="ctrl-label">Foreign Currency</div>
+          <div class="ctrl-sub">Transactions outside home country</div>
+        </div>
+      </div>
+      <button class="ctrl-toggle on" id="ctrlFX" onclick="toggleControl('ctrlFX','Foreign currency spending')"><div class="ctrl-dot"></div></button>
+    </div>
+    <div class="ctrl-item">
+      <div class="ctrl-left">
+        <div class="ctrl-icon" style="background:rgba(0,212,255,0.1);">📲</div>
+        <div>
+          <div class="ctrl-label">P2P Transfers</div>
+          <div class="ctrl-sub">Send to other .IN$DEX domains</div>
+        </div>
+      </div>
+      <button class="ctrl-toggle on" id="ctrlP2P" onclick="toggleControl('ctrlP2P','P2P transfers')"><div class="ctrl-dot"></div></button>
+    </div>
+    <div class="ctrl-item">
+      <div class="ctrl-left">
+        <div class="ctrl-icon" style="background:rgba(255,77,109,0.1);">🔁</div>
+        <div>
+          <div class="ctrl-label">Recurring / Subscriptions</div>
+          <div class="ctrl-sub">Auto-charges and subscriptions</div>
+        </div>
+      </div>
+      <button class="ctrl-toggle on" id="ctrlSubs" onclick="toggleControl('ctrlSubs','Subscriptions')"><div class="ctrl-dot"></div></button>
+    </div>
+  </div>
+
+  <!-- LOST / STOLEN -->
+  <div class="section-title">Card Actions</div>
+  <div style="padding:0 20px;">
+    <button class="lost-btn report" onclick="showLostSheet()">🚨 Report Lost or Stolen</button>
+    <button class="lost-btn replace" onclick="showToast('📦 Replacement card ordered. Arrives in 5–10 days.')">💳 Order Replacement Card</button>
+  </div>
+
+  <!-- SECURITY HISTORY -->
+  <div class="section-title">Security Log</div>
+  <div class="sec-hist" style="padding:0 16px;">
+    <div class="sh-item">
+      <div class="sh-dot green"></div>
+      <div class="sh-body">
+        <div class="sh-event">PQSI pre-flight: Cleared — Coconut Stall Avarua</div>
+        <div class="sh-time">Today 10:14 AM · T0 · Cook Islands</div>
+      </div>
+    </div>
+    <div class="sh-item">
+      <div class="sh-dot gold"></div>
+      <div class="sh-body">
+        <div class="sh-event">Unusual location flagged — Kuala Lumpur transaction paused</div>
+        <div class="sh-time">Yesterday 3:42 PM · T1 · SIINDEX review</div>
+      </div>
+    </div>
+    <div class="sh-item">
+      <div class="sh-dot green"></div>
+      <div class="sh-body">
+        <div class="sh-event">PQSI pre-flight: Cleared — ATM BSP Nadi</div>
+        <div class="sh-time">2 days ago · T0 · Fiji</div>
+      </div>
+    </div>
+    <div class="sh-item">
+      <div class="sh-dot green"></div>
+      <div class="sh-body">
+        <div class="sh-event">Freeze toggled OFF — Card reactivated</div>
+        <div class="sh-time">3 days ago 9:18 AM · Manual action</div>
+      </div>
+    </div>
+    <div class="sh-item">
+      <div class="sh-dot red"></div>
+      <div class="sh-body">
+        <div class="sh-event">Card frozen — Citizen action</div>
+        <div class="sh-time">3 days ago 9:14 AM · Manual action</div>
+      </div>
+    </div>
+    <div class="sh-item">
+      <div class="sh-dot green"></div>
+      <div class="sh-body">
+        <div class="sh-event">SIM swap check: No change detected</div>
+        <div class="sh-time">5 days ago · T0 · Daily scan</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- LOST/STOLEN SHEET -->
+<div class="overlay" id="lostOverlay" onclick="closeLostSheet(event)">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" style="color:var(--red);">🚨 Report Lost or Stolen</div>
+    <div class="sheet-sub">This will permanently block your current card and trigger a PQSI T4 lockdown. A replacement card will be dispatched within 24 hours.</div>
+    <div style="background:rgba(255,77,109,0.06);border:1px solid rgba(255,77,109,0.2);border-radius:12px;padding:14px;margin-bottom:20px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:6px;">What happens immediately:</div>
+      <div style="font-size:12px;color:var(--text-muted);line-height:1.8;">
+        🔴 Card permanently blocked<br>
+        📱 Apple Pay / Google Pay tokens revoked<br>
+        🛡️ PQSI T4 lockdown — all channels frozen<br>
+        📦 Replacement card dispatched within 24hrs<br>
+        🔔 SIINDEX monitors for fraudulent activity
+      </div>
+    </div>
+    <button class="sheet-btn red" onclick="reportLost()">Confirm — Block Card Now</button>
+    <button class="sheet-cancel" onclick="closeLostSheet()">Cancel — I Found It</button>
+  </div>
+</div>
+
+<script>
+  let isFrozen = false;
+  const controlState = { ctrlOnline:true, ctrlNFC:true, ctrlATM:true, ctrlFX:true, ctrlP2P:true, ctrlSubs:true };
+
+  function toggleFreeze() {
+    isFrozen = !isFrozen;
+    const hero = document.getElementById('freezeHero');
+    const icon = document.getElementById('freezeIcon');
+    const status = document.getElementById('freezeStatus');
+    const sub = document.getElementById('freezeSub');
+    const btn = document.getElementById('freezeToggleBtn');
+    const prop = document.getElementById('freezePropLabel');
+    if (isFrozen) {
+      hero.className = 'freeze-hero frozen';
+      icon.textContent = '🔴';
+      status.className = 'fh-status frozen'; status.textContent = 'Card Frozen';
+      sub.textContent = 'All payments blocked instantly. Apple Pay, Google Pay and all tokenised payments are frozen.';
+      btn.className = 'freeze-toggle-btn frozen'; btn.textContent = 'Unfreeze Card';
+      prop.textContent = 'Freeze propagated to Apple Pay, Google Pay & all tokenised environments ✓';
+      showToast('🔒 Card frozen. No transactions can proceed. Tap Unfreeze when safe.');
+    } else {
+      hero.className = 'freeze-hero active';
+      icon.textContent = '🟢';
+      status.className = 'fh-status active'; status.textContent = 'Card Active';
+      sub.textContent = 'Your IN$DEX card is live and protected by PQSI across all payment channels.';
+      btn.className = 'freeze-toggle-btn active'; btn.textContent = 'Freeze Card';
+      prop.textContent = 'Freeze instantly propagates to Apple Pay, Google Pay & all tokenised payments';
+      showToast('✅ Card unfrozen. PQSI protection resumed. Ready to spend.');
+    }
+  }
+
+  function toggleControl(id, name) {
+    controlState[id] = !controlState[id];
+    const btn = document.getElementById(id);
+    btn.className = 'ctrl-toggle ' + (controlState[id] ? 'on' : 'off');
+    showToast(controlState[id] ? '✅ ' + name + ' enabled.' : '🔒 ' + name + ' disabled.');
+  }
+
+  function showLostSheet() {
+    document.getElementById('lostOverlay').classList.add('show');
+  }
+
+  function closeLostSheet(e) {
+    if (!e || e.target.id === 'lostOverlay') document.getElementById('lostOverlay').classList.remove('show');
+  }
+
+  function reportLost() {
+    closeLostSheet();
+    isFrozen = true;
+    document.getElementById('freezeHero').className = 'freeze-hero frozen';
+    document.getElementById('freezeIcon').textContent = '🚨';
+    document.getElementById('freezeStatus').className = 'fh-status frozen';
+    document.getElementById('freezeStatus').textContent = 'Card Blocked — Reported Stolen';
+    document.getElementById('freezeSub').textContent = 'Your card has been permanently blocked. PQSI T4 lockdown active. Replacement dispatched.';
+    document.getElementById('freezeToggleBtn').style.display = 'none';
+    showToast('🚨 Card blocked. PQSI T4 active. Replacement card dispatched. You\'re safe.');
+  }
+
+  function showToast(msg) {
+    let t = document.getElementById('toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'toast';
+      t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#22263A;border:1px solid #2A2D38;color:#EAEAEA;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:999;max-width:360px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.4);';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg; t.style.opacity = '1';
+    clearTimeout(window._tt);
+    window._tt = setTimeout(() => { t.style.opacity = '0'; }, 3500);
+  }
+</script>
+</body>
+</html>

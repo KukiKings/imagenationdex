@@ -159,6 +159,21 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
 /* ── TOAST ── */
 .toast{position:fixed;bottom:calc(var(--nav-h)+12px);left:50%;transform:translateX(-50%) translateY(20px);max-width:320px;width:calc(100% - 40px);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:13px;color:var(--text);text-align:center;opacity:0;transition:opacity 0.3s,transform 0.3s;z-index:400;pointer-events:none;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── GOD MODE: BIG TECH COMPARE ── */
+.bigtech-compare{margin:0 20px 20px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 18px;display:none;}
+.bigtech-compare.show{display:block;}
+.btc-title{font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;}
+.btc-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+.btc-row:last-child{border-bottom:none;}
+.btc-label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);}
+.btc-val{font-size:13px;font-weight:800;}
+.btc-val.bad{color:var(--red);}
+.btc-val.good{color:var(--green);}
+
+/* ── GOD MODE: INCOMING REQUEST FLASH ── */
+.incoming-req{margin:0 20px 10px;background:rgba(255,184,0,0.08);border:1.5px solid rgba(255,184,0,0.3);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;animation:slideIn 0.4s ease;}
+@keyframes slideIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
 </style>
 </head>
 <body>
@@ -374,6 +389,9 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
       </div>
     </div>
 
+    <!-- GOD MODE: INCOMING REQUEST SLOT -->
+    <div id="incomingRequestSlot"></div>
+
     <!-- SWAP YOUR DATA EARNINGS -->
     <div class="section" id="swapSection" style="display:none">
       <div class="sec-title">Swap Your Data Earnings</div>
@@ -423,6 +441,27 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
     <div class="consent-audit" id="consentAudit">
       <div class="ca-title">🔍 Consent Audit Trail</div>
       <div id="auditList"></div>
+    </div>
+
+    <!-- GOD MODE: BIG TECH COMPARE -->
+    <div class="bigtech-compare" id="bigtechCompare">
+      <div class="btc-title">📊 What your data is worth — for real</div>
+      <div class="btc-row">
+        <div class="btc-label">📘 Facebook earned from you today</div>
+        <div class="btc-val bad" id="btcFB">—</div>
+      </div>
+      <div class="btc-row">
+        <div class="btc-label">🔍 Google earned from you today</div>
+        <div class="btc-val bad" id="btcGoogle">—</div>
+      </div>
+      <div class="btc-row">
+        <div class="btc-label">🎵 TikTok earned from you today</div>
+        <div class="btc-val bad" id="btcTikTok">—</div>
+      </div>
+      <div class="btc-row">
+        <div class="btc-label">🔒 Your Data Vault earned for you</div>
+        <div class="btc-val good" id="btcYou">—</div>
+      </div>
     </div>
 
     <!-- ZK PROOF INFO -->
@@ -477,13 +516,41 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
 const INDX_PRICE = 0.24;
 let vaultActive = false;
 let activePriceKey = '';
-let dataEarned = parseFloat(sessionStorage.getItem('vault_earned') || '0');
-let dataStats = JSON.parse(sessionStorage.getItem('vault_stats') || '{"access":0,"approved":0,"blocked":0}');
-let dataToggles = JSON.parse(sessionStorage.getItem('vault_toggles') || '{}');
-let dataPrices = JSON.parse(sessionStorage.getItem('vault_prices') || '{}');
+let earningTickInterval = null;
 
-// Check if vault was previously activated
-if (sessionStorage.getItem('vault_active') === '1') {
+// ── GOD MODE: PERSIST TO LOCALSTORAGE ──
+const VK = {
+  active:   'indx_vault_active',
+  earned:   'indx_vault_earned',
+  stats:    'indx_vault_stats',
+  toggles:  'indx_vault_toggles',
+  prices:   'indx_vault_prices',
+  earnedTs: 'indx_vault_earned_ts',
+};
+function vLoad(key, def) {
+  try { return JSON.parse(localStorage.getItem(VK[key]) || def); } catch(e) { return JSON.parse(def); }
+}
+function vSave(key, val) { localStorage.setItem(VK[key], JSON.stringify(val)); }
+
+let dataEarned  = vLoad('earned', '0');
+let dataStats   = vLoad('stats', '{"access":0,"approved":0,"blocked":0}');
+let dataToggles = vLoad('toggles', '{}');
+let dataPrices  = vLoad('prices', '{}');
+
+// GOD MODE: compute earned-while-away if vault was active
+if (localStorage.getItem(VK.active) === '1') {
+  const lastTs = parseInt(localStorage.getItem(VK.earnedTs) || '0');
+  if (lastTs > 0) {
+    const hrsSince = Math.min((Date.now() - lastTs) / 3600000, 24);
+    const CATEGORY_EARNINGS = {location:2,purchase:3,interests:1.5,market:1,social:2};
+    const activeToggles = Object.keys(dataToggles).filter(k => dataToggles[k]);
+    const hourlyRate = activeToggles.reduce((s,k) => s + (dataPrices[k] || CATEGORY_EARNINGS[k] || 1), 0) / (30 * 24);
+    const awayEarned = hrsSince * hourlyRate;
+    if (awayEarned > 0.001) {
+      dataEarned = parseFloat(dataEarned) + awayEarned;
+      vSave('earned', dataEarned);
+    }
+  }
   vaultActive = true;
   showVaultActive();
 }
@@ -500,17 +567,21 @@ function updateHeroStats() {
 
 function activateVault() {
   vaultActive = true;
-  sessionStorage.setItem('vault_active', '1');
-  // Simulate initial earnings
-  dataEarned += 0.5;
+  // GOD MODE PATCH — localStorage persistence
+  localStorage.setItem(VK.active, '1');
+  localStorage.setItem(VK.earnedTs, String(Date.now()));
+  dataEarned = parseFloat(dataEarned) + 0.5;
   dataStats.access = 3; dataStats.approved = 1; dataStats.blocked = 1;
-  sessionStorage.setItem('vault_earned', dataEarned);
-  sessionStorage.setItem('vault_stats', JSON.stringify(dataStats));
-  // Update balance
+  vSave('earned', dataEarned);
+  vSave('stats', dataStats);
   const bal = parseFloat(sessionStorage.getItem('citizen_balance') || '0');
   sessionStorage.setItem('citizen_balance', (bal + 0.5).toFixed(6));
   showVaultActive();
   updateHeroStats();
+  // GOD MODE: animate sovereignty score from 0
+  animateSovereigntyScore(82);
+  // GOD MODE: start buyer simulator after 8s
+  setTimeout(startBuyerSimulator, 8000);
   showToast('🔒 Data Vault activated! You are now earning from your data.');
 }
 
@@ -546,13 +617,14 @@ function toggleData(btn, key) {
   const lbl = document.getElementById('lbl-' + key);
   lbl.textContent = isOn ? 'On' : 'Off';
   dataToggles[key] = isOn;
-  sessionStorage.setItem('vault_toggles', JSON.stringify(dataToggles));
+  // GOD MODE PATCH — localStorage persistence
+  vSave('toggles', dataToggles);
   if (isOn) {
     const reward = dataPrices[key] || getDefaultPrice(key);
     dataEarned += reward;
     dataStats.access++; dataStats.approved++;
-    sessionStorage.setItem('vault_earned', dataEarned);
-    sessionStorage.setItem('vault_stats', JSON.stringify(dataStats));
+    vSave('earned', dataEarned);
+    vSave('stats', dataStats);
     const bal = parseFloat(sessionStorage.getItem('citizen_balance') || '0');
     sessionStorage.setItem('citizen_balance', (bal + reward).toFixed(6));
     updateHeroStats();
@@ -590,7 +662,8 @@ function closePriceSheet() {
 function savePrice() {
   const val = parseFloat(document.getElementById('priceInput').value) || 1;
   dataPrices[activePriceKey] = val;
-  sessionStorage.setItem('vault_prices', JSON.stringify(dataPrices));
+  // GOD MODE PATCH — localStorage persistence
+  vSave('prices', dataPrices);
   const earnEl = document.getElementById('earn-' + activePriceKey);
   if (earnEl) earnEl.textContent = 'Earn: ' + val + ' INDX / month';
   closePriceSheet();
@@ -615,7 +688,7 @@ function executeDataSwap() {
   const earned = dataEarned;
   showToast('⚡ Swapping ' + earned.toFixed(2) + ' INDX → ' + asset + ' · 7-point pre-flight...');
   setTimeout(() => {
-    if (asset !== 'INDX') { dataEarned = 0; sessionStorage.setItem('vault_earned', '0'); }
+    if (asset !== 'INDX') { dataEarned = 0; vSave('earned', 0); }
     updateHeroStats();
     recalcSwap();
     showToast('✅ Done. Your data earnings swapped to ' + asset + '. Standing by.');
@@ -639,7 +712,8 @@ function withdrawEarnings() {
   const bal = parseFloat(sessionStorage.getItem('citizen_balance') || '0');
   sessionStorage.setItem('citizen_balance', (bal + amt).toFixed(6));
   dataEarned = 0;
-  sessionStorage.setItem('vault_earned', '0');
+  // GOD MODE PATCH — localStorage persistence
+  vSave('earned', 0);
   logConsentEvent('withdrawn', 'Withdrew ' + amt.toFixed(2) + ' INDX to wallet');
   updateHeroStats();
   updateWithdrawStrip();
@@ -660,7 +734,8 @@ function approveAccess(buyer, dataType, statusId, actionsId) {
   if (statusEl) { statusEl.className = 'al-status approved'; statusEl.textContent = 'Approved'; }
   if (actionsEl) { actionsEl.innerHTML = '<button class="action-btn btn-revoke" onclick="revokeAccess(\'' + buyer + '\',\'' + dataType + '\')">Revoke</button>'; }
   dataStats.approved++;
-  sessionStorage.setItem('vault_stats', JSON.stringify(dataStats));
+  // GOD MODE PATCH — localStorage persistence
+  vSave('stats', dataStats);
   updateHeroStats();
   logConsentEvent('granted', buyer + ' approved — ' + dataType);
   renderConsentAudit();
@@ -673,7 +748,8 @@ function rejectAccess(buyer, statusId, actionsId) {
   if (statusEl) { statusEl.className = 'al-status blocked'; statusEl.textContent = 'Rejected'; }
   if (actionsEl) { actionsEl.innerHTML = ''; }
   dataStats.blocked++;
-  sessionStorage.setItem('vault_stats', JSON.stringify(dataStats));
+  // GOD MODE PATCH — localStorage persistence
+  vSave('stats', dataStats);
   updateHeroStats();
   logConsentEvent('blocked', buyer + ' rejected');
   renderConsentAudit();
@@ -683,7 +759,7 @@ function rejectAccess(buyer, statusId, actionsId) {
 // ── EARNINGS PROJECTION ───────────────────────────────────────────
 const CATEGORY_EARNINGS = {location:2,purchase:3,interests:1.5,market:1,social:2};
 function updateProjection() {
-  const priceMap = JSON.parse(sessionStorage.getItem('vault_prices') || '{}');
+  const priceMap = dataPrices;
   let total = 0;
   Object.entries(CATEGORY_EARNINGS).forEach(([key, def]) => {
     const val = priceMap[key] || def;
@@ -739,6 +815,146 @@ function showToast(msg) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
 }
+
+// ── GOD MODE F1: REAL-TIME EARNINGS TICKER ────────────────────────
+let _tickerInterval = null;
+// Active categories earn their monthly rate spread over seconds (30-day month)
+function getActiveHourlyRate() {
+  let total = 0;
+  const defaults = {location:2,purchase:3,interests:1.5,market:1,social:2};
+  Object.entries(defaults).forEach(([key, def]) => {
+    if (dataToggles[key]) total += dataPrices[key] || def;
+  });
+  return total / (30 * 24); // INDX per hour
+}
+function startEarningsTicker() {
+  if (_tickerInterval) return;
+  _tickerInterval = setInterval(() => {
+    if (!vaultActive) { stopEarningsTicker(); return; }
+    const perSecond = getActiveHourlyRate() / 3600;
+    if (perSecond > 0) {
+      dataEarned = parseFloat(dataEarned) + perSecond;
+      vSave('earned', dataEarned);
+      localStorage.setItem(VK.earnedTs, String(Date.now()));
+      // update displayed earned value in hero
+      const el = document.getElementById('vaultEarnedUsd');
+      if (el) el.textContent = '≈ $' + (dataEarned * INDX_PRICE).toFixed(4) + ' USD · Earning actively';
+    }
+  }, 1000);
+}
+function stopEarningsTicker() {
+  clearInterval(_tickerInterval);
+  _tickerInterval = null;
+}
+
+// ── GOD MODE F2: INCOMING BUYER REQUEST SIMULATOR ─────────────────
+const BUYERS = [
+  { name: 'HealthAnalytics Co', type: 'Behavioural Interests', reward: 1.5, icon: '🏥' },
+  { name: 'RetailInsights Pro', type: 'Purchase History',      reward: 3.0, icon: '🛍️' },
+  { name: 'GeoData Networks',   type: 'Location Data',         reward: 2.0, icon: '📍' },
+  { name: 'MarketPulse AI',     type: 'Market Research',       reward: 1.0, icon: '📊' },
+  { name: 'SocialTrends Inc',   type: 'Social Interactions',   reward: 2.0, icon: '💬' },
+];
+let _buyerTimer = null;
+function startBuyerSimulator() {
+  const delay = 30000 + Math.random() * 60000; // 30–90s
+  _buyerTimer = setTimeout(() => {
+    const b = BUYERS[Math.floor(Math.random() * BUYERS.length)];
+    const uid = 'req_' + Date.now();
+    const slot = document.getElementById('incomingRequestSlot');
+    if (!slot) return;
+    const card = document.createElement('div');
+    card.className = 'incoming-req';
+    card.id = uid;
+    card.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+        <span style="font-size:22px;">${b.icon}</span>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);">${b.name}</div>
+          <div style="font-size:11px;color:var(--text-dim);">Requesting: ${b.type}</div>
+        </div>
+        <div style="margin-left:auto;font-size:13px;font-weight:700;color:var(--green);">+${b.reward} INDX/mo</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="approveIncoming('${uid}','${b.name}','${b.type}',${b.reward})" style="flex:1;padding:8px;background:var(--green);color:#000;border:none;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;">✅ Approve</button>
+        <button onclick="rejectIncoming('${uid}','${b.name}')" style="flex:1;padding:8px;background:var(--surface3);color:var(--red);border:none;border-radius:8px;font-weight:600;font-size:12px;cursor:pointer;">🚫 Reject</button>
+      </div>`;
+    slot.prepend(card);
+    showToast('📥 New data buyer request from ' + b.name);
+    // schedule next
+    startBuyerSimulator();
+  }, delay);
+}
+function approveIncoming(uid, buyer, dataType, reward) {
+  const card = document.getElementById(uid);
+  if (card) card.remove();
+  dataEarned = parseFloat(dataEarned) + reward;
+  dataStats.approved++;
+  vSave('earned', dataEarned);
+  vSave('stats', dataStats);
+  updateHeroStats();
+  logConsentEvent('granted', buyer + ' approved — ' + dataType);
+  renderConsentAudit();
+  showToast('✅ Approved ' + buyer + ' · +' + reward + ' INDX/mo');
+}
+function rejectIncoming(uid, buyer) {
+  const card = document.getElementById(uid);
+  if (card) card.remove();
+  dataStats.blocked++;
+  vSave('stats', dataStats);
+  updateHeroStats();
+  logConsentEvent('blocked', buyer + ' rejected via incoming request');
+  renderConsentAudit();
+  showToast('🚫 Rejected ' + buyer);
+}
+
+// ── GOD MODE F3: BIG TECH COMPARISON LIVE COUNTER ─────────────────
+// Facebook ~$0.0008/day, Google ~$0.0006/day, TikTok ~$0.0004/day for user data
+// Vault active categories determine user's actual daily rate
+const BIG_TECH_RATES = { fb: 0.0008/86400, gg: 0.0006/86400, tt: 0.0004/86400 };
+let _btCounters = { fb: 0, gg: 0, tt: 0 };
+let _btTicker = null;
+function startBigTechCounter() {
+  const card = document.getElementById('bigtechCompare');
+  if (card) card.classList.add('show');
+  _btTicker = setInterval(() => {
+    _btCounters.fb += BIG_TECH_RATES.fb;
+    _btCounters.gg += BIG_TECH_RATES.gg;
+    _btCounters.tt += BIG_TECH_RATES.tt;
+    const vaultRate = getActiveHourlyRate() / 3600; // per second
+    const vaultDay = vaultRate * 86400;
+    const el = (id) => document.getElementById(id);
+    if (el('btcFB')) el('btcFB').textContent = '$' + _btCounters.fb.toFixed(6);
+    if (el('btcGoogle')) el('btcGoogle').textContent = '$' + _btCounters.gg.toFixed(6);
+    if (el('btcTikTok')) el('btcTikTok').textContent = '$' + _btCounters.tt.toFixed(6);
+    if (el('btcYou')) el('btcYou').textContent = '$' + (dataEarned * INDX_PRICE).toFixed(6);
+  }, 1000);
+}
+
+// ── GOD MODE F4: SOVEREIGNTY SCORE ANIMATOR ───────────────────────
+function animateSovereigntyScore(target) {
+  const el = document.getElementById('privScore');
+  const bar = document.getElementById('privBar');
+  if (!el) return;
+  el.textContent = '0';
+  if (bar) bar.style.width = '0%';
+  let current = 0;
+  const step = Math.ceil(target / 40);
+  const iv = setInterval(() => {
+    current = Math.min(current + step, target);
+    el.textContent = current;
+    if (bar) bar.style.width = current + '%';
+    if (current >= target) clearInterval(iv);
+  }, 30);
+}
+
+// ── PATCH showVaultActive to start tickers ─────────────────────────
+const _origShowVaultActive = showVaultActive;
+showVaultActive = function() {
+  _origShowVaultActive();
+  startEarningsTicker();
+  startBigTechCounter();
+};
 </script>
 </body>
 </html>

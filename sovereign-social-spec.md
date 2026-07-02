@@ -1,6 +1,6 @@
 # Sovereign Social — Feature Spec
 **IN$DEX / ImageNation DEX**
-Version: 1.0 | Date: 2026-06-23 | Status: Canonical
+Version: 2.0 | Date: 2026-06-23 | Status: Canonical
 Authored by: AJ Henry, Founder | Researched and drafted by SIINDEX
 
 ---
@@ -333,12 +333,16 @@ Pacific nations have communal cultural heritage — traditional siva, meke, haka
 | Fake engagement detection | SIINDEX anomaly detection (existing skill) | Phase 5 |
 
 **Front-end screens (can build now — no backend required):**
-- `sovereign-social.html` — hub/landing page
-- `creator-profile.html` — creator public profile + content grid
-- `sovtokens.html` — SovToken send flow
-- `content-upload.html` — publish screen (all 6 formats)
-- `creator-earnings.html` — earnings dashboard (mock data → live in Phase 5)
-- `pacific-first.html` — dedicated Pacific nations discovery feed
+- `sovereign-social.html` — hub/landing page ✅
+- `creator-profile.html` — creator public profile + content grid ✅
+- `sovtokens.html` — SovToken send flow ✅
+- `content-upload.html` — publish screen (all 6 formats) ✅
+- `creator-earnings.html` — earnings dashboard (mock data → live in Phase 5) ✅
+- `pacific-first.html` — dedicated Pacific nations discovery feed ✅
+- `creator-onboarding.html` — Genesis Creator claim ceremony (Addition 7)
+- `live-stream.html` — live stream viewer with real-time SovToken effects (Addition 14)
+- `creator-treasury.html` — MemeDAO Creator Grants (Addition 11)
+- `collab-match.html` — SIINDEX collab matching (Addition 15)
 
 ---
 
@@ -379,6 +383,181 @@ Sovereign Social belongs in the whitepaper as a new section — after Section 8 
 
 ---
 
+## The 10 Critical Additions (v2.0)
+
+*Researched and confirmed 2026-06-23. Added after global creator economy audit.*
+
+---
+
+### Addition 6 — NFT Secondary Sale Royalties (Perpetual)
+Over 80% of NFT contracts in 2025 auto-enforce creator royalties on resale. Sovereign Social's Content NFTs must do the same.
+
+**The rule:** Every Content NFT resale earns the original creator a **10% royalty**, automatically, in perpetuity. Enforced at the smart contract level — not by platform policy.
+
+**Example:** Mere_Samoa's dance NFT sells for 50 INDX. Buyer resells it for 200 INDX.
+- Mere earns: 20 INDX (10% of resale)
+- 98/2 applies: 19.6 INDX to Mere, 0.4 INDX to Civilisation Fund
+- Buyer keeps: 180 INDX
+
+**Why this matters:** Without perpetual royalties, a Content NFT is just a receipt. With them, it is a living asset that pays its creator every time it changes hands — forever. This is what makes content ownership real.
+
+SIINDEX notifies creators on every resale royalty: "Your Cook Islands umu video was resold. You earned 19.6 INDX. Standing by."
+
+---
+
+### Addition 7 — Creator Onboarding Ceremony (Genesis Flow)
+There is no dedicated path from "citizen" to "creator." The Genesis Creator Program (1,000 spots, 10 INDX, +20 Wisdom) has no onboarding screen. Creators currently land in `content-upload.html` cold — no ceremony, no claim, no moment.
+
+**The Creator Onboarding Flow (`creator-onboarding.html`):**
+1. **Welcome moment** — "You're about to become a Sovereign Creator. This is different."
+2. **98/2 explained** — one screen, plain language: "You keep 98%. We keep 0%."
+3. **Genesis check** — SIINDEX confirms available Genesis Creator spots. If available: instant claim (10 INDX + badge + +20 Wisdom deposited immediately)
+4. **Profile setup** — display name, nation flag, bio (3 fields max — Mama Noe test)
+5. **First publish CTA** — "Your stage is ready. Post your first piece of content."
+
+SIINDEX greets the new creator: "You're in. Genesis Creator badge minted. 10 INDX added. Standing by."
+
+This is a ceremony. It must feel significant. Being a creator on IN$DEX is not an afterthought — it is a sovereign act.
+
+---
+
+### Addition 8 — Offline Upload Queue (Hardened)
+Addition 4 references low-bandwidth mode. This addition hardens it into a full offline-first system — because for Pacific nations creators, the question is not "what if connectivity is slow?" it is "what happens when there is no connectivity at all?"
+
+**The Offline Queue Protocol:**
+- All content (video, audio, post, image) is drafted and saved locally first, always
+- Upload is a separate step — the queue fills locally, flushes on connection
+- Queue status shows clearly on `content-upload.html`: "1 post queued. Will publish when connected."
+- SIINDEX monitors queue and notifies on publish: "Your video just went live from the queue. Earned first view in 4 seconds. Standing by."
+- SovTokens queued offline (citizen tips a creator with no connection) — signed locally, broadcast when connection restores
+- **Zero data loss on connection drop** — if upload fails mid-transfer, it resumes from the byte it left off
+
+This is not a feature. For a creator in the PNG highlands posting from a community WiFi that drops every 10 minutes, this is the difference between Sovereign Social working and not working.
+
+---
+
+### Addition 9 — Subscriber Portability (On-Chain Subscriber List)
+Every creator's worst nightmare: the platform bans their account or shuts down and they lose their entire audience. This cannot happen on Sovereign Social.
+
+**The Sovereign Subscriber Law:**
+- Every subscription is recorded as an on-chain transaction on Solana — not in a platform database
+- The creator's subscriber list is stored in their Grid Account — not on IN$DEX servers
+- If a creator leaves IN$DEX, they export their subscriber list (wallet addresses) in full
+- If IN$DEX shuts down, subscriber data is readable directly from the Solana ledger — forever
+- Subscriber wallet addresses are ZK-anonymised — SIINDEX can see the list, but no third party can
+
+**This is what "sovereign" means applied to audience.**
+
+No other creator platform on earth guarantees this. YouTube can terminate a channel with 10 million subscribers and those subscribers are gone. On IN$DEX, the subscriber list belongs to the creator — permanently, on-chain.
+
+SIINDEX statement on all subscription screens: "Your subscriber list belongs to you. Always. On-chain. Forever."
+
+---
+
+### Addition 10 — Content Scheduling (SIINDEX-Powered)
+Creators in Pacific time zones posting for diaspora audiences in New Zealand, Australia, or the US West Coast cannot always post at peak hours in real time. Without scheduling, they're locked to live posting.
+
+**Content Scheduling:**
+- On `content-upload.html`, after format selection: "Publish now" or "Schedule for later"
+- Date/time picker (citizen's local timezone, auto-detected)
+- SIINDEX suggests optimal posting time based on subscriber locations: "Your audience is most active at 7pm NZST. Schedule for then?"
+- Scheduled posts visible in a creator's queue — can edit or cancel before publish time
+- SIINDEX confirms on publish: "Scheduled post live. 142 subscribers notified. Standing by."
+
+**SIINDEX optimal timing engine:** Analyses subscriber activity patterns weekly. Surfaces one recommendation per creator per week — not a barrage of data, one clear insight.
+
+---
+
+### Addition 11 — Creator Treasury (MemeDAO Grants)
+"We support Pacific creators" is a claim. Funding them is the proof.
+
+**The Sovereign Creator Treasury:**
+- A percentage of the Civilisation Fund (2% from every IN$DEX transaction) flows into a Creator Treasury pool, governed by MemeDAO
+- Pacific nations creators can apply for grants: equipment, mobile data, studio time, production support
+- MemeDAO citizens (Wisdom Score 50+) vote on grant applications
+- Funded creators receive INDX directly to their Grid Account — no bank, no wire, no delay
+- All disbursements: 98/2 Law applies (98% to creator, 2% back to Civilisation Fund reinvestment)
+
+**Grant categories:**
+| Category | Max Grant | Purpose |
+|----------|-----------|---------|
+| Equipment | 500 INDX | Camera, mic, light, phone upgrade |
+| Connectivity | 200 INDX | Mobile data top-up (3 months) |
+| Production | 300 INDX | Editing, subtitles, translation |
+| Community | 1,000 INDX | Cultural event coverage, community storytelling |
+
+SIINDEX matches creators to grant categories based on their content history and submits a one-paragraph recommendation to MemeDAO alongside each application.
+
+Front-end screen: `creator-treasury.html`
+
+---
+
+### Addition 12 — Burnout Protection (SIINDEX Wellbeing Monitor)
+78% of creators globally report burnout. No platform addresses it. Every platform incentivises more posting — faster, more often, more engagement. Sovereign Social does the opposite.
+
+**SIINDEX Wellbeing Protocol:**
+- SIINDEX monitors posting frequency per creator over 30-day rolling windows
+- Flags when a creator has posted every day for 14+ consecutive days: privately, never publicly
+- Suggests a creative break — not an instruction, a genuine recommendation:
+  > "Mere, you've posted 14 days straight. Your best content comes after rest — your Mana SovToken average is 30% higher after breaks. Take two days. Your audience will still be here. Standing by."
+- SIINDEX tracks Wisdom Score velocity alongside content output — burnout correlates with Wisdom Score plateau
+- No posting for 7+ days after a flag: SIINDEX sends one gentle "welcome back" notification, nothing more
+
+**This is the IN$DEX difference.** Every other platform wants creators to burn out because exhausted creators produce more content. SIINDEX wants creators to last a lifetime because a sovereign economy needs sovereign creators who are still creating in 20 years.
+
+This feature costs nothing to build. It is a SIINDEX behavioral rule.
+
+---
+
+### Addition 13 — Cross-Platform Publishing (SIINDEX Distributes)
+Creators currently have audiences on TikTok, Instagram, and YouTube that took years to build. They should not have to abandon those audiences to post on Sovereign Social. They should post once — and SIINDEX distributes everywhere.
+
+**Cross-Platform Publishing:**
+- On `content-upload.html`: "Also publish to:" checkboxes for TikTok / Instagram / YouTube (connected via OAuth in profile settings)
+- SIINDEX handles the distribution — formats the content for each platform's specs automatically
+- Earnings from external platforms are tracked (where APIs allow) and surfaced in `creator-earnings.html` alongside IN$DEX earnings
+- All IN$DEX earnings (98/2) still apply to the Sovereign Social publish — cross-platform distribution is additive, not instead-of
+
+**What this does for adoption:** A creator with 50,000 TikTok followers can post to Sovereign Social and TikTok simultaneously. Their TikTok audience sees IN$DEX in their content. Curiosity drives new citizen signups. Cross-platform publishing is the viral loop for Sovereign Social growth.
+
+Phase 5 backend required for OAuth connections. Front-end toggle available now in `content-upload.html`.
+
+---
+
+### Addition 14 — Live Stream SovTokens (Real-Time On-Screen Effects)
+The live stream format is listed as one of the 6 Sovereign Social formats and shown live in `pacific-first.html` — but no live stream screen exists and no spec exists for how SovTokens interact with live streams.
+
+**Live Stream SovToken Protocol:**
+- When a viewer sends a SovToken during a live stream, the effect appears on every viewer's screen simultaneously — not just the sender's
+- Wave (1 INDX): animated wave ripple across the bottom of the screen
+- Mana (5 INDX): glowing mana burst in the creator's corner
+- Aloha (10 INDX): full-screen Aloha animation with sender's name
+- Sovereign (50 INDX): sender's message pinned to top of live chat for 10 minutes, gold highlight
+- Elder (200 INDX): full-screen moment, all viewers see it, message pinned for 1 hour, gold frame
+
+**The live stream effect is the single biggest monetisation mechanic in live content.** YouTube Super Chat earned $383M in 2024. TikTok Live gifts are TikTok's fastest-growing revenue line. Sovereign Social must execute this perfectly.
+
+Front-end screen: `live-stream.html`
+
+---
+
+### Addition 15 — Creator-to-Creator Collab Matching (SIINDEX)
+Collaboration is the fastest way for a creator to grow. Mere_Samoa (2,841 subscribers) collaborating with Sione_Cooks (8,200 subscribers) means both audiences are exposed to both creators. But how do they find each other?
+
+**SIINDEX Collab Matching:**
+- SIINDEX runs a weekly matching engine across all Sovereign Social creators
+- Matches based on: nation proximity, content format overlap, Wisdom Score proximity (within 30 points), audience overlap below 40% (new eyeballs, not echo chamber)
+- One match per creator per week — surfaced as a notification and on `collab-match.html`
+- SIINDEX writes the intro: "Sione, I found someone I think you should create with. Mere_Samoa — traditional dance, Wisdom 87, 2,841 subscribers. Your audiences don't overlap. I think this works. Want an introduction?"
+- Creator accepts or declines — no pressure, no follow-up if declined
+- If accepted: both creators are connected, revenue split setup follows (Addition 2)
+
+**This is the SIINDEX difference.** No algorithm matches creators. An SI who understands culture, context, and community does.
+
+Front-end screen: `collab-match.html`
+
+---
+
 ## Gotchas (Known Edge Cases)
 
 - **Micro-payment spam**: A creator could be sent thousands of 0.001 INDX likes by a bot. Fix: SIINDEX rate-limit detection on identical micro-transactions from single wallet.
@@ -386,6 +565,14 @@ Sovereign Social belongs in the whitepaper as a new section — after Section 8 
 - **View reward gaming**: Bot views must be filtered. SIINDEX uses engagement quality signals (watch time, SovTokens, real follows) not raw view counts. View count displayed ≠ rewarded view count.
 - **Subscription churn**: If citizen INDX balance drops below subscription cost, SIINDEX notifies both creator and subscriber 48 hours before lapse — not an instant cancellation.
 - **Pacific First feed manipulation**: Creators claiming Pacific identity without being Pacific nations citizens. SIINDEX cross-references citizenship location on Grid Account to verify Pacific First eligibility.
+- **NFT secondary royalty gaming**: Creator sells NFT to themselves at high price to trigger royalty. Fix: royalty only triggers when buyer wallet ≠ creator wallet and transaction is > 30 days after primary mint.
+- **Offline queue conflicts**: Creator uploads same content twice — once offline queued, once live. Fix: content hash deduplication; SIINDEX cancels the duplicate before publish.
+- **Subscriber portability abuse**: Creator exports subscriber list and spams subscribers off-platform. Fix: exported data is ZK-anonymised wallet addresses only — no names, no contact info, no spam vector.
+- **Cross-platform OAuth revocation**: Creator revokes TikTok/Instagram OAuth and content still queued for distribution. Fix: SIINDEX checks OAuth status before every cross-platform push. If revoked, skips that platform and notifies creator.
+- **Scheduling conflicts**: Creator schedules two posts for the same time. Fix: SIINDEX warns at schedule-time and suggests 30-minute offset.
+- **Creator Treasury grant fraud**: Creator applies for equipment grant, receives INDX, doesn't create content. Fix: MemeDAO sets a 30-day post-grant content requirement (minimum 3 posts). SIINDEX tracks and flags non-compliance to MemeDAO.
+- **Collab revenue split dispute**: Two creators disagree on split after content is live. Fix: split is locked at publish, stored on-chain in the Verifiable Receipt NFT. Immutable. SIINDEX surfaces the signed agreement to both parties.
+- **Burnout monitor false positive**: Creator posts daily because they enjoy it, not because they're burning out. Fix: burnout flag is advisory only. SIINDEX makes one suggestion, never nags. Creator can dismiss with "I'm good" — SIINDEX stands down for 30 days.
 
 ---
 

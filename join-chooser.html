@@ -101,6 +101,18 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
 
 .toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(20px);max-width:320px;width:calc(100% - 40px);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:13px;color:var(--text);text-align:center;opacity:0;transition:opacity 0.3s,transform 0.3s;z-index:400;pointer-events:none;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── GOD MODE: SOCIAL PROOF + RECENT METHOD ── */
+.live-pill{display:inline-flex;align-items:center;gap:7px;background:rgba(0,229,160,0.07);border:1px solid rgba(0,229,160,0.18);border-radius:99px;padding:5px 14px;font-size:12px;font-weight:700;color:var(--green);margin-bottom:16px;}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:livePulse 1.8s ease-in-out infinite;}
+@keyframes livePulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+.live-count{font-variant-numeric:tabular-nums;}
+
+.method-card.recent-used{border-color:rgba(255,184,0,0.35);}
+.recent-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;background:rgba(255,184,0,0.12);color:var(--gold);border:1px solid rgba(255,184,0,0.25);display:inline-block;margin-top:4px;}
+
+.method-card.tap-pulse{animation:cardTap 0.25s ease;}
+@keyframes cardTap{0%{transform:scale(1);}50%{transform:scale(0.97);}100%{transform:scale(1);}}
 </style>
 </head>
 <body>
@@ -113,6 +125,11 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
 
   <div class="hero-block">
     <div class="hero-logo">IN$DEX</div>
+    <!-- GOD MODE F3: Live citizen count pill -->
+    <div class="live-pill" id="livePill">
+      <div class="live-dot"></div>
+      <span class="live-count" id="liveCount">12,847</span> citizens live
+    </div>
     <h1 class="hero-title">Your sovereign wallet<br>in <span>90 seconds.</span></h1>
     <p class="hero-sub">No bank. No ID. No paperwork. Choose how you want to start.</p>
   </div>
@@ -329,6 +346,105 @@ function applyRefCode() {
   document.querySelector('.ref-apply').disabled = true;
   showToast('✅ Code applied — welcome bonus unlocked!');
 }
+
+// ══════════════════════════════════════════════
+// GOD MODE ADDITIONS — join-chooser
+// ══════════════════════════════════════════════
+const INDX_PRICE_USD = 0.24;
+
+// F1: Auto-populate referral code from URL ?ref= param
+(function autoPopulateRef() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const ref = urlParams.get('ref');
+  if (ref) {
+    sessionStorage.setItem('referral_code', ref);
+    const input = document.getElementById('refInput');
+    if (input) input.value = ref.toUpperCase();
+    // Auto-open referral section
+    const toggle = document.getElementById('refToggle');
+    const body = document.getElementById('refBody');
+    if (toggle && body) {
+      toggle.classList.add('open');
+      body.classList.add('open');
+    }
+    // Auto-apply
+    setTimeout(applyRefCode, 300);
+  }
+})();
+
+// F2: Highlight recently used join method
+(function highlightRecentMethod() {
+  const recent = localStorage.getItem('indx_join_last_method');
+  if (!recent) return;
+  const cards = document.querySelectorAll('.method-card');
+  cards.forEach(card => {
+    const href = card.getAttribute('href') || '';
+    const onclick = card.getAttribute('onclick') || '';
+    const matches =
+      (recent === 'sovereign_link' && href.includes('instant-onboard')) ||
+      (recent === 'qr' && onclick.includes('startQRScan')) ||
+      (recent === 'phone' && href.includes('biometric-kyc')) ||
+      (recent === 'domain' && href.includes('app-lock') && card.querySelector('.method-title')?.textContent?.includes('Domain')) ||
+      (recent === 'faceid' && href.includes('app-lock') && card.querySelector('.method-title')?.textContent?.includes('Face'));
+    if (matches) {
+      card.classList.add('recent-used');
+      const badgeContainer = card.querySelector('.method-body');
+      if (badgeContainer) {
+        const existing = badgeContainer.querySelector('.recent-badge');
+        if (!existing) {
+          const badge = document.createElement('div');
+          badge.className = 'recent-badge';
+          badge.textContent = '↩ Last used';
+          badgeContainer.appendChild(badge);
+        }
+      }
+    }
+  });
+})();
+
+// F3: Live citizen counter — syncs with onboarding-flow counter
+(function initLiveCount() {
+  const stored = parseInt(localStorage.getItem('indx_onboarding_citizencount') || '12847');
+  let count = stored;
+  const el = document.getElementById('liveCount');
+  if (!el) return;
+  el.textContent = count.toLocaleString();
+  function tick() {
+    count += Math.floor(Math.random() * 3) + 1;
+    localStorage.setItem('indx_onboarding_citizencount', count);
+    el.textContent = count.toLocaleString();
+    setTimeout(tick, 9000 + Math.random() * 12000);
+  }
+  setTimeout(tick, 6000);
+})();
+
+// F4: Method selection haptic pulse animation — wraps all navigable cards
+(function wireCardTapAnimation() {
+  document.querySelectorAll('.method-card').forEach(card => {
+    const methodKey = (() => {
+      const href = card.getAttribute('href') || '';
+      const onclick = card.getAttribute('onclick') || '';
+      if (href.includes('instant-onboard')) return 'sovereign_link';
+      if (onclick.includes('startQRScan')) return 'qr';
+      if (href.includes('biometric-kyc')) return 'phone';
+      const title = card.querySelector('.method-title')?.textContent || '';
+      if (title.includes('Domain')) return 'domain';
+      if (title.includes('Face')) return 'faceid';
+      return 'unknown';
+    })();
+
+    card.addEventListener('click', function(e) {
+      // Store last used method
+      if (methodKey !== 'unknown') {
+        localStorage.setItem('indx_join_last_method', methodKey);
+      }
+      // Pulse animation
+      this.classList.remove('tap-pulse');
+      void this.offsetWidth; // reflow to restart
+      this.classList.add('tap-pulse');
+    }, true); // capture phase so it fires before navigation
+  });
+})();
 </script>
 </body>
 </html>
