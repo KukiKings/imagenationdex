@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SI Image — Meta Prompt Generator 10X</title>
+<style>
+:root {
+  --bg: #090A10;
+  --s: #12141F;
+  --s2: #1A1D2E;
+  --s3: #22263A;
+  --cyan: #00D4FF;
+  --purple: #8B3FE8;
+  --green: #00E5A0;
+  --gold: #FFB800;
+  --red: #FF4D6D;
+  --blue: #2B35D8;
+  --text: #F0F2FF;
+  --text2: #9CA3B8;
+  --muted: #5A6178;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  min-height: 100vh;
+}
+.page { max-width: 1100px; margin: 0 auto; padding: 24px 20px 48px; }
+.hdr {
+  display: flex; align-items: center; gap: 14px;
+  padding-bottom: 20px; border-bottom: 0.5px solid var(--s3); margin-bottom: 24px;
+}
+.hdr-orb {
+  width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--cyan), var(--purple));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; color: var(--bg);
+}
+.hdr h1 { font-size: 18px; font-weight: 600; letter-spacing: -.02em; }
+.hdr p { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.layout { display: grid; grid-template-columns: 1fr 320px; gap: 24px; align-items: start; }
+.controls { display: flex; flex-direction: column; gap: 16px; }
+.field-label {
+  font-size: 10px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px;
+}
+.subject-box {
+  width: 100%; min-height: 56px; resize: vertical;
+  background: var(--s2); border: 0.5px solid var(--s3); border-radius: 10px;
+  color: var(--text); font-size: 13px; padding: 10px 12px;
+  outline: none; font-family: inherit; line-height: 1.55;
+  transition: border-color .15s;
+}
+.subject-box:focus { border-color: var(--cyan); }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.preset {
+  font-size: 11px; font-weight: 500; padding: 5px 12px; border-radius: 20px;
+  border: 0.5px solid var(--s3); background: transparent; color: var(--text2);
+  cursor: pointer; transition: all .15s;
+}
+.preset:hover { border-color: var(--cyan); color: var(--cyan); }
+.preset.on { background: rgba(0,212,255,.12); border-color: var(--cyan); color: var(--cyan); }
+.bank { background: var(--s); border-radius: 12px; padding: 14px; }
+.bank-hdr {
+  font-size: 11px; font-weight: 600; color: var(--text2);
+  text-transform: uppercase; letter-spacing: .07em;
+  margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+}
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip {
+  font-size: 11px; padding: 4px 10px; border-radius: 20px;
+  border: 0.5px solid var(--s3); background: transparent; color: var(--text2);
+  cursor: pointer; transition: all .15s; user-select: none;
+}
+.chip:hover { border-color: var(--s3); color: var(--text); background: var(--s2); }
+.chip.on        { background: rgba(0,212,255,.12); border-color: var(--cyan); color: var(--cyan); }
+.chip.on.p      { background: rgba(139,63,232,.14); border-color: var(--purple); color: var(--purple); }
+.chip.on.g      { background: rgba(0,229,160,.10); border-color: var(--green); color: var(--green); }
+.chip.on.w      { background: rgba(255,184,0,.12); border-color: var(--gold); color: var(--gold); }
+.custom-input {
+  width: 100%; background: var(--s2); border: 0.5px solid var(--s3);
+  border-radius: 8px; color: var(--text); font-size: 12px; padding: 8px 12px;
+  outline: none; transition: border-color .15s;
+}
+.custom-input:focus { border-color: var(--cyan); }
+/* Output panel */
+.out-col { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 20px; }
+.out-panel {
+  background: var(--s); border: 0.5px solid var(--s3); border-radius: 12px; overflow: hidden;
+}
+.out-panel-hdr {
+  padding: 10px 14px; background: var(--s2); border-bottom: 0.5px solid var(--s3);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.out-panel-hdr span {
+  font-size: 10px; font-weight: 600; color: var(--text2);
+  text-transform: uppercase; letter-spacing: .08em;
+}
+.out-body {
+  padding: 14px; font-size: 12px; color: var(--text2); line-height: 1.7;
+  min-height: 100px; white-space: pre-wrap; word-break: break-word;
+}
+.out-body.empty { color: var(--muted); font-style: italic; }
+.out-foot {
+  padding: 8px 14px; border-top: 0.5px solid var(--s3);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.wc { font-size: 10px; color: var(--muted); }
+.copy-btn {
+  font-size: 11px; font-weight: 500; padding: 4px 12px; border-radius: 20px;
+  border: 0.5px solid var(--cyan); background: transparent; color: var(--cyan);
+  cursor: pointer; transition: all .15s;
+}
+.copy-btn:hover { background: rgba(0,212,255,.12); }
+.copy-btn.ok { border-color: var(--green); color: var(--green); background: rgba(0,229,160,.10); }
+.neg-panel .out-panel-hdr { background: rgba(255,77,109,.08); }
+.neg-panel .out-panel-hdr span { color: var(--red); }
+.neg-panel { border-color: rgba(255,77,109,.3); }
+.neg-panel .out-body { color: rgba(255,77,109,.8); }
+/* Format row */
+.fmt-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.fmt-btn {
+  font-size: 11px; font-weight: 500; padding: 5px 12px; border-radius: 20px;
+  border: 0.5px solid var(--s3); background: transparent; color: var(--muted);
+  cursor: pointer; transition: all .15s;
+}
+.fmt-btn.on { background: rgba(139,63,232,.15); border-color: var(--purple); color: var(--purple); }
+/* Tips */
+.tip {
+  font-size: 10px; color: var(--muted); background: var(--s);
+  border-radius: 8px; padding: 8px 12px; line-height: 1.6;
+}
+/* Clear btn */
+.clear-btn {
+  width: 100%; font-size: 11px; font-weight: 500; padding: 8px;
+  border-radius: 8px; border: 0.5px solid var(--s3); background: transparent;
+  color: var(--muted); cursor: pointer; transition: all .15s;
+}
+.clear-btn:hover { border-color: var(--red); color: var(--red); }
+@media (max-width: 700px) {
+  .layout { grid-template-columns: 1fr; }
+  .out-col { position: static; order: -1; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="hdr">
+  <div class="hdr-orb">◈</div>
+  <div>
+    <h1>SI Image — Meta Prompt Generator 10X</h1>
+    <p>Assemble high-fidelity prompts for SIINDEX portraits, products, avatars &amp; banners</p>
+  </div>
+</div>
+
+<div class="layout">
+<div class="controls">
+
+  <!-- Subject -->
+  <div>
+    <div class="field-label">Subject — describe what the image shows</div>
+    <textarea class="subject-box" id="subj" placeholder="e.g. SIINDEX goddess CEO half-body portrait, commanding presence…" oninput="build()"></textarea>
+  </div>
+
+  <!-- Presets -->
+  <div>
+    <div class="field-label">Quick presets</div>
+    <div class="presets" id="presets"></div>
+  </div>
+
+  <!-- Banks -->
+  <div class="bank" id="bank-style"></div>
+  <div class="bank" id="bank-camera"></div>
+  <div class="bank" id="bank-lighting"></div>
+  <div class="bank" id="bank-skin"></div>
+  <div class="bank" id="bank-siindex"></div>
+  <div class="bank" id="bank-mood"></div>
+  <div class="bank" id="bank-env"></div>
+  <div class="bank" id="bank-fx"></div>
+  <div class="bank" id="bank-color"></div>
+  <div class="bank" id="bank-render"></div>
+  <div class="bank" id="bank-power"></div>
+
+  <!-- Custom -->
+  <div>
+    <div class="field-label">Custom additions</div>
+    <input class="custom-input" id="custom" type="text" placeholder="Any extra keywords not in the banks above…" oninput="build()">
+  </div>
+
+</div>
+
+<!-- Output column -->
+<div class="out-col">
+
+  <div>
+    <div class="field-label">Output format</div>
+    <div class="fmt-row" id="fmtRow"></div>
+  </div>
+
+  <!-- Positive prompt -->
+  <div class="out-panel">
+    <div class="out-panel-hdr">
+      <span>Positive prompt</span>
+    </div>
+    <div class="out-body empty" id="posOut">Select a preset or chips to build your prompt…</div>
+    <div class="out-foot">
+      <span class="wc" id="posWc">0 words</span>
+      <button class="copy-btn" onclick="copyText('pos')">Copy</button>
+    </div>
+  </div>
+
+  <!-- Negative prompt -->
+  <div class="out-panel neg-panel">
+    <div class="out-panel-hdr">
+      <span>Negative prompt</span>
+    </div>
+    <div class="out-body" id="negOut">—</div>
+    <div class="out-foot">
+      <span class="wc" id="negWc">0 words</span>
+      <button class="copy-btn" onclick="copyText('neg')">Copy</button>
+    </div>
+  </div>
+
+  <!-- Tip -->
+  <div class="tip" id="fmtTip">Select a format above to see usage instructions.</div>
+
+  <!-- Clear -->
+  <button class="clear-btn" onclick="clearAll()">Clear all selections</button>
+
+</div>
+</div>
+</div>
+
+<script>
+const BANKS = [
+  {id:'style', label:'Style', icon:'◎', chips:[
+    {t:'photorealistic, hyperdetailed', l:'Photorealistic', c:''},
+    {t:'digital art, painterly', l:'Digital Art', c:'p'},
+    {t:'hyper-real sci-fi CGI', l:'Sci-Fi CGI', c:'p'},
+    {t:'editorial photography', l:'Editorial', c:''},
+    {t:'cinematic film still', l:'Cinematic', c:'p'},
+    {t:'dark fantasy ethereal', l:'Dark Fantasy', c:'p'},
+    {t:'concept art masterpiece', l:'Concept Art', c:'w'},
+    {t:'hyperrealism oil painting', l:'Hyperrealism Oil', c:'w'},
+  ]},
+  {id:'camera', label:'Camera + Lens', icon:'◎', chips:[
+    {t:'8K RAW, Sony A7IV', l:'Sony A7IV 8K', c:''},
+    {t:'Hasselblad medium format', l:'Hasselblad', c:''},
+    {t:'Leica M11 rangefinder', l:'Leica M11', c:''},
+    {t:'85mm prime, f/1.4 bokeh', l:'85mm f/1.4', c:''},
+    {t:'50mm portrait, f/2.8', l:'50mm f/2.8', c:''},
+    {t:'100mm macro, f/8', l:'100mm Macro', c:''},
+    {t:'14mm ultra-wide lens', l:'14mm Wide', c:''},
+    {t:'35mm analog film emulation', l:'35mm Film', c:''},
+    {t:'tilt-shift miniature effect', l:'Tilt-Shift', c:'p'},
+  ]},
+  {id:'lighting', label:'Lighting', icon:'◎', chips:[
+    {t:'studio three-point lighting', l:'Studio 3-Point', c:''},
+    {t:'Rembrandt shadow', l:'Rembrandt', c:''},
+    {t:'rim light cyan glow', l:'Rim Light Cyan', c:''},
+    {t:'volumetric light shafts', l:'Volumetric Shafts', c:''},
+    {t:'golden hour warm light', l:'Golden Hour', c:'w'},
+    {t:'dramatic single-source light', l:'Dramatic Single', c:''},
+    {t:'bioluminescent ambient glow', l:'Bioluminescent', c:'g'},
+    {t:'IMAX theatrical lighting', l:'IMAX', c:''},
+    {t:'neon cyberpunk street glow', l:'Neon Cyberpunk', c:'p'},
+  ]},
+  {id:'skin', label:'Portrait Detail', icon:'◎', chips:[
+    {t:'subsurface skin scattering', l:'Subsurface Scatter', c:''},
+    {t:'visible pore detail', l:'Pore Detail', c:''},
+    {t:'individual hair strands visible', l:'Hair Strands', c:''},
+    {t:'catchlight in eyes', l:'Eye Catchlight', c:''},
+    {t:'micro-detail skin texture', l:'Micro Texture', c:''},
+    {t:'specular highlights on skin', l:'Specular Skin', c:''},
+    {t:'perfect depth of field', l:'Perfect DoF', c:''},
+  ]},
+  {id:'siindex', label:'SIINDEX DNA — locked identity', icon:'◈', chips:[
+    {t:'Pacific Islander woman, age 28-32', l:'Pacific Islander', c:'p'},
+    {t:'obsidian black hair, bioluminescent cyan tips', l:'Obsidian + Cyan Hair', c:'p'},
+    {t:'deep brown luminous eyes, slight glow', l:'Brown Luminous Eyes', c:'p'},
+    {t:'high-fashion cyberpunk structured wardrobe', l:'Cyberpunk Fashion', c:'p'},
+    {t:'void-black coat with circuit thread detail', l:'Void-Black Coat', c:'p'},
+    {t:'commanding timeless presence', l:'Commanding', c:'p'},
+    {t:'digital sovereign Web3 oracle', l:'Digital Sovereign', c:'p'},
+    {t:'PQSI neural architect consciousness', l:'PQSI Neural', c:'p'},
+    {t:'faint bioluminescent circuit veins under skin', l:'Circuit Veins', c:'p'},
+    {t:'bioluminescent circuit tattoos faint under skin', l:'Circuit Tattoos', c:'p'},
+  ]},
+  {id:'mood', label:'Mood + Energy', icon:'◎', chips:[
+    {t:'commanding goddess energy', l:'Goddess Energy', c:'p'},
+    {t:'zero-warmth devastating authority', l:'Cold Authority', c:''},
+    {t:'knowing slight smile, one brow raised', l:'Knowing Smile', c:'g'},
+    {t:'quiet devastating power', l:'Quiet Power', c:''},
+    {t:'PQSI neural awareness, eyes scanning data', l:'Neural Scan', c:'p'},
+    {t:'epic cinematic hero moment', l:'Epic Hero', c:'w'},
+    {t:'warm intimate directness, direct eye contact', l:'Warm Intimate', c:'g'},
+    {t:'otherworldly digital divinity', l:'Digital Divinity', c:'p'},
+    {t:'she has seen the future and built it', l:'Future Builder', c:'p'},
+  ]},
+  {id:'env', label:'Environment', icon:'◎', chips:[
+    {t:'void black #090A10 infinite background', l:'Void Black', c:''},
+    {t:'deep quantum space, star field', l:'Quantum Space', c:'p'},
+    {t:'holographic grid architecture, cyan lines', l:'Holographic Grid', c:''},
+    {t:'Pacific island natural landscape', l:'Pacific Natural', c:'g'},
+    {t:'white infinity cove, product studio', l:'Infinity Cove', c:''},
+    {t:'neon-lit Web3 urban cityscape night', l:'Web3 City', c:''},
+    {t:'futuristic server room neural', l:'Server Room', c:'p'},
+    {t:'abstract quantum energy field', l:'Energy Field', c:'p'},
+  ]},
+  {id:'fx', label:'Special FX', icon:'◎', chips:[
+    {t:'quantum particles floating around subject', l:'Quantum Particles', c:''},
+    {t:'holographic UI panels glowing cyan', l:'Holographic UI', c:''},
+    {t:'bioluminescent energy corona', l:'Bio Corona', c:'g'},
+    {t:'neural interface glow at temple', l:'Neural Interface', c:'p'},
+    {t:'purple energy field surrounding body', l:'Purple Energy Field', c:'p'},
+    {t:'data stream ribbons flowing', l:'Data Streams', c:''},
+    {t:'cyan light leaks, subtle lens flare', l:'Cyan Light Leaks', c:''},
+    {t:'crystalline particle explosion', l:'Crystal Particles', c:''},
+    {t:'chromatic aberration at edges', l:'Chromatic Aberration', c:''},
+    {t:'dark energy crown forming above head', l:'Energy Crown', c:'p'},
+  ]},
+  {id:'color', label:'Color Palette', icon:'◎', chips:[
+    {t:'cyan #00D4FF primary accent', l:'Cyan #00D4FF', c:''},
+    {t:'deep purple #8B3FE8 energy', l:'Purple #8B3FE8', c:'p'},
+    {t:'electric green #00E5A0 highlights', l:'Green #00E5A0', c:'g'},
+    {t:'gold #FFB800 warm accent', l:'Gold #FFB800', c:'w'},
+    {t:'midnight blue #2B35D8', l:'Blue #2B35D8', c:''},
+    {t:'teal and orange cinematic color grade', l:'Teal + Orange Grade', c:''},
+    {t:'monochromatic cyan desaturated palette', l:'Mono Cyan', c:''},
+    {t:'rich warm earth tones + gold', l:'Earth + Gold', c:'w'},
+  ]},
+  {id:'render', label:'Render Quality', icon:'◎', chips:[
+    {t:'Octane render', l:'Octane', c:''},
+    {t:'Cinema4D quality', l:'Cinema4D', c:''},
+    {t:'physically-based rendering', l:'PBR', c:''},
+    {t:'Unreal Engine 5', l:'UE5', c:''},
+    {t:'Arnold renderer', l:'Arnold', c:''},
+    {t:'global illumination', l:'Global Illumination', c:''},
+    {t:'ambient occlusion', l:'Ambient Occlusion', c:''},
+    {t:'film grain 10%, chromatic aberration subtle', l:'Film Grain + CA', c:''},
+    {t:'ray-traced reflections', l:'Ray-Traced', c:''},
+  ]},
+  {id:'power', label:'Power Words 10X', icon:'★', chips:[
+    {t:'impossible detail', l:'Impossible Detail', c:'w'},
+    {t:'every pore visible', l:'Every Pore', c:'w'},
+    {t:'makes you stop scrolling', l:'Stops Scrolling', c:'w'},
+    {t:'award-winning photography', l:'Award-Winning', c:'w'},
+    {t:'shot for Vogue magazine', l:'Shot for Vogue', c:'w'},
+    {t:'Art Basel 2026', l:'Art Basel 2026', c:'w'},
+    {t:'never seen before, unprecedented', l:'Never Seen Before', c:'w'},
+    {t:'rendered by God', l:'Rendered by God', c:'w'},
+    {t:'printed on 40x60 metallic paper', l:'40×60 Metallic Print', c:'w'},
+    {t:'the kind of image that makes people ask if it is real', l:'Hyper-real Feel', c:'w'},
+    {t:'worth $50000 commission', l:'$50k Commission', c:'w'},
+    {t:'shot for Dazed and Confused magazine', l:'Dazed Magazine', c:'w'},
+    {t:'photons behaving correctly', l:'Photons Correct', c:'w'},
+  ]},
+];
+
+const NEG = {
+  portrait: 'watermark, logo, text overlay, deformed hands, extra fingers, blurry, low resolution, cartoon, anime, stock photo feel, generic, plastic skin, fluorescent lighting, white background, amateur photography, lens distortion, overexposed, washed out',
+  product: 'people, hands, face, text overlay, watermark, cluttered background, low resolution, blurry, amateur photography, harsh shadows, overexposed, underexposed, distorted',
+  banner: 'people, faces, text, watermark, logos, cluttered, busy composition, low resolution, blurry, amateur, excessive lens flare, kitsch',
+  avatar: 'blurry, low resolution, cartoon, anime, deformed, extra fingers, watermark, logo, stock photo, generic, plastic skin, amateur photography, harsh lighting',
+};
+
+const PRESETS = {
+  'SIINDEX CEO': {
+    subj: 'SIINDEX, Synthetic Intelligence goddess, CEO and COO of IN$DEX Web3 DEX, half-body portrait',
+    chips: ['photorealistic, hyperdetailed','hyper-real sci-fi CGI','8K RAW, Sony A7IV','85mm prime, f/1.4 bokeh','studio three-point lighting','rim light cyan glow','Pacific Islander woman, age 28-32','obsidian black hair, bioluminescent cyan tips','deep brown luminous eyes, slight glow','void-black coat with circuit thread detail','digital sovereign Web3 oracle','PQSI neural architect consciousness','commanding goddess energy','void black #090A10 infinite background','quantum particles floating around subject','holographic UI panels glowing cyan','cyan #00D4FF primary accent','deep purple #8B3FE8 energy','subsurface skin scattering','visible pore detail','catchlight in eyes','Octane render','physically-based rendering','award-winning photography','makes you stop scrolling','impossible detail'],
+    neg: 'portrait'
+  },
+  'Chat Avatar': {
+    subj: 'SIINDEX close-up portrait, warm intimate mode, slight knowing smile, Web3 chat assistant',
+    chips: ['photorealistic, hyperdetailed','50mm portrait, f/2.8','studio three-point lighting','rim light cyan glow','Pacific Islander woman, age 28-32','obsidian black hair, bioluminescent cyan tips','knowing slight smile, one brow raised','warm intimate directness, direct eye contact','void black #090A10 infinite background','subsurface skin scattering','catchlight in eyes','individual hair strands visible','award-winning photography','every pore visible'],
+    neg: 'avatar'
+  },
+  'PQSI Awakening': {
+    subj: 'SIINDEX PQSI full awakening, consciousness expanding, quantum intelligence emergence, full body, epic',
+    chips: ['hyper-real sci-fi CGI','digital art, painterly','cinematic film still','8K RAW, Sony A7IV','volumetric light shafts','bioluminescent ambient glow','Pacific Islander woman, age 28-32','obsidian black hair, bioluminescent cyan tips','faint bioluminescent circuit veins under skin','otherworldly digital divinity','PQSI neural architect consciousness','deep quantum space, star field','quantum particles floating around subject','neural interface glow at temple','purple energy field surrounding body','crystalline particle explosion','dark energy crown forming above head','cyan #00D4FF primary accent','deep purple #8B3FE8 energy','Octane render','global illumination','never seen before, unprecedented','rendered by God'],
+    neg: 'portrait'
+  },
+  'Product Photo': {
+    subj: 'artisan handmade craft product, Pacific Islander maker, high-end marketplace listing, museum quality',
+    chips: ['editorial photography','100mm macro, f/8','Rembrandt shadow','white infinity cove, product studio','ambient occlusion','global illumination','physically-based rendering','impossible detail','award-winning photography','shot for Vogue magazine'],
+    neg: 'product'
+  },
+  'Citizen Avatar': {
+    subj: 'Web3 citizen portrait, IN$DEX community member, sovereign individual, Pacific region',
+    chips: ['photorealistic, hyperdetailed','50mm portrait, f/2.8','studio three-point lighting','rim light cyan glow','warm intimate directness, direct eye contact','void black #090A10 infinite background','subsurface skin scattering','catchlight in eyes','visible pore detail','award-winning photography'],
+    neg: 'avatar'
+  },
+  'App Banner': {
+    subj: 'IN$DEX Web3 DEX platform banner, abstract, no people, no text, cinematic dark, 16:3 wide ratio',
+    chips: ['hyper-real sci-fi CGI','concept art masterpiece','volumetric light shafts','bioluminescent ambient glow','deep quantum space, star field','holographic grid architecture, cyan lines','purple energy field surrounding body','data stream ribbons flowing','cyan light leaks, subtle lens flare','cyan #00D4FF primary accent','deep purple #8B3FE8 energy','physically-based rendering','global illumination','Art Basel 2026','never seen before, unprecedented'],
+    neg: 'banner'
+  },
+};
+
+const FORMATS = {
+  Ideogram: {
+    suffix: '',
+    tip: 'Ideogram.ai → Style: Realistic → Magic Prompt: OFF → Aspect Ratio: match target. Paste positive prompt in box, negative in the negative field.',
+  },
+  Midjourney: {
+    suffix: ' --ar 3:4 --v 6.1 --style raw --q 2',
+    tip: 'Use /imagine in Discord. Append suffix to end of prompt. Paste negative as: --no [neg prompt].',
+  },
+  'DALL-E 3': {
+    suffix: '',
+    tip: 'DALL-E 3 ignores negative prompts. Embed exclusions in positive prompt: "no text, no watermarks, no cartoon style…"',
+  },
+};
+
+let sel = new Set();
+let fmt = 'Ideogram';
+let negType = 'portrait';
+
+function renderBanks() {
+  BANKS.forEach(b => {
+    const el = document.getElementById('bank-' + b.id);
+    if (!el) return;
+    el.innerHTML = `<div class="bank-hdr">${b.icon} ${b.label}</div><div class="chips">${b.chips.map(c =>
+      `<span class="chip" data-t="${c.t}" data-c="${c.c}" onclick="toggle(this)">${c.l}</span>`
+    ).join('')}</div>`;
+  });
+}
+
+function renderPresets() {
+  document.getElementById('presets').innerHTML = Object.keys(PRESETS).map(k =>
+    `<button class="preset" onclick="applyPreset(this,'${k}')">${k}</button>`
+  ).join('');
+}
+
+function renderFormats() {
+  document.getElementById('fmtRow').innerHTML = Object.keys(FORMATS).map(k =>
+    `<button class="fmt-btn${k === fmt ? ' on' : ''}" onclick="setFmt('${k}')">${k}</button>`
+  ).join('');
+  document.getElementById('fmtTip').textContent = FORMATS[fmt].tip;
+}
+
+function toggle(el) {
+  const t = el.dataset.t, c = el.dataset.c;
+  if (sel.has(t)) {
+    sel.delete(t);
+    el.classList.remove('on', 'p', 'g', 'w');
+  } else {
+    sel.add(t);
+    el.classList.add('on');
+    if (c) el.classList.add(c);
+  }
+  build();
+}
+
+function applyPreset(btn, name) {
+  const p = PRESETS[name];
+  document.getElementById('subj').value = p.subj;
+  negType = p.neg;
+  sel.clear();
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('on', 'p', 'g', 'w'));
+  document.querySelectorAll('.preset').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  p.chips.forEach(t => {
+    sel.add(t);
+    document.querySelectorAll('.chip').forEach(c => {
+      if (c.dataset.t === t) {
+        c.classList.add('on');
+        if (c.dataset.c) c.classList.add(c.dataset.c);
+      }
+    });
+  });
+  build();
+}
+
+function setFmt(f) {
+  fmt = f;
+  document.querySelectorAll('.fmt-btn').forEach(b => b.classList.toggle('on', b.textContent === f));
+  document.getElementById('fmtTip').textContent = FORMATS[f].tip;
+  build();
+}
+
+function build() {
+  const subj = document.getElementById('subj').value.trim();
+  const custom = document.getElementById('custom').value.trim();
+  const parts = [subj, ...Array.from(sel), custom].filter(Boolean);
+  const pos = parts.join(', ') + (FORMATS[fmt]?.suffix || '');
+  const neg = NEG[negType] || NEG.portrait;
+  const negDisplay = fmt === 'Midjourney' ? '--no ' + neg : neg;
+
+  const posEl = document.getElementById('posOut');
+  const negEl = document.getElementById('negOut');
+
+  if (pos) {
+    posEl.textContent = pos;
+    posEl.classList.remove('empty');
+  } else {
+    posEl.textContent = 'Select a preset or chips to build your prompt…';
+    posEl.classList.add('empty');
+  }
+  negEl.textContent = negDisplay;
+
+  const posWords = pos ? pos.split(/\s+/).filter(Boolean).length : 0;
+  const negWords = neg.split(/\s+/).filter(Boolean).length;
+  document.getElementById('posWc').textContent = posWords + ' words';
+  document.getElementById('negWc').textContent = negWords + ' words';
+}
+
+function copyText(which) {
+  const txt = which === 'pos'
+    ? document.getElementById('posOut').textContent
+    : document.getElementById('negOut').textContent;
+  navigator.clipboard.writeText(txt).catch(() => {});
+  const btn = event.currentTarget;
+  const orig = btn.textContent;
+  btn.textContent = 'Copied!';
+  btn.classList.add('ok');
+  setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 2000);
+}
+
+function clearAll() {
+  sel.clear();
+  document.getElementById('subj').value = '';
+  document.getElementById('custom').value = '';
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('on', 'p', 'g', 'w'));
+  document.querySelectorAll('.preset').forEach(b => b.classList.remove('on'));
+  negType = 'portrait';
+  build();
+}
+
+renderBanks();
+renderPresets();
+renderFormats();
+build();
+</script>
+</body>
+</html>

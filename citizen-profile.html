@@ -111,6 +111,24 @@
   .nav-icon{font-size:22px;line-height:1;}
   .nav-label{font-size:10px;font-weight:600;color:var(--text-muted);}
 
+  /* ── GOD MODE: WS CANVAS RING ── */
+  .ws-ring-wrap{position:relative;width:44px;height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+  .ws-ring-canvas{display:block;}
+
+  /* ── GOD MODE: FILTER + PRICE TOGGLE ── */
+  .filter-strip{display:flex;gap:6px;padding:12px 20px 4px;align-items:center;}
+  .filter-chip{font-size:11px;font-weight:700;padding:6px 13px;border-radius:20px;background:var(--surface);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+  .filter-chip.active{background:rgba(0,212,255,0.1);border-color:var(--cyan);color:var(--cyan);}
+  .filter-chip:active{opacity:0.75;}
+  .sort-chip{margin-left:auto;font-size:11px;font-weight:700;padding:6px 12px;border-radius:20px;background:var(--surface);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;white-space:nowrap;flex-shrink:0;}
+  .sort-chip:active{border-color:var(--cyan);}
+  .listing-card.hidden-filter{display:none;}
+
+  /* ── GOD MODE: PRICE USD CONVERSION ── */
+  .price-usd{font-size:10px;color:var(--text-muted);margin-top:2px;transition:opacity 0.2s;}
+  .price-toggle-btn{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);font-size:10px;font-weight:700;color:var(--cyan);cursor:pointer;margin:0 20px 4px auto;width:fit-content;}
+  .price-toggle-btn:active{opacity:0.7;}
+
   /* TOAST */
   .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1E2130;border:1px solid var(--border);border-radius:12px;padding:11px 20px;font-size:13px;font-weight:600;white-space:nowrap;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;}
   .toast.show{opacity:1;}
@@ -159,7 +177,9 @@
         <div class="tag">📦 Fast Shipper</div>
       </div>
       <div class="ws-badge">
-        <span class="ws-icon">⚡</span>
+        <div class="ws-ring-wrap">
+          <canvas class="ws-ring-canvas" id="wsRing" width="44" height="44"></canvas>
+        </div>
         <div>
           <div style="display:flex;align-items:baseline;gap:6px;">
             <span class="ws-val">82</span>
@@ -220,6 +240,16 @@
 
     <!-- LISTINGS TAB -->
     <div id="panel-listings">
+      <!-- GOD MODE: filter chips + price toggle -->
+      <div class="filter-strip">
+        <div class="filter-chip active" id="chip-all" onclick="filterListings('all')">All</div>
+        <div class="filter-chip" id="chip-active" onclick="filterListings('active')">Active</div>
+        <div class="filter-chip" id="chip-sold" onclick="filterListings('sold')">Sold</div>
+        <div class="sort-chip" id="sortChip" onclick="toggleSort()">Price ↕</div>
+      </div>
+      <div class="price-toggle-btn" id="priceToggleBtn" onclick="togglePriceMode()">
+        <span id="priceToggleLabel">Show USD</span>
+      </div>
       <div class="listings-grid">
         <div class="listing-card" onclick="window.location.href='listing-detail.html'">
           <div class="lc-img">🎨</div>
@@ -395,6 +425,144 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// ── GOD MODE: INDX PRICE CONSTANT ──
+const INDX_PRICE_USD = 0.24;
+
+// ── GOD MODE: WS CANVAS RING ──
+function drawWSRing(score, total) {
+  const canvas = document.getElementById('wsRing');
+  if (!canvas || !canvas.getContext) return;
+  const ctx = canvas.getContext('2d');
+  const cx = 22, cy = 22, R = 18, lw = 4;
+  const start = -Math.PI / 2;
+  const target = score / total;
+  const duration = 820;
+  let t0 = null;
+  function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+  function frame(ts) {
+    if (!t0) t0 = ts;
+    const frac = easeOut(Math.min((ts - t0) / duration, 1)) * target;
+    ctx.clearRect(0, 0, 44, 44);
+    // Track
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(34,37,47,1)';
+    ctx.lineWidth = lw;
+    ctx.stroke();
+    // Arc
+    if (frac > 0) {
+      const g = ctx.createLinearGradient(cx - R, cy, cx + R, cy);
+      g.addColorStop(0, '#2B35D8');
+      g.addColorStop(1, '#00D4FF');
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, start, start + frac * Math.PI * 2);
+      ctx.strokeStyle = g;
+      ctx.lineWidth = lw;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+    }
+    // Label
+    ctx.fillStyle = '#8B3FE8';
+    ctx.font = 'bold 11px -apple-system,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(score, cx, cy);
+    if (frac < target) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+// ── GOD MODE: FOLLOW PERSISTENCE ──
+const FOLLOWS_KEY = 'indx_profile_follows';
+const PROFILE_HANDLE = 'kiri.IN$DEX';
+function loadFollowState() {
+  const saved = JSON.parse(localStorage.getItem(FOLLOWS_KEY) || '{}');
+  if (saved[PROFILE_HANDLE]) {
+    following = true;
+    const btn = document.getElementById('followBtn');
+    if (btn) { btn.textContent = 'Following'; btn.classList.add('following'); }
+  }
+}
+function saveFollowState() {
+  const saved = JSON.parse(localStorage.getItem(FOLLOWS_KEY) || '{}');
+  saved[PROFILE_HANDLE] = following;
+  localStorage.setItem(FOLLOWS_KEY, JSON.stringify(saved));
+}
+
+// ── GOD MODE: PRICE MODE TOGGLE ──
+let priceMode = 'indx';
+function injectPriceLabels() {
+  document.querySelectorAll('.lc-price').forEach(el => {
+    if (el.querySelector('.indx-text')) return;
+    const match = el.textContent.trim().match(/(\d+(?:\.\d+)?)\s*INDX/);
+    if (!match) return;
+    const indxVal = parseFloat(match[1]);
+    el.dataset.indx = indxVal;
+    el.innerHTML = '<span class="indx-text">' + indxVal + ' INDX</span>' +
+      '<div class="price-usd" style="display:none;">$' + (indxVal * INDX_PRICE_USD).toFixed(2) + ' USD</div>';
+  });
+}
+function togglePriceMode() {
+  priceMode = priceMode === 'indx' ? 'usd' : 'indx';
+  document.getElementById('priceToggleLabel').textContent = priceMode === 'usd' ? 'Show INDX' : 'Show USD';
+  document.querySelectorAll('.lc-price').forEach(el => {
+    const iSpan = el.querySelector('.indx-text');
+    const uDiv = el.querySelector('.price-usd');
+    if (priceMode === 'usd') {
+      if (iSpan) iSpan.style.display = 'none';
+      if (uDiv) { uDiv.style.cssText = 'display:block;font-size:13px;font-weight:700;color:var(--green);margin-top:0;'; }
+    } else {
+      if (iSpan) iSpan.style.display = '';
+      if (uDiv) { uDiv.style.cssText = 'display:none;'; }
+    }
+  });
+}
+
+// ── GOD MODE: LISTING FILTERS + SORT ──
+let sortAsc = null;
+let filterMode = 'all';
+function filterListings(mode) {
+  filterMode = mode;
+  ['all','active','sold'].forEach(m => document.getElementById('chip-'+m).classList.toggle('active', m===mode));
+  applyFiltersAndSort();
+}
+function toggleSort() {
+  sortAsc = sortAsc === null ? true : sortAsc === true ? false : null;
+  const chip = document.getElementById('sortChip');
+  chip.textContent = sortAsc === null ? 'Price ↕' : sortAsc ? 'Price ↑' : 'Price ↓';
+  chip.style.color = sortAsc !== null ? 'var(--cyan)' : '';
+  chip.style.borderColor = sortAsc !== null ? 'var(--cyan)' : '';
+  applyFiltersAndSort();
+}
+function applyFiltersAndSort() {
+  const grid = document.querySelector('.listings-grid');
+  if (!grid) return;
+  const cards = Array.from(grid.querySelectorAll('.listing-card'));
+  cards.forEach(card => {
+    const statusEl = card.querySelector('.lc-status');
+    const isSold = statusEl && statusEl.textContent.includes('Sold');
+    card.classList.remove('hidden-filter');
+    if (filterMode === 'active' && isSold) card.classList.add('hidden-filter');
+    if (filterMode === 'sold' && !isSold) card.classList.add('hidden-filter');
+  });
+  if (sortAsc !== null) {
+    const visible = cards.filter(c => !c.classList.contains('hidden-filter'));
+    visible.sort((a,b) => {
+      const av = parseFloat(a.querySelector('.lc-price').dataset.indx || 0);
+      const bv = parseFloat(b.querySelector('.lc-price').dataset.indx || 0);
+      return sortAsc ? av - bv : bv - av;
+    });
+    visible.forEach(card => grid.appendChild(card));
+  }
+}
+
+// ── GOD MODE: DOMContentLoaded ──
+document.addEventListener('DOMContentLoaded', () => {
+  drawWSRing(82, 100);
+  injectPriceLabels();
+  loadFollowState();
+});
+
   function switchTab(name) {
     ['listings','reviews','activity'].forEach(t => {
       document.getElementById('tab-'+t).classList.toggle('active', t===name);
@@ -409,6 +577,8 @@
     btn.textContent = following ? 'Following' : 'Follow';
     btn.classList.toggle('following', following);
     showToast(following ? '✓ Following kiri.IN$DEX' : 'Unfollowed kiri.IN$DEX');
+    // GOD MODE PATCH — persist follow state
+    saveFollowState();
   }
 
   function showToast(msg) {
