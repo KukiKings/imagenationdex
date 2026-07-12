@@ -936,6 +936,87 @@
 
     .content-wrap { padding-bottom: 100px; }
     .spacer { height: 18px; }
+
+    /* ── GOD MODE ── */
+    .strength-wrap { margin: -8px 0 16px; }
+
+    .strength-track {
+      height: 4px;
+      background: var(--s3);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .strength-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 2px;
+      background: var(--red);
+      transition: width 0.25s, background 0.25s;
+    }
+
+    .strength-info {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 5px;
+      font-size: 10px;
+      color: var(--sub);
+    }
+
+    .strength-state { font-weight: 700; }
+
+    .gm-history { margin-bottom: 16px; }
+
+    .gm-history-chip {
+      background: var(--s2);
+      border: 1px dashed rgba(0,212,255,0.25);
+      border-radius: 20px;
+      padding: 6px 12px;
+      font-size: 11px;
+      color: var(--sub);
+      cursor: pointer;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .gm-history-chip:hover {
+      color: var(--cyan);
+      border-color: var(--cyan);
+      background: rgba(0,212,255,0.06);
+    }
+
+    .gallery-card { position: relative; }
+
+    .gm-del-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      min-width: 26px;
+      height: 26px;
+      border-radius: 13px;
+      background: rgba(9,10,16,0.78);
+      border: 1px solid rgba(255,77,109,0.4);
+      color: var(--red);
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      z-index: 2;
+      padding: 0 7px;
+    }
+
+    .gm-del-btn.armed {
+      background: var(--red);
+      color: var(--text);
+      font-size: 10px;
+      font-weight: 800;
+      padding: 0 10px;
+    }
   </style>
 </head>
 <body>
@@ -1007,6 +1088,19 @@
   <div class="section-label">Describe what you want — in your own words</div>
   <textarea class="create-input" id="imgDesc" rows="3"
     placeholder="e.g. 'I sell handmade Māori pendants. I want a photo of a greenstone necklace on dark velvet with warm golden light around it'"></textarea>
+
+  <div class="strength-wrap" id="imgStrengthWrap">
+    <div class="strength-track"><div class="strength-fill" id="imgStrengthFill"></div></div>
+    <div class="strength-info">
+      <span class="strength-state" id="imgStrengthLabel">Start typing — SIINDEX is listening</span>
+      <span id="imgCharCount">0 chars</span>
+    </div>
+  </div>
+
+  <div class="gm-history" id="gmHistImage" style="display:none;">
+    <div class="section-label">Recent Briefs — Tap to Reuse</div>
+    <div class="chip-row" id="gmHistImageChips" style="margin-bottom:0;"></div>
+  </div>
 
   <div class="section-label">Style</div>
   <div class="chip-row">
@@ -1136,6 +1230,10 @@
     <div class="section-label">Describe your video</div>
     <textarea class="create-input" id="videoDesc" rows="3"
       placeholder="e.g. 'Product video of my ceramic coffee set — rotating slowly on a dark wooden surface, warm studio lighting, premium quality feel'"></textarea>
+    <div class="gm-history" id="gmHistVideo" style="display:none;">
+      <div class="section-label">Recent Briefs — Tap to Reuse</div>
+      <div class="chip-row" id="gmHistVideoChips" style="margin-bottom:0;"></div>
+    </div>
     <div class="section-label">Vibe</div>
     <div class="chip-row">
       <div class="chip active" onclick="selectChip(this,'videoVibe')">Cinematic</div>
@@ -1401,6 +1499,11 @@
   <div class="section-label">Tell me about your product or content</div>
   <textarea class="create-input" id="writeDesc" rows="4"
     placeholder="e.g. 'I make hand-carved wooden bowls using traditional Pacific techniques. My latest piece is kauri wood, 30cm wide, finished with natural oils. Each one takes about 3 days to make.'"></textarea>
+
+  <div class="gm-history" id="gmHistWrite" style="display:none;">
+    <div class="section-label">Recent Briefs — Tap to Reuse</div>
+    <div class="chip-row" id="gmHistWriteChips" style="margin-bottom:0;"></div>
+  </div>
 
   <button class="btn-primary" onclick="generateWriting()">✦ Write It with SIINDEX</button>
 
@@ -1806,8 +1909,10 @@ function renderGallery() {
     return;
   }
 
+  // GOD MODE PATCH — cards now include tap-to-confirm delete button
   grid.innerHTML = gallery.map(item => `
     <div class="gallery-card" data-type="${item.type}" onclick="showToast('Opening ${item.type}...')">
+      <button class="gm-del-btn" onclick="gmDeleteGalleryItem(event, ${item.id})">✕</button>
       <div class="gallery-thumb">${item.icon}</div>
       <div class="gallery-meta">
         <div class="gallery-type">${item.type.toUpperCase()}</div>
@@ -1905,7 +2010,203 @@ document.addEventListener('DOMContentLoaded', () => {
   buildWaveform();
   document.getElementById('creditCount').innerHTML = `${credits} <span>remaining</span>`;
   updateGalleryStats();
+  // GOD MODE PATCH — initialise God Mode features
+  godModeInit();
 });
+
+// ═══════════════════════════════ GOD MODE (Fable 5) ═══════════════════════
+// 1. Draft auto-save & restore   2. Live brief strength meter
+// 3. Gallery tap-to-confirm delete   4. Recent brief history (tap to reuse)
+
+const GM_DRAFTS_KEY = 'indx_studio_drafts';
+const GM_HISTORY_KEY = 'indx_studio_history';
+const gmDraftFields = ['imgDesc', 'videoDesc', 'musicContext', 'writeDesc'];
+let gmDraftTimer = null;
+let gmArmedDelete = null;
+
+// ── Feature 1: Draft auto-save & restore ──────────────────────────────────
+function gmSaveDrafts() {
+  const drafts = {};
+  gmDraftFields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.value.trim()) drafts[id] = el.value;
+  });
+  localStorage.setItem(GM_DRAFTS_KEY, JSON.stringify(drafts));
+}
+
+function gmRestoreDrafts() {
+  let drafts = {};
+  try { drafts = JSON.parse(localStorage.getItem(GM_DRAFTS_KEY) || '{}'); } catch (e) { drafts = {}; }
+  let restored = 0;
+  gmDraftFields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.value && drafts[id]) { el.value = drafts[id]; restored++; }
+  });
+  if (restored) showToast('✦ Draft restored — right where you left it');
+  gmDraftFields.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', () => {
+      clearTimeout(gmDraftTimer);
+      gmDraftTimer = setTimeout(gmSaveDrafts, 600);
+    });
+  });
+}
+
+// ── Feature 2: Live brief strength meter ──────────────────────────────────
+const gmDetailWords = ['light', 'lighting', 'colour', 'color', 'texture', 'background',
+  'close-up', 'angle', 'shadow', 'warm', 'cool', 'golden', 'dark', 'soft', 'glow',
+  'wood', 'stone', 'velvet', 'ocean', 'handmade', 'detail', 'style', 'mood',
+  'premium', 'studio', 'natural', 'traditional'];
+
+function gmScoreBrief(text) {
+  const t = text.toLowerCase();
+  let score = Math.min(50, Math.round(text.length / 2.4));
+  gmDetailWords.forEach(w => { if (t.includes(w)) score += 7; });
+  return Math.min(100, score);
+}
+
+function gmUpdateStrength() {
+  const ta = document.getElementById('imgDesc');
+  const fill = document.getElementById('imgStrengthFill');
+  const label = document.getElementById('imgStrengthLabel');
+  const count = document.getElementById('imgCharCount');
+  if (!ta || !fill || !label || !count) return;
+  const text = ta.value.trim();
+  const score = text ? gmScoreBrief(text) : 0;
+  fill.style.width = score + '%';
+  count.textContent = text.length + ' chars';
+  if (!text) {
+    fill.style.background = 'var(--red)';
+    label.textContent = 'Start typing — SIINDEX is listening';
+    label.style.color = 'var(--sub)';
+  } else if (score < 35) {
+    fill.style.background = 'var(--red)';
+    label.textContent = 'Thin brief — add subject, material, lighting';
+    label.style.color = 'var(--red)';
+  } else if (score < 70) {
+    fill.style.background = 'var(--gold)';
+    label.textContent = 'Good brief — one more sensory detail lifts it';
+    label.style.color = 'var(--gold)';
+  } else {
+    fill.style.background = 'var(--green)';
+    label.textContent = 'Strong brief — SIINDEX has plenty to work with';
+    label.style.color = 'var(--green)';
+  }
+}
+
+function gmInitStrength() {
+  const ta = document.getElementById('imgDesc');
+  if (!ta) return;
+  ta.addEventListener('input', gmUpdateStrength);
+  gmUpdateStrength();
+}
+
+// ── Feature 3: Gallery tap-to-confirm delete ──────────────────────────────
+function gmDeleteGalleryItem(ev, id) {
+  ev.stopPropagation();
+  const btn = ev.currentTarget;
+  if (gmArmedDelete !== id) {
+    document.querySelectorAll('.gm-del-btn.armed').forEach(b => {
+      b.classList.remove('armed');
+      b.textContent = '✕';
+    });
+    gmArmedDelete = id;
+    btn.classList.add('armed');
+    btn.textContent = 'Remove?';
+    setTimeout(() => {
+      if (gmArmedDelete === id) {
+        gmArmedDelete = null;
+        btn.classList.remove('armed');
+        btn.textContent = '✕';
+      }
+    }, 2600);
+    return;
+  }
+  gmArmedDelete = null;
+  gallery = gallery.filter(i => i.id !== id);
+  localStorage.setItem('indx_studio_gallery', JSON.stringify(gallery));
+  renderGallery();
+  showToast('✦ Removed from Gallery');
+}
+
+// ── Feature 4: Recent brief history ───────────────────────────────────────
+const gmHistMap = {
+  image: { wrap: 'gmHistImage', chips: 'gmHistImageChips', field: 'imgDesc' },
+  video: { wrap: 'gmHistVideo', chips: 'gmHistVideoChips', field: 'videoDesc' },
+  write: { wrap: 'gmHistWrite', chips: 'gmHistWriteChips', field: 'writeDesc' }
+};
+
+function gmLoadHistory() {
+  try { return JSON.parse(localStorage.getItem(GM_HISTORY_KEY) || '{}'); } catch (e) { return {}; }
+}
+
+function gmRecordHistory(tab, text) {
+  if (!text) return;
+  const h = gmLoadHistory();
+  const list = (h[tab] || []).filter(t => t !== text);
+  list.unshift(text);
+  h[tab] = list.slice(0, 5);
+  localStorage.setItem(GM_HISTORY_KEY, JSON.stringify(h));
+  gmRenderHistory();
+}
+
+function gmRenderHistory() {
+  const h = gmLoadHistory();
+  Object.keys(gmHistMap).forEach(tab => {
+    const cfg = gmHistMap[tab];
+    const wrap = document.getElementById(cfg.wrap);
+    const chipsEl = document.getElementById(cfg.chips);
+    if (!wrap || !chipsEl) return;
+    const list = h[tab] || [];
+    if (!list.length) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    chipsEl.innerHTML = '';
+    list.forEach(text => {
+      const chip = document.createElement('div');
+      chip.className = 'gm-history-chip';
+      chip.textContent = text.length > 42 ? text.slice(0, 42) + '…' : text;
+      chip.title = text;
+      chip.onclick = () => {
+        const ta = document.getElementById(cfg.field);
+        if (!ta) return;
+        ta.value = text;
+        ta.dispatchEvent(new Event('input'));
+        showToast('✦ Brief loaded — build when ready');
+      };
+      chipsEl.appendChild(chip);
+    });
+  });
+}
+
+// GOD MODE PATCH — wrap prompt builders to capture brief history
+const gmOrigBuildImagePrompt = buildImagePrompt;
+buildImagePrompt = function () {
+  const d = document.getElementById('imgDesc').value.trim();
+  if (d) gmRecordHistory('image', d);
+  gmOrigBuildImagePrompt();
+};
+
+const gmOrigBuildVideoPrompt = buildVideoPrompt;
+buildVideoPrompt = function () {
+  const d = (document.getElementById('videoDesc')?.value || '').trim();
+  if (d) gmRecordHistory('video', d);
+  gmOrigBuildVideoPrompt();
+};
+
+const gmOrigGenerateWriting = generateWriting;
+generateWriting = function () {
+  const d = document.getElementById('writeDesc').value.trim();
+  if (d) gmRecordHistory('write', d);
+  gmOrigGenerateWriting();
+};
+
+// ── GOD MODE INIT (called from the existing DOMContentLoaded) ─────────────
+function godModeInit() {
+  gmRestoreDrafts();
+  gmInitStrength();
+  gmRenderHistory();
+}
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

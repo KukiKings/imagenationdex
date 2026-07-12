@@ -182,9 +182,19 @@ High-level summaries that link bodies of work together. Build these when a topic
 - **Milestone: SIINDEX Build-Completion Prompt queue — ALL SCREENS NOW BUILT ✅** (Session 119 x29–x31 cleared the entire missing-screen list identified in x29)
 - See [[../companies/western-union|western-union]] (new orphan stub, nightly pass 2026-07-12)
 
+### Session 119 continued x33 — 12 Jul 2026 (multi-part)
+- **AUSTRAC P0 flags + corridor stepper correction** — AUSTRAC VASP Enrollment step on all 4 Pacific corridor pages corrected `state:'done'`→`state:'current'` (enrollment not yet real); P0-A git backlog (~290 dirty files, 9 days since last push) and P0-B AUSTRAC deadline (17 days remaining) flagged for AJ
+- **Priority Wave Wire (Task #147)** ✅ — Navigator grows 89→126 screens (37 new); new "SIINDEX Intelligence Platform" section (18 screens) plus additions across Payments/Earn & Grow/Creator Economy/Identity & Governance
+- **God Mode: voice-wallet.html (Task #145)** ✅ — TTS Spoken Response, persistent command history, Quick-Send Favourites, live INDX rate badge; 🤖→⚛️ avatar fix sitewide
+- **wisdom-score.html (Task #146)** — confirmed already complete from prior session, audit ✅ CLEAN
+- **home-v2.html** — "Meet SIINDEX" section avatar images swapped to portrait renders
+- **🎉 INDX TOKEN MINTED ON SOLANA MAINNET** — Mint `9p9VMkgTEVdAeohk1zEuepvwBYUkzjnovMwwazyxsSEZ`, supply 100M, 6 decimals, minted via [[../companies/smithii|Smithii]] Token Creator, Freeze+Mint authority revoked (Update kept for metadata); full supply transferred personal wallet → INDX protocol wallet via Smithii Multisender, 12 Jul 2026
+- **Cook Islands Entity** — AJ confirmed as Cook Islands citizen; IN$DEX protocol entity to incorporate in [[../companies/cook-islands|Cook Islands]] (Cook Islands International Trust backs legacy vault layer), dual structure alongside Australian ABN entity ("Image Nation Decentralised Exchange")
+- **Full JS validation** — 244 HTML files, ZERO broken scripts (4 fixed); Platform Navigator 126→243 screens wired (115 new, 14 new sections); `austrac-vasp-enrollment.md` checklist created; 2 git commits pending AJ push from Terminal
+
 ### Screens — In Progress / Pending
 - God Mode queue: live-stream.html, creator-onboarding.html (unchanged — only two screens left in the original God Mode backlog since 2026-07-04's rollout; all Build-Completion Prompt queue screens now complete as of 2026-07-11)
-- ⚠️ **Growing backlog:** multi-day git backlog spanning Sessions 81 through 119 (2026-06-27 onward in places) — still uncommitted-to-remote as of 2026-07-11. Highest-priority cleanup item; verify and push in batches.
+- ⚠️ **Growing backlog:** multi-day git backlog spanning Sessions 81 through 119 (2026-06-27 onward in places) — ~290 dirty files, 9 days since last push (last push: 3 Jul 2026, commit b97158e) as of 2026-07-12. Highest-priority cleanup item (P0-A); AJ must push manually from Terminal.
 - ⚠️ **Open conflict:** lp-manager.html (Session 83) models LP fees on Meteora DLMM; Session 63 canonically locked Raydium CPMM for the INDX/USDC pool. Needs AJ reconciliation — still unresolved as of 2026-07-11.
 - ⏳ Builder Discipline (Session 114) + Unknowns Engine (Session 117) doctrine not yet folded into SIINDEX Master Prompt (currently v3) — flagged as next revision (v4) candidate
 - ⏳ AUSTRAC VASP Travel Rule enrollment — deadline 29 Jul 2026, treated as P0 since 2026-07-10, not yet complete
@@ -258,3 +268,5 @@ High-level summaries that link bodies of work together. Build these when a topic
 **PQSI:** post-quantum citizen protection — no single point of failure
 
 **Launch architecture (Session 114, 2026-07-08):** Two-phase — Phase A Meteora Alpha Vault citizen pre-allocation (Sep 10–17, 60–75 SOL pre-committed) → Phase B Raydium LaunchLab Virtual-CPMM public curve (Sep 24 00:00 UTC, 150 SOL / ~$30K graduation threshold, LP burn). Team/treasury vesting via Streamflow, 12-month founder cliff.
+
+**Token minted (Session 119 x33, 12 Jul 2026):** INDX is live on Solana mainnet — Mint `9p9VMkgTEVdAeohk1zEuepvwBYUkzjnovMwwazyxsSEZ`, 100M supply, 6 decimals, Freeze/Mint authority revoked. Full supply now held in INDX protocol wallet `8HxNac3HAT56gJk3LRdGqiwq6DgciGK4cnaVMUNZaMZt`. LP pairing (Raydium CPMM per Session 63) and LaunchLab graduation still pending per Two-Phase Launch Architecture.

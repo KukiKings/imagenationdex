@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>SIINDEX Living Interface — IN$DEX</title>
+  <style>
+    :root {
+      --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+      --black:#090A10; --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+      --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+      --border:rgba(255,255,255,0.07);
+      --text:#F0F2FF; --text-muted:rgba(240,242,255,0.45); --text-dim:rgba(240,242,255,0.2);
+    }
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+    body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;}
+    .phone{max-width:430px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+
+    /* TOPBAR */
+    .topbar{display:flex;align-items:center;padding:14px 16px 10px;gap:10px;border-bottom:1px solid var(--border);}
+    .tb-back{width:36px;height:36px;border-radius:10px;background:var(--surface2);border:none;color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+    .tb-title{flex:1;font-size:17px;font-weight:800;}
+    .tb-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:rgba(0,212,255,0.12);color:var(--cyan);border:1px solid rgba(0,212,255,0.2);}
+
+    /* MODE HERO */
+    .mode-hero{position:relative;padding:22px 16px 16px;overflow:hidden;transition:all 0.5s ease;}
+    .mode-hero-bg{position:absolute;inset:0;pointer-events:none;transition:background 0.5s ease;}
+    .mode-orb-wrap{display:flex;justify-content:center;margin-bottom:12px;}
+    .mode-orb{width:70px;height:70px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;position:relative;transition:all 0.5s ease;}
+    .mode-orb::after{content:'';position:absolute;inset:-5px;border-radius:50%;border:2px solid var(--orb-color,#00D4FF);opacity:0.6;animation:orbPulse 2.5s ease-in-out infinite;transition:border-color 0.5s ease;}
+    @keyframes orbPulse{0%,100%{opacity:0.3;transform:scale(1);}50%{opacity:0.8;transform:scale(1.1);}}
+    .mode-hero-name{text-align:center;font-size:18px;font-weight:900;}
+    .mode-hero-sub{text-align:center;font-size:12px;color:var(--text-muted);margin-top:4px;line-height:1.5;}
+
+    /* TABS */
+    .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;}
+    .tab{flex:1;padding:11px 2px;text-align:center;font-size:11px;font-weight:700;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;}
+    .tab.active{color:var(--cyan);border-bottom-color:var(--cyan);}
+
+    /* SECTIONS */
+    .section{display:none;padding:18px 16px;flex:1;overflow-y:auto;}
+    .section.active{display:block;}
+
+    /* COMMON */
+    .sect-label{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px;}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;}
+    .doctrine-panel{background:rgba(139,63,232,0.06);border:1px solid rgba(139,63,232,0.15);border-radius:12px;padding:14px;margin-top:16px;}
+    .doctrine-title{font-size:11px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;}
+    .doctrine-line{font-size:12px;color:var(--text-muted);line-height:1.7;padding-left:10px;border-left:2px solid rgba(139,63,232,0.4);margin-bottom:6px;}
+
+    /* ── ARMOR TAB ── */
+    .armor-detail{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:16px;display:none;animation:slideDown 0.3s ease;}
+    @keyframes slideDown{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+    .armor-detail.open{display:block;}
+    .armor-detail-hdr{font-size:14px;font-weight:900;margin-bottom:12px;}
+    .armor-row{display:flex;gap:8px;margin-bottom:8px;align-items:flex-start;}
+    .ar-label{font-size:11px;color:var(--text-muted);font-weight:700;min-width:68px;padding-top:1px;flex-shrink:0;}
+    .ar-val{font-size:12px;line-height:1.55;}
+    .ar-allowed{font-size:11px;color:var(--green);margin-top:6px;line-height:1.5;}
+    .ar-forbidden{font-size:11px;color:var(--red);margin-top:3px;line-height:1.5;}
+
+    .armor-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:16px;}
+    .armor-card{background:var(--surface);border:2px solid var(--border);border-radius:14px;padding:13px 10px;cursor:pointer;transition:all 0.25s;text-align:center;}
+    .armor-card:active{transform:scale(0.97);}
+    .armor-card.selected{background:rgba(0,212,255,0.04);}
+    .ac-icon{font-size:26px;margin-bottom:6px;}
+    .ac-name{font-size:11px;font-weight:800;margin-bottom:5px;}
+    .ac-tag{display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;}
+
+    /* ── ICON TAB ── */
+    .state-bar{display:flex;gap:5px;margin-bottom:14px;}
+    .state-btn{flex:1;padding:9px 3px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);font-size:10px;font-weight:700;cursor:pointer;text-align:center;transition:all 0.2s;}
+    .state-btn.active{background:var(--surface3);color:var(--text);border-color:var(--cyan);}
+
+    .icon-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;}
+    .icon-tile{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:12px 6px;text-align:center;cursor:pointer;transition:all 0.3s;position:relative;}
+    .icon-tile:active{transform:scale(0.95);}
+    .icon-shape{width:44px;height:44px;border-radius:11px;margin:0 auto 7px;display:flex;align-items:center;justify-content:center;font-size:22px;transition:all 0.35s;}
+    .icon-name{font-size:9px;font-weight:700;color:var(--text-muted);margin-bottom:4px;line-height:1.3;}
+    .icon-badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;display:inline-block;}
+
+    .state-idle .icon-tile{border-color:var(--border);}
+    .state-idle .icon-shape{box-shadow:0 2px 8px rgba(0,0,0,0.3);}
+    .state-idle .icon-badge{background:rgba(240,242,255,0.07);color:var(--text-dim);}
+
+    .state-active .icon-tile{border-color:rgba(0,212,255,0.4);}
+    .state-active .icon-shape{box-shadow:0 0 0 2px var(--cyan),0 4px 16px rgba(0,212,255,0.3);animation:iconGlow 1.8s ease-in-out infinite;}
+    @keyframes iconGlow{0%,100%{box-shadow:0 0 0 2px var(--cyan),0 4px 14px rgba(0,212,255,0.25);}50%{box-shadow:0 0 0 3px var(--cyan),0 6px 22px rgba(0,212,255,0.5);}}
+    .state-active .icon-badge{background:rgba(0,212,255,0.14);color:var(--cyan);}
+
+    .state-protected .icon-tile{border-color:rgba(0,229,160,0.4);}
+    .state-protected .icon-shape{box-shadow:0 0 0 2px var(--green),0 4px 14px rgba(0,229,160,0.25);}
+    .state-protected .icon-badge{background:rgba(0,229,160,0.12);color:var(--green);}
+
+    .state-blocked .icon-tile{border-color:rgba(255,77,109,0.35);}
+    .state-blocked .icon-shape{box-shadow:0 0 0 2px var(--red),0 4px 12px rgba(255,77,109,0.2);filter:grayscale(25%);}
+    .state-blocked .icon-badge{background:rgba(255,77,109,0.12);color:var(--red);}
+
+    /* ── COMMAND TAB ── */
+    .cmd-head{text-align:center;margin-bottom:16px;}
+    .cmd-orb{width:54px;height:54px;border-radius:50%;background:radial-gradient(circle,rgba(0,212,255,0.2),rgba(43,53,216,0.08));border:2px solid rgba(0,212,255,0.3);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:24px;}
+    .cmd-title{font-size:14px;font-weight:800;}
+    .cmd-sub{font-size:12px;color:var(--text-muted);margin-top:3px;}
+
+    .mission-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+    .m-chip{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:7px 11px;font-size:12px;cursor:pointer;transition:all 0.2s;color:var(--text-muted);}
+    .m-chip.active{background:rgba(0,212,255,0.1);border-color:var(--cyan);color:var(--cyan);}
+    .m-chip:active{transform:scale(0.97);}
+
+    .mission-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;color:var(--text);font-size:14px;outline:none;margin-bottom:10px;}
+    .mission-input:focus{border-color:var(--cyan);}
+    .mission-input::placeholder{color:var(--text-dim);}
+    .btn-transform{width:100%;padding:14px;border-radius:12px;background:var(--cyan);border:none;color:#000;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:16px;transition:opacity 0.2s;}
+    .btn-transform:active{opacity:0.85;}
+
+    .mission-result{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;display:none;animation:slideUp 0.3s ease;}
+    @keyframes slideUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+    .mission-result.open{display:block;}
+    .mr-hdr{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);}
+    .mr-hdr-icon{font-size:24px;}
+    .mr-mode-name{font-size:14px;font-weight:900;}
+    .mr-mode-sub{font-size:11px;color:var(--text-muted);margin-top:2px;}
+    .mr-icons{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;}
+    .mr-icon-chip{background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;color:var(--cyan);}
+    .mr-step{display:flex;align-items:flex-start;gap:8px;margin-bottom:9px;font-size:12px;line-height:1.5;}
+    .mr-num{width:18px;height:18px;border-radius:50%;background:var(--cyan);color:#000;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+    .mr-risk{display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:8px;margin-top:10px;font-size:12px;font-weight:700;}
+    .risk-low{background:rgba(0,229,160,0.08);color:var(--green);border:1px solid rgba(0,229,160,0.2);}
+    .risk-medium{background:rgba(255,184,0,0.08);color:var(--gold);border:1px solid rgba(255,184,0,0.2);}
+    .risk-high{background:rgba(255,77,109,0.08);color:var(--red);border:1px solid rgba(255,77,109,0.2);}
+
+    .mission-log{margin-top:16px;}
+    .ml-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;}
+    .ml-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;}
+    .ml-row:last-child{border-bottom:none;}
+    .ml-icon{font-size:16px;width:22px;text-align:center;}
+    .ml-text{flex:1;font-size:12px;color:var(--text-muted);}
+    .ml-mode{font-size:10px;font-weight:700;color:var(--cyan);}
+
+    /* ── GUARDRAILS TAB ── */
+    .quality-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px;}
+    .quality-card{background:var(--surface);border:2px solid var(--border);border-radius:12px;padding:12px;cursor:pointer;transition:all 0.2s;}
+    .quality-card.selected{border-color:var(--cyan);}
+    .quality-card:active{transform:scale(0.97);}
+    .ql-level{font-size:22px;font-weight:900;margin-bottom:3px;}
+    .ql-name{font-size:11px;font-weight:800;margin-bottom:4px;}
+    .ql-sub{font-size:10px;color:var(--text-muted);line-height:1.4;}
+
+    .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);}
+    .toggle-row:last-child{border-bottom:none;}
+    .tr-info{flex:1;padding-right:12px;}
+    .tr-label{font-size:13px;font-weight:700;}
+    .tr-sub{font-size:11px;color:var(--text-muted);margin-top:2px;}
+    .toggle-sw{width:44px;height:24px;border-radius:12px;background:var(--surface3);position:relative;cursor:pointer;transition:background 0.3s;flex-shrink:0;}
+    .toggle-sw.on{background:var(--cyan);}
+    .toggle-sw::after{content:'';position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;left:3px;transition:left 0.3s;}
+    .toggle-sw.on::after{left:23px;}
+
+    .readiness-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:16px;}
+    .readiness-score{font-size:28px;font-weight:900;color:var(--green);}
+    .readiness-label{font-size:12px;color:var(--text-muted);margin-top:2px;}
+    .readiness-bar{height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;margin-top:10px;}
+    .readiness-fill{height:100%;border-radius:4px;transition:width 0.5s ease,background 0.4s ease;}
+
+    /* TOAST */
+    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+  </style>
+</head>
+<body>
+<div class="phone">
+
+  <div class="topbar">
+    <button class="tb-back" onclick="history.back()">←</button>
+    <div class="tb-title">🌌 Living Interface</div>
+    <div class="tb-badge">DOCTRINE</div>
+  </div>
+
+  <!-- MODE HERO -->
+  <div class="mode-hero" id="modeHero">
+    <div class="mode-hero-bg" id="modeHeroBg"></div>
+    <div class="mode-orb-wrap">
+      <div class="mode-orb" id="modeOrb">⚡</div>
+    </div>
+    <div class="mode-hero-name" id="modeHeroName">Citizen Guide Mode</div>
+    <div class="mode-hero-sub" id="modeHeroSub">Soft cyan glow · Warm guidance · Low intensity</div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab(0)">🎭 Armor</div>
+    <div class="tab" onclick="switchTab(1)">🔷 Icons</div>
+    <div class="tab" onclick="switchTab(2)">⚡ Command</div>
+    <div class="tab" onclick="switchTab(3)">🛡️ Guard</div>
+  </div>
+
+  <!-- ── SECTION 0: ARMOR MODES ── -->
+  <div class="section active" id="sec0">
+
+    <div class="armor-detail" id="armorDetail">
+      <div class="armor-detail-hdr" id="adHdr"></div>
+      <div id="adBody"></div>
+    </div>
+
+    <div class="sect-label">Select SIINDEX Mode</div>
+    <div class="armor-grid" id="armorGrid"></div>
+
+    <div class="doctrine-panel">
+      <div class="doctrine-title">Armor Doctrine</div>
+      <div class="doctrine-line">SIINDEX's form changes by mission. Her identity stays stable.</div>
+      <div class="doctrine-line">Mode-based armor communicates mission to citizens instantly.</div>
+      <div class="doctrine-line">Wow factor must serve trust — not entertain.</div>
+    </div>
+  </div>
+
+  <!-- ── SECTION 1: LIVING ICON SYSTEM ── -->
+  <div class="section" id="sec1">
+
+    <div class="sect-label">Icon State</div>
+    <div class="state-bar" id="stateBar">
+      <button class="state-btn active" onclick="setIconState('idle',this)">● Idle</button>
+      <button class="state-btn" onclick="setIconState('active',this)">◉ Active</button>
+      <button class="state-btn" onclick="setIconState('protected',this)">🛡 Safe</button>
+      <button class="state-btn" onclick="setIconState('blocked',this)">✕ Blocked</button>
+    </div>
+
+    <div class="icon-grid state-idle" id="iconGrid"></div>
+
+    <div class="doctrine-panel" style="margin-top:16px;">
+      <div class="doctrine-title">Icon Doctrine</div>
+      <div class="doctrine-line">Every icon has a text label. Color is never the only state signal.</div>
+      <div class="doctrine-line">Shape-shifting explains what happened — it never distracts.</div>
+      <div class="doctrine-line">Every icon must work at small phone size. Clear silhouette. High contrast.</div>
+    </div>
+  </div>
+
+  <!-- ── SECTION 2: COMMAND MODE ── -->
+  <div class="section" id="sec2">
+
+    <div class="cmd-head">
+      <div class="cmd-orb">🎙️</div>
+      <div class="cmd-title">SIINDEX Command Mode</div>
+      <div class="cmd-sub">Speak your mission. SIINDEX reshapes the app.</div>
+    </div>
+
+    <div class="sect-label">Quick Missions</div>
+    <div class="mission-chips" id="missionChips"></div>
+
+    <input class="mission-input" id="missionInput" placeholder="Or type your own mission…" oninput="onMissionInput()">
+    <button class="btn-transform" onclick="runTransform()">⚡ Transform Interface</button>
+
+    <div class="mission-result" id="missionResult">
+      <div class="mr-hdr">
+        <div class="mr-hdr-icon" id="mrIcon">⚡</div>
+        <div>
+          <div class="mr-mode-name" id="mrName">—</div>
+          <div class="mr-mode-sub" id="mrSub">—</div>
+        </div>
+      </div>
+      <div class="sect-label">Active Icons</div>
+      <div class="mr-icons" id="mrIcons"></div>
+      <div class="sect-label">Next Steps</div>
+      <div id="mrSteps"></div>
+      <div class="mr-risk" id="mrRisk"></div>
+    </div>
+
+    <div id="missionLog" style="display:none;">
+      <div class="ml-title">Mission Log</div>
+      <div id="missionLogList"></div>
+    </div>
+  </div>
+
+  <!-- ── SECTION 3: GUARDRAILS ── -->
+  <div class="section" id="sec3">
+
+    <div class="sect-label">Performance Quality Level</div>
+    <div class="quality-grid" id="qualityGrid"></div>
+
+    <div class="card">
+      <div class="sect-label" style="margin-bottom:8px;">Accessibility Guardrails</div>
+      <div id="accessToggles"></div>
+    </div>
+
+    <div class="readiness-card">
+      <div class="readiness-score" id="readinessScore">0/10</div>
+      <div class="readiness-label" id="readinessLabel">Configure settings above</div>
+      <div class="readiness-bar"><div class="readiness-fill" id="readinessFill" style="width:0%"></div></div>
+    </div>
+
+    <div class="doctrine-panel">
+      <div class="doctrine-title">Performance Doctrine</div>
+      <div class="doctrine-line">If 3D blocks access, 3D weakens sovereignty.</div>
+      <div class="doctrine-line">Low-end devices must get a fast fallback. No exceptions.</div>
+      <div class="doctrine-line">Motion must explain state change — not decorate.</div>
+      <div class="doctrine-line">Never hide text during animation. Never reduce readability.</div>
+    </div>
+  </div>
+
+</div><!-- end .phone -->
+
+<div id="toast"></div>
+
+<script>
+  const INDX_PRICE_USD = 0.24;
+  const _MODE_KEY     = 'indx_liface_mode';
+  const _ICON_KEY     = 'indx_liface_iconstate';
+  const _MISSION_KEY  = 'indx_liface_missions';
+  const _SETTINGS_KEY = 'indx_liface_settings';
+
+  // ── ARMOR MODES ──
+  var ARMOR_MODES = [
+    {
+      id:'citizen', name:'Citizen Guide', icon:'💬', color:'#00D4FF',
+      glow:'rgba(0,212,255,0.15)', tag:'Guidance',
+      armor:'Soft cyan light, open form', clothing:'Simple, warm, low-key',
+      lighting:'Low-intensity ambient', posture:'Open, welcoming',
+      voice:'Warm, clear, unhurried', bg:'Soft dark glass, cyan guidance lines',
+      allowed:'Onboarding, help flows, first-time walkthroughs',
+      forbidden:'High-pressure actions, security alerts, complex legal'
+    },
+    {
+      id:'interview', name:'Interview', icon:'🎙️', color:'#8B3FE8',
+      glow:'rgba(139,63,232,0.15)', tag:'Premium',
+      armor:'Elegant cybernetic accents', clothing:'Premium, sharp, studio-ready',
+      lighting:'Studio cyan/violet', posture:'Strong, composed, camera-ready',
+      voice:'Confident, authoritative, calm', bg:'Premium black studio',
+      allowed:'Podcasts, AMAs, demos, press, media',
+      forbidden:'Support flows, error states, security mode'
+    },
+    {
+      id:'keynote', name:'Sovereign Keynote', icon:'👑', color:'#FFB800',
+      glow:'rgba(255,184,0,0.15)', tag:'Ceremonial',
+      armor:'Full cinematic, ceremonial plating', clothing:'High-detail, ceremonial',
+      lighting:'Cinematic, high glow, gold/cyan', posture:'Commanding, present, historic',
+      voice:'Resonant, clear, historic weight', bg:'Ceremonial stage, gold/cyan',
+      allowed:'Launch films, public announcements, founding events',
+      forbidden:'Routine tasks, error handling, daily ops'
+    },
+    {
+      id:'security', name:'Security Sentinel', icon:'🛡️', color:'#FF4D6D',
+      glow:'rgba(255,77,109,0.15)', tag:'Alert',
+      armor:'Protective plating, alert accents', clothing:'Minimal, focused, no distraction',
+      lighting:'Red/orange accent', posture:'Focused, firm, watchful',
+      voice:'Direct, minimal, clear', bg:'Dark shield grid, alert glow',
+      allowed:'Threats, suspicious actions, account safety, risk events',
+      forbidden:'Onboarding, celebrations, casual flows'
+    },
+    {
+      id:'cultural', name:'Cultural Steward', icon:'🪶', color:'#00E5A0',
+      glow:'rgba(0,229,160,0.12)', tag:'Respectful',
+      armor:'Restrained, no spectacle', clothing:'Soft, culturally careful',
+      lighting:'Soft, low-key', posture:'Calm, respectful, listening',
+      voice:'Measured, careful, listening', bg:'Low-light archive, approved motifs only',
+      allowed:'Cultural rights, ancestry, ICIP, permission topics',
+      forbidden:'Hype, sales language, entertainment framing'
+    },
+    {
+      id:'governance', name:'Governance', icon:'⚖️', color:'#F0F2FF',
+      glow:'rgba(240,242,255,0.07)', tag:'Formal',
+      armor:'Neutral, formal, no glow', clothing:'Balanced, clear',
+      lighting:'Clean neutral', posture:'Balanced, authoritative, clear',
+      voice:'Neutral, balanced, factual', bg:'Clean chamber, neutral light',
+      allowed:'Proposals, voting, DAO decisions, protocol updates',
+      forbidden:'Opinion-pushing, emotional appeals, sales framing'
+    },
+    {
+      id:'builder', name:'Builder Mode', icon:'🔧', color:'#2B35D8',
+      glow:'rgba(43,53,216,0.2)', tag:'Technical',
+      armor:'Modular, technical, tool-like', clothing:'Precise, functional',
+      lighting:'Console blue', posture:'Focused, precise',
+      voice:'Technical, exact, efficient', bg:'Command console, code lines, design grid',
+      allowed:'Build Console, code review, product design, dev ops',
+      forbidden:'Citizen onboarding, cultural topics, emotional support'
+    },
+    {
+      id:'liquidity', name:'Liquidity Mode', icon:'💧', color:'#FFB800',
+      glow:'rgba(255,184,0,0.12)', tag:'Treasury',
+      armor:'Vault-like, glass/gold accents', clothing:'Transparent, structured',
+      lighting:'Gold/cyan transparent', posture:'Stable, trustworthy',
+      voice:'Clear, transparent, precise', bg:'Transparent vault, flowing value lines',
+      allowed:'Treasury, revenue, LP pool, financial transparency',
+      forbidden:'Speculation, hype, price prediction language'
+    }
+  ];
+
+  // ── ICONS ──
+  var ICONS = [
+    {e:'⬛', n:'Grid Account',   bg:'rgba(0,212,255,0.08)'},
+    {e:'🧠', n:'Brain Passport', bg:'rgba(139,63,232,0.08)'},
+    {e:'🌐', n:'Life Graph',     bg:'rgba(0,229,160,0.08)'},
+    {e:'🏪', n:'Marketplace',    bg:'rgba(43,53,216,0.12)'},
+    {e:'🎙️', n:'Speak to SIINDEX',bg:'rgba(0,212,255,0.08)'},
+    {e:'🏛️', n:'Mission Room',   bg:'rgba(139,63,232,0.08)'},
+    {e:'⚙️', n:'Automation',     bg:'rgba(43,53,216,0.1)'},
+    {e:'🪶', n:'Cultural Rights',bg:'rgba(0,229,160,0.08)'},
+    {e:'📋', n:'Decision Ledger',bg:'rgba(255,184,0,0.08)'},
+    {e:'🛡️', n:'Security',       bg:'rgba(255,77,109,0.08)'},
+    {e:'💧', n:'Liquidity Pool', bg:'rgba(255,184,0,0.08)'},
+    {e:'⚖️', n:'Governance',     bg:'rgba(240,242,255,0.05)'},
+    {e:'📚', n:'Academy',        bg:'rgba(0,229,160,0.08)'},
+    {e:'🗄️', n:'Legacy Vault',   bg:'rgba(139,63,232,0.08)'},
+    {e:'💱', n:'DEX Swap',       bg:'rgba(43,53,216,0.1)'},
+    {e:'⚡', n:'SIINDEX',        bg:'rgba(0,212,255,0.1)'}
+  ];
+
+  var STATE_LABELS = {idle:'Idle', active:'Active', protected:'Protected', blocked:'Blocked'};
+
+  // ── MISSIONS ──
+  var MISSIONS = [
+    {text:'Send money to Mum', icon:'💸'},
+    {text:'Sell my prints online', icon:'🖼️'},
+    {text:'Secure my account', icon:'🛡️'},
+    {text:'Explain proposal GIP-041', icon:'⚖️'},
+    {text:'Check my INDX balance', icon:'💰'},
+    {text:'Publish cultural story', icon:'🪶'}
+  ];
+
+  var MISSION_MAP = {
+    send: {
+      modeId:'citizen', icon:'💬', color:'#00D4FF', name:'Citizen Guide Mode',
+      sub:'Send Mode · Warm guidance · Low intensity',
+      icons:['💸 Send', '📊 Fee Calc', '✅ Consent', '📋 Receipt'],
+      steps:['Enter recipient.IN$DEX domain or scan QR',
+             'Set amount in INDX or local currency',
+             'Review 0.5% fee and savings vs Western Union',
+             'Approve — consent receipt issued automatically'],
+      riskClass:'risk-low', riskLabel:'✅ Low risk — standard send flow. No approval gates.'
+    },
+    sell: {
+      modeId:'citizen', icon:'💬', color:'#00D4FF', name:'Citizen Guide Mode',
+      sub:'Opportunity Mode · Product listing flow',
+      icons:['🖼️ Product', '📸 Photos', '🪶 Cultural', '✅ Publish'],
+      steps:['Describe the product or print in plain language',
+             'Set price in INDX — USD equivalent shown live',
+             'Cultural rights check runs automatically before publish',
+             'Trust signal preview shown — citizen approves final listing'],
+      riskClass:'risk-medium', riskLabel:'⚠️ Cultural review required before publish. SIINDEX auto-checks.'
+    },
+    security: {
+      modeId:'security', icon:'🛡️', color:'#FF4D6D', name:'Security Sentinel Mode',
+      sub:'Security Mode · Alert · Protective plating active',
+      icons:['🛡️ Shield', '🔒 Lock', '📋 Audit', '⚠️ Alert'],
+      steps:['SIINDEX runs full account security audit now',
+             'Review active sessions and trusted device list',
+             'Confirm no suspicious recent actions in Decision Ledger',
+             'Enable 2FA and confirm Cloud Key backup is current'],
+      riskClass:'risk-high', riskLabel:'🔴 Security review in progress — do not skip approval gates.'
+    },
+    governance: {
+      modeId:'governance', icon:'⚖️', color:'#F0F2FF', name:'Governance Mode',
+      sub:'Governance Mode · Neutral · Formal',
+      icons:['⚖️ Vote', '📋 Brief', '🗳️ Cast', '✓ Confirm'],
+      steps:['Read full proposal GIP-041 brief and impact summary',
+             'Check your Wisdom Score voting weight multiplier',
+             'Review community for/against summary before deciding',
+             'Cast your vote — consent confirmation required'],
+      riskClass:'risk-low', riskLabel:'✅ Standard governance vote. Reversible until block confirmation.'
+    },
+    balance: {
+      modeId:'liquidity', icon:'💧', color:'#FFB800', name:'Liquidity Mode',
+      sub:'Portfolio View · Transparent · Vault-like',
+      icons:['💰 Balance', '📊 Stakes', '💱 Swap', '📈 History'],
+      steps:['View INDX balance and USD equivalent at $' + INDX_PRICE_USD.toFixed(2),
+             'Check active stakes, lock periods, and earned yield',
+             'Review DEX position and liquidity pool share if any',
+             'Export balance report — available for records'],
+      riskClass:'risk-low', riskLabel:'✅ View only — no action required. No approval gates.'
+    },
+    cultural: {
+      modeId:'cultural', icon:'🪶', color:'#00E5A0', name:'Cultural Steward Mode',
+      sub:'Cultural Mode · Respectful · Low spectacle',
+      icons:['🪶 ICIP', '✅ Permission', '📋 Rights', '🌏 Review'],
+      steps:['Upload story or image — SIINDEX runs cultural review',
+             'Confirm community ownership and attribution status',
+             'Attach cultural rights card if material is community-owned',
+             'SIINDEX checks ICIP compliance before any publish action'],
+      riskClass:'risk-medium', riskLabel:'⚠️ Cultural review required. Elder or community approval may apply.'
+    }
+  };
+
+  function detectMissionType(text) {
+    var t = text.toLowerCase();
+    if (t.includes('send') || t.includes('transfer') || t.includes('mum') || t.includes('mum') || t.includes('pay')) return 'send';
+    if (t.includes('sell') || t.includes('print') || t.includes('product') || t.includes('list')) return 'sell';
+    if (t.includes('secur') || t.includes('lock') || t.includes('safe') || t.includes('account')) return 'security';
+    if (t.includes('proposal') || t.includes('vote') || t.includes('gip') || t.includes('govern')) return 'governance';
+    if (t.includes('balance') || t.includes('indx') || t.includes('stake') || t.includes('earn')) return 'balance';
+    if (t.includes('cultur') || t.includes('story') || t.includes('publish') || t.includes('art')) return 'cultural';
+    return 'send';
+  }
+
+  // ── QUALITY LEVELS ──
+  var QUALITY_LEVELS = [
+    {level:'L1', name:'Static', color:'#00E5A0',
+     sub:'Static images + clear text. Fastest. Every device.'},
+    {level:'L2', name:'Animated', color:'#00D4FF',
+     sub:'Light animation + mode video loops. Mid-range+.'},
+    {level:'L3', name:'Real-time 3D', color:'#8B3FE8',
+     sub:'Real-time SIINDEX avatar. Modern phones only.'},
+    {level:'L4', name:'Cinematic', color:'#FFB800',
+     sub:'Full-body SIINDEX + armor transforms. Flagship only.'}
+  ];
+
+  var ACCESS_TOGGLES = [
+    {id:'lowData',      label:'Low Data Mode',    sub:'Reduces images and animation data load'},
+    {id:'reducedMotion',label:'Reduced Motion',   sub:'No animation — essential state changes only'},
+    {id:'highContrast', label:'High Contrast',    sub:'Maximum contrast for low vision readability'},
+    {id:'staticSiindex',label:'Static SIINDEX',   sub:'Still images replace all SIINDEX animation'},
+    {id:'audioOnly',    label:'Audio Only Mode',  sub:'Voice interface — minimal screen dependency'},
+    {id:'textOnly',     label:'Text Only Mode',   sub:'No icons or images — pure text interface'}
+  ];
+
+  // ── STATE ──
+  var _activeMode  = localStorage.getItem(_MODE_KEY)     || 'citizen';
+  var _iconState   = localStorage.getItem(_ICON_KEY)     || 'idle';
+  var _missions    = JSON.parse(localStorage.getItem(_MISSION_KEY)  || '[]');
+  var _settings    = JSON.parse(localStorage.getItem(_SETTINGS_KEY) || '{"quality":"L1","toggles":{}}');
+
+  // ── TABS ──
+  function switchTab(idx) {
+    document.querySelectorAll('.tab').forEach(function(t,i){ t.classList.toggle('active', i===idx); });
+    document.querySelectorAll('.section').forEach(function(s,i){ s.classList.toggle('active', i===idx); });
+  }
+
+  // ── ARMOR ──
+  function buildArmorGrid() {
+    var g = document.getElementById('armorGrid');
+    g.innerHTML = ARMOR_MODES.map(function(m) {
+      var sel = m.id === _activeMode;
+      return '<div class="armor-card' + (sel ? ' selected' : '') + '"' +
+        ' style="' + (sel ? 'border-color:' + m.color + ';' : '') + '"' +
+        ' onclick="selectMode(\'' + m.id + '\')">' +
+        '<div class="ac-icon">' + m.icon + '</div>' +
+        '<div class="ac-name">' + m.name + '</div>' +
+        '<div class="ac-tag" style="background:' + m.glow + ';color:' + m.color + '">' + m.tag + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function selectMode(id) {
+    _activeMode = id;
+    localStorage.setItem(_MODE_KEY, id);
+    buildArmorGrid();
+    updateModeHero();
+    showArmorDetail(id);
+    var mode = ARMOR_MODES.find(function(m){ return m.id===id; });
+    showToast(mode.icon + ' ' + mode.name + ' Mode activated');
+  }
+
+  function updateModeHero() {
+    var mode = ARMOR_MODES.find(function(m){ return m.id===_activeMode; }) || ARMOR_MODES[0];
+    var orb  = document.getElementById('modeOrb');
+    orb.textContent = mode.icon;
+    orb.style.background    = mode.glow;
+    orb.style.setProperty('--orb-color', mode.color);
+    document.getElementById('modeHeroBg').style.background =
+      'radial-gradient(circle at 50% 60%, ' + mode.glow + ' 0%, transparent 70%)';
+    document.getElementById('modeHeroName').textContent = mode.name + ' Mode';
+    document.getElementById('modeHeroSub').textContent  = mode.armor + ' · ' + mode.lighting;
+  }
+
+  function showArmorDetail(id) {
+    var mode   = ARMOR_MODES.find(function(m){ return m.id===id; });
+    if (!mode) return;
+    document.getElementById('adHdr').textContent = mode.icon + ' ' + mode.name + ' Mode';
+    document.getElementById('adBody').innerHTML =
+      row('Armor',      mode.armor)     +
+      row('Clothing',   mode.clothing)  +
+      row('Lighting',   mode.lighting)  +
+      row('Posture',    mode.posture)   +
+      row('Voice',      mode.voice)     +
+      row('Background', mode.bg)        +
+      '<div class="ar-allowed">✓ Allowed: ' + mode.allowed + '</div>' +
+      '<div class="ar-forbidden">✕ Forbidden: ' + mode.forbidden + '</div>';
+    document.getElementById('armorDetail').style.borderColor = mode.color;
+    document.getElementById('armorDetail').classList.add('open');
+  }
+
+  function row(label, val) {
+    return '<div class="armor-row"><div class="ar-label">' + label + '</div><div class="ar-val">' + val + '</div></div>';
+  }
+
+  // ── ICONS ──
+  function buildIconGrid() {
+    var g = document.getElementById('iconGrid');
+    g.className = 'icon-grid state-' + _iconState;
+    g.innerHTML = ICONS.map(function(ic) {
+      return '<div class="icon-tile" onclick="iconTap(\'' + ic.n + '\')">' +
+        '<div class="icon-shape" style="background:' + ic.bg + '">' + ic.e + '</div>' +
+        '<div class="icon-name">' + ic.n + '</div>' +
+        '<div class="icon-badge">' + STATE_LABELS[_iconState] + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function setIconState(state, btn) {
+    _iconState = state;
+    localStorage.setItem(_ICON_KEY, state);
+    document.querySelectorAll('.state-btn').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    buildIconGrid();
+  }
+
+  function iconTap(name) {
+    showToast(name + ' · ' + STATE_LABELS[_iconState]);
+  }
+
+  // ── COMMAND MODE ──
+  function buildMissionChips() {
+    var c = document.getElementById('missionChips');
+    c.innerHTML = MISSIONS.map(function(m, i) {
+      return '<div class="m-chip" onclick="selectMission(' + i + ', this)">' + m.icon + ' ' + m.text + '</div>';
+    }).join('');
+  }
+
+  function selectMission(idx, el) {
+    document.getElementById('missionInput').value = MISSIONS[idx].text;
+    document.querySelectorAll('.m-chip').forEach(function(c){ c.classList.remove('active'); });
+    el.classList.add('active');
+  }
+
+  function onMissionInput() {
+    document.querySelectorAll('.m-chip').forEach(function(c){ c.classList.remove('active'); });
+  }
+
+  function runTransform() {
+    var text = document.getElementById('missionInput').value.trim();
+    if (!text) { showToast('Enter a mission first'); return; }
+    var type = detectMissionType(text);
+    var r    = MISSION_MAP[type];
+
+    // Update active mode
+    _activeMode = r.modeId;
+    localStorage.setItem(_MODE_KEY, r.modeId);
+    updateModeHero();
+    buildArmorGrid();
+
+    document.getElementById('mrIcon').textContent  = r.icon;
+    document.getElementById('mrName').textContent  = r.name;
+    document.getElementById('mrSub').textContent   = r.sub;
+    document.getElementById('mrIcons').innerHTML   = r.icons.map(function(ic){
+      return '<div class="mr-icon-chip">' + ic + '</div>';
+    }).join('');
+    document.getElementById('mrSteps').innerHTML   = r.steps.map(function(s, i){
+      return '<div class="mr-step"><div class="mr-num">' + (i+1) + '</div><div>' + s + '</div></div>';
+    }).join('');
+    var riskEl = document.getElementById('mrRisk');
+    riskEl.textContent = r.riskLabel;
+    riskEl.className   = 'mr-risk ' + r.riskClass;
+    document.getElementById('missionResult').classList.add('open');
+
+    // Save log
+    _missions.unshift({text:text, icon:r.icon, mode:r.name, ts:Date.now()});
+    if (_missions.length > 5) _missions.length = 5;
+    localStorage.setItem(_MISSION_KEY, JSON.stringify(_missions));
+    renderMissionLog();
+    showToast('⚡ Interface transformed → ' + r.name);
+  }
+
+  function renderMissionLog() {
+    if (_missions.length === 0) return;
+    document.getElementById('missionLog').style.display = 'block';
+    document.getElementById('missionLogList').innerHTML = _missions.map(function(m, i) {
+      var t   = new Date(m.ts);
+      var lbl = t.toLocaleTimeString('en-AU', {hour:'2-digit', minute:'2-digit'});
+      return '<div class="ml-row" onclick="restoreMission(' + i + ')">' +
+        '<div class="ml-icon">' + m.icon + '</div>' +
+        '<div class="ml-text">' + m.text + '</div>' +
+        '<div class="ml-mode">' + m.mode + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function restoreMission(idx) {
+    document.getElementById('missionInput').value = _missions[idx].text;
+    runTransform();
+  }
+
+  // ── GUARDRAILS ──
+  function buildQualityGrid() {
+    var g = document.getElementById('qualityGrid');
+    g.innerHTML = QUALITY_LEVELS.map(function(q) {
+      return '<div class="quality-card' + (_settings.quality===q.level ? ' selected' : '') + '" onclick="selectQuality(\'' + q.level + '\')">' +
+        '<div class="ql-level" style="color:' + q.color + '">' + q.level + '</div>' +
+        '<div class="ql-name">' + q.name + '</div>' +
+        '<div class="ql-sub">' + q.sub + '</div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function selectQuality(level) {
+    _settings.quality = level;
+    saveSettings();
+    buildQualityGrid();
+    updateReadiness();
+    var q = QUALITY_LEVELS.find(function(q){ return q.level===level; });
+    showToast('Quality: ' + q.name);
+  }
+
+  function buildAccessToggles() {
+    var c = document.getElementById('accessToggles');
+    c.innerHTML = ACCESS_TOGGLES.map(function(t) {
+      var on = !!_settings.toggles[t.id];
+      return '<div class="toggle-row">' +
+        '<div class="tr-info">' +
+          '<div class="tr-label">' + t.label + '</div>' +
+          '<div class="tr-sub">' + t.sub + '</div>' +
+        '</div>' +
+        '<div class="toggle-sw' + (on ? ' on' : '') + '" onclick="toggleAccess(\'' + t.id + '\', this)"></div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function toggleAccess(id, el) {
+    _settings.toggles[id] = !_settings.toggles[id];
+    el.classList.toggle('on', !!_settings.toggles[id]);
+    saveSettings();
+    updateReadiness();
+  }
+
+  function updateReadiness() {
+    var onCount   = Object.values(_settings.toggles).filter(Boolean).length;
+    var qScore    = {L1:2, L2:4, L3:7, L4:10}[_settings.quality] || 2;
+    var aScore    = Math.min(8, onCount * 1.35);
+    var total     = Math.min(10, Math.round(qScore * 0.34 + aScore * 0.66 + 1));
+    var pct       = total * 10;
+    var scoreEl   = document.getElementById('readinessScore');
+    var fillEl    = document.getElementById('readinessFill');
+    var labelEl   = document.getElementById('readinessLabel');
+    scoreEl.textContent       = total + '/10';
+    fillEl.style.width        = pct + '%';
+    fillEl.style.background   = total >= 8 ? 'var(--green)' : total >= 5 ? 'var(--gold)' : 'var(--red)';
+    scoreEl.style.color       = total >= 8 ? 'var(--green)' : total >= 5 ? 'var(--gold)' : 'var(--red)';
+    var grades = {10:'Sovereign',9:'Sovereign',8:'Production Ready',7:'Good',6:'Acceptable',5:'Needs Work',4:'Phase 1 Only',3:'Dev Only',2:'Dev Only',1:'Incomplete'};
+    labelEl.textContent = (grades[total] || 'Configure above') + ' — ' + onCount + '/6 guardrails active';
+  }
+
+  function saveSettings() {
+    localStorage.setItem(_SETTINGS_KEY, JSON.stringify(_settings));
+  }
+
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.opacity = '1';
+    setTimeout(function(){ t.style.opacity = '0'; }, 2500);
+  }
+
+  // ── INIT ──
+  document.addEventListener('DOMContentLoaded', function() {
+    buildArmorGrid();
+    updateModeHero();
+    showArmorDetail(_activeMode);
+    buildIconGrid();
+    buildMissionChips();
+    buildQualityGrid();
+    buildAccessToggles();
+    updateReadiness();
+    renderMissionLog();
+  });
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

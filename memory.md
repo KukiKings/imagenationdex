@@ -1,5 +1,48 @@
 ---
 
+## Session 119 continued x35 — 13 Jul 2026 — SIINDEX Living Interface System
+
+**What was built**
+- `siindex-living-interface.html` — NEW SCREEN (God Mode from birth, 764 lines). SIINDEX Embodiment Layer design system. 4 features: Armor Mode Gallery (8 modes, animated hero, detail card), Living Icon System (16 icons × 4 CSS states), Command Mode Demo (mission transformer, 6 types, log), Performance + Accessibility Guardrails (4 quality levels, 6 toggles, readiness score/10).
+- `index.html` — SIINDEX section updated 21 → 22 screens. New card: Living Interface 🌌.
+
+**Doctrine locked**
+- "The app transforms around the citizen's mission."
+- "Motion must explain — not decorate."
+- "If 3D blocks access, 3D weakens sovereignty."
+- "SIINDEX's form changes by mission. Her identity stays stable."
+- "Wow factor must serve trust."
+- Build phases: L1 Static → L2 Animated → L3 Real-time 3D → L4 Cinematic
+- 8 armor modes: Citizen Guide / Interview / Sovereign Keynote / Security Sentinel / Cultural Steward / Governance / Builder / Liquidity
+
+**SIINDEX Living Interface System — Layer added to Master Architecture**
+- Living Icon System (16 icons, 4 states, text labels always shown)
+- Shape-Shifting Icon States (state changes explain process)
+- SIINDEX Armor System (8 mission modes)
+- SIINDEX Morph Protocol (controls armor/glow/posture/voice/background per mission)
+- SIINDEX Command Mode (app reshapes around spoken mission, citizen stays in control)
+- Dynamic Environment System (each mode has environment + lighting + icon style)
+- Accessibility Guardrails (6 toggles, never block onboarding)
+- Performance Guardrails (4 quality levels, L1 fallback always available)
+
+---
+
+## Session 119 continued x34 — 13 Jul 2026 — God Mode Sweep (5 screens) + 3 new SI screens
+
+**What was built**
+- `imagenation-design-studio.html` — GOD MODE Round 1: Quick Launch Templates, Brief Save & History, Design Session Cost Estimator, Council Review Tracker. INDX_PRICE_USD = 0.24. Audits CLEAN.
+- `siindex-prompt-optimiser.html` — NEW SCREEN (God Mode from birth): 4-D Methodology stepper, 6-platform selector, DETAIL/BASIC mode, prompt builder, improvements + techniques + pro tip, history (`indx_promptopt_history`). Audits CLEAN.
+- `siindex-writing-mode.html` — NEW SCREEN (God Mode from birth): 50+ banned word scanner, 8-point style checklist, score/10 with grade, auto-rewrite engine, history (`indx_writing_hist`). Audits CLEAN.
+- `siindex-readability-guardian.html` — NEW SCREEN (God Mode from birth): 10-point screen audit, WCAG contrast checker (5 presets), button label improver (12 vague labels × 3 improvements), Citizen Protection Mode demo. Audits CLEAN.
+- `index.html` — SIINDEX section updated 18 → 21 screens. 3 new cards: Prompt Optimiser ⚡, Writing Mode ✍️, Readability Guardian 👁.
+- `account-recovery.html` — GOD MODE Round 2: Session Resume (sessionStorage + banner), INDX/USD Value on Success ($465.60 / 1940 INDX), Recovery Attempt Log (indx_recovery_hist last 3), Verify Method Preference (indx_recovery_verifypref). GOD MODE PATCH on showScreen + selectVerify. Audits CLEAN.
+
+**God Mode sweep status**: ~107 orphaned screens still to sweep after account-recovery.html
+**Fable 5 credits**: May add $50 usage credits (weekly limit resets 15 Jul 12pm Melbourne)
+**AUSTRAC**: Enrol at https://online.austrac.gov.au before 29 Jul 2026
+
+---
+
 ## Session 119 continued x33 (part 4) — 12 Jul 2026 — Cook Islands Entity + God Mode sweep
 
 **CANONICAL FACT — AJ IS A COOK ISLANDS CITIZEN**

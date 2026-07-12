@@ -89,6 +89,39 @@
     .security-note{background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.15);border-radius:12px;padding:12px 14px;margin-bottom:20px;font-size:12px;color:var(--text-muted);line-height:1.6;}
     .security-note strong{color:var(--cyan);}
 
+    /* ── GOD MODE: ACCOUNT RECOVERY ── */
+    .gm-resume-banner{background:rgba(0,229,160,0.08);border-bottom:1px solid rgba(0,229,160,0.15);padding:12px 16px;display:flex;align-items:center;gap:10px;animation:gmSlideDown 0.3s ease;}
+    @keyframes gmSlideDown{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+    .gm-resume-banner.hidden{display:none;}
+    .gm-resume-meta{flex:1;}
+    .gm-resume-label{font-size:12px;font-weight:700;color:var(--green);}
+    .gm-resume-sub{font-size:11px;color:var(--text-muted);margin-top:1px;}
+    .gm-resume-btn{background:var(--green);color:#000;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;}
+    .gm-resume-dismiss{background:transparent;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;padding:4px;}
+
+    .gm-usd-strip{background:rgba(0,229,160,0.05);border:1px solid rgba(0,229,160,0.15);border-radius:12px;padding:14px 16px;margin-bottom:20px;text-align:center;}
+    .gm-usd-strip.hidden{display:none;}
+    .gm-usd-label{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;}
+    .gm-usd-amount{font-size:26px;font-weight:900;color:var(--green);}
+    .gm-usd-sub{font-size:12px;color:var(--text-muted);margin-top:2px;}
+
+    .gm-hist-strip{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:16px;}
+    .gm-hist-strip.hidden{display:none;}
+    .gm-hist-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;}
+    .gm-hist-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);}
+    .gm-hist-row:last-child{border-bottom:none;}
+    .gm-hist-icon{font-size:18px;width:28px;text-align:center;}
+    .gm-hist-info{flex:1;}
+    .gm-hist-method{font-size:12px;font-weight:700;}
+    .gm-hist-time{font-size:11px;color:var(--text-muted);}
+    .gm-hist-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;}
+    .gm-hist-badge.ok{background:rgba(0,229,160,0.12);color:var(--green);}
+    .gm-hist-badge.pending{background:rgba(255,184,0,0.12);color:var(--gold);}
+
+    .gm-pref-note{font-size:11px;color:var(--text-muted);margin-top:6px;padding:0 2px;}
+    .gm-pref-note span{color:var(--cyan);}
+    /* ── END GOD MODE ── */
+
     /* TOAST */
     #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
 
@@ -102,6 +135,17 @@
   <div class="topbar">
     <button class="tb-back" onclick="history.back()">←</button>
     <div class="tb-title">🔑 Account Recovery</div>
+  </div>
+
+  <!-- GM1: SESSION RESUME BANNER -->
+  <div id="gmResumeBanner" class="gm-resume-banner hidden">
+    <span style="font-size:20px;">⚡</span>
+    <div class="gm-resume-meta">
+      <div class="gm-resume-label">Resume recovery</div>
+      <div class="gm-resume-sub" id="gmResumeSub">Continue where you left off</div>
+    </div>
+    <button class="gm-resume-btn" onclick="gmResumeSession()">Resume</button>
+    <button class="gm-resume-dismiss" onclick="gmDismissResume()">✕</button>
   </div>
 
   <!-- PROGRESS -->
@@ -145,6 +189,8 @@
         <div id="vMethod2" onclick="selectVerify('email')" style="flex:1;padding:12px;background:var(--surface);border-radius:10px;text-align:center;font-size:13px;font-weight:700;color:var(--text-muted);cursor:pointer;border:2px solid var(--border);">📧 Email code</div>
       </div>
     </div>
+    <!-- GM4: VERIFY PREF NOTE -->
+    <div class="gm-pref-note" id="gmVerifyPrefNote"></div>
 
     <button class="btn-primary" id="step1Btn" onclick="goStep2()" disabled>Send verification code</button>
   </div>
@@ -173,6 +219,12 @@
   <div class="screen" id="screen2">
     <div class="screen-title" style="text-align:left;margin-bottom:6px;">How do you want to recover?</div>
     <div class="screen-sub" style="text-align:left;margin-bottom:20px;">Choose the method that matches what you still have access to.</div>
+
+    <!-- GM3: RECOVERY ATTEMPT LOG -->
+    <div id="gmHistStrip" class="gm-hist-strip hidden">
+      <div class="gm-hist-title">Previous attempts</div>
+      <div id="gmHistList"></div>
+    </div>
 
     <div class="method-card selected" id="mCloud" onclick="selectMethod('cloud')">
       <div class="mc-top">
@@ -280,6 +332,13 @@
         <div class="restored-item"><div class="ri-check">✓</div><div class="ri-text">Wisdom Score 62 pts</div></div>
         <div class="restored-item"><div class="ri-check">✓</div><div class="ri-text">Domain <span style="color:var(--cyan);">AJ.IN$DEX</span></div></div>
         <div class="restored-item"><div class="ri-check">✓</div><div class="ri-text">Governance votes & referrals</div></div>
+      </div>
+
+      <!-- GM2: USD VALUE STRIP -->
+      <div id="gmUSDStrip" class="gm-usd-strip hidden">
+        <div class="gm-usd-label">Total value recovered</div>
+        <div class="gm-usd-amount" id="gmUSDAmount">—</div>
+        <div class="gm-usd-sub" id="gmUSDSub">— INDX</div>
       </div>
 
       <div style="background:rgba(255,77,109,0.05);border:1px solid rgba(255,77,109,0.15);border-radius:12px;padding:12px 14px;width:100%;margin-bottom:24px;font-size:12px;color:var(--text-muted);">
@@ -473,6 +532,143 @@
       }, 5000);
     }, 3000);
   }
+
+  // ── GOD MODE: ACCOUNT RECOVERY ──
+  const INDX_PRICE_USD = 0.24;
+  const _GM_RESUME_KEY = 'indx_recovery_resume';
+  const _GM_HIST_KEY = 'indx_recovery_hist';
+  const _GM_VPREF_KEY = 'indx_recovery_verifypref';
+
+  // Feature 1 — Session Resume
+  function gmSaveResume(screenId) {
+    if (screenId === 'screen1' || screenId === 'screen3') {
+      sessionStorage.removeItem(_GM_RESUME_KEY);
+      return;
+    }
+    sessionStorage.setItem(_GM_RESUME_KEY, JSON.stringify({ screen: screenId, method: recovMethod, ts: Date.now() }));
+  }
+  function gmCheckResume() {
+    var raw = sessionStorage.getItem(_GM_RESUME_KEY);
+    if (!raw) return;
+    try {
+      var d = JSON.parse(raw);
+      if (Date.now() - d.ts > 30 * 60 * 1000) { sessionStorage.removeItem(_GM_RESUME_KEY); return; }
+      var banner = document.getElementById('gmResumeBanner');
+      var sub = document.getElementById('gmResumeSub');
+      var labels = {
+        screen1b: 'Entering verification code',
+        screen2: 'Choosing recovery method',
+        screen2cloud: 'Cloud Key restore',
+        screen2guardian: 'Waiting for Guardian',
+        screen2bio: 'Biometric scan'
+      };
+      if (sub) sub.textContent = labels[d.screen] || 'Continue where you left off';
+      if (banner) {
+        banner.classList.remove('hidden');
+        banner.dataset.screen = d.screen;
+        banner.dataset.method = d.method || '';
+      }
+    } catch(e) { sessionStorage.removeItem(_GM_RESUME_KEY); }
+  }
+  function gmResumeSession() {
+    var banner = document.getElementById('gmResumeBanner');
+    if (!banner) return;
+    var s = banner.dataset.screen;
+    var m = banner.dataset.method;
+    if (m) recovMethod = m;
+    banner.classList.add('hidden');
+    if (s) showScreen(s);
+    showToast('⚡ Recovery resumed');
+  }
+  function gmDismissResume() {
+    var banner = document.getElementById('gmResumeBanner');
+    if (banner) banner.classList.add('hidden');
+    sessionStorage.removeItem(_GM_RESUME_KEY);
+  }
+
+  // Feature 2 — INDX/USD Value on Success
+  var _GM_INDX_TOTAL = 1940;
+  function gmRenderRestoredUSD() {
+    var usd = (_GM_INDX_TOTAL * INDX_PRICE_USD).toFixed(2);
+    var strip = document.getElementById('gmUSDStrip');
+    var amt = document.getElementById('gmUSDAmount');
+    var sub = document.getElementById('gmUSDSub');
+    if (amt) amt.textContent = '$' + parseFloat(usd).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (sub) sub.textContent = _GM_INDX_TOTAL.toLocaleString() + ' INDX at $' + INDX_PRICE_USD.toFixed(2) + ' USD';
+    if (strip) strip.classList.remove('hidden');
+  }
+
+  // Feature 3 — Recovery Attempt Log
+  function gmLogAttempt(method, success) {
+    var hist = JSON.parse(localStorage.getItem(_GM_HIST_KEY) || '[]');
+    hist.unshift({ method: method, success: success, ts: Date.now() });
+    if (hist.length > 3) hist.length = 3;
+    localStorage.setItem(_GM_HIST_KEY, JSON.stringify(hist));
+    gmRenderAttemptLog();
+  }
+  function gmRenderAttemptLog() {
+    var hist = JSON.parse(localStorage.getItem(_GM_HIST_KEY) || '[]');
+    var strip = document.getElementById('gmHistStrip');
+    var list = document.getElementById('gmHistList');
+    if (!strip || !list || hist.length === 0) return;
+    var icons = { cloud: '☁️', guardian: '🤝', biometric: '🧬' };
+    var names = { cloud: 'Cloud Key', guardian: 'Guardian', biometric: 'Biometric' };
+    list.innerHTML = hist.map(function(h) {
+      var t = new Date(h.ts);
+      var label = t.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) + ' ' + t.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+      return '<div class="gm-hist-row">' +
+        '<div class="gm-hist-icon">' + (icons[h.method] || '🔑') + '</div>' +
+        '<div class="gm-hist-info">' +
+          '<div class="gm-hist-method">' + (names[h.method] || h.method) + '</div>' +
+          '<div class="gm-hist-time">' + label + '</div>' +
+        '</div>' +
+        '<div class="gm-hist-badge ' + (h.success ? 'ok' : 'pending') + '">' + (h.success ? 'Restored' : 'Attempted') + '</div>' +
+      '</div>';
+    }).join('');
+    strip.classList.remove('hidden');
+  }
+
+  // Feature 4 — Verify Method Preference
+  function gmSaveVerifyPref(m) {
+    localStorage.setItem(_GM_VPREF_KEY, m);
+    var note = document.getElementById('gmVerifyPrefNote');
+    if (note) note.innerHTML = '<span>' + (m === 'sms' ? '📱 SMS' : '📧 Email') + '</span> remembered — will pre-select next time';
+  }
+  function gmLoadVerifyPref() {
+    var pref = localStorage.getItem(_GM_VPREF_KEY);
+    if (!pref) return;
+    selectVerify(pref);
+    var note = document.getElementById('gmVerifyPrefNote');
+    if (note) note.innerHTML = '<span>' + (pref === 'sms' ? '📱 SMS' : '📧 Email') + '</span> pre-selected from last visit';
+  }
+
+  // GOD MODE PATCH: showScreen — save resume state + trigger USD on success
+  (function patchGMShowScreen() {
+    var _orig = window.showScreen;
+    window.showScreen = function(id) {
+      _orig(id);
+      gmSaveResume(id);
+      if (id === 'screen3') {
+        gmLogAttempt(recovMethod, true);
+        gmRenderRestoredUSD();
+      }
+    };
+  })();
+
+  // GOD MODE PATCH: selectVerify — persist preference
+  (function patchGMSelectVerify() {
+    var _orig = window.selectVerify;
+    window.selectVerify = function(m) {
+      _orig(m);
+      gmSaveVerifyPref(m);
+    };
+  })();
+
+  document.addEventListener('DOMContentLoaded', function() {
+    gmCheckResume();
+    gmRenderAttemptLog();
+    gmLoadVerifyPref();
+  });
 
   function showToast(msg) {
     const t = document.getElementById('toast');

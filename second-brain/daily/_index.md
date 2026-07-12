@@ -96,12 +96,21 @@ Next: Push accumulated backlog (weeks of uncommitted work — now includes 12 mo
 
 ---
 
-### 2026-07-12 (nightly brain pass only — no build session logged yet)
+### 2026-07-12 (updated retroactively — Session 119 x33, multiple parts, logged after prior nightly pass ran)
 
-Built: Nothing new — no Session 120 entry in memory.md as of this pass; consolidation-only run.
-Decisions: None new; retroactively logged the 07-11 Build-Completion queue closeout (x30/x31 detail was missing from the prior nightly pass).
-State: 12 screens from 07-11 (Sessions 119 x29–x31) still need committing/pushing along with the rest of the multi-day backlog. Created western-union.md orphan stub (named competitor across all 4 new corridor screens).
-Next: Same as 07-11 — push backlog, AUSTRAC enrollment, live-stream.html + creator-onboarding.html God Mode, Meteora/Raydium reconciliation, Stripe wiring, AJ as Founder #1.
+Built: AUSTRAC corridor stepper correction (`done`→`current` on all 4 Pacific pages, real enrollment not yet confirmed). Priority Wave Wire (Task #147): navigator 89→126 screens, new "SIINDEX Intelligence Platform" section (18 screens). God Mode voice-wallet.html (Task #145: TTS response, command history, Quick-Send Favourites, live rate badge). home-v2.html SIINDEX avatar image swap. **INDX token minted live on Solana mainnet** (100M supply via Smithii, Freeze/Mint revoked) and full supply transferred to protocol wallet. **Cook Islands entity decision** — AJ confirmed Cook Islands citizen, protocol to incorporate there alongside AU ABN entity. Full JS validation (244 files, 0 broken, 4 fixed) + navigator expansion to 243 screens. Nightly brain pass (this run, 2026-07-13): created smithii.md + cook-islands.md orphan stubs; updated austrac.md with stepper-correction note; consolidated moc/decisions indexes for all of the above.
+Decisions: AUSTRAC stepper reverted to `current` (misleading-checkmark fix). INDX minted with Update authority retained, Freeze+Mint revoked. Cook Islands dual-entity structure locked (Cook Islands protocol entity + Australian ABN AUSTRAC-regulated entity).
+State: INDX token is now real (on-chain) for the first time — LP pairing (Raydium CPMM) and LaunchLab graduation still pending. AUSTRAC still NOT ENROLLED, 17 days remaining as of 07-12. Git backlog now ~290 dirty files, 9 days since last push (last: 3 Jul, b97158e) — highest-priority risk (P0-A), needs AJ to push manually. God Mode queue unchanged: live-stream.html, creator-onboarding.html. Meteora vs Raydium LP conflict still open.
+Next: AJ to push ~290-file git backlog from Terminal. Complete AUSTRAC DCE registration + VASP enrollment (steps in austrac.md/companies, deadline 29 Jul 2026) — then flip corridor steppers back to `done`. Set up Raydium CPMM LP pool for INDX now that the token is minted. Finish God Mode queue (live-stream, creator-onboarding). Reconcile Meteora vs Raydium LP conflict. Wire Stripe product IDs. Add AJ as Founder #1.
+
+---
+
+### 2026-07-13 (nightly brain pass only — no new build session logged yet)
+
+Built: Nothing new in memory.md as of this pass; consolidation-only run covering the previously-unlogged Session 119 x33 content (INDX mint, Cook Islands entity, AUSTRAC correction) into second-brain.
+Decisions: None new today; see 2026-07-12 entry above for the decisions this pass surfaced from memory.md.
+State: Same as end of 07-12 — INDX minted on mainnet, AUSTRAC unenrolled (17 days left), ~290-file git backlog unpushed. No indication AJ has run a build session yet today.
+Next: Same priority order as 07-12 — push backlog, AUSTRAC enrollment, Raydium CPMM LP setup for the now-live INDX mint, God Mode queue, Meteora/Raydium reconciliation, Stripe wiring, AJ as Founder #1.
 
 ---
 

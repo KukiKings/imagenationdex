@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+  <title>SIINDEX Prompt Optimiser — IN$DEX</title>
+  <style>
+    :root {
+      --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8; --black:#090A10;
+      --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+      --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+      --text:#F0F2FF; --text2:#8892B0; --muted:#4A5280; --border:rgba(255,255,255,0.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;font-size:16px;line-height:1.6;min-height:100vh;padding-bottom:100px;}
+    /* TOP BAR */
+    .top-bar{position:sticky;top:0;z-index:100;background:rgba(9,10,16,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:14px 20px;}
+    .top-bar-back{color:var(--cyan);font-size:18px;cursor:pointer;text-decoration:none;}
+    .top-bar-title{font-size:16px;font-weight:800;color:var(--text);}
+    .top-bar-badge{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:0.06em;background:rgba(139,63,232,0.18);color:var(--purple);border:1px solid rgba(139,63,232,0.3);border-radius:20px;padding:3px 10px;}
+    /* HERO */
+    .hero{padding:28px 20px 20px;background:linear-gradient(160deg,rgba(43,53,216,0.1) 0%,transparent 60%);}
+    .hero-tag{font-size:10px;font-weight:800;letter-spacing:0.12em;color:var(--purple);text-transform:uppercase;margin-bottom:10px;}
+    .hero h1{font-size:26px;font-weight:900;line-height:1.2;margin-bottom:10px;}
+    .hero h1 span{color:var(--cyan);}
+    .hero-sub{font-size:14px;color:var(--text2);line-height:1.55;}
+    /* WELCOME */
+    .welcome-card{margin:0 20px 4px;background:linear-gradient(135deg,rgba(0,212,255,0.08) 0%,rgba(139,63,232,0.06) 100%);border:1px solid rgba(0,212,255,0.18);border-radius:16px;padding:16px;}
+    .welcome-card-icon{font-size:22px;margin-bottom:8px;}
+    .welcome-card-text{font-size:13px;color:var(--text2);line-height:1.55;}
+    .welcome-card-text strong{color:var(--cyan);}
+    /* SECTION HDR */
+    .section-hdr{display:flex;align-items:center;justify-content:space-between;padding:20px 20px 10px;}
+    .section-hdr h2{font-size:15px;font-weight:800;color:var(--text);}
+    .section-hdr span{font-size:11px;color:var(--muted);}
+    /* CARD */
+    .card{margin:0 20px 16px;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:16px;}
+    /* FIELD LABEL */
+    .field-lbl{font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--text2);margin-bottom:8px;}
+    /* PLATFORM GRID */
+    .platform-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;}
+    .platform-chip{background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;transition:border-color 0.18s,background 0.18s;}
+    .platform-chip.selected{border-color:var(--purple);background:rgba(139,63,232,0.12);}
+    .platform-chip-icon{font-size:18px;margin-bottom:4px;}
+    .platform-chip-name{font-size:9px;font-weight:800;color:var(--text2);letter-spacing:0.04em;}
+    .platform-chip.selected .platform-chip-name{color:var(--purple);}
+    /* PLATFORM TIP */
+    .platform-tip{background:var(--surface3);border-left:3px solid var(--purple);border-radius:0 10px 10px 0;padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:14px;display:none;}
+    /* MODE TOGGLE */
+    .mode-toggle{display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:14px;}
+    .mode-btn{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:800;color:var(--muted);cursor:pointer;transition:all 0.18s;}
+    .mode-btn.active{background:var(--purple);color:var(--text);}
+    /* TEXTAREA */
+    .prompt-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;color:var(--text);font-family:inherit;font-size:14px;line-height:1.55;padding:14px;resize:none;min-height:130px;margin-bottom:6px;outline:none;transition:border-color 0.18s;}
+    .prompt-input:focus{border-color:rgba(139,63,232,0.5);}
+    .prompt-input::placeholder{color:var(--muted);}
+    .char-count{font-size:10px;color:var(--muted);text-align:right;margin-bottom:12px;}
+    /* BUTTON */
+    .optimise-btn{width:100%;background:linear-gradient(135deg,var(--purple),var(--blue));border:none;border-radius:14px;padding:16px;color:var(--text);font-size:15px;font-weight:900;cursor:pointer;letter-spacing:0.03em;transition:opacity 0.18s;}
+    .optimise-btn:active{opacity:0.8;}
+    .optimise-btn:disabled{opacity:0.4;cursor:not-allowed;}
+    /* 4-D STEPPER */
+    .four-d{display:flex;align-items:flex-start;justify-content:space-between;padding:4px 0;}
+    .step-node{display:flex;flex-direction:column;align-items:center;gap:5px;}
+    .step-dot{width:34px;height:34px;border-radius:50%;background:var(--surface3);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:var(--muted);transition:all 0.35s;}
+    .step-dot.active{border-color:var(--cyan);background:rgba(0,212,255,0.1);color:var(--cyan);}
+    .step-dot.done{border-color:var(--green);background:rgba(0,229,160,0.1);color:var(--green);}
+    .step-lbl{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;text-align:center;}
+    .step-lbl.active{color:var(--cyan);}
+    .step-lbl.done{color:var(--green);}
+    .step-conn{flex:1;height:2px;background:var(--border);margin:17px 3px 0;transition:background 0.4s;}
+    .step-conn.done{background:var(--green);}
+    .step-status{font-size:11px;color:var(--muted);text-align:center;margin-top:10px;min-height:16px;}
+    /* OUTPUT */
+    .output-section{display:none;}
+    .output-section.show{display:block;}
+    .output-box{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;font-size:13px;color:var(--text);line-height:1.65;margin-bottom:10px;white-space:pre-wrap;word-break:break-word;}
+    .copy-btn{width:100%;background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.25);border-radius:10px;padding:10px;color:var(--green);font-size:13px;font-weight:800;cursor:pointer;margin-bottom:14px;transition:background 0.18s;}
+    .copy-btn:active{background:rgba(0,229,160,0.22);}
+    .improve-list{background:var(--surface3);border-radius:12px;padding:10px 12px;margin-bottom:12px;}
+    .improve-item{font-size:12px;color:var(--text2);line-height:1.5;padding:5px 0 5px 18px;position:relative;border-bottom:1px solid var(--border);}
+    .improve-item:last-child{border-bottom:none;}
+    .improve-item::before{content:'✓';position:absolute;left:0;color:var(--green);font-weight:900;}
+    .tech-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+    .tech-chip{background:rgba(43,53,216,0.15);border:1px solid rgba(43,53,216,0.3);border-radius:20px;padding:4px 10px;font-size:10px;font-weight:700;color:#8B9FFF;}
+    .pro-tip{background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.2);border-radius:12px;padding:12px;}
+    .pro-tip-lbl{font-size:10px;font-weight:900;color:var(--gold);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;}
+    .pro-tip-text{font-size:12px;color:var(--text2);line-height:1.5;}
+    .output-type-tag{display:inline-block;font-size:10px;font-weight:800;background:rgba(0,212,255,0.1);color:var(--cyan);border:1px solid rgba(0,212,255,0.2);border-radius:20px;padding:3px 10px;margin-bottom:10px;}
+    /* HISTORY */
+    .hist-item{background:var(--surface3);border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:8px;cursor:pointer;transition:border-color 0.15s;}
+    .hist-item:last-child{margin-bottom:0;}
+    .hist-item:active{border-color:rgba(139,63,232,0.35);}
+    .hist-raw{font-size:12px;color:var(--text);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .hist-meta{font-size:10px;color:var(--muted);margin-top:3px;}
+    .hist-empty{font-size:12px;color:var(--muted);font-style:italic;text-align:center;padding:14px 0;}
+    /* BOTTOM NAV */
+    .bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(9,10,16,0.97);backdrop-filter:blur(12px);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;padding:10px 0 18px;}
+    .nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;text-decoration:none;opacity:0.5;transition:opacity 0.18s;}
+    .nav-item.active{opacity:1;}
+    .nav-item-icon{font-size:20px;}
+    .nav-item-label{font-size:9px;font-weight:700;color:var(--text2);letter-spacing:0.05em;}
+    /* TOAST */
+    .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);border-radius:24px;padding:10px 20px;font-size:13px;font-weight:700;color:var(--text);opacity:0;pointer-events:none;transition:opacity 0.25s;z-index:999;white-space:nowrap;}
+    .toast.show{opacity:1;}
+    /* FADE */
+    .fade-in{opacity:0;animation:fadeIn 0.4s ease forwards;}
+    @keyframes fadeIn{to{opacity:1;}}
+  </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <a href="index.html" class="top-bar-back">←</a>
+  <div class="top-bar-title">Prompt Optimiser</div>
+  <div class="top-bar-badge">SIINDEX</div>
+</div>
+
+<!-- HERO -->
+<div class="hero fade-in">
+  <div class="hero-tag">SIINDEX — Precision Prompting</div>
+  <h1>Any idea.<br><span>A precision prompt.</span></h1>
+  <p class="hero-sub">Paste any raw request. SIINDEX applies the 4-D Method — Deconstruct, Diagnose, Develop, Deliver — and returns a structured prompt ready for any SI model or agent.</p>
+</div>
+
+<!-- WELCOME -->
+<div class="welcome-card fade-in" style="animation-delay:0.06s">
+  <div class="welcome-card-icon">⚡</div>
+  <p class="welcome-card-text">Hello! I'm <strong>SIINDEX</strong>, your SI prompt optimiser. I transform vague requests into precise, effective prompts that get Synthetic Intelligence working at its highest level. Tell me what you want to create, improve, build, analyse, or automate — and I'll turn it into a prompt that works.</p>
+</div>
+
+<!-- INPUT SECTION -->
+<div class="section-hdr fade-in" style="animation-delay:0.09s">
+  <h2>📝 Your Raw Prompt</h2>
+  <span>paste anything</span>
+</div>
+<div class="card fade-in" style="animation-delay:0.11s">
+  <div class="field-lbl">Target Platform</div>
+  <div class="platform-grid" id="platformGrid"></div>
+  <div class="platform-tip" id="platformTip"></div>
+
+  <div class="field-lbl">Optimisation Mode</div>
+  <div class="mode-toggle">
+    <div class="mode-btn active" id="modeDetail" onclick="setMode('DETAIL')">⚙ DETAIL MODE</div>
+    <div class="mode-btn" id="modeBasic" onclick="setMode('BASIC')">⚡ BASIC MODE</div>
+  </div>
+
+  <div class="field-lbl">Your Prompt</div>
+  <textarea class="prompt-input" id="rawPrompt" placeholder="Type or paste your prompt here. It can be rough — one sentence, a list, or a full paragraph. SIINDEX will turn it into something precise and ready to use." oninput="updateCharCount(this)"></textarea>
+  <div class="char-count" id="charCount">0 characters</div>
+
+  <button class="optimise-btn" id="optimiseBtn" onclick="runOptimiser()">⚡ Optimise Prompt</button>
+</div>
+
+<!-- 4-D PROGRESS -->
+<div class="section-hdr fade-in" style="animation-delay:0.13s">
+  <h2>4-D Method</h2>
+  <span id="stepStatusLabel">ready</span>
+</div>
+<div class="card fade-in" style="animation-delay:0.15s">
+  <div class="four-d">
+    <div class="step-node">
+      <div class="step-dot" id="dot-0">D1</div>
+      <div class="step-lbl" id="lbl-0">Deconstruct</div>
+    </div>
+    <div class="step-conn" id="conn-0"></div>
+    <div class="step-node">
+      <div class="step-dot" id="dot-1">D2</div>
+      <div class="step-lbl" id="lbl-1">Diagnose</div>
+    </div>
+    <div class="step-conn" id="conn-1"></div>
+    <div class="step-node">
+      <div class="step-dot" id="dot-2">D3</div>
+      <div class="step-lbl" id="lbl-2">Develop</div>
+    </div>
+    <div class="step-conn" id="conn-2"></div>
+    <div class="step-node">
+      <div class="step-dot" id="dot-3">D4</div>
+      <div class="step-lbl" id="lbl-3">Deliver</div>
+    </div>
+  </div>
+</div>
+
+<!-- OUTPUT SECTION -->
+<div id="outputSection" class="output-section">
+  <div class="section-hdr">
+    <h2>✅ Optimised Prompt</h2>
+    <span id="outputTypeTag">—</span>
+  </div>
+  <div class="card">
+    <div class="field-lbl">Ready to use — copy and paste into any SI model</div>
+    <div class="output-box" id="outputBox"></div>
+    <button class="copy-btn" onclick="copyPrompt()">⎘ Copy Prompt</button>
+
+    <div class="field-lbl">Key Improvements</div>
+    <div class="improve-list" id="improveList"></div>
+
+    <div class="field-lbl" style="margin-top:12px">Techniques Applied</div>
+    <div class="tech-row" id="techList"></div>
+
+    <div class="pro-tip">
+      <div class="pro-tip-lbl">Pro Tip</div>
+      <div class="pro-tip-text" id="proTipText"></div>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY SECTION -->
+<div class="section-hdr fade-in" style="animation-delay:0.17s">
+  <h2>🕐 History</h2>
+  <span>last 5 optimised</span>
+</div>
+<div class="card fade-in" style="animation-delay:0.19s">
+  <div id="histList"><div class="hist-empty">No prompts optimised yet.</div></div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <a href="index.html" class="nav-item"><span class="nav-item-icon">🏠</span><span class="nav-item-label">Home</span></a>
+  <a href="citizen-dashboard.html" class="nav-item"><span class="nav-item-icon">👤</span><span class="nav-item-label">Profile</span></a>
+  <a href="siindex-prompt-optimiser.html" class="nav-item active"><span class="nav-item-icon">⚡</span><span class="nav-item-label">Optimiser</span></a>
+  <a href="siindex-intelligence.html" class="nav-item"><span class="nav-item-icon">🧠</span><span class="nav-item-label">SIINDEX</span></a>
+  <a href="sovereign-academy.html" class="nav-item"><span class="nav-item-icon">📚</span><span class="nav-item-label">Academy</span></a>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script>
+  const INDX_PRICE_USD = 0.24;
+
+  // ── PLATFORM DATA ──
+  const PLATFORMS = [
+    { id:'chatgpt', label:'ChatGPT', icon:'🤖', tip:'Use clear section headings, specific instructions, defined output format, and concise context. Add examples where useful.' },
+    { id:'claude',  label:'Claude',  icon:'🧠', tip:'Use richer context and longer-form reasoning frameworks. Document-style formatting works well. Add nuanced constraints.' },
+    { id:'gemini',  label:'Gemini',  icon:'♊',  tip:'Prompt for comparative analysis and creative variations. Multimodal instructions and broad exploration across angles.' },
+    { id:'agentic', label:'Agentic', icon:'⌨️', tip:'Include repo context, file paths, and implementation steps. Define tests, security checks, rollback plan, and acceptance criteria.' },
+    { id:'image',   label:'Image/Video', icon:'🎨', tip:'Specify subject, composition, lighting, style, camera angle, mood. List what to include and what to exclude.' },
+    { id:'voice',   label:'Voice/Avatar', icon:'🎙️', tip:'Define tone, pacing, accent, emotional quality, audience, persona boundaries, delivery mode, and forbidden styles.' },
+  ];
+
+  // ── REQUEST TYPE DETECTION ──
+  const TYPES = [
+    { type:'technical',   words:['code','build','program','debug','fix','api','function','script','database','app','website','implement','deploy','test','error','bug','html','css','python','node','react','sql','server'], role:'Technical Lead', icon:'⌨️' },
+    { type:'creative',    words:['write','story','poem','brand','copy','post','content','campaign','ad','video','script','narrative','tagline','slogan','article','blog','caption','email'], role:'Creative Director', icon:'🎨' },
+    { type:'educational', words:['explain','teach','learn','understand','what is','how does','summarise','summarize','guide','tutorial','lesson','course','step by step','break down','define'], role:'Educator', icon:'📚' },
+    { type:'business',    words:['strategy','plan','pitch','market','business','revenue','growth','product','launch','investor','proposal','analysis','report','roi','pricing','competitive'], role:'Business Strategist', icon:'📊' },
+    { type:'legal',       words:['legal','compliance','regulation','law','contract','risk','audit','policy','privacy','security','austrac','asic','oaic','gdpr','terms'], role:'Compliance Reviewer', icon:'⚖️' },
+    { type:'research',    words:['research','find','search','compare','analyse','analyze','review','evaluate','assess','investigate','survey','data','study'], role:'Researcher', icon:'🔍' },
+  ];
+
+  // ── STATE ──
+  let _platform = null;
+  let _mode = 'DETAIL';
+  const _HIST_KEY = 'indx_promptopt_history';
+
+  // ── PLATFORM GRID ──
+  function renderPlatformGrid() {
+    document.getElementById('platformGrid').innerHTML = PLATFORMS.map(p =>
+      `<div class="platform-chip" id="pc-${p.id}" onclick="selectPlatform('${p.id}')">
+        <div class="platform-chip-icon">${p.icon}</div>
+        <div class="platform-chip-name">${p.label}</div>
+      </div>`
+    ).join('');
+  }
+
+  function selectPlatform(id) {
+    _platform = id;
+    document.querySelectorAll('.platform-chip').forEach(c => c.classList.remove('selected'));
+    document.getElementById('pc-' + id).classList.add('selected');
+    const p = PLATFORMS.find(x => x.id === id);
+    const tip = document.getElementById('platformTip');
+    tip.textContent = '💡 ' + p.tip;
+    tip.style.display = 'block';
+  }
+
+  // ── MODE ──
+  function setMode(m) {
+    _mode = m;
+    document.getElementById('modeDetail').classList.toggle('active', m === 'DETAIL');
+    document.getElementById('modeBasic').classList.toggle('active', m === 'BASIC');
+  }
+
+  // ── CHAR COUNT ──
+  function updateCharCount(el) {
+    document.getElementById('charCount').textContent = el.value.length + ' characters';
+  }
+
+  // ── DETECT TYPE ──
+  function detectType(text) {
+    const lower = text.toLowerCase();
+    let best = null, bestCount = 0;
+    for (const t of TYPES) {
+      const count = t.words.filter(w => lower.includes(w)).length;
+      if (count > bestCount) { bestCount = count; best = t; }
+    }
+    return best || { type:'general', role:'Prompt Engineer', icon:'🔧' };
+  }
+
+  // ── STEP ANIMATOR ──
+  function animateSteps(cb) {
+    const msgs = ['Deconstructing intention...','Diagnosing weak points...','Developing structure...','Delivering output...'];
+    let i = 0;
+    const tick = () => {
+      if (i > 0) {
+        document.getElementById('dot-' + (i-1)).className = 'step-dot done';
+        document.getElementById('lbl-' + (i-1)).className = 'step-lbl done';
+        if (i > 1) document.getElementById('conn-' + (i-2)).classList.add('done');
+      }
+      if (i < 4) {
+        document.getElementById('dot-' + i).className = 'step-dot active';
+        document.getElementById('lbl-' + i).className = 'step-lbl active';
+        document.getElementById('stepStatusLabel').textContent = msgs[i];
+        i++;
+        setTimeout(tick, 520);
+      } else {
+        document.getElementById('conn-2').classList.add('done');
+        document.getElementById('stepStatusLabel').textContent = 'complete';
+        setTimeout(cb, 180);
+      }
+    };
+    tick();
+  }
+
+  // ── BUILD PROMPT ──
+  function buildPrompt(raw, type, pid) {
+    const platformAdditions = {
+      chatgpt: 'Format your response with clear section headings and numbered lists where sequence matters.',
+      claude:  'Reason through each part methodically before giving your final answer. Use document-style formatting.',
+      gemini:  'Provide at least two contrasting approaches or perspectives where relevant.',
+      agentic: 'Include specific file paths, step-by-step implementation, and a verification checklist at the end.',
+      image:   'Output: one image. Keep all text out of the image unless I ask for it.',
+      voice:   'Speak in a calm, clear voice. One idea per sentence. Pause after each key point.',
+    };
+    const platformNote = platformAdditions[pid] || '';
+
+    if (_mode === 'BASIC') {
+      return `You are a ${type.role}.\n\nTask:\n${raw.trim()}\n\nRequirements:\n- Be accurate and actionable.\n- Lead with the most important output.\n- Structure your response clearly.\n${platformNote ? '\nPlatform note: ' + platformNote : ''}`;
+    }
+
+    const typeFramework = {
+      technical:   '\n\nTechnical Requirements:\n- State all language, framework, and environment assumptions upfront.\n- Define edge cases and error handling explicitly.\n- Include a basic verification or test step.\n- Flag any security considerations before writing code.',
+      creative:    '\n\nCreative Direction:\n- Tone: clear, direct, warm, sovereign. No hype.\n- Audience: real people making real decisions.\n- Include one strong example or reference if it adds clarity.\n- End with a clear next step or anchor.',
+      educational: '\n\nEducational Structure:\n- State the core concept in one sentence first.\n- Build from simple to complex.\n- Include one real-world example.\n- End with a plain summary and one practice question.',
+      business:    '\n\nBusiness Framework:\n- Define the audience, goal, and success metric first.\n- Give a clear recommendation, not analysis alone.\n- Flag key risks or assumptions that affect the decision.\n- End with a concrete next action.',
+      legal:       '\n\nCompliance Boundaries:\n- Provide structured information only. Do not give legal advice.\n- Flag where qualified legal or regulatory review is required.\n- Note jurisdiction-specific factors where relevant.\n- Include a risk disclosure note.',
+      research:    '\n\nResearch Standards:\n- Distinguish facts, estimates, and expert opinion clearly.\n- Note any contradictions or gaps in available information.\n- Cite source types where applicable.\n- End with a plain summary conclusion.',
+      general:     '',
+    };
+
+    return `You are a ${type.role} operating within the IN\$DEX sovereign intelligence framework.\n\nMission:\n${raw.trim()}\n\nContext:\n- This output is for a citizen or founding team member.\n- Accuracy, clarity, and practical value take priority.\n- Do not include filler, hype, or vague claims.${typeFramework[type.type] || ''}\n\nOutput Format:\n- Lead with the most important information.\n- Use numbered steps where sequence matters.\n- One idea per paragraph.\n- Short sentences throughout.${platformNote ? '\n\nPlatform Instruction:\n' + platformNote : ''}\n\nSuccess Criteria:\n- A citizen reads this output and knows exactly what to do next.\n- No follow-up questions are needed.\n- The output is accurate and safe to act on.`;
+  }
+
+  // ── BUILD IMPROVEMENTS ──
+  function buildImprovements(raw, type, pid) {
+    const list = [
+      'Added explicit role assignment (' + type.role + ') to anchor SIINDEX behaviour.',
+      'Added structured output format — previously undefined.',
+      'Added success criteria so SIINDEX knows what a good answer looks like.',
+    ];
+    if (_mode === 'DETAIL') {
+      list.push('Applied ' + type.type + '-specific constraints and reasoning framework.');
+      if (pid && pid !== 'chatgpt') list.push('Added ' + (PLATFORMS.find(p => p.id === pid)?.label || pid) + ' platform adaptation.');
+    }
+    if (raw.length < 60) list.push('Expanded thin input with mission framing and audience definition.');
+    if (!raw.toLowerCase().includes('format') && !raw.toLowerCase().includes('output')) list.push('Defined output format — missing from the original prompt.');
+    return list;
+  }
+
+  // ── BUILD TECHNIQUES ──
+  function buildTechniques(type) {
+    const base = ['Role assignment','Output specification','Success criteria'];
+    if (_mode === 'DETAIL') {
+      base.push('Context layering','Task decomposition','Constraint setting');
+      const extras = { technical:['Edge case definition','Security review'], creative:['Tone direction','Audience definition'], educational:['Step-by-step process','Examples'], business:['Decision matrix','Risk framing'], legal:['Risk review','Assumption mapping'], research:['Source classification','Contradiction check'] };
+      if (extras[type.type]) base.push(...extras[type.type]);
+    }
+    return base;
+  }
+
+  // ── BUILD PRO TIP ──
+  function buildProTip(type, pid) {
+    if (pid === 'image') return 'Add a list of things to exclude at the end of your image prompt. This single addition eliminates the most common generation errors before they appear.';
+    if (pid === 'voice') return 'Ask for a script with [PAUSE] markers at natural breath points. This makes the output ready for voice actors or avatar tools without further editing.';
+    const tips = {
+      technical:   'Paste your full error message or code block into the prompt alongside this template. SI gives sharper answers with exact context than with summaries.',
+      creative:    'Add 2 to 3 words describing how you want the reader to feel after reading. These anchor tone more precisely than style instructions alone.',
+      educational: 'Include one word describing your audience level — beginner, intermediate, or expert. This changes the entire output.',
+      business:    'Start with the decision you need to make, not the analysis you want. SI gives sharper answers when it knows what will be done with the information.',
+      legal:       'Confirm all legal outputs with a qualified professional before acting. SI surfaces structure — not legal advice.',
+      research:    'Ask SI to separate verified facts from estimates at the end of its response. This one instruction improves accuracy across all research outputs.',
+      general:     'Run this prompt, then ask SI to rate its own answer out of 10 and identify one thing to improve. The second pass often produces the best version.',
+    };
+    return tips[type.type] || tips.general;
+  }
+
+  // ── MAIN OPTIMISER ──
+  function runOptimiser() {
+    const raw = document.getElementById('rawPrompt').value.trim();
+    if (!raw) { showToast('⚠ Type or paste your prompt first.'); return; }
+    if (!_platform) { showToast('⚠ Select a target platform first.'); return; }
+
+    const btn = document.getElementById('optimiseBtn');
+    btn.disabled = true; btn.textContent = 'Optimising...';
+    document.getElementById('outputSection').classList.remove('show');
+
+    // Reset steps
+    for (let i = 0; i < 4; i++) { document.getElementById('dot-' + i).className = 'step-dot'; document.getElementById('lbl-' + i).className = 'step-lbl'; }
+    for (let i = 0; i < 3; i++) document.getElementById('conn-' + i).classList.remove('done');
+
+    const type = detectType(raw);
+
+    animateSteps(() => {
+      const optimised = buildPrompt(raw, type, _platform);
+      const improvements = buildImprovements(raw, type, _platform);
+      const techniques = buildTechniques(type);
+      const tip = buildProTip(type, _platform);
+
+      document.getElementById('outputBox').textContent = optimised;
+      document.getElementById('outputTypeTag').textContent = type.icon + ' ' + type.type;
+      document.getElementById('improveList').innerHTML = improvements.map(i => `<div class="improve-item">${i}</div>`).join('');
+      document.getElementById('techList').innerHTML = techniques.map(t => `<div class="tech-chip">${t}</div>`).join('');
+      document.getElementById('proTipText').textContent = tip;
+      document.getElementById('outputSection').classList.add('show');
+
+      saveHist(raw, optimised, type);
+      renderHist();
+
+      btn.disabled = false; btn.textContent = '⚡ Optimise Prompt';
+      showToast('✓ Prompt optimised — ready to use!');
+      setTimeout(() => document.getElementById('outputSection').scrollIntoView({ behavior:'smooth', block:'start' }), 120);
+    });
+  }
+
+  // ── COPY ──
+  function copyPrompt() {
+    const text = document.getElementById('outputBox').textContent;
+    navigator.clipboard.writeText(text)
+      .then(() => showToast('✓ Prompt copied to clipboard!'))
+      .catch(() => showToast('⚠ Select and copy the text manually.'));
+  }
+
+  // ── HISTORY ──
+  function saveHist(raw, optimised, type) {
+    const hist = JSON.parse(localStorage.getItem(_HIST_KEY) || '[]');
+    hist.unshift({ raw: raw.slice(0, 80), optimised, type: type.type, icon: type.icon, ts: Date.now() });
+    if (hist.length > 5) hist.splice(5);
+    localStorage.setItem(_HIST_KEY, JSON.stringify(hist));
+  }
+
+  function renderHist() {
+    const el = document.getElementById('histList');
+    const hist = JSON.parse(localStorage.getItem(_HIST_KEY) || '[]');
+    if (!hist.length) { el.innerHTML = '<div class="hist-empty">No prompts optimised yet.</div>'; return; }
+    el.innerHTML = hist.map(h => `
+      <div class="hist-item" onclick="restoreHist(${h.ts})">
+        <div class="hist-raw">${h.icon} ${h.raw}${h.raw.length >= 80 ? '…' : ''}</div>
+        <div class="hist-meta">${h.type} · ${new Date(h.ts).toLocaleDateString()} ${new Date(h.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+      </div>`).join('');
+  }
+
+  function restoreHist(ts) {
+    const hist = JSON.parse(localStorage.getItem(_HIST_KEY) || '[]');
+    const h = hist.find(x => x.ts === ts);
+    if (!h) return;
+    document.getElementById('outputBox').textContent = h.optimised;
+    document.getElementById('outputSection').classList.add('show');
+    document.getElementById('outputSection').scrollIntoView({ behavior:'smooth', block:'start' });
+    showToast('📋 Previous result restored.');
+  }
+
+  // ── TOAST ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3200);
+  }
+
+  // ── INIT ──
+  window.addEventListener('DOMContentLoaded', () => {
+    renderPlatformGrid();
+    renderHist();
+  });
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

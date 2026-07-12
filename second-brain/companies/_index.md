@@ -35,7 +35,15 @@
 
 ## Regulatory / Compliance (Session 119, 10 Jul 2026)
 
-- **[[austrac]]** — Australian VASP/AML regulator; Travel Rule mandatory 31 Mar 2026, enrollment deadline 29 Jul 2026 (P0 across platform)
+- **[[austrac]]** — Australian VASP/AML regulator; Travel Rule mandatory 31 Mar 2026, enrollment deadline 29 Jul 2026 (P0 across platform); NOT YET ENROLLED as of 12 Jul 2026 (17 days remaining) — corridor page steppers corrected `done`→`current` (Session 119 x33)
+
+## Incorporation / Jurisdiction (Session 119 x33, 12 Jul 2026)
+
+- **[[cook-islands]]** — AJ's citizenship + planned primary protocol incorporation jurisdiction; Cook Islands International Trust backs legacy vault layer; dual structure alongside Australian ABN entity
+
+## Token Infrastructure (Session 119 x33, 12 Jul 2026)
+
+- **[[smithii]]** — Solana token creation/multisender toolkit used to mint INDX on mainnet and transfer full supply to protocol wallet
 
 ## Onchain Infrastructure — Planning (Session 119, 10 Jul 2026)
 

@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+  <title>SIINDEX Writing Mode — IN$DEX</title>
+  <style>
+    :root {
+      --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8; --black:#090A10;
+      --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+      --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+      --text:#F0F2FF; --text2:#8892B0; --muted:#4A5280; --border:rgba(255,255,255,0.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;font-size:16px;line-height:1.6;min-height:100vh;padding-bottom:100px;}
+    /* TOP BAR */
+    .top-bar{position:sticky;top:0;z-index:100;background:rgba(9,10,16,0.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:14px 20px;}
+    .top-bar-back{color:var(--cyan);font-size:18px;cursor:pointer;text-decoration:none;}
+    .top-bar-title{font-size:16px;font-weight:800;color:var(--text);}
+    .top-bar-badge{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:0.06em;background:rgba(0,212,255,0.12);color:var(--cyan);border:1px solid rgba(0,212,255,0.25);border-radius:20px;padding:3px 10px;}
+    /* HERO */
+    .hero{padding:28px 20px 20px;background:linear-gradient(160deg,rgba(0,212,255,0.06) 0%,transparent 60%);}
+    .hero-tag{font-size:10px;font-weight:800;letter-spacing:0.12em;color:var(--cyan);text-transform:uppercase;margin-bottom:10px;}
+    .hero h1{font-size:26px;font-weight:900;line-height:1.2;margin-bottom:10px;}
+    .hero h1 span{color:var(--cyan);}
+    .hero-sub{font-size:14px;color:var(--text2);line-height:1.55;}
+    /* VOICE RULES CARD */
+    .rules-card{margin:0 20px 4px;background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+    .rules-card-hdr{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;cursor:pointer;}
+    .rules-card-title{font-size:13px;font-weight:800;color:var(--text);}
+    .rules-card-toggle{font-size:12px;color:var(--muted);}
+    .rules-card-body{padding:0 16px 14px;display:none;}
+    .rules-card-body.open{display:block;}
+    .rule-row{font-size:12px;color:var(--text2);line-height:1.5;padding:3px 0;padding-left:16px;position:relative;}
+    .rule-row::before{content:'·';position:absolute;left:4px;color:var(--cyan);}
+    .rule-row.forbidden::before{color:var(--red);content:'✕';}
+    /* SECTION HDR */
+    .section-hdr{display:flex;align-items:center;justify-content:space-between;padding:20px 20px 10px;}
+    .section-hdr h2{font-size:15px;font-weight:800;color:var(--text);}
+    .section-hdr span{font-size:11px;color:var(--muted);}
+    /* CARD */
+    .card{margin:0 20px 16px;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:16px;}
+    /* FIELD LABEL */
+    .field-lbl{font-size:10px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--text2);margin-bottom:8px;}
+    /* TEXTAREA */
+    .write-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;color:var(--text);font-family:inherit;font-size:14px;line-height:1.65;padding:14px;resize:none;min-height:160px;margin-bottom:6px;outline:none;transition:border-color 0.18s;}
+    .write-input:focus{border-color:rgba(0,212,255,0.4);}
+    .write-input::placeholder{color:var(--muted);}
+    .char-count{font-size:10px;color:var(--muted);text-align:right;margin-bottom:12px;}
+    /* CHECK BUTTON */
+    .check-btn{width:100%;background:linear-gradient(135deg,var(--cyan),var(--blue));border:none;border-radius:14px;padding:15px;color:var(--black);font-size:15px;font-weight:900;cursor:pointer;transition:opacity 0.18s;}
+    .check-btn:active{opacity:0.8;}
+    /* SCORE CARD */
+    .score-section{display:none;}
+    .score-section.show{display:block;}
+    .score-strip{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;}
+    .score-tile{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;}
+    .score-val{font-size:28px;font-weight:900;line-height:1;}
+    .score-lbl{font-size:9px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.06em;}
+    .score-grade{font-size:12px;font-weight:800;margin-top:6px;}
+    /* VERDICT BANNER */
+    .verdict-banner{border-radius:12px;padding:13px 15px;margin-bottom:14px;}
+    .verdict-banner.pass{background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.25);color:var(--green);}
+    .verdict-banner.warn{background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.25);color:var(--gold);}
+    .verdict-banner.fail{background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.25);color:var(--red);}
+    .verdict-label{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;}
+    .verdict-text{font-size:13px;line-height:1.5;opacity:0.85;}
+    /* VIOLATION LIST */
+    .violation-list{margin-bottom:14px;}
+    .violation-item{background:var(--surface3);border:1px solid rgba(255,77,109,0.15);border-radius:10px;padding:10px 12px;margin-bottom:7px;}
+    .violation-item:last-child{margin-bottom:0;}
+    .violation-word{font-size:12px;font-weight:800;color:var(--red);}
+    .violation-type{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-top:2px;}
+    .violation-suggestion{font-size:11px;color:var(--text2);margin-top:4px;}
+    .violation-suggestion strong{color:var(--green);}
+    .violations-empty{font-size:12px;color:var(--green);font-weight:800;text-align:center;padding:12px 0;}
+    /* REWRITE */
+    .rewrite-box{background:var(--surface2);border:1px solid rgba(0,229,160,0.15);border-radius:12px;padding:14px;font-size:13px;color:var(--text);line-height:1.65;margin-bottom:10px;white-space:pre-wrap;word-break:break-word;}
+    .copy-btn{width:100%;background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.25);border-radius:10px;padding:10px;color:var(--green);font-size:13px;font-weight:800;cursor:pointer;margin-bottom:10px;transition:background 0.18s;}
+    .copy-btn:active{background:rgba(0,229,160,0.22);}
+    /* CHECKLIST */
+    .checklist{background:var(--surface3);border-radius:12px;padding:12px;}
+    .checklist-item{font-size:12px;color:var(--text2);padding:4px 0 4px 20px;position:relative;border-bottom:1px solid var(--border);}
+    .checklist-item:last-child{border-bottom:none;}
+    .checklist-item.pass::before{content:'✓';position:absolute;left:0;color:var(--green);font-weight:900;}
+    .checklist-item.fail::before{content:'✕';position:absolute;left:0;color:var(--red);font-weight:900;}
+    /* HISTORY */
+    .hist-item{background:var(--surface3);border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:8px;cursor:pointer;transition:border-color 0.15s;}
+    .hist-item:last-child{margin-bottom:0;}
+    .hist-item:active{border-color:rgba(0,212,255,0.3);}
+    .hist-preview{font-size:12px;color:var(--text);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .hist-meta{font-size:10px;color:var(--muted);margin-top:3px;}
+    .hist-score{font-size:12px;font-weight:900;}
+    .hist-empty{font-size:12px;color:var(--muted);font-style:italic;text-align:center;padding:14px 0;}
+    /* BOTTOM NAV */
+    .bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:rgba(9,10,16,0.97);backdrop-filter:blur(12px);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;padding:10px 0 18px;}
+    .nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;text-decoration:none;opacity:0.5;transition:opacity 0.18s;}
+    .nav-item.active{opacity:1;}
+    .nav-item-icon{font-size:20px;}
+    .nav-item-label{font-size:9px;font-weight:700;color:var(--text2);letter-spacing:0.05em;}
+    /* TOAST */
+    .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);border-radius:24px;padding:10px 20px;font-size:13px;font-weight:700;color:var(--text);opacity:0;pointer-events:none;transition:opacity 0.25s;z-index:999;white-space:nowrap;}
+    .toast.show{opacity:1;}
+    .fade-in{opacity:0;animation:fadeIn 0.4s ease forwards;}
+    @keyframes fadeIn{to{opacity:1;}}
+  </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <a href="index.html" class="top-bar-back">←</a>
+  <div class="top-bar-title">Writing Mode</div>
+  <div class="top-bar-badge">SIINDEX VOICE</div>
+</div>
+
+<!-- HERO -->
+<div class="hero fade-in">
+  <div class="hero-tag">SIINDEX — Sovereign Writing</div>
+  <h1>Write with<br><span>sovereign clarity.</span></h1>
+  <p class="hero-sub">Paste any text. SIINDEX scans for banned words, weak patterns, and inflated language, then returns a rewritten version in the SIINDEX voice — clear, calm, direct, and focused.</p>
+</div>
+
+<!-- VOICE RULES -->
+<div class="rules-card fade-in" style="animation-delay:0.06s">
+  <div class="rules-card-hdr" onclick="toggleRules()">
+    <div class="rules-card-title">📋 SIINDEX Voice Rules</div>
+    <div class="rules-card-toggle" id="rulesToggle">show ↓</div>
+  </div>
+  <div class="rules-card-body" id="rulesBody">
+    <div class="rule-row">Short sentences. Active voice. One idea per sentence.</div>
+    <div class="rule-row">Address citizens as "you" and "your."</div>
+    <div class="rule-row">Use data, examples, and proof when useful.</div>
+    <div class="rule-row">Say citizens, not users.</div>
+    <div class="rule-row">Call SIINDEX by name — never "AI assistant" or "chatbot."</div>
+    <div class="rule-row forbidden">No em dashes.</div>
+    <div class="rule-row forbidden">No hashtags unless requested.</div>
+    <div class="rule-row forbidden">No setup phrases: "in conclusion," "in closing," "in summary."</div>
+    <div class="rule-row forbidden">No asterisks unless markdown is requested.</div>
+    <div class="rule-row forbidden">No banned words — see the full list below.</div>
+    <div style="margin-top:10px;font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Banned Words</div>
+    <div style="font-size:11px;color:var(--text2);line-height:1.65;margin-top:6px;">can, may, just, that, very, really, literally, actually, certainly, probably, basically, could, maybe, delve, embark, enlightening, esteemed, shed light, craft, crafting, imagine, realm, game-changer, unlock, discover, skyrocket, abyss, not alone, in a world where, revolutionize, disruptive, utilize, utilizing, dive deep, tapestry, illuminate, unveil, pivotal, intricate, elucidate, hence, furthermore, however, harness, exciting, groundbreaking, cutting-edge, remarkable, remains to be seen, glimpse into, navigating, landscape, stark, testament, moreover, boost, skyrocketing, opened up, powerful, inquiries, ever-evolving</div>
+  </div>
+</div>
+
+<!-- INPUT -->
+<div class="section-hdr fade-in" style="animation-delay:0.09s">
+  <h2>📝 Your Text</h2>
+  <span>paste anything</span>
+</div>
+<div class="card fade-in" style="animation-delay:0.11s">
+  <textarea class="write-input" id="writeInput" placeholder="Paste any text here — a social post, an email, a product description, screen copy, a brief — and SIINDEX will check it against the sovereign voice rules and rewrite it." oninput="updateCharCount(this)"></textarea>
+  <div class="char-count" id="charCount">0 characters</div>
+  <button class="check-btn" onclick="runVoiceCheck()">⚡ Run Voice Check</button>
+</div>
+
+<!-- RESULTS SECTION -->
+<div id="scoreSection" class="score-section">
+  <!-- SCORE STRIP -->
+  <div class="section-hdr">
+    <h2>📊 Voice Score</h2>
+    <span id="scoreTime">—</span>
+  </div>
+  <div class="card">
+    <div class="score-strip">
+      <div class="score-tile">
+        <div class="score-val" id="scoreNum" style="color:var(--green)">—</div>
+        <div class="score-grade" id="scoreGrade"></div>
+        <div class="score-lbl">Score / 10</div>
+      </div>
+      <div class="score-tile">
+        <div class="score-val" id="violationCount" style="color:var(--red)">—</div>
+        <div class="score-lbl">Violations</div>
+      </div>
+      <div class="score-tile">
+        <div class="score-val" id="wordCount" style="color:var(--cyan)">—</div>
+        <div class="score-lbl">Words</div>
+      </div>
+    </div>
+
+    <!-- VERDICT -->
+    <div class="verdict-banner" id="verdictBanner">
+      <div class="verdict-label" id="verdictLabel">—</div>
+      <div class="verdict-text" id="verdictText">—</div>
+    </div>
+
+    <!-- 8-POINT CHECKLIST -->
+    <div class="field-lbl">Style Checklist</div>
+    <div class="checklist" id="checklistEl"></div>
+  </div>
+
+  <!-- VIOLATIONS -->
+  <div class="section-hdr">
+    <h2>🚩 Violations Found</h2>
+    <span id="violCount">—</span>
+  </div>
+  <div class="card">
+    <div id="violationList"></div>
+  </div>
+
+  <!-- REWRITE -->
+  <div class="section-hdr">
+    <h2>✏️ SIINDEX Rewrite</h2>
+    <span>auto-cleaned</span>
+  </div>
+  <div class="card">
+    <div class="field-lbl">Banned words removed. Em dashes cleared. Setup phrases stripped.</div>
+    <div class="rewrite-box" id="rewriteBox"></div>
+    <button class="copy-btn" onclick="copyRewrite()">⎘ Copy Rewrite</button>
+    <div style="font-size:11px;color:var(--muted);line-height:1.5;">The rewrite applies automated replacements. Review before publishing — some sentences need a human edit for full clarity.</div>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div class="section-hdr fade-in" style="animation-delay:0.13s">
+  <h2>🕐 History</h2>
+  <span>last 5 checks</span>
+</div>
+<div class="card fade-in" style="animation-delay:0.15s">
+  <div id="histList"><div class="hist-empty">No checks run yet.</div></div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <a href="index.html" class="nav-item"><span class="nav-item-icon">🏠</span><span class="nav-item-label">Home</span></a>
+  <a href="siindex-prompt-optimiser.html" class="nav-item"><span class="nav-item-icon">⚡</span><span class="nav-item-label">Optimiser</span></a>
+  <a href="siindex-writing-mode.html" class="nav-item active"><span class="nav-item-icon">✍️</span><span class="nav-item-label">Writing</span></a>
+  <a href="siindex-intelligence.html" class="nav-item"><span class="nav-item-icon">🧠</span><span class="nav-item-label">SIINDEX</span></a>
+  <a href="sovereign-academy.html" class="nav-item"><span class="nav-item-icon">📚</span><span class="nav-item-label">Academy</span></a>
+</nav>
+<div class="toast" id="toast"></div>
+
+<script>
+  const INDX_PRICE_USD = 0.24;
+
+  // ── BANNED WORD DEFINITIONS (phrase → replacement) ──
+  const BANNED = [
+    // Multi-word phrases first (order matters — check long phrases before short words)
+    { find:'in a world where',       replace:'Today,',           type:'phrase' },
+    { find:'game-changer',           replace:'',                 type:'phrase' },
+    { find:'remains to be seen',     replace:'is unclear',       type:'phrase' },
+    { find:'glimpse into',           replace:'look at',          type:'phrase' },
+    { find:'shed light',             replace:'explain',          type:'phrase' },
+    { find:'dive deep',              replace:'go deeper',        type:'phrase' },
+    { find:'cutting-edge',           replace:'current',          type:'phrase' },
+    { find:'ever-evolving',          replace:'changing',         type:'phrase' },
+    { find:'opened up',              replace:'created',          type:'phrase' },
+    { find:'skyrocketing',           replace:'rising fast',      type:'phrase' },
+    { find:'not alone',              replace:'',                 type:'phrase' },
+    { find:'in conclusion',          replace:'',                 type:'setup'  },
+    { find:'in closing',             replace:'',                 type:'setup'  },
+    { find:'in summary',             replace:'',                 type:'setup'  },
+    // Single words
+    { find:'embark',                 replace:'start',            type:'word' },
+    { find:'enlightening',           replace:'useful',           type:'word' },
+    { find:'esteemed',               replace:'',                 type:'word' },
+    { find:'tapestry',               replace:'',                 type:'word' },
+    { find:'illuminate',             replace:'show',             type:'word' },
+    { find:'unveil',                 replace:'show',             type:'word' },
+    { find:'pivotal',                replace:'important',        type:'word' },
+    { find:'intricate',              replace:'complex',          type:'word' },
+    { find:'elucidate',              replace:'explain',          type:'word' },
+    { find:'furthermore',            replace:'',                 type:'word' },
+    { find:'moreover',               replace:'',                 type:'word' },
+    { find:'hence',                  replace:'so',               type:'word' },
+    { find:'however',                replace:'but',              type:'word' },
+    { find:'harness',                replace:'use',              type:'word' },
+    { find:'utilize',                replace:'use',              type:'word' },
+    { find:'utilizing',              replace:'using',            type:'word' },
+    { find:'revolutionize',          replace:'change',           type:'word' },
+    { find:'disruptive',             replace:'',                 type:'word' },
+    { find:'groundbreaking',         replace:'',                 type:'word' },
+    { find:'skyrocket',              replace:'grow fast',        type:'word' },
+    { find:'abyss',                  replace:'problem',          type:'word' },
+    { find:'testament',              replace:'proof',            type:'word' },
+    { find:'navigating',             replace:'handling',         type:'word' },
+    { find:'landscape',              replace:'space',            type:'word' },
+    { find:'stark',                  replace:'clear',            type:'word' },
+    { find:'inquiries',              replace:'questions',        type:'word' },
+    { find:'boost',                  replace:'increase',         type:'word' },
+    { find:'powerful',               replace:'',                 type:'word' },
+    { find:'remarkable',             replace:'',                 type:'word' },
+    { find:'exciting',               replace:'',                 type:'word' },
+    { find:'delve',                  replace:'go',               type:'word' },
+    { find:'discover',               replace:'find',             type:'word' },
+    { find:'craft',                  replace:'write',            type:'word' },
+    { find:'crafting',               replace:'writing',          type:'word' },
+    { find:'imagine',                replace:'consider',         type:'word' },
+    { find:'realm',                  replace:'area',             type:'word' },
+    { find:'unlock',                 replace:'open',             type:'word' },
+    { find:'basically',              replace:'',                 type:'word' },
+    { find:'certainly',              replace:'',                 type:'word' },
+    { find:'probably',               replace:'',                 type:'word' },
+    { find:'literally',              replace:'',                 type:'word' },
+    { find:'actually',               replace:'',                 type:'word' },
+    { find:'really',                 replace:'',                 type:'word' },
+    { find:'very',                   replace:'',                 type:'word' },
+    { find:'maybe',                  replace:'',                 type:'word' },
+    { find:'just',                   replace:'',                 type:'word' },
+  ];
+
+  // Style checks (separate from banned word scan)
+  const STYLE_CHECKS = [
+    { id:'noEmDash',    label:'No em dashes',         test: t => !t.includes('—') },
+    { id:'noAsterisks', label:'No asterisks',          test: t => !/\*\*|\*[^*]/.test(t) },
+    { id:'noHashtags',  label:'No hashtags',           test: t => !/#\w/.test(t) },
+    { id:'noSetup',     label:'No setup phrases',      test: t => !/in conclusion|in closing|in summary/i.test(t) },
+    { id:'noPassive',   label:'Active voice preferred', test: t => !/\b(is being|was being|are being|were being|has been|have been|had been|will be|would be|could be|should be)\b/i.test(t) },
+    { id:'noAI',        label:'No "AI" (use SI)',       test: t => !/\bAI\b/.test(t) },
+    { id:'noUsers',     label:'Citizens not users',    test: t => !/\busers?\b/i.test(t) },
+    { id:'noChatbot',   label:'No chatbot/assistant ref', test: t => !/\b(chatbot|ai assistant|bot)\b/i.test(t) },
+  ];
+
+  // ── STATE ──
+  let _lastRewrite = '';
+  const _HIST_KEY = 'indx_writing_hist';
+
+  // ── RULES TOGGLE ──
+  function toggleRules() {
+    const body = document.getElementById('rulesBody');
+    const toggle = document.getElementById('rulesToggle');
+    const open = body.classList.toggle('open');
+    toggle.textContent = open ? 'hide ↑' : 'show ↓';
+  }
+
+  // ── CHAR COUNT ──
+  function updateCharCount(el) {
+    document.getElementById('charCount').textContent = el.value.length + ' characters';
+  }
+
+  // ── SCAN FOR BANNED WORDS ──
+  function scanBanned(text) {
+    const lower = text.toLowerCase();
+    const found = [];
+    const seen = new Set();
+    for (const b of BANNED) {
+      if (seen.has(b.find)) continue;
+      // Use word boundary for single words, plain includes for phrases
+      let hit = false;
+      if (b.type === 'word') {
+        hit = new RegExp('\\b' + b.find.replace(/[-]/g, '[-]') + '\\b', 'i').test(text);
+      } else {
+        hit = lower.includes(b.find.toLowerCase());
+      }
+      if (hit) {
+        seen.add(b.find);
+        found.push(b);
+      }
+    }
+    return found;
+  }
+
+  // ── APPLY REWRITE ──
+  function applyRewrite(text) {
+    let out = text;
+    // Em dashes
+    out = out.replace(/—/g, ' ');
+    // Setup phrases (remove whole sentence containing them)
+    out = out.replace(/[^.!?\n]*\b(in conclusion|in closing|in summary)\b[^.!?\n]*/gi, '');
+    // Banned word replacements
+    for (const b of BANNED) {
+      if (b.type === 'setup') continue; // already handled
+      const pattern = b.type === 'word'
+        ? new RegExp('\\b' + b.find.replace(/[-]/g, '[-]') + '\\b', 'gi')
+        : new RegExp(b.find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      if (b.replace) {
+        out = out.replace(pattern, b.replace);
+      } else {
+        out = out.replace(pattern, '');
+      }
+    }
+    // Clean up double spaces and leading spaces in sentences
+    out = out.replace(/  +/g, ' ');
+    out = out.replace(/\n +/g, '\n');
+    out = out.replace(/ ([.,;!?])/g, '$1');
+    return out.trim();
+  }
+
+  // ── SCORE ──
+  function calcScore(violations, styleResults) {
+    let score = 10;
+    // Deduct per banned word (diminishing: -0.5 first 4, -0.25 after)
+    const vCount = violations.length;
+    if (vCount > 0) score -= Math.min(4, vCount) * 0.5;
+    if (vCount > 4) score -= (vCount - 4) * 0.25;
+    // Deduct per style fail
+    const styleFails = styleResults.filter(r => !r.pass).length;
+    score -= styleFails * 0.5;
+    return Math.max(0, Math.round(score * 10) / 10);
+  }
+
+  function scoreGrade(s) {
+    if (s >= 9)   return { label:'✓ SOVEREIGN', color:'var(--green)' };
+    if (s >= 7)   return { label:'~ GOOD',       color:'var(--cyan)'  };
+    if (s >= 5)   return { label:'⚠ NEEDS WORK', color:'var(--gold)'  };
+    return              { label:'✕ REWRITE',     color:'var(--red)'   };
+  }
+
+  // ── MAIN CHECK ──
+  function runVoiceCheck() {
+    const text = document.getElementById('writeInput').value.trim();
+    if (!text) { showToast('⚠ Paste your text first.'); return; }
+
+    const violations = scanBanned(text);
+    const styleResults = STYLE_CHECKS.map(c => ({ ...c, pass: c.test(text) }));
+    const score = calcScore(violations, styleResults);
+    const grade = scoreGrade(score);
+    const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+
+    // Score strip
+    const scoreEl = document.getElementById('scoreNum');
+    scoreEl.textContent = score.toFixed(1);
+    scoreEl.style.color = grade.color;
+    document.getElementById('scoreGrade').textContent = grade.label;
+    document.getElementById('scoreGrade').style.color = grade.color;
+    document.getElementById('violationCount').textContent = violations.length;
+    document.getElementById('wordCount').textContent = wordCount;
+    document.getElementById('scoreTime').textContent = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+
+    // Verdict
+    const banner = document.getElementById('verdictBanner');
+    const totalViolations = violations.length + styleResults.filter(r => !r.pass).length;
+    if (totalViolations === 0) {
+      banner.className = 'verdict-banner pass';
+      document.getElementById('verdictLabel').textContent = '✓ SIINDEX VOICE — CLEAR';
+      document.getElementById('verdictText').textContent = 'This text passes all style checks. No banned words. No pattern violations. Ready to publish.';
+    } else if (score >= 7) {
+      banner.className = 'verdict-banner warn';
+      document.getElementById('verdictLabel').textContent = '⚠ MINOR ISSUES';
+      document.getElementById('verdictText').textContent = totalViolations + ' violation' + (totalViolations === 1 ? '' : 's') + ' found. The rewrite below clears them automatically. Review before publishing.';
+    } else {
+      banner.className = 'verdict-banner fail';
+      document.getElementById('verdictLabel').textContent = '✕ REWRITE NEEDED';
+      document.getElementById('verdictText').textContent = totalViolations + ' violations found. The voice is off. Use the SIINDEX rewrite below and review carefully.';
+    }
+
+    // Checklist
+    document.getElementById('checklistEl').innerHTML = styleResults.map(r =>
+      `<div class="checklist-item ${r.pass ? 'pass' : 'fail'}">${r.label}</div>`
+    ).join('');
+
+    // Violations
+    const violEl = document.getElementById('violationList');
+    document.getElementById('violCount').textContent = violations.length + ' found';
+    if (!violations.length) {
+      violEl.innerHTML = '<div class="violations-empty">✓ No banned words found.</div>';
+    } else {
+      violEl.innerHTML = violations.map(b => {
+        const typeLabel = b.type === 'setup' ? 'Setup phrase' : b.type === 'phrase' ? 'Banned phrase' : 'Banned word';
+        const suggestion = b.replace ? `Replace with: <strong>"${b.replace}"</strong>` : 'Remove this word — it adds no meaning.';
+        return `<div class="violation-item">
+          <div class="violation-word">"${b.find}"</div>
+          <div class="violation-type">${typeLabel}</div>
+          <div class="violation-suggestion">${suggestion}</div>
+        </div>`;
+      }).join('');
+    }
+
+    // Rewrite
+    const rewritten = applyRewrite(text);
+    _lastRewrite = rewritten;
+    document.getElementById('rewriteBox').textContent = rewritten;
+
+    // Show results
+    document.getElementById('scoreSection').classList.add('show');
+
+    // Save to history
+    saveHist(text.slice(0, 80), score, grade.label, rewritten);
+    renderHist();
+
+    showToast(totalViolations === 0 ? '✓ Voice check passed!' : '⚠ ' + totalViolations + ' violation' + (totalViolations === 1 ? '' : 's') + ' found. Rewrite ready.');
+    setTimeout(() => document.getElementById('scoreSection').scrollIntoView({ behavior:'smooth', block:'start' }), 100);
+  }
+
+  // ── COPY REWRITE ──
+  function copyRewrite() {
+    if (!_lastRewrite) return;
+    navigator.clipboard.writeText(_lastRewrite)
+      .then(() => showToast('✓ Rewrite copied!'))
+      .catch(() => showToast('⚠ Select and copy the text manually.'));
+  }
+
+  // ── HISTORY ──
+  function saveHist(preview, score, grade, rewrite) {
+    const hist = JSON.parse(localStorage.getItem(_HIST_KEY) || '[]');
+    hist.unshift({ preview, score, grade, rewrite, ts: Date.now() });
+    if (hist.length > 5) hist.splice(5);
+    localStorage.setItem(_HIST_KEY, JSON.stringify(hist));
+  }
+
+  function renderHist() {
+    const el = document.getElementById('histList');
+    const hist = JSON.parse(localStorage.getItem(_HIST_KEY) || '[]');
+    if (!hist.length) { el.innerHTML = '<div class="hist-empty">No checks run yet.</div>'; return; }
+    const colors = { '✓ SOVEREIGN':'var(--green)', '~ GOOD':'var(--cyan)', '⚠ NEEDS WORK':'var(--gold)', '✕ REWRITE':'var(--red)' };
+    el.innerHTML = hist.map(h => `
+      <div class="hist-item" onclick="restoreHist(${h.ts})">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+          <div class="hist-preview" style="flex:1">${h.preview}${h.preview.length >= 80 ? '…' : ''}</div>
+          <div class="hist-score" style="color:${colors[h.grade] || 'var(--text2)'}; margin-left:10px; flex-shrink:0">${h.score}/10</div>
+        </div>
+        <div class="hist-meta">${h.grade} · ${new Date(h.ts).toLocaleDateString()} ${new Date(h.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+      </div>`).join('');
+  }
+
+  function restoreHist(ts) {
+    const hist = JSON.parse(localStorage.getItem(_HIST_KEY) || '[]');
+    const h = hist.find(x => x.ts === ts);
+    if (!h) return;
+    _lastRewrite = h.rewrite;
+    document.getElementById('rewriteBox').textContent = h.rewrite;
+    document.getElementById('scoreSection').classList.add('show');
+    document.getElementById('scoreSection').scrollIntoView({ behavior:'smooth', block:'start' });
+    showToast('📋 Previous check restored.');
+  }
+
+  // ── TOAST ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3200);
+  }
+
+  // ── INIT ──
+  window.addEventListener('DOMContentLoaded', () => {
+    renderHist();
+  });
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

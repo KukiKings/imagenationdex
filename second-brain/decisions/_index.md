@@ -100,6 +100,12 @@ Format: Date | Decision | Why | Alternatives considered
 
 **11 Jul 2026 (Session 119 x31)** | Build-Completion Prompt missing-screen queue closed out — 7 screens shipped (Trust Dashboard, Refusal Constitution, Legacy Vault, 4× Pacific corridor readiness pages) — no screens remain outstanding from the x29 queue | Completes the canonical build brief received in x29; corridor pages needed for AUSTRAC-adjacent Pacific remittance go-to-market | Partial rollout (corridors only, or trust/legal screens only) rejected — brief called for the full set before moving to next phase
 
+**12 Jul 2026 (Session 119 x33)** | AUSTRAC VASP Enrollment step reverted from `state:'done'` to `state:'current'` on all 4 Pacific corridor pages | Actual enrollment not yet confirmed as of 12 Jul 2026; showing a false checkmark to citizens would be misleading ahead of the real 29 Jul 2026 deadline | Leaving `done` unchanged rejected — misrepresents compliance status to citizens
+
+**12 Jul 2026 (Session 119 x33)** | INDX token minted live on Solana mainnet via Smithii Token Creator — 100M supply, 6 decimals, Freeze + Mint authority revoked, Update authority retained for metadata edits — then full supply transferred to the INDX protocol wallet via Smithii Multisender | Genesis mint needed to happen on real infrastructure ahead of Grand Synchronicity Day (24 Sep 2026) LP/LaunchLab work | Keeping Update authority live (vs. also revoking) accepted as a deliberate tradeoff — allows metadata fixes, standard practice pre-LP
+
+**12 Jul 2026 (Session 119 x33 part 4)** | IN$DEX protocol entity to incorporate in the Cook Islands (AJ holds Cook Islands citizenship), with a parallel Australian ABN entity ("Image Nation Decentralised Exchange") handling AUSTRAC-regulated AU operations | Citizenship enables domestic (non-foreign-investor) incorporation; Cook Islands tax structure benefits IN$DEX; Cook Islands International Trust is a best-in-class offshore asset protection vehicle that backs the legacy vault / sovereign wealth layer | Single-jurisdiction (Australia-only) structure rejected — loses tax and trust-structure advantages; foreign-investor Cook Islands registration rejected — AJ's citizenship allows domestic incorporation instead
+
 ## Template
 
 ```
