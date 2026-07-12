@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SIINDEX Civilization Admin Console</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+    --black:#090A10; --green:#00E5A0; --gold:#FFB800;
+    --red:#FF4D6D; --surface:#12141F; --surface2:#1A1D2E;
+    --surface3:#22263A; --muted:#6B7280; --text:#E8EAF0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',system-ui,sans-serif;min-height:100vh;overflow-x:hidden;}
+
+  .screen-header{background:var(--surface);border-bottom:1px solid var(--surface3);padding:16px 20px;}
+  .screen-eyebrow{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--purple);margin-bottom:4px;}
+  .screen-title{font-size:22px;font-weight:800;}
+  .screen-sub{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5;}
+
+  .nav-tabs{display:flex;border-bottom:1px solid var(--surface3);background:var(--surface);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .nav-tabs::-webkit-scrollbar{display:none;}
+  .nav-tab{flex-shrink:0;padding:12px 16px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s;}
+  .nav-tab.active{color:var(--cyan);border-bottom-color:var(--cyan);}
+  .tab-content{display:none;padding:16px 20px 100px;}
+  .tab-content.active{display:block;}
+  .sect-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;margin-top:20px;}
+  .sect-label:first-child{margin-top:0;}
+  .card{background:var(--surface2);border:1px solid var(--surface3);border-radius:16px;padding:16px;margin-bottom:12px;}
+
+  /* ── OVERVIEW ── */
+  .overview-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  .ov-card{background:var(--surface2);border:1.5px solid var(--surface3);border-radius:14px;padding:14px;}
+  .ov-val{font-size:26px;font-weight:800;line-height:1.1;}
+  .ov-lbl{font-size:11px;color:var(--muted);margin-top:4px;}
+  .ov-delta{font-size:11px;margin-top:4px;}
+  .ov-delta.up{color:var(--green);}
+  .ov-delta.warn{color:var(--gold);}
+  .ov-delta.alert{color:var(--red);}
+
+  .alert-strip{border-radius:12px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:flex-start;gap:10px;}
+  .alert-strip.red{background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.3);}
+  .alert-strip.gold{background:rgba(255,184,0,.08);border:1px solid rgba(255,184,0,.25);}
+  .alert-strip.green{background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.2);}
+  .alert-icon{font-size:18px;flex-shrink:0;margin-top:1px;}
+  .alert-text{font-size:12px;line-height:1.5;}
+  .alert-text strong{font-weight:700;}
+
+  /* ── GM1: RBAC ROLE MATRIX ── */
+  .role-card{background:var(--surface2);border:1.5px solid var(--surface3);border-radius:14px;padding:14px;margin-bottom:10px;}
+  .role-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+  .role-name{font-size:14px;font-weight:800;color:var(--text);}
+  .role-badge{font-size:10px;padding:3px 9px;border-radius:6px;font-weight:700;}
+  .role-desc{font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5;}
+  .perm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
+  .perm-chip{border-radius:7px;padding:5px 6px;text-align:center;cursor:pointer;transition:all .15s;user-select:none;}
+  .perm-chip:active{transform:scale(.96);}
+  .perm-chip-domain{font-size:9px;color:rgba(255,255,255,.5);margin-bottom:2px;text-transform:uppercase;letter-spacing:.3px;}
+  .perm-chip-level{font-size:10px;font-weight:700;}
+  .perm-full{background:rgba(0,229,160,.15);border:1px solid rgba(0,229,160,.3);}
+  .perm-full .perm-chip-level{color:var(--green);}
+  .perm-limited{background:rgba(255,184,0,.1);border:1px solid rgba(255,184,0,.25);}
+  .perm-limited .perm-chip-level{color:var(--gold);}
+  .perm-read{background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.2);}
+  .perm-read .perm-chip-level{color:var(--cyan);}
+  .perm-none{background:rgba(107,114,128,.08);border:1px solid rgba(107,114,128,.15);}
+  .perm-none .perm-chip-level{color:var(--muted);}
+
+  /* ── GM2: CAPACITY & BURN ── */
+  .capacity-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+  .cap-card{background:var(--surface2);border:1.5px solid var(--surface3);border-radius:14px;padding:13px;}
+  .cap-val{font-size:22px;font-weight:800;line-height:1.1;}
+  .cap-lbl{font-size:11px;color:var(--muted);margin-top:3px;}
+  .cap-sub{font-size:10px;margin-top:4px;}
+
+  .burn-chart{background:var(--surface2);border:1px solid var(--surface3);border-radius:14px;padding:14px;margin-bottom:12px;}
+  .burn-chart-title{font-size:12px;font-weight:700;margin-bottom:10px;}
+  .burn-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .burn-cat{font-size:11px;color:var(--muted);width:90px;flex-shrink:0;}
+  .burn-track{flex:1;height:7px;background:var(--surface3);border-radius:4px;overflow:hidden;}
+  .burn-fill{height:100%;border-radius:4px;}
+  .burn-amount{font-size:11px;font-weight:600;width:52px;text-align:right;flex-shrink:0;}
+
+  .runway-card{background:linear-gradient(135deg,rgba(43,53,216,.18),rgba(139,63,232,.12));border:1px solid rgba(139,63,232,.3);border-radius:14px;padding:14px;margin-bottom:12px;text-align:center;}
+  .runway-title{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--purple);margin-bottom:8px;}
+  .runway-months{font-size:36px;font-weight:800;color:var(--cyan);}
+  .runway-sub{font-size:12px;color:var(--muted);margin-top:4px;}
+  .runway-tge{font-size:12px;color:var(--gold);margin-top:8px;font-weight:600;}
+
+  .spend-input-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+  .spend-input-group{display:flex;flex-direction:column;gap:4px;}
+  .spend-lbl{font-size:11px;color:var(--muted);}
+  .spend-input{background:var(--surface3);border:1px solid rgba(255,255,255,.08);border-radius:9px;color:var(--text);font-size:13px;padding:9px 12px;width:100%;font-weight:600;}
+  .spend-input:focus{outline:none;border-color:rgba(0,212,255,.35);}
+  .spend-calc-btn{width:100%;background:var(--surface3);border:1.5px solid var(--surface3);border-radius:10px;color:var(--cyan);font-size:13px;font-weight:700;padding:11px;cursor:pointer;}
+
+  /* ── GM3: SOVEREIGN AUDIT CENTER ── */
+  .audit-filter-row{display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;scrollbar-width:none;}
+  .audit-filter-row::-webkit-scrollbar{display:none;}
+  .audit-filter-btn{flex-shrink:0;padding:6px 14px;border-radius:8px;background:var(--surface2);border:1.5px solid var(--surface3);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
+  .audit-filter-btn.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,.08);}
+
+  .audit-entry{background:var(--surface2);border:1px solid var(--surface3);border-radius:11px;padding:12px;margin-bottom:7px;}
+  .audit-entry-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+  .audit-actor{font-size:12px;font-weight:700;}
+  .audit-time{font-size:10px;color:var(--muted);}
+  .audit-action-tag{font-size:10px;padding:2px 8px;border-radius:5px;font-weight:700;margin-bottom:5px;display:inline-block;}
+  .audit-detail{font-size:12px;color:var(--muted);line-height:1.5;}
+  .audit-add-row{display:flex;gap:8px;margin-bottom:10px;}
+  .audit-input{flex:1;background:var(--surface2);border:1.5px solid var(--surface3);border-radius:10px;color:var(--text);font-size:13px;padding:9px 12px;}
+  .audit-input:focus{outline:none;border-color:rgba(0,212,255,.35);}
+  .audit-log-btn{background:var(--cyan);color:#000;font-size:13px;font-weight:800;border:none;border-radius:10px;padding:9px 16px;cursor:pointer;flex-shrink:0;}
+  .audit-export-btn{width:100%;background:var(--surface2);border:1.5px solid var(--surface3);border-radius:10px;color:var(--muted);font-size:12px;padding:10px;cursor:pointer;margin-top:6px;}
+
+  /* ── GM4: MCP CONNECTOR REGISTRY ── */
+  .connector-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+  .conn-sum{background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:12px;text-align:center;}
+  .conn-sum-num{font-size:22px;font-weight:800;}
+  .conn-sum-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:3px;}
+
+  .conn-card{background:var(--surface2);border:1.5px solid var(--surface3);border-radius:14px;padding:13px;margin-bottom:8px;}
+  .conn-card.connected{border-color:rgba(0,229,160,.3);}
+  .conn-card.planned{border-color:rgba(255,184,0,.25);}
+  .conn-card.blocked{border-color:rgba(255,77,109,.25);}
+  .conn-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
+  .conn-name{font-size:13px;font-weight:800;color:var(--text);}
+  .conn-status-chip{font-size:10px;padding:3px 10px;border-radius:6px;font-weight:700;}
+  .conn-status-chip.connected{background:rgba(0,229,160,.15);color:var(--green);}
+  .conn-status-chip.planned{background:rgba(255,184,0,.12);color:var(--gold);}
+  .conn-status-chip.blocked{background:rgba(255,77,109,.12);color:var(--red);}
+  .conn-category{font-size:10px;color:var(--cyan);font-weight:600;margin-bottom:4px;}
+  .conn-desc{font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:7px;}
+  .conn-policy-row{display:flex;justify-content:space-between;font-size:11px;}
+  .conn-policy-label{color:var(--muted);}
+  .conn-policy-val{color:var(--text);font-weight:600;}
+  .conn-tools{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px;}
+  .conn-tool-chip{font-size:10px;background:var(--surface3);border-radius:5px;padding:2px 8px;color:var(--muted);}
+
+  /* ── TOAST ── */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;color:var(--text);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:99;white-space:nowrap;pointer-events:none;}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<div class="screen-header">
+  <div class="screen-eyebrow">SIINDEX Internal Operations</div>
+  <div class="screen-title">Civilization Admin Console</div>
+  <div class="screen-sub">Roles · Capacity · Audit · Connector Governance — internal team only</div>
+</div>
+
+<div class="nav-tabs">
+  <div class="nav-tab active" onclick="switchTab('overview')">🏛️ Overview</div>
+  <div class="nav-tab" onclick="switchTab('roles')">👥 Roles</div>
+  <div class="nav-tab" onclick="switchTab('capacity')">📊 Capacity</div>
+  <div class="nav-tab" onclick="switchTab('audit')">🗄️ Audit</div>
+  <div class="nav-tab" onclick="switchTab('connectors')">🔗 Connectors</div>
+</div>
+
+<!-- OVERVIEW -->
+<div class="tab-content active" id="tab-overview">
+  <div class="sect-label">Platform Status</div>
+  <div class="overview-grid" id="overviewGrid"></div>
+
+  <div class="sect-label">Active Alerts</div>
+  <div id="overviewAlerts"></div>
+
+  <div class="sect-label">Quick Links</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+    <div class="card" style="cursor:pointer;text-align:center;padding:14px;" onclick="switchTabDirect('roles')">
+      <div style="font-size:24px;margin-bottom:6px;">👥</div>
+      <div style="font-size:12px;font-weight:700;">Manage Roles</div>
+    </div>
+    <div class="card" style="cursor:pointer;text-align:center;padding:14px;" onclick="switchTabDirect('audit')">
+      <div style="font-size:24px;margin-bottom:6px;">🗄️</div>
+      <div style="font-size:12px;font-weight:700;">View Audit Log</div>
+    </div>
+    <div class="card" style="cursor:pointer;text-align:center;padding:14px;" onclick="switchTabDirect('capacity')">
+      <div style="font-size:24px;margin-bottom:6px;">📊</div>
+      <div style="font-size:12px;font-weight:700;">Capacity & Burn</div>
+    </div>
+    <div class="card" style="cursor:pointer;text-align:center;padding:14px;" onclick="switchTabDirect('connectors')">
+      <div style="font-size:24px;margin-bottom:6px;">🔗</div>
+      <div style="font-size:12px;font-weight:700;">Connector Registry</div>
+    </div>
+  </div>
+</div>
+
+<!-- GM1: RBAC ROLE MATRIX -->
+<div class="tab-content" id="tab-roles">
+  <div class="sect-label">Civilization Role Matrix</div>
+  <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.6;">Tap any permission chip to cycle: FULL → LIMITED → READ → NONE. Changes are saved automatically and logged to the Audit Center.</div>
+  <div id="roleMatrix"></div>
+</div>
+
+<!-- GM2: CAPACITY & BURN -->
+<div class="tab-content" id="tab-capacity">
+  <div class="sect-label">Platform Capacity</div>
+  <div class="capacity-grid" id="capacityGrid"></div>
+
+  <div class="runway-card">
+    <div class="runway-title">Estimated Runway</div>
+    <div class="runway-months" id="runwayMonths">--</div>
+    <div class="runway-sub" id="runwaySub">months at current burn rate</div>
+    <div class="runway-tge" id="runwayTGE">TGE: 24 Sep 2026 — loading...</div>
+  </div>
+
+  <div class="sect-label">Monthly Burn by Category</div>
+  <div class="burn-chart" id="burnChart"></div>
+
+  <div class="sect-label">Update Spend Figures</div>
+  <div class="spend-input-row" id="spendInputs"></div>
+  <div class="spend-input-row" id="spendInputs2"></div>
+  <button class="spend-calc-btn" onclick="updateBurn()">Recalculate Runway</button>
+</div>
+
+<!-- GM3: SOVEREIGN AUDIT CENTER -->
+<div class="tab-content" id="tab-audit">
+  <div class="sect-label">Log Admin Action</div>
+  <div class="audit-add-row">
+    <input class="audit-input" id="auditActionInput" placeholder="Describe the admin action taken...">
+    <button class="audit-log-btn" onclick="logAuditEntry()">Log</button>
+  </div>
+
+  <div class="audit-filter-row" id="auditFilters"></div>
+  <div class="sect-label">Audit Log <span id="auditCount" style="color:var(--muted);font-weight:400;font-size:10px"></span></div>
+  <div id="auditLog"></div>
+  <button class="audit-export-btn" onclick="exportAudit()">📋 Export Full Audit Log</button>
+</div>
+
+<!-- GM4: MCP CONNECTOR REGISTRY -->
+<div class="tab-content" id="tab-connectors">
+  <div class="connector-summary" id="connectorSummary"></div>
+  <div class="sect-label">Connector Registry</div>
+  <div id="connectorList"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONSTANTS ──
+const INDX_PRICE_USD = 0.24;
+const POOL_TARGET = 100000;
+const TGE_DATE = new Date('2026-09-24T00:00:00+11:00');
+
+// ── NAV ──
+function switchTab(id) {
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  event.target.classList.add('active');
+  if(id==='roles') renderRoles();
+  if(id==='capacity') renderCapacity();
+  if(id==='audit') renderAudit();
+  if(id==='connectors') renderConnectors();
+}
+function switchTabDirect(id) {
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  document.querySelectorAll('.nav-tab')[['overview','roles','capacity','audit','connectors'].indexOf(id)].classList.add('active');
+  if(id==='roles') renderRoles();
+  if(id==='capacity') renderCapacity();
+  if(id==='audit') renderAudit();
+  if(id==='connectors') renderConnectors();
+}
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ── GM1: RBAC ROLE MATRIX ──
+const DOMAINS = ['Treasury','Mission Rooms','Agents','Cultural Assets','Governance','Marketplace','Security','Data'];
+const PERM_LEVELS = ['full','limited','read','none'];
+const PERM_LABELS = { full:'FULL', limited:'LMTD', read:'READ', none:'NONE' };
+
+const ROLES = [
+  { id:'founder', name:'Founder', icon:'👑', color:'var(--gold)', badge:'OWNER',
+    desc:'AJ Henry + co-founders. Full authority over all platform decisions.',
+    defaults:['full','full','full','full','full','full','full','full'] },
+  { id:'siindex', name:'SIINDEX', icon:'🧠', color:'var(--purple)', badge:'SOVEREIGN INTELLIGENCE',
+    desc:'PQSI — She executes within policy, never outside it. Defensive only.',
+    defaults:['limited','full','full','full','read','full','full','limited'] },
+  { id:'lead_builder', name:'Lead Builder', icon:'🏗️', color:'var(--cyan)', badge:'TEAM',
+    desc:'Sovereign developers with build authority. No treasury or governance access.',
+    defaults:['none','full','limited','read','read','read','limited','limited'] },
+  { id:'cultural_steward', name:'Cultural Steward', icon:'🎨', color:'var(--green)', badge:'GUARDIAN',
+    desc:'Custodians of cultural assets, rights, and IP. Cultural-domain full authority.',
+    defaults:['none','limited','none','full','limited','read','read','limited'] },
+  { id:'merchant', name:'Merchant', icon:'🏪', color:'var(--gold)', badge:'VERIFIED',
+    desc:'Verified marketplace sellers. Marketplace and mission room access only.',
+    defaults:['none','limited','none','read','read','full','read','read'] },
+  { id:'citizen', name:'Citizen', icon:'🌏', color:'var(--cyan)', badge:'PUBLIC',
+    desc:'General platform citizens. Read and participate. No admin access.',
+    defaults:['none','read','none','read','read','read','none','read'] },
+  { id:'guardian', name:'Guardian', icon:'🛡️', color:'var(--red)', badge:'SAFETY',
+    desc:'Safety and compliance agents. Security and audit read/limited access.',
+    defaults:['none','none','read','read','read','read','full','full'] },
+  { id:'auditor', name:'Auditor', icon:'🔍', color:'var(--muted)', badge:'READ-ONLY',
+    desc:'External or internal audit function. Read-only across all domains.',
+    defaults:['read','read','read','read','read','read','read','read'] },
+];
+
+function getRolePerms() { return JSON.parse(localStorage.getItem('indx_admin_roles')||'{}'); }
+function saveRolePerms(p) { localStorage.setItem('indx_admin_roles', JSON.stringify(p)); }
+
+function renderRoles() {
+  const stored = getRolePerms();
+  const container = document.getElementById('roleMatrix');
+  container.innerHTML = ROLES.map(role => {
+    const perms = stored[role.id] || role.defaults;
+    const permChips = DOMAINS.map((d,i) => {
+      const level = perms[i] || 'none';
+      return `<div class="perm-chip perm-${level}" onclick="cyclePerm('${role.id}',${i})">
+        <div class="perm-chip-domain">${d.substring(0,5)}</div>
+        <div class="perm-chip-level">${PERM_LABELS[level]}</div>
+      </div>`;
+    }).join('');
+    return `<div class="role-card">
+      <div class="role-header">
+        <div>
+          <span style="font-size:20px;margin-right:6px;">${role.icon}</span>
+          <span class="role-name">${role.name}</span>
+        </div>
+        <div class="role-badge" style="background:rgba(255,255,255,.06);color:${role.color}">${role.badge}</div>
+      </div>
+      <div class="role-desc">${role.desc}</div>
+      <div class="perm-grid">${permChips}</div>
+    </div>`;
+  }).join('');
+}
+
+function cyclePerm(roleId, domainIdx) {
+  const stored = getRolePerms();
+  const role = ROLES.find(r=>r.id===roleId);
+  if(!stored[roleId]) stored[roleId]=[...role.defaults];
+  const curr = stored[roleId][domainIdx];
+  const idx = PERM_LEVELS.indexOf(curr);
+  stored[roleId][domainIdx] = PERM_LEVELS[(idx+1)%PERM_LEVELS.length];
+  saveRolePerms(stored);
+  addAuditEntry('SIINDEX', 'permission-change',
+    `Role "${role.name}" — ${DOMAINS[domainIdx]} changed to ${stored[roleId][domainIdx].toUpperCase()}`);
+  renderRoles();
+  showToast('Permission updated → '+stored[roleId][domainIdx].toUpperCase());
+}
+
+// ── GM2: CAPACITY & BURN ──
+const BURN_CATEGORIES = [
+  { id:'dev', label:'Development', color:'var(--cyan)', defaultVal:3000 },
+  { id:'infra', label:'Infrastructure', color:'var(--blue)', defaultVal:500 },
+  { id:'legal', label:'Legal / AUSTRAC', color:'var(--red)', defaultVal:2000 },
+  { id:'security', label:'Security / Audits', color:'var(--purple)', defaultVal:1000 },
+  { id:'community', label:'Community / Events', color:'var(--gold)', defaultVal:500 },
+  { id:'marketing', label:'Marketing', color:'var(--green)', defaultVal:800 },
+];
+
+function getBurnData() {
+  const d = JSON.parse(localStorage.getItem('indx_admin_burn')||'{}');
+  const result = {};
+  BURN_CATEGORIES.forEach(c => { result[c.id] = d[c.id] ?? c.defaultVal; });
+  return result;
+}
+function saveBurnData(d) { localStorage.setItem('indx_admin_burn', JSON.stringify(d)); }
+
+function renderCapacity() {
+  const founders = JSON.parse(localStorage.getItem('indx_founders_pool_members')||'[]');
+  const totalCapital = founders.reduce((s,f)=>s+(f.amount||0),0);
+  const activeCapital = founders.filter(f=>f.status==='active').reduce((s,f)=>s+(f.amount||0),0);
+  const screenCount = 120;
+  const rulesCount = JSON.parse(localStorage.getItem('indx_flywheel_rules')||'[]').length;
+  const eventsCount = JSON.parse(localStorage.getItem('indx_flywheel_events')||'[]').length;
+  const now = new Date();
+  const daysToTGE = Math.max(0, Math.floor((TGE_DATE-now)/86400000));
+
+  document.getElementById('capacityGrid').innerHTML = `
+    <div class="cap-card"><div class="cap-val" style="color:var(--cyan)">${screenCount}+</div><div class="cap-lbl">Screens Built</div><div class="cap-sub" style="color:var(--green)">↑ Growing daily</div></div>
+    <div class="cap-card"><div class="cap-val" style="color:var(--gold)">${daysToTGE}</div><div class="cap-lbl">Days to TGE</div><div class="cap-sub" style="color:var(--red)">24 Sep 2026</div></div>
+    <div class="cap-card"><div class="cap-val" style="color:var(--purple)">${rulesCount}</div><div class="cap-lbl">Automation Rules</div><div class="cap-sub" style="color:var(--muted)">Flywheel Engine</div></div>
+    <div class="cap-card"><div class="cap-val" style="color:var(--green)">${eventsCount}</div><div class="cap-lbl">Revenue Events</div><div class="cap-sub" style="color:var(--muted)">Logged to date</div></div>`;
+
+  const burnData = getBurnData();
+  const totalBurn = Object.values(burnData).reduce((s,v)=>s+v,0);
+  const maxBurn = Math.max(...Object.values(burnData));
+  const runway = totalCapital > 0 ? (totalCapital / totalBurn).toFixed(1) : '—';
+  document.getElementById('runwayMonths').textContent = runway === '—' ? '--' : runway;
+  document.getElementById('runwaySub').textContent = `months runway (total capital $${(totalCapital/1000).toFixed(1)}K, burn $${(totalBurn/1000).toFixed(1)}K/mo)`;
+  document.getElementById('runwayTGE').textContent = `TGE in ${daysToTGE} days (${(daysToTGE/30).toFixed(1)} months) — ${runway !== '—' && parseFloat(runway) >= daysToTGE/30 ? '✅ Runway covers TGE' : '⚠️ Monitor carefully'}`;
+
+  const chart = document.getElementById('burnChart');
+  chart.innerHTML = `<div class="burn-chart-title">Monthly Spend — Total: $${totalBurn.toLocaleString()}/mo</div>` +
+    BURN_CATEGORIES.map(c => `<div class="burn-row">
+      <div class="burn-cat">${c.label}</div>
+      <div class="burn-track"><div class="burn-fill" style="width:${Math.round((burnData[c.id]/maxBurn)*100)}%;background:${c.color}"></div></div>
+      <div class="burn-amount" style="color:${c.color}">$${burnData[c.id].toLocaleString()}</div>
+    </div>`).join('');
+
+  const inp1 = document.getElementById('spendInputs');
+  const inp2 = document.getElementById('spendInputs2');
+  const half = Math.ceil(BURN_CATEGORIES.length/2);
+  inp1.innerHTML = BURN_CATEGORIES.slice(0,half).map(c=>`
+    <div class="spend-input-group">
+      <div class="spend-lbl">${c.label}/mo</div>
+      <input class="spend-input" id="si_${c.id}" type="number" value="${burnData[c.id]}">
+    </div>`).join('');
+  inp2.innerHTML = BURN_CATEGORIES.slice(half).map(c=>`
+    <div class="spend-input-group">
+      <div class="spend-lbl">${c.label}/mo</div>
+      <input class="spend-input" id="si_${c.id}" type="number" value="${burnData[c.id]}">
+    </div>`).join('');
+}
+
+function updateBurn() {
+  const data = {};
+  BURN_CATEGORIES.forEach(c => {
+    const el = document.getElementById('si_'+c.id);
+    data[c.id] = parseFloat(el?.value)||0;
+  });
+  saveBurnData(data);
+  addAuditEntry('AJ Henry','spend-update','Monthly burn figures updated');
+  renderCapacity();
+  showToast('✅ Runway recalculated');
+}
+
+// ── GM3: SOVEREIGN AUDIT CENTER ──
+const AUDIT_TYPES = {
+  'permission-change': { label:'Role Change', color:'var(--purple)', bg:'rgba(139,63,232,.12)' },
+  'spend-update':      { label:'Spend Update', color:'var(--gold)', bg:'rgba(255,184,0,.1)' },
+  'admin-action':      { label:'Admin Action', color:'var(--cyan)', bg:'rgba(0,212,255,.1)' },
+  'compliance':        { label:'Compliance', color:'var(--red)', bg:'rgba(255,77,109,.12)' },
+  'connector':         { label:'Connector', color:'var(--green)', bg:'rgba(0,229,160,.1)' },
+};
+let _auditFilter = 'all';
+
+function getAuditLog() { return JSON.parse(localStorage.getItem('indx_admin_audit')||'[]'); }
+function saveAuditLog(l) { localStorage.setItem('indx_admin_audit', JSON.stringify(l.slice(0,200))); }
+
+function addAuditEntry(actor, type, detail) {
+  const log = getAuditLog();
+  log.unshift({ actor, type, detail, time: new Date().toISOString(), id: Date.now().toString() });
+  saveAuditLog(log);
+}
+
+function logAuditEntry() {
+  const text = document.getElementById('auditActionInput').value.trim();
+  if(!text){ showToast('⚠️ Describe the action first'); return; }
+  addAuditEntry('AJ Henry','admin-action', text);
+  document.getElementById('auditActionInput').value='';
+  renderAudit();
+  showToast('✅ Action logged to Sovereign Audit Center');
+}
+
+function renderAudit() {
+  const log = getAuditLog();
+  const filtered = _auditFilter==='all' ? log : log.filter(e=>e.type===_auditFilter);
+  const filters = document.getElementById('auditFilters');
+  filters.innerHTML = ['all',...Object.keys(AUDIT_TYPES)].map(f=>
+    `<button class="audit-filter-btn ${f===_auditFilter?'active':''}" onclick="setAuditFilter('${f}')">
+      ${f==='all'?'All':AUDIT_TYPES[f]?.label||f}
+    </button>`).join('');
+  document.getElementById('auditCount').textContent = '('+filtered.length+' entries)';
+  const logEl = document.getElementById('auditLog');
+  if(filtered.length===0){
+    logEl.innerHTML='<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px;">No audit entries yet. Actions taken here are automatically logged.</div>';
+    return;
+  }
+  logEl.innerHTML = filtered.slice(0,50).map(e=>{
+    const t = AUDIT_TYPES[e.type]||{label:e.type,color:'var(--muted)',bg:'rgba(107,114,128,.1)'};
+    const d = new Date(e.time);
+    const ts = d.toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'2-digit'})+' '+d.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
+    return `<div class="audit-entry">
+      <div class="audit-entry-header">
+        <div class="audit-actor" style="color:var(--cyan)">${e.actor}</div>
+        <div class="audit-time">${ts}</div>
+      </div>
+      <div class="audit-action-tag" style="background:${t.bg};color:${t.color}">${t.label}</div>
+      <div class="audit-detail">${e.detail}</div>
+    </div>`;
+  }).join('');
+}
+
+function setAuditFilter(f) {
+  _auditFilter=f;
+  renderAudit();
+}
+
+function exportAudit() {
+  const log = getAuditLog();
+  if(log.length===0){ showToast('⚠️ No audit entries to export'); return; }
+  const lines = ['SIINDEX SOVEREIGN AUDIT CENTER — EXPORT','Generated: '+new Date().toISOString(),'','═'.repeat(60),''];
+  log.forEach(e=>{
+    lines.push('['+e.time.replace('T',' ').slice(0,19)+'] '+e.actor+' · '+e.type.toUpperCase());
+    lines.push(e.detail); lines.push('');
+  });
+  if(navigator.clipboard) navigator.clipboard.writeText(lines.join('\n')).catch(()=>{});
+  showToast('📋 Audit log ('+log.length+' entries) copied');
+}
+
+// ── GM4: MCP CONNECTOR REGISTRY ──
+const CONNECTORS = [
+  { name:'Slack', category:'Communications', status:'connected', desc:'Team messaging, channel monitoring, broadcast notifications. Used in Comms Log automation.', policy:'Read channels · Send messages (team only)', tools:['slack_send_message','slack_read_channel','slack_search_channels','slack_schedule_message'] },
+  { name:'Gmail', category:'Communications', status:'connected', desc:'Email drafts, thread reading, label management. Used for investor notifications and compliance correspondence.', policy:'Read threads · Create drafts (no auto-send)', tools:['get_thread','create_draft','search_threads','list_labels'] },
+  { name:'Google Calendar', category:'Scheduling', status:'connected', desc:'TGE event scheduling, team meetings, compliance deadline reminders.', policy:'Read events · Create events (approval required)', tools:['list_events','create_event','suggest_time'] },
+  { name:'Supabase', category:'Database', status:'connected', desc:'Platform data persistence for citizen records, mission room data, governance votes.', policy:'Execute SQL (no DELETE without approval)', tools:['execute_sql','list_tables','apply_migration'] },
+  { name:'Vercel', category:'Deployment', status:'connected', desc:'Screen deployment pipeline. Every HTML screen deployed via Vercel.', policy:'Deploy (approval required) · Read logs freely', tools:['list_deployments','get_deployment','deploy_to_vercel'] },
+  { name:'Make (Integromat)', category:'Automation', status:'connected', desc:'Scenario automation for revenue event triggers, partner notification workflows, flywheel rule execution.', policy:'Run scenarios (no fund movements)', tools:['scenarios_run','scenarios_list','executions_get'] },
+  { name:'Notion', category:'Documentation', status:'connected', desc:'Internal knowledge base, whitepaper drafting, session notes, doctrine documentation.', policy:'Read/write pages (no permission changes)', tools:['notion-fetch','notion-create-pages','notion-update-page'] },
+  { name:'Raydium LP', category:'DeFi Protocol', status:'planned', desc:'INDX/USDC CPMM pool management. Fee collection via protocol_owner address. LP token burn at TGE.', policy:'Read pool data freely · Execute (SIINDEX + AJ dual approval)', tools:['pool_create','fee_collect','lp_burn'] },
+  { name:'SolSplits', category:'Revenue Routing', status:'planned', desc:'Composable on-chain revenue splitter for covenant routing (30/30/30/10 / 40/30/20/10 / Cultural).', policy:'Deploy split contracts (legal review required)', tools:['split_create','split_execute','split_audit'] },
+  { name:'Streamflow', category:'Token Distribution', status:'planned', desc:'Automated token distribution, vesting schedules, founder pool payouts, Vault of Virja distributions.', policy:'Create streams (approval required) · Cancel (dual approval)', tools:['stream_create','stream_cancel','vesting_create'] },
+  { name:'Linear', category:'Project Management', status:'connected', desc:'Build task tracking, screen backlog, God Mode feature planning, session closeout tasks.', policy:'Full read/write on team workspace', tools:['list_issues','save_issue','get_milestone'] },
+  { name:'Anthropic Claude', category:'AI Infrastructure', status:'connected', desc:'SIINDEX core intelligence. Haiku for fast tasks, Sonnet/Opus for complex reasoning and build sessions.', policy:'SIINDEX policy framework applies. Defensive only. No fund movements.', tools:['claude-sonnet-4-6','claude-haiku-4-5','claude-opus-4-8'] },
+  { name:'AUSTRAC Portal', category:'Compliance', status:'planned', desc:'VASP enrollment submission, AML/CTF program lodgement, Tranche 2 compliance reporting.', policy:'Read regulatory updates · Submit (AJ only)', tools:['enrollment_submit','report_lodge'] },
+  { name:'Solana RPC', category:'Blockchain', status:'planned', desc:'Direct Solana network access for transaction signing, balance checks, token account management.', policy:'Read freely · Sign transactions (dual approval)', tools:['get_balance','send_transaction','get_signature_status'] },
+];
+
+function renderConnectors() {
+  let connected=0, planned=0, blocked=0;
+  CONNECTORS.forEach(c=>{ if(c.status==='connected') connected++; else if(c.status==='planned') planned++; else blocked++; });
+  document.getElementById('connectorSummary').innerHTML = `
+    <div class="conn-sum"><div class="conn-sum-num" style="color:var(--green)">${connected}</div><div class="conn-sum-lbl">Connected</div></div>
+    <div class="conn-sum"><div class="conn-sum-num" style="color:var(--gold)">${planned}</div><div class="conn-sum-lbl">Planned</div></div>
+    <div class="conn-sum"><div class="conn-sum-num" style="color:var(--red)">${blocked}</div><div class="conn-sum-lbl">Blocked</div></div>`;
+  document.getElementById('connectorList').innerHTML = CONNECTORS.map(c =>
+    `<div class="conn-card ${c.status}">
+      <div class="conn-header">
+        <div class="conn-name">${c.name}</div>
+        <div class="conn-status-chip ${c.status}">${c.status.toUpperCase()}</div>
+      </div>
+      <div class="conn-category">${c.category}</div>
+      <div class="conn-desc">${c.desc}</div>
+      <div class="conn-policy-row">
+        <span class="conn-policy-label">Policy:</span>
+        <span class="conn-policy-val" style="text-align:right;color:var(--muted)">${c.policy}</span>
+      </div>
+      <div class="conn-tools">${c.tools.map(t=>`<span class="conn-tool-chip">${t}</span>`).join('')}</div>
+    </div>`).join('');
+}
+
+// ── OVERVIEW ──
+function renderOverview() {
+  const founders = JSON.parse(localStorage.getItem('indx_founders_pool_members')||'[]');
+  const totalCapital = founders.reduce((s,f)=>s+(f.amount||0),0);
+  const daysToTGE = Math.max(0,Math.floor((TGE_DATE-new Date())/86400000));
+  const auditCount = getAuditLog().length;
+  const connectedCount = CONNECTORS.filter(c=>c.status==='connected').length;
+  document.getElementById('overviewGrid').innerHTML = `
+    <div class="ov-card"><div class="ov-val" style="color:var(--red)">${daysToTGE}</div><div class="ov-lbl">Days to TGE</div><div class="ov-delta warn">24 Sep 2026 AEST</div></div>
+    <div class="ov-card"><div class="ov-val" style="color:var(--cyan)">$${(totalCapital/1000).toFixed(1)}K</div><div class="ov-lbl">Founder Capital</div><div class="ov-delta up">${founders.length} investors</div></div>
+    <div class="ov-card"><div class="ov-val" style="color:var(--green)">${connectedCount}</div><div class="ov-lbl">Connectors Live</div><div class="ov-delta up">of ${CONNECTORS.length} total</div></div>
+    <div class="ov-card"><div class="ov-val" style="color:var(--purple)">${auditCount}</div><div class="ov-lbl">Audit Entries</div><div class="ov-delta up">Immutable log</div></div>`;
+  document.getElementById('overviewAlerts').innerHTML = `
+    <div class="alert-strip red"><div class="alert-icon">🚨</div><div class="alert-text"><strong>AUSTRAC VASP Enrollment</strong> — deadline 29 Jul 2026. ${Math.max(0,Math.floor((new Date('2026-07-29')-new Date())/86400000))} days remaining. Submit immediately.</div></div>
+    <div class="alert-strip gold"><div class="alert-icon">⚠️</div><div class="alert-text"><strong>SolSplits + Token-2022 build pending</strong> — revenue routing is manual until onchain infrastructure is deployed.</div></div>
+    <div class="alert-strip gold"><div class="alert-icon">⚠️</div><div class="alert-text"><strong>Raydium pool not yet created</strong> — pool_owner address and LP burn transaction must be prepared before TGE.</div></div>
+    <div class="alert-strip green"><div class="alert-icon">✅</div><div class="alert-text"><strong>${connectedCount} MCP connectors live</strong> — Slack, Gmail, Calendar, Supabase, Vercel, Make, Notion, Linear, Claude all operational.</div></div>`;
+}
+
+// ── INIT ──
+document.addEventListener('DOMContentLoaded',()=>{
+  renderOverview();
+  renderRoles();
+  renderConnectors();
+});
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

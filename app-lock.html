@@ -61,12 +61,31 @@
   /* Toast */
   .toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--surface2);border:1px solid rgba(0,229,160,0.3);color:var(--text);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:500;transition:transform 0.3s;z-index:200;white-space:nowrap;}
   .toast.show{transform:translateX(-50%) translateY(0);}
+
+  /* GOD MODE: LIVE CLOCK */
+  .lock-clock{font-size:13px;color:var(--muted);font-family:'SF Mono',monospace;margin:-24px 0 24px;letter-spacing:0.04em;}
+
+  /* GOD MODE: LOCKOUT BANNER */
+  .lockout-banner{display:none;width:100%;max-width:320px;background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.25);border-radius:12px;padding:10px 14px;font-size:12px;color:var(--red);font-weight:600;margin-bottom:16px;line-height:1.5;}
+  .lockout-banner.show{display:block;}
+
+  /* GOD MODE: PIN PAD */
+  .pin-pad-wrap{display:none;width:100%;max-width:320px;margin-top:8px;}
+  .pin-pad-wrap.show{display:block;}
+  .pin-dots{display:flex;justify-content:center;gap:14px;margin-bottom:24px;}
+  .pin-dot{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--surface3);transition:all 0.15s;}
+  .pin-dot.filled{background:var(--cyan);border-color:var(--cyan);}
+  .pin-keys{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .pin-key{aspect-ratio:1;border-radius:50%;background:var(--surface);border:1px solid var(--surface3);color:var(--text);font-size:20px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .pin-key:active{background:var(--surface3);}
+  .pin-key.empty{visibility:hidden;cursor:default;}
 </style>
 </head>
 <body>
 <div class="shell">
 
   <div class="logo">IN$DEX</div>
+  <div class="lock-clock" id="lockClock"></div>
 
   <!-- Avatar -->
   <div class="avatar-wrap">
@@ -78,26 +97,56 @@
   <div class="citizen-domain" id="citizenDomain">sovereign.IN$DEX</div>
   <div class="welcome-sub">Your wallet is waiting.<br>Confirm it's you to unlock.</div>
 
-  <!-- Biometric button -->
-  <button class="bio-btn" id="bioBtn" onclick="startBiometric()">
-    <div class="bio-icon-wrap" id="bioIconWrap">
-      <span id="bioIcon">🔬</span>
-    </div>
-    <div class="bio-label" id="bioLabel">Use Face ID</div>
-    <div class="bio-sub" id="bioSub">Tap to scan your face</div>
-  </button>
+  <!-- GOD MODE: LOCKOUT BANNER -->
+  <div class="lockout-banner" id="lockoutBanner"></div>
 
-  <!-- Fallback -->
-  <button class="fallback-link" onclick="toggleDomainRecovery()">Use your Web3 domain instead</button>
+  <div id="primaryMethods">
+    <!-- Biometric button -->
+    <button class="bio-btn" id="bioBtn" onclick="startBiometric()">
+      <div class="bio-icon-wrap" id="bioIconWrap">
+        <span id="bioIcon">🔬</span>
+      </div>
+      <div class="bio-label" id="bioLabel">Use Face ID</div>
+      <div class="bio-sub" id="bioSub">Tap to scan your face</div>
+    </button>
 
-  <!-- Domain recovery -->
-  <div class="domain-recovery" id="domainRecovery">
-    <div class="domain-recovery-label">Enter your sovereign address</div>
-    <div class="domain-input-wrap">
-      <input class="domain-input" id="domainInput" type="text" placeholder="yourname" autocomplete="off" autocapitalize="none" spellcheck="false">
-      <div class="domain-suffix">.IN$DEX</div>
+    <!-- Fallback -->
+    <button class="fallback-link" onclick="toggleDomainRecovery()">Use your Web3 domain instead</button>
+    <button class="fallback-link" onclick="showPinPad()">Use PIN instead</button>
+
+    <!-- Domain recovery -->
+    <div class="domain-recovery" id="domainRecovery">
+      <div class="domain-recovery-label">Enter your sovereign address</div>
+      <div class="domain-input-wrap">
+        <input class="domain-input" id="domainInput" type="text" placeholder="yourname" autocomplete="off" autocapitalize="none" spellcheck="false">
+        <div class="domain-suffix">.IN$DEX</div>
+      </div>
+      <button class="domain-btn" onclick="domainLogin()">Unlock with Domain →</button>
     </div>
-    <button class="domain-btn" onclick="domainLogin()">Unlock with Domain →</button>
+  </div>
+
+  <!-- GOD MODE: PIN PAD FALLBACK -->
+  <div class="pin-pad-wrap" id="pinPadWrap">
+    <div class="domain-recovery-label" style="margin-bottom:16px;">Enter your 6-digit PIN</div>
+    <div class="pin-dots" id="pinDots">
+      <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+      <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
+    </div>
+    <div class="pin-keys">
+      <div class="pin-key" onclick="pinPress('1')">1</div>
+      <div class="pin-key" onclick="pinPress('2')">2</div>
+      <div class="pin-key" onclick="pinPress('3')">3</div>
+      <div class="pin-key" onclick="pinPress('4')">4</div>
+      <div class="pin-key" onclick="pinPress('5')">5</div>
+      <div class="pin-key" onclick="pinPress('6')">6</div>
+      <div class="pin-key" onclick="pinPress('7')">7</div>
+      <div class="pin-key" onclick="pinPress('8')">8</div>
+      <div class="pin-key" onclick="pinPress('9')">9</div>
+      <div class="pin-key empty"></div>
+      <div class="pin-key" onclick="pinPress('0')">0</div>
+      <div class="pin-key" onclick="pinBackspace()">⌫</div>
+    </div>
+    <button class="fallback-link" onclick="showFaceID()" style="margin-top:14px;">Use Face ID instead</button>
   </div>
 
 </div>
@@ -114,9 +163,58 @@
       const slug = domain.replace('.indx','').replace('.IN$DEX','');
       document.getElementById('citizenDomain').textContent = slug + '.IN$DEX';
     }
+    // GOD MODE PATCH: smart default — jump straight to the last-used unlock method / respect an active lockout
+    if (isLockedOutFace()) {
+      showLockoutBanner();
+      showPinPad();
+    } else if (localStorage.getItem('indx_applock_last_method') === 'pin') {
+      showPinPad();
+    }
+    startClock();
   })();
 
+  // GOD MODE: LIVE CLOCK
+  function startClock() {
+    const el = document.getElementById('lockClock');
+    if (!el) return;
+    function tick() {
+      el.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+    tick();
+    setInterval(tick, 1000);
+  }
+
+  // GOD MODE: FAILED-ATTEMPT TRACKING + LOCKOUT
+  let failCount = 0;
+  const MAX_FAILS = 3;
+  const FAIL_CHANCE = 0.15;
+
+  function isLockedOutFace() {
+    const until = parseInt(localStorage.getItem('indx_applock_lockout_until') || '0');
+    return Date.now() < until;
+  }
+  function lockOutFace() {
+    localStorage.setItem('indx_applock_lockout_until', String(Date.now() + 30000));
+    showLockoutBanner();
+    showPinPad();
+  }
+  function showLockoutBanner() {
+    const b = document.getElementById('lockoutBanner');
+    if (!b) return;
+    b.textContent = '⚠️ Face ID disabled after 3 failed attempts. Use your PIN or Web3 domain.';
+    b.classList.add('show');
+  }
+
+  // GOD MODE: UNLOCK SUCCESS — remembers the method used
+  function unlockSuccess(method) {
+    localStorage.setItem('indx_applock_last_method', method);
+    localStorage.removeItem('indx_applock_lockout_until');
+    showToast('Identity confirmed. Standing by.');
+    setTimeout(() => { window.location.href = 'citizen-dashboard.html'; }, 1400);
+  }
+
   function startBiometric() {
+    if (isLockedOutFace()) { showToast('Face ID temporarily disabled use PIN'); showPinPad(); return; }
     const btn = document.getElementById('bioBtn');
     btn.classList.add('scanning');
     document.getElementById('bioLabel').textContent = 'Scanning…';
@@ -126,11 +224,20 @@
     // Simulate Face ID scan
     setTimeout(() => {
       btn.classList.remove('scanning');
+      // GOD MODE PATCH: simulate an occasional failed read instead of always succeeding
+      if (Math.random() < FAIL_CHANCE) {
+        failCount++;
+        document.getElementById('bioIcon').textContent  = '⚠️';
+        document.getElementById('bioLabel').textContent = 'Face not recognised';
+        document.getElementById('bioSub').textContent   = 'Tap to try again';
+        showToast(`Scan failed (${failCount}/${MAX_FAILS})`);
+        if (failCount >= MAX_FAILS) lockOutFace();
+        return;
+      }
       document.getElementById('bioIcon').textContent  = '✅';
       document.getElementById('bioLabel').textContent = 'Identity confirmed.';
       document.getElementById('bioSub').textContent   = 'Welcome back. Standing by.';
-      showToast('Identity confirmed. Standing by.');
-      setTimeout(() => { window.location.href = 'citizen-dashboard.html'; }, 1400);
+      unlockSuccess('faceid');
     }, 1800);
   }
 
@@ -144,10 +251,44 @@
     const slug = document.getElementById('domainInput').value.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
     if (!slug) { showToast('Enter your domain name.'); return; }
     showToast('Verifying ' + slug + '.IN$DEX…');
-    setTimeout(() => {
-      showToast('Identity confirmed. Standing by.');
-      setTimeout(() => { window.location.href = 'citizen-dashboard.html'; }, 1400);
-    }, 1600);
+    setTimeout(() => { unlockSuccess('domain'); }, 1600);
+  }
+
+  // GOD MODE: PIN PAD FALLBACK
+  let pinEntry = '';
+  const DEMO_PIN = '123456'; // prototype fallback PIN, not real key material
+
+  function showPinPad() {
+    document.getElementById('primaryMethods').style.display = 'none';
+    document.getElementById('pinPadWrap').classList.add('show');
+    pinEntry = '';
+    renderPinDots();
+  }
+  function showFaceID() {
+    document.getElementById('pinPadWrap').classList.remove('show');
+    document.getElementById('primaryMethods').style.display = 'block';
+  }
+  function pinPress(d) {
+    if (pinEntry.length >= 6) return;
+    pinEntry += d;
+    renderPinDots();
+    if (pinEntry.length === 6) checkPin();
+  }
+  function pinBackspace() {
+    pinEntry = pinEntry.slice(0, -1);
+    renderPinDots();
+  }
+  function renderPinDots() {
+    document.querySelectorAll('#pinDots .pin-dot').forEach((dot, i) => dot.classList.toggle('filled', i < pinEntry.length));
+  }
+  function checkPin() {
+    if (pinEntry === DEMO_PIN) {
+      unlockSuccess('pin');
+    } else {
+      showToast('Incorrect PIN try again');
+      pinEntry = '';
+      setTimeout(renderPinDots, 300);
+    }
   }
 
   function showToast(msg) {
@@ -157,5 +298,6 @@
     setTimeout(() => t.classList.remove('show'), 3000);
   }
 </script>
+<script src="siindex-speak-core.js"></script>
 </body>
 </html>

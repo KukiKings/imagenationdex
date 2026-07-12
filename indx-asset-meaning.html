@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>IN$DEX — Asset Meaning Engine</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+    --black:#090A10; --green:#00E5A0; --gold:#FFB800;
+    --red:#FF4D6D; --surface:#12141F; --surface2:#1A1D2E;
+    --surface3:#22263A;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--black); color:#fff;
+    font-family:'Helvetica Neue',Arial,sans-serif;
+    max-width:430px; margin:0 auto; min-height:100vh;
+    padding-bottom:40px; }
+
+  /* NAV */
+  nav { display:flex; align-items:center; justify-content:space-between;
+    padding:16px 20px 12px; }
+  .nav-back { color:var(--cyan); font-size:13px; font-weight:600;
+    letter-spacing:.04em; cursor:pointer; }
+  .nav-title { font-size:12px; font-weight:700; letter-spacing:.08em;
+    color:rgba(255,255,255,.45); text-transform:uppercase; }
+  .nav-price { font-size:12px; font-weight:700; color:var(--gold);
+    background:rgba(255,184,0,.1); border:1px solid rgba(255,184,0,.2);
+    padding:3px 9px; border-radius:20px; }
+
+  /* HERO */
+  .hero { padding:20px 20px 0; }
+  .hero-label { font-size:11px; color:var(--cyan); font-weight:700;
+    letter-spacing:.1em; text-transform:uppercase; margin-bottom:6px; }
+  .hero-title { font-size:26px; font-weight:800; line-height:1.15; }
+  .hero-title span { color:var(--gold); }
+  .hero-sub { font-size:13px; color:rgba(255,255,255,.55); margin-top:6px;
+    line-height:1.5; }
+
+  /* VERSUS STRIP */
+  .versus { margin:16px 20px 0; display:grid;
+    grid-template-columns:1fr 1fr; gap:8px; }
+  .versus-box { border-radius:12px; padding:12px 14px; }
+  .versus-old { background:var(--surface);
+    border:1px solid rgba(255,255,255,.06); }
+  .versus-new { background:rgba(0,212,255,.07);
+    border:1px solid rgba(0,212,255,.2); }
+  .versus-label { font-size:10px; font-weight:700; letter-spacing:.08em;
+    text-transform:uppercase; margin-bottom:7px; }
+  .versus-old .versus-label { color:rgba(255,255,255,.35); }
+  .versus-new .versus-label { color:var(--cyan); }
+  .versus-item { font-size:12px; color:rgba(255,255,255,.5);
+    margin-bottom:4px; }
+  .versus-new .versus-item { color:rgba(255,255,255,.8); }
+  .versus-item.strike { text-decoration:line-through;
+    color:rgba(255,255,255,.25); }
+
+  /* SECTION HEADERS */
+  .section-hd { padding:20px 20px 10px;
+    display:flex; align-items:center; justify-content:space-between; }
+  .section-title { font-size:13px; font-weight:700; letter-spacing:.05em; }
+  .section-sub { font-size:11px; color:rgba(255,255,255,.4); }
+
+  /* ROLE CHIPS */
+  .chip-row { padding:0 20px; display:flex; flex-wrap:wrap; gap:7px; }
+  .role-chip { background:var(--surface); border:1px solid rgba(255,255,255,.08);
+    border-radius:20px; padding:7px 13px; font-size:12px; font-weight:600;
+    color:rgba(255,255,255,.65); cursor:pointer; transition:all .18s; }
+  .role-chip:hover { border-color:var(--purple); color:#fff; }
+  .role-chip.selected { background:rgba(139,63,232,.15);
+    border-color:var(--purple); color:var(--purple); }
+
+  /* ASSET TYPE GRID */
+  .asset-grid { padding:0 20px; display:grid;
+    grid-template-columns:1fr 1fr; gap:8px; }
+  .asset-chip { background:var(--surface); border:1px solid rgba(255,255,255,.07);
+    border-radius:12px; padding:12px; cursor:pointer; transition:all .18s; }
+  .asset-chip:hover { border-color:var(--gold); }
+  .asset-chip.selected { background:rgba(255,184,0,.08);
+    border-color:var(--gold); }
+  .asset-chip-icon { font-size:20px; margin-bottom:5px; }
+  .asset-chip-label { font-size:12px; font-weight:600;
+    color:rgba(255,255,255,.8); line-height:1.3; }
+  .asset-chip.selected .asset-chip-label { color:var(--gold); }
+
+  /* ASSET NAME INPUT */
+  .name-row { padding:12px 20px 0; }
+  .name-input { width:100%; background:var(--surface);
+    border:1px solid rgba(255,255,255,.1); border-radius:12px;
+    padding:12px 14px; color:#fff; font-size:13px;
+    font-family:inherit; outline:none; transition:border-color .18s; }
+  .name-input:focus { border-color:var(--gold); }
+  .name-input::placeholder { color:rgba(255,255,255,.3); }
+
+  /* ANALYSE BUTTON */
+  .analyse-btn { margin:14px 20px 0;
+    width:calc(100% - 40px); display:block;
+    background:var(--gold); color:var(--black); font-size:14px;
+    font-weight:800; padding:15px; border:none; border-radius:12px;
+    cursor:pointer; letter-spacing:.03em; transition:opacity .18s; }
+  .analyse-btn:disabled { opacity:.3; cursor:not-allowed; }
+  .analyse-btn:not(:disabled):hover { opacity:.88; }
+
+  /* PROCESSING OVERLAY */
+  .proc-overlay { position:fixed; inset:0; background:rgba(9,10,16,.97);
+    z-index:100; display:none; flex-direction:column;
+    align-items:center; justify-content:center; padding:40px 30px; }
+  .proc-overlay.active { display:flex; }
+  .proc-title { font-size:13px; font-weight:700; color:var(--cyan);
+    letter-spacing:.1em; text-transform:uppercase; margin-bottom:28px; }
+  .proc-step { display:flex; align-items:center; gap:14px;
+    margin:10px 0; width:100%; max-width:320px; }
+  .step-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0;
+    background:var(--surface3); transition:background .3s; }
+  .step-dot.active { background:var(--cyan);
+    box-shadow:0 0 8px var(--cyan); }
+  .step-dot.done { background:var(--green);
+    box-shadow:0 0 6px var(--green); }
+  .step-label { font-size:13px; color:rgba(255,255,255,.4);
+    transition:color .3s; }
+  .step-label.active { color:#fff; }
+  .step-label.done { color:var(--green); }
+
+  /* ANALYSIS CARD */
+  #analysisCard { display:none; margin:18px 20px 0;
+    background:var(--surface); border-radius:16px; overflow:hidden;
+    border:1px solid rgba(255,184,0,.15); }
+  .analysis-header { padding:14px 16px;
+    background:rgba(255,184,0,.07);
+    border-bottom:1px solid rgba(255,184,0,.12); }
+  .analysis-asset-icon { font-size:22px; margin-bottom:4px; }
+  .analysis-asset-label { font-size:11px; color:var(--gold); font-weight:700;
+    letter-spacing:.08em; text-transform:uppercase; }
+  .analysis-asset-name { font-size:15px; font-weight:800; margin-top:2px; }
+
+  /* 8 DIMENSIONS */
+  .dim { padding:12px 16px;
+    border-bottom:1px solid rgba(255,255,255,.04); }
+  .dim:last-of-type { border-bottom:none; }
+  .dim-label { font-size:10px; font-weight:700; letter-spacing:.09em;
+    text-transform:uppercase; color:rgba(255,255,255,.35); margin-bottom:5px; }
+  .dim-number { display:inline-block; background:var(--surface3);
+    color:rgba(255,255,255,.5); font-size:9px; font-weight:700;
+    padding:1px 5px; border-radius:4px; margin-right:5px; }
+  .dim-content { font-size:13px; color:rgba(255,255,255,.8);
+    line-height:1.5; }
+  .dim-list { margin-top:4px; }
+  .dim-list-item { font-size:12px; color:rgba(255,255,255,.65);
+    margin-bottom:3px; padding-left:12px; position:relative;
+    line-height:1.4; }
+  .dim-list-item::before { content:'→'; position:absolute;
+    left:0; color:var(--cyan); font-size:11px; }
+
+  /* RISK ITEMS */
+  .risk-list-item::before { content:'⚠'; left:0;
+    color:var(--gold); font-size:10px; }
+
+  /* ACTION ALLOWED */
+  .dim-action { margin-top:4px; }
+  .action-pill { display:inline-block; padding:5px 12px; border-radius:20px;
+    font-size:12px; font-weight:700; letter-spacing:.04em; }
+  .action-learn   { background:rgba(0,229,160,.1); color:var(--green);
+    border:1px solid rgba(0,229,160,.3); }
+  .action-prepare { background:rgba(255,184,0,.1); color:var(--gold);
+    border:1px solid rgba(255,184,0,.3); }
+  .action-review  { background:rgba(139,63,232,.15); color:var(--purple);
+    border:1px solid rgba(139,63,232,.35); }
+  .action-trade   { background:rgba(0,212,255,.1); color:var(--cyan);
+    border:1px solid rgba(0,212,255,.3); }
+  .action-blocked { background:rgba(255,77,109,.1); color:var(--red);
+    border:1px solid rgba(255,77,109,.3); }
+
+  /* MISSION FIT ROW */
+  .mission-fit-block { padding:12px 16px;
+    border-top:1px solid rgba(255,255,255,.06);
+    background:rgba(139,63,232,.05); }
+  .mf-label { font-size:10px; font-weight:700; letter-spacing:.09em;
+    text-transform:uppercase; color:var(--purple); margin-bottom:7px; }
+  .mf-badge { display:inline-flex; align-items:center; gap:6px;
+    padding:5px 12px; border-radius:20px; font-size:12px; font-weight:700; }
+  .mf-high { background:rgba(0,229,160,.12); color:var(--green);
+    border:1px solid rgba(0,229,160,.25); }
+  .mf-medium { background:rgba(255,184,0,.1); color:var(--gold);
+    border:1px solid rgba(255,184,0,.2); }
+  .mf-low  { background:rgba(255,77,109,.08); color:var(--red);
+    border:1px solid rgba(255,77,109,.2); }
+  .mf-none { background:rgba(255,255,255,.05); color:rgba(255,255,255,.4);
+    border:1px solid rgba(255,255,255,.08); }
+  .mf-reason { font-size:12px; color:rgba(255,255,255,.6);
+    margin-top:6px; line-height:1.4; }
+
+  /* SIINDEX NOTE */
+  .siindex-note { margin:12px 16px;
+    background:rgba(139,63,232,.1);
+    border:1px solid rgba(139,63,232,.2); border-radius:12px;
+    padding:12px 14px; }
+  .sn-label { font-size:10px; font-weight:700; color:var(--purple);
+    letter-spacing:.08em; text-transform:uppercase; margin-bottom:5px; }
+  .sn-text { font-size:12px; color:rgba(255,255,255,.7); line-height:1.5; }
+
+  /* CARD ACTIONS */
+  .card-actions { display:flex; gap:8px; padding:0 16px 16px; }
+  .ca-log { flex:1; background:var(--surface2);
+    border:1px solid rgba(255,255,255,.1); color:rgba(255,255,255,.7);
+    font-size:13px; font-weight:700; padding:12px; border:none;
+    border-radius:10px; cursor:pointer; }
+  .ca-discard { flex:0 0 auto; background:transparent;
+    border:1px solid rgba(255,255,255,.1); color:rgba(255,255,255,.45);
+    font-size:12px; font-weight:600; padding:12px 14px; border-radius:10px;
+    cursor:pointer; }
+
+  /* WARNING STRIP */
+  .warning-strip { margin:16px 20px 0; background:rgba(255,184,0,.07);
+    border:1px solid rgba(255,184,0,.2); border-radius:12px;
+    padding:12px 14px; }
+  .ws-label { font-size:10px; color:var(--gold); font-weight:700;
+    letter-spacing:.08em; text-transform:uppercase; margin-bottom:5px; }
+  .ws-text { font-size:12px; color:rgba(255,255,255,.65); line-height:1.5; }
+
+  /* LEDGER STRIP */
+  .ledger-strip { padding:0 20px; display:flex; gap:10px;
+    overflow-x:auto; scrollbar-width:none; }
+  .ledger-strip::-webkit-scrollbar { display:none; }
+  .ledger-card { flex-shrink:0; width:190px; background:var(--surface);
+    border:1px solid rgba(255,255,255,.06); border-radius:12px;
+    padding:12px; }
+  .lc-icon { font-size:16px; margin-bottom:4px; }
+  .lc-type { font-size:11px; font-weight:700; color:var(--cyan);
+    margin-bottom:2px; }
+  .lc-name { font-size:11px; color:rgba(255,255,255,.55);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    margin-bottom:4px; }
+  .lc-ts { font-size:10px; color:rgba(255,255,255,.3); }
+  .ledger-empty { padding:0 20px; }
+  .ledger-empty-box { background:var(--surface);
+    border:1px dashed rgba(255,255,255,.1); border-radius:12px;
+    padding:18px; text-align:center; }
+  .ledger-empty-box p { font-size:12px; color:rgba(255,255,255,.35); }
+
+  /* GOD MODE — DRAFT RESTORE BANNER */
+  .am-draft-banner { margin:10px 20px 0; background:rgba(255,184,0,.07);
+    border:1px solid rgba(255,184,0,.2); border-radius:10px;
+    padding:10px 14px; display:none;
+    align-items:center; justify-content:space-between; gap:10px; }
+  .am-draft-banner.visible { display:flex; }
+  .am-db-text { font-size:12px; color:rgba(255,255,255,.7); }
+  .am-db-btns { display:flex; gap:6px; flex-shrink:0; }
+  .am-db-restore { background:var(--gold); color:var(--black); border:none;
+    border-radius:7px; padding:5px 10px; font-size:11px;
+    font-weight:700; cursor:pointer; }
+  .am-db-dismiss { background:transparent; color:rgba(255,255,255,.35);
+    border:none; font-size:18px; cursor:pointer; padding:0 4px; }
+
+  /* GOD MODE — LEDGER STATS BAR */
+  .ledger-stats { margin:0 20px 10px; display:grid;
+    grid-template-columns:repeat(3,1fr); gap:7px; }
+  .ls-pill { background:var(--surface); border-radius:10px;
+    padding:9px 8px; text-align:center;
+    border:1px solid rgba(255,255,255,.05); }
+  .ls-num { font-size:15px; font-weight:800; }
+  .ls-label { font-size:9px; color:rgba(255,255,255,.3); font-weight:600;
+    letter-spacing:.04em; text-transform:uppercase; margin-top:2px; }
+
+  /* GOD MODE — RISK SCORE BADGE */
+  .risk-score-row { padding:12px 16px 0;
+    display:flex; align-items:center; gap:10px; }
+  .risk-score-label { font-size:11px; font-weight:700;
+    color:rgba(255,255,255,.35); letter-spacing:.07em;
+    text-transform:uppercase; }
+  .risk-badge { display:inline-block; padding:4px 12px; border-radius:20px;
+    font-size:12px; font-weight:700; letter-spacing:.04em; }
+  .risk-low      { background:rgba(0,229,160,.1); color:var(--green);
+    border:1px solid rgba(0,229,160,.3); }
+  .risk-medium   { background:rgba(255,184,0,.1); color:var(--gold);
+    border:1px solid rgba(255,184,0,.3); }
+  .risk-high     { background:rgba(255,77,109,.1); color:var(--red);
+    border:1px solid rgba(255,77,109,.3); }
+  .risk-critical { background:rgba(255,77,109,.25); color:var(--red);
+    border:1px solid var(--red); }
+  .risk-bar-wrap { flex:1; background:var(--surface3); height:6px;
+    border-radius:3px; overflow:hidden; }
+  .risk-bar-fill { height:100%; border-radius:3px;
+    transition:width .6s ease; }
+
+  /* GOD MODE — LEDGER DETAIL SHEET */
+  .ld-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7);
+    z-index:200; display:none; }
+  .ld-overlay.open { display:block; }
+  .ledger-detail-sheet { position:fixed; bottom:0; left:50%;
+    transform:translateX(-50%) translateY(100%);
+    width:100%; max-width:430px; background:var(--surface2);
+    border-radius:20px 20px 0 0; z-index:201; padding:0 0 32px;
+    max-height:80vh; overflow-y:auto;
+    transition:transform .3s cubic-bezier(.4,0,.2,1); }
+  .ledger-detail-sheet.open { transform:translateX(-50%) translateY(0); }
+  .ld-handle { width:36px; height:4px; background:rgba(255,255,255,.15);
+    border-radius:2px; margin:12px auto 0; }
+  .ld-header { padding:14px 20px;
+    border-bottom:1px solid rgba(255,255,255,.06); }
+  .ld-icon { font-size:24px; margin-bottom:4px; }
+  .ld-type { font-size:11px; color:var(--gold); font-weight:700;
+    letter-spacing:.07em; text-transform:uppercase; margin-bottom:2px; }
+  .ld-name { font-size:16px; font-weight:800; }
+  .ld-body { padding:14px 20px; }
+  .ld-row { display:flex; justify-content:space-between;
+    align-items:center; padding:8px 0;
+    border-bottom:1px solid rgba(255,255,255,.05); }
+  .ld-row:last-child { border-bottom:none; }
+  .ld-key { font-size:12px; color:rgba(255,255,255,.4); }
+  .ld-val { font-size:12px; font-weight:700; }
+  .ld-actions { padding:14px 20px 0; display:flex; flex-direction:column; gap:8px; }
+  .ld-del-btn { background:rgba(255,77,109,.1); color:var(--red);
+    border:1px solid rgba(255,77,109,.2); border-radius:10px;
+    padding:12px; font-size:13px; font-weight:700; cursor:pointer; width:100%; }
+  .ld-del-confirm { display:none; background:var(--surface3);
+    border:1px solid rgba(255,77,109,.3); border-radius:10px;
+    padding:12px 14px; }
+  .ld-del-confirm.visible { display:block; }
+  .ld-del-q { font-size:12px; color:rgba(255,255,255,.7); margin-bottom:10px; }
+  .ld-del-row { display:flex; gap:8px; }
+  .ldd-yes { flex:1; background:var(--red); color:#fff; border:none;
+    border-radius:8px; padding:10px; font-size:12px; font-weight:700; cursor:pointer; }
+  .ldd-no  { flex:1; background:var(--surface2); color:rgba(255,255,255,.6);
+    border:1px solid rgba(255,255,255,.1); border-radius:8px; padding:10px;
+    font-size:12px; font-weight:700; cursor:pointer; }
+  .ld-close { background:var(--surface3); color:rgba(255,255,255,.5);
+    border:none; border-radius:10px; padding:12px; font-size:13px;
+    font-weight:700; cursor:pointer; width:100%; }
+
+  /* DOCTRINE FOOTER */
+  .doctrine { margin:24px 20px 0; background:var(--surface);
+    border:1px solid rgba(0,212,255,.12); border-radius:14px;
+    padding:18px; }
+  .doc-line { font-size:13px; color:rgba(255,255,255,.65);
+    line-height:1.6; margin-bottom:8px; }
+  .doc-line:last-child { margin-bottom:0; }
+  .doc-line span { color:var(--gold); font-weight:700; }
+  .doc-line.small { font-size:11px; color:rgba(255,255,255,.3);
+    margin-top:4px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-back">← Grid</span>
+  <span class="nav-title">Asset Meaning Engine</span>
+  <span class="nav-price">INDX $0.24</span>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-label">Sovereign Asset Layer</div>
+  <h1 class="hero-title">Know before<br><span>you own.</span></h1>
+  <p class="hero-sub">SIINDEX explains the meaning, rights, risk, and mission fit of any digital asset before you interact.</p>
+</div>
+
+<!-- VERSUS STRIP -->
+<div class="versus">
+  <div class="versus-box versus-old">
+    <div class="versus-label">Other platforms</div>
+    <div class="versus-item">Price</div>
+    <div class="versus-item">Chart</div>
+    <div class="versus-item">Buy button</div>
+  </div>
+  <div class="versus-box versus-new">
+    <div class="versus-label">IN$DEX shows</div>
+    <div class="versus-item">Meaning</div>
+    <div class="versus-item">Rights</div>
+    <div class="versus-item">Risk</div>
+    <div class="versus-item">Mission fit</div>
+    <div class="versus-item">Consent</div>
+  </div>
+</div>
+
+<!-- CRITICAL WARNING -->
+<div class="warning-strip">
+  <div class="ws-label">⚠ SIINDEX Warning — Tokenization ≠ Trust</div>
+  <div class="ws-text">Tokenization can make an asset easier to access and move, but it does not automatically make it safe, liquid, suitable, or fairly valued. Availability is not understanding. Access is not suitability.</div>
+</div>
+
+<!-- DRAFT RESTORE BANNER -->
+<div class="am-draft-banner" id="amDraftBanner">
+  <div class="am-db-text">Your previous selection is saved — restore it?</div>
+  <div class="am-db-btns">
+    <button class="am-db-restore" onclick="amRestoreDraft()">Restore</button>
+    <button class="am-db-dismiss" onclick="amDismissDraft()">×</button>
+  </div>
+</div>
+
+<!-- ROLE SELECT -->
+<div class="section-hd">
+  <div class="section-title">Your current mission</div>
+  <div class="section-sub">helps SIINDEX assess fit</div>
+</div>
+<div class="chip-row" id="roleRow"></div>
+
+<!-- ASSET TYPE -->
+<div class="section-hd">
+  <div class="section-title">Select asset type</div>
+  <div class="section-sub" id="assetSub">choose one</div>
+</div>
+<div class="asset-grid" id="assetGrid"></div>
+
+<!-- ASSET NAME -->
+<div class="name-row">
+  <input class="name-input" id="assetName" type="text"
+    placeholder="Asset name or ticker (optional)"
+    oninput="updateBtn()">
+</div>
+
+<!-- ANALYSE BUTTON -->
+<button class="analyse-btn" id="analyseBtn" onclick="analyse()" disabled>
+  Analyse with SIINDEX →
+</button>
+
+<!-- ANALYSIS CARD -->
+<div id="analysisCard"></div>
+
+<!-- DECISION LEDGER -->
+<div class="section-hd">
+  <div class="section-title">Decision Ledger</div>
+  <div class="section-sub" id="ledgerCount">0 entries</div>
+</div>
+<div class="ledger-stats" id="ledgerStats">
+  <div class="ls-pill">
+    <div class="ls-num" id="lsTotal">0</div>
+    <div class="ls-label">Analysed</div>
+  </div>
+  <div class="ls-pill">
+    <div class="ls-num" style="color:var(--red)" id="lsBlocked">0</div>
+    <div class="ls-label">Blocked</div>
+  </div>
+  <div class="ls-pill">
+    <div class="ls-num" style="color:var(--green)" id="lsHighFit">0</div>
+    <div class="ls-label">High Fit</div>
+  </div>
+</div>
+<div id="ledgerArea"></div>
+
+<!-- DOCTRINE FOOTER -->
+<div class="doctrine">
+  <div class="doc-line"><span>Assets Need Meaning Before Access.</span></div>
+  <div class="doc-line">Availability is not understanding. Access is not suitability. Tokenization is not trust. Liquidity is not safety.</div>
+  <div class="doc-line">Solana is proving assets can move onchain. Chainlink is proving institutions can settle onchain. IN$DEX must prove citizens can prosper onchain without being exploited by complexity.</div>
+  <div class="doc-line small">IN$DEX · Sovereign Asset Layer · INDX $0.24</div>
+</div>
+
+<!-- LEDGER DETAIL SHEET -->
+<div class="ld-overlay" id="ldOverlay" onclick="closeLedgerDetail()"></div>
+<div class="ledger-detail-sheet" id="ledgerDetailSheet">
+  <div class="ld-handle"></div>
+  <div class="ld-header">
+    <div class="ld-icon" id="ldIcon"></div>
+    <div class="ld-type" id="ldType"></div>
+    <div class="ld-name" id="ldName"></div>
+  </div>
+  <div class="ld-body" id="ldBody"></div>
+  <div class="ld-actions">
+    <button class="ld-del-btn" onclick="showLdDelConfirm()">Remove from Ledger</button>
+    <div class="ld-del-confirm" id="ldDelConfirm">
+      <div class="ld-del-q">Remove this analysis from your Decision Ledger?</div>
+      <div class="ld-del-row">
+        <button class="ldd-yes" onclick="deleteLedgerItem()">Yes, remove</button>
+        <button class="ldd-no" onclick="hideLdDelConfirm()">Keep it</button>
+      </div>
+    </div>
+    <button class="ld-close" onclick="closeLedgerDetail()">Close</button>
+  </div>
+</div>
+
+<!-- PROCESSING OVERLAY -->
+<div class="proc-overlay" id="procOverlay">
+  <div class="proc-title">SIINDEX Asset Analysis</div>
+  <div class="proc-step">
+    <div class="step-dot" id="sd0"></div>
+    <div class="step-label" id="sl0">Classifying asset type and issuer…</div>
+  </div>
+  <div class="proc-step">
+    <div class="step-dot" id="sd1"></div>
+    <div class="step-label" id="sl1">Mapping rights and redemption terms…</div>
+  </div>
+  <div class="proc-step">
+    <div class="step-dot" id="sd2"></div>
+    <div class="step-label" id="sl2">Assessing risks and citizen eligibility…</div>
+  </div>
+  <div class="proc-step">
+    <div class="step-dot" id="sd3"></div>
+    <div class="step-label" id="sl3">Running mission fit check…</div>
+  </div>
+</div>
+
+<script>
+const INDX_PRICE_USD = 0.24;
+const LEDGER_KEY = 'indx_asset_ledger';
+
+const ROLES = [
+  {key:'merchant',    label:'🏪 Merchant'},
+  {key:'creator',     label:'✨ Creator'},
+  {key:'learner',     label:'📚 Learner'},
+  {key:'community',   label:'🌏 Community'},
+  {key:'cultural',    label:'🪶 Cultural Guardian'},
+  {key:'governance',  label:'⚖️ Governance'},
+  {key:'family',      label:'👨‍👩‍👧 Family'},
+];
+
+const ASSET_TYPES = [
+  {key:'stablecoin',    label:'Stablecoin',              icon:'🔵'},
+  {key:'equity',        label:'Tokenized Public Equity', icon:'📈'},
+  {key:'treasury',      label:'Treasury Yield',          icon:'🏛️'},
+  {key:'cultural',      label:'Cultural Asset / IP',     icon:'🪶'},
+  {key:'marketplace',   label:'Marketplace Asset',       icon:'🏪'},
+  {key:'collectible',   label:'Digital Collectible',     icon:'✨'},
+  {key:'credit',        label:'Tokenized Credit',        icon:'📋'},
+  {key:'governance',    label:'Governance Asset',        icon:'⚖️'},
+  {key:'unknown',       label:'Unknown Asset',           icon:'❓'},
+];
+
+const ASSETS = {
+  stablecoin: {
+    what:'A digital token designed to maintain a fixed value (usually 1:1 with USD). Common examples: USDC, USDT, AUDD.',
+    issuer:'Regulated issuers backed by cash and short-term securities. Quality and safety varies significantly by issuer.',
+    rights:['Exchange at or near face value','Use as a settlement or payment medium','Earn yield on some platforms (not guaranteed)'],
+    redemption:'Generally redeemable 1:1 with fiat, but depends entirely on issuer solvency and platform terms.',
+    holders:'Generally available. Some platforms require KYC. Jurisdiction restrictions may apply.',
+    risks:['Issuer insolvency (reserves may not fully back supply)','Depegging risk (price can fall below $1)','Regulatory restriction risk','Platform or exchange failure'],
+    missionFit:{merchant:'High — ideal for merchant settlement and cross-border payments',creator:'High — stable income receipt and payment',learner:'Medium — good to understand, not essential to hold',community:'High — treasury management and cross-border remittance',cultural:'Low — no direct cultural asset use',governance:'Medium — useful for treasury operations',family:'High — stable value for savings and remittance'},
+    action:'prepare',
+    note:'Stablecoins can be a useful settlement and savings tool if you understand the issuer risk. USDC (Circle) is generally considered lower risk than USDT. Never treat a stablecoin as equivalent to cash held at a regulated bank.',
+  },
+  equity: {
+    what:'A digital token representing exposure to a share in a publicly traded company. The token may confer price exposure but may not transfer legal ownership of the underlying share.',
+    issuer:'Regulated securities issuers or tokenization platforms. The issuing entity, custodian, and legal wrapper are critical to understand.',
+    rights:['Price exposure to company performance','Possible dividend distributions (issuer-dependent)','May or may not include voting rights','May not constitute legal ownership of the underlying share'],
+    redemption:'Indirect — redemption depends on the platform and legal structure. Not all tokenized equities allow redemption for underlying shares.',
+    holders:'Generally restricted to eligible or accredited investors. Jurisdiction approval, KYC, and investment qualification may be required.',
+    risks:['Market risk (equity values can fall sharply)','Liquidity risk (may be harder to sell than exchange-listed shares)','Legal risk (token may not be legal share ownership)','Issuer or custodian failure','Regulatory risk (securities laws vary by jurisdiction)','Concentration risk (thinly traded markets)'],
+    missionFit:{merchant:'Low — not directly useful for merchant operations',creator:'Low — not mission-aligned without specific investment context',learner:'High — excellent learning case for digital assets and markets',community:'Low — unsuitable for community treasury without regulatory advice',cultural:'Low — no cultural relevance',governance:'Medium — useful for governance education on digital assets',family:'Medium — relevant if learning about asset ownership and wealth'},
+    action:'learn',
+    note:'Tokenized equities are a complex new instrument. The token price may track the underlying stock, but legal ownership, redemption, and liquidity are not guaranteed. Do not interact without understanding the issuer, jurisdiction, and your eligibility.',
+  },
+  treasury: {
+    what:'A token representing exposure to yield from government bonds or money market instruments (e.g. US Treasury bills). Often structured as a fund or note with onchain distribution.',
+    issuer:'Asset managers, funds, or regulated platforms. Underlying instruments are typically short-term government securities.',
+    rights:['Access to yield generated by underlying government instruments','Some products offer daily liquidity and near-instant redemption','Others have lock-up periods or minimum redemption sizes'],
+    redemption:'Varies by product. Some offer T+0 or T+1 redemption. Others have lock-up periods or minimum sizes.',
+    holders:'Often restricted for US retail investors. Generally available to non-US persons in many jurisdictions. KYC typically required.',
+    risks:['Interest rate risk (yields change with policy)','Redemption restriction risk (if liquidity windows are limited)','Fund or issuer failure','Regulatory risk (jurisdiction-specific)','Smart-contract risk'],
+    missionFit:{merchant:'Medium — potential short-term treasury yield tool for business funds',creator:'Low — not directly mission-aligned',learner:'High — strong education case for understanding yield products',community:'High — potential community treasury yield tool (with professional advice)',cultural:'Low — no cultural relevance',governance:'High — relevant for treasury governance review and community funds',family:'High — potential for yield on savings (eligibility check required)'},
+    action:'learn',
+    note:'Tokenized Treasury products can offer better yield than idle stablecoins, but they are not savings accounts. Understand the product structure, redemption terms, and your jurisdiction eligibility before interacting.',
+  },
+  cultural: {
+    what:'A digital representation of cultural intellectual property — art, story, song, ceremony, design, or knowledge — that carries cultural permissions, attribution requirements, and potentially restricted commercial use.',
+    issuer:'Cultural creators, communities, families, elders, or cultural institutions. The creator or community of origin is the governing authority, not the platform.',
+    rights:['Attribution right (credit to original creator or community)','Possible commercial license (only if explicitly granted)','Educational or viewing access','Governance rights (if community-held)'],
+    redemption:'Not applicable in most cases. Cultural assets are not redeemable for monetary value without explicit terms set by the cultural authority.',
+    holders:'Varies by cultural protocol. Some are public; others require community membership, elder approval, or cultural connection.',
+    risks:['Unauthorised commercialisation','Attribution violation','Cultural harm from misuse or decontextualisation','Unclear permission chain','Legal risk if cultural IP rights are violated'],
+    missionFit:{merchant:'High — if selling culturally created products with proper permission and attribution',creator:'High — if you are the creator or have explicit community permission',learner:'High — essential understanding for anyone engaging with Indigenous or Pacific cultural content',community:'High — communities protecting their cultural assets and permissions',cultural:'High — the primary mission for cultural stewards and elders',governance:'Medium — relevant for governance proposals around cultural protocols',family:'High — relevant for family legacy, archive, and generational memory protection'},
+    action:'request-review',
+    note:'Cultural assets require the highest level of care. Before any commercial interaction, ensure you have clear permission from the cultural authority (creator, family, community, or elder). IN$DEX Cultural Rights Graph can verify permissions. When in doubt: educate first, act later, with explicit consent.',
+  },
+  marketplace: {
+    what:'A product, service, digital item, or real-world asset listed in the IN$DEX Marketplace by a citizen merchant or creator. May include physical goods, digital downloads, access rights, or service bookings.',
+    issuer:'The listing citizen or merchant. Quality, authenticity, and trust depend on the seller\'s reputation, Wisdom Score, and verification status.',
+    rights:['Product or service as described in the listing','Exchange of value in INDX or stablecoin','Possible return or dispute rights under IN$DEX terms'],
+    redemption:'Product or service delivery per listing terms.',
+    holders:'Generally available to all IN$DEX citizens. Some listings may be restricted to verified buyers or community members.',
+    risks:['Product quality or description mismatch','Seller non-delivery','Cultural asset misuse if listing involves unverified IP','Dispute resolution process required if issue arises'],
+    missionFit:{merchant:'High — your primary trading environment as a seller',creator:'High — sell digital products and services here',learner:'Medium — buy learning resources, skills, and knowledge',community:'High — buy and sell community-relevant goods and services',cultural:'Medium — buy or sell cultural products with proper permissions',governance:'Low — not directly governance-relevant',family:'High — buy and sell goods for family and household needs'},
+    action:'trade',
+    note:'Marketplace assets are listed by IN$DEX citizens. Always check the seller\'s Wisdom Score, listing reviews, and cultural permission status before buying. For large purchases, use SIINDEX to request a review before transacting.',
+  },
+  collectible: {
+    what:'A unique or limited-edition digital item — image, audio, video, or interactive piece — that may carry proof of ownership, provenance, and transfer rights. Not all digital collectibles are valuable or legitimate.',
+    issuer:'Creators, artists, cultural makers, brands, or platforms. Legitimacy and value depend entirely on the issuer and community around the item.',
+    rights:['Digital ownership of the specific item (not the underlying copyright unless explicitly stated)','Transfer or resale rights','Display or use rights as defined by creator terms'],
+    redemption:'Generally not redeemable for fiat. Resale value is market-driven and speculative.',
+    holders:'Generally open. Some collections are gated by community membership or wallet eligibility.',
+    risks:['Speculative value risk (price may fall to zero)','Illiquidity risk (no buyer may exist)','Creator abandonment risk','Copyright confusion (owning the token ≠ owning the copyright)','Smart-contract risk','Fraud and forgery risk'],
+    missionFit:{merchant:'Medium — potential resale business, but highly speculative',creator:'High — creating and selling digital collectibles as primary creator income',learner:'High — important case study in digital ownership, rights, and speculation',community:'Medium — community collectibles for shared cultural identity',cultural:'High — important to protect legitimate cultural collectibles from unauthorised reproduction',governance:'Low — not directly governance-relevant',family:'Low — generally not suitable as a family asset without specific verified creator context'},
+    action:'learn',
+    note:'Digital collectibles can represent genuine creator income and cultural value — or pure speculation. Before buying, understand who created it, what rights you actually receive, whether the community is real, and what you would do if you could never sell it.',
+  },
+  credit: {
+    what:'A digital token representing a loan, bond, invoice, or credit instrument. The holder may receive interest payments and principal repayment at maturity if the borrower does not default.',
+    issuer:'Asset managers, fintech platforms, or DeFi protocols. Underlying borrowers, credit quality, and legal enforceability vary widely.',
+    rights:['Scheduled interest payments (if borrower performs)','Principal repayment at maturity (if no default)','Priority claim in liquidation (in some structures only)'],
+    redemption:'Depends on credit structure. Some are liquid; most are illiquid until maturity.',
+    holders:'Generally restricted to eligible investors. KYC and jurisdiction requirements typically apply.',
+    risks:['Credit risk (borrower default = loss of principal)','Illiquidity risk (hard to sell before maturity)','Legal enforceability risk','Smart-contract risk','Concentration risk','Regulatory risk'],
+    missionFit:{merchant:'Medium — invoice financing may be relevant for business cashflow',creator:'Low — not directly mission-aligned',learner:'High — important to understand credit products in the digital economy',community:'Low — generally not suitable without professional financial advice',cultural:'Low — no cultural relevance',governance:'Medium — relevant for treasury governance and community lending discussions',family:'Low — not suitable without financial advice and eligibility confirmation'},
+    action:'request-review',
+    note:'Tokenized credit products can offer higher yields, but they carry real risk of total loss. The borrower may default. The product may be illiquid. Legal recovery may be slow or uncertain. Never commit funds to a credit product without understanding the borrower, credit quality, and your ability to absorb a complete loss.',
+  },
+  governance: {
+    what:'A token conferring voting rights, proposal rights, or protocol governance participation in an IN$DEX Mission Room, community treasury, or external protocol.',
+    issuer:'IN$DEX Governance system, community treasury, or external protocol. Legitimacy depends on the governing community.',
+    rights:['Voting on proposals','Submitting proposals (if threshold met)','Review of treasury actions','Protocol governance participation'],
+    redemption:'Generally not redeemable. Governance tokens represent participation rights, not monetary claims.',
+    holders:'Typically community members, INDX holders, or specific stakeholder roles. Eligibility varies by proposal scope.',
+    risks:['Vote manipulation by concentrated holders','Low participation allowing bad proposals to pass','Governance capture','Technical bugs in vote execution','Regulatory risk in some jurisdictions'],
+    missionFit:{merchant:'Medium — relevant for governance of marketplace and trading rules',creator:'Medium — relevant for governance of creator rights and platform policy',learner:'High — excellent learning opportunity in how decentralised governance works',community:'High — core to community governance participation and collective decision-making',cultural:'High — critical for cultural protocol governance and community decisions',governance:'High — this is the primary mission asset for governance participants',family:'Low — not typically relevant unless family is an active governance stakeholder'},
+    action:'learn',
+    note:'Governance tokens give you a voice in how the system runs. Use that voice thoughtfully. Understand what a proposal changes, who benefits, and what the risks are before voting. Low participation allows concentrated actors to pass proposals that harm the broader community.',
+  },
+  unknown: {
+    what:'This asset has not been classified or verified. Its nature, issuer, rights, and risks are all unknown.',
+    issuer:'Unknown. Could be a legitimate issuer, an unverified platform, or a fraudulent project.',
+    rights:['Unknown. No rights can be confirmed until the asset is verified by a trusted authority.'],
+    redemption:'Unknown. Do not assume any redemption is possible.',
+    holders:'Unknown.',
+    risks:['Fraud or scam risk','Total loss of funds','No legal recourse','Unaudited smart-contract risk','No regulatory protection','Phishing or social engineering risk'],
+    missionFit:{merchant:'None — do not use unknown assets in business operations',creator:'None — do not use unknown assets in creative work',learner:'Low — only as a case study in what to identify and avoid',community:'None — do not use in community treasury or collective funds',cultural:'None — do not use with cultural assets or community resources',governance:'None — do not use in governance votes or treasury decisions',family:'None — do not expose family assets to unknown instruments'},
+    action:'blocked',
+    note:'This asset is unknown. IN$DEX cannot verify its issuer, rights, or safety. Do not interact until it has been reviewed and classified by a trusted source. If someone is pressuring you to interact with an unknown asset, treat it as a likely scam.',
+  },
+};
+
+const FIT_LEVELS = {
+  'High':'mf-high', 'Medium':'mf-medium', 'Low':'mf-low', 'None':'mf-none',
+};
+
+const ACTION_META = {
+  'prepare':        {label:'Prepare with SIINDEX', cls:'action-prepare'},
+  'learn':          {label:'Learn about this asset', cls:'action-learn'},
+  'request-review': {label:'Request SIINDEX Review', cls:'action-review'},
+  'trade':          {label:'Proceed with SIINDEX Guidance', cls:'action-trade'},
+  'blocked':        {label:'Do Not Interact', cls:'action-blocked'},
+};
+
+let selectedRole = null;
+let selectedAsset = null;
+let currentAnalysis = null;
+
+function init() {
+  renderRoles();
+  renderAssets();
+  renderLedger();
+}
+
+function renderRoles() {
+  document.getElementById('roleRow').innerHTML = ROLES.map(r =>
+    `<button class="role-chip" id="rc_${r.key}" onclick="pickRole('${r.key}')">${r.label}</button>`
+  ).join('');
+}
+
+function renderAssets() {
+  document.getElementById('assetGrid').innerHTML = ASSET_TYPES.map(a =>
+    `<div class="asset-chip" id="ac_${a.key}" onclick="pickAsset('${a.key}')">
+       <div class="asset-chip-icon">${a.icon}</div>
+       <div class="asset-chip-label">${a.label}</div>
+     </div>`
+  ).join('');
+}
+
+function pickRole(key) {
+  selectedRole = selectedRole === key ? null : key;
+  ROLES.forEach(r => {
+    const el = document.getElementById('rc_' + r.key);
+    el.classList.toggle('selected', r.key === selectedRole);
+  });
+  updateBtn();
+}
+
+function pickAsset(key) {
+  selectedAsset = selectedAsset === key ? null : key;
+  ASSET_TYPES.forEach(a => {
+    const el = document.getElementById('ac_' + a.key);
+    el.classList.toggle('selected', a.key === selectedAsset);
+  });
+  const label = selectedAsset ? ASSET_TYPES.find(a => a.key === selectedAsset).label : 'choose one';
+  document.getElementById('assetSub').textContent = selectedAsset ? label : 'choose one';
+  updateBtn();
+}
+
+function updateBtn() {
+  document.getElementById('analyseBtn').disabled = !(selectedRole && selectedAsset);
+}
+
+function analyse() {
+  showProc(() => {
+    buildAnalysis();
+  });
+}
+
+function showProc(cb) {
+  const overlay = document.getElementById('procOverlay');
+  overlay.classList.add('active');
+  let i = 0;
+  function tick() {
+    if (i > 0) {
+      document.getElementById('sd'+(i-1)).className='step-dot done';
+      document.getElementById('sl'+(i-1)).className='step-label done';
+    }
+    if (i < 4) {
+      document.getElementById('sd'+i).className='step-dot active';
+      document.getElementById('sl'+i).className='step-label active';
+      i++;
+      setTimeout(tick, 680);
+    } else {
+      overlay.classList.remove('active');
+      for(let j=0;j<4;j++){
+        document.getElementById('sd'+j).className='step-dot';
+        document.getElementById('sl'+j).className='step-label';
+      }
+      cb();
+    }
+  }
+  tick();
+}
+
+function buildAnalysis() {
+  const data = ASSETS[selectedAsset];
+  const assetMeta = ASSET_TYPES.find(a => a.key === selectedAsset);
+  const role = ROLES.find(r => r.key === selectedRole);
+  const assetName = document.getElementById('assetName').value.trim() ||
+    assetMeta.label;
+  const fitText = data.missionFit[selectedRole] || 'No direct mission fit identified.';
+  const fitLevel = fitText.startsWith('High') ? 'High'
+    : fitText.startsWith('Medium') ? 'Medium'
+    : fitText.startsWith('Low') ? 'Low' : 'None';
+  const am = ACTION_META[data.action];
+
+  currentAnalysis = {
+    assetKey: selectedAsset,
+    assetLabel: assetMeta.label,
+    assetIcon: assetMeta.icon,
+    assetName,
+    role: role.label,
+    fitLevel,
+    action: data.action,
+    ts: Date.now(),
+  };
+
+  const rightsHtml = data.rights.map(r =>
+    `<div class="dim-list-item">${r}</div>`).join('');
+  const risksHtml = data.risks.map(r =>
+    `<div class="dim-list-item risk-list-item">${r}</div>`).join('');
+
+  document.getElementById('analysisCard').innerHTML = `
+    <div class="analysis-header">
+      <div class="analysis-asset-icon">${assetMeta.icon}</div>
+      <div class="analysis-asset-label">${assetMeta.label}</div>
+      <div class="analysis-asset-name">${assetName}</div>
+    </div>
+
+    <div class="dim">
+      <div class="dim-label"><span class="dim-number">1</span>What is this asset?</div>
+      <div class="dim-content">${data.what}</div>
+    </div>
+    <div class="dim">
+      <div class="dim-label"><span class="dim-number">2</span>Who issued it?</div>
+      <div class="dim-content">${data.issuer}</div>
+    </div>
+    <div class="dim">
+      <div class="dim-label"><span class="dim-number">3</span>What rights does it give?</div>
+      <div class="dim-list">${rightsHtml}</div>
+    </div>
+    <div class="dim">
+      <div class="dim-label"><span class="dim-number">4</span>Can it be redeemed?</div>
+      <div class="dim-content">${data.redemption}</div>
+    </div>
+    <div class="dim">
+      <div class="dim-label"><span class="dim-number">5</span>Who can hold it?</div>
+      <div class="dim-content">${data.holders}</div>
+    </div>
+    <div class="dim">
+      <div class="dim-label"><span class="dim-number">6</span>What can go wrong?</div>
+      <div class="dim-list">${risksHtml}</div>
+    </div>
+    <div class="dim">
+      <div class="dim-label"><span class="dim-number">7</span>Does it fit your mission?</div>
+      <div class="mission-fit-block" style="padding:0;border:none;background:none;margin:0">
+        <span class="mf-badge ${FIT_LEVELS[fitLevel]}">${fitLevel} fit — ${role.label}</span>
+        <div class="mf-reason" style="padding:0;margin-top:6px">${fitText}</div>
+      </div>
+    </div>
+    <div class="dim">
+      <div class="dim-label"><span class="dim-number">8</span>What action is allowed?</div>
+      <div class="dim-action">
+        <span class="action-pill ${am.cls}">${am.label}</span>
+      </div>
+    </div>
+
+    <div class="siindex-note">
+      <div class="sn-label">SIINDEX says</div>
+      <div class="sn-text">${data.note}</div>
+    </div>
+
+    <div class="card-actions">
+      <button class="ca-log" onclick="logToLedger()">Save to Decision Ledger</button>
+      <button class="ca-discard" onclick="discardAnalysis()">Dismiss</button>
+    </div>
+  `;
+  document.getElementById('analysisCard').style.display = 'block';
+  document.getElementById('analysisCard').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function logToLedger() {
+  if (!currentAnalysis) return;
+  const ledger = JSON.parse(localStorage.getItem(LEDGER_KEY) || '[]');
+  ledger.unshift(currentAnalysis);
+  if (ledger.length > 50) ledger.length = 50;
+  localStorage.setItem(LEDGER_KEY, JSON.stringify(ledger));
+  discardAnalysis();
+  renderLedger();
+}
+
+function discardAnalysis() {
+  document.getElementById('analysisCard').style.display = 'none';
+  document.getElementById('analysisCard').innerHTML = '';
+  currentAnalysis = null;
+}
+
+function renderLedger() {
+  const ledger = JSON.parse(localStorage.getItem(LEDGER_KEY) || '[]');
+  document.getElementById('ledgerCount').textContent = `${ledger.length} entr${ledger.length===1?'y':'ies'}`;
+  const area = document.getElementById('ledgerArea');
+  if (!ledger.length) {
+    area.innerHTML = `<div class="ledger-empty">
+      <div class="ledger-empty-box">
+        <p>Every SIINDEX asset analysis you save will appear here.</p>
+      </div>
+    </div>`;
+    return;
+  }
+  area.innerHTML = `<div class="ledger-strip">` +
+    ledger.map(e => `<div class="ledger-card">
+      <div class="lc-icon">${e.assetIcon}</div>
+      <div class="lc-type">${e.assetLabel}</div>
+      <div class="lc-name">${e.assetName}</div>
+      <div class="lc-ts">${e.role} · ${new Date(e.ts).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})}</div>
+    </div>`).join('') + `</div>`;
+}
+
+// ── GOD MODE: Selection Draft Save + Restore ──
+const AM_DRAFT_KEY = 'indx_asset_meaning_draft';
+
+function amSaveDraft() {
+  const name = document.getElementById('assetName').value.trim();
+  const draft = { role: selectedRole, asset: selectedAsset, name };
+  if (draft.role || draft.asset) localStorage.setItem(AM_DRAFT_KEY, JSON.stringify(draft));
+  else localStorage.removeItem(AM_DRAFT_KEY);
+}
+
+function amCheckDraft() {
+  const raw = localStorage.getItem(AM_DRAFT_KEY);
+  if (!raw) return;
+  const d = JSON.parse(raw);
+  if (d.role || d.asset) document.getElementById('amDraftBanner').classList.add('visible');
+}
+
+function amRestoreDraft() {
+  const raw = localStorage.getItem(AM_DRAFT_KEY);
+  if (!raw) return;
+  const d = JSON.parse(raw);
+  if (d.role)  pickRole(d.role);
+  if (d.asset) pickAsset(d.asset);
+  if (d.name)  document.getElementById('assetName').value = d.name;
+  updateBtn();
+  amDismissDraft();
+}
+
+function amDismissDraft() {
+  document.getElementById('amDraftBanner').classList.remove('visible');
+  localStorage.removeItem(AM_DRAFT_KEY);
+}
+
+// Patch pickers to save draft
+const _amOrigPickRole = pickRole;
+pickRole = function(key) { _amOrigPickRole(key); amSaveDraft(); };
+const _amOrigPickAsset = pickAsset;
+pickAsset = function(key) { _amOrigPickAsset(key); amSaveDraft(); };
+document.addEventListener('input', e => {
+  if (e.target.id === 'assetName') amSaveDraft();
+}, true);
+
+// Clear draft after analysis is saved
+const _amOrigLogToLedger = logToLedger;
+logToLedger = function() {
+  _amOrigLogToLedger();
+  localStorage.removeItem(AM_DRAFT_KEY);
+};
+
+// ── GOD MODE: Risk Score Badge in Analysis Card ──
+function calcRiskScore(assetKey) {
+  const data = ASSETS[assetKey];
+  if (!data) return {label:'Unknown', cls:'risk-medium', pct:50};
+  const riskCount = data.risks.length;
+  const actionWeight = {learn:1, prepare:2, 'request-review':3, trade:2, blocked:4}[data.action] || 2;
+  const score = riskCount + actionWeight;
+  if (data.action === 'blocked')   return {label:'Critical', cls:'risk-critical', pct:100, color:'var(--red)'};
+  if (score >= 9)                  return {label:'High',     cls:'risk-high',     pct:80,  color:'var(--red)'};
+  if (score >= 6)                  return {label:'Medium',   cls:'risk-medium',   pct:50,  color:'var(--gold)'};
+  return                                  {label:'Low',      cls:'risk-low',      pct:25,  color:'var(--green)'};
+}
+
+// GOD MODE PATCH: buildAnalysis — inject risk score row
+const _amOrigBuild = buildAnalysis;
+buildAnalysis = function() {
+  _amOrigBuild();
+  const card = document.getElementById('analysisCard');
+  const header = card.querySelector('.analysis-header');
+  if (!header || !selectedAsset) return;
+  const rs = calcRiskScore(selectedAsset);
+  const riskRow = document.createElement('div');
+  riskRow.className = 'risk-score-row';
+  riskRow.innerHTML = `
+    <span class="risk-score-label">Risk</span>
+    <span class="risk-badge ${rs.cls}">${rs.label}</span>
+    <div class="risk-bar-wrap">
+      <div class="risk-bar-fill" style="width:${rs.pct}%;background:${rs.color}"></div>
+    </div>`;
+  header.after(riskRow);
+};
+
+// ── GOD MODE: Ledger Stats Bar ──
+function renderLedgerStats() {
+  const ledger = JSON.parse(localStorage.getItem(LEDGER_KEY) || '[]');
+  document.getElementById('lsTotal').textContent   = ledger.length;
+  document.getElementById('lsBlocked').textContent = ledger.filter(e=>e.action==='blocked').length;
+  document.getElementById('lsHighFit').textContent = ledger.filter(e=>e.fitLevel==='High').length;
+}
+
+// ── GOD MODE: Ledger Detail Sheet ──
+let activeLedgerIdx = null;
+
+function openLedgerDetail(idx) {
+  const ledger = JSON.parse(localStorage.getItem(LEDGER_KEY) || '[]');
+  const e = ledger[idx];
+  if (!e) return;
+  activeLedgerIdx = idx;
+  document.getElementById('ldIcon').textContent = e.assetIcon || '❓';
+  document.getElementById('ldType').textContent = e.assetLabel || '';
+  document.getElementById('ldName').textContent = e.assetName  || '';
+  hideLdDelConfirm();
+  const am = ACTION_META[e.action] || {label:e.action};
+  const fitCls = {'High':'mf-high','Medium':'mf-medium','Low':'mf-low','None':'mf-none'}[e.fitLevel] || 'mf-none';
+  document.getElementById('ldBody').innerHTML = `
+    <div class="ld-row"><span class="ld-key">Mission role</span><span class="ld-val">${e.role || '—'}</span></div>
+    <div class="ld-row"><span class="ld-key">Mission fit</span><span class="mf-badge ${fitCls}" style="font-size:11px;padding:3px 9px">${e.fitLevel || '—'}</span></div>
+    <div class="ld-row"><span class="ld-key">SIINDEX action</span><span class="action-pill ${am.cls||''}" style="font-size:11px;padding:3px 9px">${am.label}</span></div>
+    <div class="ld-row"><span class="ld-key">Analysed</span><span class="ld-val" style="color:rgba(255,255,255,.4)">${new Date(e.ts).toLocaleString('en-AU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></div>
+  `;
+  document.getElementById('ldOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('ledgerDetailSheet').classList.add('open'), 10);
+}
+
+function closeLedgerDetail() {
+  document.getElementById('ledgerDetailSheet').classList.remove('open');
+  setTimeout(() => {
+    document.getElementById('ldOverlay').classList.remove('open');
+    activeLedgerIdx = null;
+  }, 300);
+}
+
+function showLdDelConfirm() { document.getElementById('ldDelConfirm').classList.add('visible'); }
+function hideLdDelConfirm() { document.getElementById('ldDelConfirm').classList.remove('visible'); }
+
+function deleteLedgerItem() {
+  if (activeLedgerIdx === null) return;
+  let ledger = JSON.parse(localStorage.getItem(LEDGER_KEY) || '[]');
+  ledger.splice(activeLedgerIdx, 1);
+  localStorage.setItem(LEDGER_KEY, JSON.stringify(ledger));
+  closeLedgerDetail();
+  renderLedger();
+  renderLedgerStats();
+}
+
+// GOD MODE PATCH: renderLedger — make cards tappable + update stats
+const _amOrigRenderLedger = renderLedger;
+renderLedger = function() {
+  _amOrigRenderLedger();
+  renderLedgerStats();
+  const strip = document.querySelector('.ledger-strip');
+  if (!strip) return;
+  strip.querySelectorAll('.ledger-card').forEach((card, idx) => {
+    card.style.cursor = 'pointer';
+    card.onclick = () => openLedgerDetail(idx);
+  });
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+  init();
+  amCheckDraft();
+});
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

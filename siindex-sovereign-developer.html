@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SIINDEX Sovereign Developer Layer</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+    --black:#090A10; --green:#00E5A0; --gold:#FFB800;
+    --red:#FF4D6D; --surface:#12141F; --surface2:#1A1D2E;
+    --surface3:#22263A; --muted:#6B7280; --text:#E8EAF0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',system-ui,sans-serif;min-height:100vh;overflow-x:hidden;}
+
+  .screen-header{background:var(--surface);border-bottom:1px solid var(--surface3);padding:16px 20px;}
+  .screen-eyebrow{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--purple);margin-bottom:4px;}
+  .screen-title{font-size:22px;font-weight:800;}
+  .screen-sub{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5;}
+
+  .nav-tabs{display:flex;border-bottom:1px solid var(--surface3);background:var(--surface);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .nav-tabs::-webkit-scrollbar{display:none;}
+  .nav-tab{flex-shrink:0;padding:12px 16px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s;}
+  .nav-tab.active{color:var(--cyan);border-bottom-color:var(--cyan);}
+  .tab-content{display:none;padding:16px 20px 100px;}
+  .tab-content.active{display:block;}
+  .sect-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;margin-top:20px;}
+  .sect-label:first-child{margin-top:0;}
+  .card{background:var(--surface2);border:1px solid var(--surface3);border-radius:16px;padding:16px;margin-bottom:12px;}
+
+  /* ── OVERVIEW ── */
+  .vel-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  .vel-card{background:var(--surface2);border:1.5px solid var(--surface3);border-radius:14px;padding:14px;}
+  .vel-val{font-size:28px;font-weight:800;line-height:1;}
+  .vel-lbl{font-size:11px;color:var(--muted);margin-top:4px;}
+  .vel-sub{font-size:11px;margin-top:4px;}
+
+  .spark-row{display:flex;align-items:flex-end;gap:3px;height:32px;margin-top:8px;}
+  .spark-bar{flex:1;border-radius:3px 3px 0 0;min-height:4px;background:var(--cyan);opacity:.5;transition:opacity .2s;}
+  .spark-bar.today{opacity:1;}
+
+  /* ── GM1: BUILD PROTOCOL ── */
+  .build-selector{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none;}
+  .build-selector::-webkit-scrollbar{display:none;}
+  .build-select-btn{flex-shrink:0;padding:8px 16px;border-radius:10px;background:var(--surface2);border:1.5px solid var(--surface3);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .build-select-btn.active{background:rgba(0,212,255,.1);border-color:var(--cyan);color:var(--cyan);}
+
+  .build-new-row{display:flex;gap:8px;margin-bottom:14px;}
+  .build-new-input{flex:1;background:var(--surface2);border:1.5px solid var(--surface3);border-radius:10px;color:var(--text);font-size:13px;padding:9px 12px;}
+  .build-new-input:focus{outline:none;border-color:rgba(0,212,255,.4);}
+  .build-new-btn{background:var(--cyan);color:#000;font-size:13px;font-weight:800;border:none;border-radius:10px;padding:9px 16px;cursor:pointer;flex-shrink:0;}
+
+  .protocol-progress{background:var(--surface2);border:1px solid var(--surface3);border-radius:14px;padding:14px;margin-bottom:12px;}
+  .pp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .pp-name{font-size:13px;font-weight:800;color:var(--cyan);}
+  .pp-pct{font-size:12px;color:var(--muted);}
+  .pp-bar{height:5px;background:var(--surface3);border-radius:3px;overflow:hidden;margin-bottom:12px;}
+  .pp-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--purple));border-radius:3px;transition:width .4s;}
+
+  .step-list{display:flex;flex-direction:column;gap:6px;}
+  .step-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;transition:background .15s;user-select:none;}
+  .step-item.done{background:rgba(0,229,160,.05);}
+  .step-item.active{background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.2);}
+  .step-item.pending{background:var(--surface3);}
+  .step-item:active{transform:scale(.99);}
+  .step-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;}
+  .step-num.done{background:rgba(0,229,160,.2);color:var(--green);}
+  .step-num.active{background:rgba(0,212,255,.2);color:var(--cyan);}
+  .step-num.pending{background:var(--surface3);color:var(--muted);}
+  .step-label{font-size:12px;font-weight:600;flex:1;}
+  .step-label.done{color:var(--green);}
+  .step-label.active{color:var(--cyan);}
+  .step-label.pending{color:var(--muted);}
+  .step-check{font-size:14px;}
+
+  .step-notes{background:var(--surface2);border:1px solid rgba(0,212,255,.2);border-radius:10px;padding:10px 12px;margin-top:8px;}
+  .step-notes-label{font-size:10px;color:var(--cyan);font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.8px;}
+  .step-notes-input{width:100%;background:transparent;border:none;color:var(--text);font-size:12px;resize:none;outline:none;font-family:inherit;line-height:1.5;}
+
+  /* ── GM2: DEVELOPER AGENTS ── */
+  .agent-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .agent-card{background:var(--surface2);border:1.5px solid var(--surface3);border-radius:14px;padding:13px;cursor:pointer;transition:border-color .2s;}
+  .agent-card.active-agent{border-color:rgba(0,229,160,.35);}
+  .agent-card.standby{border-color:var(--surface3);}
+  .agent-card.offline{border-color:rgba(107,114,128,.2);opacity:.6;}
+  .agent-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;}
+  .agent-icon{font-size:22px;}
+  .agent-status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+  .agent-status-dot.active{background:var(--green);box-shadow:0 0 6px var(--green);}
+  .agent-status-dot.standby{background:var(--gold);}
+  .agent-status-dot.offline{background:var(--muted);}
+  .agent-name{font-size:12px;font-weight:800;color:var(--text);margin-bottom:3px;}
+  .agent-task{font-size:10px;color:var(--muted);line-height:1.4;margin-bottom:5px;}
+  .agent-last{font-size:10px;color:var(--surface3);font-style:italic;}
+  .agent-action-btn{width:100%;background:var(--surface3);border:none;border-radius:7px;color:var(--cyan);font-size:11px;font-weight:700;padding:6px;cursor:pointer;margin-top:6px;}
+
+  .agent-assign-sheet{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--surface3);border-radius:20px 20px 0 0;padding:20px;z-index:50;transform:translateY(100%);transition:transform .3s cubic-bezier(.34,1.2,.64,1);}
+  .agent-assign-sheet.open{transform:translateY(0);}
+  .sheet-handle{width:36px;height:4px;background:var(--surface3);border-radius:2px;margin:0 auto 16px;}
+  .sheet-title{font-size:15px;font-weight:800;margin-bottom:12px;color:var(--cyan);}
+  .assign-input{width:100%;background:var(--surface2);border:1.5px solid var(--surface3);border-radius:10px;color:var(--text);font-size:13px;padding:10px 12px;margin-bottom:10px;}
+  .assign-input:focus{outline:none;border-color:rgba(0,212,255,.4);}
+  .assign-btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .assign-confirm{background:var(--cyan);color:#000;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;}
+  .assign-cancel{background:var(--surface2);border:1.5px solid var(--surface3);border-radius:10px;padding:11px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;}
+  .sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;display:none;}
+  .sheet-overlay.open{display:block;}
+
+  /* ── GM3: VELOCITY DASHBOARD ── */
+  .vel-detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+  .vel-detail-card{background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:12px;text-align:center;}
+  .vel-detail-val{font-size:20px;font-weight:800;}
+  .vel-detail-lbl{font-size:10px;color:var(--muted);margin-top:3px;}
+
+  .next-build-card{background:linear-gradient(135deg,rgba(43,53,216,.2),rgba(139,63,232,.12));border:1px solid rgba(139,63,232,.3);border-radius:14px;padding:14px;margin-bottom:12px;}
+  .nb-eyebrow{font-size:10px;color:var(--purple);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
+  .nb-title{font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px;}
+  .nb-desc{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px;}
+  .nb-btn{background:var(--purple);color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;}
+
+  .weekly-chart{background:var(--surface2);border:1px solid var(--surface3);border-radius:14px;padding:14px;margin-bottom:12px;}
+  .wc-title{font-size:12px;font-weight:700;margin-bottom:10px;}
+  .wc-bars{display:flex;align-items:flex-end;gap:6px;height:60px;}
+  .wc-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .wc-bar{width:100%;border-radius:4px 4px 0 0;min-height:4px;background:var(--cyan);opacity:.5;transition:height .3s;}
+  .wc-bar.today-bar{opacity:1;background:linear-gradient(180deg,var(--cyan),var(--purple));}
+  .wc-day{font-size:9px;color:var(--muted);}
+  .wc-count{font-size:9px;color:var(--muted);font-weight:600;}
+
+  /* ── GM4: FEATURE BACKLOG ── */
+  .backlog-add{background:var(--surface2);border:1px solid var(--surface3);border-radius:14px;padding:14px;margin-bottom:12px;}
+  .backlog-add-title{font-size:12px;font-weight:700;margin-bottom:10px;color:var(--text);}
+  .bl-input{width:100%;background:var(--surface3);border:1.5px solid var(--surface3);border-radius:9px;color:var(--text);font-size:13px;padding:9px 12px;margin-bottom:8px;}
+  .bl-input:focus{outline:none;border-color:rgba(0,212,255,.35);}
+  .bl-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+  .bl-select{background:var(--surface3);border:1.5px solid var(--surface3);border-radius:9px;color:var(--text);font-size:12px;padding:9px 12px;width:100%;cursor:pointer;}
+  .bl-add-btn{width:100%;background:var(--surface3);border:1.5px solid var(--cyan);border-radius:10px;color:var(--cyan);font-size:13px;font-weight:800;padding:10px;cursor:pointer;}
+
+  .backlog-tabs{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;scrollbar-width:none;}
+  .backlog-tabs::-webkit-scrollbar{display:none;}
+  .bl-tab{flex-shrink:0;padding:6px 14px;border-radius:8px;background:var(--surface2);border:1.5px solid var(--surface3);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;}
+  .bl-tab.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,.08);}
+
+  .feature-card{background:var(--surface2);border:1.5px solid var(--surface3);border-radius:13px;padding:13px;margin-bottom:8px;}
+  .feature-card.p0{border-left:3px solid var(--red);}
+  .feature-card.p1{border-left:3px solid var(--gold);}
+  .feature-card.p2{border-left:3px solid var(--surface3);}
+  .feature-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px;}
+  .feature-title{font-size:13px;font-weight:800;color:var(--text);flex:1;padding-right:8px;}
+  .feature-badges{display:flex;gap:4px;flex-shrink:0;}
+  .priority-badge{font-size:10px;padding:2px 8px;border-radius:5px;font-weight:800;}
+  .priority-badge.p0{background:rgba(255,77,109,.15);color:var(--red);}
+  .priority-badge.p1{background:rgba(255,184,0,.12);color:var(--gold);}
+  .priority-badge.p2{background:rgba(107,114,128,.1);color:var(--muted);}
+  .status-badge{font-size:10px;padding:2px 8px;border-radius:5px;font-weight:700;}
+  .status-badge.backlog{background:rgba(107,114,128,.1);color:var(--muted);}
+  .status-badge.in-build{background:rgba(0,212,255,.12);color:var(--cyan);}
+  .status-badge.shipped{background:rgba(0,229,160,.12);color:var(--green);}
+  .feature-screen{font-size:11px;color:var(--purple);margin-bottom:4px;}
+  .feature-agent{font-size:11px;color:var(--muted);}
+  .feature-actions{display:flex;gap:6px;margin-top:8px;}
+  .feat-btn{flex:1;background:var(--surface3);border:none;border-radius:7px;color:var(--muted);font-size:11px;font-weight:700;padding:7px;cursor:pointer;}
+  .feat-btn.up{color:var(--cyan);}
+  .feat-btn.ship{color:var(--green);}
+  .feat-btn.del{color:var(--red);}
+
+  /* ── TOAST ── */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;color:var(--text);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:99;white-space:nowrap;pointer-events:none;}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<div class="screen-header">
+  <div class="screen-eyebrow">SIINDEX Internal — Build Layer</div>
+  <div class="screen-title">Sovereign Developer Console</div>
+  <div class="screen-sub">12-Step Build Protocol · Developer Agents · Feature Backlog · Velocity</div>
+</div>
+
+<div class="nav-tabs">
+  <div class="nav-tab active" onclick="switchTab('protocol')">🏗️ Protocol</div>
+  <div class="nav-tab" onclick="switchTab('agents')">🤖 Agents</div>
+  <div class="nav-tab" onclick="switchTab('velocity')">📊 Velocity</div>
+  <div class="nav-tab" onclick="switchTab('backlog')">📋 Backlog</div>
+</div>
+
+<!-- GM1: 12-STEP BUILD PROTOCOL -->
+<div class="tab-content active" id="tab-protocol">
+  <div class="sect-label">Active Feature Build</div>
+  <div class="build-selector" id="buildSelector"></div>
+  <div class="build-new-row">
+    <input class="build-new-input" id="newBuildInput" placeholder="New feature name (e.g. God Mode: screen.html)">
+    <button class="build-new-btn" onclick="createBuild()">+ New</button>
+  </div>
+  <div id="protocolContent"></div>
+</div>
+
+<!-- GM2: DEVELOPER AGENTS -->
+<div class="tab-content" id="tab-agents">
+  <div class="sect-label">Sovereign Developer Agent Roster</div>
+  <div class="agent-grid" id="agentGrid"></div>
+</div>
+
+<!-- GM3: VELOCITY DASHBOARD -->
+<div class="tab-content" id="tab-velocity">
+  <div class="sect-label">Session Metrics</div>
+  <div class="vel-grid" id="velGrid"></div>
+  <div class="sect-label">7-Day Build Velocity</div>
+  <div class="weekly-chart"><div class="wc-title">Screens built per day</div><div class="wc-bars" id="weeklyBars"></div></div>
+  <div class="sect-label">Recommended Next Build</div>
+  <div class="next-build-card" id="nextBuildCard"></div>
+  <div class="sect-label">All-Time Stats</div>
+  <div class="vel-detail-grid" id="velDetailGrid"></div>
+</div>
+
+<!-- GM4: FEATURE BACKLOG -->
+<div class="tab-content" id="tab-backlog">
+  <div class="backlog-add">
+    <div class="backlog-add-title">Add to Feature Backlog</div>
+    <input class="bl-input" id="blTitle" placeholder="Feature or screen name">
+    <input class="bl-input" id="blScreen" placeholder="Target screen (e.g. founders-pool.html)">
+    <div class="bl-row">
+      <select class="bl-select" id="blPriority">
+        <option value="p0">P0 — Critical</option>
+        <option value="p1" selected>P1 — High</option>
+        <option value="p2">P2 — Normal</option>
+      </select>
+      <select class="bl-select" id="blAgent">
+        <option value="Architect">Architect</option>
+        <option value="UI Engineer">UI Engineer</option>
+        <option value="Security Agent">Security Agent</option>
+        <option value="Compliance Agent">Compliance Agent</option>
+        <option value="Data Engineer">Data Engineer</option>
+        <option value="Integration Agent">Integration Agent</option>
+        <option value="Test Agent">Test Agent</option>
+        <option value="Deployment Agent">Deployment Agent</option>
+        <option value="Cultural Agent">Cultural Agent</option>
+        <option value="Doctrine Agent">Doctrine Agent</option>
+      </select>
+    </div>
+    <button class="bl-add-btn" onclick="addToBacklog()">+ Add Feature</button>
+  </div>
+
+  <div class="backlog-tabs" id="backlogTabs"></div>
+  <div id="backlogList"></div>
+</div>
+
+<!-- AGENT ASSIGN SHEET -->
+<div class="sheet-overlay" id="agentOverlay" onclick="closeAgentSheet()"></div>
+<div class="agent-assign-sheet" id="agentSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="agentSheetTitle">Assign Task</div>
+  <input class="assign-input" id="agentTaskInput" placeholder="Describe the task...">
+  <div class="assign-btn-row">
+    <button class="assign-confirm" onclick="confirmAgentAssign()">Assign</button>
+    <button class="assign-cancel" onclick="closeAgentSheet()">Cancel</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONSTANTS ──
+const INDX_PRICE_USD = 0.24;
+const POOL_TARGET = 100000;
+const TGE_DATE = new Date('2026-09-24T00:00:00+11:00');
+
+// ── NAV ──
+function switchTab(id) {
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  event.target.classList.add('active');
+  if(id==='agents') renderAgents();
+  if(id==='velocity') renderVelocity();
+  if(id==='backlog') renderBacklog();
+}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ── GM1: 12-STEP BUILD PROTOCOL ──
+const BUILD_STEPS = [
+  { id:'research',    label:'Deep Research' },
+  { id:'doctrine',    label:'Doctrine / Strategy Doc' },
+  { id:'preflight',   label:'Pre-Flight Check' },
+  { id:'gap',         label:'God Mode Gap Analysis' },
+  { id:'css',         label:'CSS Block' },
+  { id:'html',        label:'HTML Elements' },
+  { id:'js',          label:'JavaScript Functions' },
+  { id:'patch',       label:'Patch Existing Functions' },
+  { id:'audit1',      label:'Audit: Price / Currency / Seeds' },
+  { id:'records',     label:'Update memory.md + Appendix B' },
+  { id:'present',     label:'Present File to AJ' },
+  { id:'closeout',    label:'Git Push & Session Closeout' },
+];
+
+function getBuilds() { return JSON.parse(localStorage.getItem('indx_dev_builds')||'[]'); }
+function saveBuilds(b) { localStorage.setItem('indx_dev_builds', JSON.stringify(b)); }
+
+let _activeBuildId = null;
+
+function createBuild() {
+  const input = document.getElementById('newBuildInput');
+  const name = input.value.trim();
+  if(!name){ showToast('⚠️ Enter a feature name first'); return; }
+  const builds = getBuilds();
+  const id = Date.now().toString();
+  builds.push({ id, name, steps: {}, notes: {}, created: new Date().toISOString() });
+  saveBuilds(builds);
+  _activeBuildId = id;
+  input.value='';
+  // track velocity
+  trackBuildDay();
+  renderProtocol();
+  showToast('✅ Build started: '+name);
+}
+
+function trackBuildDay() {
+  const key='indx_dev_velocity';
+  const today = new Date().toISOString().slice(0,10);
+  const vel = JSON.parse(localStorage.getItem(key)||'{}');
+  vel[today] = (vel[today]||0)+1;
+  localStorage.setItem(key, JSON.stringify(vel));
+}
+
+function renderProtocol() {
+  const builds = getBuilds();
+  const selector = document.getElementById('buildSelector');
+  if(builds.length===0){
+    if(!_activeBuildId) {
+      selector.innerHTML='';
+      document.getElementById('protocolContent').innerHTML=
+        '<div class="card" style="text-align:center;color:var(--muted);padding:24px;"><div style="font-size:32px;margin-bottom:8px;">🏗️</div><div style="font-size:13px;">No active builds. Start one above.</div></div>';
+      return;
+    }
+  }
+  if(!_activeBuildId && builds.length>0) _activeBuildId = builds[builds.length-1].id;
+  selector.innerHTML = builds.map(b=>
+    `<button class="build-select-btn ${b.id===_activeBuildId?'active':''}" onclick="selectBuild('${b.id}')">${b.name}</button>`
+  ).join('');
+  const build = builds.find(b=>b.id===_activeBuildId);
+  if(!build) return;
+  const doneCount = Object.values(build.steps).filter(v=>v==='done').length;
+  const pct = Math.round((doneCount/BUILD_STEPS.length)*100);
+  document.getElementById('protocolContent').innerHTML = `
+    <div class="protocol-progress">
+      <div class="pp-header"><div class="pp-name">${build.name}</div><div class="pp-pct">${doneCount}/${BUILD_STEPS.length} steps · ${pct}%</div></div>
+      <div class="pp-bar"><div class="pp-fill" style="width:${pct}%"></div></div>
+      <div class="step-list">
+        ${BUILD_STEPS.map((s,i)=>{
+          const status = build.steps[s.id] || 'pending';
+          const note = build.notes[s.id]||'';
+          const isActive = (status==='active')||(status==='pending'&&Object.values(build.steps).filter(v=>v==='done').length===i);
+          const finalStatus = status==='done' ? 'done' : (isActive&&status!=='done' ? 'active' : status);
+          return `<div class="step-item ${finalStatus}" onclick="cycleStep('${build.id}','${s.id}')">
+            <div class="step-num ${finalStatus}">${i+1}</div>
+            <div class="step-label ${finalStatus}">${s.label}</div>
+            <div class="step-check">${finalStatus==='done'?'✅':finalStatus==='active'?'▶️':'○'}</div>
+          </div>
+          ${note?`<div class="step-notes"><div class="step-notes-label">Notes — ${s.label}</div><div style="font-size:12px;color:var(--muted)">${note}</div></div>`:''}`;
+        }).join('')}
+      </div>
+      <button onclick="clearBuild('${build.id}')" style="margin-top:12px;width:100%;background:var(--surface3);border:none;border-radius:9px;color:var(--red);font-size:12px;padding:9px;cursor:pointer;font-weight:600;">Archive Build</button>
+    </div>`;
+}
+
+function selectBuild(id) { _activeBuildId = id; renderProtocol(); }
+
+function cycleStep(buildId, stepId) {
+  const builds = getBuilds();
+  const build = builds.find(b=>b.id===buildId);
+  if(!build) return;
+  const curr = build.steps[stepId]||'pending';
+  const next = curr==='pending'?'done':curr==='done'?'pending':'done';
+  build.steps[stepId]=next;
+  saveBuilds(builds);
+  renderProtocol();
+  if(next==='done') showToast('✅ Step done: '+BUILD_STEPS.find(s=>s.id===stepId)?.label);
+}
+
+function clearBuild(id) {
+  let builds = getBuilds();
+  builds = builds.filter(b=>b.id!==id);
+  saveBuilds(builds);
+  _activeBuildId = builds.length > 0 ? builds[builds.length-1].id : null;
+  renderProtocol();
+  showToast('Build archived');
+}
+
+// ── GM2: DEVELOPER AGENTS ──
+const AGENT_DEFS = [
+  { id:'architect',    icon:'🏛️', name:'Architect',        role:'System design, screen structure, navigation logic',   defaultStatus:'active' },
+  { id:'ui_eng',       icon:'🎨', name:'UI Engineer',       role:'CSS, HTML layout, mobile-first components, animations', defaultStatus:'active' },
+  { id:'security',     icon:'🛡️', name:'Security Agent',    role:'Audit checks, forbidden patterns, session security',   defaultStatus:'standby' },
+  { id:'compliance',   icon:'⚖️', name:'Compliance Agent',  role:'AUSTRAC, ASIC, voice rules, NFT doctrine compliance',  defaultStatus:'standby' },
+  { id:'data_eng',     icon:'🗄️', name:'Data Engineer',     role:'localStorage schema, cross-screen data contracts',     defaultStatus:'standby' },
+  { id:'integration',  icon:'🔗', name:'Integration Agent', role:'MCP connectors, Solana RPCs, Make scenarios',          defaultStatus:'standby' },
+  { id:'test_agent',   icon:'🧪', name:'Test Agent',        role:'Manual QA, 3-audit checks, render verification',       defaultStatus:'offline' },
+  { id:'deploy',       icon:'🚀', name:'Deployment Agent',  role:'Vercel deploy, git push, version tagging',             defaultStatus:'offline' },
+  { id:'cultural',     icon:'🌏', name:'Cultural Agent',    role:'Cultural rights, creator attribution, indigenous IP',   defaultStatus:'standby' },
+  { id:'doctrine',     icon:'📜', name:'Doctrine Agent',    role:'Strategy docs, whitepaper updates, memory.md records', defaultStatus:'active' },
+];
+
+function getAgentData() { return JSON.parse(localStorage.getItem('indx_dev_agents')||'{}'); }
+function saveAgentData(d) { localStorage.setItem('indx_dev_agents', JSON.stringify(d)); }
+
+let _assigningAgent = null;
+
+function renderAgents() {
+  const agentData = getAgentData();
+  document.getElementById('agentGrid').innerHTML = AGENT_DEFS.map(a=>{
+    const stored = agentData[a.id]||{};
+    const status = stored.status || a.defaultStatus;
+    const task = stored.task || a.role;
+    const lastAction = stored.lastAction || null;
+    return `<div class="agent-card ${status}" onclick="openAgentSheet('${a.id}')">
+      <div class="agent-header">
+        <div class="agent-icon">${a.icon}</div>
+        <div class="agent-status-dot ${status}"></div>
+      </div>
+      <div class="agent-name">${a.name}</div>
+      <div class="agent-task">${task}</div>
+      ${lastAction?`<div class="agent-last">Last: ${lastAction}</div>`:''}
+      <button class="agent-action-btn" onclick="event.stopPropagation();cycleAgentStatus('${a.id}')">
+        ${status==='active'?'→ Standby':status==='standby'?'→ Activate':'→ Standby'}
+      </button>
+    </div>`;
+  }).join('');
+}
+
+function cycleAgentStatus(id) {
+  const data = getAgentData();
+  const agent = AGENT_DEFS.find(a=>a.id===id);
+  if(!data[id]) data[id]={status: agent.defaultStatus};
+  const curr = data[id].status||agent.defaultStatus;
+  data[id].status = curr==='active'?'standby':curr==='standby'?'active':'standby';
+  data[id].lastAction = new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
+  saveAgentData(data);
+  renderAgents();
+  showToast(agent.name+' → '+data[id].status.toUpperCase());
+}
+
+function openAgentSheet(id) {
+  _assigningAgent = id;
+  const agent = AGENT_DEFS.find(a=>a.id===id);
+  const data = getAgentData();
+  document.getElementById('agentSheetTitle').textContent = 'Assign Task — '+agent.name;
+  document.getElementById('agentTaskInput').value = (data[id]||{}).task||'';
+  document.getElementById('agentSheet').classList.add('open');
+  document.getElementById('agentOverlay').classList.add('open');
+}
+
+function closeAgentSheet() {
+  document.getElementById('agentSheet').classList.remove('open');
+  document.getElementById('agentOverlay').classList.remove('open');
+  _assigningAgent=null;
+}
+
+function confirmAgentAssign() {
+  if(!_assigningAgent) return;
+  const task = document.getElementById('agentTaskInput').value.trim();
+  if(!task){ showToast('⚠️ Enter a task description'); return; }
+  const data = getAgentData();
+  const agent = AGENT_DEFS.find(a=>a.id===_assigningAgent);
+  if(!data[_assigningAgent]) data[_assigningAgent]={status: agent.defaultStatus};
+  data[_assigningAgent].task = task;
+  data[_assigningAgent].status = 'active';
+  data[_assigningAgent].lastAction = new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
+  saveAgentData(data);
+  closeAgentSheet();
+  renderAgents();
+  showToast('✅ '+agent.name+' assigned');
+}
+
+// ── GM3: VELOCITY DASHBOARD ──
+const NEXT_BUILDS = [
+  { title:'siindex-sovereign-developer.html', desc:'This screen — already building!', priority:'P0' },
+  { title:'siindex-legal-defense.html', desc:'God Mode upgrade — AUSTRAC, ASIC legal framework. Task #85 in progress.', priority:'P0' },
+  { title:'siindex-dev-portal.html', desc:'Public-facing developer portal — listed as "pending" in Team Portal.', priority:'P1' },
+  { title:'citizen-dashboard.html God Mode', desc:'Additional SAE features pending for citizen dashboard.', priority:'P1' },
+  { title:'indx-sovereign-settlement.html God Mode', desc:'God Mode upgrade for Sovereign Settlement Layer screen.', priority:'P2' },
+];
+let _nextBuildIdx = 0;
+
+function renderVelocity() {
+  const builds = getBuilds();
+  const backlog = getBacklog();
+  const agentData = getAgentData();
+  const activeAgents = AGENT_DEFS.filter(a=>(agentData[a.id]||{status:a.defaultStatus}).status==='active').length;
+  const shippedCount = backlog.filter(f=>f.status==='shipped').length;
+  const daysToTGE = Math.max(0,Math.floor((TGE_DATE-new Date())/86400000));
+
+  document.getElementById('velGrid').innerHTML = `
+    <div class="vel-card"><div class="vel-val" style="color:var(--cyan)">${builds.length}</div><div class="vel-lbl">Active Builds</div><div class="vel-sub" style="color:var(--muted)">This session</div></div>
+    <div class="vel-card"><div class="vel-val" style="color:var(--green)">${shippedCount}</div><div class="vel-lbl">Features Shipped</div><div class="vel-sub" style="color:var(--muted)">Backlog total</div></div>
+    <div class="vel-card"><div class="vel-val" style="color:var(--purple)">${activeAgents}</div><div class="vel-lbl">Agents Active</div><div class="vel-sub" style="color:var(--muted)">of ${AGENT_DEFS.length} total</div></div>
+    <div class="vel-card"><div class="vel-val" style="color:var(--gold)">${daysToTGE}</div><div class="vel-lbl">Days to TGE</div><div class="vel-sub" style="color:var(--red)">24 Sep 2026</div></div>`;
+
+  // Weekly velocity bars
+  const vel = JSON.parse(localStorage.getItem('indx_dev_velocity')||'{}');
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const today=new Date();
+  const bars = [];
+  for(let i=6;i>=0;i--){
+    const d=new Date(today); d.setDate(today.getDate()-i);
+    const key=d.toISOString().slice(0,10);
+    const count=vel[key]||0;
+    bars.push({day:days[d.getDay()===0?6:d.getDay()-1],count,isToday:i===0});
+  }
+  const maxCount=Math.max(...bars.map(b=>b.count),1);
+  document.getElementById('weeklyBars').innerHTML=bars.map(b=>
+    `<div class="wc-col">
+      <div class="wc-count">${b.count||''}</div>
+      <div class="wc-bar ${b.isToday?'today-bar':''}" style="height:${Math.max(4,Math.round((b.count/maxCount)*50))}px"></div>
+      <div class="wc-day">${b.day}</div>
+    </div>`).join('');
+
+  // Next recommended build
+  const nb = NEXT_BUILDS[_nextBuildIdx % NEXT_BUILDS.length];
+  document.getElementById('nextBuildCard').innerHTML = `
+    <div class="nb-eyebrow">${nb.priority} — Next Recommended Build</div>
+    <div class="nb-title">${nb.title}</div>
+    <div class="nb-desc">${nb.desc}</div>
+    <button class="nb-btn" onclick="cycleNextBuild()">→ See Next</button>`;
+
+  document.getElementById('velDetailGrid').innerHTML = `
+    <div class="vel-detail-card"><div class="vel-detail-val" style="color:var(--cyan)">120+</div><div class="vel-detail-lbl">Screens Built</div></div>
+    <div class="vel-detail-card"><div class="vel-detail-val" style="color:var(--gold)">${backlog.length}</div><div class="vel-detail-lbl">Backlog Items</div></div>
+    <div class="vel-detail-card"><div class="vel-detail-val" style="color:var(--green)">19</div><div class="vel-detail-lbl">Sessions</div></div>`;
+}
+
+function cycleNextBuild() {
+  _nextBuildIdx++;
+  renderVelocity();
+}
+
+// ── GM4: FEATURE BACKLOG ──
+const BL_STATUSES = ['backlog','in-build','shipped'];
+let _blFilter = 'backlog';
+
+function getBacklog() { return JSON.parse(localStorage.getItem('indx_dev_backlog')||'[]'); }
+function saveBacklog(b) { localStorage.setItem('indx_dev_backlog', JSON.stringify(b)); }
+
+function addToBacklog() {
+  const title = document.getElementById('blTitle').value.trim();
+  const screen = document.getElementById('blScreen').value.trim();
+  if(!title){ showToast('⚠️ Feature name required'); return; }
+  const backlog = getBacklog();
+  backlog.unshift({
+    id: Date.now().toString(),
+    title, screen: screen||'TBD',
+    priority: document.getElementById('blPriority').value,
+    agent: document.getElementById('blAgent').value,
+    status: 'backlog',
+    created: new Date().toISOString(),
+  });
+  saveBacklog(backlog);
+  document.getElementById('blTitle').value='';
+  document.getElementById('blScreen').value='';
+  renderBacklog();
+  showToast('✅ Added to backlog: '+title);
+}
+
+function renderBacklog() {
+  const backlog = getBacklog();
+  const counts={backlog:0,'in-build':0,shipped:0};
+  backlog.forEach(f=>counts[f.status]=(counts[f.status]||0)+1);
+  const tabs=['backlog','in-build','shipped'];
+  const tabLabels={'backlog':'Backlog','in-build':'In Build','shipped':'Shipped'};
+  document.getElementById('backlogTabs').innerHTML=tabs.map(s=>
+    `<button class="bl-tab ${s===_blFilter?'active':''}" onclick="setBlFilter('${s}')">${tabLabels[s]} (${counts[s]||0})</button>`
+  ).join('');
+  const filtered = backlog.filter(f=>f.status===_blFilter);
+  const container = document.getElementById('backlogList');
+  if(filtered.length===0){
+    container.innerHTML=`<div class="card" style="text-align:center;color:var(--muted);padding:24px;font-size:13px;">Nothing in ${_blFilter} yet.</div>`;
+    return;
+  }
+  container.innerHTML=filtered.map((f,i)=>`
+    <div class="feature-card ${f.priority}">
+      <div class="feature-header">
+        <div class="feature-title">${f.title}</div>
+        <div class="feature-badges">
+          <span class="priority-badge ${f.priority}">${f.priority.toUpperCase()}</span>
+          <span class="status-badge ${f.status}">${f.status==='in-build'?'IN BUILD':f.status.toUpperCase()}</span>
+        </div>
+      </div>
+      <div class="feature-screen">📁 ${f.screen}</div>
+      <div class="feature-agent">🤖 ${f.agent}</div>
+      <div class="feature-actions">
+        ${i>0?`<button class="feat-btn up" onclick="moveFeature('${f.id}',-1)">↑ Up</button>`:''}
+        ${f.status==='backlog'?`<button class="feat-btn ship" style="color:var(--cyan)" onclick="advanceFeature('${f.id}')">▶ Start</button>`:''}
+        ${f.status==='in-build'?`<button class="feat-btn ship" onclick="advanceFeature('${f.id}')">✅ Ship</button>`:''}
+        <button class="feat-btn del" onclick="deleteFeature('${f.id}')">🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+function setBlFilter(s){ _blFilter=s; renderBacklog(); }
+
+function advanceFeature(id) {
+  const backlog = getBacklog();
+  const f = backlog.find(x=>x.id===id);
+  if(!f) return;
+  const idx = BL_STATUSES.indexOf(f.status);
+  if(idx < BL_STATUSES.length-1) { f.status=BL_STATUSES[idx+1]; }
+  saveBacklog(backlog);
+  renderBacklog();
+  showToast(f.status==='in-build'?'▶ Build started':'✅ Shipped: '+f.title);
+}
+
+function moveFeature(id, dir) {
+  const backlog = getBacklog();
+  const filtered = backlog.filter(f=>f.status===_blFilter);
+  const allIdx = backlog.findIndex(f=>f.id===id);
+  const filtIdx = filtered.findIndex(f=>f.id===id);
+  const targetFilt = filtered[filtIdx+dir];
+  if(!targetFilt) return;
+  const targetAll = backlog.findIndex(f=>f.id===targetFilt.id);
+  [backlog[allIdx], backlog[targetAll]] = [backlog[targetAll], backlog[allIdx]];
+  saveBacklog(backlog);
+  renderBacklog();
+}
+
+function deleteFeature(id) {
+  let backlog = getBacklog();
+  backlog = backlog.filter(f=>f.id!==id);
+  saveBacklog(backlog);
+  renderBacklog();
+  showToast('Removed from backlog');
+}
+
+// ── INIT ──
+document.addEventListener('DOMContentLoaded',()=>{
+  renderProtocol();
+  renderAgents();
+});
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

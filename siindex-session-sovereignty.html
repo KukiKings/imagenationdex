@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Security Centre — IN$DEX</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cyan: #00D4FF;
+    --blue: #2B35D8;
+    --purple: #8B3FE8;
+    --black: #090A10;
+    --green: #00E5A0;
+    --gold: #FFB800;
+    --red: #FF4D6D;
+    --surface: #12141F;
+    --surface2: #1A1D2E;
+    --surface3: #22263A;
+    --text: #EAEAEA;
+    --text2: #A0A8B8;
+    --muted: #5A6070;
+    --border: rgba(255,255,255,0.06);
+    --border2: rgba(255,255,255,0.1);
+    --cyan-bg: rgba(0,212,255,0.08);
+  }
+
+  body { background: var(--black); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif; min-height: 100vh; }
+
+  .shell { max-width: 430px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; position: relative; }
+
+  /* ── NAV ── */
+  .top-nav { position: sticky; top: 0; z-index: 100; background: rgba(9,10,16,0.92); backdrop-filter: blur(14px); padding: 14px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); }
+  .nav-back { width: 34px; height: 34px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; flex-shrink: 0; }
+  .nav-title { flex: 1; font-size: 16px; font-weight: 800; color: var(--text); }
+  .nav-risk-badge { padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: 800; letter-spacing: 0.04em; }
+  .risk-green  { background: rgba(0,229,160,0.15); color: #00E5A0; border: 1px solid rgba(0,229,160,0.3); }
+  .risk-yellow { background: rgba(255,184,0,0.15); color: #FFB800; border: 1px solid rgba(255,184,0,0.3); }
+  .risk-orange { background: rgba(255,140,0,0.15); color: #FF8C00; border: 1px solid rgba(255,140,0,0.3); }
+  .risk-red    { background: rgba(255,77,109,0.15); color: #FF4D6D; border: 1px solid rgba(255,77,109,0.3); }
+  .risk-black  { background: rgba(255,255,255,0.06); color: #E0E0E0; border: 1px solid rgba(255,255,255,0.18); }
+
+  /* ── SCROLL BODY ── */
+  .scroll-body { flex: 1; overflow-y: auto; padding: 0 0 140px; }
+
+  /* ── SECTION ── */
+  .section { padding: 12px 20px 0; }
+  .sec-label { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; }
+
+  /* ── RISK SCORE HERO ── */
+  .risk-hero { margin: 16px 20px 0; background: linear-gradient(135deg, rgba(0,212,255,0.07), rgba(139,63,232,0.05)); border: 1px solid rgba(0,212,255,0.2); border-radius: 20px; padding: 20px; position: relative; overflow: hidden; }
+  .risk-hero::before { content: ''; position: absolute; inset: 0; border-radius: 20px; background: radial-gradient(circle at 80% 20%, rgba(0,212,255,0.06), transparent 60%); pointer-events: none; }
+  .risk-hero-top { display: flex; align-items: flex-start; gap: 16px; }
+  .risk-orb { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 26px; position: relative; }
+  .risk-orb-ring { position: absolute; inset: -4px; border-radius: 50%; border: 2px solid transparent; }
+  .risk-orb.green  { background: rgba(0,229,160,0.12); }
+  .risk-orb.green  .risk-orb-ring { border-color: rgba(0,229,160,0.4); box-shadow: 0 0 14px rgba(0,229,160,0.25); animation: orbPulseGreen 2.5s ease-in-out infinite; }
+  .risk-orb.yellow { background: rgba(255,184,0,0.12); }
+  .risk-orb.yellow .risk-orb-ring { border-color: rgba(255,184,0,0.4); box-shadow: 0 0 14px rgba(255,184,0,0.25); animation: orbPulseGold 2.5s ease-in-out infinite; }
+  .risk-orb.red    { background: rgba(255,77,109,0.12); }
+  .risk-orb.red    .risk-orb-ring { border-color: rgba(255,77,109,0.4); animation: orbPulseRed 1.6s ease-in-out infinite; }
+  .risk-orb.black  { background: rgba(255,255,255,0.04); }
+  @keyframes orbPulseGreen { 0%,100%{box-shadow:0 0 10px rgba(0,229,160,0.2)} 50%{box-shadow:0 0 22px rgba(0,229,160,0.5)} }
+  @keyframes orbPulseGold  { 0%,100%{box-shadow:0 0 10px rgba(255,184,0,0.2)} 50%{box-shadow:0 0 22px rgba(255,184,0,0.45)} }
+  @keyframes orbPulseRed   { 0%,100%{box-shadow:0 0 10px rgba(255,77,109,0.3)} 50%{box-shadow:0 0 24px rgba(255,77,109,0.7)} }
+
+  .risk-info { flex: 1; min-width: 0; }
+  .risk-level-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 4px; }
+  .risk-level-name { font-size: 20px; font-weight: 800; color: var(--text); margin-bottom: 2px; }
+  .risk-level-desc { font-size: 12px; color: var(--text2); line-height: 1.5; }
+  .risk-meta { display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+  .risk-meta-item { background: var(--surface2); border-radius: 10px; padding: 8px 12px; flex: 1; min-width: 80px; }
+  .risk-meta-val { font-size: 13px; font-weight: 800; color: var(--cyan); }
+  .risk-meta-lbl { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .risk-doctrine { margin-top: 14px; padding: 10px 14px; background: rgba(0,212,255,0.05); border-left: 2px solid var(--cyan); border-radius: 0 8px 8px 0; font-size: 11px; color: var(--text2); font-style: italic; line-height: 1.5; }
+
+  /* ── SECURE MY ACCOUNT — FIXED ── */
+  .secure-fab { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 200; max-width: 390px; width: calc(100% - 40px); }
+  .secure-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, #FF4D6D, #C0003A); border: none; border-radius: 16px; color: #fff; font-size: 15px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 8px 28px rgba(255,77,109,0.35); transition: transform 0.15s, box-shadow 0.15s; }
+  .secure-btn:active { transform: scale(0.97); box-shadow: 0 4px 14px rgba(255,77,109,0.25); }
+  .secure-btn-icon { font-size: 18px; }
+
+  /* ── DEVICE REGISTRY ── */
+  .device-card { background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; overflow: hidden; margin-bottom: 10px; }
+  .device-item { padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+  .device-item + .device-item { border-top: 1px solid var(--border); }
+  .device-icon-wrap { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .device-icon-wrap.current { background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.25); }
+  .device-icon-wrap.trusted { background: var(--surface2); border: 1px solid var(--border); }
+  .device-body { flex: 1; min-width: 0; }
+  .device-name { font-size: 13px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 6px; }
+  .device-current-tag { font-size: 9px; font-weight: 700; background: rgba(0,212,255,0.15); color: var(--cyan); padding: 2px 6px; border-radius: 99px; letter-spacing: 0.04em; }
+  .device-meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .device-risk-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .device-risk-dot.green { background: var(--green); box-shadow: 0 0 5px rgba(0,229,160,0.5); }
+  .device-risk-dot.yellow { background: var(--gold); }
+  .device-actions { display: flex; gap: 8px; padding: 10px 16px 14px; }
+  .device-action-btn { flex: 1; padding: 8px; border-radius: 10px; border: 1px solid var(--border2); background: var(--surface2); font-size: 12px; font-weight: 700; color: var(--text2); cursor: pointer; text-align: center; }
+  .device-action-btn.danger { border-color: rgba(255,77,109,0.3); color: var(--red); }
+  .device-action-btn.primary { border-color: rgba(0,212,255,0.3); color: var(--cyan); }
+  .device-signout-all { width: 100%; padding: 13px; background: transparent; border: 1px solid rgba(255,77,109,0.25); border-radius: 12px; color: var(--red); font-size: 13px; font-weight: 700; cursor: pointer; margin-top: 6px; }
+
+  /* ── COMPARTMENTALIZATION ── */
+  .context-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .context-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+  .context-card.active { border-color: rgba(0,212,255,0.3); background: rgba(0,212,255,0.04); }
+  .context-card.locked { opacity: 0.5; }
+  .context-icon { font-size: 18px; margin-bottom: 6px; }
+  .context-name { font-size: 12px; font-weight: 700; color: var(--text); }
+  .context-status { font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .context-card.active .context-status { color: var(--cyan); }
+  .context-scope { font-size: 10px; color: var(--text2); margin-top: 5px; border-top: 1px solid var(--border); padding-top: 5px; line-height: 1.4; }
+
+  /* ── VAULT MODE ── */
+  .vault-card { background: linear-gradient(135deg, rgba(139,63,232,0.08), rgba(43,53,216,0.06)); border: 1px solid rgba(139,63,232,0.25); border-radius: 16px; padding: 16px; }
+  .vault-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .vault-icon { font-size: 28px; flex-shrink: 0; }
+  .vault-title { font-size: 15px; font-weight: 800; color: var(--text); }
+  .vault-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .vault-toggle-wrap { margin-left: auto; flex-shrink: 0; }
+  .vault-toggle { width: 46px; height: 26px; border-radius: 13px; background: var(--surface3); border: 1px solid var(--border2); position: relative; cursor: pointer; transition: background 0.25s; }
+  .vault-toggle.on { background: var(--purple); border-color: var(--purple); }
+  .vault-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform 0.25s; }
+  .vault-toggle.on::after { transform: translateX(20px); }
+  .vault-benefits { display: grid; gap: 6px; }
+  .vault-benefit { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text2); }
+  .vault-benefit-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--purple); flex-shrink: 0; }
+  .vault-doctrine { margin-top: 12px; font-size: 11px; color: var(--purple); font-weight: 700; text-align: center; }
+
+  /* ── CALLER CODE ── */
+  .caller-card { background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; padding: 16px; }
+  .caller-top { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .caller-icon { font-size: 22px; }
+  .caller-title { font-size: 14px; font-weight: 700; color: var(--text); }
+  .caller-sub { font-size: 12px; color: var(--text2); }
+  .caller-code-wrap { background: var(--surface2); border: 1px solid var(--border2); border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
+  .caller-code-val { font-size: 22px; font-weight: 800; color: var(--cyan); letter-spacing: 0.12em; font-family: 'SF Mono', monospace; }
+  .caller-code-actions { display: flex; gap: 8px; }
+  .caller-code-btn { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border2); background: var(--surface3); font-size: 11px; font-weight: 700; color: var(--text2); cursor: pointer; }
+  .caller-code-btn.rotate { border-color: rgba(0,212,255,0.3); color: var(--cyan); }
+  .caller-warning { margin-top: 10px; font-size: 11px; color: var(--text2); line-height: 1.5; padding: 8px 12px; background: rgba(255,184,0,0.06); border-radius: 8px; border-left: 2px solid var(--gold); }
+
+  /* ── DECISION LEDGER ── */
+  .ledger-item { padding: 12px 0; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 12px; }
+  .ledger-item:last-child { border-bottom: none; }
+  .ledger-icon { width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .ledger-icon.ok   { background: rgba(0,229,160,0.1); }
+  .ledger-icon.warn { background: rgba(255,184,0,0.1); }
+  .ledger-icon.sec  { background: rgba(255,77,109,0.1); }
+  .ledger-body { flex: 1; min-width: 0; }
+  .ledger-title { font-size: 13px; font-weight: 700; color: var(--text); }
+  .ledger-meta  { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .ledger-id    { font-size: 10px; color: var(--muted); margin-top: 3px; font-family: monospace; }
+  .ledger-result { font-size: 11px; font-weight: 700; flex-shrink: 0; }
+  .ledger-result.pass { color: var(--green); }
+  .ledger-result.warn { color: var(--gold); }
+  .ledger-result.block { color: var(--red); }
+
+  /* ── ANTI-PHISHING CARD ── */
+  .phishing-card { background: rgba(0,212,255,0.04); border: 1px solid rgba(0,212,255,0.12); border-radius: 16px; padding: 16px; }
+  .phishing-title { font-size: 13px; font-weight: 800; color: var(--cyan); margin-bottom: 10px; display: flex; align-items: center; gap: 7px; }
+  .phishing-rule { font-size: 12px; color: var(--text2); padding: 6px 0; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 8px; line-height: 1.4; }
+  .phishing-rule:last-child { border-bottom: none; padding-bottom: 0; }
+  .phishing-never { color: var(--red); font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+  .phishing-always { color: var(--green); font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── IDLE TIMEOUT BAR ── */
+  .idle-bar-wrap { margin: 0 20px; background: var(--surface2); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 12px; }
+  .idle-icon { font-size: 14px; flex-shrink: 0; }
+  .idle-body { flex: 1; }
+  .idle-label { font-size: 11px; color: var(--text2); }
+  .idle-time { font-size: 14px; font-weight: 800; color: var(--cyan); font-family: monospace; }
+  .idle-track { height: 3px; background: rgba(255,255,255,0.06); border-radius: 99px; margin-top: 6px; }
+  .idle-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--green), var(--cyan)); transition: width 1s linear; }
+
+  /* ── SECURE MY ACCOUNT MODAL ── */
+  .secure-overlay { position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,0.85); display: none; align-items: flex-end; justify-content: center; }
+  .secure-overlay.show { display: flex; }
+  .secure-sheet { background: var(--surface); border-radius: 24px 24px 0 0; padding: 24px 24px 40px; width: 100%; max-width: 430px; border: 1px solid rgba(255,77,109,0.25); animation: slideUp 0.3s ease; }
+  .secure-sheet-title { font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+  .secure-sheet-sub { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+  .secure-step { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .secure-step:last-of-type { border-bottom: none; }
+  .secure-step-num { width: 24px; height: 24px; border-radius: 50%; background: rgba(255,77,109,0.15); border: 1px solid rgba(255,77,109,0.4); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: var(--red); flex-shrink: 0; }
+  .secure-step-num.done { background: rgba(0,229,160,0.15); border-color: rgba(0,229,160,0.4); color: var(--green); }
+  .secure-step-text { font-size: 13px; color: var(--text2); line-height: 1.5; }
+  .secure-step-text strong { color: var(--text); }
+  .secure-close-btn { width: 100%; padding: 14px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 14px; color: var(--text2); font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 20px; }
+
+  /* ── TOAST ── */
+  .toast { position: fixed; bottom: 130px; left: 50%; transform: translateX(-50%); background: rgba(30,33,50,0.98); border: 1px solid rgba(0,212,255,0.2); color: var(--text); padding: 10px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.25s; z-index: 9999; }
+  .toast.show { opacity: 1; }
+
+  /* ── UTIL ── */
+  @keyframes slideUp { from{transform:translateY(30px);opacity:0} to{transform:translateY(0);opacity:1} }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); display: inline-block; margin-right: 5px; animation: pulse 1.5s infinite; }
+  .section-card { background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; padding: 16px; }
+
+  /* ══════════════════════════════════════════════════ */
+  /* GOD MODE — 4 FEATURES                             */
+  /* ══════════════════════════════════════════════════ */
+
+  /* Feature 1 — Security Health Score */
+  .health-card { background: linear-gradient(135deg,rgba(0,212,255,0.06),rgba(139,63,232,0.04)); border:1px solid rgba(0,212,255,0.18); border-radius:18px; padding:18px; margin-top:12px; }
+  .health-top { display:flex; align-items:center; gap:16px; margin-bottom:14px; }
+  .health-ring-wrap { position:relative; flex-shrink:0; }
+  .health-ring-wrap svg { transform:rotate(-90deg); }
+  .health-ring-bg  { fill:none; stroke:rgba(255,255,255,0.06); stroke-width:6; }
+  .health-ring-fill { fill:none; stroke-width:6; stroke-linecap:round; transition:stroke-dashoffset 1.4s ease,stroke 0.5s ease; }
+  .health-score-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .health-score-num { font-size:22px; font-weight:900; color:var(--text); line-height:1; }
+  .health-score-lbl { font-size:8px; font-weight:700; color:var(--muted); letter-spacing:0.06em; text-transform:uppercase; }
+  .health-info { flex:1; }
+  .health-grade { font-size:18px; font-weight:800; margin-bottom:3px; }
+  .health-desc  { font-size:12px; color:var(--text2); line-height:1.5; }
+  .health-factors { display:grid; gap:6px; }
+  .health-factor { display:flex; align-items:center; justify-content:space-between; padding:7px 10px; background:var(--surface2); border-radius:10px; cursor:pointer; }
+  .health-factor:active { opacity:0.8; }
+  .health-factor-left { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text2); }
+  .health-factor-icon { font-size:14px; }
+  .health-factor-score { font-size:11px; font-weight:800; }
+  .health-factor-score.full { color:var(--green); }
+  .health-factor-score.half { color:var(--gold); }
+  .health-factor-score.none { color:var(--red); }
+
+  /* Feature 2 — Live Threat Signal Feed */
+  .threat-feed { background:var(--surface); border:1px solid var(--border2); border-radius:14px; padding:14px; margin-top:8px; }
+  .threat-feed-title { font-size:11px; font-weight:700; color:var(--muted); letter-spacing:0.07em; text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+  .threat-signals { display:grid; gap:6px; }
+  .threat-signal { display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid var(--border); transition:opacity 0.4s ease; }
+  .threat-signal:last-child { border-bottom:none; }
+  .threat-signal-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .threat-signal-dot.ok   { background:var(--green); box-shadow:0 0 5px rgba(0,229,160,0.5); animation:pulse 2s infinite; }
+  .threat-signal-dot.warn { background:var(--gold); }
+  .threat-signal-label { font-size:12px; color:var(--text2); flex:1; }
+  .threat-signal-val   { font-size:11px; font-weight:700; color:var(--green); }
+  .threat-signal-val.warn { color:var(--gold); }
+  .threat-updated { font-size:10px; color:var(--muted); margin-top:8px; text-align:right; }
+
+  /* Feature 3 — Shared Device Mode */
+  .sdm-card { background:var(--surface); border:1px solid var(--border2); border-radius:16px; padding:16px; }
+  .sdm-top  { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+  .sdm-icon { font-size:24px; flex-shrink:0; }
+  .sdm-title { font-size:14px; font-weight:700; color:var(--text); }
+  .sdm-sub   { font-size:12px; color:var(--text2); margin-top:1px; }
+  .sdm-toggle-wrap { margin-left:auto; flex-shrink:0; }
+  .sdm-toggle { width:46px; height:26px; border-radius:13px; background:var(--surface3); border:1px solid var(--border2); position:relative; cursor:pointer; transition:background 0.25s; }
+  .sdm-toggle.on { background:var(--gold); border-color:var(--gold); }
+  .sdm-toggle::after { content:''; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#fff; transition:transform 0.25s; }
+  .sdm-toggle.on::after { transform:translateX(20px); }
+  .sdm-rules { display:grid; gap:5px; }
+  .sdm-rule { font-size:12px; color:var(--text2); display:flex; align-items:flex-start; gap:7px; line-height:1.4; }
+  .sdm-rule-icon { flex-shrink:0; font-size:11px; margin-top:1px; }
+  .sdm-active-banner { background:rgba(255,184,0,0.08); border:1px solid rgba(255,184,0,0.3); border-radius:10px; padding:9px 12px; margin-top:10px; font-size:12px; color:var(--gold); font-weight:700; display:none; }
+  .sdm-active-banner.show { display:block; }
+
+  /* Feature 4 — Session Activity Timeline */
+  .timeline-wrap { }
+  .timeline-item { display:flex; align-items:flex-start; gap:10px; padding:8px 0; position:relative; }
+  .timeline-item + .timeline-item::before { content:''; position:absolute; left:7px; top:0; width:1px; height:8px; background:var(--border2); }
+  .timeline-dot { width:15px; height:15px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:8px; margin-top:1px; }
+  .timeline-dot.ok   { background:rgba(0,229,160,0.15); border:1px solid rgba(0,229,160,0.4); }
+  .timeline-dot.info { background:rgba(0,212,255,0.12); border:1px solid rgba(0,212,255,0.3); }
+  .timeline-dot.warn { background:rgba(255,184,0,0.12); border:1px solid rgba(255,184,0,0.3); }
+  .timeline-body { flex:1; min-width:0; }
+  .timeline-text { font-size:12px; color:var(--text2); line-height:1.4; }
+  .timeline-time { font-size:10px; color:var(--muted); margin-top:2px; font-family:monospace; }
+  .timeline-empty { font-size:13px; color:var(--muted); text-align:center; padding:16px 0; }
+
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ── NAV ── -->
+  <div class="top-nav">
+    <div class="nav-back" onclick="window.location.href='citizen-dashboard.html'">‹</div>
+    <div class="nav-title">Security Centre</div>
+    <div class="nav-risk-badge risk-green" id="navRiskBadge">🟢 Protected</div>
+  </div>
+
+  <div class="scroll-body">
+
+    <!-- ── SESSION RISK HERO ── -->
+    <div class="risk-hero" id="riskHero">
+      <div class="risk-hero-top">
+        <div class="risk-orb green" id="riskOrb">
+          <div class="risk-orb-ring" id="riskOrbRing"></div>
+          <span id="riskOrbEmoji">🛡️</span>
+        </div>
+        <div class="risk-info">
+          <div class="risk-level-label">Session Risk Score</div>
+          <div class="risk-level-name" id="riskLevelName">Normal — Protected</div>
+          <div class="risk-level-desc" id="riskLevelDesc">All systems are clear. SIINDEX is monitoring this session continuously.</div>
+        </div>
+      </div>
+      <div class="risk-meta">
+        <div class="risk-meta-item">
+          <div class="risk-meta-val" id="sessionAgeVal">0m</div>
+          <div class="risk-meta-lbl">Session age</div>
+        </div>
+        <div class="risk-meta-item">
+          <div class="risk-meta-val" id="sessionDeviceVal">iPhone</div>
+          <div class="risk-meta-lbl">This device</div>
+        </div>
+        <div class="risk-meta-item">
+          <div class="risk-meta-val" id="sessionRegionVal">—</div>
+          <div class="risk-meta-lbl">Region</div>
+        </div>
+        <div class="risk-meta-item">
+          <div class="risk-meta-val" id="sessionAuthVal">Passkey</div>
+          <div class="risk-meta-lbl">Auth method</div>
+        </div>
+      </div>
+      <div class="risk-doctrine" id="riskDoctrine">
+        "A session proves access. It does not prove sovereignty."
+      </div>
+    </div>
+
+    <!-- GOD MODE F2 — LIVE THREAT SIGNAL FEED -->
+    <div style="margin:10px 20px 0;">
+      <div class="threat-feed" id="threatFeed">
+        <div class="threat-feed-title"><span class="live-dot"></span>Live monitoring signals</div>
+        <div class="threat-signals" id="threatSignals">
+          <!-- populated by JS -->
+        </div>
+        <div class="threat-updated" id="threatUpdated">Checking…</div>
+      </div>
+    </div>
+
+    <!-- ── IDLE TIMEOUT ── -->
+    <div class="idle-bar-wrap" style="margin-top:12px;" id="idleBarWrap">
+      <div class="idle-icon">⏱️</div>
+      <div class="idle-body">
+        <div class="idle-label">Session idle timeout</div>
+        <div class="idle-time" id="idleTimeVal">15:00</div>
+        <div class="idle-track"><div class="idle-fill" id="idleFill" style="width:100%;"></div></div>
+      </div>
+    </div>
+
+    <!-- GOD MODE F1 — SECURITY HEALTH SCORE -->
+    <div class="section" style="margin-top:16px;">
+      <div class="sec-label">Security Health Score</div>
+      <div class="health-card">
+        <div class="health-top">
+          <div class="health-ring-wrap">
+            <svg width="76" height="76" viewBox="0 0 76 76">
+              <circle class="health-ring-bg" cx="38" cy="38" r="32"/>
+              <circle class="health-ring-fill" id="healthRingFill" cx="38" cy="38" r="32"
+                stroke-dasharray="201" stroke-dashoffset="201"/>
+            </svg>
+            <div class="health-score-center">
+              <div class="health-score-num" id="healthScoreNum">—</div>
+              <div class="health-score-lbl">/ 100</div>
+            </div>
+          </div>
+          <div class="health-info">
+            <div class="health-grade" id="healthGrade">Calculating…</div>
+            <div class="health-desc" id="healthDesc">SIINDEX is evaluating your account security posture.</div>
+          </div>
+        </div>
+        <div class="health-factors" id="healthFactors">
+          <!-- populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DEVICE TRUST REGISTRY ── -->
+    <div class="section" style="margin-top:20px;">
+      <div class="sec-label">Device Trust Registry</div>
+      <div class="device-card">
+        <div class="device-item" id="currentDeviceItem">
+          <div class="device-icon-wrap current">📱</div>
+          <div class="device-body">
+            <div class="device-name" id="currentDeviceName">
+              This device
+              <span class="device-current-tag">CURRENT</span>
+            </div>
+            <div class="device-meta" id="currentDeviceMeta">Active now · Region loading…</div>
+          </div>
+          <div class="device-risk-dot green" id="currentDeviceDot"></div>
+        </div>
+        <div id="trustedDevicesList">
+          <!-- dynamically populated -->
+        </div>
+        <div class="device-actions">
+          <div class="device-action-btn primary" onclick="showToast('✅ Device trust confirmed')">✓ Trust this device</div>
+          <div class="device-action-btn" onclick="showToast('🔄 Device renamed')">Rename</div>
+        </div>
+      </div>
+      <button class="device-signout-all" onclick="confirmSignOutAll()">🔐 Sign out everywhere</button>
+    </div>
+
+    <!-- GOD MODE F3 — SHARED DEVICE MODE -->
+    <div class="section" style="margin-top:20px;">
+      <div class="sec-label">Shared / Public Device</div>
+      <div class="sdm-card">
+        <div class="sdm-top">
+          <div class="sdm-icon">🖥️</div>
+          <div>
+            <div class="sdm-title">Shared Device Mode</div>
+            <div class="sdm-sub" id="sdmSubText">I'm using a public computer, library, or shared device</div>
+          </div>
+          <div class="sdm-toggle-wrap">
+            <div class="sdm-toggle" id="sdmToggle" onclick="toggleSharedDevice()"></div>
+          </div>
+        </div>
+        <div class="sdm-rules">
+          <div class="sdm-rule"><span class="sdm-rule-icon">⏱️</span>Idle timeout reduced to 5 minutes</div>
+          <div class="sdm-rule"><span class="sdm-rule-icon">🔒</span>No passkey storage on this device</div>
+          <div class="sdm-rule"><span class="sdm-rule-icon">🚫</span>Payout and recovery changes blocked</div>
+          <div class="sdm-rule"><span class="sdm-rule-icon">📋</span>Clipboard warning on all sensitive fields</div>
+          <div class="sdm-rule"><span class="sdm-rule-icon">🔐</span>Session auto-revoked on browser close</div>
+        </div>
+        <div class="sdm-active-banner" id="sdmActiveBanner">
+          ⚠️ Shared Device Mode is active — sensitive actions are restricted. Remember to sign out when done.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SESSION COMPARTMENTALIZATION ── -->
+    <div class="section" style="margin-top:20px;">
+      <div class="sec-label">Session Compartmentalization</div>
+      <div class="context-grid" id="contextGrid">
+        <div class="context-card active">
+          <div class="context-icon">🏠</div>
+          <div class="context-name">Browse</div>
+          <div class="context-status"><span class="live-dot"></span>Active token</div>
+          <div class="context-scope">Dashboard · Read-only · No fund access</div>
+        </div>
+        <div class="context-card locked">
+          <div class="context-icon">💸</div>
+          <div class="context-name">Financial</div>
+          <div class="context-status">Step-up required</div>
+          <div class="context-scope">Send · Payout · Staking · Requires fresh passkey</div>
+        </div>
+        <div class="context-card locked">
+          <div class="context-icon">🪪</div>
+          <div class="context-name">Identity</div>
+          <div class="context-status">Step-up required</div>
+          <div class="context-scope">Profile · Recovery · Devices · Requires fresh passkey</div>
+        </div>
+        <div class="context-card locked">
+          <div class="context-icon">🎨</div>
+          <div class="context-name">Cultural</div>
+          <div class="context-status">Step-up required</div>
+          <div class="context-scope">Assets · Rights · Publishing · Cultural review gated</div>
+        </div>
+        <div class="context-card locked">
+          <div class="context-icon">⚖️</div>
+          <div class="context-name">Governance</div>
+          <div class="context-status">Passkey per vote</div>
+          <div class="context-scope">Proposals · Voting · Each action requires fresh consent</div>
+        </div>
+        <div class="context-card locked">
+          <div class="context-icon">🛒</div>
+          <div class="context-name">Marketplace</div>
+          <div class="context-status">Step-up for changes</div>
+          <div class="context-scope">Listings · Messages · Payout changes require confirmation</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;">A marketplace session being hijacked must not grant access to funds, identity, or culture.</div>
+    </div>
+
+    <!-- ── SOVEREIGN VAULT MODE ── -->
+    <div class="section" style="margin-top:20px;">
+      <div class="sec-label">Sovereign Vault Mode</div>
+      <div class="vault-card">
+        <div class="vault-top">
+          <div class="vault-icon">🏛️</div>
+          <div>
+            <div class="vault-title">Vault Mode</div>
+            <div class="vault-sub" id="vaultStatusText">Passkey required for every sensitive action</div>
+          </div>
+          <div class="vault-toggle-wrap">
+            <div class="vault-toggle" id="vaultToggle" onclick="toggleVault()"></div>
+          </div>
+        </div>
+        <div class="vault-benefits">
+          <div class="vault-benefit"><div class="vault-benefit-dot"></div>Passkey confirmation on every sensitive action</div>
+          <div class="vault-benefit"><div class="vault-benefit-dot"></div>24-hour delay on new payout destinations</div>
+          <div class="vault-benefit"><div class="vault-benefit-dot"></div>New device cannot transfer for 24 hours</div>
+          <div class="vault-benefit"><div class="vault-benefit-dot"></div>Recovery changes delayed 72 hours minimum</div>
+          <div class="vault-benefit"><div class="vault-benefit-dot"></div>Notifications to all trusted channels simultaneously</div>
+        </div>
+        <div class="vault-doctrine">This is not friction. This is sovereignty.</div>
+      </div>
+    </div>
+
+    <!-- ── CALLER VERIFICATION CODE ── -->
+    <div class="section" style="margin-top:20px;">
+      <div class="sec-label">Caller Verification Code</div>
+      <div class="caller-card">
+        <div class="caller-top">
+          <div class="caller-icon">📞</div>
+          <div>
+            <div class="caller-title">Your support call code</div>
+            <div class="caller-sub">Quote this when contacting IN$DEX support</div>
+          </div>
+        </div>
+        <div class="caller-code-wrap">
+          <div class="caller-code-val" id="callerCodeVal">INDX-····</div>
+          <div class="caller-code-actions">
+            <div class="caller-code-btn" onclick="revealCallerCode()">Show</div>
+            <div class="caller-code-btn rotate" onclick="rotateCallerCode()">Rotate</div>
+          </div>
+        </div>
+        <div class="caller-warning">
+          ⚠️ SIINDEX will never ask for this code by chat or email. Agents must verify it before any account changes. If a caller claims urgency without asking for your code — hang up.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SECURITY DECISION LEDGER ── -->
+    <div class="section" style="margin-top:20px;">
+      <div class="sec-label">Security Decision Ledger</div>
+      <div class="section-card">
+        <div id="ledgerList">
+          <!-- dynamically populated -->
+        </div>
+      </div>
+    </div>
+
+    <!-- GOD MODE F4 — SESSION ACTIVITY TIMELINE -->
+    <div class="section" style="margin-top:20px;">
+      <div class="sec-label">This Session — Activity Timeline</div>
+      <div class="section-card timeline-wrap" id="sessionTimeline">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+    <!-- ── ANTI-PHISHING REMINDER ── -->
+    <div class="section" style="margin-top:20px; padding-bottom:0;">
+      <div class="sec-label">SIINDEX will never</div>
+      <div class="phishing-card">
+        <div class="phishing-title">🛡️ Protect your sovereignty</div>
+        <div class="phishing-rule"><span class="phishing-never">NEVER</span>Ask for your Grid Account keys, passkeys, or credential data</div>
+        <div class="phishing-rule"><span class="phishing-never">NEVER</span>Ask you to paste cookies or session values into a chat</div>
+        <div class="phishing-rule"><span class="phishing-never">NEVER</span>Demand urgent fund movement under any circumstances</div>
+        <div class="phishing-rule"><span class="phishing-never">NEVER</span>Ask you to approve a login you did not start</div>
+        <div class="phishing-rule"><span class="phishing-always">ALWAYS</span>Passkeys refuse to authenticate on fake domains</div>
+        <div class="phishing-rule"><span class="phishing-always">ALWAYS</span>Use Secure My Account if anything feels wrong</div>
+      </div>
+      <div style="height:16px;"></div>
+    </div>
+
+  </div><!-- /scroll-body -->
+
+  <!-- ── SECURE MY ACCOUNT FAB ── -->
+  <div class="secure-fab">
+    <button class="secure-btn" onclick="openSecureMyAccount()">
+      <span class="secure-btn-icon">🔐</span>
+      Secure My Account
+    </button>
+  </div>
+
+</div><!-- /shell -->
+
+<!-- ── SECURE MY ACCOUNT SHEET ── -->
+<div class="secure-overlay" id="secureOverlay">
+  <div class="secure-sheet">
+    <div class="secure-sheet-title">🔐 Account Secured</div>
+    <div class="secure-sheet-sub" id="secureSheetSub">Confirmed. Your account is in protection mode. Your funds have not moved.</div>
+    <div id="secureStepsList">
+      <!-- populated by JS -->
+    </div>
+    <button class="secure-close-btn" onclick="closeSecureSheet()">Dismiss — account remains protected</button>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // ══════════════════════════════════════════════════════
+  // GOD MODE — SECURITY CENTRE ENHANCEMENTS
+  // ══════════════════════════════════════════════════════
+
+  // Feature 1 — Security Health Score
+  function computeAndRenderHealthScore() {
+    const vaultOn       = localStorage.getItem('indx_sec_vault_mode') === '1';
+    const callerCodeSet = !!localStorage.getItem('indx_sec_caller_code');
+    const sdmOn         = localStorage.getItem('indx_sec_shared_device') === '1';
+    const sessionAge    = (Date.now() - parseInt(sessionStorage.getItem('indx_sec_session_start') || Date.now())) / 60000;
+    const authMethod    = sessionStorage.getItem('citizen_auth_method') || 'passkey';
+    const trustedCount  = 3; // current + 2 pre-populated
+
+    const factors = [
+      { icon:'🔑', label:'Authentication method', tip:'passkey.html',  score: authMethod === 'passkey' ? 25 : authMethod === 'totp' ? 12 : 5,  max:25 },
+      { icon:'🏛️', label:'Vault Mode',            tip:'staking.html',  score: vaultOn ? 25 : 0,                                                max:25 },
+      { icon:'📱', label:'Trusted devices',       tip:'',              score: Math.min(trustedCount * 5, 20),                                  max:20 },
+      { icon:'📞', label:'Caller code set',       tip:'',              score: callerCodeSet ? 15 : 0,                                          max:15 },
+      { icon:'⏱️', label:'Session age',           tip:'',              score: sessionAge < 60 ? 10 : sessionAge < 120 ? 5 : 2,                 max:10 },
+      { icon:'🖥️', label:'Device mode',           tip:'',              score: sdmOn ? 3 : 5,                                                   max:5  },
+    ];
+
+    const total = factors.reduce((s, f) => s + f.score, 0);
+    const maxTotal = factors.reduce((s, f) => s + f.max, 0);
+    const pct   = Math.round((total / maxTotal) * 100);
+
+    // Grade
+    const grade = pct >= 85 ? { label:'Excellent', color:'var(--green)', desc:'Your account is very well hardened.' }
+                : pct >= 65 ? { label:'Strong',    color:'var(--cyan)',  desc:'Good security posture. A few improvements are available.' }
+                : pct >= 45 ? { label:'Fair',      color:'var(--gold)',  desc:'Some key protections are missing. Tap a factor to fix it.' }
+                :             { label:'Weak',      color:'var(--red)',   desc:'Several critical protections are not enabled. Act now.' };
+
+    // Ring
+    const ring = document.getElementById('healthRingFill');
+    const circumference = 201;
+    if (ring) {
+      ring.style.stroke = grade.color;
+      setTimeout(() => {
+        ring.style.strokeDashoffset = (circumference - (circumference * pct / 100)).toFixed(1);
+      }, 400);
+    }
+
+    const numEl = document.getElementById('healthScoreNum');
+    const gradeEl = document.getElementById('healthGrade');
+    const descEl  = document.getElementById('healthDesc');
+    if (numEl) { numEl.textContent = pct; numEl.style.color = grade.color; }
+    if (gradeEl) { gradeEl.textContent = grade.label; gradeEl.style.color = grade.color; }
+    if (descEl)  descEl.textContent = grade.desc;
+
+    // Factors list
+    const fList = document.getElementById('healthFactors');
+    if (fList) {
+      fList.innerHTML = factors.map(f => {
+        const cls = f.score >= f.max ? 'full' : f.score > 0 ? 'half' : 'none';
+        const pctF = Math.round((f.score / f.max) * 100);
+        return `<div class="health-factor" onclick="${f.tip ? "window.location.href='" + f.tip + "'" : "showToast('✅ ' + '" + f.label + "'}")">
+          <div class="health-factor-left">
+            <span class="health-factor-icon">${f.icon}</span>
+            ${f.label}
+          </div>
+          <div class="health-factor-score ${cls}">${pctF}%</div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // Feature 2 — Live Threat Signal Feed
+  const THREAT_SIGNALS = [
+    { label:'IP reputation',          ok: true,  val:'Clean' },
+    { label:'Impossible travel',      ok: true,  val:'None detected' },
+    { label:'Browser fingerprint',    ok: true,  val:'Stable' },
+    { label:'Automation cadence',     ok: true,  val:'Human pattern' },
+    { label:'Geo consistency',        ok: true,  val:'AU · Consistent' },
+    { label:'Session age risk',       ok: true,  val:'Within normal range' },
+  ];
+
+  function renderThreatSignals() {
+    const signals = document.getElementById('threatSignals');
+    const updated = document.getElementById('threatUpdated');
+    if (!signals) return;
+    signals.innerHTML = THREAT_SIGNALS.map(s => `
+      <div class="threat-signal">
+        <div class="threat-signal-dot ${s.ok ? 'ok' : 'warn'}"></div>
+        <div class="threat-signal-label">${s.label}</div>
+        <div class="threat-signal-val ${s.ok ? '' : 'warn'}">${s.val}</div>
+      </div>
+    `).join('');
+    const now = new Date();
+    if (updated) updated.textContent = 'Last checked ' + now.toLocaleTimeString('en-AU', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  }
+
+  function startThreatFeedRefresh() {
+    renderThreatSignals();
+    setInterval(() => {
+      // Simulate live re-evaluation — small chance of a transient amber signal
+      const flip = Math.random() < 0.08;
+      if (flip) {
+        THREAT_SIGNALS[5].ok  = false;
+        THREAT_SIGNALS[5].val = 'Session age elevated';
+        setTimeout(() => { THREAT_SIGNALS[5].ok = true; THREAT_SIGNALS[5].val = 'Within normal range'; renderThreatSignals(); }, 8000);
+      }
+      renderThreatSignals();
+    }, 12000);
+  }
+
+  // Feature 3 — Shared Device Mode
+  const SDM_KEY = 'indx_sec_shared_device';
+
+  function initSharedDeviceMode() {
+    const isOn = localStorage.getItem(SDM_KEY) === '1';
+    const toggle = document.getElementById('sdmToggle');
+    const banner = document.getElementById('sdmActiveBanner');
+    const sub    = document.getElementById('sdmSubText');
+    if (toggle) toggle.classList.toggle('on', isOn);
+    if (banner) banner.classList.toggle('show', isOn);
+    if (sub) sub.textContent = isOn
+      ? 'Active — session restricted, idle timeout 5 minutes'
+      : "I'm using a public computer, library, or shared device";
+  }
+
+  function toggleSharedDevice() {
+    const isOn = localStorage.getItem(SDM_KEY) === '1';
+    const newState = !isOn;
+    localStorage.setItem(SDM_KEY, newState ? '1' : '0');
+    if (newState) {
+      // Override idle timeout to 5 min
+      window._sdmIdleOverride = true;
+      addTimelineEvent('info', '🖥️ Shared Device Mode enabled — session restricted');
+      addLedgerEntry('sdm', '🖥️ Shared Device Mode enabled', 'Citizen-initiated · Idle timeout 5 min', 'warn');
+      showToast('🖥️ Shared Device Mode ON — sensitive actions restricted');
+    } else {
+      window._sdmIdleOverride = false;
+      addTimelineEvent('ok', '✅ Shared Device Mode disabled — full session restored');
+      showToast('✅ Shared Device Mode off — full session restored');
+    }
+    initSharedDeviceMode();
+    computeAndRenderHealthScore();
+  }
+
+  // Feature 4 — Session Activity Timeline
+  const TIMELINE_KEY = 'indx_sec_timeline_' + new Date().toDateString(); // resets each day
+  let _timelineEvents = [];
+
+  function addTimelineEvent(type, text) {
+    const now = new Date();
+    _timelineEvents.unshift({
+      type,
+      text,
+      time: now.toLocaleTimeString('en-AU', { hour:'2-digit', minute:'2-digit', second:'2-digit' }),
+    });
+    if (_timelineEvents.length > 20) _timelineEvents = _timelineEvents.slice(0, 20);
+    renderTimeline();
+  }
+
+  function renderTimeline() {
+    const wrap = document.getElementById('sessionTimeline');
+    if (!wrap) return;
+    if (!_timelineEvents.length) {
+      wrap.innerHTML = '<div class="timeline-empty">Session just started — events appear here as they happen.</div>';
+      return;
+    }
+    wrap.innerHTML = _timelineEvents.map(e => `
+      <div class="timeline-item">
+        <div class="timeline-dot ${e.type}">•</div>
+        <div class="timeline-body">
+          <div class="timeline-text">${e.text}</div>
+          <div class="timeline-time">${e.time}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ── CONSTANTS ──
+  const INDX_PRICE_USD = 0.24;
+  const VAULT_KEY      = 'indx_sec_vault_mode';
+  const CALLER_KEY     = 'indx_sec_caller_code';
+  const LEDGER_KEY     = 'indx_sec_ledger';
+  const SESSION_START  = 'indx_sec_session_start';
+  const IDLE_TIMEOUT_S = 900; // 15 min (AAL2)
+
+  // ── RISK LEVELS ──
+  const RISK_LEVELS = {
+    green:  { label: 'Normal — Protected',     desc: 'All systems are clear. SIINDEX is monitoring this session continuously.', emoji: '🛡️', badge: '🟢 Protected',  cls: 'risk-green',  orbCls: 'green' },
+    yellow: { label: 'Awareness — Monitoring', desc: 'Something is slightly unusual. Sensitive actions will prompt a quick confirmation.', emoji: '⚠️', badge: '🟡 Awareness', cls: 'risk-yellow', orbCls: 'yellow' },
+    orange: { label: 'Step-Up Required',       desc: 'Unusual session signals detected. Sensitive actions are paused until you confirm it is you.', emoji: '🔶', badge: '🟠 Step-Up', cls: 'risk-orange', orbCls: 'yellow' },
+    red:    { label: 'Restricted',             desc: 'Session risk is elevated. Funds, identity, governance, and publishing are blocked.', emoji: '🚨', badge: '🔴 Restricted', cls: 'risk-red', orbCls: 'red' },
+    black:  { label: 'Emergency Lock',         desc: 'Account is in protection mode. Human review required before sensitive actions resume.', emoji: '⛔', badge: '⚫ Locked', cls: 'risk-black', orbCls: 'black' },
+  };
+
+  // ── INIT SESSION START ──
+  if (!sessionStorage.getItem(SESSION_START)) {
+    sessionStorage.setItem(SESSION_START, Date.now().toString());
+  }
+
+  // ── TOAST ──
+  let toastTimer;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  // ── RISK SCORE DISPLAY ──
+  let currentRisk = 'green';
+  function setRisk(level) {
+    if (!RISK_LEVELS[level]) return;
+    currentRisk = level;
+    const r = RISK_LEVELS[level];
+
+    // Nav badge
+    const badge = document.getElementById('navRiskBadge');
+    badge.textContent = r.badge;
+    badge.className = 'nav-risk-badge ' + r.cls;
+
+    // Hero
+    document.getElementById('riskLevelName').textContent = r.label;
+    document.getElementById('riskLevelDesc').textContent = r.desc;
+    document.getElementById('riskOrbEmoji').textContent  = r.emoji;
+
+    // Orb class
+    const orb = document.getElementById('riskOrb');
+    orb.className = 'risk-orb ' + r.orbCls;
+  }
+
+  // ── SESSION META ──
+  function updateSessionMeta() {
+    const start  = parseInt(sessionStorage.getItem(SESSION_START) || Date.now());
+    const ageMs  = Date.now() - start;
+    const ageMin = Math.floor(ageMs / 60000);
+    const ageH   = Math.floor(ageMin / 60);
+    const ageStr = ageH > 0 ? ageH + 'h ' + (ageMin % 60) + 'm' : ageMin + 'm';
+    document.getElementById('sessionAgeVal').textContent = ageStr;
+
+    // Device detection
+    const ua = navigator.userAgent;
+    const isIOS = /iPad|iPhone|iPod/.test(ua);
+    const isAndroid = /Android/.test(ua);
+    const name = sessionStorage.getItem('citizen_name') || 'Sovereign';
+    document.getElementById('currentDeviceName').innerHTML =
+      (isIOS ? '📱 iPhone' : isAndroid ? '📱 Android' : '💻 Browser') +
+      ' <span class="device-current-tag">CURRENT</span>';
+    document.getElementById('currentDeviceMeta').textContent =
+      'Active now · ' + name + ' · Trusted';
+    document.getElementById('sessionDeviceVal').textContent =
+      isIOS ? 'iPhone' : isAndroid ? 'Android' : 'Browser';
+    document.getElementById('sessionRegionVal').textContent = 'AU';
+  }
+
+  // ── IDLE TIMEOUT COUNTDOWN ──
+  let idleSecondsLeft = IDLE_TIMEOUT_S;
+  let lastActivity    = Date.now();
+
+  function resetIdle() { lastActivity = Date.now(); }
+  ['touchstart','click','keydown','scroll'].forEach(e =>
+    document.addEventListener(e, resetIdle, { passive: true }));
+
+  function tickIdle() {
+    const elapsed = Math.floor((Date.now() - lastActivity) / 1000);
+    idleSecondsLeft = Math.max(0, IDLE_TIMEOUT_S - elapsed);
+    const m = Math.floor(idleSecondsLeft / 60);
+    const s = idleSecondsLeft % 60;
+    document.getElementById('idleTimeVal').textContent =
+      String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+    const pct = (idleSecondsLeft / IDLE_TIMEOUT_S) * 100;
+    document.getElementById('idleFill').style.width = pct + '%';
+    const fill = document.getElementById('idleFill');
+    if (pct < 25) {
+      fill.style.background = 'linear-gradient(90deg,#FF4D6D,#FF8C00)';
+    } else if (pct < 50) {
+      fill.style.background = 'linear-gradient(90deg,#FFB800,#FF8C00)';
+    } else {
+      fill.style.background = 'linear-gradient(90deg,#00E5A0,#00D4FF)';
+    }
+    if (idleSecondsLeft <= 0) {
+      showToast('⏱️ Session idle — sensitive actions paused');
+      setRisk('yellow');
+    }
+  }
+  setInterval(tickIdle, 1000);
+
+  // ── TRUSTED DEVICES ──
+  const TRUSTED_DEVICES = [
+    { icon: '💻', name: 'MacBook Pro', meta: 'Last active 2h ago · AU', risk: 'green', id: 'td1' },
+    { icon: '📱', name: 'iPad (home)', meta: 'Last active 3 days ago · AU', risk: 'green', id: 'td2' },
+  ];
+
+  function renderTrustedDevices() {
+    const list = document.getElementById('trustedDevicesList');
+    list.innerHTML = TRUSTED_DEVICES.map(d => `
+      <div class="device-item" id="${d.id}">
+        <div class="device-icon-wrap trusted">${d.icon}</div>
+        <div class="device-body">
+          <div class="device-name">${d.name}</div>
+          <div class="device-meta">${d.meta}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+          <div class="device-risk-dot ${d.risk}"></div>
+          <div style="font-size:10px;color:var(--muted);cursor:pointer;" onclick="signOutDevice('${d.id}','${d.name}')">Sign out</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function signOutDevice(id, name) {
+    const el = document.getElementById(id);
+    if (el) { el.style.opacity = '0.35'; el.style.pointerEvents = 'none'; }
+    addLedgerEntry('sign_out', '🔒 Session signed out', name + ' signed out remotely', 'pass');
+    showToast('✅ ' + name + ' signed out');
+  }
+
+  function confirmSignOutAll() {
+    if (confirm('Sign out all devices? You will remain logged in on this device only.')) {
+      TRUSTED_DEVICES.forEach(d => {
+        const el = document.getElementById(d.id);
+        if (el) { el.style.opacity = '0.35'; el.style.pointerEvents = 'none'; }
+      });
+      addLedgerEntry('sign_out_all', '🔐 Signed out everywhere', 'All other sessions revoked', 'pass');
+      showToast('✅ All other sessions signed out');
+    }
+  }
+
+  // ── VAULT MODE ──
+  function initVault() {
+    const isOn = localStorage.getItem(VAULT_KEY) === '1';
+    const toggle = document.getElementById('vaultToggle');
+    const statusText = document.getElementById('vaultStatusText');
+    if (isOn) {
+      toggle.classList.add('on');
+      statusText.textContent = 'Active — passkey required for every sensitive action';
+    } else {
+      toggle.classList.remove('on');
+      statusText.textContent = 'Tap to activate enhanced protection';
+    }
+  }
+
+  function toggleVault() {
+    const isOn = localStorage.getItem(VAULT_KEY) === '1';
+    const newState = !isOn;
+    localStorage.setItem(VAULT_KEY, newState ? '1' : '0');
+    initVault();
+    const msg = newState
+      ? '🏛️ Vault Mode ON — passkey required for all sensitive actions'
+      : 'Vault Mode disabled';
+    showToast(msg);
+    // GOD MODE PATCH — log to timeline + recompute health
+    addTimelineEvent(newState ? 'ok' : 'info', newState ? '🏛️ Vault Mode enabled' : '🏛️ Vault Mode disabled');
+    computeAndRenderHealthScore();
+    addLedgerEntry('vault_toggle', newState ? '🏛️ Vault Mode enabled' : '🏛️ Vault Mode disabled',
+      'Citizen-initiated · This device', newState ? 'pass' : 'warn');
+  }
+
+  // ── CALLER CODE ──
+  const WORDS = ['AZURE','SIGMA','NEXUS','PULSE','EMBER','FORTE','GRACE','HELIX','INDRA','JEWEL'];
+
+  function getOrCreateCallerCode() {
+    let code = localStorage.getItem(CALLER_KEY);
+    if (!code) {
+      const w = WORDS[Math.floor(Math.random() * WORDS.length)];
+      const n = Math.floor(1000 + Math.random() * 9000);
+      code = 'INDX-' + w + '-' + n;
+      localStorage.setItem(CALLER_KEY, code);
+    }
+    return code;
+  }
+
+  let codeRevealed = false;
+  function revealCallerCode() {
+    const code = getOrCreateCallerCode();
+    document.getElementById('callerCodeVal').textContent = code;
+    codeRevealed = true;
+    showToast('🔑 Code revealed — keep this private');
+  }
+
+  function rotateCallerCode() {
+    const w = WORDS[Math.floor(Math.random() * WORDS.length)];
+    const n = Math.floor(1000 + Math.random() * 9000);
+    const code = 'INDX-' + w + '-' + n;
+    localStorage.setItem(CALLER_KEY, code);
+    if (codeRevealed) document.getElementById('callerCodeVal').textContent = code;
+    addLedgerEntry('caller_code', '🔑 Caller code rotated', 'Citizen-initiated · This device', 'pass');
+    showToast('✅ Caller code rotated — update your records');
+  }
+
+  // ── DECISION LEDGER ──
+  function loadLedger() {
+    try { return JSON.parse(localStorage.getItem(LEDGER_KEY) || '[]'); } catch(e) { return []; }
+  }
+
+  function saveLedger(entries) {
+    // Keep max 20 entries
+    localStorage.setItem(LEDGER_KEY, JSON.stringify(entries.slice(0, 20)));
+  }
+
+  function addLedgerEntry(type, title, meta, result) {
+    const entries = loadLedger();
+    const icons   = { ok: '✅', warn: '⚠️', pass: '✅', block: '🔴', sign_out: '🔒', sign_out_all: '🔐', vault_toggle: '🏛️', caller_code: '🔑', secure_account: '🚨' };
+    const iconCls = result === 'pass' ? 'ok' : result === 'warn' ? 'warn' : 'sec';
+    entries.unshift({
+      id:     'DL-' + new Date().toISOString().slice(0,10) + '-' + Math.floor(1000 + Math.random() * 9000),
+      icon:   icons[type] || '📋',
+      iconCls,
+      title,
+      meta,
+      result,
+      ts:     new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' }),
+      date:   new Date().toLocaleDateString('en-AU', { day:'numeric', month:'short' }),
+    });
+    saveLedger(entries);
+    renderLedger();
+  }
+
+  function renderLedger() {
+    const entries = loadLedger();
+    const list = document.getElementById('ledgerList');
+    if (!entries.length) {
+      list.innerHTML = '<div style="font-size:13px;color:var(--muted);text-align:center;padding:20px 0;">No security events yet. Actions will appear here.</div>';
+      return;
+    }
+    list.innerHTML = entries.slice(0, 8).map(e => `
+      <div class="ledger-item">
+        <div class="ledger-icon ${e.iconCls}">${e.icon}</div>
+        <div class="ledger-body">
+          <div class="ledger-title">${e.title}</div>
+          <div class="ledger-meta">${e.date} · ${e.ts} · ${e.meta}</div>
+          <div class="ledger-id">${e.id}</div>
+        </div>
+        <div class="ledger-result ${e.result}">${e.result === 'pass' ? 'CLEAR' : e.result === 'warn' ? 'REVIEW' : 'BLOCKED'}</div>
+      </div>
+    `).join('');
+  }
+
+  // ── SECURE MY ACCOUNT ──
+  const SECURE_STEPS = [
+    { text: '<strong>Sensitive actions paused</strong> across all sessions — funds have not moved.' },
+    { text: '<strong>All other sessions signed out</strong> — this device remains active.' },
+    { text: '<strong>Recent changes reviewed</strong> — payout, recovery, identity, governance.' },
+    { text: '<strong>Decision Ledger entry created</strong> — timestamped, citizen-initiated.' },
+    { text: '<strong>SIINDEX monitoring elevated</strong> — next sensitive action requires fresh passkey.' },
+  ];
+
+  function openSecureMyAccount() {
+    const overlay = document.getElementById('secureOverlay');
+    const stepsList = document.getElementById('secureStepsList');
+    overlay.classList.add('show');
+
+    // Sign out all devices
+    TRUSTED_DEVICES.forEach(d => {
+      const el = document.getElementById(d.id);
+      if (el) { el.style.opacity = '0.35'; el.style.pointerEvents = 'none'; }
+    });
+
+    // Render steps (animate in sequence)
+    stepsList.innerHTML = SECURE_STEPS.map((s, i) => `
+      <div class="secure-step" id="secStep${i}" style="opacity:0;transition:opacity 0.4s ease ${i * 0.35}s;">
+        <div class="secure-step-num" id="secNum${i}">${i + 1}</div>
+        <div class="secure-step-text">${s.text}</div>
+      </div>
+    `).join('');
+
+    // Animate steps in
+    SECURE_STEPS.forEach((_, i) => {
+      setTimeout(() => {
+        const el = document.getElementById('secStep' + i);
+        if (el) el.style.opacity = '1';
+        setTimeout(() => {
+          const num = document.getElementById('secNum' + i);
+          if (num) num.classList.add('done');
+          if (num) num.textContent = '✓';
+        }, 350 + i * 350);
+      }, i * 350);
+    });
+
+    // GOD MODE PATCH — also log to timeline
+    addTimelineEvent('warn', '🚨 Secure My Account activated — all sessions revoked');
+    // Log to ledger
+    addLedgerEntry('secure_account', '🚨 Secure My Account — initiated', 'Citizen-initiated · All sessions revoked', 'pass');
+
+    // Elevate risk display temporarily
+    setRisk('yellow');
+    setTimeout(() => setRisk('green'), 8000);
+  }
+
+  function closeSecureSheet() {
+    document.getElementById('secureOverlay').classList.remove('show');
+  }
+
+  // ── SEED ENTRY LOG (page open) ──
+  function logPageOpen() {
+    const entries = loadLedger();
+    if (!entries.length || entries[0].title !== '🔍 Security Centre opened') {
+      addLedgerEntry('ok', '🔍 Security Centre opened', 'Browse context · This device · Passkey session', 'pass');
+    }
+  }
+
+  // ── DOMContentLoaded ──
+  window.addEventListener('DOMContentLoaded', () => {
+    updateSessionMeta();
+    renderTrustedDevices();
+    initVault();
+    renderLedger();
+    logPageOpen();
+    document.getElementById('callerCodeVal').textContent = 'INDX-····';
+    // GOD MODE INIT
+    computeAndRenderHealthScore();
+    startThreatFeedRefresh();
+    initSharedDeviceMode();
+    addTimelineEvent('info', '🔐 Security Centre opened — session monitoring active');
+    addTimelineEvent('ok', '✅ Risk Score: Normal · Passkey session confirmed');
+    renderTimeline();
+
+    // Live session age update
+    setInterval(updateSessionMeta, 60000);
+
+    // Simulate continuous risk monitoring (green only in demo)
+    setInterval(() => {
+      const start = parseInt(sessionStorage.getItem(SESSION_START) || Date.now());
+      const ageMin = (Date.now() - start) / 60000;
+      if (ageMin > 120 && currentRisk === 'green') {
+        setRisk('yellow');
+        showToast('⚠️ Session is 2+ hours old — some actions may require re-authentication');
+      }
+    }, 30000);
+  });
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

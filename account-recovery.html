@@ -91,6 +91,9 @@
 
     /* TOAST */
     #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+
+    /* GOD MODE: ASYNC APPROVAL STATE */
+    .btn-primary.approved{background:var(--green);color:#04120b;}
   </style>
 </head>
 <body>
@@ -153,14 +156,14 @@
     <div class="screen-sub" id="otpSub">We sent a 6-digit code to your phone. Enter it below.</div>
 
     <div class="otp-row">
-      <input class="otp-box" maxlength="1" id="ob0" oninput="otpMove(0)" type="number">
-      <input class="otp-box" maxlength="1" id="ob1" oninput="otpMove(1)" type="number">
-      <input class="otp-box" maxlength="1" id="ob2" oninput="otpMove(2)" type="number">
-      <input class="otp-box" maxlength="1" id="ob3" oninput="otpMove(3)" type="number">
-      <input class="otp-box" maxlength="1" id="ob4" oninput="otpMove(4)" type="number">
-      <input class="otp-box" maxlength="1" id="ob5" oninput="otpMove(5)" type="number">
+      <input class="otp-box" maxlength="1" id="ob0" oninput="otpMove(0)" onkeydown="otpKeyDown(event,0)" onpaste="otpPaste(event)" type="number">
+      <input class="otp-box" maxlength="1" id="ob1" oninput="otpMove(1)" onkeydown="otpKeyDown(event,1)" onpaste="otpPaste(event)" type="number">
+      <input class="otp-box" maxlength="1" id="ob2" oninput="otpMove(2)" onkeydown="otpKeyDown(event,2)" onpaste="otpPaste(event)" type="number">
+      <input class="otp-box" maxlength="1" id="ob3" oninput="otpMove(3)" onkeydown="otpKeyDown(event,3)" onpaste="otpPaste(event)" type="number">
+      <input class="otp-box" maxlength="1" id="ob4" oninput="otpMove(4)" onkeydown="otpKeyDown(event,4)" onpaste="otpPaste(event)" type="number">
+      <input class="otp-box" maxlength="1" id="ob5" oninput="otpMove(5)" onkeydown="otpKeyDown(event,5)" onpaste="otpPaste(event)" type="number">
     </div>
-    <div style="text-align:center;font-size:13px;color:var(--text-muted);margin-bottom:24px;">Didn't receive it? <span style="color:var(--cyan);cursor:pointer;" onclick="showToast('New code sent ✓')">Resend</span></div>
+    <div style="text-align:center;font-size:13px;color:var(--text-muted);margin-bottom:24px;">Didn't receive it? <span id="resendLink" style="color:var(--cyan);cursor:pointer;" onclick="resendCode()">Resend</span></div>
 
     <button class="btn-primary" id="otpBtn" onclick="verifyOTP()" disabled>Verify</button>
     <button class="btn-ghost" onclick="showScreen('screen1')">← Back</button>
@@ -195,7 +198,7 @@
         <div class="mc-icon" style="background:rgba(0,229,160,0.1);">🧬</div>
         <div><div class="mc-name">Biometric + SIINDEX</div></div>
       </div>
-      <div class="mc-desc">Use Face ID / fingerprint on a trusted device. SIINDEX AI will verify your identity pattern over 24h.</div>
+      <div class="mc-desc">Use Face ID / fingerprint on a trusted device. SIINDEX will verify your identity pattern over 24h.</div>
     </div>
 
     <button class="btn-primary" onclick="goRecovery()" style="margin-top:auto;">Continue with selected method</button>
@@ -254,7 +257,7 @@
   <div class="screen" id="screen2bio">
     <div class="screen-icon" style="margin-bottom:8px;">🧬</div>
     <div class="screen-title">Biometric recovery</div>
-    <div class="screen-sub" style="margin-bottom:24px;">SIINDEX AI will cross-reference your biometric signature, transaction patterns, and device history over 24 hours.</div>
+    <div class="screen-sub" style="margin-bottom:24px;">SIINDEX will cross-reference your biometric signature, transaction patterns, and device history over 24 hours.</div>
     <div class="bio-circle" id="bioCircle" onclick="startBioScan()">👁️</div>
     <div style="text-align:center;font-size:13px;color:var(--text-muted);margin-bottom:24px;" id="bioStatus">Tap to begin Face ID scan</div>
     <div style="background:rgba(255,184,0,0.06);border:1px solid rgba(255,184,0,0.15);border-radius:12px;padding:12px 14px;margin-bottom:20px;font-size:12px;color:var(--text-muted);">
@@ -326,6 +329,8 @@
       : 'We sent a 6-digit code to your email. Enter it below.';
     showScreen('screen1b');
     setTimeout(() => document.getElementById('ob0').focus(), 100);
+    // GOD MODE PATCH: start the resend cooldown as soon as the first code goes out
+    startResendCooldown();
   }
 
   function otpMove(i) {
@@ -333,6 +338,55 @@
     if (v.length >= 1 && i < 5) document.getElementById('ob' + (i+1)).focus();
     const filled = [0,1,2,3,4,5].every(n => document.getElementById('ob'+n).value.length > 0);
     document.getElementById('otpBtn').disabled = !filled;
+  }
+
+  // GOD MODE: OTP BACKSPACE NAVIGATION + PASTE SUPPORT
+  function otpKeyDown(e, i) {
+    if (e.key === 'Backspace' && !e.target.value && i > 0) {
+      document.getElementById('ob' + (i - 1)).focus();
+    }
+  }
+  function otpPaste(e) {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!text) return;
+    for (let i = 0; i < 6; i++) document.getElementById('ob' + i).value = text[i] || '';
+    const last = Math.min(text.length, 6) - 1;
+    if (last >= 0) document.getElementById('ob' + last).focus();
+    const filled = [0,1,2,3,4,5].every(n => document.getElementById('ob'+n).value.length > 0);
+    document.getElementById('otpBtn').disabled = !filled;
+  }
+
+  // GOD MODE: RESEND COOLDOWN
+  let resendCooldown = 0;
+  let resendTimer = null;
+  function startResendCooldown() {
+    resendCooldown = 30;
+    updateResendLabel();
+    clearInterval(resendTimer);
+    resendTimer = setInterval(() => {
+      resendCooldown--;
+      updateResendLabel();
+      if (resendCooldown <= 0) clearInterval(resendTimer);
+    }, 1000);
+  }
+  function updateResendLabel() {
+    const el = document.getElementById('resendLink');
+    if (!el) return;
+    if (resendCooldown > 0) {
+      el.textContent = `Resend in ${resendCooldown}s`;
+      el.style.cursor = 'default';
+      el.style.color = 'var(--text-dim)';
+    } else {
+      el.textContent = 'Resend';
+      el.style.cursor = 'pointer';
+      el.style.color = 'var(--cyan)';
+    }
+  }
+  function resendCode() {
+    if (resendCooldown > 0) return;
+    showToast('New code sent ✓');
+    startResendCooldown();
   }
 
   function verifyOTP() {
@@ -382,11 +436,22 @@
 
   function sendGuardianRequest() {
     showToast('🤝 Recovery request sent to your Guardian');
+    const btn = document.getElementById('screen2guardian').querySelector('.btn-primary');
     setTimeout(() => {
-      document.getElementById('screen2guardian').querySelector('.btn-primary').textContent = '⏳ Waiting for Guardian approval…';
-      document.getElementById('screen2guardian').querySelector('.btn-primary').disabled = true;
+      btn.textContent = '⏳ Waiting for Guardian approval…';
+      btn.disabled = true;
     }, 500);
     // In production: SIINDEX sends push notification to guardian's device via Supabase
+    // GOD MODE PATCH: simulate the Guardian actually responding instead of leaving the flow dead-ended
+    setTimeout(() => {
+      btn.classList.add('approved');
+      btn.textContent = '✓ Guardian approved!';
+      showToast('✓ Your Guardian approved the recovery request');
+      setTimeout(() => {
+        setProgress(2);
+        showScreen('screen3');
+      }, 1200);
+    }, 6000);
   }
 
   function startBioScan() {
@@ -397,6 +462,15 @@
       c.classList.remove('scanning');
       document.getElementById('bioStatus').textContent = '✓ Scan submitted SIINDEX reviewing (up to 24h)';
       showToast('Biometric submitted you\'ll be notified when verified');
+      // GOD MODE PATCH: simulate SIINDEX completing the review instead of leaving the flow dead-ended
+      setTimeout(() => {
+        document.getElementById('bioStatus').textContent = '✓ SIINDEX verification complete restoring access';
+        showToast('✓ Biometric verification complete');
+        setTimeout(() => {
+          setProgress(2);
+          showScreen('screen3');
+        }, 1200);
+      }, 5000);
     }, 3000);
   }
 
@@ -406,5 +480,6 @@
     setTimeout(() => t.style.opacity = '0', 2500);
   }
 </script>
+<script src="siindex-speak-core.js"></script>
 </body>
 </html>

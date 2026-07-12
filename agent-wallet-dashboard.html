@@ -76,6 +76,22 @@
     .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;}
     .sect-title{font-size:12px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px;}
     #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+
+    /* GOD MODE: FEED FILTERS + NEW BADGE */
+    .feed-filters{display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;}
+    .feed-filter{padding:6px 12px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);font-size:11px;font-weight:700;color:var(--text-muted);white-space:nowrap;cursor:pointer;flex-shrink:0;}
+    .feed-filter.active{background:rgba(0,212,255,0.12);border-color:rgba(0,212,255,0.3);color:var(--cyan);}
+    .new-badge{background:var(--red);color:#fff;font-size:9px;font-weight:800;padding:2px 7px;border-radius:20px;margin-left:6px;}
+    .feed-item.feed-new{animation:feedIn 0.4s ease;}
+    @keyframes feedIn{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+
+    /* GOD MODE: APPROVAL CONFIRM */
+    .ac-confirm{display:none;background:rgba(0,0,0,0.25);border-radius:10px;padding:10px;margin-top:10px;font-size:12px;font-weight:700;text-align:center;}
+    .ac-confirm.show{display:block;}
+    .ac-confirm-actions{display:flex;gap:8px;margin-top:8px;}
+    .ac-confirm-actions button{flex:1;padding:8px;border-radius:8px;border:none;font-size:12px;font-weight:800;cursor:pointer;}
+    .ac-yes{background:var(--green);color:#04120b;}
+    .ac-no{background:var(--surface3);color:var(--text-muted);}
   </style>
 </head>
 <body>
@@ -83,7 +99,7 @@
   <div class="topbar">
     <button class="tb-back" onclick="history.back()">←</button>
     <div class="tb-title">📊 Agent Dashboard</div>
-    <div class="live-dot"></div>
+    <div class="live-dot" id="liveDot" style="cursor:pointer;" onclick="toggleLive()"></div>
   </div>
 
   <div class="scroll-body">
@@ -113,7 +129,7 @@
       </div>
 
       <!-- PENDING APPROVALS -->
-      <div class="sect-title">⏳ Pending approval (1)</div>
+      <div class="sect-title" id="pendingTitle">⏳ Pending approval (1)</div>
       <div class="approval-card" id="pendingCard">
         <div class="ac-header">
           <div class="ac-title">Add Liquidity · INDX/USDC Pool</div>
@@ -123,9 +139,17 @@
         <div class="ac-row"><div class="ac-lbl">Protocol</div><div>IN$DEX LP Pools · Solana</div></div>
         <div class="ac-row"><div class="ac-lbl">PQSI result</div><div style="color:var(--green);">T0 CLEAR ✓</div></div>
         <div class="ac-row"><div class="ac-lbl">Waiting since</div><div style="color:var(--gold);">2 minutes ago</div></div>
-        <div class="ac-actions">
-          <button class="btn-approve" onclick="approveCard()">✓ Approve</button>
-          <button class="btn-reject" onclick="rejectCard()">✗ Reject</button>
+        <div class="ac-actions" id="pendingActions">
+          <button class="btn-approve" onclick="askConfirm('approve')">✓ Approve</button>
+          <button class="btn-reject" onclick="askConfirm('reject')">✗ Reject</button>
+        </div>
+        <!-- GOD MODE: TWO-STEP CONFIRM -->
+        <div class="ac-confirm" id="pendingConfirm">
+          <div id="confirmMsg">Confirm approval?</div>
+          <div class="ac-confirm-actions">
+            <button class="ac-yes" onclick="executeDecision()">Yes, confirm</button>
+            <button class="ac-no" onclick="cancelConfirm()">Cancel</button>
+          </div>
         </div>
       </div>
 
@@ -142,36 +166,44 @@
 
       <!-- ACTIVITY FEED -->
       <div class="card">
-        <div class="sect-title">📋 Recent activity</div>
-        <div class="feed-item">
+        <div class="sect-title">📋 Recent activity<span class="new-badge" id="feedNewBadge" style="display:none;"></span></div>
+        <div class="feed-filters" id="feedFilters">
+          <div class="feed-filter active" data-filter="all" onclick="setFeedFilter('all')">All</div>
+          <div class="feed-filter" data-filter="ok" onclick="setFeedFilter('ok')">Auto-signed</div>
+          <div class="feed-filter" data-filter="blocked" onclick="setFeedFilter('blocked')">Blocked</div>
+          <div class="feed-filter" data-filter="pending" onclick="setFeedFilter('pending')">Pending</div>
+        </div>
+        <div id="activityFeed">
+        <div class="feed-item" data-status="ok">
           <div class="fi-dot dot-ok">✓</div>
           <div class="fi-body"><div class="fi-action">Swap 40 USDC → 78.18 INDX</div><div class="fi-detail">IN$DEX DEX · Solana · Auto-signed · T0 CLEAR</div></div>
           <div class="fi-time">14:22</div>
         </div>
-        <div class="feed-item">
+        <div class="feed-item" data-status="ok">
           <div class="fi-dot dot-ok">✓</div>
           <div class="fi-body"><div class="fi-action">Stake 50 INDX (30d)</div><div class="fi-detail">IN$DEX Staking · Solana · Auto-signed</div></div>
           <div class="fi-time">14:18</div>
         </div>
-        <div class="feed-item">
+        <div class="feed-item" data-status="pending">
           <div class="fi-dot dot-pending">⏳</div>
           <div class="fi-body"><div class="fi-action">Add liquidity 600 INDX + 307 USDC</div><div class="fi-detail">Awaiting 2FA · $307 exceeds threshold</div></div>
           <div class="fi-time">14:14</div>
         </div>
-        <div class="feed-item">
+        <div class="feed-item" data-status="ok">
           <div class="fi-dot dot-ok">✓</div>
           <div class="fi-body"><div class="fi-action">Claim fees 2.4 INDX</div><div class="fi-detail">LP Pool · Solana · Auto-signed</div></div>
           <div class="fi-time">14:05</div>
         </div>
-        <div class="feed-item">
+        <div class="feed-item" data-status="blocked">
           <div class="fi-dot dot-blocked">✗</div>
           <div class="fi-body"><div class="fi-action">Contract interaction BLOCKED</div><div class="fi-detail">PQSI T3 ALERT rug-pull pattern · Incident #CE-2026-0142</div></div>
           <div class="fi-time">13:58</div>
         </div>
-        <div class="feed-item">
+        <div class="feed-item" data-status="blocked">
           <div class="fi-dot dot-blocked">✗</div>
           <div class="fi-body"><div class="fi-action">Swap blocked daily limit reached</div><div class="fi-detail">Policy: $2,000/day cap · 2 more attempts rejected</div></div>
           <div class="fi-time">13:41</div>
+        </div>
         </div>
       </div>
 
@@ -197,20 +229,105 @@
 <script>
 function approveCard(){
   document.getElementById('pendingCard').style.display='none';
-  document.querySelector('.sect-title').textContent='✓ No pending approvals';
+  // GOD MODE PATCH: target unique id, not the first .sect-title in the document
+  document.getElementById('pendingTitle').textContent='✓ No pending approvals';
   showToast('✓ LP transaction approved broadcasting now');
 }
 function rejectCard(){
   document.getElementById('pendingCard').style.display='none';
-  document.querySelector('.sect-title').textContent='✓ No pending approvals';
+  // GOD MODE PATCH: target unique id, not the first .sect-title in the document
+  document.getElementById('pendingTitle').textContent='✓ No pending approvals';
   showToast('✗ LP transaction rejected');
 }
+
+// GOD MODE: TWO-STEP APPROVE/REJECT CONFIRM
+let pendingDecision=null;
+function askConfirm(type){
+  pendingDecision=type;
+  document.getElementById('pendingActions').style.display='none';
+  document.getElementById('confirmMsg').textContent=type==='approve'?'Confirm approval of $307.00 LP add?':'Confirm rejection of this transaction?';
+  document.getElementById('pendingConfirm').classList.add('show');
+}
+function cancelConfirm(){
+  document.getElementById('pendingConfirm').classList.remove('show');
+  document.getElementById('pendingActions').style.display='flex';
+  pendingDecision=null;
+}
+function executeDecision(){
+  if(pendingDecision==='approve')approveCard();
+  else if(pendingDecision==='reject')rejectCard();
+  pendingDecision=null;
+}
+
+// GOD MODE: LIVE FEED PAUSE TOGGLE
+let livePaused=false;
+function toggleLive(){
+  livePaused=!livePaused;
+  const dot=document.getElementById('liveDot');
+  if(dot)dot.style.background=livePaused?'var(--text-dim)':'var(--green)';
+  if(dot)dot.style.animationPlayState=livePaused?'paused':'running';
+  showToast(livePaused?'⏸ Live feed paused':'▶ Live feed resumed');
+}
+
+// GOD MODE: ACTIVITY FEED FILTERS
+let currentFilter='all';
+function setFeedFilter(f){
+  currentFilter=f;
+  document.querySelectorAll('.feed-filter').forEach(el=>el.classList.toggle('active',el.dataset.filter===f));
+  applyFeedFilter();
+  clearNewBadge();
+}
+function applyFeedFilter(){
+  document.querySelectorAll('#activityFeed .feed-item').forEach(el=>{
+    el.style.display=(currentFilter==='all'||el.getAttribute('data-status')===currentFilter)?'flex':'none';
+  });
+}
+
+// GOD MODE: LIVE ACTIVITY PUSH + UNSEEN BADGE
+const liveEvents=[
+  {status:'ok',ico:'✓',dot:'dot-ok',action:'Swap 25 USDC → 48.9 INDX',detail:'IN$DEX DEX · Solana · Auto-signed · T0 CLEAR'},
+  {status:'ok',ico:'✓',dot:'dot-ok',action:'Claim staking rewards 1.8 INDX',detail:'IN$DEX Staking · Solana · Auto-signed'},
+  {status:'blocked',ico:'✗',dot:'dot-blocked',action:'Contract interaction BLOCKED',detail:'PQSI T2 flag · unknown token approval'},
+];
+let unseenCount=0;
+function pushLiveEvent(){
+  const e=liveEvents[Math.floor(Math.random()*liveEvents.length)];
+  const feed=document.getElementById('activityFeed');
+  if(!feed)return;
+  const div=document.createElement('div');
+  div.className='feed-item feed-new';
+  div.setAttribute('data-status',e.status);
+  const now=new Date();
+  const time=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  div.innerHTML=`<div class="fi-dot ${e.dot}">${e.ico}</div><div class="fi-body"><div class="fi-action">${e.action}</div><div class="fi-detail">${e.detail}</div></div><div class="fi-time">${time}</div>`;
+  feed.prepend(div);
+  applyFeedFilter();
+  bumpNewBadge();
+}
+function bumpNewBadge(){
+  unseenCount++;
+  const b=document.getElementById('feedNewBadge');
+  if(b){b.textContent=unseenCount+' new';b.style.display='inline-block';}
+}
+function clearNewBadge(){
+  unseenCount=0;
+  const b=document.getElementById('feedNewBadge');
+  if(b)b.style.display='none';
+  localStorage.setItem('indx_dashboard_lastseen',Date.now().toString());
+}
+
 // Live tick
 setInterval(()=>{
+  if(livePaused)return;
   const el=document.getElementById('txCount');
   if(Math.random()>0.7)el.textContent=parseInt(el.textContent)+1;
 },3500);
+setInterval(()=>{
+  if(livePaused)return;
+  if(Math.random()>0.6)pushLiveEvent();
+},9000);
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}
 </script>
+<script src="siindex-speak-core.js"></script>
 </body>
 </html>

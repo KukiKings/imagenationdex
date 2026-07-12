@@ -230,6 +230,24 @@
   .toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--surface3); border:1px solid var(--border); border-radius:20px; padding:10px 20px; font-size:13px; font-weight:500; white-space:nowrap; opacity:0; transition:all 0.3s; z-index:999; pointer-events:none; }
   .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 
+  /* GOD MODE — QR SCANNER R1 */
+  /* Live USD conversion hint */
+  .usd-hint{font-size:12px;color:var(--text-dim);margin-top:-12px;margin-bottom:14px;text-align:right;}
+  .usd-hint span{color:var(--cyan);}
+
+  /* PQSI verification animation */
+  .pqsi-check-wrap{display:none;margin-bottom:16px;background:rgba(0,229,160,0.06);border:1px solid rgba(0,229,160,0.18);border-radius:12px;padding:12px 14px;}
+  .pqsi-check-wrap.show{display:block;}
+  .pqsi-step{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);padding:4px 0;transition:color 0.3s;}
+  .pqsi-step.done{color:var(--green);}
+  .pqsi-dot{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--text-dim);display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;transition:all 0.3s;}
+  .pqsi-step.done .pqsi-dot{background:var(--green);border-color:var(--green);color:#000;}
+
+  /* Last-used amount memory chip */
+  .last-amt-chip{display:none;margin-bottom:10px;}
+  .last-amt-chip.show{display:block;}
+  .lac-btn{padding:7px 14px;border-radius:20px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);color:var(--cyan);font-size:12px;font-weight:700;cursor:pointer;}
+
   /* BOTTOM NAV */
   .bottom-nav-spacer{height:64px;}
   .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(16,18,26,0.96);backdrop-filter:blur(16px);border-top:1px solid #252836;display:flex;z-index:80;}
@@ -289,23 +307,8 @@
 
   <div id="recentSection">
     <div class="recent-title">Recent</div>
-    <div class="recent-list">
-      <div class="recent-item" onclick="loadRecent('james.IN$DEX','James','10')">
-        <div class="recent-icon">👤</div>
-        <div class="recent-body">
-          <div class="recent-name">James</div>
-          <div class="recent-meta">james.IN$DEX · 2 days ago</div>
-        </div>
-        <div class="recent-amount">10 INDX</div>
-      </div>
-      <div class="recent-item" onclick="loadRecent('sarah.IN$DEX','Sarah','25')">
-        <div class="recent-icon">👤</div>
-        <div class="recent-body">
-          <div class="recent-name">Sarah</div>
-          <div class="recent-meta">sarah.IN$DEX · 5 days ago</div>
-        </div>
-        <div class="recent-amount">25 INDX</div>
-      </div>
+    <div class="recent-list" id="recentList">
+      <!-- GOD MODE: populated dynamically from localStorage -->
     </div>
   </div>
 </div>
@@ -344,13 +347,24 @@
     <div class="result-type">Sending to</div>
     <div class="result-name" id="resultName"></div>
     <div class="result-domain" id="resultDomain"></div>
-    <div class="verified-row">
+    <!-- GOD MODE: PQSI verification animation -->
+    <div class="pqsi-check-wrap" id="pqsiCheckWrap">
+      <div class="pqsi-step" id="pqsiStep1"><div class="pqsi-dot" id="pqsiDot1">⟳</div><span>Verifying IN$DEX citizen…</span></div>
+      <div class="pqsi-step" id="pqsiStep2"><div class="pqsi-dot" id="pqsiDot2">⟳</div><span>PQSI T0 — threat scan…</span></div>
+    </div>
+    <div class="verified-row" id="verifiedRow" style="display:none;">
       <div class="verified-badge">✓ Verified IN$DEX citizen</div>
     </div>
+    <!-- GOD MODE: Last-used amount memory chip -->
+    <div class="last-amt-chip" id="lastAmtChip">
+      <button class="lac-btn" id="lacBtn" onclick="gmApplyLastAmt()">↩ Last sent: <span id="lacAmt">0</span> INDX</button>
+    </div>
     <div class="result-amount-row">
-      <input class="result-amount-input" id="resultAmount" type="number" placeholder="0" inputmode="decimal">
+      <input class="result-amount-input" id="resultAmount" type="number" placeholder="0" inputmode="decimal" oninput="gmUpdateUsdHint()">
       <div class="result-token">INDX</div>
     </div>
+    <!-- GOD MODE: Live USD conversion -->
+    <div class="usd-hint" id="usdHint">≈ <span>$0.00 USD</span></div>
     <input class="result-note-input" id="resultNote" type="text" placeholder="What's this for? (optional)">
     <button class="pay-btn" onclick="goToSovereignPay()">⚡ Send Now</button>
     <button class="scan-again-btn" onclick="scanAgain()">← Scan Another</button>
@@ -459,16 +473,16 @@
     try {
       const url = new URL(data);
       const parts = url.pathname.replace(/^\//, '').split('/');
-      username = parts[0] || '';
+      username = (parts[0] || '').toLowerCase();
       amount = parts[1] || '';
       displayName = toTitleCase(username);
     } catch {
       // Not a URL try bare formats
       if (data.toLowerCase().includes('.in$dex') || data.toLowerCase().includes('.indx')) {
-        username = data.split('.')[0];
+        username = data.split('.')[0].toLowerCase();
         displayName = toTitleCase(username);
       } else {
-        username = data.trim();
+        username = data.trim().toLowerCase();
         displayName = toTitleCase(username);
       }
     }
@@ -635,6 +649,158 @@
   window.addEventListener('pagehide', stopCamera);
   window.addEventListener('beforeunload', stopCamera);
 
+  // ════════════════════════════════════════════════
+  // GOD MODE R1 — QR-SCANNER.HTML
+  // ════════════════════════════════════════════════
+  const INDX_PRICE_USD = 0.24;
+  const QR_HIST_KEY  = 'indx_qr_history';   // scan history
+  const QR_AMTS_KEY  = 'indx_qr_last_amts'; // per-recipient last amount
+
+  // ── 1. SCAN HISTORY PERSISTENCE ──────────────
+  function getQRHist() {
+    try { return JSON.parse(localStorage.getItem(QR_HIST_KEY) || '[]'); } catch(e) { return []; }
+  }
+  function addQRHist(name, domain, amount) {
+    const hist = getQRHist();
+    // Dedupe by domain
+    const idx = hist.findIndex(h => h.domain === domain);
+    const entry = { name, domain, amount: amount || '', ts: Date.now() };
+    if (idx >= 0) hist.splice(idx, 1);
+    hist.unshift(entry);
+    try { localStorage.setItem(QR_HIST_KEY, JSON.stringify(hist.slice(0,10))); } catch(e) {}
+  }
+  function timeAgo(ts) {
+    const diff = Date.now() - ts;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 2)  return 'just now';
+    if (mins < 60) return mins + 'm ago';
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24)  return hrs + 'h ago';
+    return Math.floor(hrs / 24) + 'd ago';
+  }
+  function renderQRHist() {
+    const list = getQRHist();
+    const el = document.getElementById('recentList');
+    if (!el) return;
+    if (!list.length) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--text-dim);text-align:center;padding:12px 0;">No recent scans yet</div>';
+      return;
+    }
+    el.innerHTML = list.slice(0,4).map(h => `
+      <div class="recent-item" onclick="loadRecent('${h.domain}','${h.name}','${h.amount}')">
+        <div class="recent-icon">👤</div>
+        <div class="recent-body">
+          <div class="recent-name">${h.name}</div>
+          <div class="recent-meta">${h.domain} · ${timeAgo(h.ts)}</div>
+        </div>
+        <div class="recent-amount">${h.amount ? h.amount + ' INDX' : '—'}</div>
+      </div>`).join('');
+  }
+
+  // ── 2. LIVE USD CONVERSION ────────────────────
+  function gmUpdateUsdHint() {
+    const amt = parseFloat(document.getElementById('resultAmount').value || '0');
+    const el = document.getElementById('usdHint');
+    if (!el) return;
+    el.innerHTML = amt > 0
+      ? '≈ <span>$' + (amt * INDX_PRICE_USD).toFixed(2) + ' USD</span>'
+      : '≈ <span>$0.00 USD</span>';
+  }
+
+  // ── 3. PQSI VERIFICATION ANIMATION ───────────
+  function gmRunPQSI(onDone) {
+    const wrap  = document.getElementById('pqsiCheckWrap');
+    const vrow  = document.getElementById('verifiedRow');
+    const s1    = document.getElementById('pqsiStep1');
+    const d1    = document.getElementById('pqsiDot1');
+    const s2    = document.getElementById('pqsiStep2');
+    const d2    = document.getElementById('pqsiDot2');
+    if (!wrap) { onDone && onDone(); return; }
+    wrap.classList.add('show');
+    vrow.style.display = 'none';
+    // Step 1: citizen verified at 380ms
+    setTimeout(() => {
+      s1.classList.add('done'); d1.textContent = '✓';
+      s1.querySelector('span').textContent = 'Citizen verified ✓';
+    }, 380);
+    // Step 2: PQSI clear at 780ms
+    setTimeout(() => {
+      s2.classList.add('done'); d2.textContent = '✓';
+      s2.querySelector('span').textContent = 'PQSI T0 CLEAR ✓';
+    }, 780);
+    // Reveal verified badge at 1050ms
+    setTimeout(() => {
+      wrap.classList.remove('show');
+      vrow.style.display = 'flex';
+      onDone && onDone();
+    }, 1100);
+  }
+
+  // ── 4. LAST-USED AMOUNT PER RECIPIENT ─────────
+  function getQRAmts() {
+    try { return JSON.parse(localStorage.getItem(QR_AMTS_KEY) || '{}'); } catch(e) { return {}; }
+  }
+  function saveQRAmt(domain, amount) {
+    if (!amount || parseFloat(amount) <= 0) return;
+    const amts = getQRAmts();
+    amts[domain] = amount;
+    try { localStorage.setItem(QR_AMTS_KEY, JSON.stringify(amts)); } catch(e) {}
+  }
+  function loadQRLastAmt(domain) {
+    const amts = getQRAmts();
+    return amts[domain] || null;
+  }
+  function gmApplyLastAmt() {
+    const amt = document.getElementById('lacBtn').dataset.amt;
+    if (amt) {
+      document.getElementById('resultAmount').value = amt;
+      gmUpdateUsdHint();
+    }
+  }
+
+  // GOD MODE PATCH — showResultSheet: run PQSI + show last-amt chip
+  const _origShowResult = showResultSheet;
+  window.showResultSheet = function(name, domain, amount) {
+    _origShowResult(name, domain, amount);
+    // Reset PQSI steps
+    const s1 = document.getElementById('pqsiStep1');
+    const s2 = document.getElementById('pqsiStep2');
+    const d1 = document.getElementById('pqsiDot1');
+    const d2 = document.getElementById('pqsiDot2');
+    if (s1) { s1.classList.remove('done'); d1.textContent = '⟳'; s1.querySelector('span').textContent = 'Verifying IN$DEX citizen…'; }
+    if (s2) { s2.classList.remove('done'); d2.textContent = '⟳'; s2.querySelector('span').textContent = 'PQSI T0 — threat scan…'; }
+    document.getElementById('verifiedRow').style.display = 'none';
+    gmRunPQSI();
+    // Last-used amount chip
+    const lastAmt = loadQRLastAmt(domain);
+    const chip = document.getElementById('lastAmtChip');
+    const lacBtn = document.getElementById('lacBtn');
+    if (lastAmt && !amount) {
+      document.getElementById('lacAmt').textContent = lastAmt;
+      lacBtn.dataset.amt = lastAmt;
+      chip.classList.add('show');
+    } else {
+      chip.classList.remove('show');
+    }
+    gmUpdateUsdHint();
+  };
+
+  // GOD MODE PATCH — goToSovereignPay: save scan to history + last-amt
+  const _origGoToPay = goToSovereignPay;
+  window.goToSovereignPay = function() {
+    const domain = document.getElementById('resultDomain').textContent;
+    const name   = document.getElementById('resultName').textContent;
+    const amount = document.getElementById('resultAmount').value;
+    if (amount && parseFloat(amount) > 0) {
+      addQRHist(name, domain, amount);
+      saveQRAmt(domain, amount);
+    }
+    _origGoToPay();
+  };
+
+  // Init
+  renderQRHist();
+
   // ── CHECK jsQR LOADED ──
   window.addEventListener('load', () => {
     if (typeof jsQR === 'undefined') {
@@ -669,5 +835,6 @@
     <div class="nav-label">Profile</div>
   </div>
 </nav>
+<script src="siindex-speak-core.js"></script>
 </body>
 </html>

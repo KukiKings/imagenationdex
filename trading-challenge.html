@@ -171,6 +171,38 @@
   .success-badge{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.3);border-radius:12px;font-size:13px;font-weight:700;color:var(--green);margin-bottom:24px;}
   .success-close{padding:14px 32px;background:var(--surface);border:1px solid var(--border);border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;color:var(--text);}
 
+  /* ── GOD MODE ── */
+  /* #1 PNL SPARKLINE */
+  .pnl-spark-wrap{margin-bottom:12px;}
+  .pnl-spark-lbl{display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:5px;}
+  #pnlSparkCanvas{width:100%;height:50px;display:block;}
+  /* #2 DRAWDOWN METER */
+  .dd-meter{padding:10px 12px;background:var(--surface2);border-radius:10px;margin-bottom:12px;}
+  .dd-header{display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px;}
+  .dd-label{color:var(--text-muted);}
+  .dd-val{font-weight:700;}
+  .dd-val.dd-safe{color:var(--green);}
+  .dd-val.dd-warn{color:var(--gold);}
+  .dd-val.dd-danger{color:var(--red);}
+  .dd-bar-track{height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;}
+  .dd-bar-fill{height:100%;border-radius:3px;transition:width 0.8s ease,background-color 0.5s;}
+  /* #3 TRADE JOURNAL */
+  .ac-actions{display:flex;gap:8px;margin-top:10px;}
+  .ac-action-btn{flex:1;padding:8px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);font-size:11px;font-weight:700;cursor:pointer;text-align:center;}
+  .ac-action-btn:active{border-color:var(--cyan);color:var(--cyan);}
+  .trade-row{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);}
+  .trade-row:last-child{border-bottom:none;}
+  .trade-badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;flex-shrink:0;margin-top:2px;}
+  .trade-badge.long{background:rgba(0,229,160,0.12);color:var(--green);}
+  .trade-badge.close{background:rgba(255,77,109,0.12);color:var(--red);}
+  .trade-badge.hold{background:rgba(255,184,0,0.12);color:var(--gold);}
+  .trade-info{flex:1;min-width:0;}
+  .trade-desc{font-size:11px;color:var(--text-muted);line-height:1.4;}
+  .trade-ts{font-size:10px;color:var(--text-dim);margin-top:2px;}
+  .trade-delta{font-size:12px;font-weight:800;flex-shrink:0;}
+  .trade-delta.pos{color:var(--green);}
+  .trade-delta.neg{color:var(--red);}
+  .journal-empty{text-align:center;padding:28px;font-size:12px;color:var(--text-muted);}
   /* TOAST */
   .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:10px 18px;font-size:13px;font-weight:600;z-index:400;opacity:0;transition:all 0.3s;white-space:nowrap;pointer-events:none;}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -230,9 +262,27 @@
         </div>
         <div class="ac-bar"><div class="ac-bar-fill" id="acBarFill" style="width:0%"></div></div>
       </div>
+      <!-- GOD MODE: PNL SPARKLINE -->
+      <div class="pnl-spark-wrap" id="pnlSparkWrap" style="display:none;">
+        <div class="pnl-spark-lbl"><span>7-Day P&L</span><span id="sparkTrend">—</span></div>
+        <canvas id="pnlSparkCanvas"></canvas>
+      </div>
+      <!-- GOD MODE: DRAWDOWN METER -->
+      <div class="dd-meter" id="ddMeter" style="display:none;">
+        <div class="dd-header">
+          <span class="dd-label">Max drawdown used</span>
+          <span class="dd-val dd-safe" id="ddVal">0.0 / 10%</span>
+        </div>
+        <div class="dd-bar-track"><div class="dd-bar-fill" id="ddBarFill" style="width:0%;background-color:var(--green);"></div></div>
+      </div>
       <div class="ac-agent-status" id="acAgentStatus" style="display:none">
         <div class="ac-agent-dot"></div>
         <span id="acAgentText">SIINDEX Agent running strategy…</span>
+      </div>
+      <!-- GOD MODE: ACTION BUTTONS -->
+      <div class="ac-actions" id="acActions" style="display:none;">
+        <button class="ac-action-btn" onclick="openJournal()">📋 Trade Journal</button>
+        <button class="ac-action-btn" onclick="shareChallenge()">📤 Share Stats</button>
       </div>
     </div>
 
@@ -380,6 +430,14 @@
     </div>
 
   </div><!-- /scroll-body -->
+
+  <!-- TRADE JOURNAL SHEET -->
+  <div class="sheet-overlay" id="journalOverlay" onclick="closeJournal()"></div>
+  <div class="bottom-sheet" id="journalSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">📋 Trade Journal</div>
+    <div class="sheet-body" id="journalBody" style="max-height:60vh;overflow-y:auto;padding-top:4px;"></div>
+  </div>
 
   <!-- ENTRY SHEET -->
   <div class="sheet-overlay" id="entryOverlay" onclick="closeEntrySheet()"></div>
@@ -727,6 +785,9 @@
       `${t.entry} INDX staked. Hit +8% to pass Phase 1 and unlock your ${t.alloc.toLocaleString()} INDX funded allocation. SIINDEX is watching.`;
     document.getElementById('successOverlay').classList.add('show');
     loadActiveChallenge();
+    // GOD MODE PATCH — show new elements after challenge start
+    document.getElementById('acActions').style.display = 'flex';
+    setTimeout(() => drawSparkline(getSparkData()), 400);
   }
 
   function closeSuccess() {
@@ -739,6 +800,178 @@
     t.textContent = msg;
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // ── GOD MODE ────────────────────────────────────────────────
+  const TC_TRADES_KEY = 'indx_tc_trades';
+  const TC_DAILY_KEY  = 'indx_tc_daily_pnl';
+  const TC_WORST_KEY  = 'indx_tc_worst_pnl';
+
+  // #1 SPARKLINE
+  function getSparkData() {
+    const stored = JSON.parse(localStorage.getItem(TC_DAILY_KEY) || '[]');
+    if (stored.length >= 3) return stored.slice(-7);
+    const demo = []; let v = 0;
+    for (let i = 6; i >= 1; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      v += (Math.random() - 0.42) * 1.5;
+      v = Math.min(Math.max(v, -9.5), 10);
+      demo.push({ d: d.toISOString().slice(0,10), v: parseFloat(v.toFixed(2)) });
+    }
+    return demo;
+  }
+
+  function saveSparkToday(pnl) {
+    const today = new Date().toISOString().slice(0,10);
+    const stored = JSON.parse(localStorage.getItem(TC_DAILY_KEY) || '[]');
+    const existing = stored.find(x => x.d === today);
+    if (existing) existing.v = pnl; else stored.push({ d: today, v: pnl });
+    if (stored.length > 30) stored.splice(0, stored.length - 30);
+    localStorage.setItem(TC_DAILY_KEY, JSON.stringify(stored));
+  }
+
+  function drawSparkline(data) {
+    const wrap = document.getElementById('pnlSparkWrap');
+    const canvas = document.getElementById('pnlSparkCanvas');
+    if (!canvas || !data.length) { if(wrap) wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.parentElement.offsetWidth || 300;
+    const h = 50;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    const vals = data.map(x => x.v);
+    const min = Math.min(...vals) - 0.5;
+    const max = Math.max(...vals) + 0.5;
+    const range = max - min || 1;
+    const pad = 4;
+    const xStep = (w - pad * 2) / Math.max(vals.length - 1, 1);
+    const getY = v => h - pad - ((v - min) / range) * (h - pad * 2);
+    const getX = i => pad + i * xStep;
+    // Fill
+    ctx.beginPath();
+    ctx.moveTo(getX(0), getY(vals[0]));
+    for (let i = 1; i < vals.length; i++) ctx.lineTo(getX(i), getY(vals[i]));
+    ctx.lineTo(getX(vals.length - 1), h); ctx.lineTo(getX(0), h); ctx.closePath();
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, 'rgba(0,212,255,0.22)'); grad.addColorStop(1, 'rgba(0,212,255,0)');
+    ctx.fillStyle = grad; ctx.fill();
+    // Line
+    ctx.beginPath();
+    ctx.moveTo(getX(0), getY(vals[0]));
+    for (let i = 1; i < vals.length; i++) ctx.lineTo(getX(i), getY(vals[i]));
+    ctx.strokeStyle = '#00D4FF'; ctx.lineWidth = 2; ctx.stroke();
+    // Zero line
+    ctx.beginPath(); ctx.moveTo(0, getY(0)); ctx.lineTo(w, getY(0));
+    ctx.strokeStyle = 'rgba(255,255,255,0.07)'; ctx.lineWidth = 1;
+    ctx.setLineDash([3,4]); ctx.stroke(); ctx.setLineDash([]);
+    // Endpoint dot
+    const lx = getX(vals.length - 1), ly = getY(vals[vals.length - 1]);
+    ctx.beginPath(); ctx.arc(lx, ly, 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#00D4FF'; ctx.fill();
+    // Trend label
+    const trend = vals[vals.length - 1] - vals[0];
+    const tEl = document.getElementById('sparkTrend');
+    if (tEl) { tEl.textContent = (trend >= 0 ? '▲ +' : '▼ ') + trend.toFixed(2) + '%'; tEl.style.color = trend >= 0 ? 'var(--green)' : 'var(--red)'; }
+  }
+
+  // #2 DRAWDOWN METER
+  function updateDrawdownMeter(pnl) {
+    const prev = parseFloat(localStorage.getItem(TC_WORST_KEY) || '0');
+    const worst = Math.min(prev, pnl);
+    localStorage.setItem(TC_WORST_KEY, worst.toFixed(3));
+    const dd = Math.abs(Math.min(0, worst));
+    const meter = document.getElementById('ddMeter');
+    if (!meter) return;
+    meter.style.display = 'block';
+    const pct = Math.min(dd / 10 * 100, 100);
+    document.getElementById('ddVal').textContent = dd.toFixed(1) + ' / 10%';
+    document.getElementById('ddVal').className = 'dd-val ' + (dd < 5 ? 'dd-safe' : dd < 8 ? 'dd-warn' : 'dd-danger');
+    document.getElementById('ddBarFill').style.width = pct + '%';
+    document.getElementById('ddBarFill').style.backgroundColor = dd < 5 ? 'var(--green)' : dd < 8 ? 'var(--gold)' : 'var(--red)';
+    if (dd >= 9) showToast('⚠️ Drawdown at ' + dd.toFixed(1) + '% — 1% from bust!');
+  }
+
+  // #3 TRADE JOURNAL
+  function getTrades() { return JSON.parse(localStorage.getItem(TC_TRADES_KEY) || '[]'); }
+  function saveTrade(entry) {
+    const t = getTrades(); t.unshift(entry);
+    if (t.length > 50) t.pop();
+    localStorage.setItem(TC_TRADES_KEY, JSON.stringify(t));
+  }
+  function classifyTradeType(action) {
+    const a = action.toLowerCase();
+    if (a.includes('long') || a.includes('entering') || a.includes('scaling in')) return 'long';
+    if (a.includes('closed') || a.includes('watermark') || a.includes('stop')) return 'close';
+    return 'hold';
+  }
+  function openJournal() {
+    const trades = getTrades();
+    const body = document.getElementById('journalBody');
+    if (!trades.length) {
+      body.innerHTML = '<div class="journal-empty">No trades yet.<br>Activate the SIINDEX Agent to start logging.</div>';
+    } else {
+      body.innerHTML = trades.map(t => {
+        const ts = new Date(t.ts);
+        const timeStr = ts.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) + ' · ' + ts.toLocaleDateString([], {month:'short',day:'numeric'});
+        return `<div class="trade-row">
+          <span class="trade-badge ${t.type}">${t.type.toUpperCase()}</span>
+          <div class="trade-info"><div class="trade-desc">${t.text}</div><div class="trade-ts">${timeStr}</div></div>
+          <div class="trade-delta ${t.delta >= 0 ? 'pos' : 'neg'}">${t.delta >= 0 ? '+' : ''}${t.delta.toFixed(2)}%</div>
+        </div>`;
+      }).join('');
+    }
+    document.getElementById('journalOverlay').classList.add('open');
+    document.getElementById('journalSheet').classList.add('open');
+  }
+  function closeJournal() {
+    document.getElementById('journalOverlay').classList.remove('open');
+    document.getElementById('journalSheet').classList.remove('open');
+  }
+
+  // #4 SHARE STATS
+  function shareChallenge() {
+    const active = localStorage.getItem('indx_challenge_active');
+    if (!active) { showToast('No active challenge to share'); return; }
+    const data = JSON.parse(active);
+    const pnl = parseFloat(localStorage.getItem('indx_challenge_pnl') || '0');
+    const elapsed = Math.floor((Date.now() - parseInt(data.startTs)) / 86400000);
+    const trades = getTrades().length;
+    const text = `⚡ IN$DEX Sovereign Challenge\n📊 ${data.tierName} Tier · Day ${elapsed + 1}/30\n📈 P&L: ${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}%\n🤖 ${trades} agent trades logged\n🌟 Target: +8% → ${data.alloc.toLocaleString()} INDX funded\n\nTrade Sovereign. Get Funded. indx.finance`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => showToast('📋 Challenge stats copied!'));
+    } else {
+      showToast('📊 ' + data.tierName + ' · ' + (pnl >= 0 ? '+' : '') + pnl.toFixed(2) + '% P&L');
+    }
+  }
+
+  // GOD MODE PATCH — showAgentAction logs to journal + saves daily spark
+  function showAgentAction() {
+    const action = AGENT_ACTIONS[Math.floor(Math.random() * AGENT_ACTIONS.length)];
+    const el = document.getElementById('agentLastAction');
+    el.textContent = '🤖 ' + action;
+    el.classList.add('show');
+    document.getElementById('acAgentText').textContent = action;
+    // GOD MODE PATCH — persist trade to journal
+    const delta = parseFloat(((Math.random() > 0.38 ? 1 : -0.4) * Math.random() * 0.9).toFixed(2));
+    saveTrade({ ts: new Date().toISOString(), text: action, type: classifyTradeType(action), delta });
+    saveSparkToday(parseFloat(localStorage.getItem('indx_challenge_pnl') || '0'));
+  }
+
+  // GOD MODE PATCH — updateActivePnl calls drawdown meter + spark save
+  function updateActivePnl(pnl, phase) {
+    const target = (phase || (pnl >= 8 ? 2 : 1)) === 1 ? 8 : 5;
+    const pct = Math.min(Math.max(pnl / target * 100, 0), 100);
+    const el = document.getElementById('acPnl');
+    el.textContent = (pnl >= 0 ? '+' : '') + pnl.toFixed(2) + '%';
+    el.className = 'ac-pnl ' + (pnl >= 0 ? 'pos' : 'neg');
+    document.getElementById('acBarFill').style.width = pct + '%';
+    document.getElementById('acProgPct').textContent = pct.toFixed(0) + '%';
+    // GOD MODE PATCH
+    updateDrawdownMeter(pnl);
+    saveSparkToday(pnl);
   }
 
   // ── DOMContentLoaded ─────────────────────────────────────────
@@ -765,7 +998,13 @@
     if (agentActive) {
       document.getElementById('agentCta').textContent = '⏸ Pause SIINDEX Agent';
     }
+    // GOD MODE INIT
+    if (localStorage.getItem('indx_challenge_active')) {
+      document.getElementById('acActions').style.display = 'flex';
+      setTimeout(() => drawSparkline(getSparkData()), 120);
+    }
   });
 </script>
+<script src="siindex-speak-core.js"></script>
 </body>
 </html>

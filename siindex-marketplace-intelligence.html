@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SIINDEX · Marketplace Intelligence</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" crossorigin="anonymous"></script>
+<script src="js/indx-db.js"></script>
+<script src="js/siindex-system.js"></script>
+<style>
+  :root {
+    --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8; --black:#090A10;
+    --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+    --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+    --border:rgba(255,255,255,0.07); --text:#EAEAEA; --text-muted:#6B7080; --text-dim:#3D4050;
+    --nav-h:64px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;overscroll-behavior:none;}
+  .shell{max-width:430px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;}
+  .scroll-body{flex:1;overflow-y:auto;padding-bottom:calc(var(--nav-h) + 24px);-webkit-overflow-scrolling:touch;}
+  .scroll-body::-webkit-scrollbar{display:none;}
+
+  /* ── TOPBAR ── */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;background:var(--black);}
+  .topbar-back{width:36px;height:36px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;}
+  .topbar-title{font-size:16px;font-weight:700;letter-spacing:0.02em;}
+  .topbar-badge{font-size:10px;font-weight:700;color:var(--cyan);background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.2);border-radius:6px;padding:3px 8px;letter-spacing:0.06em;}
+
+  /* ── HERO ── */
+  .hero{padding:28px 20px 20px;text-align:center;position:relative;overflow:hidden;}
+  .hero-canvas{position:absolute;inset:0;opacity:0.15;pointer-events:none;}
+  .hero-badge{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--cyan);background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.15);border-radius:20px;padding:5px 12px;margin-bottom:14px;}
+  .hero-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--cyan);animation:pulse 1.8s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.7);}}
+  .hero-title{font-size:24px;font-weight:900;letter-spacing:-0.02em;line-height:1.1;margin-bottom:8px;}
+  .hero-title span{background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+  .hero-sub{font-size:13px;color:var(--text-muted);line-height:1.5;max-width:320px;margin:0 auto 20px;}
+
+  /* ── ARCHITECTURE DIAGRAM ── */
+  .arch-card{margin:0 20px 24px;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:20px;position:relative;overflow:hidden;}
+  .arch-center{text-align:center;margin-bottom:18px;}
+  .arch-si-node{display:inline-flex;flex-direction:column;align-items:center;gap:4px;background:linear-gradient(135deg,rgba(0,212,255,0.12),rgba(139,63,232,0.12));border:1.5px solid rgba(0,212,255,0.3);border-radius:16px;padding:14px 24px;}
+  .arch-si-name{font-size:16px;font-weight:900;letter-spacing:0.04em;color:var(--cyan);}
+  .arch-si-role{font-size:10px;font-weight:600;color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;}
+  .arch-connector{display:flex;flex-direction:column;align-items:center;gap:2px;margin-bottom:12px;}
+  .arch-line{width:1px;height:16px;background:linear-gradient(to bottom,rgba(0,212,255,0.5),rgba(0,212,255,0.1));}
+  .arch-core-node{background:var(--surface2);border:1px solid rgba(0,212,255,0.15);border-radius:12px;padding:10px 18px;text-align:center;}
+  .arch-core-label{font-size:13px;font-weight:700;color:var(--text);}
+  .arch-core-sub{font-size:10px;color:var(--text-muted);}
+  .arch-spoke-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;}
+  .arch-spoke{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:8px;cursor:pointer;transition:border-color 0.2s,background 0.2s;}
+  .arch-spoke:active{background:var(--surface3);}
+  .arch-spoke.active{border-color:rgba(0,212,255,0.35);background:rgba(0,212,255,0.05);}
+  .arch-spoke.live{border-color:rgba(0,229,160,0.25);}
+  .arch-spoke-icon{font-size:18px;flex-shrink:0;}
+  .arch-spoke-name{font-size:11px;font-weight:700;color:var(--text);line-height:1.2;}
+  .arch-spoke-status{font-size:9px;color:var(--text-muted);margin-top:1px;}
+  .arch-spoke-status.live{color:var(--green);}
+  .arch-spoke-status.planned{color:var(--gold);}
+
+  /* ── DOMAIN DETAIL SHEET ── */
+  .domain-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;backdrop-filter:blur(4px);}
+  .domain-overlay.show{display:block;}
+  .domain-sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:430px;background:var(--surface);border-top:1px solid var(--border);border-radius:24px 24px 0 0;padding:20px 20px 40px;z-index:101;transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);}
+  .domain-sheet.open{transform:translateX(-50%) translateY(0);}
+  .domain-sheet-handle{width:36px;height:4px;background:var(--surface3);border-radius:2px;margin:0 auto 18px;}
+  .ds-icon{font-size:36px;margin-bottom:10px;text-align:center;}
+  .ds-title{font-size:19px;font-weight:800;margin-bottom:6px;text-align:center;}
+  .ds-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;border-radius:8px;padding:3px 10px;margin:0 auto 14px;display:flex;width:fit-content;}
+  .ds-badge.live{background:rgba(0,229,160,0.1);color:var(--green);border:1px solid rgba(0,229,160,0.2);}
+  .ds-badge.planned{background:rgba(255,184,0,0.1);color:var(--gold);border:1px solid rgba(255,184,0,0.2);}
+  .ds-desc{font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:16px;text-align:center;}
+  .ds-signals-title{font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;}
+  .ds-signals{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px;}
+  .ds-signal{font-size:11px;color:var(--cyan);background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.12);border-radius:8px;padding:4px 10px;}
+  .ds-close{width:100%;padding:14px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;}
+
+  /* ── METRIC STRIP ── */
+  .metric-strip{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:0 20px 20px;}
+  .metric-cell{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 10px;text-align:center;}
+  .mc-val{font-size:20px;font-weight:900;color:var(--cyan);line-height:1;}
+  .mc-lbl{font-size:10px;color:var(--text-muted);margin-top:4px;font-weight:600;letter-spacing:0.04em;}
+
+  /* ── LOOP STATUS ── */
+  .section-header{padding:0 20px;margin-bottom:12px;}
+  .sh-title{font-size:13px;font-weight:700;color:var(--text);letter-spacing:0.04em;text-transform:uppercase;}
+  .sh-sub{font-size:11px;color:var(--text-muted);margin-top:2px;}
+
+  .loops-list{padding:0 20px;display:flex;flex-direction:column;gap:8px;margin-bottom:24px;}
+  .loop-row{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;}
+  .loop-icon{font-size:16px;flex-shrink:0;}
+  .loop-body{flex:1;min-width:0;}
+  .loop-name{font-size:12px;font-weight:700;color:var(--text);}
+  .loop-state{font-size:10px;color:var(--text-muted);margin-top:2px;}
+  .loop-indicator{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .loop-indicator.active{background:var(--green);box-shadow:0 0 6px var(--green);}
+  .loop-indicator.learning{background:var(--cyan);animation:pulse 2s ease-in-out infinite;}
+  .loop-indicator.planned{background:var(--gold);opacity:0.6;}
+
+  /* ── PHILOSOPHY CARD ── */
+  .philosophy-card{margin:0 20px 24px;background:linear-gradient(135deg,rgba(43,53,216,0.15),rgba(139,63,232,0.15));border:1px solid rgba(139,63,232,0.2);border-radius:16px;padding:18px;}
+  .pc-title{font-size:12px;font-weight:700;color:var(--purple);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;}
+  .pc-quote{font-size:14px;font-weight:600;color:var(--text);line-height:1.6;font-style:italic;}
+  .pc-attr{font-size:11px;color:var(--text-muted);margin-top:8px;}
+
+  /* ── MISSING FEATURES ── */
+  .features-grid{padding:0 20px;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px;}
+  .feature-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;}
+  .fc-icon{font-size:20px;margin-bottom:6px;}
+  .fc-name{font-size:11px;font-weight:700;color:var(--text);margin-bottom:3px;}
+  .fc-desc{font-size:10px;color:var(--text-muted);line-height:1.4;}
+  .feature-card.priority{border-color:rgba(0,212,255,0.2);background:rgba(0,212,255,0.03);}
+
+  /* ── NAV ── */
+  .bottom-nav{height:var(--nav-h);display:flex;align-items:center;justify-content:space-around;border-top:1px solid var(--border);position:sticky;bottom:0;background:var(--black);z-index:50;}
+  .nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:8px 14px;opacity:0.5;transition:opacity 0.2s;}
+  .nav-item.active{opacity:1;}
+  .nav-icon{font-size:20px;}
+  .nav-label{font-size:10px;font-weight:600;}
+
+  /* ── CANVAS ANIMATION ── */
+  canvas#heroCanvas{position:absolute;inset:0;width:100%;height:100%;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-back" onclick="history.back()">←</div>
+    <div class="topbar-title">SI Intelligence</div>
+    <div class="topbar-badge">v2.0</div>
+  </div>
+
+  <div class="scroll-body">
+
+    <!-- HERO -->
+    <div class="hero">
+      <canvas id="heroCanvas" class="hero-canvas"></canvas>
+      <div class="hero-badge">
+        <div class="hero-badge-dot"></div>
+        Operating Intelligence · 15 Domains
+      </div>
+      <div class="hero-title">SIINDEX<br><span>Intelligence Layer</span></div>
+      <div class="hero-sub">Not another feature. The operating intelligence connecting every marketplace interaction — learning from every transaction, compounding trust over decades.</div>
+    </div>
+
+    <!-- LIVE METRICS -->
+    <div class="metric-strip" id="metricStrip">
+      <div class="metric-cell">
+        <div class="mc-val" id="mDomains">15</div>
+        <div class="mc-lbl">Intelligence Domains</div>
+      </div>
+      <div class="metric-cell">
+        <div class="mc-val" id="mLoops">25</div>
+        <div class="mc-lbl">Active Loops</div>
+      </div>
+      <div class="metric-cell">
+        <div class="mc-val" id="mRating">8.5</div>
+        <div class="mc-lbl">Architecture Score</div>
+      </div>
+    </div>
+
+    <!-- ARCHITECTURE DIAGRAM -->
+    <div class="arch-card">
+      <div class="arch-center">
+        <div class="arch-si-node">
+          <div class="arch-si-name">SIINDEX</div>
+          <div class="arch-si-role">Sovereign Synthetic Intelligence · Chief PQSI Officer</div>
+        </div>
+      </div>
+      <div class="arch-connector">
+        <div class="arch-line"></div>
+        <div class="arch-core-node">
+          <div class="arch-core-label">IN$DEX Marketplace Core</div>
+          <div class="arch-core-sub">Every interaction. Every transaction. Every citizen.</div>
+        </div>
+        <div class="arch-line"></div>
+      </div>
+      <div class="arch-spoke-grid" id="spokesGrid">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- PHILOSOPHY -->
+    <div class="philosophy-card">
+      <div class="pc-title">Core Architecture Principle</div>
+      <div class="pc-quote">"SIINDEX is not another feature — it is the intelligence layer connecting every interaction, learning from every transaction, and continuously improving the entire IN$DEX ecosystem."</div>
+      <div class="pc-attr">— AJ Henry, Founder · 4 July 2026</div>
+    </div>
+
+    <!-- ACTIVE INTELLIGENCE LOOPS -->
+    <div class="section-header">
+      <div class="sh-title">Intelligence Loops</div>
+      <div class="sh-sub">Observe → Analyse → Reason → Recommend → Learn → Repeat</div>
+    </div>
+    <div class="loops-list" id="loopsList">
+      <!-- Populated by JS -->
+    </div>
+
+    <!-- MISSING FEATURES (priority additions) -->
+    <div class="section-header">
+      <div class="sh-title">Priority Additions</div>
+      <div class="sh-sub">Features identified to reach 10/10 architecture</div>
+    </div>
+    <div class="features-grid" id="featuresGrid">
+      <!-- Populated by JS -->
+    </div>
+
+  </div><!-- /scroll-body -->
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <div class="nav-item" onclick="window.location.href='citizen-dashboard.html'">
+      <div class="nav-icon">🏠</div>
+      <div class="nav-label">Home</div>
+    </div>
+    <div class="nav-item" onclick="window.location.href='siindex-chat.html'">
+      <div class="nav-icon">🤖</div>
+      <div class="nav-label">SIINDEX</div>
+    </div>
+    <div class="nav-item active">
+      <div class="nav-icon">🧠</div>
+      <div class="nav-label">Intelligence</div>
+    </div>
+    <div class="nav-item" onclick="window.location.href='governance.html'">
+      <div class="nav-icon">🏛</div>
+      <div class="nav-label">Govern</div>
+    </div>
+    <div class="nav-item" onclick="window.location.href='siindex-avatar.html'">
+      <div class="nav-icon">✦</div>
+      <div class="nav-label">Meet SI</div>
+    </div>
+  </nav>
+
+</div><!-- /shell -->
+
+<!-- DOMAIN DETAIL SHEET -->
+<div class="domain-overlay" id="domainOverlay" onclick="closeDomain()"></div>
+<div class="domain-sheet" id="domainSheet">
+  <div class="domain-sheet-handle"></div>
+  <div class="ds-icon" id="dsIcon"></div>
+  <div class="ds-title" id="dsTitle"></div>
+  <div class="ds-badge" id="dsBadge"></div>
+  <div class="ds-desc" id="dsDesc"></div>
+  <div class="ds-signals-title">Intelligence Signals</div>
+  <div class="ds-signals" id="dsSignals"></div>
+  <button class="ds-close" onclick="closeDomain()">Close</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Domain signals (what each loop monitors) ──────────────────
+  const DOMAIN_SIGNALS = {
+    voice_commerce:        ['product identification','market value estimation','image enhancement','listing generation','price recommendation','multilingual translation','zero-form publishing'],
+    visual_intelligence:   ['brand detection','model identification','condition scoring','rarity assessment','value estimation','similar listing matching','counterfeit probability','selling velocity'],
+    trade_intelligence:    ['demand forecasting','competition mapping','optimal sell window','profit maximisation','negotiation strategy','market timing','category velocity'],
+    geo_intelligence:      ['pickup speed','safe meeting detection','delivery partner matching','local demand signals','nearby buyer density','regional price variance'],
+    escrow_intelligence:   ['payment verification','shipment tracking','delivery confirmation','dispute probability','fraud signal scoring','pre-emptive escalation'],
+    delivery_intelligence: ['cost optimisation','speed routing','safety scoring','carbon footprint','insurance matching','last-mile intelligence'],
+    reputation_intelligence:['sales success rate','dispute history','delivery reliability','response time','community contributions','governance participation','verification depth'],
+    merchant_circles:      ['inventory synergy','collaborative promotions','shared analytics','educational clusters','merchant network density','cross-referral potential'],
+    pricing_intelligence:  ['demand pressure','seasonal adjustment','location premium','scarcity multiplier','historical price anchor','urgency signal','competition gap'],
+    knowledge_intelligence:['listing success patterns','failure pattern analysis','scam signatures','buying habit mapping','regional demand curves','price elasticity modelling'],
+    fraud_intelligence:    ['duplicate listing detection','fake product signals','stolen image fingerprinting','payment anomalies','identity confidence','coordinated scam patterns'],
+    sovereign_identity:    ['reputation portability','credential verification','purchase history','creator history','merchant validation','cross-platform trust score'],
+    digital_assets:        ['artwork valuation','music licensing','software authenticity','AI agent registry','prompt quality scoring','course demand','ticket fraud prevention'],
+    negotiation_intelligence:['fair price calculation','counter-offer generation','trade-off explanation','emotional signal detection','deal velocity'],
+    executive_intelligence: ['live GMV','liquidity depth','regional growth','dispute heat maps','seller retention','buyer acquisition cost','trust index','marketplace health score'],
+  };
+
+  // ── Spoke icons ───────────────────────────────────────────────
+  const SPOKE_ICONS = {
+    voice_commerce:'🎙', visual_intelligence:'📸', trade_intelligence:'🤖',
+    geo_intelligence:'🌍', escrow_intelligence:'🔒', delivery_intelligence:'📦',
+    reputation_intelligence:'⭐', merchant_circles:'👥', pricing_intelligence:'💰',
+    knowledge_intelligence:'🧠', fraud_intelligence:'🛡', sovereign_identity:'🪪',
+    digital_assets:'💎', negotiation_intelligence:'🤝', executive_intelligence:'📊',
+  };
+
+  const SPOKE_NAMES = {
+    voice_commerce:'Voice Commerce', visual_intelligence:'Visual Intelligence',
+    trade_intelligence:'Trade Assistant', geo_intelligence:'Geo Intelligence',
+    escrow_intelligence:'Escrow Intelligence', delivery_intelligence:'Delivery Intelligence',
+    reputation_intelligence:'Reputation Intelligence', merchant_circles:'Merchant Circles 2.0',
+    pricing_intelligence:'Dynamic Pricing', knowledge_intelligence:'Knowledge Intelligence',
+    fraud_intelligence:'Fraud Intelligence', sovereign_identity:'Sovereign Identity',
+    digital_assets:'Digital Assets', negotiation_intelligence:'Negotiation Intelligence',
+    executive_intelligence:'Executive Intelligence',
+  };
+
+  // ── Render spoke grid ─────────────────────────────────────────
+  function renderSpokes() {
+    const grid = document.getElementById('spokesGrid');
+    const domains = SIINDEX_CONFIG.intelligence_domains;
+    grid.innerHTML = domains.map(d => {
+      const icon = SPOKE_ICONS[d.id] || '◉';
+      const isLive = d.status === 'active';
+      return `<div class="arch-spoke ${isLive ? 'live' : ''}" onclick="openDomain('${d.id}')">
+        <div class="arch-spoke-icon">${icon}</div>
+        <div>
+          <div class="arch-spoke-name">${SPOKE_NAMES[d.id] || d.label}</div>
+          <div class="arch-spoke-status ${d.status}">${isLive ? '● Active' : '○ Planned'}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Render intelligence loops ─────────────────────────────────
+  const LOOP_META = [
+    { icon:'🎙', name:'Voice Commerce Loop',        state:'Learning from listing patterns',  status:'learning' },
+    { icon:'🛡', name:'Fraud Detection Loop',        state:'Monitoring 182 active signals',   status:'active'   },
+    { icon:'💰', name:'Dynamic Pricing Loop',        state:'Calibrating 7-factor model',      status:'learning' },
+    { icon:'⭐', name:'Reputation Scoring Loop',     state:'Aggregating sovereign scores',    status:'active'   },
+    { icon:'🔒', name:'Escrow Monitoring Loop',      state:'Watching active transactions',    status:'active'   },
+    { icon:'📊', name:'Executive Intelligence Loop', state:'Processing marketplace metrics',  status:'active'   },
+    { icon:'🧠', name:'Knowledge Ingestion Loop',    state:'Indexing transaction patterns',   status:'learning' },
+    { icon:'🌍', name:'Geo Intelligence Loop',       state:'Mapping regional demand curves',  status:'planned'  },
+    { icon:'🤝', name:'Negotiation Loop',            state:'Training on offer/counter data',  status:'planned'  },
+    { icon:'📸', name:'Visual Intelligence Loop',    state:'Computer vision pipeline',        status:'planned'  },
+  ];
+
+  function renderLoops() {
+    const list = document.getElementById('loopsList');
+    list.innerHTML = LOOP_META.map(l => `
+      <div class="loop-row">
+        <div class="loop-icon">${l.icon}</div>
+        <div class="loop-body">
+          <div class="loop-name">${l.name}</div>
+          <div class="loop-state">${l.state}</div>
+        </div>
+        <div class="loop-indicator ${l.status}"></div>
+      </div>`).join('');
+  }
+
+  // ── Priority features grid ────────────────────────────────────
+  const PRIORITY_FEATURES = [
+    { icon:'🔍', name:'AI Visual Search',        desc:'Find products from a photo', priority:true },
+    { icon:'✍️', name:'Listing Optimizer',       desc:'Auto-improve titles, descriptions, images', priority:true },
+    { icon:'🪪', name:'Digital Passport',        desc:'Portable identity & trust profile', priority:true },
+    { icon:'🎯', name:'Smart Recommendations',   desc:'Personalised buying & selling suggestions', priority:true },
+    { icon:'🗳', name:'Community Governance',    desc:'Vote on marketplace policies', priority:false },
+    { icon:'🎨', name:'Creator Economy Hub',     desc:'Digital goods, subscriptions, services', priority:false },
+    { icon:'🌐', name:'Cross-Border Commerce',   desc:'Translation, FX, localized discovery', priority:false },
+    { icon:'📈', name:'Merchant Analytics',      desc:'Real-time dashboards with insights', priority:false },
+    { icon:'🤖', name:'Autonomous Operations',   desc:'SIINDEX continuously monitors & optimizes', priority:true },
+    { icon:'⚡', name:'Fraud Prevention Engine', desc:'AI-assisted trust & safety', priority:true },
+  ];
+
+  function renderFeatures() {
+    const grid = document.getElementById('featuresGrid');
+    grid.innerHTML = PRIORITY_FEATURES.map(f => `
+      <div class="feature-card ${f.priority ? 'priority' : ''}">
+        <div class="fc-icon">${f.icon}</div>
+        <div class="fc-name">${f.name}</div>
+        <div class="fc-desc">${f.desc}</div>
+      </div>`).join('');
+  }
+
+  // ── Domain detail sheet ───────────────────────────────────────
+  function openDomain(id) {
+    const d = SIINDEX_CONFIG.intelligence_domains.find(x => x.id === id);
+    if (!d) return;
+    const icon = SPOKE_ICONS[id] || '◉';
+    const signals = DOMAIN_SIGNALS[id] || [];
+    const isLive = d.status === 'active';
+
+    document.getElementById('dsIcon').textContent = icon;
+    document.getElementById('dsTitle').textContent = SPOKE_NAMES[id] || d.label;
+    const badge = document.getElementById('dsBadge');
+    badge.className = 'ds-badge ' + d.status;
+    badge.textContent = isLive ? '● Active Intelligence Loop' : '○ Planned — Next Phase';
+    document.getElementById('dsDesc').textContent = d.desc;
+    document.getElementById('dsSignals').innerHTML = signals.map(s =>
+      `<div class="ds-signal">${s}</div>`).join('');
+
+    document.getElementById('domainOverlay').classList.add('show');
+    setTimeout(() => document.getElementById('domainSheet').classList.add('open'), 10);
+  }
+
+  function closeDomain() {
+    document.getElementById('domainSheet').classList.remove('open');
+    setTimeout(() => document.getElementById('domainOverlay').classList.remove('show'), 320);
+  }
+  window.openDomain = openDomain;
+  window.closeDomain = closeDomain;
+
+  // ── Hero canvas — neural network animation ────────────────────
+  (function initCanvas() {
+    const canvas = document.getElementById('heroCanvas');
+    const hero = canvas.parentElement;
+    function resize() { canvas.width = hero.offsetWidth; canvas.height = hero.offsetHeight; }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const ctx = canvas.getContext('2d');
+    const NODES = 18;
+    const nodes = Array.from({ length: NODES }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.4,
+    }));
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Connections
+      nodes.forEach((a, i) => {
+        nodes.slice(i + 1).forEach(b => {
+          const d = Math.hypot(a.x - b.x, a.y - b.y);
+          if (d < 90) {
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.strokeStyle = `rgba(0,212,255,${(1 - d / 90) * 0.3})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        });
+      });
+      // Nodes
+      nodes.forEach(n => {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, 2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,212,255,0.5)';
+        ctx.fill();
+        // Move
+        n.x += n.vx; n.y += n.vy;
+        if (n.x < 0 || n.x > canvas.width)  n.vx *= -1;
+        if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+      });
+      requestAnimationFrame(draw);
+    }
+    draw();
+  })();
+
+  // ── Animate metric counters ───────────────────────────────────
+  function countUp(el, target, decimals, suffix, duration) {
+    const start = performance.now();
+    const from = 0;
+    function step(now) {
+      const p = Math.min((now - start) / duration, 1);
+      const val = from + (target - from) * p;
+      el.textContent = val.toFixed(decimals) + (suffix || '');
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  // ── Live data from INDXDB ─────────────────────────────────────
+  async function loadLiveMetrics() {
+    try {
+      const txs = await INDXDB.getTransactions(200);
+      if (txs && txs.length) {
+        document.getElementById('mLoops').textContent = Math.min(txs.length, 99) + '+';
+      }
+    } catch(e) {}
+  }
+
+  // ── Init ──────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', function () {
+    renderSpokes();
+    renderLoops();
+    renderFeatures();
+
+    // Animate counters
+    setTimeout(() => {
+      countUp(document.getElementById('mDomains'), 15, 0, '', 1200);
+      countUp(document.getElementById('mLoops'), 25, 0, '', 1400);
+      setTimeout(() => {
+        countUp(document.getElementById('mRating'), 8.5, 1, '/10', 1000);
+      }, 200);
+    }, 300);
+
+    loadLiveMetrics();
+  });
+
+  // ── Toast ─────────────────────────────────────────────────────
+  let _toastTimer;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 20px;border-radius:12px;font-size:13px;z-index:300;white-space:nowrap;opacity:1;transition:opacity 0.3s;';
+    clearTimeout(_toastTimer); _toastTimer = setTimeout(() => t.style.opacity = '0', 2400);
+  }
+
+})();
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

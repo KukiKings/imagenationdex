@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Civilization Action Gallery — IN$DEX</title>
+<style>
+  :root {
+    --cyan:    #00D4FF;
+    --blue:    #2B35D8;
+    --purple:  #8B3FE8;
+    --black:   #090A10;
+    --green:   #00E5A0;
+    --gold:    #FFB800;
+    --red:     #FF4D6D;
+    --surface: #12141F;
+    --surface2:#1A1D2E;
+    --surface3:#22263A;
+    --text:    #FFFFFF;
+    --text2:   #A0A8C0;
+    --muted:   #5A6080;
+    --border:  rgba(255,255,255,0.07);
+  }
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  body {
+    background:var(--black); color:var(--text);
+    font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    max-width:430px; margin:0 auto; min-height:100vh;
+    padding-bottom:90px; overflow-x:hidden;
+  }
+
+  /* NAV */
+  .nav {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:52px 20px 16px; position:sticky; top:0;
+    background:rgba(9,10,16,0.96); backdrop-filter:blur(16px);
+    z-index:100; border-bottom:1px solid var(--border);
+  }
+  .nav-back { font-size:20px; cursor:pointer; color:var(--text2); }
+  .nav-title { font-size:14px; font-weight:700; }
+  .nav-badge { background:rgba(0,229,160,0.1); border:1px solid rgba(0,229,160,0.3); color:var(--green); font-size:10px; font-weight:700; padding:3px 8px; border-radius:20px; }
+
+  /* HERO */
+  .hero { padding:32px 20px 24px; text-align:center; position:relative; overflow:hidden; }
+  .hero::before {
+    content:''; position:absolute; top:-40px; left:50%; transform:translateX(-50%);
+    width:320px; height:300px;
+    background:radial-gradient(circle, rgba(0,229,160,0.08) 0%, transparent 70%);
+    pointer-events:none;
+  }
+  .hero-tag { display:inline-block; background:rgba(0,229,160,0.1); border:1px solid rgba(0,229,160,0.3); color:var(--green); font-size:10px; font-weight:800; letter-spacing:1.5px; padding:5px 14px; border-radius:20px; text-transform:uppercase; margin-bottom:16px; }
+  .hero h1 { font-size:22px; font-weight:800; line-height:1.3; margin-bottom:12px; letter-spacing:-0.5px; }
+  .hero h1 span { color:var(--green); }
+  .hero-sub { font-size:13px; color:var(--text2); line-height:1.6; max-width:320px; margin:0 auto 20px; }
+  .hero-lock { background:var(--surface); border:1px solid rgba(0,229,160,0.15); border-radius:12px; padding:14px 16px; font-size:12px; color:var(--text2); font-style:italic; line-height:1.55; text-align:left; }
+
+  /* STAT ROW */
+  .stat-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; padding:0 20px 24px; }
+  .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 10px; text-align:center; }
+  .stat-val { font-size:18px; font-weight:800; letter-spacing:-0.5px; margin-bottom:4px; }
+  .stat-label { font-size:10px; color:var(--text2); font-weight:600; letter-spacing:0.3px; line-height:1.3; }
+
+  /* SECTION HDR */
+  .section-hdr { display:flex; align-items:center; justify-content:space-between; padding:0 20px 12px; }
+  .section-hdr h2 { font-size:14px; font-weight:800; }
+  .section-hdr span { font-size:11px; color:var(--text2); font-weight:600; }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  .fade-in { animation:fadeUp 0.35s ease both; }
+
+  /* ── GM3: CITIZEN PROFILE MATCHER ── */
+  .profile-card { margin:0 20px 20px; background:var(--surface); border:1px solid var(--border); border-radius:18px; overflow:hidden; }
+  .profile-hdr { display:flex; align-items:center; justify-content:space-between; padding:13px 16px 10px; border-bottom:1px solid var(--border); }
+  .profile-hdr-title { font-size:12px; font-weight:700; }
+  .profile-active-role { font-size:10px; color:var(--green); font-weight:700; }
+  .role-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; padding:12px 14px 14px; }
+  .role-chip { background:var(--surface3); border:1px solid var(--border); border-radius:12px; padding:10px 6px; text-align:center; cursor:pointer; transition:all 0.15s; }
+  .role-chip.sel { border-color:rgba(0,229,160,0.5); background:rgba(0,229,160,0.06); }
+  .role-chip-icon { font-size:22px; margin-bottom:4px; display:block; }
+  .role-chip-label { font-size:9px; font-weight:700; color:var(--text2); display:block; }
+  .role-chip.sel .role-chip-label { color:var(--green); }
+
+  /* ── GM1: MISSION GALLERY ── */
+  .mission-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:0 20px 8px; }
+  .mission-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:14px 13px; cursor:pointer; transition:all 0.2s; }
+  .mission-card:hover { border-color:rgba(0,229,160,0.3); transform:translateY(-1px); }
+  .mission-card.role-highlight { border-color:rgba(0,229,160,0.25); }
+  .mission-icon { font-size:28px; margin-bottom:8px; }
+  .mission-title { font-size:12px; font-weight:800; line-height:1.3; margin-bottom:5px; }
+  .mission-sub { font-size:10px; color:var(--text2); line-height:1.4; margin-bottom:8px; }
+  .mission-cta { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:800; color:var(--green); }
+
+  /* ── GM2: USE CASE EXPLORER ── */
+  .explorer-card { margin:0 20px 16px; background:var(--surface); border:1px solid var(--border); border-radius:18px; overflow:hidden; }
+  .cat-tabs { display:flex; overflow-x:auto; scrollbar-width:none; border-bottom:1px solid var(--border); }
+  .cat-tabs::-webkit-scrollbar { display:none; }
+  .cat-tab { flex-shrink:0; padding:11px 14px; font-size:10px; font-weight:800; color:var(--text2); cursor:pointer; border-bottom:2px solid transparent; transition:all 0.15s; white-space:nowrap; }
+  .cat-tab.active { color:var(--text); border-bottom-color:var(--green); }
+  .cat-hero { padding:14px 16px 12px; border-bottom:1px solid var(--border); }
+  .cat-hero-row { display:flex; align-items:center; gap:10px; margin-bottom:5px; }
+  .cat-hero-icon { font-size:26px; }
+  .cat-hero-name { font-size:14px; font-weight:800; }
+  .cat-hero-tagline { font-size:11px; color:var(--text2); line-height:1.45; }
+  .use-case-item { border-bottom:1px solid var(--border); }
+  .use-case-item:last-child { border-bottom:none; }
+  .use-case-row { display:flex; align-items:center; padding:11px 16px; gap:10px; cursor:pointer; transition:background 0.15s; }
+  .use-case-row:hover { background:rgba(255,255,255,0.02); }
+  .use-case-num { font-size:9px; font-weight:800; color:var(--muted); width:16px; flex-shrink:0; }
+  .use-case-title-text { font-size:12px; font-weight:600; flex:1; line-height:1.35; }
+  .use-case-chevron { font-size:13px; color:var(--muted); flex-shrink:0; transition:transform 0.2s; }
+  .use-case-chevron.open { transform:rotate(90deg); }
+  .use-case-expand { display:none; padding:12px 16px 14px; background:var(--surface2); border-top:1px solid var(--border); }
+  .use-case-expand.show { display:block; }
+  .field-row { display:flex; gap:10px; margin-bottom:8px; font-size:11px; line-height:1.5; }
+  .field-lbl { color:var(--text2); font-weight:700; width:96px; flex-shrink:0; font-size:10px; text-transform:uppercase; letter-spacing:0.4px; padding-top:1px; }
+  .field-val { color:var(--text); flex:1; }
+  .expand-launch { margin-top:10px; padding:10px; border-radius:11px; font-size:12px; font-weight:800; text-align:center; cursor:pointer; background:rgba(0,229,160,0.1); border:1px solid rgba(0,229,160,0.3); color:var(--green); transition:all 0.2s; }
+  .expand-launch:hover { background:rgba(0,229,160,0.18); }
+
+  /* ── GM4: MISSION LAUNCH SHEET ── */
+  .sheet-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:200; opacity:0; pointer-events:none; transition:opacity 0.25s; }
+  .sheet-overlay.show { opacity:1; pointer-events:all; }
+  .launch-sheet {
+    position:fixed; bottom:0; left:50%; transform:translateX(-50%) translateY(100%);
+    width:100%; max-width:430px; background:var(--surface);
+    border-radius:24px 24px 0 0; z-index:201; transition:transform 0.32s ease;
+    border-top:1px solid rgba(255,255,255,0.1); max-height:82vh; overflow-y:auto;
+  }
+  .launch-sheet.show { transform:translateX(-50%) translateY(0); }
+  .sheet-drag { width:36px; height:4px; border-radius:2px; background:var(--muted); margin:14px auto 0; }
+  .sheet-hdr { padding:16px 20px 14px; border-bottom:1px solid var(--border); }
+  .sheet-cat-tag { font-size:9px; font-weight:800; color:var(--green); letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; }
+  .sheet-mission-title { font-size:18px; font-weight:800; line-height:1.3; }
+  .sheet-fields { padding:16px 20px 4px; }
+  .sf-block { margin-bottom:14px; }
+  .sf-lbl { font-size:9px; font-weight:800; color:var(--text2); letter-spacing:0.8px; text-transform:uppercase; margin-bottom:5px; }
+  .sf-val { font-size:12px; color:var(--text); line-height:1.55; }
+  .sheet-actions { display:flex; gap:10px; padding:8px 20px 16px; }
+  .sheet-btn { flex:1; padding:12px; border-radius:13px; font-size:13px; font-weight:800; text-align:center; cursor:pointer; transition:all 0.2s; }
+  .sheet-btn-primary { background:rgba(0,229,160,0.12); border:1px solid rgba(0,229,160,0.35); color:var(--green); }
+  .sheet-btn-primary:hover { background:rgba(0,229,160,0.2); }
+  .sheet-btn-sec { background:var(--surface3); border:1px solid var(--border); color:var(--text2); }
+  .recent-strip { padding:10px 20px 14px; border-top:1px solid var(--border); }
+  .recent-lbl { font-size:9px; font-weight:700; color:var(--muted); letter-spacing:0.8px; text-transform:uppercase; margin-bottom:8px; }
+  .recent-row { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; }
+  .recent-row::-webkit-scrollbar { display:none; }
+  .recent-chip { flex-shrink:0; background:var(--surface3); border:1px solid var(--border); border-radius:10px; padding:7px 12px; font-size:10px; font-weight:600; color:var(--text2); white-space:nowrap; cursor:pointer; max-width:160px; overflow:hidden; text-overflow:ellipsis; }
+
+  /* DOCTRINE */
+  .doctrine-section { padding:8px 20px 24px; }
+  .doctrine-section h2 { font-size:13px; font-weight:800; color:var(--text2); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:14px; }
+  .doctrine-line { display:flex; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); font-size:12px; color:var(--text2); line-height:1.5; }
+  .doctrine-line:last-child { border-bottom:none; }
+  .doctrine-line::before { content:'🌊'; flex-shrink:0; margin-top:1px; }
+
+  /* TOAST */
+  .toast {
+    position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--surface3); border:1px solid rgba(255,255,255,0.12);
+    color:var(--text); font-size:13px; font-weight:600; padding:12px 20px;
+    border-radius:24px; opacity:0; transition:all 0.3s; z-index:999;
+    white-space:nowrap; max-width:340px; pointer-events:none;
+  }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* BOTTOM NAV */
+  .bottom-nav {
+    position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+    width:100%; max-width:430px;
+    background:rgba(18,20,31,0.97); backdrop-filter:blur(20px);
+    border-top:1px solid var(--border); display:flex; padding:10px 0 24px; z-index:100;
+  }
+  .nav-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; font-size:9px; font-weight:700; color:var(--muted); letter-spacing:0.3px; text-transform:uppercase; transition:color 0.15s; }
+  .nav-item.active { color:var(--green); }
+  .nav-item-icon { font-size:22px; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-back">←</div>
+  <div class="nav-title">Civilization Action Gallery</div>
+  <div class="nav-badge">v10.0</div>
+</nav>
+
+<!-- HERO -->
+<div class="hero fade-in">
+  <div class="hero-tag">SIINDEX Use Case Library — IN$DEX</div>
+  <h1>Do not give citizens<br>an empty prompt box.<br><span>Give them a doorway.</span></h1>
+  <p class="hero-sub">100 practical missions across 10 civilization categories. Bring one idea. SIINDEX turns it into a mission.</p>
+  <div class="hero-lock">"Claude shows what people can do with intelligence. IN$DEX shows what citizens can become with sovereignty."</div>
+</div>
+
+<!-- STAT ROW -->
+<div class="stat-row">
+  <div class="stat-card fade-in" style="animation-delay:.05s">
+    <div class="stat-val" style="color:var(--green)">100</div>
+    <div class="stat-label">Citizen missions across the civilization</div>
+  </div>
+  <div class="stat-card fade-in" style="animation-delay:.10s">
+    <div class="stat-val" style="color:var(--gold)">10</div>
+    <div class="stat-label">Core civilization categories</div>
+  </div>
+  <div class="stat-card fade-in" style="animation-delay:.15s">
+    <div class="stat-val" style="color:var(--cyan)">12</div>
+    <div class="stat-label">Mission doorways — no prompt needed</div>
+  </div>
+</div>
+
+<!-- GM3: CITIZEN PROFILE MATCHER -->
+<div class="section-hdr fade-in" style="animation-delay:.08s">
+  <h2>👤 Who Are You?</h2>
+  <span>Select to filter missions</span>
+</div>
+<div class="profile-card fade-in" style="animation-delay:.10s">
+  <div class="profile-hdr">
+    <div class="profile-hdr-title">SIINDEX filters the gallery for your role</div>
+    <div class="profile-active-role" id="profileActiveRole">All roles</div>
+  </div>
+  <div class="role-grid" id="roleGrid"></div>
+</div>
+
+<!-- GM1: MISSION GALLERY -->
+<div class="section-hdr fade-in" style="animation-delay:.14s">
+  <h2>🚪 Mission Doorways</h2>
+  <span id="galleryCount">12 doorways</span>
+</div>
+<div class="mission-grid fade-in" id="missionGrid" style="animation-delay:.16s"></div>
+
+<!-- GM2: USE CASE EXPLORER -->
+<div class="section-hdr fade-in" style="animation-delay:.22s;margin-top:12px">
+  <h2>📖 Use Case Explorer</h2>
+  <span>100 missions · tap to expand</span>
+</div>
+<div class="explorer-card fade-in" style="animation-delay:.24s">
+  <div class="cat-tabs" id="catTabs"></div>
+  <div id="catContent"></div>
+</div>
+
+<!-- DOCTRINE -->
+<div class="doctrine-section fade-in" style="animation-delay:.30s">
+  <h2>Doctrine — Citizens Should Not Need to Know What to Ask</h2>
+  <div id="doctrineLines"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- GM4: MISSION LAUNCH SHEET -->
+<div class="sheet-overlay" id="sheetOverlay" onclick="closeLaunchSheet()"></div>
+<div class="launch-sheet" id="launchSheet">
+  <div class="sheet-drag"></div>
+  <div class="sheet-hdr">
+    <div class="sheet-cat-tag" id="sheetCatTag">SIINDEX Mission</div>
+    <div class="sheet-mission-title" id="sheetMissionTitle">—</div>
+  </div>
+  <div class="recent-strip" id="recentStrip" style="display:none">
+    <div class="recent-lbl">Recent missions</div>
+    <div class="recent-row" id="recentRow"></div>
+  </div>
+  <div class="sheet-fields" id="sheetFields"></div>
+  <div class="sheet-actions">
+    <div class="sheet-btn sheet-btn-primary" onclick="copyMissionBrief()">Copy Mission Brief</div>
+    <div class="sheet-btn sheet-btn-sec" onclick="closeLaunchSheet()">Close</div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <div class="nav-item"><div class="nav-item-icon">🏠</div>Home</div>
+  <div class="nav-item"><div class="nav-item-icon">🧠</div>Brain</div>
+  <div class="nav-item active"><div class="nav-item-icon">🌊</div>Gallery</div>
+  <div class="nav-item"><div class="nav-item-icon">🚀</div>Missions</div>
+  <div class="nav-item"><div class="nav-item-icon">⚙️</div>Settings</div>
+</nav>
+
+<script>
+  const INDX_PRICE_USD = 0.24;
+
+  // ── DATA ──
+
+  const CATEGORIES = [
+    {
+      key:'income', icon:'💰', label:'Create Income', color:'var(--gold)',
+      tagline:'Turn one idea into income paths.',
+      example:{
+        who:'Anyone with a skill, product, story, or creative idea',
+        siindex:'Generates possible products, services, courses, live events, subscriptions, and marketplace offers — then helps choose the safest first move',
+        protected:'Your idea, pricing, and identity — nothing shared without your consent',
+        approval:'None to generate paths. Marketplace listing requires Brain Passport and Wisdom Score.',
+        output:'A personalized income path list with 3–5 starting options ranked by your situation',
+        next:'Choose one path. SIINDEX opens a Mission Room and starts building.'
+      },
+      cases:[
+        'Turn my skill into an offer',
+        'Create my first service page',
+        'Build a product bundle',
+        'Create a marketplace listing',
+        'Prepare a live commerce session',
+        'Turn my story into a digital product',
+        'Create a course from what I know',
+        'Build my first 30-day income path',
+        'Find three ways to monetize one idea',
+        'Improve my listing after no sales',
+      ]
+    },
+    {
+      key:'business', icon:'🏢', label:'Build My Business', color:'var(--blue)',
+      tagline:'SIINDEX turns a rough idea into a clear, trusted business presence.',
+      example:{
+        who:'Anyone starting, running, or formalizing a business — from street stall to startup',
+        siindex:'Creates a clear business page with offer, audience, story, product or service details, trust signals, payment path, and next best action',
+        protected:'Your business information, draft content, and customer contact details',
+        approval:'None to create your business page. Merchant badge required to list on marketplace.',
+        output:'A complete business page with offer, story, trust signals, and a payment path',
+        next:'Review your page. Activate your merchant profile. Start receiving orders.'
+      },
+      cases:[
+        'Create my business one-pager',
+        'Write my customer message',
+        'Build a simple offer page',
+        'Prepare a hotel or tourism partnership pitch',
+        'Create a price list',
+        'Design a buyer FAQ',
+        'Create a trust checklist',
+        'Draft customer replies',
+        'Review my sales signals',
+        'Build a weekly business dashboard',
+      ]
+    },
+    {
+      key:'culture', icon:'🌿', label:'Protect Culture', color:'var(--purple)',
+      tagline:'Every cultural asset deserves a rights check before it becomes a product.',
+      example:{
+        who:'Citizens, creators, elders, guardians, and community stewards working with cultural material',
+        siindex:'Classifies the cultural status of your asset, identifies whether permission is needed, drafts attribution, and pauses commercialization if rights are unclear',
+        protected:'The cultural integrity of the asset, the rights of the community, and the citation of the originating people',
+        approval:'Sacred or community-owned material requires elder or community approval before any commercial use.',
+        output:'A cultural rights card showing classification, permission status, attribution requirements, and next steps',
+        next:'If approved: proceed to listing. If hold: SIINDEX initiates elder review request.'
+      },
+      cases:[
+        'Check if my cultural design can be sold',
+        'Create a cultural permission request',
+        'Write an attribution statement',
+        'Create a cultural rights card',
+        'Build a family or community archive page',
+        'Mark an asset as education-only',
+        'Create a revenue-sharing rule',
+        'Block unsafe commercialization',
+        'Review a generated image for cultural misuse',
+        'Prepare elder or community review',
+      ]
+    },
+    {
+      key:'learn', icon:'📚', label:'Learn and Grow', color:'var(--cyan)',
+      tagline:'Learning connected to what you are building — not generic lessons.',
+      example:{
+        who:'Citizens at any stage — beginners, students, business owners, elders, and children with a guardian',
+        siindex:'Connects learning directly to your current mission: a listing, service, product, community project, or business page',
+        protected:'Your learning pace, skill level, and personal context — never compared or exposed',
+        approval:'Child-safe missions require guardian consent. Skill passports require Wisdom Score.',
+        output:'A personalized learning path with missions, milestones, quizzes, and a skill passport entry',
+        next:'Start the first mission. Your Life Graph tracks every step.'
+      },
+      cases:[
+        'Build my learning path',
+        'Explain a topic at my level',
+        'Turn a lesson into a quiz',
+        'Create a child-safe learning mission',
+        'Adapt a guide for different reading levels',
+        'Create a visual explainer',
+        'Build a mentor plan',
+        'Track my progress in my Life Graph',
+        'Turn my mistakes into a learning loop',
+        'Create a skill passport',
+      ]
+    },
+    {
+      key:'rooms', icon:'🚀', label:'Mission Rooms', color:'var(--green)',
+      tagline:'A shared workspace with roles, tasks, agents, and approval gates.',
+      example:{
+        who:'Teams, families, communities, merchants, creators, and governance groups working together',
+        siindex:'Creates a Mission Room with roles, files, tasks, decisions, agents, permissions, approval gates, and next actions — coordinated without group chat chaos',
+        protected:'Room contents, member roles, and decision records — visible only to approved members',
+        approval:'Room creation is open. Adding agents or publishing outputs may require steward approval.',
+        output:'A fully configured Mission Room with your team onboarded, tasks assigned, and first actions ready',
+        next:'Invite your first member. Assign the first task. SIINDEX starts tracking progress.'
+      },
+      cases:[
+        'Launch a product with a team',
+        'Coordinate a community project',
+        'Plan a live commerce event',
+        'Run a governance proposal room',
+        'Build a family legacy archive',
+        'Manage a merchant business',
+        'Create a learning cohort',
+        'Prepare a cultural review room',
+        'Track decisions and tasks',
+        'Summarize what changed overnight',
+      ]
+    },
+    {
+      key:'opportunity', icon:'🔍', label:'Opportunity Feed', color:'var(--cyan)',
+      tagline:'Not viral content. Opportunities connected to your skills and goals.',
+      example:{
+        who:'Any citizen who wants to find their next useful move without being manipulated by an algorithm',
+        siindex:'Matches you to opportunities based on your skills, goals, trust level, location, learning path, and Brain Passport — not your attention patterns',
+        protected:'Your data is never used to generate ads, increase screen time, or serve any third party without consent',
+        approval:'None to browse. Converting an opportunity to a Mission Room is automatic.',
+        output:'A curated set of opportunity cards ranked by relevance to your current situation and goals',
+        next:'Tap any card to understand it. Tap again to convert it into a Mission Room.'
+      },
+      cases:[
+        'Find my next buyer action',
+        'Discover local opportunities',
+        'Match my skill to demand',
+        'Find community missions',
+        'See learning paths tied to income',
+        'Find safe marketplace opportunities',
+        'Receive opportunity cards, not addictive content',
+        'See why SIINDEX recommended something',
+        'Hide opportunities that do not fit my mission',
+        'Convert an opportunity into a Mission Room',
+      ]
+    },
+    {
+      key:'social', icon:'📢', label:'Sovereign Social', color:'var(--purple)',
+      tagline:'Content that builds trust, opportunity, ownership, or legacy.',
+      example:{
+        who:'Creators, merchants, community communicators, and citizens with something worth sharing',
+        siindex:'Helps you communicate clearly without chasing followers, likes, or virality — every post should build trust, opportunity, ownership, or legacy',
+        protected:'Cultural content, consent of people featured, and your identity — SIINDEX checks for misuse before publishing',
+        approval:'Synthetic media requires disclosure. Cultural content requires permission check. Financial claims require hype review.',
+        output:'Platform-native content versions with hype review passed and consent confirmed',
+        next:'Review. Approve. Publish. SIINDEX logs the content in your Brain Passport.'
+      },
+      cases:[
+        'Turn a product into a post',
+        'Create a story-led carousel',
+        'Draft a launch announcement',
+        'Create a short-form video script',
+        'Convert a citizen story into a consent-safe post',
+        'Check for hype or misleading claims',
+        'Create platform-native versions',
+        'Add synthetic media disclosure',
+        'Protect cultural content before posting',
+        'Connect content to a marketplace offer',
+      ]
+    },
+    {
+      key:'money', icon:'💳', label:'Money, Settlement & Safety', color:'var(--red)',
+      tagline:'Understand before you send. SIINDEX explains every move.',
+      example:{
+        who:'Any citizen moving money, receiving payments, reviewing transfers, or managing financial risk',
+        siindex:'Explains fees, timing, risk, destination, consent, and whether extra verification is needed — before anything is signed or sent',
+        protected:'Your transaction history, wallet address, financial data, and identity — never shared without explicit consent',
+        approval:'High-value payouts require step-up verification. Unusual destinations trigger a SIINDEX safety review.',
+        output:'A plain-language explanation of the transaction with fees, risk rating, timing, and a consent receipt',
+        next:'Approve and proceed. Or pause and review. SIINDEX holds the transaction until you decide.'
+      },
+      cases:[
+        'Explain a payment before I send it',
+        'Check transfer risk',
+        'Review a new payout destination',
+        'Compare settlement options',
+        'Explain stablecoin risk in plain language',
+        'Create a consent receipt',
+        'Pause suspicious account activity',
+        'Sign out all devices',
+        'Secure my account',
+        'Review recent financial actions',
+      ]
+    },
+    {
+      key:'governance', icon:'🏛️', label:'Governance', color:'var(--blue)',
+      tagline:'Citizens who understand a proposal can give informed consent.',
+      example:{
+        who:'Any citizen, delegate, steward, or community member involved in a governance decision',
+        siindex:'Explains what the proposal changes, who is affected, what risks exist, what alternatives are available, and what your vote means — in plain language',
+        protected:'Your vote is private until you choose to make it public. SIINDEX never pressures a direction.',
+        approval:'Voting requires Wisdom Score. Proposal creation requires delegate or steward status.',
+        output:'A plain-language governance summary with impact analysis, risk flags, and a comparison of arguments',
+        next:'Vote with confidence. Your vote receipt is logged permanently to the governance ledger.'
+      },
+      cases:[
+        'Explain a proposal in simple language',
+        'Show merchant impact of a proposal',
+        'Show treasury impact',
+        'Create a neutral voting guide',
+        'Detect unclear governance language',
+        'Create a proposal one-pager',
+        'Open a Governance Mission Room',
+        'Log a vote receipt',
+        'Compare arguments for and against',
+        'Track implementation after a vote',
+      ]
+    },
+    {
+      key:'legacy', icon:'🌟', label:'Legacy', color:'var(--gold)',
+      tagline:'Preserve what you build, learn, own, protect, teach, and pass forward.',
+      example:{
+        who:'Citizens, families, elders, community historians, and anyone who wants their journey to outlast them',
+        siindex:'Helps you preserve what you build, learn, own, protect, teach, and pass forward — in a format that future generations can access with the same trust protections',
+        protected:'Family stories, cultural knowledge, ownership history, and personal milestones — locked with consent gates',
+        approval:'Family archive requires consent of featured members. Cultural knowledge requires elder or community approval.',
+        output:'A sovereign legacy page with stories, assets, milestones, ownership history, and access rules for future generations',
+        next:'Review your legacy page. Set who can see it and when. SIINDEX stores it in your Life Graph permanently.'
+      },
+      cases:[
+        'Create my Life Graph',
+        'Archive family stories',
+        'Preserve cultural knowledge',
+        'Create a legacy page',
+        'Record business milestones',
+        'Turn learning into memory',
+        'Save decisions for future generations',
+        'Create a mentor record',
+        'Build a child transition plan for 18+',
+        'Preserve ownership history',
+      ]
+    },
+  ];
+
+  const MISSION_GALLERY = [
+    { icon:'💡', title:'Build my first opportunity', sub:'Turn an idea into a starting move', catKey:'income', who:'Any citizen' },
+    { icon:'🪪', title:'Create my Grid Account', sub:'Set up identity, wallet, and domain', catKey:'money', who:'New citizens' },
+    { icon:'🚀', title:'Launch my product', sub:'From idea to marketplace in one mission', catKey:'income', who:'Creators and merchants' },
+    { icon:'🌿', title:'Protect my cultural asset', sub:'Check rights before commercializing', catKey:'culture', who:'Elders and creators' },
+    { icon:'🏠', title:'Open a Mission Room', sub:'Coordinate a team, project, or community', catKey:'rooms', who:'Teams and communities' },
+    { icon:'🏢', title:'Create my business page', sub:'Clear offer, trust, and payment path', catKey:'business', who:'Any entrepreneur' },
+    { icon:'📡', title:'Prepare my live commerce event', sub:'Stream, sell, and settle in one session', catKey:'income', who:'Live sellers' },
+    { icon:'🏛️', title:'Understand a proposal', sub:'Plain-language governance before you vote', catKey:'governance', who:'Any citizen voter' },
+    { icon:'🔐', title:'Secure my account', sub:'Review sessions, devices, and permissions', catKey:'money', who:'All citizens' },
+    { icon:'🧬', title:'Build my Life Graph', sub:'Memory, reputation, and legacy in one place', catKey:'legacy', who:'Any citizen' },
+    { icon:'🧠', title:'Create my Brain Passport', sub:'Identity, delegations, and trust profile', catKey:'business', who:'Any citizen' },
+    { icon:'🔍', title:'Find my next opportunity', sub:'Matched to your skills, goals, and context', catKey:'opportunity', who:'Any citizen' },
+  ];
+
+  const ROLES = [
+    { key:'citizen',   icon:'👤', label:'Citizen',   cats:['income','opportunity','learn','legacy','money'] },
+    { key:'merchant',  icon:'🏪', label:'Merchant',  cats:['business','income','social','money','rooms'] },
+    { key:'creator',   icon:'🎨', label:'Creator',   cats:['income','social','culture','legacy','rooms'] },
+    { key:'family',    icon:'👨‍👩‍👧', label:'Family',   cats:['legacy','learn','governance','culture','money'] },
+    { key:'elder',     icon:'🌺', label:'Elder',     cats:['culture','legacy','governance','rooms','learn'] },
+    { key:'guardian',  icon:'🛡️', label:'Guardian',  cats:['learn','money','legacy','governance','culture'] },
+    { key:'governor',  icon:'🏛️', label:'Governor',  cats:['governance','rooms','money','business','legacy'] },
+    { key:'community', icon:'🌊', label:'Community', cats:['rooms','governance','culture','opportunity','social'] },
+  ];
+
+  const DOCTRINE = [
+    'Citizens should not need to know what to ask. IN$DEX must surface useful missions before citizens have the language for them.',
+    'Do not give citizens an empty prompt box. Give them a doorway into opportunity.',
+    'Claude shows what people can do with intelligence. IN$DEX shows what citizens can become with sovereignty.',
+    'Not scrolling. Building. Not followers. Opportunity. Not confusion. Guidance.',
+    'The citizen should not need to understand the system. The system should help the citizen discover what is possible.',
+    'Bring one idea. SIINDEX turns it into a mission.',
+    'Every mission card answers seven questions: what, who, what SIINDEX does, what is protected, approval needed, output, and next action.',
+    'SIINDEX does not show generic tools. She shows citizen missions — real things citizens can start immediately.',
+    'The mission is the entry point. The system is invisible. The outcome is sovereign.',
+    'A practical gallery is not a feature list. It is proof that the civilization works.',
+  ];
+
+  // ── STATE ──
+  let _selectedRole = null;
+  let _selectedCat  = 0;
+  let _openCase     = null; // { catIdx, caseIdx }
+  let _currentMission = null;
+  let _recentMissions = JSON.parse(localStorage.getItem('indx_gallery_recent') || '[]');
+
+  // ── GM3: ROLES ──
+  function renderRoles() {
+    const el = document.getElementById('roleGrid');
+    el.innerHTML = ROLES.map(r =>
+      `<div class="role-chip ${_selectedRole===r.key?'sel':''}" onclick="selectRole('${r.key}')">
+        <span class="role-chip-icon">${r.icon}</span>
+        <span class="role-chip-label">${r.label}</span>
+      </div>`
+    ).join('');
+  }
+
+  function selectRole(key) {
+    _selectedRole = _selectedRole === key ? null : key;
+    const role = ROLES.find(r=>r.key===key);
+    document.getElementById('profileActiveRole').textContent = _selectedRole
+      ? (role ? role.label : 'All roles') : 'All roles';
+    renderRoles();
+    renderMissionGrid();
+    // Jump to first relevant category if role selected
+    if (_selectedRole && role) {
+      const firstCat = role.cats[0];
+      const idx = CATEGORIES.findIndex(c=>c.key===firstCat);
+      if (idx >= 0) { _selectedCat = idx; _openCase = null; renderCatTabs(); renderCatContent(); }
+    }
+    showToast(_selectedRole ? `Showing missions for ${role.label}` : 'Showing all missions');
+  }
+
+  // ── GM1: MISSION GALLERY ──
+  function renderMissionGrid() {
+    const el = document.getElementById('missionGrid');
+    const role = ROLES.find(r=>r.key===_selectedRole);
+    const sorted = _selectedRole && role
+      ? [...MISSION_GALLERY].sort((a,b) => {
+          const aRel = role.cats.includes(a.catKey) ? 0 : 1;
+          const bRel = role.cats.includes(b.catKey) ? 0 : 1;
+          return aRel - bRel;
+        })
+      : MISSION_GALLERY;
+
+    el.innerHTML = sorted.map((m, i) => {
+      const cat = CATEGORIES.find(c=>c.key===m.catKey);
+      const highlight = _selectedRole && role && role.cats.includes(m.catKey);
+      return `<div class="mission-card ${highlight?'role-highlight':''}" onclick="openMissionFromGallery(${MISSION_GALLERY.indexOf(m)})">
+        <div class="mission-icon">${m.icon}</div>
+        <div class="mission-title">${m.title}</div>
+        <div class="mission-sub">${m.sub}</div>
+        <div class="mission-cta">Start → <span style="font-size:9px;color:var(--muted)">${cat?cat.label:''}</span></div>
+      </div>`;
+    }).join('');
+
+    const count = sorted.length;
+    document.getElementById('galleryCount').textContent = _selectedRole
+      ? `${ROLES.find(r=>r.key===_selectedRole)?.cats.filter(c=>MISSION_GALLERY.some(m=>m.catKey===c)).length || count} most relevant first`
+      : count + ' doorways';
+  }
+
+  function openMissionFromGallery(idx) {
+    const m = MISSION_GALLERY[idx];
+    const cat = CATEGORIES.find(c=>c.key===m.catKey);
+    if (!cat) return;
+    openLaunchSheet(m.title, cat.label + ' · ' + cat.icon, m.who, cat.example);
+  }
+
+  // ── GM2: USE CASE EXPLORER ──
+  function renderCatTabs() {
+    const el = document.getElementById('catTabs');
+    el.innerHTML = CATEGORIES.map((c, i) =>
+      `<div class="cat-tab ${i===_selectedCat?'active':''}" onclick="selectCat(${i})">${c.icon} ${c.label}</div>`
+    ).join('');
+    // scroll active into view
+    const active = el.querySelector('.active');
+    if (active) active.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
+  }
+
+  function selectCat(i) {
+    _selectedCat = i;
+    _openCase = null;
+    renderCatTabs();
+    renderCatContent();
+  }
+
+  function renderCatContent() {
+    const cat = CATEGORIES[_selectedCat];
+    const el = document.getElementById('catContent');
+    el.innerHTML = `
+      <div class="cat-hero">
+        <div class="cat-hero-row">
+          <div class="cat-hero-icon">${cat.icon}</div>
+          <div class="cat-hero-name">${cat.label}</div>
+        </div>
+        <div class="cat-hero-tagline">${cat.tagline}</div>
+      </div>
+      ${cat.cases.map((c, i) => {
+        const isOpen = _openCase && _openCase.catIdx===_selectedCat && _openCase.caseIdx===i;
+        return `<div class="use-case-item">
+          <div class="use-case-row" onclick="toggleCase(${_selectedCat},${i})">
+            <div class="use-case-num">${i+1}</div>
+            <div class="use-case-title-text">${c}</div>
+            <div class="use-case-chevron ${isOpen?'open':''}">›</div>
+          </div>
+          <div class="use-case-expand ${isOpen?'show':''}">
+            ${buildFieldRows(c, cat)}
+            <div class="expand-launch" onclick="openMissionFromExplorer(${_selectedCat},${i},event)">Start this mission →</div>
+          </div>
+        </div>`;
+      }).join('')}`;
+  }
+
+  function buildFieldRows(caseTitle, cat) {
+    const e = cat.example;
+    return [
+      ['What can I do?',            caseTitle],
+      ['Who is it for?',            e.who],
+      ['SIINDEX helps with',        e.siindex],
+      ['What is protected?',        e.protected],
+      ['Approval needed',           e.approval],
+      ['What output do I get?',     e.output],
+      ['What is the next action?',  e.next],
+    ].map(([lbl,val]) =>
+      `<div class="field-row"><div class="field-lbl">${lbl}</div><div class="field-val">${val}</div></div>`
+    ).join('');
+  }
+
+  function toggleCase(catIdx, caseIdx) {
+    if (_openCase && _openCase.catIdx===catIdx && _openCase.caseIdx===caseIdx) {
+      _openCase = null;
+    } else {
+      _openCase = { catIdx, caseIdx };
+    }
+    renderCatContent();
+  }
+
+  function openMissionFromExplorer(catIdx, caseIdx, evt) {
+    evt.stopPropagation();
+    const cat = CATEGORIES[catIdx];
+    const title = cat.cases[caseIdx];
+    openLaunchSheet(title, cat.label + ' · ' + cat.icon, cat.example.who, cat.example);
+  }
+
+  // ── GM4: MISSION LAUNCH SHEET ──
+  function openLaunchSheet(title, catLabel, who, example) {
+    _currentMission = { title, catLabel, who, example };
+    document.getElementById('sheetCatTag').textContent = catLabel;
+    document.getElementById('sheetMissionTitle').textContent = title;
+
+    const fields = document.getElementById('sheetFields');
+    fields.innerHTML = [
+      ['What can I do?',           title],
+      ['Who is it for?',           who || example.who],
+      ['SIINDEX helps with',       example.siindex],
+      ['What is protected?',       example.protected],
+      ['Approval needed',          example.approval],
+      ['What output do I get?',    example.output],
+      ['Next action',              example.next],
+    ].map(([l,v]) =>
+      `<div class="sf-block"><div class="sf-lbl">${l}</div><div class="sf-val">${v}</div></div>`
+    ).join('');
+
+    // Recent missions
+    _recentMissions = _recentMissions.filter(m=>m!==title);
+    _recentMissions.unshift(title);
+    if (_recentMissions.length > 6) _recentMissions = _recentMissions.slice(0,6);
+    localStorage.setItem('indx_gallery_recent', JSON.stringify(_recentMissions));
+    renderRecentStrip();
+
+    document.getElementById('sheetOverlay').classList.add('show');
+    document.getElementById('launchSheet').classList.add('show');
+  }
+
+  function closeLaunchSheet() {
+    document.getElementById('sheetOverlay').classList.remove('show');
+    document.getElementById('launchSheet').classList.remove('show');
+  }
+
+  function copyMissionBrief() {
+    if (!_currentMission) return;
+    const m = _currentMission;
+    const brief = [
+      `SIINDEX MISSION BRIEF`,
+      `Mission: ${m.title}`,
+      `Category: ${m.catLabel}`,
+      `Who: ${m.who || m.example.who}`,
+      `SIINDEX helps with: ${m.example.siindex}`,
+      `Protected: ${m.example.protected}`,
+      `Approval: ${m.example.approval}`,
+      `Output: ${m.example.output}`,
+      `Next action: ${m.example.next}`,
+    ].join('\n');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(brief).then(() => showToast('✓ Mission brief copied to clipboard'));
+    } else {
+      showToast('Mission brief ready');
+    }
+  }
+
+  function renderRecentStrip() {
+    const strip = document.getElementById('recentStrip');
+    const row   = document.getElementById('recentRow');
+    if (_recentMissions.length === 0) { strip.style.display='none'; return; }
+    strip.style.display = 'block';
+    row.innerHTML = _recentMissions.slice(0,3).map(t =>
+      `<div class="recent-chip" onclick="reopenRecent('${t.replace(/'/g,"\\'")}' )">${t}</div>`
+    ).join('');
+  }
+
+  function reopenRecent(title) {
+    // Find matching mission in gallery or explorer
+    const gal = MISSION_GALLERY.find(m=>m.title===title);
+    if (gal) { openMissionFromGallery(MISSION_GALLERY.indexOf(gal)); return; }
+    for (let ci=0; ci<CATEGORIES.length; ci++) {
+      const caseIdx = CATEGORIES[ci].cases.indexOf(title);
+      if (caseIdx >= 0) { openMissionFromExplorer(ci, caseIdx, { stopPropagation:()=>{} }); return; }
+    }
+  }
+
+  // ── DOCTRINE ──
+  function renderDoctrine() {
+    document.getElementById('doctrineLines').innerHTML = DOCTRINE.map((d,i)=>
+      `<div class="doctrine-line fade-in" style="animation-delay:${i*0.04}s">${d}</div>`
+    ).join('');
+  }
+
+  // ── TOAST ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 3400);
+  }
+
+  // ── INIT ──
+  window.addEventListener('DOMContentLoaded', () => {
+    renderRoles();
+    renderMissionGrid();
+    renderCatTabs();
+    renderCatContent();
+    renderDoctrine();
+    renderRecentStrip();
+  });
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

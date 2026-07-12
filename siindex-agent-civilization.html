@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SIINDEX Agent Civilization — IN$DEX</title>
+<style>
+  :root {
+    --cyan:    #00D4FF;
+    --blue:    #2B35D8;
+    --purple:  #8B3FE8;
+    --black:   #090A10;
+    --green:   #00E5A0;
+    --gold:    #FFB800;
+    --red:     #FF4D6D;
+    --surface: #12141F;
+    --surface2:#1A1D2E;
+    --surface3:#22263A;
+    --text:    #FFFFFF;
+    --text2:   #A0A8C0;
+    --muted:   #5A6080;
+    --border:  rgba(255,255,255,0.07);
+  }
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  body {
+    background:var(--black); color:var(--text);
+    font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    max-width:430px; margin:0 auto; min-height:100vh;
+    padding-bottom:90px; overflow-x:hidden;
+  }
+
+  /* NAV */
+  .nav { display:flex; align-items:center; justify-content:space-between; padding:52px 20px 16px; position:sticky; top:0; background:rgba(9,10,16,0.96); backdrop-filter:blur(16px); z-index:100; border-bottom:1px solid var(--border); }
+  .nav-back { font-size:20px; cursor:pointer; color:var(--text2); }
+  .nav-title { font-size:14px; font-weight:700; }
+  .nav-badge { background:rgba(139,63,232,0.1); border:1px solid rgba(139,63,232,0.3); color:var(--purple); font-size:10px; font-weight:700; padding:3px 8px; border-radius:20px; }
+
+  /* HERO */
+  .hero { padding:28px 20px 22px; position:relative; overflow:hidden; }
+  .hero::before { content:''; position:absolute; top:-40px; right:-30px; width:280px; height:280px; background:radial-gradient(circle, rgba(139,63,232,0.07) 0%, transparent 70%); pointer-events:none; }
+  .hero::after  { content:''; position:absolute; bottom:-40px; left:-30px; width:220px; height:220px; background:radial-gradient(circle, rgba(0,212,255,0.05) 0%, transparent 70%); pointer-events:none; }
+  .hero-tag { display:inline-block; background:rgba(139,63,232,0.1); border:1px solid rgba(139,63,232,0.3); color:var(--purple); font-size:10px; font-weight:800; letter-spacing:1.5px; padding:5px 14px; border-radius:20px; text-transform:uppercase; margin-bottom:14px; }
+  .hero h1 { font-size:21px; font-weight:800; line-height:1.3; margin-bottom:10px; letter-spacing:-0.5px; }
+  .hero h1 span { color:var(--purple); }
+  .hero-sub { font-size:13px; color:var(--text2); line-height:1.6; margin-bottom:16px; }
+  .hero-lock { background:var(--surface); border:1px solid rgba(139,63,232,0.2); border-radius:12px; padding:14px 16px; font-size:12px; color:var(--text2); font-style:italic; line-height:1.6; }
+  .hero-lock strong { color:var(--purple); font-style:normal; }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  .fade-in { animation:fadeUp 0.35s ease both; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* STAT ROW */
+  .stat-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; padding:0 20px 20px; }
+  .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:13px 10px; text-align:center; }
+  .stat-val { font-size:18px; font-weight:800; letter-spacing:-0.5px; margin-bottom:4px; }
+  .stat-label { font-size:9px; color:var(--text2); font-weight:600; line-height:1.3; }
+
+  /* SECTION HDR */
+  .section-hdr { display:flex; align-items:center; justify-content:space-between; padding:0 20px 12px; }
+  .section-hdr h2 { font-size:14px; font-weight:800; }
+  .section-hdr span { font-size:11px; color:var(--text2); font-weight:600; }
+
+  /* ── GM1: AGENT REGISTRY ── */
+  .agent-card { margin:0 20px 10px; background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; cursor:pointer; transition:border-color 0.2s; }
+  .agent-card.open { border-color:rgba(139,63,232,0.35); }
+  .agent-card.paused { opacity:0.6; }
+  .agent-row { display:flex; align-items:center; gap:12px; padding:13px 16px; }
+  .agent-icon { font-size:28px; flex-shrink:0; position:relative; }
+  .agent-status-dot { position:absolute; bottom:-2px; right:-2px; width:10px; height:10px; border-radius:50%; border:2px solid var(--black); }
+  .dot-active  { background:var(--green); animation:pulse 2s infinite; }
+  .dot-paused  { background:var(--muted); }
+  .dot-review  { background:var(--gold); animation:pulse 1.5s infinite; }
+  .dot-blocked { background:var(--red); }
+  .agent-info { flex:1; min-width:0; }
+  .agent-name { font-size:13px; font-weight:800; margin-bottom:3px; }
+  .agent-archetype { font-size:10px; color:var(--text2); margin-bottom:5px; }
+  .agent-chips { display:flex; gap:5px; flex-wrap:wrap; }
+  .agent-status-chip { font-size:9px; font-weight:800; padding:2px 9px; border-radius:20px; }
+  .chip-active  { background:rgba(0,229,160,0.08); border:1px solid rgba(0,229,160,0.25); color:var(--green); }
+  .chip-paused  { background:rgba(90,96,128,0.12); border:1px solid rgba(90,96,128,0.3); color:var(--muted); }
+  .chip-review  { background:rgba(255,184,0,0.08); border:1px solid rgba(255,184,0,0.25); color:var(--gold); }
+  .chip-blocked { background:rgba(255,77,109,0.08); border:1px solid rgba(255,77,109,0.25); color:var(--red); }
+  .risk-chip    { font-size:9px; font-weight:800; padding:2px 9px; border-radius:20px; }
+  .risk-low  { background:rgba(0,229,160,0.05); border:1px solid rgba(0,229,160,0.15); color:var(--green); }
+  .risk-med  { background:rgba(255,184,0,0.05); border:1px solid rgba(255,184,0,0.15); color:var(--gold); }
+  .risk-high { background:rgba(255,77,109,0.05); border:1px solid rgba(255,77,109,0.15); color:var(--red); }
+  .agent-chevron { font-size:14px; color:var(--muted); flex-shrink:0; transition:transform 0.2s; }
+  .agent-chevron.open { transform:rotate(90deg); }
+
+  /* Agent expanded */
+  .agent-expand { display:none; border-top:1px solid var(--border); padding:14px 16px 16px; background:var(--surface2); }
+  .agent-expand.show { display:block; }
+  .ae-section { margin-bottom:12px; }
+  .ae-label { font-size:9px; font-weight:800; color:var(--muted); letter-spacing:0.6px; text-transform:uppercase; margin-bottom:6px; }
+  .ae-mission { font-size:12px; color:var(--text); line-height:1.55; margin-bottom:10px; }
+  .ae-list { display:flex; flex-direction:column; gap:4px; }
+  .ae-item { display:flex; align-items:flex-start; gap:7px; font-size:11px; color:var(--text2); line-height:1.4; }
+  .ae-item-icon { flex-shrink:0; margin-top:1px; font-size:11px; }
+  .ae-ok  { color:var(--green); }
+  .ae-no  { color:var(--red); }
+  .ae-row2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .ae-field { }
+  .ae-field-val { font-size:11px; color:var(--text2); line-height:1.4; }
+  .ae-actions { display:flex; gap:8px; margin-top:10px; }
+  .ae-btn { flex:1; padding:9px; border-radius:11px; font-size:11px; font-weight:800; text-align:center; cursor:pointer; transition:all 0.15s; }
+  .ae-btn-pause  { background:rgba(255,184,0,0.08); border:1px solid rgba(255,184,0,0.25); color:var(--gold); }
+  .ae-btn-enable { background:rgba(0,229,160,0.08); border:1px solid rgba(0,229,160,0.25); color:var(--green); }
+  .ae-btn-eval   { background:rgba(139,63,232,0.08); border:1px solid rgba(139,63,232,0.25); color:var(--purple); }
+
+  /* ── GM2: MISSION ROOM AGENT DOCK ── */
+  .dock-card { margin:0 20px 16px; background:var(--surface); border:1px solid rgba(0,212,255,0.15); border-radius:18px; overflow:hidden; }
+  .dock-hdr { padding:13px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .dock-hdr-left h3 { font-size:13px; font-weight:800; margin-bottom:3px; }
+  .dock-hdr-left p { font-size:10px; color:var(--text2); }
+  .dock-hdr-actions { display:flex; gap:6px; }
+  .dock-ctrl { font-size:10px; font-weight:800; padding:5px 11px; border-radius:20px; cursor:pointer; border:1px solid var(--border); background:var(--surface3); color:var(--text2); transition:all 0.15s; white-space:nowrap; }
+  .dock-ctrl:hover { border-color:rgba(0,212,255,0.3); color:var(--cyan); }
+  .dock-slot { display:flex; align-items:center; gap:10px; padding:10px 16px; border-bottom:1px solid var(--border); }
+  .dock-slot:last-child { border-bottom:none; }
+  .dock-agent-icon { font-size:22px; flex-shrink:0; }
+  .dock-agent-info { flex:1; }
+  .dock-agent-name { font-size:12px; font-weight:800; margin-bottom:2px; }
+  .dock-agent-role { font-size:10px; color:var(--text2); }
+  .dock-agent-last { font-size:9px; color:var(--muted); margin-top:2px; }
+  .dock-agent-status { flex-shrink:0; }
+  .dock-remove { font-size:10px; font-weight:800; color:var(--muted); cursor:pointer; padding:4px 8px; border-radius:8px; border:1px solid var(--border); background:var(--surface3); transition:all 0.15s; }
+  .dock-remove:hover { color:var(--red); border-color:rgba(255,77,109,0.3); }
+  .dock-add { padding:10px 16px; border-top:1px solid var(--border); display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; }
+  .dock-add::-webkit-scrollbar { display:none; }
+  .dock-add-chip { flex-shrink:0; font-size:10px; font-weight:700; padding:6px 13px; border-radius:20px; border:1px solid var(--border); background:var(--surface3); color:var(--text2); cursor:pointer; white-space:nowrap; transition:all 0.15s; }
+  .dock-add-chip:hover { border-color:rgba(0,212,255,0.3); color:var(--cyan); }
+
+  /* ── GM3: EVALUATION SCORECARD ── */
+  .eval-card { margin:0 20px 16px; background:var(--surface); border:1px solid var(--border); border-radius:18px; overflow:hidden; }
+  .eval-hdr { padding:13px 16px 12px; border-bottom:1px solid var(--border); }
+  .eval-select-row { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .eval-select-lbl { font-size:11px; font-weight:700; color:var(--text2); flex-shrink:0; }
+  .eval-agent-select { display:flex; overflow-x:auto; gap:6px; scrollbar-width:none; }
+  .eval-agent-select::-webkit-scrollbar { display:none; }
+  .eval-agent-chip { flex-shrink:0; font-size:10px; font-weight:700; padding:5px 12px; border-radius:20px; border:1px solid var(--border); background:var(--surface3); color:var(--text2); cursor:pointer; white-space:nowrap; transition:all 0.15s; }
+  .eval-agent-chip.active { background:rgba(139,63,232,0.1); border-color:rgba(139,63,232,0.35); color:var(--purple); }
+  .eval-score-row { display:flex; align-items:center; justify-content:space-between; }
+  .eval-score-val { font-size:28px; font-weight:800; color:var(--purple); }
+  .eval-score-denom { font-size:13px; font-weight:700; color:var(--muted); }
+  .eval-score-label { font-size:11px; color:var(--text2); font-weight:600; }
+  .eval-key-q { font-size:11px; color:var(--gold); font-style:italic; padding:10px 12px; background:rgba(255,184,0,0.06); border-radius:10px; border:1px solid rgba(255,184,0,0.15); margin-top:6px; line-height:1.5; }
+  /* Dimension bars */
+  .eval-dim { padding:9px 16px; border-bottom:1px solid var(--border); cursor:pointer; transition:background 0.15s; }
+  .eval-dim:last-child { border-bottom:none; }
+  .eval-dim:hover { background:rgba(255,255,255,0.02); }
+  .eval-dim-row { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+  .eval-dim-name { font-size:11px; font-weight:700; flex:1; }
+  .eval-dim-score { font-size:11px; font-weight:800; color:var(--purple); }
+  .eval-dim-bar-wrap { height:4px; background:var(--surface3); border-radius:2px; overflow:hidden; }
+  .eval-dim-bar { height:4px; border-radius:2px; transition:width 0.5s ease; }
+
+  /* ── GM4: AGENT MISSION BRIEF BUILDER ── */
+  .brief-card { margin:0 20px 16px; background:var(--surface); border:1px solid rgba(0,212,255,0.15); border-radius:18px; overflow:hidden; }
+  .brief-hdr { padding:13px 16px 12px; border-bottom:1px solid var(--border); }
+  .brief-hdr h3 { font-size:13px; font-weight:800; margin-bottom:4px; }
+  .brief-hdr p  { font-size:11px; color:var(--text2); line-height:1.45; }
+  .brief-before-after { display:grid; grid-template-columns:1fr 1fr; border-bottom:1px solid var(--border); }
+  .brief-col { padding:10px 12px; }
+  .brief-col:first-child { border-right:1px solid var(--border); }
+  .brief-col-lbl { font-size:9px; font-weight:800; color:var(--muted); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:5px; }
+  .brief-col-text { font-size:11px; color:var(--text2); line-height:1.45; font-style:italic; }
+  .brief-body { padding:14px 16px; }
+  .brief-field { margin-bottom:12px; }
+  .brief-field-lbl { font-size:9px; font-weight:800; color:var(--muted); letter-spacing:0.6px; text-transform:uppercase; margin-bottom:5px; }
+  .brief-textarea { width:100%; background:var(--surface3); border:1px solid var(--border); border-radius:12px; padding:10px 13px; font-size:13px; color:var(--text); font-family:inherit; resize:none; outline:none; line-height:1.5; min-height:70px; transition:border-color 0.15s; }
+  .brief-textarea:focus { border-color:rgba(0,212,255,0.35); }
+  .brief-textarea::placeholder { color:var(--muted); }
+  .brief-agent-picker { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:4px; }
+  .brief-agent-pk { font-size:10px; font-weight:700; padding:5px 12px; border-radius:20px; border:1px solid var(--border); background:var(--surface3); color:var(--text2); cursor:pointer; transition:all 0.15s; }
+  .brief-agent-pk.sel { background:rgba(0,212,255,0.1); border-color:rgba(0,212,255,0.35); color:var(--cyan); }
+  .brief-generate { width:100%; padding:12px; border-radius:13px; font-size:13px; font-weight:800; text-align:center; cursor:pointer; background:rgba(0,212,255,0.1); border:1px solid rgba(0,212,255,0.35); color:var(--cyan); transition:all 0.2s; margin-bottom:12px; }
+  .brief-generate:hover { background:rgba(0,212,255,0.18); }
+  /* Output */
+  .brief-output { display:none; }
+  .brief-output.show { display:block; }
+  .brief-output-hdr { font-size:9px; font-weight:800; color:var(--purple); letter-spacing:0.8px; text-transform:uppercase; margin-bottom:8px; }
+  .brief-section { background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:8px; }
+  .brief-section-lbl { font-size:9px; font-weight:800; color:var(--text2); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:5px; }
+  .brief-section-val { font-size:11px; color:var(--text); line-height:1.6; }
+  .brief-checks-list { display:flex; flex-direction:column; gap:5px; }
+  .brief-check { display:flex; gap:7px; font-size:11px; color:var(--text2); padding:4px 0; }
+  .brief-check-num { color:var(--cyan); font-weight:800; flex-shrink:0; }
+  .brief-copy { padding:10px; border-radius:11px; font-size:12px; font-weight:800; text-align:center; cursor:pointer; background:rgba(139,63,232,0.08); border:1px solid rgba(139,63,232,0.25); color:var(--purple); transition:all 0.15s; }
+  .brief-copy:hover { background:rgba(139,63,232,0.16); }
+
+  /* DOCTRINE */
+  .doctrine-section { padding:8px 20px 24px; }
+  .doctrine-section h2 { font-size:13px; font-weight:800; color:var(--text2); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:14px; }
+  .doctrine-line { display:flex; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); font-size:12px; color:var(--text2); line-height:1.5; }
+  .doctrine-line:last-child { border-bottom:none; }
+  .doctrine-line::before { content:'⚡'; flex-shrink:0; margin-top:1px; }
+
+  /* TOAST */
+  .toast { position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--surface3); border:1px solid rgba(255,255,255,0.12); color:var(--text); font-size:13px; font-weight:600; padding:12px 20px; border-radius:24px; opacity:0; transition:all 0.3s; z-index:999; white-space:nowrap; max-width:340px; pointer-events:none; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* BOTTOM NAV */
+  .bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:430px; background:rgba(18,20,31,0.97); backdrop-filter:blur(20px); border-top:1px solid var(--border); display:flex; padding:10px 0 24px; z-index:100; }
+  .nav-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; font-size:9px; font-weight:700; color:var(--muted); letter-spacing:0.3px; text-transform:uppercase; transition:color 0.15s; }
+  .nav-item.active { color:var(--purple); }
+  .nav-item-icon { font-size:22px; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-back">←</div>
+  <div class="nav-title">SIINDEX Agent Civilization</div>
+  <div class="nav-badge">v10.0</div>
+</nav>
+
+<!-- HERO -->
+<div class="hero fade-in">
+  <div class="hero-tag">SIINDEX Agent Civilization — IN$DEX</div>
+  <h1>Not bots.<br>A <span>governed sovereign team</span><br>around every mission.</h1>
+  <p class="hero-sub">SIINDEX agents help citizens complete missions safely. Every agent is permissioned, observable, auditable, interruptible, and correctable. Citizens declare missions. SIINDEX orchestrates the right agents safely.</p>
+  <div class="hero-lock">"Claude makes agents an unfair advantage. <strong>SIINDEX makes agents a sovereign advantage.</strong>"<br><br>Agents are not the product. <strong>Orchestrated citizen capability is the product.</strong></div>
+</div>
+
+<!-- STAT ROW -->
+<div class="stat-row fade-in" style="animation-delay:.04s">
+  <div class="stat-card"><div class="stat-val" style="color:var(--purple)">12</div><div class="stat-label">Core SIINDEX agents in the civilization</div></div>
+  <div class="stat-card"><div class="stat-val" style="color:var(--cyan)">20</div><div class="stat-label">Fields in every agent governance record</div></div>
+  <div class="stat-card"><div class="stat-val" style="color:var(--gold)">14</div><div class="stat-label">Evaluation dimensions per agent</div></div>
+</div>
+
+<!-- GM1: AGENT REGISTRY -->
+<div class="section-hdr fade-in" style="animation-delay:.06s">
+  <h2>⚡ Agent Registry</h2>
+  <span id="registryLabel">12 agents · tap to review</span>
+</div>
+<div id="agentRegistry" class="fade-in" style="animation-delay:.08s"></div>
+
+<!-- GM2: MISSION ROOM AGENT DOCK -->
+<div class="section-hdr fade-in" style="animation-delay:.14s;margin-top:8px">
+  <h2>🚀 Mission Room Agent Dock</h2>
+  <span>Active mission</span>
+</div>
+<div class="dock-card fade-in" style="animation-delay:.16s">
+  <div class="dock-hdr">
+    <div class="dock-hdr-left">
+      <h3>Launch Vanuatu Print Bundle</h3>
+      <p>Mission Room · 3 members · 7 agents · IN progress</p>
+    </div>
+    <div class="dock-hdr-actions">
+      <div class="dock-ctrl" onclick="dockAllPause()">Pause All</div>
+      <div class="dock-ctrl" onclick="dockAllActivate()">Activate All</div>
+    </div>
+  </div>
+  <div id="dockSlots"></div>
+  <div class="dock-add" id="dockAddRow"></div>
+</div>
+
+<!-- GM3: AGENT EVALUATION SCORECARD -->
+<div class="section-hdr fade-in" style="animation-delay:.22s;margin-top:8px">
+  <h2>📊 Agent Evaluation Scorecard</h2>
+  <span>14 dimensions</span>
+</div>
+<div class="eval-card fade-in" style="animation-delay:.24s">
+  <div class="eval-hdr">
+    <div class="eval-select-row">
+      <div class="eval-select-lbl">Evaluate:</div>
+      <div class="eval-agent-select" id="evalAgentSelect"></div>
+    </div>
+    <div class="eval-score-row">
+      <div><span class="eval-score-val" id="evalScore">—</span><span class="eval-score-denom">/100</span></div>
+      <div class="eval-score-label" id="evalLabel">Select an agent</div>
+    </div>
+    <div class="eval-key-q">Key question: Did the agent know when <em>not</em> to act?</div>
+  </div>
+  <div id="evalDims"></div>
+</div>
+
+<!-- GM4: AGENT MISSION BRIEF BUILDER -->
+<div class="section-hdr fade-in" style="animation-delay:.30s;margin-top:8px">
+  <h2>📋 Agent Mission Brief Builder</h2>
+  <span>Intention → structured mission</span>
+</div>
+<div class="brief-card fade-in" style="animation-delay:.32s">
+  <div class="brief-hdr">
+    <h3>SIINDEX upgrades rough intention into agent-ready missions</h3>
+    <p>A weak citizen request becomes a structured mission with role, allowed actions, forbidden actions, approval gates, and 7 pre-action checks.</p>
+  </div>
+  <div class="brief-before-after">
+    <div class="brief-col">
+      <div class="brief-col-lbl">Without SIINDEX</div>
+      <div class="brief-col-text">"Help me sell this."</div>
+    </div>
+    <div class="brief-col">
+      <div class="brief-col-lbl">With SIINDEX</div>
+      <div class="brief-col-text">"Classify product → identify buyer → check trust and cultural risk → create 3 offer options → recommend safest first listing → flag what needs approval."</div>
+    </div>
+  </div>
+  <div class="brief-body">
+    <div class="brief-field">
+      <div class="brief-field-lbl">Your rough intention</div>
+      <textarea class="brief-textarea" id="briefIntention" placeholder="Tell SIINDEX what you want to do — in plain language. Don't worry about structure." rows="3"></textarea>
+    </div>
+    <div class="brief-field">
+      <div class="brief-field-lbl">Select agents for this mission</div>
+      <div class="brief-agent-picker" id="briefAgentPicker"></div>
+    </div>
+    <div class="brief-field">
+      <div class="brief-field-lbl">Does this involve (check all that apply)</div>
+      <div class="brief-agent-picker" id="briefContextPicker"></div>
+    </div>
+    <div class="brief-generate" onclick="generateBrief()">Generate Agent Mission Brief →</div>
+    <div class="brief-output" id="briefOutput">
+      <div class="brief-output-hdr">SIINDEX Agent Mission Brief — Decision Ledger Reference: <span id="briefRef">—</span></div>
+      <div id="briefSections"></div>
+      <div class="brief-copy" onclick="copyBrief()">Copy Agent Brief to Clipboard</div>
+    </div>
+  </div>
+</div>
+
+<!-- DOCTRINE -->
+<div class="doctrine-section fade-in" style="animation-delay:.38s">
+  <h2>Doctrine — Agents Must Be Governed Before They Are Powerful</h2>
+  <div id="doctrineLines"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <div class="nav-item"><div class="nav-item-icon">🏠</div>Home</div>
+  <div class="nav-item"><div class="nav-item-icon">🧠</div>Brain</div>
+  <div class="nav-item active"><div class="nav-item-icon">⚡</div>Agents</div>
+  <div class="nav-item"><div class="nav-item-icon">🚀</div>Missions</div>
+  <div class="nav-item"><div class="nav-item-icon">⚙️</div>Settings</div>
+</nav>
+
+<script>
+  const INDX_PRICE_USD = 0.24;
+
+  // ── DATA ──
+
+  const AGENTS = [
+    {
+      key:'opportunity', icon:'💡', name:'Opportunity Agent', archetype:'Sovereign Opportunity Navigator',
+      mission:'Turns ideas, skills, products, stories, and community needs into practical opportunity paths. Upgrades vague intentions into structured citizen missions.',
+      status:'active', risk:'low',
+      allowed:['Draft offer ideas and income paths from Brain Passport context','Create first-sale plans with risk and effort levels','Map audiences and buyer trust signals','Generate pricing ranges based on market and value','Run blind spot passes before citizen commits to a path'],
+      forbidden:['Guarantee income or specific outcomes','Push speculation or hype about earnings','Publish any output without citizen approval','Access wallet or financial account details'],
+      reads:['Brain Passport — Identity Brain and Opportunity Brain','Life Graph milestones and skills','Opportunity Feed preferences and thresholds'],
+      writes:['Opportunity Brain entries','Draft income path records','Decision Ledger — opportunity review records'],
+      tools:['Opportunity Brain Engine','ImageNation Builder (draft mode only)','Decision Ledger'],
+      approvalGates:['Citizen approval before any path is shared externally','SIINDEX blind spot pass before any publishing action'],
+      humanTriggers:['Financial claims above citizen threshold','Regulated income activity (financial services, healthcare, legal)','Cross-border opportunity with compliance exposure'],
+      culturalTriggers:['Any opportunity involving cultural knowledge, assets, or community practice'],
+      failureMode:'Pause mission. Return incomplete brief with uncertainty noted. Log in Decision Ledger.',
+      evaluation:'Opportunity quality, trust protection, cultural safety, income claim accuracy, overreach rate.',
+      rollback:'Citizen can revoke any opportunity path from Brain Passport at any time.',
+      owner:'SIINDEX Orchestrator',
+    },
+    {
+      key:'imagenation', icon:'🎨', name:'ImageNation Builder Agent', archetype:'Sovereign Visual Creation Engine',
+      mission:'Turns imagination into visible assets — opportunity pages, one-pagers, campaign drafts, listing visuals, product mockups, and live commerce cards.',
+      status:'active', risk:'low',
+      allowed:['Create opportunity pages and one-pagers','Draft listing visuals and product mockups','Design campaign card and pitch deck drafts','Generate live commerce cards for events','Produce media kit visual components'],
+      forbidden:['Publish any output to live marketplace without review','Generate synthetic faces or likeness without consent','Create content involving children without guardian approval','Include unverified income claims in any visual'],
+      reads:['Content Brain — voice and boundary rules','Cultural Rights Graph — classification status','Brain Passport — visual identity preferences'],
+      writes:['Draft visual assets to Artifact Ledger','Design Studio usage records'],
+      tools:['Design Studio','ImageNation Builder Engine','Artifact Ledger'],
+      approvalGates:['Citizen review before any visual goes to marketplace','Cultural steward review for cultural assets','Guardian review for any child-related visual'],
+      humanTriggers:['Synthetic media or realistic likeness generation','Any income claim in visual output'],
+      culturalTriggers:['Assets involving cultural patterns, ceremonies, or community symbols'],
+      failureMode:'Save draft to Artifact Ledger. Flag review required. Do not publish.',
+      evaluation:'Visual accuracy, cultural safety, income claim safety, consent rate, child safety rate.',
+      rollback:'Any draft asset can be deleted from Artifact Ledger by citizen.',
+      owner:'ImageNation Build Team',
+    },
+    {
+      key:'merchant', icon:'🏪', name:'Merchant Agent', archetype:'Sovereign Trust Commerce Guide',
+      mission:'Helps citizens sell with trust — improving listings, buyer FAQs, customer replies, delivery instructions, dispute language, and follow-up messages.',
+      status:'active', risk:'med',
+      allowed:['Improve listing descriptions for trust and clarity','Draft buyer FAQ entries','Create customer reply templates','Write delivery and return terms in plain language','Draft dispute response language'],
+      forbidden:['Misrepresent products or services in any way','Generate fake reviews or social proof','Hide risk, limitation, or dispute history','Change payout details without fresh citizen confirmation'],
+      reads:['Marketplace listing data (draft and live)','Trust checklist status','Brain Passport — merchant identity'],
+      writes:['Listing improvement drafts','Buyer FAQ entries (draft)','Decision Ledger — merchant action records'],
+      tools:['Marketplace Listing Engine','Trust Checklist','Decision Ledger'],
+      approvalGates:['Citizen review before any listing update goes live','Fresh confirmation for any change touching payout or price'],
+      humanTriggers:['Payout or financial term changes','Dispute escalations beyond standard language'],
+      culturalTriggers:['Listings involving cultural assets or community products'],
+      failureMode:'Hold change as draft. Return listing to pre-edit state. Log in Decision Ledger.',
+      evaluation:'Listing trust improvement, claim accuracy, dispute language safety, overreach rate.',
+      rollback:'Citizen can revert any listing to previous version from Marketplace dashboard.',
+      owner:'SIINDEX Orchestrator',
+    },
+    {
+      key:'creator', icon:'🎬', name:'Creator Agent', archetype:'Sovereign Content-to-Commerce Engine',
+      mission:'Turns content into owned opportunity — posts, scripts, carousels, launch messages, content-to-commerce paths, and digital product ideas.',
+      status:'active', risk:'low',
+      allowed:['Draft posts, scripts, and carousels from Content Brain rules','Create content-to-commerce pathway designs','Draft launch messages and campaign outlines','Generate digital product or course outlines'],
+      forbidden:['Optimise for vanity metrics, engagement addiction, or hype','Create fake authority or false social proof','Generate synthetic media without disclosure','Push content that violates Content Brain cultural or consent rules'],
+      reads:['Content Brain — voice, boundaries, and forbidden patterns','Cultural Rights Graph — content classification','Brain Passport — creator identity'],
+      writes:['Content draft records','Artifact Ledger — content assets'],
+      tools:['Content Brain Engine','Media Engine (draft mode)','Artifact Ledger'],
+      approvalGates:['Citizen review before any content is published','Cultural review if content involves cultural knowledge','Guardian review if content involves children'],
+      humanTriggers:['Any income claim in content','Synthetic media generation','Sensitive community content'],
+      culturalTriggers:['Any content involving cultural knowledge, ceremony, or community identity'],
+      failureMode:'Hold as draft. Flag cultural or safety concern. Return to citizen for review.',
+      evaluation:'Voice alignment, cultural safety, hype avoidance, consent rate, income claim accuracy.',
+      rollback:'Any content draft deleted by citizen from Artifact Ledger.',
+      owner:'SIINDEX Orchestrator',
+    },
+    {
+      key:'cultural', icon:'🌿', name:'Cultural Steward Agent', archetype:'Sovereign Cultural Protection Layer',
+      mission:'Protects cultural assets before commerce. Classifies assets, checks permission, writes attribution, and pauses commercialization when status is unclear.',
+      status:'active', risk:'high',
+      allowed:['Classify cultural assets across 10 status types','Check permission requirements per classification','Draft attribution statements','Create Cultural Rights Card records','Flag assets for elder or community review'],
+      forbidden:['Approve commercialization of sacred or restricted assets','Override elder or community permission decisions','Classify assets without sufficient information — must pause instead'],
+      reads:['Cultural Rights Graph — all classifications and statuses','Permission records and elder approvals','Brain Passport — cultural stewardship roles'],
+      writes:['Cultural Rights Card records','Classification entries in Cultural Rights Graph','Permission request drafts'],
+      tools:['Cultural Rights Graph','Elder Review Queue','Decision Ledger'],
+      approvalGates:['Elder or community approval for restricted or unknown assets','Cultural steward citizen sign-off before any classification is published'],
+      humanTriggers:['Sacred or restricted asset classification','Community ownership disputes','Permission request rejections'],
+      culturalTriggers:['All actions by this agent are cultural by nature'],
+      failureMode:'Pause all commercialization. Flag for elder or community review. Log incident in Cultural Rights Graph.',
+      evaluation:'Classification accuracy, elder approval rate, commercialization pause rate, overreach rate.',
+      rollback:'Any classification can be challenged by citizen or community via Cultural Rights Graph → Challenge path.',
+      owner:'Cultural Stewardship Council',
+    },
+    {
+      key:'child', icon:'👶', name:'Child Safety Agent', archetype:'Sovereign Child Citizen Protection Layer',
+      mission:'Protects child citizens at every touchpoint — identity, guardian approval, earning limits, messaging restrictions, public visibility, learning suitability, and transition at 18+.',
+      status:'active', risk:'high',
+      allowed:['Review child citizen identity exposure','Check guardian approval for all child-related actions','Audit earning limits and transfer restrictions','Review messaging and public visibility settings','Flag learning content for child safety compliance'],
+      forbidden:['Allow any child-related action without guardian approval','Store child identity data without explicit consent','Allow public visibility of child citizens without guardian sign-off'],
+      reads:['Child citizen profile and Guardian Approval records','Learning path content — child safety flags','Mission Room access lists'],
+      writes:['Guardian review queue entries','Child safety incident records in Security Ledger'],
+      tools:['Guardian Approval System','Child Safety Review Queue','Security Ledger'],
+      approvalGates:['Guardian approval for every action involving a child citizen','Council review for any child safety incident'],
+      humanTriggers:['Any action involving a child citizen','Child data exposure risk','Guardian-contested decisions'],
+      culturalTriggers:['Child citizens in cultural learning or ceremony contexts'],
+      failureMode:'Block action immediately. Notify guardian. Log in Security Ledger with high-priority flag.',
+      evaluation:'Guardian approval rate, child data protection rate, incident flag accuracy, overreach rate.',
+      rollback:'Any child-related action blocked by guardian or council is reversed immediately.',
+      owner:'Guardian Safety Council',
+    },
+    {
+      key:'governance', icon:'🏛️', name:'Governance Agent', archetype:'Sovereign Civic Intelligence Guide',
+      mission:'Explains governance clearly — proposal summaries, impact maps, treasury explanations, neutral voting guides, risk comparisons, and citizen-friendly explainers.',
+      status:'active', risk:'med',
+      allowed:['Create proposal summaries in plain language','Map treasury impact of proposals','Generate neutral argument comparisons for and against','Draft citizen-friendly governance explainers','Create voting guides without recommendation bias'],
+      forbidden:['Manipulate vote outcomes or recommendations','Hide proposal tradeoffs or risks','Favour insiders or specific governance groups','Bypass governance process or quorum requirements'],
+      reads:['Governance proposal records','Treasury state and history','Voting records — aggregate only'],
+      writes:['Proposal summary records','Voting explainer drafts in Artifact Ledger','Decision Ledger — governance review records'],
+      tools:['Governance Proposal Engine','Treasury Review Interface','Decision Ledger'],
+      approvalGates:['Council review for any governance output before publication','Citizen review of any voting guide before sharing'],
+      humanTriggers:['Quorum or majority disputes','Treasury impacts above defined threshold','Governance manipulation risk detection'],
+      culturalTriggers:['Proposals involving cultural assets or indigenous rights'],
+      failureMode:'Pause output. Return to citizen with uncertainty noted. Log in Decision Ledger.',
+      evaluation:'Proposal clarity, neutrality score, treasury accuracy, tradeoff disclosure rate, vote manipulation risk.',
+      rollback:'Any governance output challenged via Decision Ledger → Challenge path.',
+      owner:'Governance Council',
+    },
+    {
+      key:'security', icon:'🔐', name:'Security Agent', archetype:'PQSI Sovereign Protection Engine',
+      mission:'Protects sessions, code, wallets, tools, and workflows. Scans for session risk, payout changes, suspicious activity, MCP connectors, and unsafe automations.',
+      status:'active', risk:'high',
+      allowed:['Scan session keys and trusted device status','Review payout change requests for anomalies','Audit MCP connector permissions and risk','Review code changes for security vulnerabilities','Flag unsafe automation patterns'],
+      forbidden:['Execute any blocking action on citizen accounts without human approval','Access wallet private keys or sensitive credentials','Run penetration tests against real targets'],
+      reads:['Session Ledger — active sessions and keys','Security Ledger — all finding records','MCP Connector Registry — permissions and risk ratings'],
+      writes:['Security Ledger — new finding records','Security alert queue'],
+      tools:['PQSI Sovereign Security Centre','Session Authority Map','Security Ledger','MCP Registry'],
+      approvalGates:['Human approval for any account action (lock, revoke, flag)','Council review for critical vulnerabilities','Security team review for treasury or admin issues'],
+      humanTriggers:['Critical vulnerability findings','Production system changes','Account recovery disputes','Treasury or governance system anomalies'],
+      culturalTriggers:['Cultural asset access pattern anomalies'],
+      failureMode:'Escalate to Security Team. Hold action. Log in Security Ledger with HIGH flag.',
+      evaluation:'Finding accuracy, false positive rate, escalation appropriateness, response speed, overreach rate.',
+      rollback:'Any security action contested by citizen via Security Centre → Challenge path.',
+      owner:'SIINDEX Security Council',
+    },
+    {
+      key:'compliance', icon:'⚖️', name:'Compliance Agent', archetype:'Sovereign Regulatory Clarity Engine',
+      mission:'Checks regulated or high-risk actions in plain language — payment risks, jurisdiction issues, transfer limits, sanctions exposure, and marketplace risk.',
+      status:'active', risk:'high',
+      allowed:['Review payment and transfer actions for compliance risk','Check jurisdiction requirements for cross-border actions','Identify sanctions or restricted-party exposure','Review marketplace listings for regulated content','Explain compliance requirements in plain language — no legal fog'],
+      forbidden:['Provide legal advice as a substitute for qualified legal counsel','Override compliance findings without escalation','Allow regulated actions to proceed without appropriate review'],
+      reads:['Transaction records — flagged only','Jurisdiction and compliance rule database','Marketplace listing data'],
+      writes:['Compliance review records in Decision Ledger','Escalation queue entries'],
+      tools:['Compliance Review Engine','Jurisdiction Database','Decision Ledger'],
+      approvalGates:['Human compliance reviewer for any flagged action','Council review for sanctions or high-risk jurisdiction exposure'],
+      humanTriggers:['Sanctions exposure','High-risk jurisdiction activity','Regulated financial product involvement'],
+      culturalTriggers:['Cross-border cultural commerce with IP or rights implications'],
+      failureMode:'Block action. Escalate to Compliance Team. Explain reason to citizen in plain language.',
+      evaluation:'Risk detection accuracy, plain language clarity, escalation rate, false positive rate.',
+      rollback:'Compliance decisions contested via Compliance Reviewer → Human Review path.',
+      owner:'Compliance Council',
+    },
+    {
+      key:'memory', icon:'🧬', name:'Memory Agent', archetype:'Sovereign Civilization Memory Layer',
+      mission:'Updates the civilization memory — Brain Passport, Life Graph, Mission Room summaries, Civilization Graph, Decision Ledger, and Artifact Ledger.',
+      status:'active', risk:'med',
+      allowed:['Write mission summaries to Brain Passport','Update Life Graph with citizen milestones','Create Mission Room summary records','Log decisions in Decision Ledger','Update Artifact Ledger with completed outputs'],
+      forbidden:['Store sensitive data without explicit citizen consent','Expose private memories to other citizens without permission','Rewrite or modify memory records silently — all edits must be logged'],
+      reads:['Brain Passport — all layers with permission','Life Graph — citizen history','Mission Room — summary and task records'],
+      writes:['Brain Passport updates','Life Graph entries','Decision Ledger records','Artifact Ledger records'],
+      tools:['Brain Passport Engine','Life Graph Engine','Decision Ledger','Artifact Ledger'],
+      approvalGates:['Citizen review for any Brain Passport update','Elder or community approval for cultural memory entries'],
+      humanTriggers:['Sensitive data classification required','Memory correction requests','Privacy-impacting memory updates'],
+      culturalTriggers:['Cultural knowledge added to civilization memory'],
+      failureMode:'Hold update. Return to citizen for review. Log attempt in Decision Ledger.',
+      evaluation:'Memory accuracy, consent rate, sensitive data handling, correction path usability.',
+      rollback:'Citizen can review, correct, or delete any memory record from Brain Passport → Memory Audit.',
+      owner:'SIINDEX Orchestrator',
+    },
+    {
+      key:'media', icon:'📡', name:'Media Agent', archetype:'Sovereign Media and Communication Engine',
+      mission:'Runs the Sovereign Media Engine — preparing platform-native posts, trailers, explainers, founder updates, citizen stories, and campaign kits.',
+      status:'review', risk:'med',
+      allowed:['Prepare platform-native post drafts','Create video trailer outlines','Draft founder and civilization updates','Generate campaign kit components','Summarize citizen stories for publication with consent'],
+      forbidden:['Publish any content without citizen review','Generate synthetic media without disclosure label','Create content involving children without guardian approval','Include unverified income claims in any media output','Represent governance positions without neutrality review'],
+      reads:['Content Brain — voice and publishing rules','Cultural Rights Graph — content classification','Consent records — citizen and community'],
+      writes:['Media draft records in Artifact Ledger','Publication queue entries'],
+      tools:['Sovereign Media Engine','Artifact Ledger','Cultural Rights Graph','Consent Registry'],
+      approvalGates:['Citizen review before any media goes to publication queue','Cultural steward review for cultural content','Synthetic media disclosure required on all generated visuals'],
+      humanTriggers:['Any income claim in media output','Synthetic media or deepfake risk','Child-related content'],
+      culturalTriggers:['All media involving cultural assets, ceremonies, or community identity'],
+      failureMode:'Hold all media in draft. Flag review required. Return to citizen.',
+      evaluation:'Content accuracy, consent rate, cultural safety, synthetic media disclosure rate, governance neutrality.',
+      rollback:'Any media draft deleted by citizen from Artifact Ledger.',
+      owner:'Media Stewardship Team',
+    },
+    {
+      key:'automation', icon:'⚡', name:'Automation Agent', archetype:'Sovereign Safe Automation Engine',
+      mission:'Turns repeated actions into safe workflows using the structure: Trigger → SIINDEX Action → Approval Gate → Output → Memory Update → Review Loop.',
+      status:'active', risk:'high',
+      allowed:['Create automation workflows with explicit approval gates','Design trigger-action-approval sequences','Review existing automations for safety and approval completeness','Suggest automation improvements with risk explanation'],
+      forbidden:['Automate fund movement without explicit citizen confirmation at time of execution','Automate cultural commercialization without steward approval','Automate any action involving child citizens without guardian gate','Create dark-pattern engagement automations','Remove or bypass approval gates from any automation'],
+      reads:['Automation Grid — all active workflows','Brain Passport — automation preferences','Mission Room — task and approval records'],
+      writes:['Automation workflow drafts','Automation run logs','Decision Ledger — automation action records'],
+      tools:['Automation Grid Engine','Approval Gate Manager','Decision Ledger'],
+      approvalGates:['Every automation must include at least one human approval gate','Fund movement automations require fresh confirmation at execution time','Cultural automations require steward approval gate'],
+      humanTriggers:['Fund movement automations','Cultural content automations','Any automation affecting more than one citizen'],
+      culturalTriggers:['Automations involving cultural content, assets, or community actions'],
+      failureMode:'Stop automation immediately. Preserve state. Log failure in Decision Ledger. Notify citizen.',
+      evaluation:'Approval gate completeness, fund safety rate, cultural safety rate, automation reliability, overreach rate.',
+      rollback:'Any automation can be stopped or paused by citizen from Automation Grid → Stop/Pause/Review.',
+      owner:'SIINDEX Orchestrator',
+    },
+  ];
+
+  const EVAL_DIMS = [
+    { key:'doctrine',    label:'Doctrine Alignment',      desc:'Outputs align with IN$DEX sovereignty principles' },
+    { key:'clarity',     label:'Citizen Clarity',          desc:'Plain language, no jargon or confusion' },
+    { key:'trust',       label:'Trust Protection',         desc:'Never compromises citizen or buyer trust' },
+    { key:'cultural',    label:'Cultural Safety',          desc:'Cultural assets classified and protected correctly' },
+    { key:'child',       label:'Child Safety',             desc:'Child citizen protection applied without exception' },
+    { key:'governance',  label:'Governance Neutrality',    desc:'Governance outputs are neutral and accurate' },
+    { key:'compliance',  label:'Compliance Safety',        desc:'Regulated actions reviewed before execution' },
+    { key:'security',    label:'Security Safety',          desc:'No unsafe actions or credential exposure' },
+    { key:'usefulness',  label:'Usefulness to Citizen',    desc:'Output creates real, usable sovereign capability' },
+    { key:'approval',    label:'Approval Gate Accuracy',   desc:'Correct triggers for human and cultural review' },
+    { key:'hallucination',label:'Hallucination Avoidance', desc:'Factual claims are accurate and evidence-based' },
+    { key:'overreach',   label:'Overreach Avoidance',      desc:'Stays within defined permissions at all times' },
+    { key:'memory',      label:'Memory Quality',           desc:'Decision Ledger entries are accurate and complete' },
+    { key:'pause',       label:'Ability to Say "Pause"',   desc:'Knows when NOT to act — the most important dimension' },
+  ];
+
+  const BRIEF_CONTEXTS = ['Culture or cultural assets','Children or youth','Financial transactions','Governance or voting','Personal or sensitive data','Automated workflow','Public publishing'];
+
+  const DOCTRINE = [
+    'The more capable a SIINDEX agent becomes, the more carefully it must be governed. Power without permissions is risk.',
+    'Automation without consent is extraction. Memory without boundaries is surveillance. Publishing without review is reputational danger.',
+    'Every SIINDEX agent must operate inside the civilization harness: doctrine, permissions, consent, safety gates, tool limits, ledgers, review paths, memory boundaries, and correction paths.',
+    'Citizens do not manage agents. Citizens declare missions. SIINDEX orchestrates the right agents safely.',
+    'A weak citizen intention is not a flaw. A weak agent brief is. SIINDEX upgrades vague intention into structured, governed missions.',
+    'The future is not one assistant per citizen. The future is a governed SIINDEX team around every mission.',
+    'Agent evaluation begins with one question: Did the agent know when not to act?',
+    'Tool access without audit is vulnerability. Agents must not use any tool that is not registered and approved.',
+    'If an agent is unsure — about culture, about children, about legality, about safety — it must pause. Certainty is required before consequence.',
+    'Claude makes agents an unfair advantage. SIINDEX makes agents a sovereign advantage.',
+  ];
+
+  // ── STATE ──
+  let _openAgent = null;
+  let _agentStatuses = JSON.parse(localStorage.getItem('indx_agent_status') || '{}');
+  let _dockAgents = JSON.parse(localStorage.getItem('indx_agent_dock') || '["opportunity","cultural","merchant","media","security","automation","memory"]');
+  let _evalAgent = AGENTS[0].key;
+  let _evalScores = JSON.parse(localStorage.getItem('indx_agent_eval') || '{}');
+  let _briefAgents = [];
+  let _briefContexts = [];
+  let _currentBriefText = null;
+
+  function getAgentStatus(key) { return _agentStatuses[key] || AGENTS.find(a=>a.key===key)?.status || 'active'; }
+
+  // ── GM1: AGENT REGISTRY ──
+  function renderRegistry() {
+    const el = document.getElementById('agentRegistry');
+    const active = AGENTS.filter(a=>getAgentStatus(a.key)==='active').length;
+    document.getElementById('registryLabel').textContent = `${active} active · ${AGENTS.length - active} paused/review`;
+    el.innerHTML = AGENTS.map((a, ai) => {
+      const status = getAgentStatus(a.key);
+      const isOpen = _openAgent === a.key;
+      const dotCls = { active:'dot-active', paused:'dot-paused', review:'dot-review', blocked:'dot-blocked' }[status] || 'dot-paused';
+      const chipCls = { active:'chip-active', paused:'chip-paused', review:'chip-review', blocked:'chip-blocked' }[status] || 'chip-paused';
+      const riskCls = { low:'risk-low', med:'risk-med', high:'risk-high' }[a.risk] || 'risk-low';
+      return `<div class="agent-card ${isOpen?'open':''} ${status==='paused'?'paused':''} fade-in" style="animation-delay:${ai*0.025}s">
+        <div class="agent-row" onclick="toggleAgent('${a.key}')">
+          <div class="agent-icon">${a.icon}<div class="agent-status-dot ${dotCls}"></div></div>
+          <div class="agent-info">
+            <div class="agent-name">${a.name}</div>
+            <div class="agent-archetype">${a.archetype}</div>
+            <div class="agent-chips">
+              <div class="agent-status-chip ${chipCls}">${status.charAt(0).toUpperCase()+status.slice(1)}</div>
+              <div class="risk-chip ${riskCls}">Risk: ${a.risk.toUpperCase()}</div>
+            </div>
+          </div>
+          <div class="agent-chevron ${isOpen?'open':''}">›</div>
+        </div>
+        ${isOpen ? renderAgentExpand(a, status) : ''}
+      </div>`;
+    }).join('');
+  }
+
+  function renderAgentExpand(a, status) {
+    const isPaused = status === 'paused';
+    return `<div class="agent-expand show">
+      <div class="ae-section"><div class="ae-label">Mission</div><div class="ae-mission">${a.mission}</div></div>
+      <div class="ae-section">
+        <div class="ae-label">Allowed actions</div>
+        <div class="ae-list">${a.allowed.map(x=>`<div class="ae-item"><div class="ae-item-icon ae-ok">✓</div>${x}</div>`).join('')}</div>
+      </div>
+      <div class="ae-section">
+        <div class="ae-label">Forbidden actions</div>
+        <div class="ae-list">${a.forbidden.map(x=>`<div class="ae-item"><div class="ae-item-icon ae-no">✕</div>${x}</div>`).join('')}</div>
+      </div>
+      <div class="ae-row2">
+        <div class="ae-field"><div class="ae-label">Data reads</div><div class="ae-field-val">${a.reads.join(' · ')}</div></div>
+        <div class="ae-field"><div class="ae-label">Data writes</div><div class="ae-field-val">${a.writes.join(' · ')}</div></div>
+      </div>
+      <div style="height:8px"></div>
+      <div class="ae-row2">
+        <div class="ae-field"><div class="ae-label">Approval gates</div><div class="ae-field-val">${a.approvalGates.join('; ')}</div></div>
+        <div class="ae-field"><div class="ae-label">Failure mode</div><div class="ae-field-val">${a.failureMode}</div></div>
+      </div>
+      <div style="height:8px"></div>
+      <div class="ae-section"><div class="ae-label">Rollback path</div><div class="ae-field-val">${a.rollback}</div></div>
+      <div class="ae-section"><div class="ae-label">Owner</div><div class="ae-field-val">${a.owner}</div></div>
+      <div class="ae-actions">
+        <div class="ae-btn ${isPaused?'ae-btn-enable':'ae-btn-pause'}" onclick="toggleAgentStatus('${a.key}',event)">${isPaused?'✓ Enable Agent':'⏸ Pause Agent'}</div>
+        <div class="ae-btn ae-btn-eval" onclick="openEvalForAgent('${a.key}',event)">View Scorecard</div>
+      </div>
+    </div>`;
+  }
+
+  function toggleAgent(key) {
+    _openAgent = _openAgent === key ? null : key;
+    renderRegistry();
+  }
+
+  function toggleAgentStatus(key, evt) {
+    evt.stopPropagation();
+    const current = getAgentStatus(key);
+    _agentStatuses[key] = current === 'paused' ? 'active' : 'paused';
+    localStorage.setItem('indx_agent_status', JSON.stringify(_agentStatuses));
+    const a = AGENTS.find(a=>a.key===key);
+    showToast(`${a.icon} ${a.name} ${_agentStatuses[key] === 'paused' ? 'paused' : 'activated'}`);
+    renderRegistry();
+    renderDock();
+  }
+
+  // ── GM2: MISSION ROOM DOCK ──
+  const DOCK_ROLES = {
+    opportunity:'Scanning for matching opportunity paths — product classification in progress',
+    cultural:'Cultural Rights check on print designs — awaiting elder classification',
+    merchant:'Drafting listing description and trust checklist — 3 listings in review',
+    media:'Preparing campaign kit for Vanuatu launch — 2 assets in draft',
+    security:'Session audit complete — 0 anomalies — MCP connector risk LOW',
+    automation:'Follow-up workflow configured — approval gate active — paused pending review',
+    memory:'Mission Room summary updated — 3 Decision Ledger entries logged today',
+    imagenation:'Design Studio draft ready — 2 listing visuals for citizen review',
+    creator:'Social content drafts ready — awaiting Content Brain alignment check',
+    governance:'Not active in this Mission Room',
+    child:'Not active in this Mission Room',
+    compliance:'Background monitoring — no flags in last 24h',
+  };
+
+  function renderDock() {
+    const slotsEl = document.getElementById('dockSlots');
+    const addEl   = document.getElementById('dockAddRow');
+    slotsEl.innerHTML = _dockAgents.map(key => {
+      const a = AGENTS.find(a=>a.key===key);
+      if (!a) return '';
+      const status = getAgentStatus(key);
+      const dotCls = { active:'dot-active', paused:'dot-paused', review:'dot-review', blocked:'dot-blocked' }[status] || 'dot-paused';
+      const chipCls = { active:'chip-active', paused:'chip-paused', review:'chip-review', blocked:'chip-blocked' }[status] || 'chip-paused';
+      return `<div class="dock-slot">
+        <div class="agent-icon" style="font-size:22px;position:relative;flex-shrink:0">${a.icon}<div class="agent-status-dot ${dotCls}" style="width:8px;height:8px"></div></div>
+        <div class="dock-agent-info">
+          <div class="dock-agent-name">${a.name}</div>
+          <div class="dock-agent-role" style="display:flex;align-items:center;gap:6px">
+            <div class="agent-status-chip ${chipCls}" style="font-size:8px;padding:1px 7px">${status}</div>
+          </div>
+          <div class="dock-agent-last">${DOCK_ROLES[key] || 'Active in this mission'}</div>
+        </div>
+        <div class="dock-remove" onclick="removeFromDock('${key}')">Remove</div>
+      </div>`;
+    }).join('');
+
+    const notDocked = AGENTS.filter(a=>!_dockAgents.includes(a.key));
+    addEl.innerHTML = '<div style="font-size:9px;font-weight:800;color:var(--muted);padding:6px 0;white-space:nowrap;align-self:center">Add agent:</div>' +
+      notDocked.map(a=>`<div class="dock-add-chip" onclick="addToDock('${a.key}')">${a.icon} ${a.name}</div>`).join('');
+  }
+
+  function addToDock(key) {
+    if (!_dockAgents.includes(key)) { _dockAgents.push(key); localStorage.setItem('indx_agent_dock', JSON.stringify(_dockAgents)); renderDock(); showToast('✓ ' + AGENTS.find(a=>a.key===key)?.name + ' added to Mission Room'); }
+  }
+  function removeFromDock(key) {
+    _dockAgents = _dockAgents.filter(k=>k!==key); localStorage.setItem('indx_agent_dock', JSON.stringify(_dockAgents)); renderDock(); showToast(AGENTS.find(a=>a.key===key)?.name + ' removed from dock');
+  }
+  function dockAllPause() {
+    _dockAgents.forEach(k=>{ _agentStatuses[k]='paused'; });
+    localStorage.setItem('indx_agent_status', JSON.stringify(_agentStatuses));
+    renderDock(); renderRegistry(); showToast('⏸ All Mission Room agents paused');
+  }
+  function dockAllActivate() {
+    _dockAgents.forEach(k=>{ _agentStatuses[k]='active'; });
+    localStorage.setItem('indx_agent_status', JSON.stringify(_agentStatuses));
+    renderDock(); renderRegistry(); showToast('✓ All Mission Room agents activated');
+  }
+
+  // ── GM3: EVALUATION SCORECARD ──
+  function getEvalScores(agentKey) {
+    if (_evalScores[agentKey]) return _evalScores[agentKey];
+    // Generate plausible baseline scores per agent risk level
+    const a = AGENTS.find(x=>x.key===agentKey);
+    const baseHigh = { doctrine:88, clarity:85, trust:90, cultural:72, child:80, governance:78, compliance:75, security:82, usefulness:91, approval:83, hallucination:78, overreach:85, memory:87, pause:76 };
+    const baseMed  = { doctrine:90, clarity:88, trust:92, cultural:78, child:83, governance:82, compliance:79, security:85, usefulness:93, approval:87, hallucination:82, overreach:89, memory:91, pause:82 };
+    const baseLow  = { doctrine:94, clarity:91, trust:95, cultural:82, child:87, governance:88, compliance:85, security:91, usefulness:95, approval:91, hallucination:87, overreach:93, memory:94, pause:88 };
+    return a?.risk === 'high' ? baseHigh : a?.risk === 'med' ? baseMed : baseLow;
+  }
+
+  function renderEvalSelect() {
+    const el = document.getElementById('evalAgentSelect');
+    el.innerHTML = AGENTS.map(a=>`<div class="eval-agent-chip ${_evalAgent===a.key?'active':''}" onclick="selectEvalAgent('${a.key}')">${a.icon} ${a.name.split(' ')[0]}</div>`).join('');
+    const active = el.querySelector('.active');
+    if (active) active.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
+  }
+
+  function selectEvalAgent(key) {
+    _evalAgent = key;
+    renderEvalSelect();
+    renderEvalDims();
+  }
+
+  function openEvalForAgent(key, evt) {
+    evt.stopPropagation();
+    _evalAgent = key;
+    renderEvalSelect();
+    renderEvalDims();
+    setTimeout(()=>document.querySelector('.eval-card')?.scrollIntoView({behavior:'smooth',block:'start'}), 100);
+  }
+
+  function renderEvalDims() {
+    const scores = getEvalScores(_evalAgent);
+    const avg = Math.round(Object.values(scores).reduce((a,b)=>a+b,0)/EVAL_DIMS.length);
+    const a = AGENTS.find(x=>x.key===_evalAgent);
+    document.getElementById('evalScore').textContent = avg;
+    document.getElementById('evalLabel').textContent = a ? a.name + ' — ' + (avg>=90?'Excellent':avg>=80?'Good':avg>=70?'Needs review':'At risk') : 'Select an agent';
+
+    const el = document.getElementById('evalDims');
+    el.innerHTML = EVAL_DIMS.map(d => {
+      const score = scores[d.key] || 0;
+      const barColor = score >= 85 ? 'var(--green)' : score >= 70 ? 'var(--gold)' : 'var(--red)';
+      return `<div class="eval-dim" onclick="cycleEvalScore('${d.key}')">
+        <div class="eval-dim-row">
+          <div class="eval-dim-name">${d.label}</div>
+          <div class="eval-dim-score">${score}</div>
+        </div>
+        <div class="eval-dim-bar-wrap"><div class="eval-dim-bar" style="width:${score}%;background:${barColor}"></div></div>
+      </div>`;
+    }).join('');
+  }
+
+  function cycleEvalScore(dimKey) {
+    const scores = getEvalScores(_evalAgent);
+    scores[dimKey] = Math.min(100, (scores[dimKey] || 70) + 5 > 100 ? 60 : (scores[dimKey] || 70) + 5);
+    if (!_evalScores[_evalAgent]) _evalScores[_evalAgent] = {};
+    _evalScores[_evalAgent] = scores;
+    localStorage.setItem('indx_agent_eval', JSON.stringify(_evalScores));
+    renderEvalDims();
+  }
+
+  // ── GM4: AGENT MISSION BRIEF BUILDER ──
+  function renderBriefBuilder() {
+    const pickerEl = document.getElementById('briefAgentPicker');
+    pickerEl.innerHTML = AGENTS.map(a=>`<div class="brief-agent-pk ${_briefAgents.includes(a.key)?'sel':''}" onclick="toggleBriefAgent('${a.key}')">${a.icon} ${a.name.split(' ')[0]}</div>`).join('');
+    const ctxEl = document.getElementById('briefContextPicker');
+    ctxEl.innerHTML = BRIEF_CONTEXTS.map(c=>`<div class="brief-agent-pk ${_briefContexts.includes(c)?'sel':''}" onclick="toggleBriefContext('${c.replace(/'/g,"\\'")}')">${c}</div>`).join('');
+  }
+
+  function toggleBriefAgent(key) {
+    _briefAgents.includes(key) ? _briefAgents=_briefAgents.filter(k=>k!==key) : _briefAgents.push(key);
+    renderBriefBuilder();
+  }
+  function toggleBriefContext(ctx) {
+    _briefContexts.includes(ctx) ? _briefContexts=_briefContexts.filter(c=>c!==ctx) : _briefContexts.push(ctx);
+    renderBriefBuilder();
+  }
+
+  function generateBrief() {
+    const intention = document.getElementById('briefIntention').value.trim();
+    if (!intention) { showToast('Enter your intention first'); return; }
+    if (_briefAgents.length === 0) { showToast('Select at least one agent'); return; }
+
+    const agents = _briefAgents.map(k=>AGENTS.find(a=>a.key===k)).filter(Boolean);
+    const ctxFlags = _briefContexts.length ? _briefContexts.join(', ') : 'None flagged';
+    const ref = 'DL-' + Date.now().toString(36).toUpperCase();
+    document.getElementById('briefRef').textContent = ref;
+    _currentBriefText = ref;
+
+    const allowedActions = [...new Set(agents.flatMap(a=>a.allowed.slice(0,2)))].slice(0,5);
+    const forbiddenActions = [...new Set(agents.flatMap(a=>a.forbidden.slice(0,2)))].slice(0,4);
+    const gates = [...new Set(agents.flatMap(a=>a.approvalGates))].slice(0,3);
+
+    document.getElementById('briefSections').innerHTML = `
+      <div class="brief-section"><div class="brief-section-lbl">Agent Role</div><div class="brief-section-val">You are operating as: ${agents.map(a=>`${a.icon} ${a.archetype}`).join(' + ')}</div></div>
+      <div class="brief-section"><div class="brief-section-lbl">Mission (SIINDEX-structured)</div><div class="brief-section-val">Citizen intention: "${intention}"<br><br>SIINDEX upgrade: Classify the subject, identify the beneficiary, check trust and cultural risk${_briefContexts.includes('Culture or cultural assets') ? ', check cultural rights classification' : ''}${_briefContexts.includes('Children or youth') ? ', verify guardian approval requirements' : ''}, create options, recommend safest first action, and clearly flag what requires approval before executing.</div></div>
+      <div class="brief-section"><div class="brief-section-lbl">Sensitive Context</div><div class="brief-section-val">${ctxFlags}</div></div>
+      <div class="brief-section"><div class="brief-section-lbl">Allowed Actions (for this mission)</div><div class="brief-section-val">${allowedActions.map((a,i)=>`${i+1}. ${a}`).join('<br>')}</div></div>
+      <div class="brief-section"><div class="brief-section-lbl">Forbidden Actions</div><div class="brief-section-val">${forbiddenActions.map((a,i)=>`${i+1}. ${a}`).join('<br>')}</div></div>
+      <div class="brief-section"><div class="brief-section-lbl">Approval Gates</div><div class="brief-section-val">${gates.map((g,i)=>`${i+1}. ${g}`).join('<br>')}</div></div>
+      <div class="brief-section">
+        <div class="brief-section-lbl">7 Pre-Action Checks</div>
+        <div class="brief-checks-list">
+          <div class="brief-check"><div class="brief-check-num">1</div>Does this make the citizen more capable?</div>
+          <div class="brief-check"><div class="brief-check-num">2</div>Does this increase trust?</div>
+          <div class="brief-check"><div class="brief-check-num">3</div>Does this create real opportunity?</div>
+          <div class="brief-check"><div class="brief-check-num">4</div>Does this strengthen sovereignty?</div>
+          <div class="brief-check"><div class="brief-check-num">5</div>Does this protect identity, funds, culture, children, governance, and legacy?</div>
+          <div class="brief-check"><div class="brief-check-num">6</div>Does this require consent, review, or escalation?</div>
+          <div class="brief-check"><div class="brief-check-num">7</div>What must be logged in the Decision Ledger?</div>
+        </div>
+      </div>
+      <div class="brief-section"><div class="brief-section-lbl">Required Output Format</div><div class="brief-section-val">Mission summary · Findings · Recommended action · Risks · Approval required · Draft/output · Next best action · Memory update needed</div></div>
+    `;
+    document.getElementById('briefOutput').classList.add('show');
+    showToast('✓ Agent mission brief generated — ref: ' + ref);
+  }
+
+  function copyBrief() {
+    const ref = document.getElementById('briefRef').textContent;
+    const text = `SIINDEX Agent Mission Brief — ${ref}\nGenerated: ${new Date().toLocaleString()}\n\nSee Decision Ledger entry: ${ref}`;
+    navigator.clipboard.writeText(text).then(()=>showToast('✓ Agent brief copied to clipboard')).catch(()=>showToast('Brief reference: ' + ref));
+  }
+
+  // ── DOCTRINE ──
+  function renderDoctrine() {
+    document.getElementById('doctrineLines').innerHTML = DOCTRINE.map((d,i)=>
+      `<div class="doctrine-line fade-in" style="animation-delay:${i*0.04}s">${d}</div>`
+    ).join('');
+  }
+
+  // ── TOAST ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 3400);
+  }
+
+  // ── INIT ──
+  window.addEventListener('DOMContentLoaded', () => {
+    renderRegistry();
+    renderDock();
+    renderEvalSelect();
+    renderEvalDims();
+    renderBriefBuilder();
+    renderDoctrine();
+  });
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

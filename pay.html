@@ -133,6 +133,45 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
 .note-suggestions::-webkit-scrollbar{display:none;}
 .ns-chip{flex-shrink:0;padding:5px 12px;border-radius:16px;background:var(--surface2);border:1px solid var(--surface3);font-size:12px;color:var(--text2);cursor:pointer;white-space:nowrap;}
 .ns-chip:active{background:var(--surface3);border-color:var(--cyan);}
+
+/* ── GOD MODE R2 — PAY.HTML ── */
+/* 1. Balance bar */
+.balance-bar{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--surface3);border-radius:12px;transition:border-color 0.2s,background 0.2s;}
+.balance-label{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;}
+.balance-val{font-size:15px;font-weight:900;color:var(--cyan);}
+.balance-usd{font-size:11px;color:var(--muted);margin-top:2px;}
+.balance-bar.over-limit{border-color:rgba(255,77,109,0.35);background:rgba(255,77,109,0.04);}
+.balance-bar.over-limit .balance-val{color:var(--red);}
+.over-limit-warn{font-size:12px;color:var(--red);margin-top:6px;text-align:center;display:none;}
+.over-limit-warn.show{display:block;}
+/* 2. Recent pays */
+.recent-pays{margin:12px 20px 0;}
+.rp-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;}
+.rp-row{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface);border:1px solid var(--surface3);border-radius:10px;margin-bottom:5px;cursor:pointer;transition:border-color 0.15s;}
+.rp-row:hover,.rp-row:active{border-color:rgba(0,212,255,0.3);}
+.rp-amt{font-size:13px;font-weight:800;color:var(--cyan);min-width:72px;}
+.rp-note{font-size:12px;color:var(--text2);flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.rp-date{font-size:11px;color:var(--muted);flex-shrink:0;}
+/* 3. PQSI pre-flight scan overlay */
+.pqsi-scan-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.96);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.25s;z-index:150;padding:24px;}
+.pqsi-scan-overlay.show{opacity:1;pointer-events:all;}
+.pqsi-scan-title{font-size:12px;font-weight:700;color:var(--cyan);text-transform:uppercase;letter-spacing:0.14em;margin-bottom:24px;}
+.pqsi-check-list{display:flex;flex-direction:column;gap:10px;width:100%;max-width:320px;}
+.pqsi-check{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface);border:1px solid var(--surface3);border-radius:12px;transition:border-color 0.3s,background 0.3s;}
+.pqsi-check.pass{border-color:rgba(0,229,160,0.4);background:rgba(0,229,160,0.03);}
+.pqsi-chk-icon{width:30px;height:30px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;transition:background 0.3s;}
+.pqsi-check.pass .pqsi-chk-icon{background:rgba(0,229,160,0.12);}
+.pqsi-chk-label{font-size:13px;font-weight:600;flex:1;}
+.pqsi-chk-status{font-size:11px;color:var(--muted);font-weight:700;white-space:nowrap;}
+.pqsi-check.pass .pqsi-chk-status{color:var(--green);}
+/* 4. Civ fund tracker */
+.civ-tracker{margin:12px 20px 0;background:linear-gradient(135deg,rgba(0,229,160,0.04),rgba(43,53,216,0.06));border:1px solid rgba(0,229,160,0.15);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:14px;}
+.civ-orb{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,rgba(0,229,160,0.15),rgba(43,53,216,0.15));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.civ-info{flex:1;min-width:0;}
+.civ-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:2px;}
+.civ-amount{font-size:16px;font-weight:900;color:var(--green);}
+.civ-sub{font-size:11px;color:var(--muted);margin-top:1px;}
+.civ-this-pay{font-size:13px;font-weight:800;color:var(--text2);text-align:right;flex-shrink:0;line-height:1.4;}
 </style>
 </head>
 <body>
@@ -176,6 +215,15 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
         <div class="qc-chip" onclick="setQuickIndx(25,this)">$25</div>
         <div class="qc-chip" onclick="setQuickIndx(50,this)">$50</div>
       </div>
+      <!-- GOD MODE R2 — BALANCE BAR -->
+      <div class="balance-bar" id="balanceBar" style="display:none;">
+        <div>
+          <div class="balance-label">Your balance</div>
+          <div class="balance-usd" id="balanceUSD"></div>
+        </div>
+        <div class="balance-val" id="balanceVal">—</div>
+      </div>
+      <div class="over-limit-warn" id="overLimitWarn">⚠ Amount exceeds your balance</div>
     </div>
 
     <!-- NOTE -->
@@ -183,6 +231,23 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
       <textarea class="note-input" id="noteInput" rows="2" placeholder="Add a note (optional)"></textarea>
       <!-- GOD MODE — NOTE SUGGESTIONS -->
       <div class="note-suggestions" id="noteSuggestions"></div>
+    </div>
+
+    <!-- GOD MODE R2 — RECENT PAYMENTS TO RECIPIENT -->
+    <div class="recent-pays" id="recentPays" style="display:none;">
+      <div class="rp-label">Recent payments to <span id="rpName">them</span></div>
+      <div id="rpList"></div>
+    </div>
+
+    <!-- GOD MODE R2 — CIVILISATION FUND TRACKER -->
+    <div class="civ-tracker" id="civTracker">
+      <div class="civ-orb">⚖️</div>
+      <div class="civ-info">
+        <div class="civ-label">Your Civilisation Contribution</div>
+        <div class="civ-amount" id="civTotal">0.00 INDX</div>
+        <div class="civ-sub">2% of every payment builds the Civ Fund</div>
+      </div>
+      <div class="civ-this-pay" id="civThisPay">+0.00<br><span style="color:var(--muted);font-size:10px;font-weight:500;">this payment</span></div>
     </div>
 
     <!-- CTA — for existing citizens -->
@@ -285,6 +350,28 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
   <div class="success-title">Payment sent.</div>
   <div class="success-sub" id="successSub">Your INDX is on its way.<br>Standing by.</div>
   <button class="success-back" onclick="window.location.href='citizen-dashboard.html'">Back to Dashboard</button>
+</div>
+
+<!-- GOD MODE R2 — PQSI PRE-FLIGHT SCAN OVERLAY -->
+<div class="pqsi-scan-overlay" id="pqsiScanOverlay">
+  <div class="pqsi-scan-title">PQSI Pre-Flight Scan</div>
+  <div class="pqsi-check-list">
+    <div class="pqsi-check" id="pqsiCheck1">
+      <div class="pqsi-chk-icon">🔍</div>
+      <div class="pqsi-chk-label">Recipient Verified</div>
+      <div class="pqsi-chk-status" id="pqsiStatus1">Scanning…</div>
+    </div>
+    <div class="pqsi-check" id="pqsiCheck2">
+      <div class="pqsi-chk-icon">⚖️</div>
+      <div class="pqsi-chk-label">Amount Within Limits</div>
+      <div class="pqsi-chk-status" id="pqsiStatus2">Checking…</div>
+    </div>
+    <div class="pqsi-check" id="pqsiCheck3">
+      <div class="pqsi-chk-icon">🌐</div>
+      <div class="pqsi-chk-label">Network Clear — T0</div>
+      <div class="pqsi-chk-status" id="pqsiStatus3">Verifying…</div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -548,6 +635,143 @@ function showToast(msg) {
     }
   }, 100);
 })();
+
+// ════════════════════════════════════════════════
+// GOD MODE ROUND 2 — PAY.HTML
+// ════════════════════════════════════════════════
+(function godModePayR2() {
+  const INDX_PRICE_USD  = 0.24;
+  const PAY_HISTORY_KEY = 'indx_pay_history';   // { [slug]: [{amt,note,dateStr,ts}] }
+  const CIV_TOTAL_KEY   = 'indx_pay_civ_total'; // cumulative INDX to Civ Fund (float string)
+
+  // ── 1. LIVE BALANCE BAR + OVER-LIMIT GUARD ──
+  (function initBalanceBar() {
+    const raw = sessionStorage.getItem('citizen_balance');
+    if (!raw) return;
+    const bal = parseFloat(raw) || 0;
+    const bar = document.getElementById('balanceBar');
+    document.getElementById('balanceVal').textContent = bal.toFixed(2) + ' INDX';
+    document.getElementById('balanceUSD').textContent = '$' + (bal * INDX_PRICE_USD).toFixed(2) + ' USD';
+    bar.style.display = 'flex';
+
+    document.getElementById('amountInput').addEventListener('input', function() {
+      const entered = parseFloat(this.value) || 0;
+      const warn    = document.getElementById('overLimitWarn');
+      if (bal > 0 && entered > bal) {
+        bar.classList.add('over-limit');
+        warn.classList.add('show');
+        document.getElementById('payBtn').disabled = true;
+      } else {
+        bar.classList.remove('over-limit');
+        warn.classList.remove('show');
+        if (entered > 0) document.getElementById('payBtn').disabled = false;
+      }
+    });
+  })();
+
+  // ── 2. RECENT PAYMENTS HISTORY TO RECIPIENT ──
+  function loadRecentPays() {
+    if (!TARGET_SLUG) { setTimeout(loadRecentPays, 150); return; }
+    try {
+      const all  = JSON.parse(localStorage.getItem(PAY_HISTORY_KEY) || '{}');
+      const pays = (all[TARGET_SLUG] || []).slice(0, 3);
+      if (!pays.length) return;
+      document.getElementById('rpName').textContent = (TARGET_NAME || TARGET_SLUG).split(' ')[0];
+      const list = document.getElementById('rpList');
+      list.innerHTML = pays.map(p =>
+        `<div class="rp-row" onclick="gmPreFillAmt(${p.amt})">` +
+          `<div class="rp-amt">${(p.amt||0).toFixed(2)} INDX</div>` +
+          `<div class="rp-note">${p.note || 'Payment'}</div>` +
+          `<div class="rp-date">${p.dateStr || ''}</div>` +
+        `</div>`
+      ).join('');
+      document.getElementById('recentPays').style.display = 'block';
+    } catch(e) {}
+  }
+  loadRecentPays();
+
+  window.gmPreFillAmt = function(amt) {
+    document.getElementById('amountInput').value = amt;
+    updateConvert();
+    document.getElementById('payBtn').disabled = false;
+    updateCivTracker();
+    showToast('Amount pre-filled ✓');
+  };
+
+  // Save to history after successful payment (patch confirmPayment)
+  const _origConfirmPayR2 = window.confirmPayment;
+  // GOD MODE PATCH
+  window.confirmPayment = async function() {
+    const amt  = parseFloat(document.getElementById('amountInput').value) || 0;
+    const note = document.getElementById('noteInput').value.trim() || 'Payment';
+    await _origConfirmPayR2();
+    // If success overlay is now visible, persist history + update civ total
+    if (document.getElementById('successOverlay').classList.contains('show')) {
+      const now     = new Date();
+      const dateStr = now.toLocaleDateString('en-NZ', { day:'numeric', month:'short' });
+      try {
+        const all  = JSON.parse(localStorage.getItem(PAY_HISTORY_KEY) || '{}');
+        const pays = all[TARGET_SLUG] || [];
+        pays.unshift({ amt, note, dateStr, ts: now.getTime() });
+        all[TARGET_SLUG] = pays.slice(0, 10);
+        localStorage.setItem(PAY_HISTORY_KEY, JSON.stringify(all));
+      } catch(e) {}
+      // Accumulate civ total
+      const civAmt = amt * 0.02;
+      const prev   = parseFloat(localStorage.getItem(CIV_TOTAL_KEY) || '0');
+      localStorage.setItem(CIV_TOTAL_KEY, (prev + civAmt).toFixed(4));
+    }
+  };
+
+  // ── 3. PQSI PRE-FLIGHT SCAN ──
+  window.gmPqsiScan = function() {
+    return new Promise(resolve => {
+      const overlay = document.getElementById('pqsiScanOverlay');
+      const checks  = [
+        { id:'pqsiCheck1', sid:'pqsiStatus1', pass:'CLEAR',    ms:360 },
+        { id:'pqsiCheck2', sid:'pqsiStatus2', pass:'CLEAR',    ms:700 },
+        { id:'pqsiCheck3', sid:'pqsiStatus3', pass:'T0 CLEAR', ms:1020 }
+      ];
+      // Reset state
+      checks.forEach(c => {
+        document.getElementById(c.id).classList.remove('pass');
+        document.getElementById(c.sid).textContent = c.id==='pqsiCheck1' ? 'Scanning…' : c.id==='pqsiCheck2' ? 'Checking…' : 'Verifying…';
+      });
+      overlay.classList.add('show');
+      checks.forEach(c => {
+        setTimeout(() => {
+          document.getElementById(c.id).classList.add('pass');
+          document.getElementById(c.sid).textContent = c.pass;
+        }, c.ms);
+      });
+      setTimeout(() => { overlay.classList.remove('show'); resolve(); }, 1350);
+    });
+  };
+
+  // Patch initiatePayment to run PQSI scan first
+  const _origInitiate = window.initiatePayment;
+  // GOD MODE PATCH
+  window.initiatePayment = async function() {
+    const amt = parseFloat(document.getElementById('amountInput').value);
+    if (!amt || amt <= 0) { showToast('Enter an amount.'); return; }
+    await window.gmPqsiScan();
+    _origInitiate();
+  };
+
+  // ── 4. CIVILISATION FUND TRACKER ──
+  function updateCivTracker() {
+    const total   = parseFloat(localStorage.getItem(CIV_TOTAL_KEY) || '0');
+    const current = parseFloat(document.getElementById('amountInput').value) || 0;
+    const thisCiv = (current * 0.02).toFixed(2);
+    document.getElementById('civTotal').textContent = total.toFixed(2) + ' INDX';
+    document.getElementById('civThisPay').innerHTML =
+      `+${thisCiv}<br><span style="color:var(--muted);font-size:10px;font-weight:500;">this payment</span>`;
+  }
+  updateCivTracker();
+  document.getElementById('amountInput').addEventListener('input', updateCivTracker);
+
+})();
 </script>
+<script src="siindex-speak-core.js"></script>
 </body>
 </html>

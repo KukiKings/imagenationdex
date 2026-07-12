@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>SIINDEX Voice Command OS — IN$DEX</title>
+  <meta name="description" content="Speak to SIINDEX. No endless clicking. No complicated forms. The citizen speaks. SIINDEX handles the system." />
+  <style>
+    :root {
+      --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+      --black:#090A10; --green:#00E5A0; --gold:#FFB800;
+      --red:#FF4D6D; --surface:#12141F; --surface2:#1A1D2E;
+      --surface3:#22263A; --text:#F0F2FF; --muted:rgba(240,242,255,0.5);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;max-width:430px;margin:0 auto;padding-bottom:80px;overflow-x:hidden;}
+
+    /* NAV */
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.06);position:sticky;top:0;background:rgba(9,10,16,0.92);backdrop-filter:blur(14px);z-index:100;}
+    .nav-back{color:var(--gold);text-decoration:none;font-size:14px;font-weight:600;}
+    .nav-title{font-size:11px;font-weight:800;color:var(--cyan);letter-spacing:1.5px;text-transform:uppercase;}
+    .nav-stop{background:rgba(255,77,109,0.12);border:1px solid rgba(255,77,109,0.3);color:var(--red);font-size:10px;font-weight:800;padding:5px 10px;border-radius:20px;cursor:pointer;font-family:inherit;letter-spacing:0.5px;}
+
+    /* TABS */
+    .tabs{display:flex;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid rgba(255,255,255,0.06);background:var(--surface);sticky:top;}
+    .tabs::-webkit-scrollbar{display:none;}
+    .tab-btn{flex-shrink:0;padding:12px 14px;font-size:11px;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all 0.2s;}
+    .tab-btn.active{color:var(--cyan);border-bottom-color:var(--cyan);}
+    .tab-pane{display:none;padding:0;}
+    .tab-pane.active{display:block;}
+
+    /* HERO VOICE INTERFACE */
+    .voice-hero{padding:20px 18px 0;text-align:center;}
+    .voice-orb-wrap{display:flex;justify-content:center;margin-bottom:14px;}
+    .voice-orb{width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,rgba(0,212,255,0.15),rgba(139,63,232,0.1));border:2px solid rgba(0,212,255,0.3);display:flex;align-items:center;justify-content:center;font-size:38px;position:relative;cursor:pointer;transition:all 0.3s;}
+    .voice-orb::before{content:'';position:absolute;inset:-6px;border-radius:50%;border:1.5px solid rgba(0,212,255,0.15);animation:orbRing1 3s ease-in-out infinite;}
+    .voice-orb::after{content:'';position:absolute;inset:-14px;border-radius:50%;border:1px solid rgba(0,212,255,0.07);animation:orbRing2 3s ease-in-out infinite 0.5s;}
+    .voice-orb.listening{border-color:rgba(255,77,109,0.6);background:linear-gradient(135deg,rgba(255,77,109,0.15),rgba(139,63,232,0.1));animation:orbPulse 0.8s ease-in-out infinite;}
+    .voice-orb.speaking{border-color:rgba(0,229,160,0.5);background:linear-gradient(135deg,rgba(0,229,160,0.1),rgba(0,212,255,0.08));animation:orbSpeak 0.6s ease-in-out infinite;}
+    @keyframes orbRing1{0%,100%{opacity:0.3;transform:scale(1)}50%{opacity:0.8;transform:scale(1.05)}}
+    @keyframes orbRing2{0%,100%{opacity:0.15;transform:scale(1)}50%{opacity:0.4;transform:scale(1.08)}}
+    @keyframes orbPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+    @keyframes orbSpeak{0%,100%{transform:scale(1)}25%{transform:scale(1.04)}75%{transform:scale(0.97)}}
+    .voice-status-label{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;height:18px;}
+    .voice-status-label.listening{color:var(--red);}
+    .voice-status-label.speaking{color:var(--green);}
+    .voice-transcript{font-size:15px;font-weight:600;color:var(--text);min-height:22px;margin-bottom:6px;line-height:1.4;}
+    .voice-response{font-size:13px;color:var(--muted);min-height:40px;line-height:1.6;padding:0 10px;margin-bottom:14px;}
+    .voice-controls{display:flex;gap:10px;justify-content:center;margin-bottom:16px;}
+    .vc-btn{padding:10px 20px;border-radius:24px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;border:none;transition:all 0.2s;}
+    .vc-mic{background:linear-gradient(135deg,var(--cyan),var(--blue));color:var(--black);min-width:100px;}
+    .vc-brief{background:rgba(255,184,0,0.1);border:1px solid rgba(255,184,0,0.3);color:var(--gold);}
+    .vc-text-row{display:flex;gap:8px;padding:0 18px 16px;}
+    .vc-text-input{flex:1;background:var(--surface2);border:1px solid rgba(255,255,255,0.08);border-radius:24px;padding:10px 16px;color:var(--text);font-size:13px;font-family:inherit;outline:none;}
+    .vc-text-input:focus{border-color:rgba(0,212,255,0.3);}
+    .vc-send{width:40px;height:40px;border-radius:50%;background:rgba(0,212,255,0.12);border:1px solid rgba(0,212,255,0.25);color:var(--cyan);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+
+    /* QUICK COMMANDS */
+    .qcmd-title{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);padding:0 18px;margin-bottom:8px;}
+    .qcmd-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 18px 16px;}
+    .qcmd-btn{background:var(--surface2);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:10px 12px;text-align:left;cursor:pointer;font-family:inherit;transition:all 0.18s;}
+    .qcmd-btn:hover{border-color:rgba(0,212,255,0.2);}
+    .qcmd-icon{font-size:16px;margin-bottom:4px;}
+    .qcmd-text{font-size:11px;font-weight:600;color:var(--text);}
+    .qcmd-sub{font-size:10px;color:var(--muted);margin-top:1px;}
+
+    /* DAILY BRIEF */
+    .brief-card{margin:14px 18px 0;background:linear-gradient(135deg,rgba(255,184,0,0.08),rgba(0,212,255,0.04));border:1px solid rgba(255,184,0,0.2);border-radius:16px;padding:16px;}
+    .brief-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+    .brief-icon{font-size:24px;}
+    .brief-title{font-size:14px;font-weight:800;}
+    .brief-time{font-size:10px;color:var(--muted);margin-top:1px;}
+    .brief-read-btn{margin-left:auto;background:rgba(255,184,0,0.1);border:1px solid rgba(255,184,0,0.3);color:var(--gold);font-size:10px;font-weight:700;padding:5px 10px;border-radius:20px;cursor:pointer;font-family:inherit;}
+    .brief-section{padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+    .brief-section:last-child{border-bottom:none;padding-bottom:0;}
+    .brief-section-lbl{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+    .brief-section-text{font-size:13px;line-height:1.5;}
+    .brief-section-text.priority{color:var(--gold);}
+    .brief-section-text.risk{color:var(--red);}
+    .brief-section-text.opportunity{color:var(--green);}
+    .brief-action-row{display:flex;gap:8px;margin-top:14px;}
+    .brief-act-btn{flex:1;padding:9px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;text-align:center;}
+    .brief-act-btn.primary{background:linear-gradient(135deg,var(--gold),rgba(255,184,0,0.7));color:var(--black);border:none;}
+    .brief-act-btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.1);color:var(--muted);}
+
+    /* MISSION QUEUE */
+    .sect-pad{padding:14px 18px 0;}
+    .sect-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+    .sect-lbl{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
+    .sect-add{background:none;border:none;color:var(--cyan);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;}
+    .mission-list{display:flex;flex-direction:column;gap:8px;}
+    .mission-card{background:var(--surface2);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px;}
+    .mission-top{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+    .mission-icon{font-size:16px;flex-shrink:0;}
+    .mission-title{font-size:13px;font-weight:700;flex:1;}
+    .mission-badge{font-size:9px;font-weight:700;padding:3px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;flex-shrink:0;}
+    .badge-pending{background:rgba(255,184,0,0.12);color:var(--gold);border:1px solid rgba(255,184,0,0.25);}
+    .badge-active{background:rgba(0,212,255,0.12);color:var(--cyan);border:1px solid rgba(0,212,255,0.25);}
+    .badge-approval{background:rgba(255,77,109,0.12);color:var(--red);border:1px solid rgba(255,77,109,0.25);}
+    .badge-done{background:rgba(0,229,160,0.12);color:var(--green);border:1px solid rgba(0,229,160,0.25);}
+    .mission-desc{font-size:11px;color:var(--muted);line-height:1.4;margin-bottom:8px;}
+    .mission-btns{display:flex;gap:6px;}
+    .mission-approve{flex:1;padding:7px;background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.3);border-radius:8px;color:var(--green);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
+    .mission-reject{padding:7px 14px;background:rgba(255,77,109,0.07);border:1px solid rgba(255,77,109,0.2);border-radius:8px;color:var(--red);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
+    .mission-view{flex:1;padding:7px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
+
+    /* TOOL PERMISSION MATRIX */
+    .tool-grid{display:flex;flex-direction:column;gap:6px;padding:14px 18px;}
+    .tool-row{background:var(--surface2);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:11px 13px;}
+    .tool-top{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+    .tool-icon{font-size:18px;flex-shrink:0;}
+    .tool-name{font-size:13px;font-weight:700;flex:1;}
+    .tool-master{width:36px;height:20px;border-radius:10px;cursor:pointer;border:none;transition:background 0.25s;flex-shrink:0;}
+    .tool-master.on{background:var(--green);}
+    .tool-master.off{background:rgba(255,255,255,0.1);}
+    .tool-scopes{display:flex;gap:5px;}
+    .scope-chip{font-size:9px;font-weight:700;padding:3px 7px;border-radius:6px;cursor:pointer;transition:all 0.18s;text-transform:uppercase;letter-spacing:0.4px;}
+    .scope-chip.read{background:rgba(0,212,255,0.12);color:var(--cyan);}
+    .scope-chip.prepare{background:rgba(255,184,0,0.1);color:var(--gold);}
+    .scope-chip.write{background:rgba(139,63,232,0.12);color:var(--purple);}
+    .scope-chip.execute{background:rgba(255,77,109,0.1);color:var(--red);}
+    .scope-chip.off{background:rgba(255,255,255,0.04);color:rgba(240,242,255,0.2);text-decoration:line-through;}
+    .tool-revoke{font-size:10px;color:var(--red);background:none;border:none;cursor:pointer;font-family:inherit;font-weight:700;margin-left:auto;}
+
+    /* EMERGENCY CONTROL */
+    .stop-zone{margin:16px 18px;background:linear-gradient(135deg,rgba(255,77,109,0.1),rgba(139,63,232,0.05));border:1px solid rgba(255,77,109,0.25);border-radius:16px;padding:16px;text-align:center;}
+    .stop-title{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--red);margin-bottom:6px;}
+    .stop-desc{font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5;}
+    .stop-btn{width:100%;padding:16px;background:linear-gradient(135deg,rgba(255,77,109,0.25),rgba(255,77,109,0.15));border:2px solid rgba(255,77,109,0.5);border-radius:12px;color:var(--red);font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:0.5px;transition:all 0.2s;}
+    .stop-btn:hover{background:rgba(255,77,109,0.3);}
+    .stop-btn:active{transform:scale(0.98);}
+    .stop-secondary{display:flex;gap:8px;margin-top:10px;}
+    .stop-sec-btn{flex:1;padding:9px;background:none;border:1px solid rgba(255,255,255,0.08);border-radius:8px;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
+    .audit-log{margin:14px 18px 0;}
+    .audit-item{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+    .audit-item:last-child{border-bottom:none;}
+    .audit-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+    .audit-dot.stop{background:var(--red);}
+    .audit-dot.approve{background:var(--green);}
+    .audit-dot.reject{background:var(--gold);}
+    .audit-dot.cmd{background:var(--cyan);}
+    .audit-info{flex:1;}
+    .audit-text{font-size:12px;line-height:1.4;}
+    .audit-time{font-size:10px;color:var(--muted);margin-top:2px;}
+    .audit-empty{font-size:12px;color:var(--muted);padding:8px 0;}
+
+    /* DOCTRINE CARD */
+    .doctrine-card{margin:14px 18px;background:var(--surface2);border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:16px;}
+    .doctrine-eyebrow{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(0,212,255,0.5);margin-bottom:8px;}
+    .doctrine-quote{font-size:14px;font-weight:700;line-height:1.6;color:var(--text);margin-bottom:8px;}
+    .doctrine-quote span{color:var(--cyan);}
+    .doctrine-sig{font-size:10px;color:rgba(0,212,255,0.4);letter-spacing:0.5px;font-weight:700;text-transform:uppercase;}
+
+    /* TOAST */
+    .toast-el{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--surface2);border:1px solid rgba(0,229,160,0.3);border-radius:24px;padding:10px 18px;font-size:12px;font-weight:700;color:var(--green);z-index:9000;opacity:0;transition:all 0.3s;pointer-events:none;white-space:nowrap;}
+    .toast-el.show{opacity:1;transform:translateX(-50%) translateY(0);}
+    .toast-el.red{border-color:rgba(255,77,109,0.4);color:var(--red);}
+    .toast-el.gold{border-color:rgba(255,184,0,0.4);color:var(--gold);}
+  </style>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="index.html" class="nav-back">← IN$DEX</a>
+    <span class="nav-title">Voice Command OS</span>
+    <button class="nav-stop" onclick="emergencyStop()">⬛ STOP ALL</button>
+  </nav>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="openTab('tab-speak')">🎙 Speak</button>
+    <button class="tab-btn" onclick="openTab('tab-brief')">📋 Daily Brief</button>
+    <button class="tab-btn" onclick="openTab('tab-missions')">⚡ Missions</button>
+    <button class="tab-btn" onclick="openTab('tab-tools')">🔧 Tools</button>
+    <button class="tab-btn" onclick="openTab('tab-control')">🛑 Control</button>
+  </div>
+
+  <!-- TAB: SPEAK -->
+  <div class="tab-pane active" id="tab-speak">
+    <div class="voice-hero">
+      <div class="voice-orb-wrap">
+        <div class="voice-orb" id="voiceOrb" onclick="toggleVoice()">⬡</div>
+      </div>
+      <div class="voice-status-label" id="voiceStatusLbl">TAP TO SPEAK</div>
+      <div class="voice-transcript" id="voiceTranscript"></div>
+      <div class="voice-response" id="voiceResponse">Good morning. I am SIINDEX — the sovereign intelligence of IN$DEX. Tap the orb or type a command below. I am ready.</div>
+      <div class="voice-controls">
+        <button class="vc-btn vc-mic" id="voiceMicBtn" onclick="toggleVoice()">🎙 Hold to Speak</button>
+        <button class="vc-btn vc-brief" onclick="generateDailyBrief(); openTab('tab-brief')">📋 Prepare My Day</button>
+      </div>
+    </div>
+    <div class="vc-text-row">
+      <input class="vc-text-input" id="vcTextInput" placeholder="Type a command for SIINDEX…" onkeydown="if(event.key==='Enter')submitVoiceCmd(this.value)">
+      <button class="vc-send" onclick="submitVoiceCmd(document.getElementById('vcTextInput').value)">➤</button>
+    </div>
+
+    <div class="qcmd-title">EXAMPLE COMMANDS</div>
+    <div class="qcmd-grid" id="qcmdGrid"></div>
+
+    <div class="doctrine-card">
+      <div class="doctrine-eyebrow">SIINDEX Doctrine · Voice OS</div>
+      <div class="doctrine-quote">The future of financial inclusion is not another form. It is <span>a citizen speaking</span>, and a sovereign intelligence building the path.</div>
+      <div class="doctrine-sig">IN$DEX · Speak to SIINDEX</div>
+    </div>
+  </div>
+
+  <!-- TAB: DAILY BRIEF -->
+  <div class="tab-pane" id="tab-brief">
+    <div class="brief-card" id="briefCard">
+      <div class="brief-header">
+        <div class="brief-icon">🌅</div>
+        <div>
+          <div class="brief-title" id="briefTitle">Your Daily Brief</div>
+          <div class="brief-time" id="briefTime">Loading…</div>
+        </div>
+        <button class="brief-read-btn" id="briefReadBtn" onclick="readBriefAloud()">🔊 Read Aloud</button>
+      </div>
+      <div id="briefSections">
+        <div style="font-size:13px;color:var(--muted);padding:8px 0;">Tap "Prepare My Day" to generate your brief.</div>
+      </div>
+      <div class="brief-action-row" id="briefActionRow" style="display:none;">
+        <button class="brief-act-btn primary" onclick="submitVoiceCmd('draft replies to my buyer questions'); openTab(\'tab-speak\')">Draft Replies</button>
+        <button class="brief-act-btn secondary" onclick="openTab('tab-missions')">View Missions</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: MISSIONS -->
+  <div class="tab-pane" id="tab-missions">
+    <div class="sect-pad">
+      <div class="sect-hdr">
+        <span class="sect-lbl">Mission Queue</span>
+        <button class="sect-add" onclick="addTestMission()">+ New</button>
+      </div>
+      <div class="mission-list" id="missionList"></div>
+    </div>
+  </div>
+
+  <!-- TAB: TOOLS -->
+  <div class="tab-pane" id="tab-tools">
+    <div style="padding:14px 18px 0;">
+      <div class="sect-lbl">Approved Tool Registry</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;margin-bottom:0;">SIINDEX can only act through tools you approve. Toggle scopes. Revoke at any time.</div>
+    </div>
+    <div class="tool-grid" id="toolGrid"></div>
+  </div>
+
+  <!-- TAB: CONTROL -->
+  <div class="tab-pane" id="tab-control">
+    <div class="stop-zone">
+      <div class="stop-title">⬛ Emergency Shutdown</div>
+      <div class="stop-desc">Say "SIINDEX, stop all actions" or tap below to immediately terminate all running missions, abort in-flight tool calls, flush the task queue, and revoke all execute permissions.</div>
+      <button class="stop-btn" onclick="emergencyStop()">⬛ STOP ALL SIINDEX ACTIONS</button>
+      <div class="stop-secondary">
+        <button class="stop-sec-btn" onclick="pauseMissions()">⏸ Pause Missions</button>
+        <button class="stop-sec-btn" onclick="revokeExecute()">🔒 Revoke Execute</button>
+      </div>
+    </div>
+
+    <div class="sect-pad">
+      <div class="sect-hdr">
+        <span class="sect-lbl">Security Audit Log</span>
+        <button class="sect-add" onclick="exportAuditLog()">Export</button>
+      </div>
+      <div id="auditLog"></div>
+    </div>
+  </div>
+
+  <div class="toast-el" id="toastEl"></div>
+
+  <script>
+    // ── CONSTANTS ──────────────────────────────────────────
+    const INDX_PRICE_USD = 0.24;
+    const TGE_DATE       = new Date('2026-09-24T00:00:00+11:00');
+    const AUSTRAC_DL     = new Date('2026-07-29T23:59:59+10:00');
+    const MISS_KEY       = 'indx_vcos_missions';
+    const TOOL_KEY       = 'indx_vcos_tools';
+    const AUDIT_KEY      = 'indx_vcos_audit';
+
+    // ── TABS ───────────────────────────────────────────────
+    function openTab(id) {
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      const idx = ['tab-speak','tab-brief','tab-missions','tab-tools','tab-control'].indexOf(id);
+      document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+    }
+
+    // ── TOAST ──────────────────────────────────────────────
+    function showToast(msg, type='') {
+      const t = document.getElementById('toastEl');
+      t.textContent = msg;
+      t.className = 'toast-el show' + (type ? ' '+type : '');
+      setTimeout(() => t.classList.remove('show'), 3500);
+    }
+
+    // ── AUDIT LOG ──────────────────────────────────────────
+    function getAudit() { try{return JSON.parse(localStorage.getItem(AUDIT_KEY)||'[]');}catch{return[];} }
+    function saveAudit(a) { localStorage.setItem(AUDIT_KEY, JSON.stringify(a.slice(0,100))); }
+    function addAudit(text, type='cmd') {
+      const a = getAudit();
+      a.unshift({ text, type, ts: Date.now() });
+      saveAudit(a);
+      renderAuditLog();
+    }
+    function renderAuditLog() {
+      const el = document.getElementById('auditLog');
+      const a  = getAudit();
+      if (!a.length) { el.innerHTML = '<div class="audit-empty">No actions logged yet.</div>'; return; }
+      el.innerHTML = a.slice(0,20).map(entry => {
+        const dt = new Date(entry.ts).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
+        const dd = new Date(entry.ts).toLocaleDateString('en-AU',{day:'numeric',month:'short'});
+        return `<div class="audit-item">
+          <div class="audit-dot ${entry.type}"></div>
+          <div class="audit-info">
+            <div class="audit-text">${esc(entry.text)}</div>
+            <div class="audit-time">${dd} · ${dt}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    function exportAuditLog() {
+      const a = getAudit();
+      const text = a.map(e => `[${new Date(e.ts).toISOString()}] [${e.type.toUpperCase()}] ${e.text}`).join('\n');
+      navigator.clipboard.writeText(text).then(() => showToast('Audit log copied to clipboard'));
+    }
+
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // ── GM1: VOICE COMMAND INTERFACE ───────────────────────
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+    let recog = null, recogActive = false;
+
+    // SpeechSynthesis
+    const synth = window.speechSynthesis;
+    let femaleVoice = null;
+    if (synth) {
+      const loadV = () => {
+        const vs = synth.getVoices();
+        femaleVoice = vs.find(v => /samantha|karen|victoria|tessa|moira|female|woman/i.test(v.name) && /en/i.test(v.lang))
+          || vs.find(v => /en-AU|en-GB|en-US/i.test(v.lang)) || vs[0] || null;
+      };
+      loadV();
+      synth.onvoiceschanged = loadV;
+    }
+
+    function speak(text) {
+      if (!synth) return;
+      synth.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      if (femaleVoice) u.voice = femaleVoice;
+      u.rate = 0.9; u.pitch = 1.05; u.volume = 1;
+      const orb = document.getElementById('voiceOrb');
+      const lbl = document.getElementById('voiceStatusLbl');
+      orb.classList.add('speaking');
+      lbl.textContent = 'SIINDEX SPEAKING';
+      lbl.classList.add('speaking');
+      u.onend = () => {
+        orb.classList.remove('speaking');
+        lbl.textContent = 'TAP TO SPEAK';
+        lbl.classList.remove('speaking');
+      };
+      synth.speak(u);
+    }
+
+    function toggleVoice() {
+      if (!SpeechRec) {
+        showToast('Voice recognition requires Chrome browser', 'gold');
+        return;
+      }
+      if (recogActive) {
+        recog.stop(); recogActive = false;
+        setVoiceState('idle');
+        return;
+      }
+      recog = new SpeechRec();
+      recog.lang = 'en-AU';
+      recog.interimResults = false;
+      recog.onresult = e => {
+        const txt = e.results[0][0].transcript;
+        recogActive = false;
+        setVoiceState('idle');
+        document.getElementById('voiceTranscript').textContent = '"' + txt + '"';
+        submitVoiceCmd(txt);
+      };
+      recog.onerror = () => { recogActive = false; setVoiceState('idle'); };
+      recog.onend   = () => { recogActive = false; setVoiceState('idle'); };
+      recog.start();
+      recogActive = true;
+      setVoiceState('listening');
+    }
+
+    function setVoiceState(state) {
+      const orb = document.getElementById('voiceOrb');
+      const lbl = document.getElementById('voiceStatusLbl');
+      const btn = document.getElementById('voiceMicBtn');
+      orb.classList.remove('listening','speaking');
+      lbl.classList.remove('listening','speaking');
+      if (state === 'listening') {
+        orb.classList.add('listening');
+        lbl.classList.add('listening');
+        lbl.textContent = '🔴 LISTENING…';
+        btn.textContent = '⬛ Stop';
+      } else {
+        lbl.textContent = 'TAP TO SPEAK';
+        btn.textContent = '🎙 Hold to Speak';
+      }
+    }
+
+    function submitVoiceCmd(input) {
+      input = (input || '').trim();
+      if (!input) return;
+      document.getElementById('vcTextInput').value = '';
+      document.getElementById('voiceTranscript').textContent = '"' + input + '"';
+      addAudit('Command: ' + input, 'cmd');
+
+      // Check for emergency stop command
+      if (/stop all|shut down all|revoke all|emergency stop/i.test(input)) {
+        emergencyStop();
+        return;
+      }
+      // Check for prepare day
+      if (/prepare.*day|brief.*day|morning brief|what.*today|today.*what/i.test(input)) {
+        generateDailyBrief();
+        openTab('tab-brief');
+        const r = "I've prepared your daily brief. Opening it now.";
+        document.getElementById('voiceResponse').textContent = r;
+        speak(r); return;
+      }
+      // Check for mission room
+      if (/mission room|open.*mission/i.test(input)) {
+        const r = "Opening your Mission Room. You have one decision awaiting approval.";
+        document.getElementById('voiceResponse').textContent = r;
+        speak(r);
+        addMission('Mission Room', '🏛️', 'Open and review Mission Room decisions', 'active');
+        openTab('tab-missions'); return;
+      }
+      // Check for listing / marketplace
+      if (/create.*listing|new listing|list.*product/i.test(input)) {
+        const r = "I'll prepare a listing draft. What's the product name and price? I'll need your approval before it goes live.";
+        document.getElementById('voiceResponse').textContent = r;
+        speak(r);
+        addMission('Create Listing', '🛍️', 'Prepare new marketplace listing draft — awaiting citizen approval to publish', 'approval');
+        return;
+      }
+      // Reply to buyers
+      if (/reply.*buyer|draft.*repl|answer.*question/i.test(input)) {
+        const r = "I'll draft replies to your buyer questions now. You'll review them before I send anything.";
+        document.getElementById('voiceResponse').textContent = r;
+        speak(r);
+        addMission('Draft Replies', '💬', 'Draft replies to 2 buyer questions — awaiting approval before sending', 'approval');
+        openTab('tab-missions'); return;
+      }
+      // Videos / content
+      if (/make.*video|create.*video|five.*video|content.*video|reel/i.test(input)) {
+        const r = "I'll prepare five short-form video concepts for your product. Ready in a moment — you'll approve the scripts before any publishing.";
+        document.getElementById('voiceResponse').textContent = r;
+        speak(r);
+        addMission('Video Concepts', '🎬', 'Generate 5 short-form video scripts — awaiting approval before scheduling', 'pending');
+        openTab('tab-missions'); return;
+      }
+      // Cultural check
+      if (/cultural.*safe|safe.*sell|check.*design|cultural.*check/i.test(input)) {
+        const r = "Running a cultural clearance pre-flight. I'll cross-check the Cultural Rights Graph and check for any existing claims before I clear it for sale.";
+        document.getElementById('voiceResponse').textContent = r;
+        speak(r);
+        addMission('Cultural Clearance', '🌺', 'Pre-flight check against Cultural Rights Graph — running now', 'active');
+        openTab('tab-missions'); return;
+      }
+      // Check payouts
+      if (/payout|check.*pay|pay.*confirm/i.test(input)) {
+        const r = "You have one payout pending confirmation — 247.50 INDX from marketplace settlement. I need your approval before it processes. Shall I open it?";
+        document.getElementById('voiceResponse').textContent = r;
+        speak(r);
+        addMission('Payout Confirmation', '💰', '247.50 INDX marketplace settlement — requires citizen approval', 'approval');
+        openTab('tab-missions'); return;
+      }
+      // Staking / yield
+      if (/stake|yield|apy|earn/i.test(input)) {
+        const tge = Math.ceil((TGE_DATE - Date.now()) / 86400000);
+        const r = `Your staked INDX is earning yield. At the 180-day rate of 22% APY, 1,000 INDX earns approximately 108 INDX over 6 months. TGE is ${tge} days away. Do you want to stake more?`;
+        document.getElementById('voiceResponse').textContent = r;
+        speak(r); return;
+      }
+      // AUSTRAC
+      if (/austrac|compliance|vasp|legal/i.test(input)) {
+        const days = Math.max(0, Math.ceil((AUSTRAC_DL - Date.now()) / 86400000));
+        const r = `AUSTRAC VASP enrollment deadline is in ${days} days. Your compliance checklist has ${days > 5 ? 'items still open' : 'CRITICAL items requiring immediate action'}. I've prepared the checklist — you need to review it now.`;
+        document.getElementById('voiceResponse').textContent = r;
+        speak(r);
+        addMission('AUSTRAC Compliance', '⚠️', `VASP enrollment deadline in ${days} days — checklist ready for review`, 'approval');
+        return;
+      }
+      // Weekend live commerce
+      if (/weekend|live.*commerce|commerce.*plan|schedule|livestream/i.test(input)) {
+        const r = "I'll prepare your weekend live commerce plan: session times, product lineup, promotional scripts, and social scheduler. You'll review before I schedule anything.";
+        document.getElementById('voiceResponse').textContent = r;
+        speak(r);
+        addMission('Weekend Live Commerce', '📺', 'Prepare weekend live commerce plan + social schedule — awaiting approval', 'pending');
+        openTab('tab-missions'); return;
+      }
+      // Security
+      if (/secure.*account|security|check.*security|account.*safe/i.test(input)) {
+        const r = "Your account security check: 2FA is active, session sovereignty is enabled, last login was from your registered device. No anomalies detected. Do you want me to open the Security Centre?";
+        document.getElementById('voiceResponse').textContent = r;
+        speak(r); return;
+      }
+      // Overnight summary
+      if (/overnight|what.*changed|summarize|changed.*night/i.test(input)) {
+        const r = "Overnight summary: 2 new buyer questions on your marketplace listing. Your INDX yield added 0.82 INDX to your balance. One governance proposal opened — GIP-042. No security alerts. Your scheduled content post at 5 p.m. is confirmed.";
+        document.getElementById('voiceResponse').textContent = r;
+        speak(r); return;
+      }
+      // Governance / vote
+      if (/vote|governance|proposal|gip/i.test(input)) {
+        const r = "There are 2 open proposals: GIP-041 on LP fee distribution and GIP-040 on the AUSTRAC Compliance Fund. Both require your approval before I submit your vote. Want me to prepare a summary?";
+        document.getElementById('voiceResponse').textContent = r;
+        speak(r);
+        addMission('Governance Vote', '⚖️', 'GIP-041 + GIP-040 vote summaries prepared — awaiting citizen approval', 'approval');
+        openTab('tab-missions'); return;
+      }
+      // Price / token
+      if (/price|how much|indx worth|token/i.test(input)) {
+        const tge = Math.ceil((TGE_DATE - Date.now()) / 86400000);
+        const r = `INDX genesis price is $${INDX_PRICE_USD.toFixed(2)} USD. This is the founding price set for the Raydium liquidity pool at TGE in ${tge} days. Founding citizens hold at this price.`;
+        document.getElementById('voiceResponse').textContent = r;
+        speak(r); return;
+      }
+      // Default
+      const defaults = [
+        "I understand. Let me identify the mission behind that request. Which area should I focus on — your marketplace, content, payouts, governance, or security?",
+        "Noted. Say 'Prepare my day' and I'll give you a full brief, or tell me specifically what you need done.",
+        "I'm ready. You can speak naturally — tell me what you want to create, sell, earn, or protect, and I'll prepare the path.",
+      ];
+      const r = defaults[Math.floor(Math.random() * defaults.length)];
+      document.getElementById('voiceResponse').textContent = r;
+      speak(r);
+    }
+
+    // ── GM2: DAILY BRIEF ───────────────────────────────────
+    function generateDailyBrief() {
+      const now  = new Date();
+      const hour = now.getHours();
+      const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+      const days  = Math.max(0, Math.ceil((AUSTRAC_DL - now) / 86400000));
+      const tge   = Math.ceil((TGE_DATE - now) / 86400000);
+
+      const name = sessionStorage.getItem('citizen_name') || 'citizen';
+      const ws   = parseInt(sessionStorage.getItem('citizen_wisdom') || '42', 10);
+      const bal  = parseFloat(sessionStorage.getItem('citizen_balance') || '1247.5');
+
+      document.getElementById('briefTitle').textContent = `${greeting}, ${name}.`;
+      document.getElementById('briefTime').textContent = now.toLocaleDateString('en-AU',{weekday:'long', day:'numeric', month:'long'}) + ' · ' + now.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
+
+      const sections = [
+        { lbl:'🎯 Highest Priority', text: days <= 19 ? `AUSTRAC VASP enrollment — ${days} days remaining. Checklist is ready. This is your most critical action today.` : 'Your marketplace listing has 2 buyer questions waiting for replies.', cls:'priority' },
+        { lbl:'✅ Pending Your Approval', text: '2 buyer reply drafts ready · 1 payout confirmation (247.50 INDX) · GIP-041 governance vote prepared · Weekend live commerce schedule ready', cls:'' },
+        { lbl:'💚 Opportunities', text: '2 new buyer enquiries · Your video post is scheduled for 5 p.m. · 1 collab request from a Pacific creator · Staking yield earned overnight: +0.82 INDX', cls:'opportunity' },
+        { lbl:'⚠️ Risks & Protections', text: days <= 19 ? `AUSTRAC deadline in ${days} days — P0 action required · GIP-040 (AUSTRAC Compliance Fund) vote closes tomorrow` : 'No active risks detected. All systems nominal.', cls: days <= 19 ? 'risk' : '' },
+        { lbl:'💡 Suggested Next Action', text: 'Review and approve your buyer replies, then check the AUSTRAC enrollment checklist.', cls:'' },
+        { lbl:'📊 Your Status', text: `Balance: ${bal.toFixed(2)} INDX ($${(bal * INDX_PRICE_USD).toFixed(2)} USD) · Wisdom Score: ${ws} WS · TGE: ${tge} days away`, cls:'' },
+      ];
+
+      document.getElementById('briefSections').innerHTML = sections.map(s =>
+        `<div class="brief-section">
+          <div class="brief-section-lbl">${s.lbl}</div>
+          <div class="brief-section-text ${s.cls}">${s.text}</div>
+        </div>`
+      ).join('');
+
+      document.getElementById('briefActionRow').style.display = 'flex';
+      addAudit('Daily Brief generated', 'cmd');
+    }
+
+    function readBriefAloud() {
+      const title   = document.getElementById('briefTitle').textContent;
+      const sections = document.querySelectorAll('#briefSections .brief-section-text');
+      const labels   = document.querySelectorAll('#briefSections .brief-section-lbl');
+      let text = title + '. ';
+      sections.forEach((s, i) => {
+        text += labels[i]?.textContent?.replace(/[🎯✅💚⚠️💡📊]/g,'') + ': ' + s.textContent + '. ';
+      });
+      text += 'What would you like to do first?';
+      speak(text);
+      showToast('Reading your brief aloud…', 'gold');
+    }
+
+    // ── GM3: TOOL PERMISSION MATRIX ────────────────────────
+    const TOOLS_DEF = [
+      { id:'calendar',  icon:'📅', name:'Calendar',         scopes:['read','prepare'],               master:true },
+      { id:'email',     icon:'📧', name:'Email & Messages', scopes:['read','prepare'],               master:true },
+      { id:'mktplace',  icon:'🛍️', name:'Marketplace',      scopes:['read','prepare','write'],       master:true },
+      { id:'social',    icon:'📱', name:'Social Scheduler', scopes:['read','prepare'],               master:true },
+      { id:'files',     icon:'📁', name:'Files & Documents',scopes:['read','prepare'],               master:true },
+      { id:'payments',  icon:'💳', name:'Payments & Payouts',scopes:['read'],                        master:true },
+      { id:'governance',icon:'⚖️', name:'Governance',       scopes:['read','prepare'],               master:true },
+      { id:'missions',  icon:'🏛️', name:'Mission Rooms',    scopes:['read','prepare','write'],       master:true },
+      { id:'security',  icon:'🔒', name:'Security Layer',   scopes:['read'],                        master:true },
+      { id:'datavault', icon:'🗄️', name:'Data Vault',       scopes:['read'],                        master:false },
+      { id:'cultural',  icon:'🌺', name:'Cultural Rights',  scopes:['read','prepare'],               master:true },
+      { id:'design',    icon:'🎨', name:'Design Tools',     scopes:['read','prepare'],               master:false },
+    ];
+    const ALL_SCOPES = ['read','prepare','write','execute'];
+
+    function getTools() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(TOOL_KEY) || 'null');
+        if (saved) return saved;
+      } catch {}
+      return TOOLS_DEF.map(t => ({
+        id: t.id, icon: t.icon, name: t.name,
+        master: t.master,
+        scopes: Object.fromEntries(ALL_SCOPES.map(s => [s, t.scopes.includes(s)]))
+      }));
+    }
+    function saveTools(tools) { localStorage.setItem(TOOL_KEY, JSON.stringify(tools)); }
+
+    function renderToolGrid() {
+      const tools = getTools();
+      const grid  = document.getElementById('toolGrid');
+      grid.innerHTML = tools.map(t => `
+        <div class="tool-row" id="tool_${t.id}">
+          <div class="tool-top">
+            <div class="tool-icon">${t.icon}</div>
+            <div class="tool-name">${t.name}</div>
+            <button class="tool-master ${t.master ? 'on' : 'off'}" onclick="toggleToolMaster('${t.id}')" title="${t.master ? 'Connected' : 'Disconnected'}"></button>
+          </div>
+          <div class="tool-scopes">
+            ${ALL_SCOPES.map(s => `<span class="scope-chip ${s}${t.scopes[s] ? '' : ' off'}" onclick="toggleScope('${t.id}','${s}')">${s}</span>`).join('')}
+            <button class="tool-revoke" onclick="revokeTool('${t.id}')">Revoke</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function toggleToolMaster(id) {
+      const tools = getTools();
+      const t = tools.find(x => x.id === id);
+      if (t) { t.master = !t.master; }
+      saveTools(tools);
+      renderToolGrid();
+      addAudit(`Tool ${t.name} ${t.master ? 'connected' : 'disconnected'}`, t.master ? 'approve' : 'reject');
+      showToast(`${t.name} ${t.master ? 'connected' : 'disconnected'}`);
+    }
+
+    function toggleScope(id, scope) {
+      const tools = getTools();
+      const t = tools.find(x => x.id === id);
+      if (!t) return;
+      // Prevent toggling execute without master
+      if (scope === 'execute' && !t.master) { showToast('Connect the tool first', 'gold'); return; }
+      t.scopes[scope] = !t.scopes[scope];
+      saveTools(tools);
+      renderToolGrid();
+      addAudit(`${t.name} scope ${scope.toUpperCase()} ${t.scopes[scope] ? 'granted' : 'revoked'}`, t.scopes[scope] ? 'approve' : 'reject');
+      showToast(`${scope.toUpperCase()} ${t.scopes[scope] ? 'granted' : 'revoked'} for ${t.name}`);
+    }
+
+    function revokeTool(id) {
+      const tools = getTools();
+      const t = tools.find(x => x.id === id);
+      if (!t) return;
+      t.master = false;
+      t.scopes = Object.fromEntries(ALL_SCOPES.map(s => [s, false]));
+      saveTools(tools);
+      renderToolGrid();
+      addAudit(`All permissions revoked for ${t.name}`, 'stop');
+      showToast(`${t.name} fully revoked`, 'red');
+    }
+
+    // ── GM4: EMERGENCY CONTROL ─────────────────────────────
+    function emergencyStop() {
+      // Kill all missions
+      const missions = getMissions().map(m => ({ ...m, status: 'stopped' }));
+      saveMissions(missions);
+      // Revoke all execute scopes
+      const tools = getTools().map(t => ({ ...t, scopes: { ...t.scopes, execute: false, write: false } }));
+      saveTools(tools);
+      // Stop speech
+      if (synth) synth.cancel();
+      if (recog && recogActive) { recog.stop(); recogActive = false; }
+      setVoiceState('idle');
+
+      addAudit('EMERGENCY STOP — all missions terminated, execute/write permissions revoked', 'stop');
+      showToast('⬛ All SIINDEX actions stopped', 'red');
+      renderMissions();
+      renderToolGrid();
+      renderAuditLog();
+
+      const resp = 'All actions stopped. All execute and write permissions revoked. All missions terminated. I am now in read-only mode. You may re-authorise individual tools at any time.';
+      document.getElementById('voiceResponse').textContent = resp;
+      // Don't speak — we just stopped everything
+    }
+
+    function pauseMissions() {
+      const missions = getMissions().map(m => m.status === 'active' ? { ...m, status: 'pending' } : m);
+      saveMissions(missions);
+      addAudit('All active missions paused', 'stop');
+      showToast('All missions paused', 'gold');
+      renderMissions();
+    }
+
+    function revokeExecute() {
+      const tools = getTools().map(t => ({ ...t, scopes: { ...t.scopes, execute: false } }));
+      saveTools(tools);
+      addAudit('All EXECUTE permissions revoked', 'stop');
+      showToast('Execute permissions revoked', 'red');
+      renderToolGrid();
+    }
+
+    // ── MISSION QUEUE ──────────────────────────────────────
+    function getMissions() { try{return JSON.parse(localStorage.getItem(MISS_KEY)||'[]');}catch{return[];} }
+    function saveMissions(m) { localStorage.setItem(MISS_KEY, JSON.stringify(m.slice(0,20))); }
+
+    function addMission(title, icon, desc, status) {
+      const missions = getMissions();
+      missions.unshift({ id: Date.now(), title, icon, desc, status, ts: Date.now() });
+      saveMissions(missions);
+      renderMissions();
+    }
+
+    function approveMission(id) {
+      const missions = getMissions().map(m => m.id === id ? { ...m, status: 'done' } : m);
+      saveMissions(missions);
+      addAudit(`Mission approved: ${getMissions().find(m=>m.id===id)?.title || id}`, 'approve');
+      renderMissions();
+      showToast('Mission approved and executing');
+    }
+
+    function rejectMission(id) {
+      const m = getMissions().find(x => x.id === id);
+      const missions = getMissions().filter(x => x.id !== id);
+      saveMissions(missions);
+      addAudit(`Mission rejected: ${m?.title || id}`, 'reject');
+      renderMissions();
+      showToast('Mission rejected', 'gold');
+    }
+
+    function addTestMission() {
+      addMission('Custom Task', '⚡', 'Speak a command or type below to create a new mission', 'pending');
+      openTab('tab-speak');
+    }
+
+    function renderMissions() {
+      const missions = getMissions();
+      const el = document.getElementById('missionList');
+      if (!missions.length) {
+        el.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0;">No active missions. Speak a command to create one.</div>';
+        return;
+      }
+      el.innerHTML = missions.map(m => {
+        const badge = { pending:'badge-pending', active:'badge-active', approval:'badge-approval', done:'badge-done', stopped:'badge-done' };
+        const badgeTxt = { pending:'Pending', active:'Active', approval:'⚠️ Needs Approval', done:'Done', stopped:'Stopped' };
+        const needsApproval = m.status === 'approval';
+        return `<div class="mission-card">
+          <div class="mission-top">
+            <div class="mission-icon">${m.icon}</div>
+            <div class="mission-title">${esc(m.title)}</div>
+            <span class="mission-badge ${badge[m.status]||'badge-pending'}">${badgeTxt[m.status]||m.status}</span>
+          </div>
+          <div class="mission-desc">${esc(m.desc)}</div>
+          <div class="mission-btns">
+            ${needsApproval
+              ? `<button class="mission-approve" onclick="approveMission(${m.id})">✓ Approve</button>
+                 <button class="mission-reject" onclick="rejectMission(${m.id})">✕</button>`
+              : `<button class="mission-view" onclick="showToast('Mission: ${esc(m.title)}')">View</button>
+                 <button class="mission-reject" onclick="rejectMission(${m.id})">Remove</button>`
+            }
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // ── QUICK COMMANDS ─────────────────────────────────────
+    const QCMDS = [
+      { icon:'🌅', text:'Prepare my day',       sub:'Daily brief' },
+      { icon:'💬', text:'Reply to buyers',       sub:'Draft + approve' },
+      { icon:'🎬', text:'Make 5 videos',         sub:'Content creation' },
+      { icon:'💰', text:'Check my payouts',      sub:'Awaiting confirmation' },
+      { icon:'🏛️', text:'Open Mission Room',     sub:'1 decision pending' },
+      { icon:'🌺', text:'Cultural design check', sub:'Pre-flight clearance' },
+      { icon:'⚖️', text:'Prepare my vote',       sub:'GIP-041 + GIP-040' },
+      { icon:'🔒', text:'Secure my account',     sub:'Security review' },
+      { icon:'📊', text:'What changed overnight',sub:'Summary brief' },
+      { icon:'📺', text:'Weekend commerce plan', sub:'Live + schedule' },
+      { icon:'⚠️', text:'AUSTRAC status',        sub:'Compliance check' },
+      { icon:'⬛', text:'Stop all actions',      sub:'Emergency shutdown' },
+    ];
+
+    function renderQuickCmds() {
+      const grid = document.getElementById('qcmdGrid');
+      grid.innerHTML = QCMDS.map(c => `
+        <button class="qcmd-btn" onclick="submitVoiceCmd('${c.text.replace(/'/g,"\\'")}')" >
+          <div class="qcmd-icon">${c.icon}</div>
+          <div class="qcmd-text">${c.text}</div>
+          <div class="qcmd-sub">${c.sub}</div>
+        </button>
+      `).join('');
+    }
+
+    // ── INIT ───────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      renderQuickCmds();
+      renderMissions();
+      renderToolGrid();
+      renderAuditLog();
+
+      // Auto-generate daily brief on first load of the day
+      const lastBrief = localStorage.getItem('indx_vcos_brief_date');
+      const today = new Date().toDateString();
+      if (lastBrief !== today) {
+        generateDailyBrief();
+        localStorage.setItem('indx_vcos_brief_date', today);
+      }
+
+      // Add initial audit entry
+      const audit = getAudit();
+      if (!audit.length) {
+        addAudit('SIINDEX Voice Command OS initialized', 'cmd');
+        addAudit('All tool permissions loaded from secure store', 'approve');
+      }
+    });
+  </script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

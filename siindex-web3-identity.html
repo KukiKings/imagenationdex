@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>yourname.IN$DEX — Sovereign Identity</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8; --black:#090A10;
+    --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+    --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+    --text:#EAEAEA; --text2:#A0A8B8; --muted:#5A6070;
+    --border:rgba(255,255,255,0.06); --border2:rgba(255,255,255,0.1);
+  }
+  body { background:var(--black); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif; min-height:100vh; overflow-x:hidden; }
+  .shell { max-width:430px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column; position:relative; }
+
+  /* NAV */
+  .top-nav { position:sticky; top:0; z-index:100; background:rgba(9,10,16,0.92); backdrop-filter:blur(14px); padding:14px 20px; display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--border); }
+  .nav-back { width:34px; height:34px; border-radius:50%; background:var(--surface2); border:1px solid var(--border2); display:flex; align-items:center; justify-content:center; font-size:16px; cursor:pointer; }
+  .nav-title { flex:1; font-size:15px; font-weight:800; }
+  .nav-ws { font-size:11px; font-weight:700; background:rgba(0,229,160,0.1); color:var(--green); border:1px solid rgba(0,229,160,0.2); border-radius:99px; padding:3px 10px; }
+
+  .scroll-body { flex:1; overflow-y:auto; padding:0 0 130px; }
+
+  /* HERO */
+  .hero { padding:22px 20px 0; }
+  .hero-eye { font-size:11px; font-weight:700; color:var(--cyan); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:8px; }
+  .hero-name { font-size:28px; font-weight:900; margin-bottom:6px; }
+  .hero-name .domain { background:linear-gradient(135deg,var(--cyan),var(--purple)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .hero-sub { font-size:13px; color:var(--text2); line-height:1.6; margin-bottom:14px; }
+  .hero-lock { padding:12px 16px; background:rgba(0,212,255,0.05); border-left:2px solid var(--cyan); border-radius:0 10px 10px 0; font-size:12px; color:var(--cyan); font-style:italic; line-height:1.6; margin-bottom:18px; }
+
+  /* IDENTITY CARD */
+  .id-card { margin:0 20px; background:linear-gradient(135deg,rgba(0,212,255,0.08),rgba(139,63,232,0.06)); border:1px solid rgba(0,212,255,0.3); border-radius:20px; padding:18px; position:relative; overflow:hidden; }
+  .id-card::before { content:''; position:absolute; top:-30px; right:-30px; width:100px; height:100px; background:radial-gradient(circle,rgba(139,63,232,0.2),transparent 70%); border-radius:50%; }
+  .id-card-row { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+  .id-avatar { width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,var(--cyan),var(--purple)); display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; border:2px solid rgba(0,212,255,0.3); }
+  .id-info { flex:1; }
+  .id-name { font-size:18px; font-weight:900; color:var(--text); }
+  .id-domain { font-size:13px; font-weight:700; background:linear-gradient(135deg,var(--cyan),var(--purple)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .id-badges { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+  .id-badge { font-size:10px; font-weight:700; padding:3px 9px; border-radius:99px; }
+  .id-badge.verified { background:rgba(0,229,160,0.12); color:var(--green); border:1px solid rgba(0,229,160,0.25); }
+  .id-badge.sovereign { background:rgba(0,212,255,0.1); color:var(--cyan); border:1px solid rgba(0,212,255,0.2); }
+  .id-badge.merchant { background:rgba(255,184,0,0.1); color:var(--gold); border:1px solid rgba(255,184,0,0.2); }
+  .id-stats { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .id-stat { background:var(--surface2); border-radius:10px; padding:8px; text-align:center; }
+  .id-stat-val { font-size:16px; font-weight:900; color:var(--cyan); }
+  .id-stat-label { font-size:9px; color:var(--text2); margin-top:2px; text-transform:uppercase; letter-spacing:0.05em; }
+
+  /* GOD MODE F1 — LIVE VERIFICATION STACK */
+  .vm-stack { margin:0 20px; display:grid; gap:7px; }
+  .vm-item { background:var(--surface); border:1px solid var(--border2); border-radius:14px; padding:12px 14px; display:flex; align-items:center; gap:12px; cursor:pointer; transition:border-color 0.2s, background 0.2s; position:relative; }
+  .vm-item.active { border-color:var(--vm-color,var(--green)); background:rgba(255,255,255,0.02); }
+  .vm-item.active::after { content:'✓'; position:absolute; right:14px; font-size:14px; color:var(--vm-color,var(--green)); font-weight:800; }
+  .vm-icon { font-size:20px; flex-shrink:0; }
+  .vm-body { flex:1; min-width:0; }
+  .vm-name { font-size:13px; font-weight:700; color:var(--text); }
+  .vm-desc { font-size:11px; color:var(--text2); margin-top:2px; line-height:1.4; }
+  .vm-tier { font-size:9px; font-weight:700; color:var(--vm-color,var(--muted)); text-transform:uppercase; letter-spacing:0.07em; margin-top:3px; }
+  .vm-ws   { font-size:11px; font-weight:700; color:var(--vm-color,var(--muted)); flex-shrink:0; }
+  /* tier colors */
+  .vm-t1 { --vm-color:var(--green); }
+  .vm-t2 { --vm-color:var(--cyan); }
+  .vm-t3 { --vm-color:var(--gold); }
+  .vm-t4 { --vm-color:#8B3FE8; }
+  .vm-t5 { --vm-color:var(--blue); }
+  .vm-t6 { --vm-color:var(--text2); }
+
+  /* SECURITY SCORE RING */
+  .score-wrap { margin:0 20px; background:var(--surface); border:1px solid var(--border2); border-radius:18px; padding:18px; display:flex; align-items:center; gap:18px; }
+  .score-ring-wrap { position:relative; flex-shrink:0; }
+  .score-ring-wrap svg { transform:rotate(-90deg); }
+  .score-ring-bg { fill:none; stroke:rgba(255,255,255,0.06); stroke-width:7; }
+  .score-ring-fill { fill:none; stroke-width:7; stroke-linecap:round; transition:stroke-dashoffset 1.2s ease; }
+  .score-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .score-val  { font-size:22px; font-weight:900; }
+  .score-unit { font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; }
+  .score-info { flex:1; }
+  .score-grade { font-size:16px; font-weight:900; margin-bottom:4px; }
+  .score-sub   { font-size:12px; color:var(--text2); line-height:1.5; }
+  .score-bar-row { display:flex; align-items:center; gap:8px; margin-top:8px; }
+  .score-bar { flex:1; height:4px; background:rgba(255,255,255,0.06); border-radius:99px; overflow:hidden; }
+  .score-bar-fill { height:100%; border-radius:99px; transition:width 1s ease; }
+
+  /* GOD MODE F2 — SEND BY NAME */
+  .send-demo { margin:0 20px; background:var(--surface); border:1px solid var(--border2); border-radius:18px; padding:16px; }
+  .send-row { display:flex; gap:8px; margin-bottom:10px; }
+  .send-input { flex:1; background:var(--surface2); border:1px solid var(--border2); border-radius:12px; padding:12px 14px; font-size:13px; color:var(--text); outline:none; font-family:inherit; }
+  .send-input::placeholder { color:var(--muted); }
+  .send-input:focus { border-color:rgba(0,212,255,0.4); }
+  .send-btn { background:var(--cyan); border:none; border-radius:12px; padding:12px 16px; color:var(--black); font-size:13px; font-weight:800; cursor:pointer; }
+  .send-resolve { display:none; margin-top:10px; }
+  .send-resolve.show { display:block; }
+  .resolve-step { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
+  .resolve-step:last-child { border-bottom:none; }
+  .resolve-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .resolve-dot.done { background:var(--green); }
+  .resolve-dot.active { background:var(--cyan); animation:rpulse 1s infinite; }
+  .resolve-dot.wait { background:var(--muted); }
+  @keyframes rpulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .resolve-text { font-size:12px; color:var(--text2); flex:1; }
+  .resolve-val  { font-size:11px; color:var(--green); font-weight:700; font-family:monospace; }
+  .send-result  { margin-top:12px; background:rgba(0,229,160,0.07); border:1px solid rgba(0,229,160,0.2); border-radius:12px; padding:12px 14px; display:none; }
+  .send-result.show { display:block; }
+  .send-result-title { font-size:13px; font-weight:800; color:var(--green); margin-bottom:4px; }
+  .send-result-detail { font-size:12px; color:var(--text2); line-height:1.5; }
+
+  /* GOD MODE F3 — GUARDIAN RECOVERY */
+  .guardian-grid { display:grid; gap:7px; margin:0 20px; }
+  .guardian-item { background:var(--surface); border:1px solid var(--border2); border-radius:14px; padding:12px 14px; display:flex; align-items:center; gap:12px; }
+  .guardian-item.add { border-style:dashed; cursor:pointer; justify-content:center; }
+  .guardian-item.add:active { opacity:0.8; }
+  .guardian-avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+  .guardian-body { flex:1; min-width:0; }
+  .guardian-name { font-size:13px; font-weight:700; color:var(--text); }
+  .guardian-meta { font-size:11px; color:var(--text2); margin-top:2px; }
+  .guardian-status { font-size:10px; font-weight:700; flex-shrink:0; }
+  .guardian-status.confirmed { color:var(--green); }
+  .guardian-status.pending   { color:var(--gold); }
+  .threshold-bar { margin:10px 20px 0; background:var(--surface); border-radius:12px; padding:12px 14px; }
+  .threshold-label { font-size:11px; color:var(--text2); margin-bottom:8px; }
+  .threshold-dots { display:flex; gap:6px; }
+  .th-dot { width:28px; height:28px; border-radius:50%; border:2px solid var(--border2); display:flex; align-items:center; justify-content:center; font-size:12px; }
+  .th-dot.filled { background:rgba(0,229,160,0.15); border-color:rgba(0,229,160,0.4); }
+  .th-dot.needed { background:rgba(0,212,255,0.08); border-color:rgba(0,212,255,0.3); }
+
+  /* GOD MODE F4 — ZK PROOF REVEAL */
+  .zk-card { margin:0 20px; background:var(--surface); border:1px solid rgba(139,63,232,0.25); border-radius:18px; overflow:hidden; }
+  .zk-header { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px; }
+  .zk-title { flex:1; font-size:13px; font-weight:700; }
+  .zk-toggle-wrap { display:flex; align-items:center; gap:8px; }
+  .zk-toggle-label { font-size:11px; color:var(--text2); }
+  .zk-toggle { width:40px; height:22px; background:rgba(139,63,232,0.3); border-radius:11px; position:relative; cursor:pointer; transition:background 0.2s; }
+  .zk-toggle.on { background:var(--purple); }
+  .zk-toggle::after { content:''; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:white; transition:left 0.2s; }
+  .zk-toggle.on::after { left:21px; }
+  .zk-body { padding:14px 16px; }
+  .zk-mode-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:10px; }
+  .zk-mode-label.reveal { color:var(--red); }
+  .zk-mode-label.prove  { color:var(--green); }
+  .zk-rows { display:grid; gap:8px; }
+  .zk-row { display:flex; align-items:center; gap:10px; background:var(--surface2); border-radius:10px; padding:10px 12px; }
+  .zk-row-icon { font-size:16px; flex-shrink:0; }
+  .zk-row-label { font-size:12px; color:var(--text2); flex:1; }
+  .zk-row-val { font-size:12px; font-weight:700; font-family:monospace; }
+  .zk-row-val.revealed { color:var(--red); }
+  .zk-row-val.proven   { color:var(--green); }
+  .zk-note { margin-top:10px; font-size:11px; color:var(--muted); line-height:1.5; text-align:center; }
+
+  /* SEND CHIPS */
+  .send-chips { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  .send-chip { padding:5px 10px; background:var(--surface2); border:1px solid var(--border2); border-radius:20px; font-size:11px; color:var(--text2); cursor:pointer; }
+
+  /* SECTION */
+  .section { padding:20px 20px 0; }
+  .sec-label { font-size:11px; font-weight:700; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:12px; }
+  .divider { height:1px; background:var(--border); margin:20px 20px 0; }
+
+  /* DOCTRINE */
+  .doctrine-list { margin:0 20px; display:grid; gap:8px; }
+  .doc-line { background:var(--surface); border:1px solid var(--border2); border-radius:14px; padding:12px 14px 12px 22px; font-size:12px; color:var(--text2); font-style:italic; line-height:1.6; position:relative; }
+  .doc-line::before { content:'"'; position:absolute; left:11px; top:10px; font-size:16px; color:var(--gold); font-style:normal; }
+
+  /* GOD MODE F5 — BIOMETRIC LOGIN SIMULATOR */
+  .login-sim { margin:0 20px; background:var(--surface); border:1px solid rgba(0,229,160,0.2); border-radius:18px; overflow:hidden; }
+  .login-sim-header { padding:14px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+  .login-sim-title { font-size:13px; font-weight:700; }
+  .login-sim-btn { background:var(--green); border:none; border-radius:10px; padding:7px 14px; font-size:12px; font-weight:800; color:var(--black); cursor:pointer; }
+  .login-sim-btn:disabled { opacity:0.5; cursor:default; }
+  .login-steps { padding:12px 16px; display:grid; gap:6px; }
+  .login-step { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:10px; transition:background 0.2s,opacity 0.2s; opacity:0.35; }
+  .login-step.active { background:rgba(0,212,255,0.07); opacity:1; }
+  .login-step.done   { background:rgba(0,229,160,0.06); opacity:1; }
+  .ls-dot { width:28px; height:28px; border-radius:50%; border:2px solid rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; transition:background 0.3s,border-color 0.3s; }
+  .login-step.active .ls-dot { border-color:var(--cyan); background:rgba(0,212,255,0.15); animation:lsPulse 0.9s infinite; }
+  .login-step.done   .ls-dot { border-color:var(--green); background:rgba(0,229,160,0.15); }
+  @keyframes lsPulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
+  .ls-text { flex:1; font-size:11px; color:var(--text2); line-height:1.4; }
+  .ls-text strong { color:var(--text); font-size:12px; display:block; margin-bottom:1px; }
+  .ls-time { font-size:10px; color:var(--muted); font-family:monospace; white-space:nowrap; }
+  .login-result { padding:12px 16px; border-top:1px solid var(--border); display:none; }
+  .login-result.show { display:block; }
+  .login-result-label { font-size:13px; font-weight:800; margin-bottom:4px; }
+  .login-result-sub { font-size:11px; color:var(--text2); line-height:1.5; }
+
+  /* GOD MODE F6 — CREDENTIAL LIFECYCLE */
+  .cred-lifecycle { margin:0 20px; display:grid; gap:7px; }
+  .cred-item { background:var(--surface); border:1px solid var(--border2); border-radius:14px; padding:12px 14px; }
+  .cred-item-row { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .cred-icon { font-size:18px; flex-shrink:0; }
+  .cred-name { font-size:12px; font-weight:700; flex:1; }
+  .cred-status-badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:99px; flex-shrink:0; }
+  .cred-status-badge.valid    { background:rgba(0,229,160,0.12); color:var(--green); border:1px solid rgba(0,229,160,0.25); }
+  .cred-status-badge.expiring { background:rgba(255,184,0,0.12); color:var(--gold);  border:1px solid rgba(255,184,0,0.25); }
+  .cred-status-badge.expired  { background:rgba(255,77,109,0.12); color:var(--red);  border:1px solid rgba(255,77,109,0.25); }
+  .cred-bar-wrap { height:4px; background:rgba(255,255,255,0.06); border-radius:99px; overflow:hidden; margin-bottom:6px; }
+  .cred-bar-fill { height:100%; border-radius:99px; transition:width 1s ease; }
+  .cred-meta { display:flex; justify-content:space-between; font-size:10px; color:var(--muted); }
+  .cred-renew { font-size:11px; font-weight:700; color:var(--cyan); cursor:pointer; text-align:right; display:block; margin-top:6px; }
+
+  /* GOD MODE F7 — AGENT IDENTITY REGISTRY */
+  .agent-grid { margin:0 20px; display:grid; gap:7px; }
+  .agent-item { background:var(--surface); border:1px solid var(--border2); border-radius:14px; padding:12px 14px; }
+  .agent-row { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .agent-avatar { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+  .agent-info { flex:1; }
+  .agent-name { font-size:13px; font-weight:700; color:var(--text); }
+  .agent-handle { font-size:10px; color:var(--purple); font-family:monospace; margin-top:1px; }
+  .agent-ats { font-size:11px; font-weight:700; color:var(--gold); flex-shrink:0; }
+  .agent-scope { font-size:11px; color:var(--text2); margin-bottom:8px; line-height:1.4; }
+  .agent-foot { display:flex; align-items:center; justify-content:space-between; }
+  .agent-last { font-size:10px; color:var(--muted); }
+  .agent-revoke { font-size:11px; font-weight:700; color:var(--red); cursor:pointer; background:rgba(255,77,109,0.08); border:1px solid rgba(255,77,109,0.2); border-radius:8px; padding:3px 10px; }
+
+  /* GOD MODE F8 — SYBIL RESISTANCE */
+  .sybil-card { margin:0 20px; background:var(--surface); border:1px solid rgba(139,63,232,0.2); border-radius:18px; padding:16px; }
+  .sybil-header { display:flex; align-items:center; gap:14px; margin-bottom:14px; }
+  .sybil-ring-wrap { position:relative; flex-shrink:0; }
+  .sybil-ring-wrap svg { transform:rotate(-90deg); }
+  .sybil-ring-bg   { fill:none; stroke:rgba(255,255,255,0.06); stroke-width:6; }
+  .sybil-ring-fill { fill:none; stroke-width:6; stroke-linecap:round; transition:stroke-dashoffset 1.4s ease; }
+  .sybil-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .sybil-pct { font-size:17px; font-weight:900; color:var(--purple); }
+  .sybil-info { flex:1; }
+  .sybil-grade { font-size:13px; font-weight:900; color:var(--purple); margin-bottom:3px; }
+  .sybil-sub { font-size:11px; color:var(--text2); line-height:1.5; }
+  .sybil-factors { display:grid; gap:7px; }
+  .sybil-factor { display:flex; align-items:center; gap:8px; }
+  .sybil-factor-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .sybil-factor-label { font-size:11px; color:var(--text2); flex:1; }
+  .sybil-factor-score { font-size:11px; font-weight:700; font-family:monospace; }
+
+  /* TOAST */
+  .toast { position:fixed; bottom:110px; left:50%; transform:translateX(-50%); background:rgba(30,33,50,0.98); border:1px solid rgba(0,212,255,0.2); color:var(--text); padding:10px 18px; border-radius:12px; font-size:13px; font-weight:600; pointer-events:none; opacity:0; transition:opacity 0.25s; z-index:9999; white-space:nowrap; }
+  .toast.show { opacity:1; }
+
+  /* FAB */
+  .fab { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); max-width:390px; width:calc(100% - 40px); z-index:200; }
+  .fab-btn { width:100%; padding:16px; background:linear-gradient(135deg,var(--cyan),var(--blue)); border:none; border-radius:16px; color:var(--black); font-size:15px; font-weight:800; cursor:pointer; box-shadow:0 8px 28px rgba(0,212,255,0.25); }
+
+  @keyframes fadeIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
+  .fade-in { animation:fadeIn 0.3s ease; }
+  @keyframes slideUp { from{transform:translateY(30px);opacity:0} to{transform:translateY(0);opacity:1} }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="top-nav">
+    <div class="nav-back" onclick="history.back()">‹</div>
+    <div class="nav-title">Sovereign Identity</div>
+    <div class="nav-ws" id="navWs">WS —</div>
+  </div>
+
+  <div class="scroll-body">
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-eye">🪪 yourname.IN$DEX — One Name. Every Credential.</div>
+      <div class="hero-name">Your name.<br><span class="domain">Sovereign forever.</span></div>
+      <div class="hero-sub">No bank. No government. No carrier. Every credential — phone, QR, 2FA, passkey, biometric, email — is a different door into the same sovereign house.</div>
+      <div class="hero-lock">"The citizen does not have a phone number linked to a bank. The citizen has yourname.IN$DEX, and their phone number is one of the keys to it."</div>
+    </div>
+
+    <!-- IDENTITY CARD -->
+    <div class="id-card" style="margin:0 20px;">
+      <div class="id-card-row">
+        <div class="id-avatar" id="idAvatar">🌺</div>
+        <div class="id-info">
+          <div class="id-name" id="idName">Loading…</div>
+          <div class="id-domain" id="idDomain">yourname.IN$DEX</div>
+        </div>
+      </div>
+      <div class="id-badges">
+        <div class="id-badge verified">✓ Verified</div>
+        <div class="id-badge sovereign">Sovereign</div>
+        <div class="id-badge merchant" id="merchantBadge" style="display:none">Merchant</div>
+      </div>
+      <div class="id-stats">
+        <div class="id-stat"><div class="id-stat-val" id="statWs">—</div><div class="id-stat-label">Wisdom Score</div></div>
+        <div class="id-stat"><div class="id-stat-val" id="statMethods">0</div><div class="id-stat-label">Verified Methods</div></div>
+        <div class="id-stat"><div class="id-stat-val" id="statCredentials">0</div><div class="id-stat-label">Credentials</div></div>
+      </div>
+    </div>
+
+    <!-- GOD MODE F1 — VERIFICATION STACK -->
+    <div class="section" style="margin-top:20px;">
+      <div class="sec-label">Verification Method Stack — Tap to activate</div>
+    </div>
+    <div class="vm-stack" id="vmStack"></div>
+
+    <!-- SECURITY SCORE -->
+    <div class="section" style="margin-top:16px;">
+      <div class="sec-label">Identity Security Score</div>
+    </div>
+    <div class="score-wrap">
+      <div class="score-ring-wrap">
+        <svg width="72" height="72" viewBox="0 0 72 72">
+          <circle class="score-ring-bg" cx="36" cy="36" r="30"/>
+          <circle class="score-ring-fill" id="scoreRingFill" cx="36" cy="36" r="30" stroke="var(--green)" stroke-dasharray="188.5" stroke-dashoffset="188.5"/>
+        </svg>
+        <div class="score-center">
+          <div class="score-val" id="scoreVal">0</div>
+          <div class="score-unit">/ 100</div>
+        </div>
+      </div>
+      <div class="score-info">
+        <div class="score-grade" id="scoreGrade">Not started</div>
+        <div class="score-sub" id="scoreSub">Activate verification methods to build your identity security score.</div>
+        <div class="score-bar-row">
+          <div style="font-size:10px;color:var(--muted);white-space:nowrap;">Progress</div>
+          <div class="score-bar"><div class="score-bar-fill" id="scoreBarFill" style="width:0%;background:var(--green);"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- GOD MODE F2 — SEND BY NAME -->
+    <div class="section">
+      <div class="sec-label">Send by Name — Universal Resolver</div>
+    </div>
+    <div class="send-demo">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">Send to any <strong style="color:var(--text)">name, phone, or email</strong> — SIINDEX resolves it.</div>
+      <div class="send-chips">
+        <div class="send-chip" onclick="setSend('mamaNoe.IN$DEX')">mamaNoe.IN$DEX</div>
+        <div class="send-chip" onclick="setSend('+682 123 4567')">+682 123 4567</div>
+        <div class="send-chip" onclick="setSend('cousin@gmail.com')">cousin@gmail.com</div>
+      </div>
+      <div class="send-row">
+        <input class="send-input" id="sendInput" type="text" placeholder="name, phone, email, or QR…">
+        <button class="send-btn" onclick="runResolve()">→</button>
+      </div>
+      <div class="send-resolve" id="sendResolve">
+        <div class="resolve-step"><div class="resolve-dot wait" id="rd1"></div><div class="resolve-text">Looking up IN$DEX resolver…</div><div class="resolve-val" id="rv1"></div></div>
+        <div class="resolve-step"><div class="resolve-dot wait" id="rd2"></div><div class="resolve-text">Matching to <span id="resolvedName">—</span></div><div class="resolve-val" id="rv2"></div></div>
+        <div class="resolve-step"><div class="resolve-dot wait" id="rd3"></div><div class="resolve-text">Returning Solana address</div><div class="resolve-val" id="rv3"></div></div>
+        <div class="resolve-step"><div class="resolve-dot wait" id="rd4"></div><div class="resolve-text">Ready to send</div><div class="resolve-val" id="rv4"></div></div>
+      </div>
+      <div class="send-result" id="sendResult">
+        <div class="send-result-title">✓ Resolved — Ready to send</div>
+        <div class="send-result-detail" id="sendResultDetail">—</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- GOD MODE F3 — GUARDIAN RECOVERY -->
+    <div class="section">
+      <div class="sec-label">Guardian Recovery — Zero Memorised Keys</div>
+    </div>
+    <div class="guardian-grid" id="guardianGrid"></div>
+    <div class="threshold-bar">
+      <div class="threshold-label">Recovery threshold: <strong id="thresholdText">3 of 5 guardians required</strong></div>
+      <div class="threshold-dots" id="thresholdDots"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- GOD MODE F4 — ZK PROOF REVEAL -->
+    <div class="section">
+      <div class="sec-label">Zero-Knowledge Proof — Prove Facts, Reveal Nothing</div>
+    </div>
+    <div class="zk-card">
+      <div class="zk-header">
+        <div class="zk-title">What you share vs what you prove</div>
+        <div class="zk-toggle-wrap">
+          <div class="zk-toggle-label" id="zkToggleLabel">ZK Proof</div>
+          <div class="zk-toggle on" id="zkToggle" onclick="toggleZK()"></div>
+        </div>
+      </div>
+      <div class="zk-body">
+        <div class="zk-mode-label prove" id="zkModeLabel">✓ ZK Proof Mode — proving facts without revealing data</div>
+        <div class="zk-rows" id="zkRows"></div>
+        <div class="zk-note" id="zkNote">Citizens prove attributes. Institutions confirm the proof. No data custody changes hands.</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- GOD MODE F5 — BIOMETRIC LOGIN SIMULATOR -->
+    <div class="section">
+      <div class="sec-label">Biometric Login — The Unhackable Door</div>
+    </div>
+    <div class="login-sim">
+      <div class="login-sim-header">
+        <div class="login-sim-title">🔑 Simulate your sovereign login</div>
+        <button class="login-sim-btn" id="loginSimBtn" onclick="runLoginSim()">Authenticate</button>
+      </div>
+      <div class="login-steps" id="loginSteps"></div>
+      <div class="login-result" id="loginResult">
+        <div class="login-result-label" id="loginResultLabel">—</div>
+        <div class="login-result-sub" id="loginResultSub">—</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- GOD MODE F6 — CREDENTIAL LIFECYCLE -->
+    <div class="section">
+      <div class="sec-label">Credential Lifecycle — Active · Expiring · Renew</div>
+    </div>
+    <div class="cred-lifecycle" id="credLifecycle"></div>
+
+    <div class="divider"></div>
+
+    <!-- GOD MODE F7 — AGENT IDENTITY REGISTRY -->
+    <div class="section">
+      <div class="sec-label">Authorised Agents — Sovereign Agent Identity</div>
+    </div>
+    <div class="agent-grid" id="agentGrid"></div>
+
+    <div class="divider"></div>
+
+    <!-- GOD MODE F8 — SYBIL RESISTANCE -->
+    <div class="section">
+      <div class="sec-label">Sybil Resistance — One Human, Proven On-Chain</div>
+    </div>
+    <div class="sybil-card">
+      <div class="sybil-header">
+        <div class="sybil-ring-wrap">
+          <svg width="64" height="64" viewBox="0 0 64 64">
+            <circle class="sybil-ring-bg" cx="32" cy="32" r="26"/>
+            <circle class="sybil-ring-fill" id="sybilRingFill" cx="32" cy="32" r="26" stroke="var(--purple)" stroke-dasharray="163.4" stroke-dashoffset="163.4"/>
+          </svg>
+          <div class="sybil-center"><div class="sybil-pct" id="sybilPct">—</div></div>
+        </div>
+        <div class="sybil-info">
+          <div class="sybil-grade" id="sybilGrade">Calculating…</div>
+          <div class="sybil-sub">One name. One human. On-chain proven. You cannot buy more votes by creating more wallets.</div>
+        </div>
+      </div>
+      <div class="sybil-factors" id="sybilFactors"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- DOCTRINE -->
+    <div class="section">
+      <div class="sec-label">Doctrine — Locked</div>
+      <div class="doctrine-list" id="doctrineList"></div>
+      <div style="height:18px;"></div>
+    </div>
+
+  </div>
+
+  <div class="fab">
+    <button class="fab-btn" onclick="showToast('yourname.IN$DEX — one name, sovereign forever')">🪪 Claim yourname.IN$DEX</button>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const INDX_PRICE_USD = 0.24;
+
+  // ── GOD MODE F5 — BIOMETRIC LOGIN SIMULATOR ──
+  const LOGIN_STEPS = [
+    { icon:'🪪', label:'Enter yourname.IN$DEX',           sub:'Name resolves to sovereign wallet on Solana',          ms:300 },
+    { icon:'📷', label:'Camera opens — liveness check',    sub:'Random challenge: blink left eye, then smile',         ms:700 },
+    { icon:'👁️', label:'Active liveness: PASS',            sub:'Deepfake rejected. Real human confirmed.',             ms:500 },
+    { icon:'🔒', label:'Hardware Secure Enclave unlocks',  sub:'Private key accessed inside chip — never transmitted', ms:600 },
+    { icon:'✍️', label:'Passkey signs the challenge',       sub:'Cryptographic signature created in hardware only',     ms:400 },
+    { icon:'🌐', label:'Signature verified on Solana',     sub:'Public key match confirmed on-chain',                  ms:800 },
+    { icon:'🧬', label:'BSC credential checked',           sub:'Biometric Sovereign Credential: valid, not replayed',  ms:500 },
+    { icon:'✅', label:'Sovereign session opened',          sub:'No password. No SMS. No carrier. Just you.',           ms:0   },
+  ];
+  let _loginRunning = false;
+
+  function buildLoginSteps() {
+    const el = document.getElementById('loginSteps');
+    if (!el) return;
+    el.innerHTML = LOGIN_STEPS.map((s, i) => `
+      <div class="login-step" id="ls-${i}">
+        <div class="ls-dot">${s.icon}</div>
+        <div class="ls-text"><strong>${s.label}</strong>${s.sub}</div>
+        <div class="ls-time" id="lst-${i}"></div>
+      </div>`).join('');
+  }
+
+  function runLoginSim() {
+    if (_loginRunning) return;
+    _loginRunning = true;
+    const btn = document.getElementById('loginSimBtn');
+    btn.disabled = true;
+    btn.textContent = 'Running…';
+    document.getElementById('loginResult').classList.remove('show');
+    LOGIN_STEPS.forEach((_, i) => {
+      const el = document.getElementById('ls-' + i);
+      if (el) el.className = 'login-step';
+      const t = document.getElementById('lst-' + i);
+      if (t) t.textContent = '';
+    });
+    let cumulative = 400;
+    LOGIN_STEPS.forEach((s, i) => {
+      if (i > 0) cumulative += s.ms + 320;
+      const delay = cumulative;
+      setTimeout(() => {
+        if (i > 0) {
+          const prev = document.getElementById('ls-' + (i-1));
+          if (prev) prev.className = 'login-step done';
+          const prevT = document.getElementById('lst-' + (i-1));
+          if (prevT) prevT.textContent = '+' + LOGIN_STEPS[i-1].ms + 'ms';
+        }
+        const cur = document.getElementById('ls-' + i);
+        if (cur) cur.className = 'login-step active';
+      }, delay - 280);
+      if (i === LOGIN_STEPS.length - 1) {
+        setTimeout(() => {
+          const last = document.getElementById('ls-' + i);
+          if (last) last.className = 'login-step done';
+          const lastT = document.getElementById('lst-' + i);
+          if (lastT) lastT.textContent = '+' + s.ms + 'ms';
+          const result = document.getElementById('loginResult');
+          document.getElementById('loginResultLabel').textContent = '✓ Authenticated — ' + delay + 'ms total';
+          document.getElementById('loginResultLabel').style.color = 'var(--green)';
+          document.getElementById('loginResultSub').textContent = 'Hardware-backed. Liveness-checked. On-chain verified. No server ever held your key.';
+          result.classList.add('show');
+          btn.disabled = false;
+          btn.textContent = 'Authenticate Again';
+          _loginRunning = false;
+          showToast('✓ Sovereign session opened — you cannot be hacked remotely');
+        }, delay + 420);
+      }
+    });
+  }
+
+  // ── GOD MODE F6 — CREDENTIAL LIFECYCLE ──
+  const CRED_ITEMS = [
+    { icon:'🧬', name:'Biometric Sovereign Credential', days:312, total:365, status:'valid',    lastVerified:'9 Jul 2025' },
+    { icon:'🪪', name:'KYC / Identity Verification',   days:58,  total:730, status:'valid',    lastVerified:'12 Feb 2025' },
+    { icon:'🏪', name:'Verified Merchant Badge',        days:22,  total:365, status:'expiring', lastVerified:'18 Jun 2025' },
+    { icon:'🎨', name:'Cultural Stewardship Certificate',days:280,total:365, status:'valid',    lastVerified:'2 Apr 2025'  },
+    { icon:'📊', name:'Wisdom Score Credential',        days:1,   total:1,   status:'valid',    lastVerified:'Live — auto-updated' },
+  ];
+
+  function renderCredLifecycle() {
+    const el = document.getElementById('credLifecycle');
+    if (!el) return;
+    el.innerHTML = CRED_ITEMS.map((c, i) => {
+      const pct   = Math.round((c.days / c.total) * 100);
+      const color = c.status === 'valid' ? 'var(--green)' : c.status === 'expiring' ? 'var(--gold)' : 'var(--red)';
+      const label = c.status === 'valid' ? 'Valid' : c.status === 'expiring' ? 'Expiring Soon' : 'Expired';
+      const dText = c.total === 1 ? 'Real-time' : c.days + ' days remaining';
+      return `
+        <div class="cred-item fade-in" style="animation-delay:${i*0.06}s">
+          <div class="cred-item-row">
+            <div class="cred-icon">${c.icon}</div>
+            <div class="cred-name">${c.name}</div>
+            <div class="cred-status-badge ${c.status}">${label}</div>
+          </div>
+          <div class="cred-bar-wrap"><div class="cred-bar-fill" style="width:${pct}%;background:${color};"></div></div>
+          <div class="cred-meta">
+            <span>Last verified: ${c.lastVerified}</span>
+            <span style="color:${color};font-weight:700;">${dText}</span>
+          </div>
+          ${c.status === 'expiring' ? `<span class="cred-renew" onclick="renewCred('${c.name}')">↻ Renew now →</span>` : ''}
+        </div>`;
+    }).join('');
+  }
+
+  function renewCred(name) {
+    const item = CRED_ITEMS.find(c => c.name === name);
+    if (item) { item.status = 'valid'; item.days = item.total; item.lastVerified = 'Just now'; renderCredLifecycle(); }
+    showToast('↻ Credential renewed: ' + name);
+  }
+
+  // ── GOD MODE F7 — AGENT IDENTITY REGISTRY ──
+  const AGENTS_DATA = [
+    { icon:'📋', name:'Marketplace Listing Agent', handle:'listing-agent.IN$DEX',    ats:94, scope:'Create and update listings only. Cannot process payouts or transfer assets.', last:'2 hours ago', color:'rgba(0,212,255,0.12)' },
+    { icon:'🛡️', name:'Cultural Steward Agent',   handle:'cultural-steward.IN$DEX', ats:88, scope:'Cultural rights verification and certificate issuance only. Read-only on financial data.', last:'1 day ago',   color:'rgba(139,63,232,0.12)' },
+    { icon:'📊', name:'Wisdom Score Agent',        handle:'wisdom-agent.IN$DEX',     ats:99, scope:'Score calculation and credential updates. No financial access permitted.', last:'Live',         color:'rgba(0,229,160,0.1)'  },
+  ];
+
+  function renderAgentGrid() {
+    const el = document.getElementById('agentGrid');
+    if (!el) return;
+    if (!AGENTS_DATA.length) {
+      el.innerHTML = '<div style="padding:16px 20px;font-size:12px;color:var(--muted);">No agents authorised. Agents earn trust through on-platform history.</div>';
+      return;
+    }
+    el.innerHTML = AGENTS_DATA.map((a, i) => `
+      <div class="agent-item fade-in" style="animation-delay:${i*0.07}s">
+        <div class="agent-row">
+          <div class="agent-avatar" style="background:${a.color}">${a.icon}</div>
+          <div class="agent-info">
+            <div class="agent-name">${a.name}</div>
+            <div class="agent-handle">${a.handle}</div>
+          </div>
+          <div class="agent-ats">ATS ${a.ats}</div>
+        </div>
+        <div class="agent-scope">${a.scope}</div>
+        <div class="agent-foot">
+          <div class="agent-last">Last action: ${a.last}</div>
+          <div class="agent-revoke" onclick="revokeAgent('${a.name}')">Revoke</div>
+        </div>
+      </div>`).join('');
+  }
+
+  function revokeAgent(name) {
+    const idx = AGENTS_DATA.findIndex(a => a.name === name);
+    if (idx > -1) { AGENTS_DATA.splice(idx, 1); renderAgentGrid(); }
+    showToast('✗ Agent access revoked — ' + name);
+  }
+
+  // ── GOD MODE F8 — SYBIL RESISTANCE ──
+  const SYBIL_FACTORS = [
+    { label:'Biometric Sovereign Credential (BSC)',   score:30, max:30, color:'var(--green)' },
+    { label:'Wisdom Score depth (WS 82)',             score:25, max:30, color:'var(--cyan)' },
+    { label:'Guardian network diversity (3 regions)', score:20, max:20, color:'var(--purple)' },
+    { label:'On-platform history (2+ years)',          score:15, max:15, color:'var(--gold)' },
+    { label:'Behavioral biometric layer',              score:3,  max:5,  color:'var(--text2)' },
+  ];
+
+  function renderSybilResistance() {
+    const total    = SYBIL_FACTORS.reduce((s, f) => s + f.score, 0);
+    const maxTotal = SYBIL_FACTORS.reduce((s, f) => s + f.max, 0);
+    const pct      = Math.round((total / maxTotal) * 100);
+    const circ     = 163.4;
+    const grade    = pct >= 90 ? 'Sovereign Grade — One Human, Proven'
+                   : pct >= 70 ? 'Strong Resistance'
+                   : pct >= 50 ? 'Moderate Resistance'
+                   :              'Low Resistance';
+    const el = document.getElementById('sybilRingFill');
+    if (el) setTimeout(() => { el.style.strokeDashoffset = circ - (circ * pct / 100); }, 400);
+    const p = document.getElementById('sybilPct');   if (p) p.textContent = pct + '%';
+    const g = document.getElementById('sybilGrade'); if (g) g.textContent = grade;
+    const f = document.getElementById('sybilFactors');
+    if (f) f.innerHTML = SYBIL_FACTORS.map(fc => `
+      <div class="sybil-factor">
+        <div class="sybil-factor-dot" style="background:${fc.color}"></div>
+        <div class="sybil-factor-label">${fc.label}</div>
+        <div class="sybil-factor-score" style="color:${fc.color}">${fc.score}/${fc.max}</div>
+      </div>`).join('');
+  }
+
+  // ── VERIFICATION METHODS ──
+  const VM_METHODS = [
+    { id:'passkey',  icon:'🔑', name:'Passkey',              tier:'T1', tierLabel:'Tier 1 — Strongest', desc:'Hardware-backed. Private key never leaves your device. Phishing-resistant.', ws:25, cls:'vm-t1' },
+    { id:'biometric',icon:'👁️', name:'Biometric',            tier:'T2', tierLabel:'Tier 2 — Very Strong', desc:'Face / fingerprint / iris. Biometric hash on-chain. Liveness detection.', ws:20, cls:'vm-t2' },
+    { id:'totp',     icon:'🔐', name:'Google Authenticator', tier:'T3', tierLabel:'Tier 3 — Strong',      desc:'TOTP 2FA. Device-bound. Cannot be SIM-swapped.', ws:15, cls:'vm-t3' },
+    { id:'phone',    icon:'📱', name:'Phone Number',         tier:'T4', tierLabel:'Tier 4 — Standard',    desc:'Links +61412345678 → yourname.IN$DEX. One path — not the root.', ws:10, cls:'vm-t4' },
+    { id:'email',    icon:'✉️', name:'Email Address',        tier:'T5', tierLabel:'Tier 5 — Standard',    desc:'email@domain → yourname.IN$DEX. Web2-to-Web3 bridge.', ws:10, cls:'vm-t4' },
+    { id:'qr',       icon:'⬛', name:'QR / Barcode / NFC',   tier:'T6', tierLabel:'Tier 6 — Physical',    desc:'Sovereign QR code for in-person payments and market stalls.', ws:5,  cls:'vm-t5' },
+    { id:'caller',   icon:'📞', name:'Caller Code',          tier:'T6', tierLabel:'Tier 6 — Anti-Fraud',  desc:'WORD-NNNN code for voice channel trust. Rotatable on demand.', ws:5,  cls:'vm-t6' },
+  ];
+
+  // ── STATE ──
+  const _active = new Set(['passkey','totp','phone','email','qr']);
+  let _zkMode = true; // true = ZK proof mode
+
+  // ── TOAST ──
+  let _tt;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(_tt);
+    _tt = setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  // ── IDENTITY CARD ──
+  function initIdCard() {
+    const name  = sessionStorage.getItem('citizen_name') || 'Arthur Henry';
+    const ws    = parseInt(sessionStorage.getItem('citizen_wisdom') || '82');
+    const first = name.split(' ')[0].toLowerCase().replace(/[^a-z]/g,'');
+    document.getElementById('idName').textContent    = name;
+    document.getElementById('idDomain').textContent  = first + '.IN$DEX';
+    document.getElementById('navWs').textContent     = 'WS ' + ws;
+    document.getElementById('statWs').textContent    = ws;
+    if (ws >= 60) document.getElementById('merchantBadge').style.display = '';
+  }
+
+  // ── GOD MODE F1 — VERIFICATION STACK ──
+  function renderVmStack() {
+    const el = document.getElementById('vmStack');
+    el.innerHTML = VM_METHODS.map(m => `
+      <div class="vm-item ${m.cls} ${_active.has(m.id) ? 'active' : ''}" id="vm-${m.id}" onclick="toggleVM('${m.id}')">
+        <div class="vm-icon">${m.icon}</div>
+        <div class="vm-body">
+          <div class="vm-name">${m.name}</div>
+          <div class="vm-desc">${m.desc}</div>
+          <div class="vm-tier">${m.tierLabel}</div>
+        </div>
+        <div class="vm-ws">+${m.ws} WS</div>
+      </div>
+    `).join('');
+    updateScores();
+  }
+
+  function toggleVM(id) {
+    if (_active.has(id)) _active.delete(id);
+    else _active.add(id);
+    const el = document.getElementById('vm-' + id);
+    if (el) el.classList.toggle('active', _active.has(id));
+    updateScores();
+    showToast((_active.has(id) ? '✓ ' : '✗ ') + VM_METHODS.find(m => m.id === id)?.name);
+  }
+
+  function updateScores() {
+    const total = VM_METHODS.reduce((sum, m) => sum + (_active.has(m.id) ? m.ws : 0), 0);
+    const pct   = Math.min(100, total);
+    const grade = pct >= 85 ? { label:'Excellent — Sovereign Grade', color:'var(--green)', sub:'Maximum credential security. All major verification methods active.' }
+                : pct >= 65 ? { label:'Strong', color:'var(--cyan)', sub:'Good coverage. Consider adding biometric for sovereign grade.' }
+                : pct >= 40 ? { label:'Fair', color:'var(--gold)', sub:'Add passkey and biometric to significantly strengthen your identity.' }
+                :              { label:'Weak', color:'var(--red)', sub:'Activate more verification methods to secure your identity.' };
+
+    document.getElementById('scoreVal').textContent   = pct;
+    document.getElementById('scoreGrade').textContent = grade.label;
+    document.getElementById('scoreGrade').style.color = grade.color;
+    document.getElementById('scoreSub').textContent   = grade.sub;
+    document.getElementById('scoreBarFill').style.width  = pct + '%';
+    document.getElementById('scoreBarFill').style.background = grade.color;
+
+    const circ = 188.5;
+    const offset = circ - (circ * pct / 100);
+    const ring = document.getElementById('scoreRingFill');
+    ring.style.strokeDashoffset = offset;
+    ring.style.stroke = grade.color;
+
+    const methods = VM_METHODS.filter(m => _active.has(m.id)).length;
+    document.getElementById('statMethods').textContent    = methods;
+    document.getElementById('statCredentials').textContent = methods + 2;
+  }
+
+  // ── GOD MODE F2 — SEND BY NAME ──
+  function setSend(val) { document.getElementById('sendInput').value = val; }
+
+  function runResolve() {
+    const raw = document.getElementById('sendInput').value.trim();
+    if (!raw) { showToast('Enter a name, phone, or email'); return; }
+
+    const resolveEl = document.getElementById('sendResolve');
+    const resultEl  = document.getElementById('sendResult');
+    resolveEl.classList.add('show');
+    resultEl.classList.remove('show');
+
+    // Detect input type
+    let resolvedName, resolvedAddr;
+    if (raw.includes('@')) {
+      resolvedName = raw.split('@')[0] + '.IN$DEX';
+      resolvedAddr = '7xKp…' + Math.random().toString(36).slice(-4).toUpperCase();
+    } else if (raw.startsWith('+') || /^\d/.test(raw)) {
+      resolvedName = 'cousin.IN$DEX';
+      resolvedAddr = '9mBz…' + Math.random().toString(36).slice(-4).toUpperCase();
+    } else {
+      resolvedName = raw.includes('.IN$DEX') ? raw : raw + '.IN$DEX';
+      resolvedAddr = '3pRq…' + Math.random().toString(36).slice(-4).toUpperCase();
+    }
+
+    document.getElementById('resolvedName').textContent = resolvedName;
+
+    const steps = [
+      { dot:'rd1', val:'rv1', valText:'IN$DEX Resolver v1', delay:400 },
+      { dot:'rd2', val:'rv2', valText:resolvedName, delay:900 },
+      { dot:'rd3', val:'rv3', valText:resolvedAddr, delay:1500 },
+      { dot:'rd4', val:'rv4', valText:'✓ 400ms', delay:2000 },
+    ];
+
+    steps.forEach((s, i) => {
+      setTimeout(() => {
+        if (i > 0) {
+          document.getElementById(steps[i-1].dot).className = 'resolve-dot done';
+        }
+        document.getElementById(s.dot).className = 'resolve-dot active';
+        document.getElementById(s.val).textContent = '';
+      }, s.delay - 200);
+
+      setTimeout(() => {
+        document.getElementById(s.dot).className = 'resolve-dot done';
+        document.getElementById(s.val).textContent = s.valText;
+      }, s.delay);
+    });
+
+    setTimeout(() => {
+      resultEl.classList.add('show');
+      document.getElementById('sendResultDetail').textContent =
+        raw + ' → ' + resolvedName + ' → ' + resolvedAddr + ' (Solana) — Ready in 400ms. No address copied. No error possible.';
+      showToast('✓ Resolved — ' + resolvedName);
+    }, 2200);
+  }
+
+  // ── GOD MODE F3 — GUARDIAN RECOVERY ──
+  const GUARDIANS = [
+    { name:'Maria Henry',   loc:'Melbourne, AU', status:'confirmed', emoji:'👩', color:'rgba(0,229,160,0.15)' },
+    { name:'James Taufa',   loc:'Tonga',         status:'confirmed', emoji:'🧑', color:'rgba(0,212,255,0.12)' },
+    { name:'Sina Fono',     loc:'Auckland, NZ',  status:'confirmed', emoji:'👩', color:'rgba(139,63,232,0.15)' },
+    { name:'Rev. Thomas K.',loc:'Cook Islands',  status:'pending',   emoji:'👴', color:'rgba(255,184,0,0.12)'  },
+    { name:'Add Guardian',  loc:'',              status:'add',       emoji:'➕', color:'rgba(255,255,255,0.04)' },
+  ];
+
+  function renderGuardians() {
+    const grid = document.getElementById('guardianGrid');
+    grid.innerHTML = GUARDIANS.map((g, i) => {
+      if (g.status === 'add') return `
+        <div class="guardian-item add" onclick="showToast('Add a trusted guardian to strengthen recovery')">
+          <div style="font-size:13px;color:var(--muted);">+ Add guardian</div>
+        </div>`;
+      return `
+        <div class="guardian-item fade-in" style="animation-delay:${i * 0.06}s">
+          <div class="guardian-avatar" style="background:${g.color}">${g.emoji}</div>
+          <div class="guardian-body">
+            <div class="guardian-name">${g.name}</div>
+            <div class="guardian-meta">${g.loc}</div>
+          </div>
+          <div class="guardian-status ${g.status}">${g.status === 'confirmed' ? '✓ Confirmed' : '⏳ Pending'}</div>
+        </div>`;
+    }).join('');
+
+    // Threshold dots
+    const confirmed = GUARDIANS.filter(g => g.status === 'confirmed').length;
+    const needed    = 3;
+    const total     = 5;
+    const dots = document.getElementById('thresholdDots');
+    dots.innerHTML = Array.from({ length: total }, (_, i) =>
+      `<div class="th-dot ${i < confirmed ? 'filled' : i < needed ? 'needed' : ''}">${i < confirmed ? '✓' : i < needed ? '?' : ''}</div>`
+    ).join('');
+    document.getElementById('thresholdText').textContent = needed + ' of ' + total + ' guardians required · ' + confirmed + ' confirmed';
+  }
+
+  // ── GOD MODE F4 — ZK PROOF ──
+  const ZK_DATA = [
+    { icon:'🎂', label:'Age',           reveal:'12 March 1973',          prove:'✓ Over 18 — ZK Verified' },
+    { icon:'🌏', label:'Country',       reveal:'Melbourne, Victoria, AU', prove:'✓ Australian Resident — ZK Verified' },
+    { icon:'🏪', label:'Merchant status',reveal:'IN$DEX Verified Merchant — since 2024', prove:'✓ Verified Merchant — ZK Verified' },
+    { icon:'💰', label:'Income range',  reveal:'INDX 820/month avg',      prove:'✓ Income ≥ INDX 500/month — ZK Verified' },
+    { icon:'📱', label:'Phone number',  reveal:'+61 412 345 678',         prove:'✓ Phone verified — number not shared' },
+    { icon:'🆔', label:'Government ID', reveal:'DL: VIC 012345678',       prove:'✓ Government ID verified — ID not shared' },
+  ];
+
+  function renderZKRows() {
+    const rows = document.getElementById('zkRows');
+    rows.innerHTML = ZK_DATA.map(z => `
+      <div class="zk-row">
+        <div class="zk-row-icon">${z.icon}</div>
+        <div class="zk-row-label">${z.label}</div>
+        <div class="zk-row-val ${_zkMode ? 'proven' : 'revealed'}" id="zkval-${z.label.replace(/\s/g,'')}">${_zkMode ? z.prove : z.reveal}</div>
+      </div>
+    `).join('');
+    document.getElementById('zkModeLabel').textContent  = _zkMode
+      ? '✓ ZK Proof Mode — proving facts without revealing data'
+      : '⚠ Raw Reveal Mode — actual data exposed';
+    document.getElementById('zkModeLabel').className = 'zk-mode-label ' + (_zkMode ? 'prove' : 'reveal');
+    document.getElementById('zkNote').textContent = _zkMode
+      ? 'Citizens prove attributes. Institutions confirm the proof. No data custody changes hands.'
+      : 'In this mode your actual data would be shared with the institution. ZK Proof Mode protects your privacy.';
+    document.getElementById('zkToggleLabel').textContent = _zkMode ? 'ZK Proof' : 'Reveal';
+    document.getElementById('zkToggle').classList.toggle('on', _zkMode);
+  }
+
+  function toggleZK() {
+    _zkMode = !_zkMode;
+    renderZKRows();
+    showToast(_zkMode ? '✓ ZK Proof Mode — data protected' : '⚠ Raw Reveal Mode — data exposed');
+  }
+
+  // ── DOCTRINE ──
+  const DOCTRINE = [
+    'Your name on the IN$DEX civilization. No bank. No government. No carrier. No one can take it.',
+    'The citizen does not have a phone number linked to a bank. The citizen has yourname.IN$DEX, and their phone number is one of the keys to it.',
+    'Every credential is a different door into the same sovereign house. The house is owned by the citizen.',
+    'KYC-once. Use everywhere. Prove facts. Reveal nothing.',
+    'IN$DEX does not only store credentials. IN$DEX issues credentials for the citizens every other system has refused.',
+    'No memorised keys. No central server. No single point of failure. Just your name — and the keys you choose to carry.',
+    'For 1.4 billion unbanked citizens, yourname.IN$DEX is the first proof of financial existence they will ever hold.',
+  ];
+
+  function renderDoctrine() {
+    document.getElementById('doctrineList').innerHTML = DOCTRINE.map(d =>
+      `<div class="doc-line">${d}</div>`
+    ).join('');
+  }
+
+  // ── INIT ──
+  window.addEventListener('DOMContentLoaded', () => {
+    initIdCard();
+    renderVmStack();
+    renderGuardians();
+    renderZKRows();
+    renderDoctrine();
+
+    document.getElementById('sendInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') runResolve();
+    });
+    buildLoginSteps();
+    renderCredLifecycle();
+    renderAgentGrid();
+    renderSybilResistance();
+  });
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

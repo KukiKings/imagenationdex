@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>IN$DEX Flywheel Automation Engine</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+    --black:#090A10; --green:#00E5A0; --gold:#FFB800;
+    --red:#FF4D6D; --surface:#12141F; --surface2:#1A1D2E;
+    --surface3:#22263A; --muted:#6B7280; --text:#E8EAF0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',system-ui,sans-serif;min-height:100vh;overflow-x:hidden;}
+
+  /* ── HEADER ── */
+  .screen-header{background:var(--surface);border-bottom:1px solid var(--surface3);padding:16px 20px;}
+  .screen-eyebrow{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--purple);margin-bottom:4px;}
+  .screen-title{font-size:22px;font-weight:800;}
+  .screen-sub{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5;}
+  .live-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(0,229,160,.12);border:1px solid rgba(0,229,160,.3);border-radius:8px;padding:3px 10px;font-size:11px;color:var(--green);font-weight:600;margin-top:8px;}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+  /* ── TABS ── */
+  .nav-tabs{display:flex;border-bottom:1px solid var(--surface3);background:var(--surface);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .nav-tabs::-webkit-scrollbar{display:none;}
+  .nav-tab{flex-shrink:0;padding:12px 16px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s;}
+  .nav-tab.active{color:var(--cyan);border-bottom-color:var(--cyan);}
+  .tab-content{display:none;padding:16px 20px 100px;}
+  .tab-content.active{display:block;}
+  .sect-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;margin-top:20px;}
+  .sect-label:first-child{margin-top:0;}
+
+  /* ── GM1: REVENUE EVENT LOGGER ── */
+  .event-totals{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+  .event-total-card{background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:12px;text-align:center;}
+  .event-total-val{font-size:20px;font-weight:800;line-height:1.1;}
+  .event-total-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:3px;}
+
+  .event-add-row{display:flex;gap:8px;margin-bottom:12px;}
+  .event-source-select{flex:1;background:var(--surface2);border:1.5px solid var(--surface3);border-radius:10px;color:var(--text);font-size:13px;padding:9px 12px;}
+  .event-amount-input{width:90px;background:var(--surface2);border:1.5px solid var(--surface3);border-radius:10px;color:var(--text);font-size:13px;padding:9px 12px;font-weight:600;}
+  .event-amount-input:focus,.event-source-select:focus{outline:none;border-color:rgba(0,212,255,.4);}
+  .event-log-btn{background:var(--cyan);color:#000;font-size:13px;font-weight:800;border:none;border-radius:10px;padding:9px 16px;cursor:pointer;flex-shrink:0;}
+  .event-log-btn:active{opacity:.85;}
+
+  .event-feed{display:flex;flex-direction:column;gap:8px;}
+  .event-entry{background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:12px;animation:slideIn .3s ease;}
+  @keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+  .event-entry-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+  .event-source-badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;}
+  .event-time{font-size:10px;color:var(--muted);}
+  .event-entry-splits{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+  .event-split{background:var(--surface3);border-radius:8px;padding:6px 8px;text-align:center;}
+  .event-split-amt{font-size:12px;font-weight:700;}
+  .event-split-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;margin-top:1px;}
+  .event-gross{font-size:13px;font-weight:700;color:var(--text);}
+  .event-covenant-tag{font-size:10px;color:var(--muted);margin-top:4px;}
+  .event-clear-btn{width:100%;background:transparent;border:1px solid var(--surface3);border-radius:10px;color:var(--muted);font-size:12px;padding:10px;cursor:pointer;margin-top:8px;}
+
+  /* ── GM2: AUTOMATION RULE BUILDER ── */
+  .rule-summary{display:flex;justify-content:space-between;background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:12px 16px;margin-bottom:14px;}
+  .rule-sum-item{text-align:center;}
+  .rule-sum-num{font-size:22px;font-weight:800;}
+  .rule-sum-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+
+  .rule-builder{background:var(--surface2);border:1.5px solid var(--surface3);border-radius:14px;padding:14px;margin-bottom:14px;}
+  .rule-builder-title{font-size:12px;font-weight:700;color:var(--cyan);margin-bottom:12px;}
+  .rule-field-row{display:flex;flex-direction:column;gap:5px;margin-bottom:10px;}
+  .rule-field-lbl{font-size:11px;color:var(--muted);}
+  .rule-select,.rule-input{background:var(--surface3);border:1px solid rgba(255,255,255,.08);border-radius:9px;color:var(--text);font-size:13px;padding:9px 12px;width:100%;}
+  .rule-select:focus,.rule-input:focus{outline:none;border-color:rgba(0,212,255,.35);}
+  .rule-row-2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+  .rule-add-btn{width:100%;background:linear-gradient(90deg,var(--blue),var(--purple));border:none;border-radius:11px;color:#fff;font-size:13px;font-weight:700;padding:12px;cursor:pointer;}
+  .rule-add-btn:active{opacity:.85;}
+
+  .rule-list{display:flex;flex-direction:column;gap:8px;}
+  .rule-item{background:var(--surface2);border:1.5px solid var(--surface3);border-radius:13px;padding:13px;}
+  .rule-item-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .rule-item-name{font-size:13px;font-weight:700;color:var(--text);}
+  .rule-status-btn{padding:4px 12px;border-radius:7px;font-size:10px;font-weight:700;border:none;cursor:pointer;}
+  .rule-status-btn.armed{background:rgba(0,229,160,.15);color:var(--green);}
+  .rule-status-btn.triggered{background:rgba(255,184,0,.15);color:var(--gold);}
+  .rule-status-btn.paused{background:rgba(107,114,128,.15);color:var(--muted);}
+  .rule-item-desc{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:8px;}
+  .rule-item-actions{display:flex;gap:6px;}
+  .rule-action-btn{flex:1;background:var(--surface3);border:1px solid rgba(255,255,255,.06);border-radius:8px;color:var(--muted);font-size:11px;font-weight:600;padding:7px;cursor:pointer;}
+  .rule-action-btn.delete{color:var(--red);}
+
+  /* ── GM3: SIINDEX AGENT MONITOR ── */
+  .agent-header{background:linear-gradient(135deg,rgba(139,63,232,.2),rgba(43,53,216,.15));border:1px solid rgba(139,63,232,.4);border-radius:16px;padding:16px;margin-bottom:14px;text-align:center;}
+  .agent-avatar{font-size:36px;margin-bottom:8px;}
+  .agent-name{font-size:16px;font-weight:800;color:var(--text);}
+  .agent-status-line{font-size:12px;color:var(--purple);margin-top:4px;}
+  .agent-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px;}
+  .agent-stat{background:rgba(0,0,0,.2);border-radius:10px;padding:10px;text-align:center;}
+  .agent-stat-val{font-size:18px;font-weight:800;color:var(--cyan);}
+  .agent-stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;margin-top:2px;}
+
+  .watch-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+  .watch-card{background:var(--surface2);border:1.5px solid var(--surface3);border-radius:13px;padding:12px;}
+  .watch-icon{font-size:20px;margin-bottom:6px;}
+  .watch-metric{font-size:11px;color:var(--muted);margin-bottom:3px;}
+  .watch-value{font-size:16px;font-weight:800;}
+  .watch-status{font-size:10px;margin-top:4px;font-weight:600;}
+
+  .action-log-item{display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--surface2);border-radius:10px;margin-bottom:6px;}
+  .action-log-icon{font-size:16px;flex-shrink:0;}
+  .action-log-text{font-size:12px;color:var(--text);line-height:1.4;flex:1;}
+  .action-log-time{font-size:10px;color:var(--muted);flex-shrink:0;}
+
+  .circuit-breaker-item{display:flex;align-items:center;gap:10px;background:rgba(255,77,109,.06);border:1px solid rgba(255,77,109,.2);border-radius:10px;padding:11px;margin-bottom:6px;}
+  .cb-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .cb-dot.safe{background:var(--green);}
+  .cb-dot.warn{background:var(--gold);}
+  .cb-dot.trip{background:var(--red);animation:pulse 1s infinite;}
+  .cb-text{font-size:12px;color:var(--text);flex:1;line-height:1.4;}
+  .cb-status{font-size:10px;font-weight:700;flex-shrink:0;}
+
+  /* ── GM4: ONCHAIN INFRASTRUCTURE PLANNER ── */
+  .infra-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+  .infra-sum{background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:12px;text-align:center;}
+  .infra-sum-num{font-size:24px;font-weight:800;}
+  .infra-sum-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;}
+
+  .infra-card{background:var(--surface2);border:1.5px solid var(--surface3);border-radius:14px;padding:14px;margin-bottom:10px;cursor:pointer;transition:border-color .2s;}
+  .infra-card.live{border-color:rgba(0,229,160,.3);}
+  .infra-card.deploy{border-color:rgba(255,184,0,.3);}
+  .infra-card.build{border-color:rgba(107,114,128,.2);}
+  .infra-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+  .infra-name{font-size:13px;font-weight:800;color:var(--text);}
+  .infra-stage{font-size:10px;padding:3px 10px;border-radius:6px;font-weight:700;}
+  .infra-stage.live{background:rgba(0,229,160,.15);color:var(--green);}
+  .infra-stage.deploy{background:rgba(255,184,0,.12);color:var(--gold);}
+  .infra-stage.build{background:rgba(107,114,128,.12);color:var(--muted);}
+  .infra-tool{font-size:11px;color:var(--cyan);font-weight:600;margin-bottom:4px;}
+  .infra-desc{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:8px;}
+  .infra-checklist{display:flex;flex-direction:column;gap:4px;}
+  .infra-check-item{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);}
+  .infra-check-item .check-done{color:var(--green);}
+  .infra-check-item .check-todo{color:var(--surface3);}
+
+  /* ── TOAST ── */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;color:var(--text);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:99;white-space:nowrap;pointer-events:none;}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="screen-header">
+  <div class="screen-eyebrow">IN$DEX Economic Layer</div>
+  <div class="screen-title">Flywheel Automation Engine</div>
+  <div class="screen-sub">SIINDEX monitors revenue, applies covenants, routes liquidity — automatically.</div>
+  <div class="live-badge"><div class="live-dot"></div>SIINDEX MONITORING</div>
+</div>
+
+<!-- TABS -->
+<div class="nav-tabs">
+  <div class="nav-tab active" onclick="switchTab('events')">📡 Events</div>
+  <div class="nav-tab" onclick="switchTab('rules')">⚙️ Rules</div>
+  <div class="nav-tab" onclick="switchTab('agent')">🤖 SIINDEX</div>
+  <div class="nav-tab" onclick="switchTab('infra')">🔗 Onchain</div>
+</div>
+
+<!-- TAB: EVENTS -->
+<div class="tab-content active" id="tab-events">
+  <div class="event-totals">
+    <div class="event-total-card">
+      <div class="event-total-val" style="color:var(--cyan);" id="evTotalRevenue">$0</div>
+      <div class="event-total-lbl">Total Revenue</div>
+    </div>
+    <div class="event-total-card">
+      <div class="event-total-val" style="color:var(--green);" id="evTotalLP">$0</div>
+      <div class="event-total-lbl">To LP</div>
+    </div>
+    <div class="event-total-card">
+      <div class="event-total-val" style="color:var(--gold);" id="evTotalVault">$0</div>
+      <div class="event-total-lbl">To Vault</div>
+    </div>
+  </div>
+
+  <div class="sect-label">Log Revenue Event</div>
+  <div class="event-add-row">
+    <select class="event-source-select" id="evSource">
+      <option value="marketplace">🛒 Marketplace Sale (2%)</option>
+      <option value="siindex">🤖 SIINDEX Credits</option>
+      <option value="mission">🚪 Mission Room Sub</option>
+      <option value="agent">📜 Agent License</option>
+      <option value="partner">🌏 Partner Fee</option>
+      <option value="nft">🪙 NFT Utility Sale</option>
+      <option value="grant">🌱 Grant / Impact Fee</option>
+      <option value="cultural">🎨 Cultural Licensing</option>
+    </select>
+    <input class="event-amount-input" id="evAmount" type="number" placeholder="$">
+    <button class="event-log-btn" onclick="logEvent()">Log</button>
+  </div>
+
+  <div class="sect-label">Live Revenue Feed</div>
+  <div class="event-feed" id="eventFeed"></div>
+  <button class="event-clear-btn" onclick="clearEvents()">Clear Event Log</button>
+</div>
+
+<!-- TAB: RULES -->
+<div class="tab-content" id="tab-rules">
+  <div class="rule-summary" id="ruleSummary">
+    <div class="rule-sum-item"><div class="rule-sum-num" style="color:var(--green);" id="ruleArmedCount">0</div><div class="rule-sum-lbl">Armed</div></div>
+    <div class="rule-sum-item"><div class="rule-sum-num" style="color:var(--gold);" id="ruleTriggeredCount">0</div><div class="rule-sum-lbl">Triggered</div></div>
+    <div class="rule-sum-item"><div class="rule-sum-num" style="color:var(--muted);" id="rulePausedCount">0</div><div class="rule-sum-lbl">Paused</div></div>
+  </div>
+
+  <div class="rule-builder">
+    <div class="rule-builder-title">＋ Add Automation Rule</div>
+    <div class="rule-field-row">
+      <div class="rule-field-lbl">Condition — what SIINDEX watches</div>
+      <select class="rule-select" id="ruleCondition">
+        <option value="lp_below">LP balance drops below threshold</option>
+        <option value="revenue_above">Monthly revenue exceeds threshold</option>
+        <option value="stream_inactive">Revenue stream inactive for days</option>
+        <option value="compliance_red">Compliance system shows RED status</option>
+        <option value="pool_pct_below">LP pool funding % drops below threshold</option>
+        <option value="founders_below">Founders pool total below threshold</option>
+      </select>
+    </div>
+    <div class="rule-row-2">
+      <div class="rule-field-row">
+        <div class="rule-field-lbl">Threshold value</div>
+        <input class="rule-input" id="ruleThreshold" placeholder="e.g. 50000">
+      </div>
+      <div class="rule-field-row">
+        <div class="rule-field-lbl">Covenant to apply</div>
+        <select class="rule-select" id="ruleCovenant">
+          <option value="standard">Standard 30/30/30/10</option>
+          <option value="enterprise">Enterprise 40/30/20/10</option>
+          <option value="cultural">Cultural 70cr/10/10/10</option>
+        </select>
+      </div>
+    </div>
+    <div class="rule-field-row">
+      <div class="rule-field-lbl">Action — what SIINDEX does when triggered</div>
+      <select class="rule-select" id="ruleAction">
+        <option value="initiate_lp_topup">Initiate LP top-up from treasury</option>
+        <option value="run_covenant_split">Run covenant revenue split</option>
+        <option value="alert_team">Alert team via Comms Log</option>
+        <option value="pause_onboarding">Pause new investor onboarding</option>
+        <option value="generate_memo">Generate routing memo for approval</option>
+        <option value="flag_review">Flag for manual SIINDEX review</option>
+      </select>
+    </div>
+    <button class="rule-add-btn" onclick="addRule()">Add Rule</button>
+  </div>
+
+  <div class="sect-label">Active Rules</div>
+  <div class="rule-list" id="ruleList"></div>
+</div>
+
+<!-- TAB: SIINDEX AGENT MONITOR -->
+<div class="tab-content" id="tab-agent">
+  <div class="agent-header">
+    <div class="agent-avatar">🧠</div>
+    <div class="agent-name">SIINDEX — Flywheel Agent</div>
+    <div class="agent-status-line">Monitoring · Routing · Protecting · Optimising</div>
+    <div class="agent-stats">
+      <div class="agent-stat"><div class="agent-stat-val" id="agentEventsWatched">0</div><div class="agent-stat-lbl">Events Watched</div></div>
+      <div class="agent-stat"><div class="agent-stat-val" id="agentRulesArmed">0</div><div class="agent-stat-lbl">Rules Armed</div></div>
+      <div class="agent-stat"><div class="agent-stat-val" id="agentActionsLog">0</div><div class="agent-stat-lbl">Auto-Actions</div></div>
+    </div>
+  </div>
+
+  <div class="sect-label">What SIINDEX Is Watching</div>
+  <div class="watch-grid" id="watchGrid"></div>
+
+  <div class="sect-label">Recent SIINDEX Auto-Actions</div>
+  <div id="agentActionLog"></div>
+
+  <div class="sect-label">Circuit Breakers</div>
+  <div id="circuitBreakers"></div>
+</div>
+
+<!-- TAB: ONCHAIN INFRASTRUCTURE -->
+<div class="tab-content" id="tab-infra">
+  <div class="infra-summary" id="infraSummary">
+    <div class="infra-sum"><div class="infra-sum-num" style="color:var(--green);">0</div><div class="infra-sum-lbl">Live</div></div>
+    <div class="infra-sum"><div class="infra-sum-num" style="color:var(--gold);">0</div><div class="infra-sum-lbl">Deploy Ready</div></div>
+    <div class="infra-sum"><div class="infra-sum-num" style="color:var(--muted);">0</div><div class="infra-sum-lbl">To Build</div></div>
+  </div>
+  <div id="infraCards"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONSTANTS ──
+const INDX_PRICE_USD = 0.24;
+const POOL_TARGET = 100000;
+
+const COVENANTS = {
+  standard:   { lp:.30, ops:.30, vault:.30, sec:.10, name:'Standard 30/30/30/10' },
+  enterprise: { lp:.40, ops:.30, vault:.20, sec:.10, name:'Enterprise 40/30/20/10' },
+  cultural:   { lp:.10, ops:.10, vault:.10, creator:.70, sec:0, name:'Cultural 70cr/10/10/10' },
+};
+
+const SOURCE_META = {
+  marketplace: { label:'Marketplace Sale', color:'rgba(0,212,255,.15)', textColor:'var(--cyan)', covenant:'standard', feeRate:.02 },
+  siindex:     { label:'SIINDEX Credits', color:'rgba(139,63,232,.15)', textColor:'var(--purple)', covenant:'enterprise', feeRate:1 },
+  mission:     { label:'Mission Room Sub', color:'rgba(0,229,160,.12)', textColor:'var(--green)', covenant:'standard', feeRate:1 },
+  agent:       { label:'Agent License', color:'rgba(255,184,0,.12)', textColor:'var(--gold)', covenant:'enterprise', feeRate:1 },
+  partner:     { label:'Partner Fee', color:'rgba(43,53,216,.2)', textColor:'#7B8FFF', covenant:'standard', feeRate:1 },
+  nft:         { label:'NFT Utility Sale', color:'rgba(0,212,255,.1)', textColor:'var(--cyan)', covenant:'standard', feeRate:1 },
+  grant:       { label:'Grant / Impact', color:'rgba(0,229,160,.1)', textColor:'var(--green)', covenant:'standard', feeRate:1 },
+  cultural:    { label:'Cultural Licensing', color:'rgba(0,229,160,.08)', textColor:'var(--green)', covenant:'cultural', feeRate:1 },
+};
+
+// ── TAB NAV ──
+function switchTab(id) {
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  event.target.classList.add('active');
+  if (id==='rules') renderRules();
+  if (id==='agent') renderAgent();
+  if (id==='infra') renderInfra();
+}
+
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+function fmt(n){ return '$'+(n<1000?n.toFixed(2):(n<1000000?(n/1000).toFixed(1)+'K':(n/1000000).toFixed(2)+'M')); }
+
+// ── GM1: REVENUE EVENT LOGGER ──
+function getEvents(){ return JSON.parse(localStorage.getItem('indx_flywheel_events')||'[]'); }
+function saveEvents(ev){ localStorage.setItem('indx_flywheel_events',JSON.stringify(ev)); }
+
+function logEvent() {
+  const source = document.getElementById('evSource').value;
+  const rawAmt = parseFloat(document.getElementById('evAmount').value);
+  if (!rawAmt || rawAmt <= 0) { showToast('⚠️ Enter an amount'); return; }
+  const meta = SOURCE_META[source];
+  const revenue = source==='marketplace' ? rawAmt * meta.feeRate : rawAmt;
+  const cov = COVENANTS[meta.covenant];
+  const splits = {
+    lp: revenue * cov.lp,
+    ops: revenue * cov.ops,
+    vault: revenue * cov.vault,
+    sec: cov.creator ? revenue * cov.creator : revenue * cov.sec,
+    secLabel: cov.creator ? 'Creator' : 'Security',
+    covenant: meta.covenant,
+    covenantName: cov.name,
+  };
+  const events = getEvents();
+  events.unshift({
+    id: Date.now(),
+    source, revenue, splits,
+    grossInput: rawAmt,
+    time: new Date().toISOString(),
+    label: meta.label,
+    color: meta.color,
+    textColor: meta.textColor,
+  });
+  saveEvents(events.slice(0,100));
+  document.getElementById('evAmount').value='';
+  renderEventFeed();
+  logAgentAction('💹 Revenue event logged: '+meta.label+' — '+fmt(revenue)+' → LP '+fmt(splits.lp));
+  showToast('✅ Event logged — '+fmt(revenue)+' routed by covenant');
+}
+
+function renderEventFeed() {
+  const events = getEvents();
+  let totalRev=0, totalLP=0, totalVault=0;
+  events.forEach(e=>{ totalRev+=e.revenue; totalLP+=e.splits.lp; totalVault+=e.splits.vault; });
+  document.getElementById('evTotalRevenue').textContent = fmt(totalRev);
+  document.getElementById('evTotalLP').textContent = fmt(totalLP);
+  document.getElementById('evTotalVault').textContent = fmt(totalVault);
+  const feed = document.getElementById('eventFeed');
+  if (events.length===0){
+    feed.innerHTML='<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px;">No events logged yet. Log your first revenue event above.</div>';
+    return;
+  }
+  feed.innerHTML = events.slice(0,30).map(e=>{
+    const d=new Date(e.time);
+    const ts=d.toLocaleDateString('en-AU',{day:'numeric',month:'short'})+' '+d.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
+    return `<div class="event-entry">
+      <div class="event-entry-top">
+        <div>
+          <span class="event-source-badge" style="background:${e.color};color:${e.textColor}">${e.label}</span>
+          <div class="event-gross" style="margin-top:5px">${fmt(e.revenue)} <span style="color:var(--muted);font-size:11px;font-weight:400">protocol revenue</span></div>
+          <div class="event-covenant-tag">Covenant: ${e.splits.covenantName}</div>
+        </div>
+        <div class="event-time">${ts}</div>
+      </div>
+      <div class="event-entry-splits">
+        <div class="event-split"><div class="event-split-amt" style="color:var(--cyan)">${fmt(e.splits.lp)}</div><div class="event-split-lbl">💧 LP</div></div>
+        <div class="event-split"><div class="event-split-amt" style="color:#7B8FFF">${fmt(e.splits.ops)}</div><div class="event-split-lbl">⚙️ Ops</div></div>
+        <div class="event-split"><div class="event-split-amt" style="color:var(--gold)">${fmt(e.splits.vault)}</div><div class="event-split-lbl">🏛️ Vault</div></div>
+        <div class="event-split"><div class="event-split-amt" style="color:var(--red)">${fmt(e.splits.sec)}</div><div class="event-split-lbl">${e.splits.secLabel}</div></div>
+      </div>
+    </div>`;
+  }).join('');
+  // Update agent stats
+  document.getElementById('agentEventsWatched').textContent = events.length;
+}
+
+function clearEvents(){
+  if(!confirm('Clear all revenue events?')) return;
+  localStorage.removeItem('indx_flywheel_events');
+  renderEventFeed();
+  showToast('🗑️ Event log cleared');
+}
+
+// ── GM2: AUTOMATION RULE BUILDER ──
+const CONDITION_LABELS = {
+  lp_below: 'LP balance drops below $',
+  revenue_above: 'Monthly revenue exceeds $',
+  stream_inactive: 'Revenue stream inactive for N days',
+  compliance_red: 'Any compliance system shows RED',
+  pool_pct_below: 'LP pool funding % drops below %',
+  founders_below: 'Founders pool total drops below $',
+};
+const ACTION_LABELS = {
+  initiate_lp_topup: 'Initiate LP top-up from treasury',
+  run_covenant_split: 'Run covenant revenue split',
+  alert_team: 'Alert team via Comms Log',
+  pause_onboarding: 'Pause new investor onboarding',
+  generate_memo: 'Generate routing memo for approval',
+  flag_review: 'Flag for manual SIINDEX review',
+};
+const STATUS_CYCLE_RULE = ['armed','triggered','paused'];
+
+function getRules(){ return JSON.parse(localStorage.getItem('indx_flywheel_rules')||'[]'); }
+function saveRules(r){ localStorage.setItem('indx_flywheel_rules',JSON.stringify(r)); }
+
+function addRule(){
+  const condition = document.getElementById('ruleCondition').value;
+  const threshold = document.getElementById('ruleThreshold').value.trim();
+  const covenant  = document.getElementById('ruleCovenant').value;
+  const action    = document.getElementById('ruleAction').value;
+  if(!threshold){ showToast('⚠️ Enter a threshold value'); return; }
+  const rules = getRules();
+  rules.push({
+    id: Date.now().toString(),
+    condition, threshold, covenant, action,
+    status: 'armed',
+    created: new Date().toISOString(),
+  });
+  saveRules(rules);
+  document.getElementById('ruleThreshold').value='';
+  renderRules();
+  showToast('⚙️ Rule armed — SIINDEX is watching');
+}
+
+function renderRules(){
+  const rules = getRules();
+  let armed=0,triggered=0,paused=0;
+  rules.forEach(r=>{ if(r.status==='armed') armed++; else if(r.status==='triggered') triggered++; else paused++; });
+  document.getElementById('ruleArmedCount').textContent=armed;
+  document.getElementById('ruleTriggeredCount').textContent=triggered;
+  document.getElementById('rulePausedCount').textContent=paused;
+  document.getElementById('agentRulesArmed').textContent=armed;
+  const list=document.getElementById('ruleList');
+  if(!list) return;
+  if(rules.length===0){
+    list.innerHTML='<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px;">No rules yet. Add your first automation rule above.</div>';
+    return;
+  }
+  list.innerHTML=rules.map(r=>`
+    <div class="rule-item">
+      <div class="rule-item-header">
+        <div class="rule-item-name">If: ${CONDITION_LABELS[r.condition]||r.condition} ${r.threshold}</div>
+        <button class="rule-status-btn ${r.status}" onclick="cycleRuleStatus('${r.id}')">${r.status.toUpperCase()}</button>
+      </div>
+      <div class="rule-item-desc">→ ${ACTION_LABELS[r.action]||r.action}<br>Covenant: ${COVENANTS[r.covenant]?.name||r.covenant}</div>
+      <div class="rule-item-actions">
+        <button class="rule-action-btn" onclick="cycleRuleStatus('${r.id}')">Toggle Status</button>
+        <button class="rule-action-btn delete" onclick="deleteRule('${r.id}')">Remove</button>
+      </div>
+    </div>`).join('');
+}
+
+function cycleRuleStatus(id){
+  const rules=getRules();
+  const r=rules.find(x=>x.id===id);
+  if(!r) return;
+  const idx=STATUS_CYCLE_RULE.indexOf(r.status);
+  r.status=STATUS_CYCLE_RULE[(idx+1)%STATUS_CYCLE_RULE.length];
+  saveRules(rules);
+  renderRules();
+  showToast('Rule → '+r.status.toUpperCase());
+}
+
+function deleteRule(id){
+  const rules=getRules().filter(r=>r.id!==id);
+  saveRules(rules);
+  renderRules();
+  showToast('Rule removed');
+}
+
+// ── GM3: SIINDEX AGENT MONITOR ──
+const WATCH_ITEMS = [
+  { icon:'💧', metric:'LP Pool Funding', getValue:()=>{ const f=JSON.parse(localStorage.getItem('indx_founders_pool_members')||'[]'); const t=f.reduce((s,x)=>s+(x.amount||0),0); return fmt(t)+' / $100K'; }, getStatus:()=>{ const f=JSON.parse(localStorage.getItem('indx_founders_pool_members')||'[]'); const t=f.reduce((s,x)=>s+(x.amount||0),0); const p=t/100000; return p>=1?{text:'TARGET MET',color:'var(--green)'}:p>=.5?{text:'ON TRACK',color:'var(--gold)'}:{text:'NEEDS ATTENTION',color:'var(--red)'}; } },
+  { icon:'📡', metric:'Revenue Events (logged)', getValue:()=>{ const e=JSON.parse(localStorage.getItem('indx_flywheel_events')||'[]'); return e.length+' events'; }, getStatus:()=>{ const n=JSON.parse(localStorage.getItem('indx_flywheel_events')||'[]').length; return n>0?{text:'ACTIVE',color:'var(--green)'}:{text:'NO EVENTS YET',color:'var(--muted)'}; } },
+  { icon:'⚙️', metric:'Rules Armed', getValue:()=>{ const r=JSON.parse(localStorage.getItem('indx_flywheel_rules')||'[]'); return r.filter(x=>x.status==='armed').length+' of '+r.length; }, getStatus:()=>{ const r=JSON.parse(localStorage.getItem('indx_flywheel_rules')||'[]'); return r.length>0?{text:'MONITORING',color:'var(--green)'}:{text:'NO RULES SET',color:'var(--gold)'}; } },
+  { icon:'🏛️', metric:'AUSTRAC Compliance', getValue:()=>'Deadline: 29 Jul 2026', getStatus:()=>({text:'ACTION REQUIRED',color:'var(--red)'}) },
+  { icon:'💰', metric:'Treasury (Vault of Virja)', getValue:()=>{ const e=JSON.parse(localStorage.getItem('indx_flywheel_events')||'[]'); const t=e.reduce((s,x)=>s+(x.splits?.vault||0),0); return fmt(t)+' accumulated'; }, getStatus:()=>({text:'ACCUMULATING',color:'var(--cyan)'}) },
+  { icon:'🔗', metric:'Onchain Infra', getValue:()=>'5 components planned', getStatus:()=>({text:'IN BUILD',color:'var(--gold)'}) },
+];
+
+const CIRCUIT_BREAKERS = [
+  { condition:'LP pool balance drops below $10,000', status:'safe', statusText:'SAFE' },
+  { condition:'AUSTRAC compliance status is unconfirmed after 29 Jul 2026', status:'trip', statusText:'TRIGGERED' },
+  { condition:'Two or more revenue streams show no activity for 30+ days', status:'safe', statusText:'SAFE' },
+  { condition:'Treasury routing memo unexecuted for 7+ days', status:'warn', statusText:'WATCH' },
+  { condition:'Agent license deployment without signed legal review', status:'safe', statusText:'SAFE' },
+  { condition:'Cultural licensing revenue routed before creator share confirmed', status:'safe', statusText:'SAFE' },
+];
+
+function logAgentAction(text){
+  const log=JSON.parse(localStorage.getItem('indx_flywheel_agentlog')||'[]');
+  log.unshift({ text, time:new Date().toISOString() });
+  localStorage.setItem('indx_flywheel_agentlog', JSON.stringify(log.slice(0,20)));
+}
+
+function renderAgent(){
+  const grid=document.getElementById('watchGrid');
+  grid.innerHTML=WATCH_ITEMS.map(w=>{
+    const val=w.getValue(); const st=w.getStatus();
+    return `<div class="watch-card">
+      <div class="watch-icon">${w.icon}</div>
+      <div class="watch-metric">${w.metric}</div>
+      <div class="watch-value">${val}</div>
+      <div class="watch-status" style="color:${st.color}">● ${st.text}</div>
+    </div>`;
+  }).join('');
+
+  const actionLog=JSON.parse(localStorage.getItem('indx_flywheel_agentlog')||'[]');
+  document.getElementById('agentActionsLog').textContent=actionLog.length;
+  const logEl=document.getElementById('agentActionLog');
+  if(actionLog.length===0){
+    logEl.innerHTML='<div style="text-align:center;color:var(--muted);padding:16px;font-size:13px;">No auto-actions yet. Log revenue events to start the flywheel.</div>';
+  } else {
+    logEl.innerHTML=actionLog.map(a=>{
+      const d=new Date(a.time);
+      const ts=d.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
+      return `<div class="action-log-item">
+        <div class="action-log-icon">⚡</div>
+        <div class="action-log-text">${a.text}</div>
+        <div class="action-log-time">${ts}</div>
+      </div>`;
+    }).join('');
+  }
+
+  const cbEl=document.getElementById('circuitBreakers');
+  cbEl.innerHTML=CIRCUIT_BREAKERS.map(cb=>`
+    <div class="circuit-breaker-item">
+      <div class="cb-dot ${cb.status}"></div>
+      <div class="cb-text">${cb.condition}</div>
+      <div class="cb-status" style="color:${cb.status==='safe'?'var(--green)':cb.status==='warn'?'var(--gold)':'var(--red)'}">${cb.statusText}</div>
+    </div>`).join('');
+}
+
+// ── GM4: ONCHAIN INFRASTRUCTURE PLANNER ──
+const INFRA_PIECES = [
+  {
+    id:'raydium-cpmm', name:'Raydium CPMM Pool', stage:'deploy',
+    tool:'Raydium — raydium.io',
+    desc:'INDX/USDC liquidity pool on Raydium CPMM. Genesis price $0.24. LP tokens burned at launch. protocol_owner and fund_owner addresses collect accumulated pool fees for protocol treasury.',
+    checks:[
+      {done:true, text:'Pool type selected: CPMM (Constant Product)'},
+      {done:true, text:'Token pair defined: INDX / USDC'},
+      {done:true, text:'Genesis price set: $0.24 per INDX'},
+      {done:false, text:'pool_owner wallet address configured'},
+      {done:false, text:'LP token burn transaction prepared'},
+      {done:false, text:'Pool creation fee (~0.15 SOL) funded'},
+    ]
+  },
+  {
+    id:'solsplits', name:'SolSplits Revenue Router', stage:'build',
+    tool:'SolSplits — solsplits.xyz',
+    desc:'Composable on-chain revenue splitting. Each Split is a payable smart contract receiving SOL/SPL tokens and routing to multiple destinations. Implements 30/30/30/10 (Standard) and 40/30/20/10 (Enterprise) covenant splits automatically.',
+    checks:[
+      {done:false, text:'Standard Covenant splitter contract deployed'},
+      {done:false, text:'Enterprise Covenant splitter contract deployed'},
+      {done:false, text:'Destination wallets defined (LP / Ops / Vault / Security)'},
+      {done:false, text:'Fee routing tested on devnet'},
+      {done:false, text:'Splitter addresses added to 2% marketplace fee flow'},
+    ]
+  },
+  {
+    id:'token2022', name:'Token-2022 Transfer Hook', stage:'build',
+    tool:'Solana Token Extensions Program',
+    desc:'Token-2022 transfer hook automatically routes a percentage of every INDX token transfer through a custom program. Enables on-the-fly fee capture and covenant routing without manual intervention. Supports soulbound (non-transferable) NFTs for Merchant Trust Credentials.',
+    checks:[
+      {done:false, text:'Token-2022 program selected over legacy SPL Token'},
+      {done:false, text:'Transfer hook program written and audited'},
+      {done:false, text:'Transfer fee rate set per covenant'},
+      {done:false, text:'Soulbound flag configured for Merchant Trust NFTs'},
+      {done:false, text:'Hook tested on devnet'},
+    ]
+  },
+  {
+    id:'streamflow', name:'Streamflow Distribution Engine', stage:'build',
+    tool:'Streamflow Finance — streamflow.finance',
+    desc:'Solana-native token operations platform. Handles: Vault of Virja periodic distributions, founder pool payouts, creator/cultural revenue share, recurring partner fee subscriptions. Audited smart contracts. Full token lifecycle management.',
+    checks:[
+      {done:false, text:'Vault of Virja distribution schedule configured'},
+      {done:false, text:'Founder pool monthly payout streams created'},
+      {done:false, text:'Cultural revenue creator share automation set up'},
+      {done:false, text:'Partner subscription recurring payments tested'},
+    ]
+  },
+  {
+    id:'siindex-agent', name:'SIINDEX Flywheel Agent (Onchain)', stage:'build',
+    tool:'SIINDEX PQSI — Internal Agent System',
+    desc:'SIINDEX monitors all revenue events, applies covenant routing rules, triggers LP top-ups when thresholds are breached, alerts team when circuit breakers trip, generates routing memos, and maintains the full audit log. Operates 24/7 with human approval required before any funds move.',
+    checks:[
+      {done:true, text:'Agent monitoring logic defined'},
+      {done:true, text:'Automation rules system built (Rules tab)'},
+      {done:true, text:'Circuit breakers defined'},
+      {done:false, text:'Onchain wallet authority configured (defensive only)'},
+      {done:false, text:'Alert webhook to Team Portal Comms Log connected'},
+      {done:false, text:'Human-in-the-loop approval gate for fund movements'},
+    ]
+  },
+];
+
+function renderInfra(){
+  let live=0,deploy=0,build=0;
+  INFRA_PIECES.forEach(p=>{ if(p.stage==='live')live++; else if(p.stage==='deploy')deploy++; else build++; });
+  const sum=document.getElementById('infraSummary');
+  sum.innerHTML=`
+    <div class="infra-sum"><div class="infra-sum-num" style="color:var(--green)">${live}</div><div class="infra-sum-lbl">Live</div></div>
+    <div class="infra-sum"><div class="infra-sum-num" style="color:var(--gold)">${deploy}</div><div class="infra-sum-lbl">Deploy Ready</div></div>
+    <div class="infra-sum"><div class="infra-sum-num" style="color:var(--muted)">${build}</div><div class="infra-sum-lbl">To Build</div></div>`;
+  document.getElementById('infraCards').innerHTML=INFRA_PIECES.map(p=>{
+    const doneCount=p.checks.filter(c=>c.done).length;
+    const pct=Math.round(doneCount/p.checks.length*100);
+    return `<div class="infra-card ${p.stage}">
+      <div class="infra-card-header">
+        <div class="infra-name">${p.name}</div>
+        <div class="infra-stage ${p.stage}">${p.stage.toUpperCase()}</div>
+      </div>
+      <div class="infra-tool">🔧 ${p.tool}</div>
+      <div class="infra-desc">${p.desc}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">${doneCount}/${p.checks.length} steps complete (${pct}%)</div>
+      <div class="infra-checklist">${p.checks.map(c=>`
+        <div class="infra-check-item">
+          <span class="${c.done?'check-done':'check-todo'}">${c.done?'✓':'○'}</span>
+          <span style="${c.done?'opacity:.5':''}">${c.text}</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── INIT ──
+document.addEventListener('DOMContentLoaded',()=>{
+  renderEventFeed();
+  renderRules();
+  renderAgent();
+  renderInfra();
+});
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

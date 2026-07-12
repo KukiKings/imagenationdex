@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SIINDEX Orchestration Layer — IN$DEX</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cyan:    #00D4FF;
+    --blue:    #2B35D8;
+    --purple:  #8B3FE8;
+    --black:   #090A10;
+    --green:   #00E5A0;
+    --gold:    #FFB800;
+    --red:     #FF4D6D;
+    --surface: #12141F;
+    --surface2:#1A1D2E;
+    --surface3:#22263A;
+    --text:    #EAEAEA;
+    --text2:   #A0A8B8;
+    --muted:   #5A6070;
+    --border:  rgba(255,255,255,0.06);
+    --border2: rgba(255,255,255,0.1);
+  }
+
+  body { background: var(--black); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif; min-height: 100vh; overflow-x: hidden; }
+
+  .shell { max-width: 430px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; position: relative; }
+
+  /* ── AMBIENT CANVAS ── */
+  #orchCanvas { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; opacity: 0.22; }
+
+  /* ── NAV ── */
+  .top-nav { position: sticky; top: 0; z-index: 100; background: rgba(9,10,16,0.92); backdrop-filter: blur(14px); padding: 14px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); }
+  .nav-back { width: 34px; height: 34px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; flex-shrink: 0; }
+  .nav-title { flex: 1; font-size: 15px; font-weight: 800; color: var(--text); }
+  .nav-status { font-size: 11px; font-weight: 700; color: var(--cyan); display: flex; align-items: center; gap: 5px; }
+  .nav-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 1.5s infinite; }
+
+  /* ── SCROLL ── */
+  .scroll-body { flex: 1; overflow-y: auto; padding: 0 0 120px; position: relative; z-index: 1; }
+
+  /* ── HERO ── */
+  .hero { padding: 24px 20px 0; }
+  .hero-eyebrow { font-size: 11px; font-weight: 700; color: var(--cyan); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .hero-title { font-size: 26px; font-weight: 900; color: var(--text); line-height: 1.15; margin-bottom: 8px; }
+  .hero-title span { background: linear-gradient(135deg, var(--cyan), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .hero-sub { font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 18px; }
+  .hero-doctrine { padding: 12px 16px; background: rgba(0,212,255,0.05); border-left: 2px solid var(--cyan); border-radius: 0 10px 10px 0; font-size: 12px; color: var(--cyan); font-style: italic; line-height: 1.6; margin-bottom: 18px; }
+
+  /* ── MISSION DECLARE ── */
+  .mission-declare { margin: 0 20px; background: var(--surface); border: 1px solid rgba(0,212,255,0.25); border-radius: 18px; padding: 16px; }
+  .declare-label { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 10px; }
+  .declare-input-wrap { display: flex; gap: 8px; }
+  .declare-input { flex: 1; background: var(--surface2); border: 1px solid var(--border2); border-radius: 12px; padding: 12px 14px; font-size: 13px; color: var(--text); outline: none; font-family: inherit; }
+  .declare-input::placeholder { color: var(--muted); }
+  .declare-input:focus { border-color: rgba(0,212,255,0.4); }
+  .declare-btn { background: var(--cyan); border: none; border-radius: 12px; padding: 12px 16px; color: var(--black); font-size: 13px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+  .declare-btn:active { opacity: 0.85; }
+  .declare-examples { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .declare-ex { padding: 5px 10px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 20px; font-size: 11px; color: var(--text2); cursor: pointer; }
+  .declare-ex:active { border-color: var(--cyan); color: var(--cyan); }
+
+  /* ── ACTIVE MISSION CARD ── */
+  .active-mission { margin: 14px 20px 0; background: linear-gradient(135deg,rgba(0,212,255,0.07),rgba(139,63,232,0.05)); border: 1px solid rgba(0,212,255,0.25); border-radius: 18px; padding: 16px; display: none; }
+  .active-mission.show { display: block; }
+  .am-eyebrow { font-size: 10px; font-weight: 700; color: var(--cyan); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .am-title { font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+  .am-status { font-size: 12px; color: var(--text2); }
+  .am-progress { margin-top: 12px; height: 4px; background: rgba(255,255,255,0.06); border-radius: 99px; overflow: hidden; }
+  .am-progress-fill { height: 100%; background: linear-gradient(90deg, var(--cyan), var(--purple)); border-radius: 99px; transition: width 0.8s ease; width: 0%; }
+  .am-phases { display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+  .am-phase { padding: 3px 9px; border-radius: 99px; font-size: 10px; font-weight: 700; border: 1px solid var(--border2); color: var(--muted); }
+  .am-phase.active { background: rgba(0,212,255,0.12); border-color: rgba(0,212,255,0.35); color: var(--cyan); }
+  .am-phase.done   { background: rgba(0,229,160,0.1); border-color: rgba(0,229,160,0.3); color: var(--green); }
+
+  /* ── SIX ARCHETYPES GRID ── */
+  .section { padding: 20px 20px 0; }
+  .sec-label { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; }
+  .archetype-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .arch-card { background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; padding: 14px; cursor: pointer; transition: border-color 0.2s, background 0.2s; position: relative; overflow: hidden; }
+  .arch-card::before { content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity 0.3s; border-radius: 16px; }
+  .arch-card.idle   { }
+  .arch-card.active { border-color: rgba(0,212,255,0.45); background: rgba(0,212,255,0.05); }
+  .arch-card.active::before { background: radial-gradient(circle at 50% 0%, rgba(0,212,255,0.08), transparent 60%); opacity: 1; }
+  .arch-card.done   { border-color: rgba(0,229,160,0.35); background: rgba(0,229,160,0.04); }
+  .arch-card.orchestrate { grid-column: 1 / -1; background: linear-gradient(135deg,rgba(139,63,232,0.1),rgba(43,53,216,0.08)); border-color: rgba(139,63,232,0.35); }
+  .arch-card.orchestrate.active { border-color: rgba(139,63,232,0.6); background: linear-gradient(135deg,rgba(139,63,232,0.15),rgba(43,53,216,0.1)); }
+  .arch-icon { font-size: 24px; margin-bottom: 8px; }
+  .arch-name { font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 3px; }
+  .arch-q    { font-size: 10px; color: var(--text2); font-style: italic; margin-bottom: 8px; line-height: 1.4; }
+  .arch-status { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 99px; display: inline-block; }
+  .arch-status.idle   { background: rgba(255,255,255,0.05); color: var(--muted); }
+  .arch-status.active { background: rgba(0,212,255,0.12); color: var(--cyan); }
+  .arch-status.done   { background: rgba(0,229,160,0.1);  color: var(--green); }
+  .arch-status.orch   { background: rgba(139,63,232,0.15);color: var(--purple); }
+  .arch-output { font-size: 11px; color: var(--text2); margin-top: 8px; line-height: 1.5; display: none; }
+  .arch-card.active .arch-output,
+  .arch-card.done   .arch-output { display: block; }
+
+  /* ── AGENT DEPLOYMENT PANEL ── */
+  .agent-list { display: grid; gap: 8px; }
+  .agent-item { background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; }
+  .agent-item.deploying { border-color: rgba(0,212,255,0.3); animation: agentPulse 2s ease-in-out infinite; }
+  .agent-item.complete  { border-color: rgba(0,229,160,0.3); }
+  .agent-item.waiting   { opacity: 0.5; }
+  @keyframes agentPulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,212,255,0)} 50%{box-shadow:0 0 0 4px rgba(0,212,255,0.1)} }
+  .agent-icon  { font-size: 20px; flex-shrink: 0; }
+  .agent-body  { flex: 1; min-width: 0; }
+  .agent-name  { font-size: 13px; font-weight: 700; color: var(--text); }
+  .agent-arch  { font-size: 10px; color: var(--text2); margin-top: 2px; }
+  .agent-task  { font-size: 11px; color: var(--cyan); margin-top: 3px; display: none; }
+  .agent-item.deploying .agent-task,
+  .agent-item.complete  .agent-task { display: block; }
+  .agent-item.complete  .agent-task { color: var(--green); }
+  .agent-state { font-size: 10px; font-weight: 700; flex-shrink: 0; }
+  .agent-state.idle      { color: var(--muted); }
+  .agent-state.deploying { color: var(--cyan); }
+  .agent-state.complete  { color: var(--green); }
+  .agent-state.blocked   { color: var(--gold); }
+
+  /* ── ORCHESTRATION FEED ── */
+  .orch-feed { background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; overflow: hidden; }
+  .orch-feed-header { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+  .orch-feed-title { font-size: 12px; font-weight: 700; color: var(--text); flex: 1; }
+  .orch-feed-live { font-size: 10px; color: var(--green); font-weight: 700; display: flex; align-items: center; gap: 4px; }
+  .orch-entries { max-height: 280px; overflow-y: auto; }
+  .orch-entry { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 10px; }
+  .orch-entry:last-child { border-bottom: none; }
+  .orch-entry-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+  .orch-entry-dot.prototype { background: #8B3FE8; }
+  .orch-entry-dot.build     { background: var(--cyan); }
+  .orch-entry-dot.sweep     { background: var(--gold); }
+  .orch-entry-dot.grow      { background: var(--green); }
+  .orch-entry-dot.maintain  { background: var(--red); }
+  .orch-entry-dot.orchestrate{ background: var(--purple); }
+  .orch-entry-dot.system    { background: var(--muted); }
+  .orch-entry-body { flex: 1; min-width: 0; }
+  .orch-entry-text { font-size: 12px; color: var(--text2); line-height: 1.4; }
+  .orch-entry-time { font-size: 10px; color: var(--muted); margin-top: 3px; font-family: monospace; }
+  .orch-entry-dl   { font-size: 10px; color: rgba(139,63,232,0.7); margin-top: 2px; font-family: monospace; }
+
+  /* ── DECISION LEDGER PREVIEW ── */
+  .ledger-mini { display: grid; gap: 6px; }
+  .ledger-mini-item { background: var(--surface); border: 1px solid var(--border2); border-radius: 12px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
+  .ledger-mini-icon { font-size: 16px; flex-shrink: 0; }
+  .ledger-mini-body { flex: 1; min-width: 0; }
+  .ledger-mini-title { font-size: 12px; font-weight: 700; color: var(--text); }
+  .ledger-mini-meta  { font-size: 10px; color: var(--muted); margin-top: 2px; font-family: monospace; }
+  .ledger-mini-result { font-size: 10px; font-weight: 700; color: var(--green); flex-shrink: 0; }
+
+  /* ── MISSION HISTORY ── */
+  .mission-history { display: grid; gap: 8px; }
+  .mh-item { background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; padding: 12px 14px; cursor: pointer; }
+  .mh-item:active { opacity: 0.8; }
+  .mh-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .mh-meta  { font-size: 11px; color: var(--text2); display: flex; align-items: center; gap: 8px; }
+  .mh-arch-tags { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+  .mh-tag { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 99px; }
+  .mh-tag.prototype  { background: rgba(139,63,232,0.15); color: #8B3FE8; }
+  .mh-tag.build      { background: rgba(0,212,255,0.1); color: var(--cyan); }
+  .mh-tag.sweep      { background: rgba(255,184,0,0.1); color: var(--gold); }
+  .mh-tag.grow       { background: rgba(0,229,160,0.1); color: var(--green); }
+  .mh-tag.maintain   { background: rgba(255,77,109,0.1); color: var(--red); }
+  .mh-tag.orchestrate{ background: rgba(139,63,232,0.1); color: var(--purple); }
+
+  /* ── APPROVAL GATE SHEET ── */
+  .gate-overlay { position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,0.8); display: none; align-items: flex-end; justify-content: center; }
+  .gate-overlay.show { display: flex; }
+  .gate-sheet { background: var(--surface); border-radius: 24px 24px 0 0; padding: 24px 24px 40px; width: 100%; max-width: 430px; border-top: 2px solid rgba(139,63,232,0.4); animation: slideUp 0.3s ease; }
+  .gate-title { font-size: 17px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+  .gate-sub   { font-size: 13px; color: var(--text2); margin-bottom: 18px; line-height: 1.5; }
+  .gate-action-box { background: var(--surface2); border: 1px solid var(--border2); border-radius: 14px; padding: 14px; margin-bottom: 16px; }
+  .gate-action-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px; }
+  .gate-action-text  { font-size: 13px; color: var(--text); line-height: 1.5; }
+  .gate-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .gate-approve { background: var(--cyan); border: none; border-radius: 14px; padding: 14px; color: var(--black); font-size: 14px; font-weight: 800; cursor: pointer; }
+  .gate-reject  { background: var(--surface2); border: 1px solid var(--border2); border-radius: 14px; padding: 14px; color: var(--text2); font-size: 14px; font-weight: 700; cursor: pointer; }
+  .gate-dl-note { margin-top: 12px; font-size: 11px; color: var(--muted); text-align: center; }
+
+  /* ── TOAST ── */
+  .toast { position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%); background: rgba(30,33,50,0.98); border: 1px solid rgba(0,212,255,0.2); color: var(--text); padding: 10px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.25s; z-index: 9999; }
+  .toast.show { opacity: 1; }
+
+  /* ── FIXED DECLARE FAB ── */
+  .declare-fab { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); max-width: 390px; width: calc(100% - 40px); z-index: 200; }
+  .declare-fab-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, var(--purple), var(--blue)); border: none; border-radius: 16px; color: #fff; font-size: 15px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 8px 28px rgba(139,63,232,0.35); }
+  .declare-fab-btn:active { opacity: 0.9; }
+
+  /* ── UTIL ── */
+  @keyframes slideUp { from{transform:translateY(30px);opacity:0} to{transform:translateY(0);opacity:1} }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+  .fade-in { animation: fadeIn 0.4s ease; }
+</style>
+</head>
+<body>
+
+<!-- ── AMBIENT CANVAS ── -->
+<canvas id="orchCanvas" aria-hidden="true"></canvas>
+
+<div class="shell">
+
+  <!-- ── NAV ── -->
+  <div class="top-nav">
+    <div class="nav-back" onclick="window.location.href='citizen-dashboard.html'">‹</div>
+    <div class="nav-title">SIINDEX Orchestration</div>
+    <div class="nav-status"><div class="nav-dot"></div>Active</div>
+  </div>
+
+  <div class="scroll-body">
+
+    <!-- ── HERO ── -->
+    <div class="hero">
+      <div class="hero-eyebrow">🧠 SIINDEX Six-Archetype Operating Model</div>
+      <div class="hero-title">Citizens declare missions.<br><span>SIINDEX assembles the team.</span></div>
+      <div class="hero-sub">SIINDEX is not a chatbot. She is the civilization intelligence layer that knows when IN$DEX needs invention, building, sweeping, growth, maintenance, or protection.</div>
+      <div class="hero-doctrine">"The future business has agents. The future civilization has orchestration."</div>
+    </div>
+
+    <!-- ── MISSION DECLARE ── -->
+    <div class="mission-declare">
+      <div class="declare-label">Declare a Mission</div>
+      <div class="declare-input-wrap">
+        <input class="declare-input" id="missionInput" type="text" placeholder="I want to launch handmade print bundles…" maxlength="120">
+        <button class="declare-btn" onclick="declareMission()">→ Route</button>
+      </div>
+      <div class="declare-examples">
+        <div class="declare-ex" onclick="setExample('Launch my marketplace store for Pacific art')">🏪 Pacific art store</div>
+        <div class="declare-ex" onclick="setExample('Fix my listing — no sales in 7 days')">🔧 Fix listing</div>
+        <div class="declare-ex" onclick="setExample('Grow my referral income to 500 INDX/month')">📈 Grow referrals</div>
+        <div class="declare-ex" onclick="setExample('Secure my account after suspicious login')">🔐 Secure account</div>
+      </div>
+    </div>
+
+    <!-- ── ACTIVE MISSION ── -->
+    <div class="active-mission" id="activeMission">
+      <div class="am-eyebrow"><span class="nav-dot"></span>Active Mission — SIINDEX Routing</div>
+      <div class="am-title" id="amTitle">Mission loading…</div>
+      <div class="am-status" id="amStatus">SIINDEX is assembling the sovereign team.</div>
+      <div class="am-progress"><div class="am-progress-fill" id="amProgressFill"></div></div>
+      <div class="am-phases" id="amPhases"></div>
+    </div>
+
+    <!-- ── SIX ARCHETYPES ── -->
+    <div class="section">
+      <div class="sec-label">Six-Archetype Operating Model</div>
+      <div class="archetype-grid" id="archetypeGrid">
+
+        <div class="arch-card idle" id="arch-prototype" onclick="openArchDetail('prototype')">
+          <div class="arch-icon">💡</div>
+          <div class="arch-name">Prototype</div>
+          <div class="arch-q">"What could this become?"</div>
+          <div class="arch-status idle" id="arch-prototype-status">Idle</div>
+          <div class="arch-output" id="arch-prototype-output"></div>
+        </div>
+
+        <div class="arch-card idle" id="arch-build" onclick="openArchDetail('build')">
+          <div class="arch-icon">🔨</div>
+          <div class="arch-name">Build</div>
+          <div class="arch-q">"How do we make this real?"</div>
+          <div class="arch-status idle" id="arch-build-status">Idle</div>
+          <div class="arch-output" id="arch-build-output"></div>
+        </div>
+
+        <div class="arch-card idle" id="arch-sweep" onclick="openArchDetail('sweep')">
+          <div class="arch-icon">🧹</div>
+          <div class="arch-name">Sweep</div>
+          <div class="arch-q">"What should be removed or simplified?"</div>
+          <div class="arch-status idle" id="arch-sweep-status">Idle</div>
+          <div class="arch-output" id="arch-sweep-output"></div>
+        </div>
+
+        <div class="arch-card idle" id="arch-grow" onclick="openArchDetail('grow')">
+          <div class="arch-icon">🌱</div>
+          <div class="arch-name">Grow</div>
+          <div class="arch-q">"How does this reach the right citizens?"</div>
+          <div class="arch-status idle" id="arch-grow-status">Idle</div>
+          <div class="arch-output" id="arch-grow-output"></div>
+        </div>
+
+        <div class="arch-card idle" id="arch-maintain" onclick="openArchDetail('maintain')">
+          <div class="arch-icon">🛡️</div>
+          <div class="arch-name">Maintain</div>
+          <div class="arch-q">"How do we keep this safe and sovereign?"</div>
+          <div class="arch-status idle" id="arch-maintain-status">Idle</div>
+          <div class="arch-output" id="arch-maintain-output"></div>
+        </div>
+
+        <div class="arch-card orchestrate" id="arch-orchestrate" onclick="openArchDetail('orchestrate')">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="arch-icon" style="margin-bottom:0;">🧠</div>
+            <div>
+              <div class="arch-name">Orchestrate — SIINDEX</div>
+              <div class="arch-q" style="margin-bottom:0;">"Which intelligence should act now, under what limits, with what review?"</div>
+            </div>
+          </div>
+          <div class="arch-status orch" id="arch-orchestrate-status" style="margin-top:10px;">Always active</div>
+          <div class="arch-output" id="arch-orchestrate-output"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── AGENT DEPLOYMENT PANEL ── -->
+    <div class="section" style="margin-top:20px;">
+      <div class="sec-label">Agent Deployment</div>
+      <div class="agent-list" id="agentList">
+        <div style="font-size:13px;color:var(--muted);text-align:center;padding:20px 0;">Declare a mission to deploy agents.</div>
+      </div>
+    </div>
+
+    <!-- ── ORCHESTRATION FEED ── -->
+    <div class="section" style="margin-top:20px;">
+      <div class="sec-label">Orchestration Feed</div>
+      <div class="orch-feed">
+        <div class="orch-feed-header">
+          <div class="orch-feed-title">SIINDEX Decision Log</div>
+          <div class="orch-feed-live"><div class="nav-dot"></div>Live</div>
+        </div>
+        <div class="orch-entries" id="orchEntries">
+          <div class="orch-entry">
+            <div class="orch-entry-dot system"></div>
+            <div class="orch-entry-body">
+              <div class="orch-entry-text">Orchestration Layer initialised. Awaiting citizen mission declaration.</div>
+              <div class="orch-entry-time" id="initTime"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DECISION LEDGER PREVIEW ── -->
+    <div class="section" style="margin-top:20px;">
+      <div class="sec-label">Decision Ledger — This Session</div>
+      <div class="ledger-mini" id="ledgerMini">
+        <div style="font-size:13px;color:var(--muted);text-align:center;padding:16px 0;">No decisions logged yet.</div>
+      </div>
+    </div>
+
+    <!-- ── MISSION HISTORY ── -->
+    <div class="section" style="margin-top:20px;">
+      <div class="sec-label">Mission History</div>
+      <div class="mission-history" id="missionHistory">
+        <div style="font-size:13px;color:var(--muted);text-align:center;padding:16px 0;">No missions run yet this session.</div>
+      </div>
+    </div>
+
+    <!-- ── DOCTRINE CARD ── -->
+    <div class="section" style="margin-top:20px; padding-bottom:0;">
+      <div class="sec-label">Doctrine — Locked</div>
+      <div style="background:var(--surface);border:1px solid var(--border2);border-radius:16px;padding:16px;">
+        <div style="display:grid;gap:10px;" id="doctrineLines"></div>
+      </div>
+      <div style="height:16px;"></div>
+    </div>
+
+  </div><!-- /scroll-body -->
+
+  <!-- ── DECLARE FAB ── -->
+  <div class="declare-fab">
+    <button class="declare-fab-btn" onclick="document.getElementById('missionInput').focus();document.querySelector('.mission-declare').scrollIntoView({behavior:'smooth'})">
+      🧠 Declare a New Mission
+    </button>
+  </div>
+
+</div><!-- /shell -->
+
+<!-- ── APPROVAL GATE SHEET ── -->
+<div class="gate-overlay" id="gateOverlay">
+  <div class="gate-sheet">
+    <div class="gate-title" id="gateTitle">🔐 SIINDEX Approval Gate</div>
+    <div class="gate-sub" id="gateSub">The following action requires your explicit approval before it can proceed.</div>
+    <div class="gate-action-box">
+      <div class="gate-action-label">Action requiring approval</div>
+      <div class="gate-action-text" id="gateAction">Loading…</div>
+    </div>
+    <div class="gate-btns">
+      <button class="gate-approve" id="gateApproveBtn" onclick="approveGate()">✓ Approve</button>
+      <button class="gate-reject" onclick="rejectGate()">Reject</button>
+    </div>
+    <div class="gate-dl-note" id="gateDlNote">Decision Ledger entry will be created either way.</div>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── CONSTANTS ──
+  const INDX_PRICE_USD = 0.24;
+  const HISTORY_KEY    = 'indx_orch_history';
+  const LEDGER_KEY     = 'indx_orch_ledger';
+
+  // ── ARCHETYPE DEFINITIONS ──
+  const ARCHETYPES = {
+    prototype:  { icon:'💡', name:'Prototype',  q:'"What could this become?"',          color:'rgba(139,63,232,0.6)' },
+    build:      { icon:'🔨', name:'Build',       q:'"How do we make this real?"',        color:'rgba(0,212,255,0.6)' },
+    sweep:      { icon:'🧹', name:'Sweep',       q:'"What should be removed?"',          color:'rgba(255,184,0,0.6)' },
+    grow:       { icon:'🌱', name:'Grow',        q:'"How does this reach citizens?"',    color:'rgba(0,229,160,0.6)' },
+    maintain:   { icon:'🛡️', name:'Maintain',   q:'"How do we keep it safe?"',         color:'rgba(255,77,109,0.6)' },
+    orchestrate:{ icon:'🧠', name:'Orchestrate', q:'"Which intelligence acts now?"',     color:'rgba(139,63,232,1)' },
+  };
+
+  // ── MISSION ROUTING TEMPLATES ──
+  const MISSION_ROUTES = {
+    store: {
+      summary: 'Launch marketplace store',
+      archetypes: ['prototype','build','sweep','grow','maintain'],
+      agents: [
+        { icon:'💡', name:'Opportunity Agent',      arch:'Prototype',            task:'Generating 10 offer structures for Pacific art',   state:'deploying' },
+        { icon:'🎨', name:'Cultural Steward Agent', arch:'Maintain',             task:'Checking cultural permission + attribution status', state:'deploying' },
+        { icon:'🧹', name:'Sweep Agent',            arch:'Sweep',                task:'Removing low-feasibility and risky options',        state:'waiting' },
+        { icon:'🔨', name:'Builder Agent',          arch:'Build',                task:'Creating listing draft + opportunity page',         state:'waiting' },
+        { icon:'🌱', name:'Grow Agent',             arch:'Grow',                 task:'Designing first-sale path + tourist outreach',      state:'waiting' },
+      ],
+      phases: ['Prototype','Cultural Check','Sweep','Build','Grow','Approve'],
+      gate: { title:'🔐 Publish Approval', action:'Builder Agent has drafted your marketplace listing. Approve to publish or request changes.', sub:'Approving allows the listing to go live. You can edit at any time.' },
+    },
+    fix: {
+      summary: 'Fix listing with no sales',
+      archetypes: ['sweep','grow','build'],
+      agents: [
+        { icon:'🧹', name:'Sweep Agent',   arch:'Sweep',   task:'Analysing listing for trust gaps and friction', state:'deploying' },
+        { icon:'🌱', name:'Grow Agent',    arch:'Grow',    task:'Diagnosing low-conversion signals',             state:'deploying' },
+        { icon:'🔨', name:'Builder Agent', arch:'Build',   task:'Drafting improved title and trust copy',        state:'waiting' },
+      ],
+      phases: ['Diagnose','Sweep','Fix','Approve'],
+      gate: { title:'🔐 Update Approval', action:'Sweep + Build agents have proposed 3 changes to your listing. Approve to apply all, or review each.', sub:'Changes will be applied to your draft listing, not published, until you confirm.' },
+    },
+    grow: {
+      summary: 'Grow referral income',
+      archetypes: ['prototype','grow','build'],
+      agents: [
+        { icon:'🌱', name:'Grow Agent',    arch:'Grow',      task:'Analysing your referral funnel for friction',   state:'deploying' },
+        { icon:'💡', name:'Opportunity Agent', arch:'Prototype', task:'Generating 5 referral growth experiments', state:'deploying' },
+        { icon:'🔨', name:'Builder Agent', arch:'Build',     task:'Creating referral campaign landing page',       state:'waiting' },
+      ],
+      phases: ['Analyse','Prototype','Build','Approve'],
+      gate: { title:'🔐 Campaign Approval', action:'Growth Agent proposes launching a referral campaign: "Earn 50 INDX. Share one link." Approve to build the campaign page.', sub:'No spend required. Campaign page will be drafts until you confirm.' },
+    },
+    secure: {
+      summary: 'Secure account after suspicious login',
+      archetypes: ['maintain','sweep'],
+      agents: [
+        { icon:'🛡️', name:'Security Agent',  arch:'Maintain', task:'Reviewing active sessions + recent changes', state:'deploying' },
+        { icon:'🧹', name:'Sweep Agent',     arch:'Sweep',    task:'Removing unknown devices + weak permissions', state:'deploying' },
+        { icon:'🧠', name:'SIINDEX Orchestrator', arch:'Orchestrate', task:'Escalating to human review if needed', state:'deploying' },
+      ],
+      phases: ['Scan','Sweep','Escalate','Confirm'],
+      gate: { title:'🔐 Security Action Required', action:'Maintain Agent found 1 unrecognised session. Approve to sign it out and log to Decision Ledger.', sub:'Your funds have not moved. This action cannot be reversed by the session being removed.' },
+    },
+  };
+
+  // ── STATE ──
+  let currentMission = null;
+  let _orchEntries   = [];
+  let _ledgerEntries = [];
+  let _missionHistory = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+  let _pendingGateResolve = null;
+  let _missionTimer = null;
+
+  // ── TOAST ──
+  let toastTimer;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  // ── EXAMPLE MISSIONS ──
+  function setExample(text) {
+    document.getElementById('missionInput').value = text;
+    document.getElementById('missionInput').focus();
+  }
+
+  // ── DETECT MISSION TYPE ──
+  function detectMissionType(text) {
+    const t = text.toLowerCase();
+    if (t.includes('fix') || t.includes('no sales') || t.includes('improve listing')) return 'fix';
+    if (t.includes('grow') || t.includes('referral') || t.includes('income')) return 'grow';
+    if (t.includes('secure') || t.includes('suspicious') || t.includes('hack')) return 'secure';
+    return 'store'; // default: new opportunity build
+  }
+
+  // ── DECLARE MISSION ──
+  function declareMission() {
+    const input = document.getElementById('missionInput');
+    const text  = input.value.trim();
+    if (!text) { showToast('Tell SIINDEX what you want to achieve'); return; }
+
+    const type   = detectMissionType(text);
+    const route  = MISSION_ROUTES[type];
+    currentMission = { text, type, route, startTime: Date.now() };
+
+    // Reset archetypes
+    resetAllArchetypes();
+    setArchActive('orchestrate', 'Routing mission…');
+
+    // Show active mission card
+    const card = document.getElementById('activeMission');
+    card.classList.add('show');
+    document.getElementById('amTitle').textContent = text;
+    document.getElementById('amStatus').textContent = 'SIINDEX is assembling the sovereign team…';
+    document.getElementById('amProgressFill').style.width = '0%';
+
+    // Render phases
+    const phasesEl = document.getElementById('amPhases');
+    phasesEl.innerHTML = route.phases.map((p, i) =>
+      `<div class="am-phase" id="phase-${i}">${p}</div>`
+    ).join('');
+
+    // Log to feed
+    addOrchEntry('orchestrate', `Mission received: "${text}" → routed as ${route.summary}`);
+    addOrchEntry('orchestrate', `Archetypes engaged: ${route.archetypes.map(a => ARCHETYPES[a].name).join(' → ')}`);
+
+    // Deploy agents UI
+    renderAgents(route.agents);
+
+    // Run mission sequence
+    runMissionSequence(route);
+
+    input.value = '';
+    addLedgerEntry('🧠', 'Mission declared: ' + text.slice(0,40) + (text.length > 40 ? '…' : ''), 'DL-' + Date.now().toString().slice(-6));
+
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ── MISSION SEQUENCE ──
+  function runMissionSequence(route) {
+    const phases = route.phases;
+    const archs  = route.archetypes;
+    let step     = 0;
+    const totalSteps = archs.length + 1;
+
+    function advancePhase() {
+      if (step >= archs.length) {
+        // All archetypes done — show gate
+        document.getElementById('amStatus').textContent = 'SIINDEX assembled the team. Approval gate required.';
+        document.getElementById('amProgressFill').style.width = '90%';
+        setArchActive('orchestrate', 'Requesting citizen approval');
+        addOrchEntry('orchestrate', 'All agents complete. Opening citizen approval gate.');
+
+        setTimeout(() => openGate(route.gate), 800);
+        return;
+      }
+
+      const arch = archs[step];
+      const pct  = Math.round(((step + 1) / totalSteps) * 90);
+
+      // Mark phase
+      const phaseEl = document.getElementById('phase-' + step);
+      if (phaseEl) phaseEl.classList.add('active');
+
+      // Activate archetype card
+      const prevArch = step > 0 ? archs[step - 1] : null;
+      if (prevArch) setArchDone(prevArch, getArchOutput(prevArch, route));
+      setArchActive(arch, getArchWorking(arch, route));
+
+      // Update progress
+      document.getElementById('amProgressFill').style.width = pct + '%';
+      document.getElementById('amStatus').textContent = ARCHETYPES[arch].icon + ' ' + ARCHETYPES[arch].name + ' agent working…';
+
+      // Update agent UI
+      updateAgentState(step, 'deploying');
+      if (step > 0) updateAgentState(step - 1, 'complete');
+
+      // Feed entry
+      addOrchEntry(arch, ARCHETYPES[arch].name + ' agent: ' + getArchWorking(arch, route));
+
+      step++;
+      const delay = 1800 + Math.random() * 600;
+      _missionTimer = setTimeout(advancePhase, delay);
+    }
+
+    advancePhase();
+  }
+
+  function getArchWorking(arch, route) {
+    const m = {
+      prototype:  'Generating opportunity options and possibility paths',
+      build:      'Converting selection into draft listing and opportunity page',
+      sweep:      'Removing friction, weak options, and cultural risks',
+      grow:       'Mapping first-sale path and citizen adoption strategy',
+      maintain:   'Running cultural permission check and security review',
+    };
+    return m[arch] || 'Processing…';
+  }
+
+  function getArchOutput(arch, route) {
+    const m = {
+      prototype:  '10 opportunity options generated · Top 3 selected',
+      build:      'Listing draft created · Opportunity page ready for review',
+      sweep:      '4 weak options removed · 2 cultural risks flagged + resolved',
+      grow:       'First-sale path mapped · Referral loop designed',
+      maintain:   'Cultural permission: ✓ Cleared · Security: ✓ No flags',
+    };
+    return m[arch] || 'Complete';
+  }
+
+  // ── ARCHETYPE CARD STATE ──
+  function resetAllArchetypes() {
+    ['prototype','build','sweep','grow','maintain'].forEach(a => {
+      const card = document.getElementById('arch-' + a);
+      const stat = document.getElementById('arch-' + a + '-status');
+      const out  = document.getElementById('arch-' + a + '-output');
+      if (card) card.className = 'arch-card idle';
+      if (stat) { stat.textContent = 'Idle'; stat.className = 'arch-status idle'; }
+      if (out)  out.textContent = '';
+    });
+  }
+
+  function setArchActive(arch, text) {
+    const card = document.getElementById('arch-' + arch);
+    const stat = document.getElementById('arch-' + arch + '-status');
+    const out  = document.getElementById('arch-' + arch + '-output');
+    if (card) card.className = 'arch-card active' + (arch === 'orchestrate' ? ' orchestrate' : '');
+    if (stat) { stat.textContent = '⚡ Working'; stat.className = 'arch-status active'; }
+    if (out)  out.textContent = text;
+  }
+
+  function setArchDone(arch, text) {
+    const card = document.getElementById('arch-' + arch);
+    const stat = document.getElementById('arch-' + arch + '-status');
+    const out  = document.getElementById('arch-' + arch + '-output');
+    if (card) card.className = 'arch-card done' + (arch === 'orchestrate' ? ' orchestrate' : '');
+    if (stat) { stat.textContent = '✓ Done'; stat.className = 'arch-status done'; }
+    if (out)  out.textContent = text;
+  }
+
+  function openArchDetail(arch) {
+    const a = ARCHETYPES[arch];
+    showToast(a.icon + ' ' + a.name + ': ' + a.q);
+  }
+
+  // ── AGENTS ──
+  function renderAgents(agents) {
+    const list = document.getElementById('agentList');
+    list.innerHTML = agents.map((a, i) => `
+      <div class="agent-item waiting fade-in" id="agentItem-${i}" style="animation-delay:${i * 0.1}s">
+        <div class="agent-icon">${a.icon}</div>
+        <div class="agent-body">
+          <div class="agent-name">${a.name}</div>
+          <div class="agent-arch">Archetype: ${a.arch}</div>
+          <div class="agent-task" id="agentTask-${i}">${a.task}</div>
+        </div>
+        <div class="agent-state waiting" id="agentState-${i}">Waiting</div>
+      </div>
+    `).join('');
+  }
+
+  function updateAgentState(index, state) {
+    const item  = document.getElementById('agentItem-' + index);
+    const stEl  = document.getElementById('agentState-' + index);
+    if (!item || !stEl) return;
+    item.className = 'agent-item ' + state + ' fade-in';
+    stEl.className = 'agent-state ' + state;
+    stEl.textContent = state === 'deploying' ? 'Working…' : state === 'complete' ? '✓ Done' : state === 'blocked' ? 'Paused' : 'Waiting';
+  }
+
+  // ── ORCHESTRATION FEED ──
+  function addOrchEntry(type, text) {
+    const now = new Date().toLocaleTimeString('en-AU', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    _orchEntries.unshift({ type, text, time: now });
+    if (_orchEntries.length > 30) _orchEntries = _orchEntries.slice(0, 30);
+    renderOrchFeed();
+  }
+
+  function renderOrchFeed() {
+    const el = document.getElementById('orchEntries');
+    if (!el) return;
+    el.innerHTML = _orchEntries.map(e => `
+      <div class="orch-entry fade-in">
+        <div class="orch-entry-dot ${e.type}"></div>
+        <div class="orch-entry-body">
+          <div class="orch-entry-text">${e.text}</div>
+          <div class="orch-entry-time">${e.time}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ── DECISION LEDGER ──
+  function addLedgerEntry(icon, title, dlId) {
+    const now = new Date().toLocaleTimeString('en-AU', { hour:'2-digit', minute:'2-digit' });
+    _ledgerEntries.unshift({ icon, title, dlId, time: now });
+    if (_ledgerEntries.length > 10) _ledgerEntries = _ledgerEntries.slice(0, 10);
+    renderLedger();
+  }
+
+  function renderLedger() {
+    const el = document.getElementById('ledgerMini');
+    if (!el) return;
+    if (!_ledgerEntries.length) {
+      el.innerHTML = '<div style="font-size:13px;color:var(--muted);text-align:center;padding:16px 0;">No decisions logged yet.</div>';
+      return;
+    }
+    el.innerHTML = _ledgerEntries.slice(0, 5).map(e => `
+      <div class="ledger-mini-item fade-in">
+        <div class="ledger-mini-icon">${e.icon}</div>
+        <div class="ledger-mini-body">
+          <div class="ledger-mini-title">${e.title}</div>
+          <div class="ledger-mini-meta">${e.dlId} · ${e.time}</div>
+        </div>
+        <div class="ledger-mini-result">LOGGED</div>
+      </div>
+    `).join('');
+  }
+
+  // ── APPROVAL GATE ──
+  let _pendingGate = null;
+
+  function openGate(gate) {
+    _pendingGate = gate;
+    document.getElementById('gateTitle').textContent  = gate.title;
+    document.getElementById('gateSub').textContent    = gate.sub;
+    document.getElementById('gateAction').textContent = gate.action;
+    document.getElementById('gateOverlay').classList.add('show');
+  }
+
+  function approveGate() {
+    document.getElementById('gateOverlay').classList.remove('show');
+    if (!currentMission) return;
+    const route = currentMission.route;
+
+    // Complete the last agent
+    updateAgentState(route.agents.length - 1, 'complete');
+    setArchDone('orchestrate', 'Mission approved by citizen · Decision Ledger updated');
+
+    // Phase complete
+    route.phases.forEach((_, i) => {
+      const ph = document.getElementById('phase-' + i);
+      if (ph) ph.classList.add('done');
+    });
+
+    document.getElementById('amProgressFill').style.width = '100%';
+    document.getElementById('amStatus').textContent = '✅ Mission complete — citizen approved · Logged to Decision Ledger';
+
+    addOrchEntry('orchestrate', 'Citizen approved gate: ' + (_pendingGate?.title || 'Approval'));
+    addLedgerEntry('✅', 'Mission approved: ' + currentMission.text.slice(0,40), 'DL-' + Date.now().toString().slice(-6));
+
+    // Save to history
+    saveMissionToHistory(currentMission, route);
+
+    showToast('✅ Mission complete — SIINDEX has logged the outcome');
+  }
+
+  function rejectGate() {
+    document.getElementById('gateOverlay').classList.remove('show');
+    addOrchEntry('orchestrate', 'Citizen rejected gate — mission paused · Changes not applied');
+    addLedgerEntry('⚠️', 'Mission gate rejected by citizen', 'DL-' + Date.now().toString().slice(-6));
+    document.getElementById('amStatus').textContent = '⚠️ Mission paused — you rejected the action. You can redeclare at any time.';
+    showToast('⚠️ Mission paused — no changes made');
+  }
+
+  // ── MISSION HISTORY ──
+  function saveMissionToHistory(mission, route) {
+    _missionHistory.unshift({
+      text:       mission.text,
+      archetypes: route.archetypes,
+      ts:         new Date().toLocaleString('en-AU', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }),
+    });
+    if (_missionHistory.length > 10) _missionHistory = _missionHistory.slice(0, 10);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(_missionHistory));
+    renderMissionHistory();
+  }
+
+  function renderMissionHistory() {
+    const el = document.getElementById('missionHistory');
+    if (!_missionHistory.length) {
+      el.innerHTML = '<div style="font-size:13px;color:var(--muted);text-align:center;padding:16px 0;">No missions run yet this session.</div>';
+      return;
+    }
+    el.innerHTML = _missionHistory.slice(0, 5).map(m => `
+      <div class="mh-item fade-in" onclick="showToast('Mission: ${m.text.slice(0,40).replace(/'/g,'&apos;')}')">
+        <div class="mh-title">${m.text}</div>
+        <div class="mh-meta"><span>✓ Complete</span><span>${m.ts}</span></div>
+        <div class="mh-arch-tags">
+          ${m.archetypes.map(a => `<div class="mh-tag ${a}">${ARCHETYPES[a].icon} ${ARCHETYPES[a].name}</div>`).join('')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // ── DOCTRINE LINES ──
+  const DOCTRINE = [
+    '"Citizens declare missions. SIINDEX assembles the sovereign team."',
+    '"SIINDEX is not a chatbot. She is the civilization intelligence layer."',
+    '"No citizen should need to know which agent to call."',
+    '"The future business has agents. The future civilization has orchestration."',
+    '"Omnipresent does not mean unrestricted."',
+    '"The more power an agent has, the more auditable it must be."',
+    '"SIINDEX orchestrates opportunity. Citizens own the outcome."',
+  ];
+
+  function renderDoctrine() {
+    document.getElementById('doctrineLines').innerHTML = DOCTRINE.map(d =>
+      `<div style="font-size:12px;color:var(--text2);font-style:italic;padding:6px 0;border-bottom:1px solid var(--border);line-height:1.5;">${d}</div>`
+    ).join('').replace(/<div[^>]*>([^<]*)<\/div>$/, m => m.replace('border-bottom:1px solid var(--border);', ''));
+  }
+
+  // ── AMBIENT CANVAS ── (hex particle network)
+  (function initOrchCanvas() {
+    const canvas = document.getElementById('orchCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const COUNT = 28;
+    const CONNECT_DIST = 110;
+    const COLORS = ['#00D4FF','#8B3FE8','#2B35D8','#00D4FF','#8B3FE8'];
+
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    resize();
+    window.addEventListener('resize', resize, { passive: true });
+
+    const particles = Array.from({ length: COUNT }, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 0.25,
+      vy: (Math.random() - 0.5) * 0.25,
+      size: 5 + Math.random() * 8,
+      phase: Math.random() * Math.PI * 2,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      base: 0.025 + Math.random() * 0.04,
+    }));
+
+    function hexPath(ctx, x, y, r) {
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI / 3) * i - Math.PI / 6;
+        i === 0 ? ctx.moveTo(x + r * Math.cos(a), y + r * Math.sin(a))
+                : ctx.lineTo(x + r * Math.cos(a), y + r * Math.sin(a));
+      }
+      ctx.closePath();
+    }
+
+    let lastT = 0;
+    const FPS = 1000 / 22;
+
+    function loop(now) {
+      requestAnimationFrame(loop);
+      if (now - lastT < FPS) return;
+      lastT = now;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy; p.phase += 0.018;
+        if (p.x < -20) p.x = canvas.width + 20;
+        if (p.x > canvas.width + 20) p.x = -20;
+        if (p.y < -20) p.y = canvas.height + 20;
+        if (p.y > canvas.height + 20) p.y = -20;
+      });
+
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const d  = Math.sqrt(dx * dx + dy * dy);
+          if (d < CONNECT_DIST) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = '#8B3FE8';
+            ctx.globalAlpha = (1 - d / CONNECT_DIST) * 0.05;
+            ctx.lineWidth = 0.6;
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+      }
+
+      particles.forEach(p => {
+        const opacity = p.base + Math.sin(p.phase) * 0.02;
+        ctx.save();
+        hexPath(ctx, p.x, p.y, p.size);
+        ctx.strokeStyle = p.color;
+        ctx.globalAlpha = opacity;
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 1.2, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = opacity * 2;
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    requestAnimationFrame(loop);
+  })();
+
+  // ── INIT ──
+  window.addEventListener('DOMContentLoaded', () => {
+    // Init timestamp
+    const now = new Date().toLocaleTimeString('en-AU', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    const initEl = document.getElementById('initTime');
+    if (initEl) initEl.textContent = now;
+
+    renderDoctrine();
+    renderMissionHistory();
+    renderLedger();
+
+    // Enter on mission input
+    document.getElementById('missionInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') declareMission();
+    });
+  });
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

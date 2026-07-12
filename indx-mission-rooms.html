@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Mission Rooms — IN$DEX</title>
+  <meta name="description" content="Sovereign workspaces where citizens, agents, and workflows coordinate action. Not chatter — capability." />
+  <style>
+    :root {
+      --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+      --black:#090A10; --green:#00E5A0; --gold:#FFB800;
+      --red:#FF4D6D; --surface:#12141F; --surface2:#1A1D2E;
+      --surface3:#22263A; --text:#F0F2FF; --muted:rgba(240,242,255,0.5);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;max-width:430px;margin:0 auto;padding-bottom:60px;overflow-x:hidden;}
+
+    /* NAV */
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.06);position:sticky;top:0;background:rgba(9,10,16,0.92);backdrop-filter:blur(14px);z-index:100;}
+    .nav-back{color:var(--gold);text-decoration:none;font-size:14px;font-weight:600;}
+    .nav-title{font-size:12px;font-weight:800;color:var(--gold);letter-spacing:1px;text-transform:uppercase;}
+    .nav-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(255,184,0,0.1);color:var(--gold);border:1px solid rgba(255,184,0,0.25);}
+
+    /* HERO */
+    .hero{padding:26px 20px 20px;text-align:center;background:linear-gradient(180deg,rgba(255,184,0,0.07) 0%,transparent 100%);}
+    .hero-icon{font-size:36px;margin-bottom:10px;}
+    .hero-eyebrow{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,184,0,0.6);margin-bottom:8px;}
+    .hero-title{font-size:28px;font-weight:900;background:linear-gradient(135deg,#FFB800,#FFF3A0,#FFB800);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px;}
+    .hero-sub{font-size:12px;color:var(--muted);line-height:1.6;max-width:300px;margin:0 auto;}
+
+    /* SECTION */
+    .sect{padding:0 20px 18px;}
+    .sect-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+    .sect-title{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.5px;text-transform:uppercase;}
+    .sect-action{font-size:12px;font-weight:700;color:var(--gold);cursor:pointer;background:none;border:none;padding:0;font-family:inherit;}
+
+    /* ROOMS STRIP */
+    .rooms-strip{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none;}
+    .rooms-strip::-webkit-scrollbar{display:none;}
+    .room-card{flex-shrink:0;width:195px;background:var(--surface);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:14px;cursor:pointer;transition:border-color 0.2s;}
+    .room-card:active{border-color:rgba(255,184,0,0.3);}
+    .rc-icon{font-size:22px;margin-bottom:8px;}
+    .rc-name{font-size:13px;font-weight:700;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .rc-type{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;}
+    .rc-meta{display:flex;align-items:center;gap:7px;margin-top:8px;}
+    .rc-ch{font-size:10px;color:var(--muted);}
+    .rc-agents{font-size:9px;font-weight:700;padding:2px 7px;border-radius:7px;background:rgba(139,63,232,0.1);color:var(--purple);border:1px solid rgba(139,63,232,0.18);}
+
+    /* CREATE PANEL */
+    .create-panel{margin:0 20px 18px;background:var(--surface);border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;}
+    .create-hdr{display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.06);}
+    .create-hdr-icon{font-size:18px;}
+    .create-hdr-title{font-size:14px;font-weight:700;flex:1;}
+    .create-arr{font-size:14px;color:var(--muted);transition:transform 0.25s;}
+    .create-panel.open .create-arr{transform:rotate(180deg);}
+    .create-body{padding:14px 16px;display:none;}
+    .create-panel.open .create-body{display:block;}
+
+    .field-label{font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    .mission-ta{width:100%;background:var(--surface2);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:var(--text);font-size:13px;padding:11px 12px;font-family:inherit;resize:none;line-height:1.5;margin-bottom:14px;}
+    .mission-ta:focus{outline:none;border-color:rgba(255,184,0,0.35);}
+
+    .type-chips{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:14px;}
+    .type-chip{padding:10px 10px;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:var(--surface2);color:var(--text);font-size:11px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:7px;font-family:inherit;transition:border-color 0.2s,background 0.2s;}
+    .type-chip.selected{border-color:rgba(255,184,0,0.4);background:rgba(255,184,0,0.05);}
+    .tc-icon{font-size:16px;flex-shrink:0;}
+
+    .gen-btn{width:100%;padding:13px;border-radius:10px;background:var(--gold);color:var(--black);font-size:14px;font-weight:800;border:none;cursor:pointer;font-family:inherit;transition:opacity 0.2s;}
+    .gen-btn:hover{opacity:0.88;}
+    .gen-btn:disabled{opacity:0.35;cursor:not-allowed;}
+
+    /* PROCESSING OVERLAY */
+    .proc-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.97);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;padding:30px;}
+    .proc-overlay.show{display:flex;}
+    .proc-orb{font-size:38px;margin-bottom:18px;animation:procSpin 3s linear infinite;}
+    @keyframes procSpin{to{transform:rotate(360deg)}}
+    .proc-title{font-size:16px;font-weight:800;color:var(--gold);margin-bottom:5px;text-align:center;}
+    .proc-sub{font-size:12px;color:var(--muted);margin-bottom:22px;text-align:center;}
+    .proc-steps{width:100%;max-width:300px;}
+    .proc-step{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+    .proc-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.08);flex-shrink:0;transition:background 0.3s;}
+    .proc-dot.done{background:var(--green);}
+    .proc-dot.active{background:var(--gold);animation:dotBlink 0.75s ease-in-out infinite;}
+    @keyframes dotBlink{0%,100%{opacity:1}50%{opacity:0.15}}
+    .proc-step-text{font-size:12px;color:var(--muted);transition:color 0.3s;}
+    .proc-step-text.active{color:var(--gold);}
+    .proc-step-text.done{color:var(--green);}
+
+    /* RESULT */
+    .result-wrap{margin:0 20px 18px;display:none;}
+    .result-wrap.show{display:block;}
+    .result-card{background:var(--surface);border:1px solid rgba(255,184,0,0.2);border-radius:14px;overflow:hidden;}
+    .result-banner{background:linear-gradient(135deg,rgba(255,184,0,0.09),rgba(139,63,232,0.04));padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.06);}
+    .res-name{font-size:18px;font-weight:800;color:var(--gold);}
+    .res-type{font-size:10px;color:rgba(255,184,0,0.6);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;}
+    .res-desc{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5;}
+    .result-body{padding:14px 16px;}
+    .r-blk{margin-bottom:13px;}
+    .r-blk-title{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:7px;}
+    .r-chips{display:flex;flex-wrap:wrap;gap:5px;}
+    .r-chip{font-size:11px;font-weight:600;padding:4px 10px;border-radius:8px;background:var(--surface2);border:1px solid rgba(255,255,255,0.06);}
+    .r-chip.ch{color:var(--cyan);border-color:rgba(0,212,255,0.15);}
+    .r-chip.ag{color:var(--purple);background:rgba(139,63,232,0.07);border-color:rgba(139,63,232,0.18);}
+    .r-wf{background:var(--surface2);border-radius:8px;padding:10px 12px;margin-bottom:6px;}
+    .r-wf-trigger{font-size:11px;font-weight:700;color:var(--gold);margin-bottom:3px;}
+    .r-wf-steps{font-size:11px;color:var(--muted);line-height:1.45;}
+    .r-first-action{background:rgba(0,229,160,0.04);border:1px solid rgba(0,229,160,0.15);border-radius:10px;padding:12px;margin-top:4px;}
+    .r-fa-label{font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px;}
+    .r-fa-text{font-size:12px;line-height:1.5;}
+    .result-btns{display:flex;gap:8px;padding:0 16px 16px;}
+    .btn-save{flex:1;padding:13px;border-radius:10px;background:var(--gold);color:var(--black);font-size:13px;font-weight:800;border:none;cursor:pointer;font-family:inherit;}
+    .btn-discard{padding:13px 14px;border-radius:10px;background:var(--surface2);color:var(--muted);font-size:13px;font-weight:700;border:1px solid rgba(255,255,255,0.07);cursor:pointer;font-family:inherit;}
+
+    /* EMPTY STATE */
+    .empty-state{margin:0 20px 18px;padding:28px 20px;text-align:center;background:var(--surface);border:1px dashed rgba(255,255,255,0.07);border-radius:14px;}
+    .es-icon{font-size:30px;margin-bottom:10px;}
+    .es-title{font-size:14px;font-weight:700;margin-bottom:6px;}
+    .es-sub{font-size:12px;color:var(--muted);line-height:1.6;}
+
+    /* DOCTRINE */
+    .doctrine{margin:0 20px 20px;padding:16px;background:rgba(255,184,0,0.03);border:1px solid rgba(255,184,0,0.1);border-radius:12px;text-align:center;}
+    .doctrine-text{font-size:12px;color:rgba(240,242,255,0.6);line-height:1.75;font-style:italic;}
+    .doctrine-sig{font-size:10px;color:rgba(255,184,0,0.45);margin-top:7px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;}
+
+    /* SHEET */
+    .sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:150;display:none;}
+    .sheet-overlay.show{display:block;}
+    .detail-sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--surface);border-radius:20px 20px 0 0;z-index:160;padding:0 0 40px;max-height:85vh;overflow-y:auto;display:none;}
+    .detail-sheet.show{display:block;}
+    .sheet-handle{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.1);margin:12px auto 16px;}
+    .detail-body{padding:0 20px;}
+    .det-name{font-size:20px;font-weight:800;color:var(--gold);margin-bottom:4px;}
+    .det-meta{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+    .det-del{background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.2);color:var(--red);font-size:11px;font-weight:700;padding:4px 10px;border-radius:7px;cursor:pointer;font-family:inherit;}
+
+    /* GOD MODE: QUICK-START TEMPLATES */
+    .tpl-strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;margin-bottom:14px;scrollbar-width:none;}
+    .tpl-strip::-webkit-scrollbar{display:none;}
+    .tpl-chip{flex-shrink:0;padding:9px 13px;border-radius:20px;border:1px solid rgba(255,184,0,0.18);background:rgba(255,184,0,0.05);color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;transition:background 0.2s;}
+    .tpl-chip:active{background:rgba(255,184,0,0.14);}
+
+    /* GOD MODE: DRAFT BANNER */
+    .draft-banner{display:none;align-items:center;gap:8px;background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.18);border-radius:10px;padding:9px 12px;margin-bottom:12px;font-size:11px;color:var(--cyan);}
+    .draft-banner.show{display:flex;}
+    .draft-banner-dismiss{margin-left:auto;background:none;border:none;color:var(--cyan);font-size:13px;cursor:pointer;font-family:inherit;padding:0;}
+
+    /* GOD MODE: DELETE CONFIRM */
+    .det-del-confirm{display:flex;gap:6px;align-items:center;font-size:11px;color:var(--muted);}
+    .det-del-yes{background:var(--red);border:none;color:#fff;font-size:11px;font-weight:800;padding:4px 10px;border-radius:7px;cursor:pointer;font-family:inherit;}
+    .det-del-no{background:var(--surface2);border:1px solid rgba(255,255,255,0.08);color:var(--muted);font-size:11px;font-weight:700;padding:4px 10px;border-radius:7px;cursor:pointer;font-family:inherit;}
+
+    /* GOD MODE: LIVE ACTIVITY TICKER */
+    .rc-activity{display:flex;align-items:center;gap:5px;margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,0.05);}
+    .rc-activity-dot{width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0;animation:actPulse 1.6s ease-in-out infinite;}
+    @keyframes actPulse{0%,100%{opacity:1}50%{opacity:0.3}}
+    .rc-activity-text{font-size:9.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:opacity 0.3s;}
+
+    /* TOAST */
+    .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--gold);color:var(--black);padding:11px 20px;border-radius:24px;font-size:13px;font-weight:800;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap;}
+    .toast.show{opacity:1;}
+  </style>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="index.html" class="nav-back">← IN$DEX</a>
+    <span class="nav-title">Mission Rooms</span>
+    <span class="nav-badge" id="roomBadge">0 Rooms</span>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-icon">⚡</div>
+    <div class="hero-eyebrow">Coordination Layer · Layer 4</div>
+    <h1 class="hero-title">Mission Rooms</h1>
+    <p class="hero-sub">Shared hubs where citizens, SIINDEX agents, and workflows coordinate action around a mission. Not chatter — capability.</p>
+  </div>
+
+  <!-- YOUR ROOMS -->
+  <div class="sect" id="yourRoomsSect" style="display:none;">
+    <div class="sect-hdr">
+      <span class="sect-title">Your Mission Rooms</span>
+      <button class="sect-action" onclick="toggleCreate()">+ New Room</button>
+    </div>
+    <div class="rooms-strip" id="roomsStrip"></div>
+  </div>
+
+  <!-- EMPTY STATE -->
+  <div class="empty-state" id="emptyState">
+    <div class="es-icon">🏛️</div>
+    <div class="es-title">No Mission Rooms yet</div>
+    <div class="es-sub">Build your first Mission Room below. SIINDEX assigns channels, roles, agents, and workflows from your mission brief.</div>
+  </div>
+
+  <!-- CREATE PANEL -->
+  <div class="create-panel open" id="createPanel">
+    <div class="create-hdr" onclick="toggleCreate()">
+      <span class="create-hdr-icon">✦</span>
+      <span class="create-hdr-title">Build a Mission Room</span>
+      <span class="create-arr">▼</span>
+    </div>
+    <div class="create-body">
+      <div class="draft-banner" id="draftBanner"><span>📝 Draft restored from last visit</span><button class="draft-banner-dismiss" onclick="dismissDraftBanner()">✕</button></div>
+      <div class="field-label">Quick Start — tap a mission template</div>
+      <div class="tpl-strip" id="tplStrip"></div>
+      <div class="field-label">Step 1 — Describe the mission</div>
+      <textarea class="mission-ta" id="missionTa" rows="3" placeholder="e.g. Sell handmade Vanuatu prints online and protect their cultural heritage…"></textarea>
+      <div class="field-label">Step 2 — Room type</div>
+      <div class="type-chips" id="typeChips"></div>
+      <button class="gen-btn" id="genBtn" onclick="generateRoom()" disabled>Let SIINDEX Build This Room →</button>
+    </div>
+  </div>
+
+  <!-- RESULT CARD -->
+  <div class="result-wrap" id="resultWrap">
+    <div class="result-card">
+      <div class="result-banner">
+        <div class="res-name" id="resName"></div>
+        <div class="res-type" id="resType"></div>
+        <div class="res-desc" id="resDesc"></div>
+      </div>
+      <div class="result-body">
+        <div class="r-blk"><div class="r-blk-title">Channels</div><div class="r-chips" id="resChannels"></div></div>
+        <div class="r-blk"><div class="r-blk-title">Roles</div><div class="r-chips" id="resRoles"></div></div>
+        <div class="r-blk"><div class="r-blk-title">SIINDEX Agents</div><div class="r-chips" id="resAgents"></div></div>
+        <div class="r-blk"><div class="r-blk-title">Workflows</div><div id="resWorkflows"></div></div>
+        <div class="r-first-action"><div class="r-fa-label">✦ First Next Action</div><div class="r-fa-text" id="resFirstAction"></div></div>
+      </div>
+      <div class="result-btns">
+        <button class="btn-save" onclick="saveRoom()">Save to My Mission Rooms</button>
+        <button class="btn-discard" onclick="discardResult()">Discard</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROCESSING OVERLAY -->
+  <div class="proc-overlay" id="procOverlay">
+    <div class="proc-orb">⚡</div>
+    <div class="proc-title">SIINDEX Building Your Room</div>
+    <div class="proc-sub">Synthetic Intelligence is configuring your Mission Room.</div>
+    <div class="proc-steps" id="procSteps"></div>
+  </div>
+
+  <!-- DOCTRINE -->
+  <div class="doctrine">
+    <div class="doctrine-text">"Mission Rooms turn intention into coordinated action. They are not designed for chatter. They are designed for capability, trust, opportunity, ownership, sovereignty, and legacy."</div>
+    <div class="doctrine-sig">IN$DEX Doctrine · Sovereign Workspace Layer</div>
+  </div>
+
+  <!-- DETAIL SHEET -->
+  <div class="sheet-overlay" id="sheetOverlay" onclick="closeDetail()"></div>
+  <div class="detail-sheet" id="detailSheet">
+    <div class="sheet-handle"></div>
+    <div class="detail-body" id="detailBody"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const INDX_PRICE_USD = 0.24;
+    const ROOM_KEY = 'indx_mission_rooms';
+
+    const TYPE_DATA = {
+      citizen: {
+        label:'Citizen Personal', icon:'⚡',
+        desc:'Your personal mission command centre — goals, income ideas, SIINDEX briefs, Life Graph.',
+        channels:['#mission-brief','#next-actions','#income-ideas','#learning','#life-graph','#siindex-summary'],
+        roles:['Citizen','Mentor','SIINDEX Opportunity Agent','SIINDEX Memory Agent'],
+        agents:['Opportunity Agent','Memory Agent'],
+        workflows:[
+          {trigger:'Weekly reset',steps:'Review last week → Set next actions → Update Life Graph → SIINDEX brief'},
+          {trigger:'New income idea',steps:'Brain Builder → Weak Idea Killer → Opportunity Brain → 14-day plan'},
+          {trigger:'Goal achieved',steps:'Update Life Graph → Wisdom Score → share to Opportunity Feed'},
+        ],
+        firstAction:'Describe your mission in #mission-brief. SIINDEX builds your first Opportunity Brain.',
+      },
+      merchant: {
+        label:'Merchant', icon:'🏪',
+        desc:'Run your store, listings, orders, disputes, and live commerce in one room.',
+        channels:['#listings','#orders','#customer-questions','#disputes','#live-commerce','#siindex-summary'],
+        roles:['Merchant','Buyer Support','SIINDEX Merchant Agent','SIINDEX Trust Bot'],
+        agents:['Merchant Agent','Trust / Safety Agent'],
+        workflows:[
+          {trigger:'New order',steps:'Notify merchant → Update stock → Suggest follow-up message → Request review'},
+          {trigger:'Product sells out',steps:'Alert merchant → Suggest restock bundle → Update listing → Notify waitlist'},
+          {trigger:'10 good reviews',steps:'Celebrate → Suggest premium storefront → Update Wisdom Score → Media kit'},
+        ],
+        firstAction:'Add your first listing to #listings. SIINDEX suggests pricing, bundles, and trust badges.',
+      },
+      creator: {
+        label:'Creator', icon:'✨',
+        desc:'Turn content into ownership — calendar, assets, licensing, live drops, media kits.',
+        channels:['#content-calendar','#digital-assets','#media-kit','#live-drops','#licensing','#siindex-summary'],
+        roles:['Creator','Collaborator','SIINDEX Creator Agent','SIINDEX Media Agent'],
+        agents:['Creator Agent','Media Agent'],
+        workflows:[
+          {trigger:'New content idea',steps:'Identity Brain → Content Brain → 10 hooks → 30-day plan → media kit'},
+          {trigger:'Live drop goes live',steps:'Announce → stream → record → replay page → bundle offer'},
+          {trigger:'First royalty earned',steps:'Update Life Graph → licensing template → suggest next drop'},
+        ],
+        firstAction:'Post your first content idea in #content-calendar. SIINDEX builds your full Content Brain.',
+      },
+      community: {
+        label:'Community', icon:'🌏',
+        desc:'Villages, clubs, diaspora, churches, associations — organise and coordinate together.',
+        channels:['#announcements','#events','#fundraising','#community-votes','#resources','#siindex-summary'],
+        roles:['Community Admin','Member','Elder','Volunteer','SIINDEX Opportunity Agent'],
+        agents:['Opportunity Agent','Governance Agent'],
+        workflows:[
+          {trigger:'New community event',steps:'Build event page → broadcast kit → reminders → RSVP tracking → post-event recap'},
+          {trigger:'Fundraising goal hit',steps:'Announce → update treasury → thank donors → Life Graph update'},
+          {trigger:'Community vote opened',steps:'SIINDEX explainer → risk map → discussion → vote → decision log'},
+        ],
+        firstAction:'Post your first announcement. SIINDEX suggests your event page and broadcast kit.',
+      },
+      cultural: {
+        label:'Cultural Stewardship', icon:'🪶',
+        desc:'Protect, classify, and honour cultural assets. Elder review, attribution, commercial approval.',
+        channels:['#cultural-review','#permission-requests','#elder-decisions','#archive','#restricted','#siindex-summary'],
+        roles:['Elder','Cultural Steward','Creator','Community Admin','SIINDEX Cultural Steward Agent'],
+        agents:['Cultural Steward Agent','Compliance Agent'],
+        workflows:[
+          {trigger:'Cultural asset uploaded',steps:'Auto-classify → check permission → elder review request → approve or restrict'},
+          {trigger:'Commercial request received',steps:'Review attribution → revenue terms → elder approval → publish or decline'},
+          {trigger:'Misuse reported',steps:'Trust review → evidence log → escalate → decision ledger entry → response'},
+        ],
+        firstAction:'Upload your first cultural asset to #cultural-review. SIINDEX classifies and flags review needs.',
+      },
+      governance: {
+        label:'Governance', icon:'⚖️',
+        desc:'Proposals, councils, risk simulation, voting guides, and the decision ledger.',
+        channels:['#proposals','#discussions','#risk-map','#voting-guide','#council-notes','#decision-ledger'],
+        roles:['Governor','Council Member','Treasury Reviewer','Citizen','SIINDEX Governance Agent'],
+        agents:['Governance Agent','Compliance Agent'],
+        workflows:[
+          {trigger:'New proposal submitted',steps:'SIINDEX explainer → risk simulation → treasury impact → discussion → voting guide'},
+          {trigger:'Vote closes',steps:'Tally → announce result → decision ledger entry → Civilization Graph update'},
+          {trigger:'Appeal received',steps:'Review process → council notes → outcome → audit trail'},
+        ],
+        firstAction:'Submit your first proposal to #proposals. SIINDEX builds the explainer and risk map.',
+      },
+      child: {
+        label:'Child Citizen', icon:'🌱',
+        desc:'Guardian-controlled safe learning hub — projects, approvals, milestones, family archive.',
+        channels:['#learning-projects','#guardian-approvals','#school-projects','#achievements','#family-archive'],
+        roles:['Guardian','Child Citizen','Mentor','SIINDEX Learning Agent','SIINDEX Child Safety Agent'],
+        agents:['Learning Agent','Child Safety Agent'],
+        workflows:[
+          {trigger:'Child earns reward',steps:'Guardian review → approve → Life Graph update → family archive'},
+          {trigger:'Learning milestone reached',steps:'Issue credential → mentor recommendation → guardian notify → celebrate'},
+          {trigger:'Child turns 18',steps:'Transition plan → full citizen status → archive handed over → Life Graph migrated'},
+        ],
+        firstAction:'Guardian: set up learning goals in #learning-projects. SIINDEX tracks progress and milestones.',
+      },
+    };
+
+    let selectedType = null;
+    let pendingRoom  = null;
+
+    // BUILD TYPE CHIPS
+    (function(){
+      const wrap = document.getElementById('typeChips');
+      Object.entries(TYPE_DATA).forEach(([key,t])=>{
+        const btn = document.createElement('button');
+        btn.className = 'type-chip';
+        btn.dataset.key = key;
+        btn.innerHTML = `<span class="tc-icon">${t.icon}</span>${t.label}`;
+        btn.onclick = ()=>selectType(key);
+        wrap.appendChild(btn);
+      });
+    })();
+
+    // GOD MODE: QUICK-START TEMPLATES
+    const TEMPLATES = [
+      {type:'citizen',    label:'Personal mission',        mission:'Get my finances, learning, and next actions organised in one place.'},
+      {type:'merchant',   label:'Sell online',              mission:'Sell handmade Vanuatu prints online and manage orders and customer questions.'},
+      {type:'creator',    label:'Grow as a creator',        mission:'Turn my content into a steady income stream with a content calendar and media kits.'},
+      {type:'community',  label:'Organise my community',    mission:'Coordinate events, fundraising, and votes for my village community group.'},
+      {type:'cultural',   label:'Protect cultural heritage',mission:'Protect and classify our traditional designs before selling any cultural products.'},
+      {type:'governance', label:'Governance proposal',      mission:'Draft and coordinate a governance proposal with risk analysis and a voting guide.'},
+    ];
+    (function(){
+      const wrap = document.getElementById('tplStrip');
+      TEMPLATES.forEach(t=>{
+        const btn = document.createElement('button');
+        btn.className = 'tpl-chip';
+        btn.textContent = t.label;
+        btn.onclick = ()=>applyTemplate(t);
+        wrap.appendChild(btn);
+      });
+    })();
+
+    function applyTemplate(t){
+      document.getElementById('missionTa').value = t.mission;
+      selectType(t.type);
+      updateGenBtn();
+      saveDraft();
+      showToast('Template applied — edit and generate.');
+    }
+
+    function selectType(key){
+      selectedType = key;
+      document.querySelectorAll('.type-chip').forEach(b=>b.classList.toggle('selected', b.dataset.key===key));
+      updateGenBtn();
+      saveDraft(); // GOD MODE PATCH — persist type choice into draft
+    }
+
+    // GOD MODE PATCH — save draft on every mission input
+    document.getElementById('missionTa').addEventListener('input', ()=>{ updateGenBtn(); saveDraft(); });
+
+    // GOD MODE: MISSION DRAFT AUTO-SAVE
+    const DRAFT_KEY = 'indx_missionrooms_draft';
+    function saveDraft(){
+      const mission = document.getElementById('missionTa').value;
+      if(!mission.trim()){ localStorage.removeItem(DRAFT_KEY); return; }
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({mission, type:selectedType, ts:Date.now()}));
+    }
+    function restoreDraft(){
+      try{
+        const d = JSON.parse(localStorage.getItem(DRAFT_KEY)||'null');
+        if(d && d.mission && d.mission.trim().length>0){
+          document.getElementById('missionTa').value = d.mission;
+          if(d.type) selectType(d.type);
+          updateGenBtn();
+          document.getElementById('draftBanner').classList.add('show');
+        }
+      }catch(e){}
+    }
+    function dismissDraftBanner(){
+      document.getElementById('draftBanner').classList.remove('show');
+    }
+
+    // GOD MODE: LIVE ROOM ACTIVITY TICKER
+    const ACTIVITY_TEMPLATES = {
+      citizen:    ['SIINDEX updated your Life Graph','New match in Opportunity Feed','Weekly reset due soon'],
+      merchant:   ['🛍️ New order in #orders','💬 New customer question','📦 Restock suggested'],
+      creator:    ['✨ New idea flagged in #content-calendar','🎥 Live drop scheduled','📈 Media kit ready'],
+      community:  ['📅 New event in #events','💰 Fundraising goal rising','🗳️ Vote closing soon'],
+      cultural:   ['🪶 Asset pending elder review','✅ Commercial request approved','📁 New archive entry'],
+      governance: ['⚖️ New proposal awaiting vote','🗳️ Vote closes soon','📜 Decision Ledger updated'],
+      child:      ['🌱 Milestone reached','👨‍👩‍👧 Guardian approval pending','🏆 New achievement'],
+    };
+    function initActivityTicker(){
+      tickActivity();
+      setInterval(tickActivity, 6500);
+    }
+    function tickActivity(){
+      const rooms = getRooms();
+      rooms.forEach((r,i)=>{
+        const el = document.getElementById('ract-'+i);
+        if(!el) return;
+        const lines = ACTIVITY_TEMPLATES[r.type] || ['SIINDEX is monitoring this room'];
+        const line = lines[Math.floor(Math.random()*lines.length)];
+        el.style.opacity = 0;
+        setTimeout(()=>{ el.textContent = line; el.style.opacity = 1; }, 180);
+      });
+    }
+
+    // GOD MODE: DELETE CONFIRMATION
+    function requestDeleteConfirm(idx){
+      const area = document.getElementById('detDelArea');
+      if(!area) return;
+      area.innerHTML = `<span class="det-del-confirm">Delete? <button class="det-del-yes" onclick="deleteRoom(${idx})">Yes</button><button class="det-del-no" onclick="cancelDeleteConfirm(${idx})">No</button></span>`;
+    }
+    function cancelDeleteConfirm(idx){
+      const area = document.getElementById('detDelArea');
+      if(!area) return;
+      area.innerHTML = `<button class="det-del" onclick="requestDeleteConfirm(${idx})">Delete</button>`;
+    }
+
+    function updateGenBtn(){
+      const ok = document.getElementById('missionTa').value.trim().length >= 8 && selectedType;
+      document.getElementById('genBtn').disabled = !ok;
+    }
+
+    function toggleCreate(){
+      document.getElementById('createPanel').classList.toggle('open');
+    }
+
+    // GENERATE ROOM
+    const PROC_LABELS = [
+      'Reading your mission brief…',
+      'Mapping roles and permissions…',
+      'Assigning SIINDEX agents…',
+      'Building channels and workflows…',
+    ];
+
+    function generateRoom(){
+      const mission = document.getElementById('missionTa').value.trim();
+      if(!mission || !selectedType) return;
+      const T = TYPE_DATA[selectedType];
+
+      // Name from first meaningful word
+      const words = mission.split(/\s+/).filter(w=>w.length>3 && !/^(the|and|for|with|that|this|are|have|will|your|from|into)$/i.test(w));
+      const key = (words[0]||'Sovereign');
+      const cap = key.charAt(0).toUpperCase() + key.slice(1).toLowerCase();
+      const suffixes = {citizen:'Personal Room',merchant:'Store Room',creator:'Studio Room',community:'Community Hub',cultural:'Stewardship Room',governance:'Council Chamber',child:'Learning Room'};
+      const roomName = `${cap} ${suffixes[selectedType]||'Mission Room'}`;
+
+      pendingRoom = {id:Date.now().toString(36), name:roomName, type:selectedType, mission, created:Date.now()};
+
+      // Processing overlay
+      const overlay = document.getElementById('procOverlay');
+      document.getElementById('procSteps').innerHTML = PROC_LABELS.map((s,i)=>
+        `<div class="proc-step"><div class="proc-dot" id="pd${i}"></div><div class="proc-step-text" id="pt${i}">${s}</div></div>`
+      ).join('');
+      overlay.classList.add('show');
+      document.getElementById('resultWrap').classList.remove('show');
+      document.getElementById('createPanel').classList.remove('open');
+
+      let step = 0;
+      function next(){
+        if(step > 0){ document.getElementById('pd'+(step-1)).className='proc-dot done'; document.getElementById('pt'+(step-1)).className='proc-step-text done'; }
+        if(step < PROC_LABELS.length){ document.getElementById('pd'+step).className='proc-dot active'; document.getElementById('pt'+step).className='proc-step-text active'; step++; setTimeout(next,640); }
+        else{ setTimeout(()=>{ overlay.classList.remove('show'); buildResult(roomName, T); }, 400); }
+      }
+      next();
+    }
+
+    function buildResult(name, T){
+      document.getElementById('resName').textContent = name;
+      document.getElementById('resType').textContent = T.label;
+      document.getElementById('resDesc').textContent = T.desc;
+      document.getElementById('resChannels').innerHTML = T.channels.map(c=>`<span class="r-chip ch">${c}</span>`).join('');
+      document.getElementById('resRoles').innerHTML = T.roles.map(r=>`<span class="r-chip">${r}</span>`).join('');
+      document.getElementById('resAgents').innerHTML = T.agents.map(a=>`<span class="r-chip ag">⚡ ${a}</span>`).join('');
+      document.getElementById('resWorkflows').innerHTML = T.workflows.map(w=>
+        `<div class="r-wf"><div class="r-wf-trigger">Trigger: ${w.trigger}</div><div class="r-wf-steps">${w.steps}</div></div>`
+      ).join('');
+      document.getElementById('resFirstAction').textContent = T.firstAction;
+      const wrap = document.getElementById('resultWrap');
+      wrap.classList.add('show');
+      wrap.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+
+    function saveRoom(){
+      if(!pendingRoom) return;
+      const rooms = getRooms();
+      rooms.unshift(pendingRoom);
+      if(rooms.length > 20) rooms.pop();
+      localStorage.setItem(ROOM_KEY, JSON.stringify(rooms));
+      pendingRoom = null;
+      document.getElementById('resultWrap').classList.remove('show');
+      document.getElementById('missionTa').value = '';
+      selectedType = null;
+      document.querySelectorAll('.type-chip').forEach(b=>b.classList.remove('selected'));
+      updateGenBtn();
+      localStorage.removeItem(DRAFT_KEY); // GOD MODE PATCH — clear draft once room is saved
+      document.getElementById('draftBanner').classList.remove('show');
+      renderRooms();
+      showToast('✦ Mission Room saved.');
+    }
+
+    function discardResult(){
+      document.getElementById('resultWrap').classList.remove('show');
+      pendingRoom = null;
+    }
+
+    // RENDER ROOMS
+    function getRooms(){ try{ return JSON.parse(localStorage.getItem(ROOM_KEY)||'[]'); }catch(e){ return []; } }
+
+    function renderRooms(){
+      const rooms = getRooms();
+      document.getElementById('roomBadge').textContent = rooms.length === 1 ? '1 Room' : `${rooms.length} Rooms`;
+      const sect  = document.getElementById('yourRoomsSect');
+      const empty = document.getElementById('emptyState');
+      if(rooms.length > 0){
+        sect.style.display = 'block';
+        empty.style.display = 'none';
+        document.getElementById('roomsStrip').innerHTML = rooms.map((r,i)=>{
+          const T = TYPE_DATA[r.type]||{};
+          return `<div class="room-card" onclick="openDetail(${i})">
+            <div class="rc-icon">${T.icon||'⚡'}</div>
+            <div class="rc-name">${esc(r.name)}</div>
+            <div class="rc-type">${T.label||r.type}</div>
+            <div class="rc-meta"><span class="rc-ch">${(T.channels||[]).length} channels</span><span class="rc-agents">${(T.agents||[]).length} agents</span></div>
+            <div class="rc-activity"><span class="rc-activity-dot"></span><span class="rc-activity-text" id="ract-${i}">Reading room activity…</span></div>
+          </div>`;
+        }).join('');
+        tickActivity(); // GOD MODE PATCH — populate live activity lines immediately after render
+      } else {
+        sect.style.display  = 'none';
+        empty.style.display = 'block';
+      }
+    }
+
+    // DETAIL SHEET
+    function openDetail(idx){
+      const rooms = getRooms();
+      const r = rooms[idx];
+      if(!r) return;
+      const T = TYPE_DATA[r.type]||{};
+      const created = new Date(r.created).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});
+      document.getElementById('detailBody').innerHTML = `
+        <div class="det-meta">
+          <span>${T.label||r.type} · ${created}</span>
+          <span id="detDelArea"><button class="det-del" onclick="requestDeleteConfirm(${idx})">Delete</button></span>
+        </div>
+        <div class="det-name">${esc(r.name)}</div>
+        <div class="r-blk" style="margin-top:14px;"><div class="r-blk-title">Channels</div><div class="r-chips">${(T.channels||[]).map(c=>`<span class="r-chip ch">${c}</span>`).join('')}</div></div>
+        <div class="r-blk" style="margin-top:12px;"><div class="r-blk-title">Roles</div><div class="r-chips">${(T.roles||[]).map(c=>`<span class="r-chip">${c}</span>`).join('')}</div></div>
+        <div class="r-blk" style="margin-top:12px;"><div class="r-blk-title">SIINDEX Agents</div><div class="r-chips">${(T.agents||[]).map(a=>`<span class="r-chip ag">⚡ ${a}</span>`).join('')}</div></div>
+        <div class="r-blk" style="margin-top:12px;"><div class="r-blk-title">Workflows</div>${(T.workflows||[]).map(w=>`<div class="r-wf"><div class="r-wf-trigger">Trigger: ${w.trigger}</div><div class="r-wf-steps">${w.steps}</div></div>`).join('')}</div>
+        <div class="r-first-action" style="margin-top:8px;"><div class="r-fa-label">✦ First Next Action</div><div class="r-fa-text">${T.firstAction||''}</div></div>
+      `;
+      document.getElementById('detailSheet').classList.add('show');
+      document.getElementById('sheetOverlay').classList.add('show');
+    }
+
+    function closeDetail(){
+      document.getElementById('detailSheet').classList.remove('show');
+      document.getElementById('sheetOverlay').classList.remove('show');
+    }
+
+    function deleteRoom(idx){
+      const rooms = getRooms();
+      rooms.splice(idx,1);
+      localStorage.setItem(ROOM_KEY, JSON.stringify(rooms));
+      closeDetail();
+      renderRooms();
+      showToast('Room deleted.');
+    }
+
+    // UTILS
+    function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3000); }
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+      renderRooms();
+      restoreDraft(); // GOD MODE PATCH
+      initActivityTicker(); // GOD MODE PATCH
+    });
+  </script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

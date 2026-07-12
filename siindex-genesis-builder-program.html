@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Genesis Builder Program — IN$DEX</title>
+<style>
+  :root {
+    --cyan:    #00D4FF;
+    --blue:    #2B35D8;
+    --purple:  #8B3FE8;
+    --black:   #090A10;
+    --green:   #00E5A0;
+    --gold:    #FFB800;
+    --red:     #FF4D6D;
+    --surface: #12141F;
+    --surface2:#1A1D2E;
+    --surface3:#22263A;
+    --text:    #FFFFFF;
+    --text2:   #A0A8C0;
+    --muted:   #5A6080;
+    --border:  rgba(255,255,255,0.07);
+  }
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  body {
+    background:var(--black); color:var(--text);
+    font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    max-width:430px; margin:0 auto; min-height:100vh;
+    padding-bottom:90px; overflow-x:hidden;
+  }
+
+  /* NAV */
+  .nav {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:52px 20px 16px; position:sticky; top:0;
+    background:rgba(9,10,16,0.96); backdrop-filter:blur(16px);
+    z-index:100; border-bottom:1px solid var(--border);
+  }
+  .nav-back { font-size:20px; cursor:pointer; color:var(--text2); }
+  .nav-title { font-size:14px; font-weight:700; }
+  .nav-badge { background:rgba(255,184,0,0.1); border:1px solid rgba(255,184,0,0.3); color:var(--gold); font-size:10px; font-weight:700; padding:3px 8px; border-radius:20px; }
+
+  /* HERO */
+  .hero { padding:28px 20px 22px; position:relative; overflow:hidden; }
+  .hero::before {
+    content:''; position:absolute; top:-40px; left:50%; transform:translateX(-50%);
+    width:360px; height:320px;
+    background:radial-gradient(circle, rgba(255,184,0,0.06) 0%, transparent 70%);
+    pointer-events:none;
+  }
+  .hero-tag { display:inline-block; background:rgba(255,184,0,0.1); border:1px solid rgba(255,184,0,0.3); color:var(--gold); font-size:10px; font-weight:800; letter-spacing:1.5px; padding:5px 14px; border-radius:20px; text-transform:uppercase; margin-bottom:14px; }
+  .hero h1 { font-size:22px; font-weight:800; line-height:1.3; margin-bottom:10px; letter-spacing:-0.5px; }
+  .hero h1 span { color:var(--gold); }
+  .hero-sub { font-size:13px; color:var(--text2); line-height:1.6; margin-bottom:16px; }
+  .hero-lock { background:var(--surface); border:1px solid rgba(255,184,0,0.18); border-radius:12px; padding:14px 16px; font-size:12px; color:var(--text2); line-height:1.6; }
+  .hero-lock strong { color:var(--gold); font-style:normal; }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  .fade-in { animation:fadeUp 0.35s ease both; }
+
+  /* STAT ROW */
+  .stat-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; padding:0 20px 20px; }
+  .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:13px 10px; text-align:center; }
+  .stat-val { font-size:18px; font-weight:800; letter-spacing:-0.5px; margin-bottom:4px; }
+  .stat-label { font-size:9px; color:var(--text2); font-weight:600; line-height:1.3; }
+
+  /* SECTION HDR */
+  .section-hdr { display:flex; align-items:center; justify-content:space-between; padding:0 20px 12px; }
+  .section-hdr h2 { font-size:14px; font-weight:800; }
+  .section-hdr span { font-size:11px; color:var(--text2); font-weight:600; }
+
+  /* ── GM1: BUILDER TIER SELECTOR ── */
+  .tier-card { margin:0 20px 10px; border-radius:16px; overflow:hidden; cursor:pointer; transition:border-color 0.2s; border:1px solid var(--border); background:var(--surface); }
+  .tier-card.selected { border-color:rgba(255,184,0,0.4); }
+  .tier-row { display:flex; align-items:center; gap:12px; padding:14px 16px; }
+  .tier-icon { font-size:28px; flex-shrink:0; }
+  .tier-info { flex:1; min-width:0; }
+  .tier-name { font-size:13px; font-weight:800; margin-bottom:3px; }
+  .tier-who  { font-size:10px; color:var(--text2); margin-bottom:6px; }
+  .tier-proofs { display:flex; flex-wrap:wrap; gap:4px; }
+  .tier-proof-chip { font-size:9px; font-weight:700; padding:2px 8px; border-radius:20px; background:rgba(255,184,0,0.08); border:1px solid rgba(255,184,0,0.2); color:var(--gold); }
+  .tier-chevron { font-size:14px; color:var(--muted); flex-shrink:0; transition:transform 0.2s; }
+  .tier-chevron.open { transform:rotate(90deg); }
+  /* Tier expand */
+  .tier-expand { display:none; border-top:1px solid var(--border); padding:14px 16px 16px; background:var(--surface2); }
+  .tier-expand.show { display:block; }
+  .tier-section-lbl { font-size:9px; font-weight:800; color:var(--muted); letter-spacing:0.6px; text-transform:uppercase; margin-bottom:7px; margin-top:10px; }
+  .tier-section-lbl:first-child { margin-top:0; }
+  .tier-item { display:flex; align-items:flex-start; gap:8px; font-size:11px; color:var(--text2); padding:4px 0; line-height:1.4; }
+  .tier-item::before { content:'✓'; color:var(--green); flex-shrink:0; font-weight:800; margin-top:1px; }
+  .tier-cta { margin-top:12px; padding:11px; border-radius:12px; font-size:13px; font-weight:800; text-align:center; cursor:pointer; background:rgba(255,184,0,0.1); border:1px solid rgba(255,184,0,0.35); color:var(--gold); transition:all 0.2s; }
+  .tier-cta:hover { background:rgba(255,184,0,0.18); }
+
+  /* ── GM2: 30-DAY JOURNEY TRACKER ── */
+  .journey-card { margin:0 20px 16px; background:var(--surface); border:1px solid var(--border); border-radius:18px; overflow:hidden; }
+  .journey-hdr { padding:14px 16px 12px; border-bottom:1px solid var(--border); }
+  .journey-progress-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .journey-progress-label { font-size:12px; font-weight:700; }
+  .journey-progress-pct { font-size:12px; font-weight:800; color:var(--gold); }
+  .journey-bar-wrap { height:5px; background:var(--surface3); border-radius:3px; overflow:hidden; }
+  .journey-bar { height:5px; border-radius:3px; background:linear-gradient(90deg,var(--gold),var(--green)); transition:width 0.5s ease; }
+  /* Week */
+  .journey-week { border-bottom:1px solid var(--border); }
+  .journey-week:last-child { border-bottom:none; }
+  .journey-week-hdr { display:flex; align-items:center; gap:10px; padding:12px 16px; cursor:pointer; transition:background 0.15s; }
+  .journey-week-hdr:hover { background:rgba(255,255,255,0.02); }
+  .journey-week-num { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800; flex-shrink:0; }
+  .week-done  { background:rgba(0,229,160,0.12); border:1px solid rgba(0,229,160,0.3); color:var(--green); }
+  .week-active{ background:rgba(255,184,0,0.12); border:1px solid rgba(255,184,0,0.3); color:var(--gold); }
+  .week-locked{ background:var(--surface3); border:1px solid var(--border); color:var(--muted); }
+  .journey-week-info { flex:1; }
+  .journey-week-title { font-size:12px; font-weight:800; }
+  .journey-week-sub   { font-size:10px; color:var(--text2); }
+  .journey-week-prog  { font-size:9px; color:var(--muted); font-weight:700; margin-top:2px; }
+  .journey-week-chev  { font-size:14px; color:var(--muted); transition:transform 0.2s; }
+  .journey-week-chev.open { transform:rotate(90deg); }
+  .journey-tasks { display:none; padding:0 16px 12px; }
+  .journey-tasks.show { display:block; }
+  .journey-task { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); cursor:pointer; }
+  .journey-task:last-child { border-bottom:none; }
+  .task-check { width:20px; height:20px; border-radius:50%; border:2px solid var(--muted); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:10px; transition:all 0.15s; }
+  .task-check.done { background:var(--green); border-color:var(--green); color:var(--black); font-weight:800; }
+  .task-check.locked { background:var(--surface3); border-color:var(--surface3); }
+  .task-label { font-size:11px; font-weight:600; flex:1; line-height:1.35; }
+  .task-label.done { color:var(--text2); text-decoration:line-through; }
+  .task-label.locked { color:var(--muted); }
+  .task-output { font-size:9px; font-weight:800; color:var(--gold); background:rgba(255,184,0,0.07); border:1px solid rgba(255,184,0,0.15); padding:2px 8px; border-radius:20px; white-space:nowrap; }
+
+  /* ── GM3: APPLICATION FLOW ── */
+  .app-card { margin:0 20px 16px; background:var(--surface); border:1px solid rgba(255,184,0,0.18); border-radius:18px; overflow:hidden; }
+  .app-hdr { padding:14px 16px 12px; border-bottom:1px solid var(--border); }
+  .app-hdr-title { font-size:14px; font-weight:800; margin-bottom:4px; }
+  .app-hdr-sub { font-size:11px; color:var(--text2); }
+  .app-progress { display:flex; gap:4px; padding:12px 16px; border-bottom:1px solid var(--border); }
+  .app-step-dot { flex:1; height:4px; border-radius:2px; background:var(--surface3); transition:background 0.2s; }
+  .app-step-dot.done { background:var(--green); }
+  .app-step-dot.active { background:var(--gold); }
+  .app-body { padding:14px 16px; }
+  .app-q-num { font-size:9px; font-weight:800; color:var(--gold); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:6px; }
+  .app-q-text { font-size:14px; font-weight:800; line-height:1.35; margin-bottom:14px; }
+  .app-hint { font-size:11px; color:var(--text2); margin-bottom:12px; line-height:1.5; }
+  /* Sensitive check */
+  .app-checks { display:flex; flex-direction:column; gap:8px; margin-bottom:4px; }
+  .app-check-item { display:flex; align-items:center; gap:10px; padding:9px 12px; background:var(--surface3); border-radius:11px; cursor:pointer; font-size:12px; border:1px solid var(--border); transition:border-color 0.15s; }
+  .app-check-item.selected { border-color:rgba(255,184,0,0.4); background:rgba(255,184,0,0.06); }
+  .app-check-box { width:18px; height:18px; border-radius:5px; border:2px solid var(--muted); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:800; transition:all 0.15s; }
+  .app-check-box.selected { background:var(--gold); border-color:var(--gold); color:var(--black); }
+  /* Text input */
+  .app-textarea { width:100%; background:var(--surface3); border:1px solid var(--border); border-radius:12px; padding:12px 14px; font-size:13px; color:var(--text); font-family:inherit; resize:none; outline:none; line-height:1.5; min-height:90px; transition:border-color 0.15s; }
+  .app-textarea:focus { border-color:rgba(255,184,0,0.4); }
+  .app-textarea::placeholder { color:var(--muted); }
+  /* Select */
+  .app-chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .app-chip { font-size:11px; font-weight:700; padding:6px 14px; border-radius:20px; border:1px solid var(--border); background:var(--surface3); color:var(--text2); cursor:pointer; transition:all 0.15s; }
+  .app-chip.selected { background:rgba(255,184,0,0.1); border-color:rgba(255,184,0,0.4); color:var(--gold); }
+  /* Nav */
+  .app-nav { display:flex; gap:8px; margin-top:16px; }
+  .app-btn { flex:1; padding:12px; border-radius:13px; font-size:13px; font-weight:800; text-align:center; cursor:pointer; transition:all 0.2s; }
+  .app-btn-primary { background:rgba(255,184,0,0.12); border:1px solid rgba(255,184,0,0.35); color:var(--gold); }
+  .app-btn-primary:hover { background:rgba(255,184,0,0.2); }
+  .app-btn-sec { background:var(--surface3); border:1px solid var(--border); color:var(--text2); }
+  /* Confirm screen */
+  .app-confirm { padding:24px 16px; text-align:center; }
+  .app-confirm-icon { font-size:48px; margin-bottom:14px; }
+  .app-confirm-title { font-size:18px; font-weight:800; margin-bottom:8px; }
+  .app-confirm-sub { font-size:12px; color:var(--text2); line-height:1.6; margin-bottom:16px; }
+  .app-confirm-ref { font-size:11px; color:var(--gold); font-weight:700; background:rgba(255,184,0,0.08); border:1px solid rgba(255,184,0,0.2); padding:8px 16px; border-radius:12px; margin-bottom:16px; }
+  .app-confirm-next { font-size:11px; color:var(--text2); line-height:1.55; }
+
+  /* ── GM4: BUILDER NETWORK + EVENTS ── */
+  .network-role-card { margin:0 20px 10px; background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; cursor:pointer; }
+  .network-role-row { display:flex; align-items:center; gap:12px; padding:13px 16px; }
+  .network-role-icon { font-size:26px; flex-shrink:0; }
+  .network-role-info { flex:1; }
+  .network-role-name { font-size:12px; font-weight:800; margin-bottom:3px; }
+  .network-role-desc { font-size:10px; color:var(--text2); margin-bottom:4px; }
+  .network-role-count { font-size:9px; font-weight:700; color:var(--green); }
+  .network-role-milestone { font-size:9px; color:var(--muted); margin-top:2px; }
+  .network-join { font-size:10px; font-weight:800; color:var(--cyan); flex-shrink:0; }
+
+  /* Events */
+  .event-card { margin:0 20px 10px; background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+  .event-row { display:flex; align-items:center; gap:12px; padding:12px 16px; }
+  .event-date { flex-shrink:0; text-align:center; background:var(--surface3); border-radius:10px; padding:8px 10px; min-width:44px; }
+  .event-month { font-size:8px; font-weight:800; color:var(--muted); letter-spacing:0.5px; text-transform:uppercase; }
+  .event-day   { font-size:18px; font-weight:800; color:var(--gold); line-height:1; }
+  .event-info  { flex:1; }
+  .event-title { font-size:12px; font-weight:800; margin-bottom:3px; }
+  .event-meta  { font-size:10px; color:var(--text2); }
+  .event-interest { font-size:10px; font-weight:800; border:1px solid rgba(255,184,0,0.3); background:rgba(255,184,0,0.07); color:var(--gold); padding:5px 12px; border-radius:20px; flex-shrink:0; cursor:pointer; transition:all 0.15s; white-space:nowrap; }
+  .event-interest.registered { background:rgba(0,229,160,0.08); border-color:rgba(0,229,160,0.3); color:var(--green); }
+
+  /* DOCTRINE */
+  .doctrine-section { padding:8px 20px 24px; }
+  .doctrine-section h2 { font-size:13px; font-weight:800; color:var(--text2); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:14px; }
+  .doctrine-line { display:flex; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); font-size:12px; color:var(--text2); line-height:1.5; }
+  .doctrine-line:last-child { border-bottom:none; }
+  .doctrine-line::before { content:'🔨'; flex-shrink:0; margin-top:1px; }
+
+  /* TOAST */
+  .toast { position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--surface3); border:1px solid rgba(255,255,255,0.12); color:var(--text); font-size:13px; font-weight:600; padding:12px 20px; border-radius:24px; opacity:0; transition:all 0.3s; z-index:999; white-space:nowrap; max-width:340px; pointer-events:none; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* BOTTOM NAV */
+  .bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:430px; background:rgba(18,20,31,0.97); backdrop-filter:blur(20px); border-top:1px solid var(--border); display:flex; padding:10px 0 24px; z-index:100; }
+  .nav-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; font-size:9px; font-weight:700; color:var(--muted); letter-spacing:0.3px; text-transform:uppercase; transition:color 0.15s; }
+  .nav-item.active { color:var(--gold); }
+  .nav-item-icon { font-size:22px; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-back">←</div>
+  <div class="nav-title">Genesis Builder Program</div>
+  <div class="nav-badge">Genesis</div>
+</nav>
+
+<!-- HERO -->
+<div class="hero fade-in">
+  <div class="hero-tag">IN$DEX Genesis Builder Program — v10.0</div>
+  <h1>Build the first<br><span>Sovereign Opportunity Economy</span><br>with us.</h1>
+  <p class="hero-sub">IN$DEX is inviting Genesis Builders — citizens, merchants, creators, cultural stewards, developers, educators, and community leaders — ready to turn imagination into sovereign opportunity.</p>
+  <div class="hero-lock">This is not a waitlist.<br><strong>This is the first builder circle of a new civilization.</strong><br><br>"The first citizens should not be spectators. They should be Genesis Builders." — AJ Henry, Founder</div>
+</div>
+
+<!-- STAT ROW -->
+<div class="stat-row fade-in" style="animation-delay:.04s">
+  <div class="stat-card"><div class="stat-val" style="color:var(--gold)">6</div><div class="stat-label">Genesis Builder tiers</div></div>
+  <div class="stat-card"><div class="stat-val" style="color:var(--green)">30</div><div class="stat-label">Day structured journey</div></div>
+  <div class="stat-card"><div class="stat-val" style="color:var(--cyan)">10</div><div class="stat-label">Capability Proofs to earn</div></div>
+</div>
+
+<!-- GM1: TIER SELECTOR -->
+<div class="section-hdr fade-in" style="animation-delay:.06s">
+  <h2>🏗️ Program Tiers — Choose Your Role</h2>
+  <span id="tierSelLabel">None selected</span>
+</div>
+<div id="tierList" class="fade-in" style="animation-delay:.08s"></div>
+
+<!-- GM2: 30-DAY JOURNEY -->
+<div class="section-hdr fade-in" style="animation-delay:.14s;margin-top:8px">
+  <h2>📅 30-Day Genesis Journey</h2>
+  <span id="journeyPctLabel">0% complete</span>
+</div>
+<div class="journey-card fade-in" style="animation-delay:.16s">
+  <div class="journey-hdr">
+    <div class="journey-progress-row">
+      <div class="journey-progress-label">Your Genesis Build Journey</div>
+      <div class="journey-progress-pct" id="journeyPct">0%</div>
+    </div>
+    <div class="journey-bar-wrap"><div class="journey-bar" id="journeyBar" style="width:0%"></div></div>
+  </div>
+  <div id="journeyWeeks"></div>
+</div>
+
+<!-- GM3: APPLICATION FLOW -->
+<div class="section-hdr fade-in" style="animation-delay:.22s;margin-top:8px">
+  <h2>📋 Apply to Become a Genesis Builder</h2>
+  <span>10 questions · 5 min</span>
+</div>
+<div class="app-card fade-in" style="animation-delay:.24s">
+  <div class="app-hdr">
+    <div class="app-hdr-title">Genesis Builder Application</div>
+    <div class="app-hdr-sub">Bring one idea, skill, product, story, cultural asset, community project, or business mission. SIINDEX will help shape it into something visible, trusted, useful, and sovereign.</div>
+  </div>
+  <div class="app-progress" id="appProgress"></div>
+  <div class="app-body" id="appBody"></div>
+</div>
+
+<!-- GM4: BUILDER NETWORK -->
+<div class="section-hdr fade-in" style="animation-delay:.30s;margin-top:8px">
+  <h2>🌐 Builder Network</h2>
+  <span>6 roles · active now</span>
+</div>
+<div id="networkList" class="fade-in" style="animation-delay:.32s"></div>
+
+<!-- EVENTS -->
+<div class="section-hdr fade-in" style="animation-delay:.36s;margin-top:4px">
+  <h2>📆 Upcoming Events</h2>
+  <span id="eventsRegistered">0 registered</span>
+</div>
+<div id="eventsList" class="fade-in" style="animation-delay:.38s"></div>
+
+<!-- DOCTRINE -->
+<div class="doctrine-section fade-in" style="animation-delay:.44s">
+  <h2>Doctrine — Ecosystems Need Builders, Not Just Citizens</h2>
+  <div id="doctrineLines"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <div class="nav-item"><div class="nav-item-icon">🏠</div>Home</div>
+  <div class="nav-item"><div class="nav-item-icon">🧠</div>Brain</div>
+  <div class="nav-item active"><div class="nav-item-icon">🔨</div>Genesis</div>
+  <div class="nav-item"><div class="nav-item-icon">🚀</div>Missions</div>
+  <div class="nav-item"><div class="nav-item-icon">⚙️</div>Settings</div>
+</nav>
+
+<script>
+  const INDX_PRICE_USD = 0.24;
+
+  // ── DATA ──
+
+  const TIERS = [
+    {
+      key:'citizen', icon:'🌱', name:'Genesis Citizen', color:'var(--green)',
+      who:'Early adopter completing SIINDEX onboarding and their first mission',
+      receives:[
+        'Brain Passport setup with Identity Brain',
+        'First Opportunity Brain configuration',
+        'First guided learning pathway',
+        'Basic SIINDEX mission credits',
+        'Founding record in Life Graph',
+        'Genesis Citizen proof and founding trust tier',
+      ],
+      credits:['SIINDEX mission sessions (5)', 'Learning path access', 'Brain Passport setup'],
+      proofs:['Genesis Citizen Proof'],
+    },
+    {
+      key:'builder', icon:'🔨', name:'Genesis Builder', color:'var(--gold)',
+      who:'Citizen actively building a product, service, business, course, Mission Room, or community project',
+      receives:[
+        'Dedicated Mission Room with 8 SIINDEX agents',
+        'SIINDEX build credits across all creative modules',
+        'Launch templates (product, service, cultural, creator, community)',
+        'Capability pathway with weekly check-ins',
+        'Public showcase eligibility in Proof & Insight Network',
+        'Priority SIINDEX capacity and deeper strategy review',
+        'Early access to new IN$DEX modules before general release',
+      ],
+      credits:['SIINDEX mission sessions (25)', 'ImageNation Builder (10)', 'Design Studio (10)', 'Media Engine (5)', 'Automation Grid (5)', 'Marketplace listing boosts (3)', 'Premium trust review pass'],
+      proofs:['Genesis Builder Proof', 'First Opportunity Proof', 'Mission Room Operator Proof'],
+    },
+    {
+      key:'merchant', icon:'🏪', name:'Genesis Merchant', color:'var(--cyan)',
+      who:'Seller or business using IN$DEX to trade with trust across corridors',
+      receives:[
+        'Marketplace setup and listing review',
+        'Trust checklist and trust signals audit',
+        'Buyer FAQ generation by SIINDEX',
+        'Dispute guidance and protection review',
+        'First-sale plan with 7-day launch sequence',
+        'Pricing strategy review',
+        'Delivery and payment terms documentation',
+      ],
+      credits:['SIINDEX mission sessions (15)', 'Listing boosts (5)', 'Buyer FAQ generation (3)', 'Trust review passes (2)'],
+      proofs:['Genesis Merchant Proof', 'Trusted Merchant Proof', 'First Opportunity Proof'],
+    },
+    {
+      key:'creator', icon:'🎨', name:'Genesis Creator', color:'var(--purple)',
+      who:'Creator turning content, knowledge, culture, or skills into owned opportunity',
+      receives:[
+        'Content Brain setup with voice and boundary rules',
+        'Offer design and product page creation',
+        'Full media kit generation',
+        'Live commerce setup and event support',
+        'Audience-to-ownership pathway design',
+        'Course outline and pricing review',
+        'Cultural safety check on all content outputs',
+      ],
+      credits:['SIINDEX mission sessions (20)', 'Design Studio (15)', 'Media Engine (10)', 'ImageNation Builder (10)', 'Live commerce setup (2)'],
+      proofs:['Genesis Creator Proof', 'ImageNation Builder Proof', 'First Opportunity Proof'],
+    },
+    {
+      key:'steward', icon:'🌿', name:'Genesis Steward', color:'var(--green)',
+      who:'Community, cultural, governance, or safety contributor building sovereign infrastructure',
+      receives:[
+        'Cultural Rights Graph tools and classification support',
+        'Governance Mission Room with proposal tools',
+        'Proposal explainer generation by SIINDEX',
+        'Community mission templates',
+        'Decision Ledger access and provenance review',
+        'Elder review facilitation support',
+        'Cultural Rights Card creation support',
+      ],
+      credits:['SIINDEX mission sessions (20)', 'Cultural review passes (5)', 'Governance session support (3)', 'Mission Room setup'],
+      proofs:['Cultural Steward Proof', 'Governance Contributor Proof', 'Community Launch Proof'],
+    },
+    {
+      key:'developer', icon:'⚙️', name:'Genesis Developer / Partner', color:'var(--blue)',
+      who:'Builder integrating tools, applications, services, rails, or workflows into IN$DEX',
+      receives:[
+        'API and MCP access with documentation',
+        'Sandbox environment with test credentials',
+        'SIINDEX integration review and guidance',
+        'Security requirements briefing and review',
+        'Partner Days access and ecosystem alignment',
+        'Build log publication eligibility for integration launches',
+        'Direct access to IN$DEX technical build team',
+      ],
+      credits:['API access (full sandbox)', 'SIINDEX integration sessions (10)', 'Security review passes (2)', 'Partner showcase eligibility'],
+      proofs:['Genesis Developer Proof', 'Automation Safety Proof', 'Mission Room Operator Proof'],
+    },
+  ];
+
+  const JOURNEY_WEEKS = [
+    {
+      num:1, title:'Week 1 — Identity and Brain', sub:'Establish who you are and what you are building',
+      tasks:[
+        { label:'Create your Grid Account', output:'Grid Account' },
+        { label:'Complete your Identity Brain: skills, values, and what you will not offer', output:'Identity Brain' },
+        { label:'Build your Opportunity Brain: what you are looking for and at what value', output:'Opportunity Brain' },
+        { label:'Set up your Visual Brain and Content Brain voice rules', output:'Content Brain' },
+        { label:'Complete your Brain Passport and review delegation settings', output:'Brain Passport' },
+        { label:'Run your first SIINDEX blind spot pass on your planned opportunity', output:'Blind Spot Review' },
+      ]
+    },
+    {
+      num:2, title:'Week 2 — Build', sub:'Create the first real artifact of your opportunity',
+      tasks:[
+        { label:'Choose your first offer from the three opportunity paths SIINDEX created', output:'Opportunity Map' },
+        { label:'Create your opportunity page or product/service description', output:'Offer Page' },
+        { label:'Build your first marketplace listing draft with trust signals', output:'Listing Draft' },
+        { label:'Complete the trust checklist for your offer', output:'Trust Checklist' },
+        { label:'Run cultural, child, and security checks if your offer involves any of these', output:'Safety Review' },
+        { label:'Have SIINDEX review your listing before it goes live', output:'SIINDEX Review' },
+      ]
+    },
+    {
+      num:3, title:'Week 3 — Launch', sub:'Get your opportunity in front of the people it helps',
+      tasks:[
+        { label:'Create your media kit with SIINDEX', output:'Media Kit' },
+        { label:'Run your first buyer, learner, or community outreach action', output:'First Outreach' },
+        { label:'Activate your Mission Room for this opportunity', output:'Mission Room' },
+        { label:'Complete your first live commerce event, community post, or direct sale', output:'Launch Record' },
+        { label:'Gather your first feedback and log it in your Decision Ledger', output:'Feedback Record' },
+      ]
+    },
+    {
+      num:4, title:'Week 4 — Learn and Prove', sub:'Review what worked, improve what did not, and earn your proof',
+      tasks:[
+        { label:'Review your launch results with SIINDEX and identify what to improve', output:'Results Review' },
+        { label:'Update your listing, offer, or outreach based on what you learned', output:'Iteration Record' },
+        { label:'Document any failures or surprises in your Decision Ledger', output:'Failure Record' },
+        { label:'Create your Genesis Builder case study for the Public Trust Hub', output:'Case Study' },
+        { label:'Earn your Genesis Builder Capability Proof', output:'Genesis Builder Proof' },
+        { label:'Update your Life Graph with your founding journey entry', output:'Life Graph Entry' },
+      ]
+    },
+  ];
+
+  const APP_QUESTIONS = [
+    { num:1, text:'Who are you?', hint:'Tell us your name, where you are based, and your background in 2–3 sentences. You can be a merchant, creator, cultural steward, developer, community leader, or just someone with a strong idea.', type:'textarea', placeholder:'I am a...' },
+    { num:2, text:'What are you building?', hint:'Describe the product, service, offer, community project, cultural asset, course, or mission you want to build inside IN$DEX.', type:'textarea', placeholder:'I am building...' },
+    { num:3, text:'Who does it help?', hint:'Describe the specific people this helps — their situation, needs, and what becomes better for them.', type:'textarea', placeholder:'This helps...' },
+    { num:4, text:'What do you already have?', hint:'Tell us what you already have: a skill, product, audience, existing business, cultural knowledge, community relationship, or starting idea.', type:'textarea', placeholder:'I already have...' },
+    { num:5, text:'What do you need SIINDEX to help with?', hint:'Be specific. SIINDEX can help with briefing, opportunity design, listing creation, trust review, automation, Mission Rooms, media, governance, cultural protection, and more.', type:'textarea', placeholder:'I need help with...' },
+    { num:6, text:'Does your project involve any of the following?', hint:'Tick everything that applies. These areas require additional review and support.', type:'checks', options:['Cultural knowledge or assets', 'Children or youth learning', 'Financial transactions or payments', 'Governance or community decisions', 'Personal or sensitive data', 'Medical, legal, or professional advice', 'None of the above'] },
+    { num:7, text:'What would a useful first outcome look like in 30 days?', hint:'Be specific. Not "grow my business" but "have one trusted listing live, one buyer message received, and one cultural asset protected."', type:'textarea', placeholder:'In 30 days I want to...' },
+    { num:8, text:'What corridor or community are you connected to?', hint:'Tell us about the geographic, cultural, or economic corridor you operate in — Pacific, diaspora, urban, regional, digital, or cross-border.', type:'chips', options:['Pacific Islands', 'Pacific Diaspora', 'Australia / NZ', 'Southeast Asia', 'South Asia', 'Africa', 'Latin America', 'North America', 'Europe', 'Cross-border / global'] },
+    { num:9, text:'What support do you need most?', hint:'Select everything that applies.', type:'chips', options:['Design and visual', 'Marketplace listing', 'Media kit', 'Automation setup', 'Governance guidance', 'Cultural protection', 'Security review', 'Funding pathway', 'Community building', 'Legal or compliance guidance'] },
+    { num:10, text:'Are you willing to share learnings or a story if consented?', hint:'If your Genesis Builder journey generates useful insights or a story worth telling, would you be willing to share it publicly — with your review and approval before anything is published?', type:'chips', options:['Yes — I am happy to share my story with full approval', 'Yes — anonymous or aggregate only', 'Undecided — I\'d like to understand more first', 'No — I prefer privacy'] },
+  ];
+
+  const NETWORK_ROLES = [
+    { icon:'🔨', name:'Genesis Builders', desc:'Citizens building products, services, and missions from scratch', count:'142 active', milestone:'First 100 Genesis Builder Proofs awarded' },
+    { icon:'🏪', name:'Merchant Partners', desc:'Trusted sellers using IN$DEX to trade across corridors', count:'89 active', milestone:'First cross-corridor sale completed: Fiji → Auckland' },
+    { icon:'🎨', name:'Creator Partners', desc:'Creators turning imagination into owned digital opportunity', count:'67 active', milestone:'First ImageNation Creator proof awarded' },
+    { icon:'🌿', name:'Cultural Stewards', desc:'Community and cultural leaders protecting knowledge and rights', count:'34 active', milestone:'First community Cultural Rights Cards issued' },
+    { icon:'⚙️', name:'Developer Partners', desc:'Builders integrating tools, rails, and services into IN$DEX', count:'18 active', milestone:'First MCP connector certified for citizen use' },
+    { icon:'🌐', name:'Corridor Ambassadors', desc:'Leaders representing Pacific corridors and communities', count:'11 active', milestone:'Three new Pacific corridors onboarded' },
+  ];
+
+  const EVENTS = [
+    { month:'AUG', day:'4', title:'Genesis Builder Day — Auckland', meta:'In-person · Full day · All tiers welcome', key:'gbd-akl' },
+    { month:'AUG', day:'11', title:'Pacific Founder Circle — Suva', meta:'In-person · Morning session · Invitation only', key:'pfc-suva' },
+    { month:'AUG', day:'18', title:'ImageNation Hackathon — Online', meta:'Virtual · 48 hours · Creators and builders', key:'imn-hack' },
+    { month:'SEP', day:'1', title:'Merchant Launch Week — Samoa Launch', meta:'In-person + virtual · 5 days', key:'mlw-samoa' },
+    { month:'SEP', day:'8', title:'Cultural Rights Workshop — Cook Islands', meta:'In-person · Community elders and stewards', key:'crw-cooks' },
+    { month:'SEP', day:'15', title:'Governance Readiness Session — Online', meta:'Virtual · 2 hours · All citizens', key:'gov-ready' },
+  ];
+
+  const DOCTRINE = [
+    'IN$DEX must not launch as an empty platform waiting for activity. The civilization must recruit and support builders who create real opportunity, trust, knowledge, culture, commerce, governance, and legacy.',
+    'Genesis Builders are not growth hacks. They are the first citizens proving that the civilization works.',
+    'Every Genesis Builder should leave behind: an artifact, a lesson, a reusable template, a proof of capability, a trust signal, a story if consented, a system improvement, and a Civilization Graph memory.',
+    'Anthropic gives founders credits to build with Claude. IN$DEX gives citizens capacity to build sovereignty with SIINDEX.',
+    'Do not measure views, followers, or hype. Measure: citizens onboarded, Brain Passports completed, opportunities created, first listings launched, cultural assets protected, disputes resolved, learning paths completed, and reusable templates created.',
+    'A Genesis Builder who fails openly creates more civilization value than one who quietly succeeds. Failure is intelligence.',
+    'Launch templates exist so builders do not start from blank pages. Speed to first useful artifact is the measure.',
+    'Capability Proofs should increase trust and opportunity — not create social status games between builders.',
+    'The 30-day Genesis Journey is not a course. It is a structured path from identity to artifact to launch to proof.',
+    'The first citizens should not be spectators. They should be Genesis Builders.',
+  ];
+
+  // ── STATE ──
+  let _openTier = null;
+  let _selectedTier = localStorage.getItem('indx_genesis_tier') || null;
+  let _openWeek = null;
+  let _progress = JSON.parse(localStorage.getItem('indx_genesis_progress') || '{}');
+  let _appStep = JSON.parse(localStorage.getItem('indx_genesis_app') || 'null') !== null ? 10 : 0;
+  let _appAnswers = JSON.parse(localStorage.getItem('indx_genesis_app') || '{}');
+  let _appSubmitted = !!_appAnswers._submitted;
+  let _currentAnswer = null;
+  let _eventInterests = JSON.parse(localStorage.getItem('indx_genesis_events') || '[]');
+
+  // ── GM1: TIER SELECTOR ──
+  function renderTiers() {
+    const el = document.getElementById('tierList');
+    const lbl = document.getElementById('tierSelLabel');
+    lbl.textContent = _selectedTier ? TIERS.find(t=>t.key===_selectedTier)?.name || 'None selected' : 'None selected';
+    el.innerHTML = TIERS.map((t, ti) => {
+      const isOpen = _openTier === t.key;
+      const isSel  = _selectedTier === t.key;
+      return `<div class="tier-card ${isSel?'selected':''} fade-in" style="animation-delay:${ti*0.03}s">
+        <div class="tier-row" onclick="toggleTier('${t.key}')">
+          <div class="tier-icon">${t.icon}</div>
+          <div class="tier-info">
+            <div class="tier-name" style="${isSel?'color:'+t.color:''}">${t.name}</div>
+            <div class="tier-who">${t.who}</div>
+            <div class="tier-proofs">${t.proofs.map(p=>`<div class="tier-proof-chip">${p}</div>`).join('')}</div>
+          </div>
+          <div class="tier-chevron ${isOpen?'open':''}">›</div>
+        </div>
+        <div class="tier-expand ${isOpen?'show':''}">
+          <div class="tier-section-lbl">What you receive</div>
+          ${t.receives.map(r=>`<div class="tier-item">${r}</div>`).join('')}
+          <div class="tier-section-lbl">SIINDEX credits</div>
+          ${t.credits.map(c=>`<div class="tier-item">${c}</div>`).join('')}
+          <div class="tier-cta" onclick="selectTier('${t.key}', event)">${_selectedTier===t.key ? '✓ Selected — Apply below' : 'Apply as ' + t.name + ' →'}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function toggleTier(key) {
+    _openTier = _openTier === key ? null : key;
+    renderTiers();
+  }
+
+  function selectTier(key, evt) {
+    evt.stopPropagation();
+    _selectedTier = key;
+    localStorage.setItem('indx_genesis_tier', key);
+    _openTier = null;
+    renderTiers();
+    const tier = TIERS.find(t=>t.key===key);
+    showToast('✓ ' + tier.name + ' tier selected — scroll down to apply');
+    setTimeout(() => {
+      document.querySelector('.app-card')?.scrollIntoView({ behavior:'smooth', block:'start' });
+    }, 400);
+  }
+
+  // ── GM2: 30-DAY JOURNEY ──
+  function getJourneyStats() {
+    let total = 0, done = 0;
+    JOURNEY_WEEKS.forEach((w, wi) => {
+      w.tasks.forEach((t, ti) => {
+        total++;
+        if (_progress[`${wi}-${ti}`]) done++;
+      });
+    });
+    return { total, done, pct: Math.round(done/total*100) };
+  }
+
+  function isWeekUnlocked(wi) {
+    if (wi === 0) return true;
+    const prev = JOURNEY_WEEKS[wi-1];
+    return prev.tasks.every((t, ti) => _progress[`${wi-1}-${ti}`]);
+  }
+
+  function isWeekDone(wi) {
+    return JOURNEY_WEEKS[wi].tasks.every((t, ti) => _progress[`${wi}-${ti}`]);
+  }
+
+  function renderJourney() {
+    const stats = getJourneyStats();
+    document.getElementById('journeyPct').textContent = stats.pct + '%';
+    document.getElementById('journeyBar').style.width = stats.pct + '%';
+    document.getElementById('journeyPctLabel').textContent = stats.pct + '% complete';
+
+    const el = document.getElementById('journeyWeeks');
+    el.innerHTML = JOURNEY_WEEKS.map((w, wi) => {
+      const unlocked = isWeekUnlocked(wi);
+      const done = isWeekDone(wi);
+      const isOpen = _openWeek === wi;
+      const tasksDone = w.tasks.filter((t,ti)=>_progress[`${wi}-${ti}`]).length;
+      const weekCls = done ? 'week-done' : unlocked ? 'week-active' : 'week-locked';
+      const weekLbl = done ? '✓' : unlocked ? 'W' + (wi+1) : '🔒';
+      return `<div class="journey-week">
+        <div class="journey-week-hdr" onclick="${unlocked?'toggleWeek('+wi+')':'showToast(\'Complete Week '+(wi)+' first\')'}">
+          <div class="journey-week-num ${weekCls}">${weekLbl}</div>
+          <div class="journey-week-info">
+            <div class="journey-week-title">${w.title}</div>
+            <div class="journey-week-sub">${w.sub}</div>
+            <div class="journey-week-prog">${tasksDone}/${w.tasks.length} tasks · ${unlocked?'':'Locked — '} ${done?'Complete ✓':unlocked?'In progress':'complete previous week'}</div>
+          </div>
+          <div class="journey-week-chev ${isOpen?'open':''}">›</div>
+        </div>
+        <div class="journey-tasks ${isOpen?'show':''}">
+          ${w.tasks.map((t, ti) => {
+            const isDone = !!_progress[`${wi}-${ti}`];
+            return `<div class="journey-task" onclick="toggleTask(${wi},${ti})">
+              <div class="task-check ${isDone?'done':''}">${isDone?'✓':''}</div>
+              <div class="task-label ${isDone?'done':''}">${t.label}</div>
+              <div class="task-output">${t.output}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function toggleWeek(wi) {
+    _openWeek = _openWeek === wi ? null : wi;
+    renderJourney();
+  }
+
+  function toggleTask(wi, ti) {
+    const key = `${wi}-${ti}`;
+    _progress[key] = !_progress[key];
+    localStorage.setItem('indx_genesis_progress', JSON.stringify(_progress));
+    renderJourney();
+    const stats = getJourneyStats();
+    if (_progress[key]) {
+      const task = JOURNEY_WEEKS[wi].tasks[ti];
+      showToast('✓ ' + task.output + ' — task complete');
+      if (isWeekDone(wi)) {
+        setTimeout(() => showToast('🔨 Week ' + (wi+1) + ' complete — Week ' + (wi+2) + ' unlocked!'), 1500);
+      }
+    }
+  }
+
+  // ── GM3: APPLICATION FLOW ──
+  function renderApp() {
+    if (_appSubmitted) { renderAppConfirm(); return; }
+    const steps = APP_QUESTIONS.length;
+    const prog = document.getElementById('appProgress');
+    prog.innerHTML = APP_QUESTIONS.map((q, i) =>
+      `<div class="app-step-dot ${i < _appStep ? 'done' : i === _appStep ? 'active' : ''}"></div>`
+    ).join('');
+
+    if (_appStep >= steps) { submitApp(); return; }
+
+    const q = APP_QUESTIONS[_appStep];
+    const saved = _appAnswers[_appStep] || null;
+    let inputHtml = '';
+
+    if (q.type === 'textarea') {
+      inputHtml = `<textarea class="app-textarea" id="appInput" placeholder="${q.placeholder}" oninput="saveCurrentAnswer(this.value)">${typeof saved === 'string' ? saved : ''}</textarea>`;
+    } else if (q.type === 'checks') {
+      const sel = Array.isArray(saved) ? saved : [];
+      inputHtml = `<div class="app-checks">${q.options.map((o,oi)=>
+        `<div class="app-check-item ${sel.includes(o)?'selected':''}" onclick="toggleCheckOption(${oi},'${o.replace(/'/g,"\\'")}')">
+          <div class="app-check-box ${sel.includes(o)?'selected':''}">${sel.includes(o)?'✓':''}</div>
+          <div>${o}</div>
+        </div>`
+      ).join('')}</div>`;
+    } else if (q.type === 'chips') {
+      const sel = Array.isArray(saved) ? saved : [];
+      inputHtml = `<div class="app-chips">${q.options.map(o=>
+        `<div class="app-chip ${sel.includes(o)?'selected':''}" onclick="toggleChipOption('${o.replace(/'/g,"\\'")}',${q.num-1})">${o}</div>`
+      ).join('')}</div>`;
+    }
+
+    const isFirst = _appStep === 0;
+    document.getElementById('appBody').innerHTML = `
+      <div class="app-q-num">Question ${q.num} of ${steps}</div>
+      <div class="app-q-text">${q.text}</div>
+      <div class="app-hint">${q.hint}</div>
+      ${inputHtml}
+      <div class="app-nav">
+        ${!isFirst ? `<div class="app-btn app-btn-sec" onclick="appBack()">← Back</div>` : ''}
+        <div class="app-btn app-btn-primary" onclick="appNext()">${_appStep === steps-1 ? 'Submit Application' : 'Next →'}</div>
+      </div>`;
+  }
+
+  function saveCurrentAnswer(val) {
+    _appAnswers[_appStep] = val;
+  }
+
+  function toggleCheckOption(oi, val) {
+    let arr = Array.isArray(_appAnswers[_appStep]) ? _appAnswers[_appStep] : [];
+    arr.includes(val) ? arr = arr.filter(v=>v!==val) : arr.push(val);
+    _appAnswers[_appStep] = arr;
+    renderApp();
+  }
+
+  function toggleChipOption(val, stepIdx) {
+    let arr = Array.isArray(_appAnswers[stepIdx]) ? _appAnswers[stepIdx] : [];
+    arr.includes(val) ? arr = arr.filter(v=>v!==val) : arr.push(val);
+    _appAnswers[stepIdx] = arr;
+    renderApp();
+  }
+
+  function appNext() {
+    const q = APP_QUESTIONS[_appStep];
+    if (q.type === 'textarea') {
+      const el = document.getElementById('appInput');
+      if (el) { _appAnswers[_appStep] = el.value; }
+      if (!_appAnswers[_appStep] || !_appAnswers[_appStep].trim()) {
+        showToast('Please answer this question before continuing'); return;
+      }
+    }
+    if ((q.type === 'checks' || q.type === 'chips') && (!Array.isArray(_appAnswers[_appStep]) || _appAnswers[_appStep].length === 0)) {
+      showToast('Please select at least one option'); return;
+    }
+    _appStep++;
+    localStorage.setItem('indx_genesis_app', JSON.stringify(_appAnswers));
+    if (_appStep >= APP_QUESTIONS.length) { submitApp(); } else { renderApp(); }
+  }
+
+  function appBack() {
+    if (_appStep > 0) { _appStep--; renderApp(); }
+  }
+
+  function submitApp() {
+    _appAnswers._submitted = true;
+    _appAnswers._ref = 'GBP-' + Date.now().toString(36).toUpperCase();
+    _appAnswers._date = new Date().toLocaleDateString('en-AU', { day:'numeric', month:'short', year:'numeric' });
+    localStorage.setItem('indx_genesis_app', JSON.stringify(_appAnswers));
+    _appSubmitted = true;
+    renderAppConfirm();
+  }
+
+  function renderAppConfirm() {
+    document.getElementById('appProgress').innerHTML = APP_QUESTIONS.map(()=>`<div class="app-step-dot done"></div>`).join('');
+    document.getElementById('appBody').innerHTML = `<div class="app-confirm">
+      <div class="app-confirm-icon">🔨</div>
+      <div class="app-confirm-title">Application Received</div>
+      <div class="app-confirm-sub">SIINDEX is reviewing your application. You will receive your Genesis Builder onboarding brief within 48 hours. Your Mission Room will be prepared based on your selected tier and answers.</div>
+      <div class="app-confirm-ref">Reference: ${_appAnswers._ref} · Submitted ${_appAnswers._date}</div>
+      <div class="app-confirm-next">
+        While you wait: open the 30-Day Genesis Journey above and complete Week 1. Your Brain Passport, Identity Brain, and Opportunity Brain do not require approval to start. Begin building now.
+      </div>
+    </div>`;
+  }
+
+  // ── GM4: BUILDER NETWORK + EVENTS ──
+  function renderNetwork() {
+    const el = document.getElementById('networkList');
+    el.innerHTML = NETWORK_ROLES.map((r, ri) => `<div class="network-role-card fade-in" style="animation-delay:${ri*0.03}s">
+      <div class="network-role-row">
+        <div class="network-role-icon">${r.icon}</div>
+        <div class="network-role-info">
+          <div class="network-role-name">${r.name}</div>
+          <div class="network-role-desc">${r.desc}</div>
+          <div class="network-role-count">${r.count}</div>
+          <div class="network-role-milestone">Recent: ${r.milestone}</div>
+        </div>
+        <div class="network-join" onclick="showToast('✓ Interest registered — SIINDEX will connect you with ${r.name}')">Join →</div>
+      </div>
+    </div>`).join('');
+  }
+
+  function renderEvents() {
+    const el = document.getElementById('eventsList');
+    const registered = _eventInterests.length;
+    document.getElementById('eventsRegistered').textContent = registered + ' registered';
+    el.innerHTML = EVENTS.map((e, ei) => {
+      const isReg = _eventInterests.includes(e.key);
+      return `<div class="event-card fade-in" style="animation-delay:${ei*0.03}s">
+        <div class="event-row">
+          <div class="event-date"><div class="event-month">${e.month}</div><div class="event-day">${e.day}</div></div>
+          <div class="event-info">
+            <div class="event-title">${e.title}</div>
+            <div class="event-meta">${e.meta}</div>
+          </div>
+          <div class="event-interest ${isReg?'registered':''}" onclick="toggleEventInterest('${e.key}')">${isReg?'✓ Going':'Register'}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function toggleEventInterest(key) {
+    if (_eventInterests.includes(key)) {
+      _eventInterests = _eventInterests.filter(k=>k!==key);
+      showToast('Removed from event interest list');
+    } else {
+      _eventInterests.push(key);
+      const ev = EVENTS.find(e=>e.key===key);
+      showToast('✓ Registered — ' + ev.title);
+    }
+    localStorage.setItem('indx_genesis_events', JSON.stringify(_eventInterests));
+    renderEvents();
+  }
+
+  // ── DOCTRINE ──
+  function renderDoctrine() {
+    document.getElementById('doctrineLines').innerHTML = DOCTRINE.map((d,i)=>
+      `<div class="doctrine-line fade-in" style="animation-delay:${i*0.04}s">${d}</div>`
+    ).join('');
+  }
+
+  // ── TOAST ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 3400);
+  }
+
+  // ── INIT ──
+  window.addEventListener('DOMContentLoaded', () => {
+    renderTiers();
+    renderJourney();
+    renderApp();
+    renderNetwork();
+    renderEvents();
+    renderDoctrine();
+  });
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

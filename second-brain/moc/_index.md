@@ -43,8 +43,152 @@ High-level summaries that link bodies of work together. Build these when a topic
 - citizen-dashboard.html ✅ (God Mode R2 — Session 72)
 - buy-indx.html ✅ (God Mode R3 — Session 66)
 
+- lp-manager.html ✅ (new screen — Treasury & LP Command Center, Session 83; illustrative/demo mode, Phase 2 = real integration)
+- dex-swap.html ✅ (God Mode R3 — Session 81)
+- nft-marketplace.html ✅ (God Mode R2 — Session 82: sort sheet, rarity badges, price sparkline, share deep-link)
+- staking.html ✅ (God Mode R2 — Session 84: Grand Sync countdown, rewards sparkline, early-unstake penalty sheet, staking streak)
+- p2p-marketplace.html ✅ (God Mode R1 — Session 85: live sold feed, wishlist, make-offer sheet, urgency signals)
+- receive.html ✅ (God Mode R2 — Session 86: quick-amount chips, fullscreen QR, payment watcher, receive stats)
+- home-v2.html ✅ (Macro Validation section — Session 87, Task #62)
+- siindex-brief.html ✅ (Market Signal section — Session 87 Task #63; God Mode R1 action persistence/schedule/chart tooltip/history/follow/price-flip — latest commit, not yet logged in memory.md)
+- citizen-profile.html ✅ (God Mode R1 — listing filters, WS canvas ring — latest commit, not yet logged in memory.md)
+- pay.html ✅ (God Mode R2 — Session 88: balance bar, payment history, PQSI pre-flight scan, Civ Fund tracker)
+- whitepaper-v1.md ✅ (Macro Validation narrative — Session 87 Task #64)
+
+### Task #56 — App-Wide God Mode Rollout ✅ COMPLETE (2026-07-04, Sessions 89–94, 100)
+- governance.html ✅ (R3 — Session 89: draft persistence, proposal bookmarks, swipe-to-vote, wisdom pulse)
+- citizen-dashboard.html ✅ (R3 — Session 90: checklist tracker, live price ticker, smart PAG nudge, mesh earnings counter)
+- portfolio.html ✅ (R2 — Session 91: animated canvas price chart, P&L tracker, income live totals, Grand Sync target card)
+- dex-swap.html ✅ (R3 — Session 92: full DCA mode, animated swap stepper, SOL gas reserve warning, pair quick-pins)
+- send.html ✅ (R2 — Session 93: send-history sheet, memo emoji picks, FX savings vs Western Union, animated stepper)
+- history.html ✅ (R1 — Session 94: date range filter, spending insights bar, transaction bookmarks, quick repeat send)
+- Task #56 confirmed complete across all 7 target screens (Session 100 note): history, send, receive, marketplace, referral, wisdom-score, profile
+
+### New Shared Infrastructure — 2026-07-04 (Session 100)
+- `js/indx-db.js` ✅ — canonical singleton Supabase client; full citizen/transaction/listing/staking/governance/referral API surface
+- `js/indx-wallet.js` ✅ — Phantom/Backpack/xNFT wallet adapter (see [[../companies/phantom|phantom]], [[../companies/backpack|backpack]]); pre-TGE sessionStorage balance, post-TGE Solana RPC
+- `audit.sh` ✅ — automated 6-check audit pipeline (price/currency/recovery-words/hex-colour/brand/expired-key); pre-commit hook installable; **first run found 25 hard violations across 25 files**
+
+### SIINDEX Canonical Mandate — 2026-07-04 (Session 101)
+- `js/siindex-system.js` ✅ new — canonizes SIINDEX as **Chief PQSI Officer** / Sovereign Marketplace Intelligence Platform (not a trading bot/price predictor/hype generator), 11 intelligence domains, canonical 12-part output format, forbidden-behaviour list; wired into siindex-chat.html and siindex-avatar.html
+
+### indx-kids.html — New Screen (2026-07-04, Sessions 102–103)
+- IN$DEX Academy ✅ — 5-tier progression (Explorer/Creator/Innovator/Future Citizen/IN$DEX Citizen), custodial wallet until 18 then phone+liveness transfer, COPPA-2025-compliant guardian approval queue, institution partner portal, milestone journey canvas, daily challenge engine
+- God Mode R2 ✅ (Session 103) — SIINDEX companion bubble, wallet graduation countdown, 30-day learning heatmap, tier unlock celebration modal
+
+### Violation Remediation — 2026-07-04 (Sessions 104–105)
+- 54 changes across 22 files ✅ (Session 104) — "seed phrase" → "recovery words" (14 files), "SIINDEX AI" → "SIINDEX" (5 files), "Sovereign Intelligence" → "Synthetic Intelligence" (6 files)
+- Full codebase re-audit ✅ (Session 105) — 187 HTML files, ALL CLEAN across all 4 checks; INDX_PRICE_USD = 0.24 confirmed at all 20 occurrences
+
+### Additional Screens — 2026-07-04 (Sessions 106–107)
+- launchpad.html ✅ (God Mode, Task #79 — live contribution preview, portfolio strip, activity feed ticker, launch watchlist)
+- trading-challenge.html ✅ (God Mode, Task #80 — P&L sparkline, drawdown risk meter, trade journal, stats share card)
+
+### God Mode R1 × 4 — 2026-07-08 (Session 113)
+- bill-pay.html ✅ (Monthly Spend Card, savings badge, recent payments slide-in, scheduled bills sheet)
+- deposit.html ✅ (draft resume banner, activity ticker, Grand Sync value strip, pre-deposit confirm sheet)
+- qr-scanner.html ✅ (scan history, live USD conversion, PQSI verification animation, last-used amount per recipient)
+- nft-create.html ✅ (Grand Sync wealth strip, trait/attribute builder, creator history & level, scheduled drop toggle)
+
+### SIINDEX Master Prompt v2 + MVP Builds — 2026-07-08 (Session 114)
+- siindex-master-prompt-v2.md ✅ (new canonical, 20 sections)
+- home-v2.html ✅ (Civilization-First Positioning: 1.4B unbanked stat update, new ImageNation + Opportunity Feed sections, footer links renamed to siindex-decision-ledger.html)
+- imagenation-builder.html ✅ (new — ImageNation Experience Builder MVP, 6 categories, 7-card results panel)
+- siindex-brief.html ✅ (Sovereign Briefing Engine COR upgrade: Context→Outcome→Role generator, Next Best Action card, EU AI Act risk warning, 1.4B stat fix)
+
+### SIINDEX Master Prompt v3 + New Screens — 2026-07-08 (Session 114 cont.)
+- siindex-master-prompt-v3.md ✅ (new canonical, 16 systems, supersedes v2)
+- siindex-decision-ledger.html ✅ (new — EU AI Act Article 13 compliance, decision log, appeal workflow, citizen rights panel)
+- siindex-media-kit.html ✅ (new — Sovereign Media Engine + Citizen Media Kit Generator, 6 categories × 4 platforms)
+- cultural-rights.html ✅ (new — Cultural Rights Graph + Cultural Story Broadcast Kits, 4-tab interface, elder review workflow)
+
+### Three-Brain Commercialization Engine — 2026-07-08 (Session 114 cont., part 2)
+- siindex-brain-engine.md ✅ (new canonical — Identity/Opportunity/Content Brain strategy, Brain Passport spec)
+- imagenation-brain-builder.html ✅ (new — 5-phase wizard, ~950 lines, 6 full category templates, Brain Passport save)
+
+### Grand Synchronicity Launch Strategy — 2026-07-08 (Session 114 cont., part 3–4)
+- indx-launch-strategy-sep24.md ✅ (new canonical — Two-Phase Launch Architecture: Meteora Alpha Vault + Raydium LaunchLab, 78-day pre-launch calendar, risk map; see [[../companies/raydium]], [[../companies/meteora]], [[../companies/streamflow]])
+- indx-grand-synchronicity-countdown.html ✅ (new — full-screen countdown to 24 Sep 2026, price strip $0.24→$2.50, Alpha Vault tracker, Founding Citizen pledge wall)
+
+### Mission Rooms (Sovereign Workspace Layer) — 2026-07-08 (Session 114 cont., part 5–6)
+- indx-mission-rooms.md ✅ (new canonical — Layer 4 coordination layer, 7 room types, 8 SIINDEX agents, full dev build spec)
+- indx-mission-rooms.html ✅ (new — 511 lines, mission intake, SIINDEX room generation, 3-workflow templates for all 7 room types)
+
+### AJ Founder Metadata — 2026-07-08 (Session 113)
+- Permanent context added to memory.md: name-code numerology (master pattern 5/8/6/9/2, missing 4), archetype "The Sovereign Opportunity Architect," Grand Synchronicity date = AJ's birthday alignment
+
+### God Mode ×3 — 2026-07-09 (Session 115)
+- indx-mission-rooms.html ✅ (God Mode — quick-start templates, draft auto-save, two-step delete, live room activity ticker)
+- indx-automation-grid.html ✅ (God Mode — SIINDEX Automation Sanity Gate classification per Builder Discipline doctrine, active/paused toggle, test-run simulation, two-step delete)
+- indx-sovereign-settlement.html ✅ (God Mode — balance/over-limit guard, FX savings vs Western Union, repeat-last-transfer, live rail status)
+
+### Life Graph — 2026-07-09 (Session 115 cont.)
+- life-graph.html ✅ (new — Layer 2 Citizen Memory + Reputation; Wisdom Score SVG arc, 5 levels Seed→Elder, Quick Log with 8 category chips, SIINDEX Insights pattern reads)
+
+### God Mode ×4 — 2026-07-09 (Session 115 cont.)
+- indx-sovereign-team.html ✅ (streak badge, mission draft auto-save, agent usage stats, queue item detail+delete)
+- indx-asset-meaning.html ✅ (ledger entry detail+delete, selection draft save, ledger stats bar, risk score badge)
+- indx-build-console.html ✅ (build brief draft auto-save, quick doctrine scan chips, doctrine check history, saved spec detail+delete)
+- brain-passport.html ✅ (draft auto-save+restore, saved passport detail+delete, completeness milestone toasts, grid account pre-fill)
+
+### Sovereign Attention Engine — 2026-07-09 (Session 115 cont.)
+- indx-sovereign-attention-engine.md ✅ (new canonical — 8 sections + 2 appendices; Five Sovereign Mechanics, Moral Inversion table, forbidden dark-pattern list)
+- home-v2.html ✅ (God Mode — ambient Cybertron hex canvas, gradient power-word glow, live civ activity feed, Sovereign Return Feed "While You Were Away")
+
+### Session Sovereignty + Security Centre — 2026-07-09 (Session 115–116)
+- indx-session-sovereignty.md ✅ (new canonical — 28 sections; DBSC, AiTM/passkey hardening, MFA number matching, caller code vishing defense, DPoP Action Intent Tokens, session compartmentalization, W3C VC 2.0 consent receipts, NIST SP 800-63B-4, PQC readiness)
+- siindex-session-sovereignty.html ✅ (new — Citizen Security Centre; Session Risk Score, Idle Countdown, Device Trust Registry, Session Compartmentalization, Vault Mode, Caller Code, Security Decision Ledger; God Mode: Security Health Score ring, live threat signal feed, Shared Device Mode, Session Activity Timeline)
+- citizen-dashboard.html ✅ (God Mode — power word glow, streak flame milestone toasts, civilization activity feed, sovereign yield preview lock)
+
+### Orchestration Layer — 2026-07-09 (Session 117)
+- indx-orchestration-layer.md ✅ (new canonical — Six-Archetype Operating Model: Prototype/Build/Sweep/Grow/Maintain/Orchestrate; Agent Declaration Standard, SIINDEX Everywhere 12 presence locations)
+- siindex-orchestration-layer.html ✅ (new — Mission Command Centre; ambient hex particle canvas, animated mission routing sequence, approval gate sheet, localStorage mission history)
+
+### Unknowns Engine — 2026-07-09 (Session 117 cont.)
+- indx-unknowns-engine.md ✅ (new canonical — Blind Spot Pass, Consequence Classifier 9-level, 9-Step Mission Loop, civilization-notes.md standard)
+- siindex-unknowns-engine.html ✅ (new — Blind Spot Command Centre; 4-quadrant classifier, Mission Loop navigator, Consequence Classifier sheet, live civilization-notes builder)
+
+### Web3 Sovereign Identity — 2026-07-09 (Session 117 cont. x2)
+- indx-web3-identity.md ✅ (new canonical — yourname.IN$DEX root identity; 9-tier verification stack, KYC-once ZK-SNARKs, Universal Resolver, 4-path Guardian Recovery)
+- siindex-web3-identity.html ✅ (new — Sovereign Identity hub; Live Verification Stack Builder, Send by Name Simulator, Guardian Recovery Setup, ZK Credential Reveal)
+
+### Sovereign Data Economy — 2026-07-09 (Session 117 cont. x3)
+- indx-sovereign-data-economy.md ✅ (new canonical — Sovereign Data Earnings, Sovereign Threat Intelligence Feed, Identity Attack Bond; Compute-to-Data model; $831,497 lifetime-per-user foundation stat)
+- siindex-sovereign-data-economy.html ✅ (new — Data Earnings Dashboard, Sovereign Threat Feed, Consent Manager, IAB Ledger)
+
+### PQSI Supremacy Reframe + ~20 New Screens — 2026-07-10 (Session 118–119)
+- PQSI Supremacy Reframe ✅ (Session 118)
+- New screens, God Mode from birth: imagenation-design-studio, siindex-provenance-engine, siindex-sovereign-security, siindex-use-case-library, siindex-citizen-fluency-academy, indx-proof-insight-network, indx-genesis-builder-program, siindex-agent-civilization, indx-sovereign-ecosystem-layer, siindex-sovereign-services, siindex-sovereign-embodiment, siindex-sovereign-ip.html, siindex-legal-defense.html (new), siindex-voice-terminal (Voice Interface additions), siindex-team-portal.html (PIN-gated internal), indx-liquidity-flywheel.html, indx-flywheel-automation.html, siindex-civilization-admin-console.html, siindex-sovereign-developer.html, siindex-dev-portal.html, siindex-voice-command-os.html, siindex-travel-rule.html (P0 AUSTRAC), siindex-pacific-corridor.html (P1), home-v3.html (strategic homepage rebuild), siindex-trust-compliance.html, siindex-verify.html, siindex-citizen-zero.html
+- God Mode upgrade rounds: founders-pool.html (features 5–8), citizen-dashboard.html (R4), indx-sovereign-settlement.html, siindex-legal-defense.html (GM upgrade)
+- Full-site strategic audit (233 screens) ✅ — 5 P0 fixes: dead CTAs wired, index.html → home-v3.html, MemeDAO → Citizen Assembly sweep (~30 screens), price target removed from countdown screen (ASIC risk), "DeFi platform" → "Sovereign Digital Civilization" sweep (~15 screens). Final verification: 18/18 CLEAN.
+- See [[../companies/austrac|austrac]], [[../companies/solsplits|solsplits]], [[../companies/arup|arup]] (new orphan stubs, nightly pass 2026-07-11)
+
+### P1 God Mode Batch — 2026-07-11 (Session 119 continued x29)
+- about.html ✅, send.html ✅, login.html ✅, governance.html ✅, marketplace.html ✅ (5 screens, 5 parallel Fable agents; about.html JS completed manually)
+- SIINDEX Build-Completion Prompt ✅ — canonical build brief locked: "Do not build an app with SIINDEX inside it. Build SIINDEX with an app around her."
+
+### Build-Completion Prompt Queue — 3 New Screens — 2026-07-11 (Session 119 continued x30)
+- indx-trust-dashboard.html ✅ (new, Task #135 — Public Trust / Proof-of-Usefulness Dashboard: live stat counters ×9, rotating activity feed, "what we measure vs don't" doctrine card, citizen savings ticker vs Western Union, 6-corridor status table)
+- siindex-refusal-constitution.html ✅ (new, Task #136 — SIINDEX Refusal Constitution: live scenario tester against 8 rule patterns, 8 Safe-to-Proceed status explorer, 14 consent categories, session refusal log)
+- indx-legacy-vault.html ✅ (new, Task #137 — Legacy Vault: heir management, 8-asset inventory across 4 categories, 3-type unlock condition builder, cultural stewardship toggles, vault readiness bar)
+- Audit: all 3 screens ✅ CLEAN
+
+### Pacific Corridor Readiness Pages ×4 — 2026-07-11 (Session 119 continued x31)
+- indx-corridor-samoa.html ✅ (Task #138 — Melbourne↔Samoa, WU 9%, $142M annual flow, $11.8M savings potential)
+- indx-corridor-fiji.html ✅ (Task #139 — Melbourne↔Fiji, WU 9%, $247M annual flow, $20.8M savings potential)
+- indx-corridor-vanuatu.html ✅ (Task #140 — Melbourne↔Vanuatu, WU 10% highest, $43M annual flow, $3.7M savings potential)
+- indx-corridor-rmi.html ✅ (Task #141 — Melbourne↔Marshall Islands, USD-native/no-FX, $19M annual flow, $1.6M savings potential)
+- Each: Fee Calculator, 5-step Readiness Stepper, Diaspora Insights, Settlement Timeline; all cross-link to each other + siindex-pacific-corridor.html
+- **Milestone: SIINDEX Build-Completion Prompt queue — ALL SCREENS NOW BUILT ✅** (Session 119 x29–x31 cleared the entire missing-screen list identified in x29)
+- See [[../companies/western-union|western-union]] (new orphan stub, nightly pass 2026-07-12)
+
 ### Screens — In Progress / Pending
-- God Mode queue (Session 65h): citizen-profile.html, live-stream.html, creator-onboarding.html — not yet started
+- God Mode queue: live-stream.html, creator-onboarding.html (unchanged — only two screens left in the original God Mode backlog since 2026-07-04's rollout; all Build-Completion Prompt queue screens now complete as of 2026-07-11)
+- ⚠️ **Growing backlog:** multi-day git backlog spanning Sessions 81 through 119 (2026-06-27 onward in places) — still uncommitted-to-remote as of 2026-07-11. Highest-priority cleanup item; verify and push in batches.
+- ⚠️ **Open conflict:** lp-manager.html (Session 83) models LP fees on Meteora DLMM; Session 63 canonically locked Raydium CPMM for the INDX/USDC pool. Needs AJ reconciliation — still unresolved as of 2026-07-11.
+- ⏳ Builder Discipline (Session 114) + Unknowns Engine (Session 117) doctrine not yet folded into SIINDEX Master Prompt (currently v3) — flagged as next revision (v4) candidate
+- ⏳ AUSTRAC VASP Travel Rule enrollment — deadline 29 Jul 2026, treated as P0 since 2026-07-10, not yet complete
+- ⏳ Onchain revenue infrastructure (SolSplits Revenue Router, Token-2022 Transfer Hook, Streamflow distribution) — planning-only, flagged by AJ for automation (Session 119 x17)
 
 ### Infrastructure — Complete
 - SRI supply-chain hardening ✅ (Session 61 — SHA-384 integrity + crossorigin on all CDN imports across 24 files)
@@ -83,7 +227,7 @@ High-level summaries that link bodies of work together. Build these when a topic
 
 ### Core Docs
 - whitepaper-v1.md ✅ (live, Appendix B tracks sessions)
-- memory.md ✅ (sessions 1–79 logged)
+- memory.md ✅ (sessions 1–107 logged)
 - business-plan-v12.5-SEALED.md ✅
 - user.md ✅
 - soul.md ✅
@@ -112,3 +256,5 @@ High-level summaries that link bodies of work together. Build these when a topic
 **Staking:** APY distributed from Civ Law pool
 **MemeDAO:** governance weight proportional to INDX held + wisdom score
 **PQSI:** post-quantum citizen protection — no single point of failure
+
+**Launch architecture (Session 114, 2026-07-08):** Two-phase — Phase A Meteora Alpha Vault citizen pre-allocation (Sep 10–17, 60–75 SOL pre-committed) → Phase B Raydium LaunchLab Virtual-CPMM public curve (Sep 24 00:00 UTC, 150 SOL / ~$30K graduation threshold, LP burn). Team/treasury vesting via Streamflow, 12-month founder cliff.

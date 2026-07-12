@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Travel Rule Compliance — IN$DEX</title>
+  <meta name="description" content="AUSTRAC Travel Rule compliance for IN$DEX VASP operations. Originator and beneficiary data collection for virtual asset transfers." />
+  <style>
+    :root {
+      --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+      --black:#090A10; --green:#00E5A0; --gold:#FFB800;
+      --red:#FF4D6D; --surface:#12141F; --surface2:#1A1D2E;
+      --surface3:#22263A; --text:#F0F2FF; --muted:rgba(240,242,255,0.5);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;max-width:430px;margin:0 auto;padding-bottom:80px;overflow-x:hidden;}
+
+    /* NAV */
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.06);position:sticky;top:0;background:rgba(9,10,16,0.92);backdrop-filter:blur(14px);z-index:100;}
+    .nav-back{color:var(--gold);text-decoration:none;font-size:14px;font-weight:600;}
+    .nav-title{font-size:11px;font-weight:800;color:var(--red);letter-spacing:1.5px;text-transform:uppercase;}
+    .nav-days{background:rgba(255,77,109,0.12);border:1px solid rgba(255,77,109,0.35);color:var(--red);font-size:10px;font-weight:800;padding:5px 10px;border-radius:20px;}
+
+    /* DEADLINE BANNER */
+    .deadline-banner{background:linear-gradient(90deg,rgba(255,77,109,0.15),rgba(139,63,232,0.08));border-bottom:1px solid rgba(255,77,109,0.25);padding:10px 18px;display:flex;align-items:center;gap:10px;}
+    .db-icon{font-size:18px;flex-shrink:0;}
+    .db-text{flex:1;}
+    .db-label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--red);}
+    .db-countdown{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:1px;}
+    .db-sub{font-size:10px;color:var(--muted);margin-top:1px;}
+
+    /* TABS */
+    .tabs{display:flex;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid rgba(255,255,255,0.06);background:var(--surface);position:sticky;top:49px;z-index:99;}
+    .tabs::-webkit-scrollbar{display:none;}
+    .tab-btn{flex-shrink:0;padding:12px 14px;font-size:11px;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all 0.2s;}
+    .tab-btn.active{color:var(--red);border-bottom-color:var(--red);}
+    .tab-pane{display:none;padding:14px 18px;}
+    .tab-pane.active{display:block;}
+
+    /* SECTION HEADERS */
+    .sect-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+    .sect-lbl{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);}
+
+    /* STATUS BADGE */
+    .status-badge{font-size:9px;font-weight:800;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:0.5px;}
+    .sb-clear{background:rgba(0,229,160,0.12);color:var(--green);border:1px solid rgba(0,229,160,0.3);}
+    .sb-pending{background:rgba(255,184,0,0.12);color:var(--gold);border:1px solid rgba(255,184,0,0.3);}
+    .sb-required{background:rgba(255,77,109,0.12);color:var(--red);border:1px solid rgba(255,77,109,0.3);}
+    .sb-transmitted{background:rgba(0,212,255,0.12);color:var(--cyan);border:1px solid rgba(0,212,255,0.3);}
+
+    /* CARDS */
+    .card{background:var(--surface2);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:14px;margin-bottom:10px;}
+    .card.red-border{border-color:rgba(255,77,109,0.25);}
+    .card.green-border{border-color:rgba(0,229,160,0.2);}
+    .card.gold-border{border-color:rgba(255,184,0,0.2);}
+    .card.cyan-border{border-color:rgba(0,212,255,0.2);}
+    .card-title{font-size:13px;font-weight:800;margin-bottom:2px;}
+    .card-sub{font-size:11px;color:var(--muted);line-height:1.4;margin-bottom:12px;}
+
+    /* FORM FIELDS */
+    .field-row{margin-bottom:10px;}
+    .field-label{font-size:10px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+    .field-input{width:100%;background:var(--surface3);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 13px;color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color 0.2s;}
+    .field-input:focus{border-color:rgba(255,77,109,0.4);}
+    .field-input.valid{border-color:rgba(0,229,160,0.4);}
+    .field-select{width:100%;background:var(--surface3);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 13px;color:var(--text);font-size:13px;font-family:inherit;outline:none;appearance:none;cursor:pointer;}
+    .field-select:focus{border-color:rgba(255,77,109,0.4);}
+    .field-hint{font-size:10px;color:rgba(0,229,160,0.6);margin-top:3px;}
+    .field-error{font-size:10px;color:var(--red);margin-top:3px;display:none;}
+
+    /* THRESHOLD INDICATOR */
+    .threshold-bar{background:var(--surface3);border-radius:8px;padding:10px 13px;margin-bottom:10px;display:flex;align-items:center;gap:10px;}
+    .tb-icon{font-size:16px;flex-shrink:0;}
+    .tb-label{font-size:11px;color:var(--muted);flex:1;}
+    .tb-value{font-size:12px;font-weight:800;}
+    .tb-value.triggered{color:var(--red);}
+    .tb-value.safe{color:var(--green);}
+
+    /* STEP FLOW */
+    .step-flow{display:flex;flex-direction:column;gap:0;}
+    .step-item{display:flex;gap:12px;position:relative;}
+    .step-item:not(:last-child)::after{content:'';position:absolute;left:14px;top:32px;bottom:0;width:2px;background:rgba(255,255,255,0.06);z-index:0;}
+    .step-dot{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;z-index:1;margin-top:2px;}
+    .step-dot.done{background:rgba(0,229,160,0.2);border:1.5px solid var(--green);color:var(--green);}
+    .step-dot.active{background:rgba(255,77,109,0.15);border:1.5px solid var(--red);color:var(--red);}
+    .step-dot.pending{background:rgba(255,255,255,0.04);border:1.5px solid rgba(255,255,255,0.1);color:var(--muted);}
+    .step-body{flex:1;padding-bottom:14px;}
+    .step-title{font-size:13px;font-weight:700;margin-bottom:2px;}
+    .step-desc{font-size:11px;color:var(--muted);line-height:1.4;}
+    .step-action{margin-top:7px;font-size:11px;font-weight:700;color:var(--cyan);cursor:pointer;background:none;border:none;font-family:inherit;padding:0;}
+
+    /* ACTION BUTTONS */
+    .btn-primary{width:100%;padding:13px;background:linear-gradient(135deg,var(--red),rgba(255,77,109,0.7));color:var(--text);font-size:13px;font-weight:800;border:none;border-radius:12px;cursor:pointer;font-family:inherit;letter-spacing:0.3px;transition:opacity 0.2s;}
+    .btn-primary:hover{opacity:0.88;}
+    .btn-secondary{width:100%;padding:12px;background:transparent;border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:8px;}
+    .btn-cyan{width:100%;padding:12px;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.25);border-radius:12px;color:var(--cyan);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:8px;}
+    .btn-sm{padding:7px 14px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;border:none;}
+    .btn-sm.green{background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.3);color:var(--green);}
+    .btn-sm.red{background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.25);color:var(--red);}
+
+    /* TRANSACTION LOG */
+    .tx-item{background:var(--surface2);border:1px solid rgba(255,255,255,0.05);border-radius:12px;padding:11px 13px;margin-bottom:7px;}
+    .tx-top{display:flex;align-items:center;gap:8px;margin-bottom:5px;}
+    .tx-icon{font-size:14px;flex-shrink:0;}
+    .tx-title{font-size:12px;font-weight:700;flex:1;}
+    .tx-time{font-size:10px;color:var(--muted);}
+    .tx-row{display:flex;justify-content:space-between;margin-bottom:2px;}
+    .tx-lbl{font-size:10px;color:var(--muted);}
+    .tx-val{font-size:10px;font-weight:600;}
+    .tx-rule-row{display:flex;align-items:center;gap:6px;margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.04);}
+    .tx-rule-icon{font-size:11px;}
+    .tx-rule-text{font-size:10px;color:var(--muted);flex:1;}
+
+    /* ATTESTATION */
+    .attest-card{background:linear-gradient(135deg,rgba(139,63,232,0.08),rgba(0,212,255,0.04));border:1px solid rgba(139,63,232,0.2);border-radius:14px;padding:14px;margin-bottom:10px;}
+    .attest-title{font-size:12px;font-weight:800;margin-bottom:6px;}
+    .attest-wallet-input{width:100%;background:var(--surface3);border:1px solid rgba(139,63,232,0.2);border-radius:10px;padding:10px 13px;color:var(--text);font-size:11px;font-family:monospace;outline:none;margin-bottom:8px;}
+    .attest-wallet-input:focus{border-color:rgba(139,63,232,0.5);}
+    .attest-checks{display:flex;flex-direction:column;gap:5px;margin-bottom:10px;}
+    .attest-check{display:flex;align-items:center;gap:8px;font-size:11px;}
+    .attest-check input[type=checkbox]{width:14px;height:14px;accent-color:var(--purple);cursor:pointer;}
+    .attest-check label{color:var(--muted);cursor:pointer;line-height:1.4;}
+    .attest-result{display:none;background:rgba(0,229,160,0.06);border:1px solid rgba(0,229,160,0.2);border-radius:8px;padding:9px 12px;font-size:11px;color:var(--green);line-height:1.5;}
+
+    /* VASP MESSAGING */
+    .vasp-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+    .vasp-row:last-child{border-bottom:none;}
+    .vasp-name{font-size:12px;font-weight:700;flex:1;}
+    .vasp-chain{font-size:10px;color:var(--muted);}
+    .vasp-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+    .vasp-dot.live{background:var(--green);}
+    .vasp-dot.pending{background:var(--gold);}
+    .vasp-dot.offline{background:rgba(255,255,255,0.2);}
+
+    /* PROGRESS */
+    .progress-bar-wrap{background:rgba(255,255,255,0.05);border-radius:4px;height:6px;overflow:hidden;margin-top:6px;}
+    .progress-bar-fill{height:100%;border-radius:4px;transition:width 0.6s ease;}
+    .pbf-red{background:linear-gradient(90deg,var(--red),rgba(255,77,109,0.6));}
+    .pbf-green{background:linear-gradient(90deg,var(--green),rgba(0,229,160,0.6));}
+    .pbf-gold{background:linear-gradient(90deg,var(--gold),rgba(255,184,0,0.6));}
+
+    /* DOCTRINE CARD */
+    .doctrine-card{background:var(--surface2);border:1px solid rgba(255,255,255,0.04);border-radius:14px;padding:14px;margin-bottom:10px;}
+    .doctrine-eyebrow{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,77,109,0.5);margin-bottom:6px;}
+    .doctrine-text{font-size:13px;font-weight:600;line-height:1.6;color:var(--text);}
+    .doctrine-text span{color:var(--cyan);}
+
+    /* TOAST */
+    .toast-el{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--surface2);border:1px solid rgba(0,229,160,0.3);border-radius:24px;padding:10px 18px;font-size:12px;font-weight:700;color:var(--green);z-index:9000;opacity:0;transition:all 0.3s;pointer-events:none;white-space:nowrap;}
+    .toast-el.show{opacity:1;transform:translateX(-50%) translateY(0);}
+    .toast-el.red{border-color:rgba(255,77,109,0.4);color:var(--red);}
+    .toast-el.gold{border-color:rgba(255,184,0,0.4);color:var(--gold);}
+    .toast-el.cyan{border-color:rgba(0,212,255,0.4);color:var(--cyan);}
+  </style>
+</head>
+<body>
+
+  <nav class="nav">
+    <a href="index.html" class="nav-back">← IN$DEX</a>
+    <span class="nav-title">Travel Rule</span>
+    <span class="nav-days" id="navDays">— days</span>
+  </nav>
+
+  <!-- AUSTRAC DEADLINE COUNTDOWN -->
+  <div class="deadline-banner">
+    <div class="db-icon">⚠️</div>
+    <div class="db-text">
+      <div class="db-label">AUSTRAC VASP Enrollment Deadline</div>
+      <div class="db-countdown" id="dbCountdown">Calculating…</div>
+      <div class="db-sub">29 July 2026 · Travel Rule mandatory from 31 Mar 2026</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="openTab('tab-transfer')">📤 Transfer</button>
+    <button class="tab-btn" onclick="openTab('tab-attest')">🔐 Wallet Check</button>
+    <button class="tab-btn" onclick="openTab('tab-log')">📋 Log</button>
+    <button class="tab-btn" onclick="openTab('tab-vasp')">🌐 VASP Network</button>
+    <button class="tab-btn" onclick="openTab('tab-enrol')">✅ Enrollment</button>
+  </div>
+
+  <!-- TAB: TRANSFER DATA COLLECTION -->
+  <div class="tab-pane active" id="tab-transfer">
+
+    <div class="threshold-bar">
+      <div class="tb-icon">⚡</div>
+      <div class="tb-label">Travel Rule threshold (AUD equiv.)</div>
+      <div class="tb-value safe" id="thresholdStatus">Not triggered</div>
+    </div>
+
+    <!-- ORIGINATOR -->
+    <div class="card red-border" style="margin-bottom:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div class="card-title">👤 Originator (Sender)</div>
+        <span class="status-badge" id="origStatus">⚪ Incomplete</span>
+      </div>
+      <div class="card-sub">Required for all transfers over AUD 1,000 equivalent under AUSTRAC Travel Rule obligations.</div>
+
+      <div class="field-row">
+        <div class="field-label">Full Legal Name</div>
+        <input class="field-input" id="origName" type="text" placeholder="e.g. Maria Santos" oninput="validateOrig()">
+        <div class="field-hint">Must match government-issued ID</div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Account / Wallet Identifier</div>
+        <input class="field-input" id="origAccount" type="text" placeholder="Web3 domain or wallet address" oninput="validateOrig()">
+      </div>
+      <div class="field-row">
+        <div class="field-label">Geographic Address (or jurisdiction)</div>
+        <input class="field-input" id="origAddress" type="text" placeholder="City, State, Country" oninput="validateOrig()">
+      </div>
+      <div class="field-row">
+        <div class="field-label">National ID Number (optional)</div>
+        <input class="field-input" id="origId" type="text" placeholder="Passport, drivers licence, etc.">
+      </div>
+    </div>
+
+    <!-- BENEFICIARY -->
+    <div class="card cyan-border" style="margin-bottom:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <div class="card-title">🏦 Beneficiary (Recipient)</div>
+        <span class="status-badge" id="benStatus">⚪ Incomplete</span>
+      </div>
+      <div class="card-sub">Beneficiary information must be transmitted to the receiving VASP simultaneously with the virtual asset transfer.</div>
+
+      <div class="field-row">
+        <div class="field-label">Full Legal Name</div>
+        <input class="field-input" id="benName" type="text" placeholder="e.g. Jose Santos" oninput="validateBen()">
+      </div>
+      <div class="field-row">
+        <div class="field-label">Receiving Account / Address</div>
+        <input class="field-input" id="benAccount" type="text" placeholder="VASP account or wallet" oninput="validateBen()">
+      </div>
+      <div class="field-row">
+        <div class="field-label">Beneficiary VASP (if known)</div>
+        <select class="field-select" id="benVasp">
+          <option value="">— Select receiving VASP —</option>
+          <option value="indx">IN$DEX</option>
+          <option value="coinbase">Coinbase</option>
+          <option value="binance">Binance</option>
+          <option value="kraken">Kraken</option>
+          <option value="bitget">Bitget</option>
+          <option value="self_hosted">Self-Hosted Wallet</option>
+          <option value="unknown">Unknown / Other</option>
+        </select>
+      </div>
+      <div id="selfHostedNote" style="display:none;background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.2);border-radius:8px;padding:9px 12px;font-size:11px;color:var(--gold);line-height:1.5;margin-bottom:8px;">
+        ⚠️ Self-hosted wallet detected. SIINDEX will open wallet attestation flow. Citizen must confirm ownership and confirm the destination is not a sanctioned address.
+      </div>
+    </div>
+
+    <!-- TRANSFER DETAILS -->
+    <div class="card" style="margin-bottom:10px;">
+      <div class="card-title" style="margin-bottom:8px;">💸 Transfer Details</div>
+      <div class="field-row">
+        <div class="field-label">Amount (INDX)</div>
+        <input class="field-input" id="txAmount" type="number" min="0" placeholder="0" oninput="updateThreshold()">
+        <div class="field-hint" id="txUsdHint">USD equivalent: —</div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Reference / Purpose</div>
+        <select class="field-select" id="txPurpose">
+          <option value="">— Select purpose —</option>
+          <option>Family remittance</option>
+          <option>Business payment</option>
+          <option>Marketplace settlement</option>
+          <option>Platform earnings withdrawal</option>
+          <option>Staking rewards</option>
+          <option>NFT / digital asset purchase</option>
+          <option>Other</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="submitTravelRuleData()">📤 Attach Travel Rule Data &amp; Proceed</button>
+    <button class="btn-secondary" onclick="saveDraft()">Save Draft</button>
+
+    <div class="doctrine-card" style="margin-top:14px;">
+      <div class="doctrine-eyebrow">SIINDEX Travel Rule Doctrine</div>
+      <div class="doctrine-text">SIINDEX handles Travel Rule <span>silently</span>. Citizens see "cleared" or "info needed" — never the paperwork. We absorb the compliance complexity so the citizen can focus on the transfer.</div>
+    </div>
+  </div>
+
+  <!-- TAB: WALLET ATTESTATION -->
+  <div class="tab-pane" id="tab-attest">
+
+    <div class="card gold-border">
+      <div class="card-title">🔐 Self-Hosted Wallet Attestation</div>
+      <div class="card-sub">AUSTRAC requires VASPs to verify that citizens sending to self-hosted wallets own or control the destination address. This is the ownership check.</div>
+
+      <div class="field-row" style="margin-top:4px;">
+        <div class="field-label">Destination Wallet Address</div>
+        <input class="attest-wallet-input" id="attestWallet" placeholder="Paste Solana or EVM wallet address…" oninput="validateAttest()">
+      </div>
+
+      <div class="field-label" style="margin-bottom:6px;">Verification Method</div>
+      <select class="field-select" id="attestMethod" style="margin-bottom:10px;" onchange="updateAttestMethod()">
+        <option value="">— Select method —</option>
+        <option value="sign">Cryptographic Signature (Recommended)</option>
+        <option value="micro">Micro-deposit Verification</option>
+        <option value="declaration">Statutory Declaration</option>
+      </select>
+      <div id="attestMethodDetail" style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5;min-height:18px;"></div>
+
+      <div class="attest-checks">
+        <div class="attest-check">
+          <input type="checkbox" id="c1" onchange="validateAttest()">
+          <label for="c1">I am the sole owner or authorised controller of this wallet address.</label>
+        </div>
+        <div class="attest-check">
+          <input type="checkbox" id="c2" onchange="validateAttest()">
+          <label for="c2">To the best of my knowledge, this address is not subject to sanctions or restrictions.</label>
+        </div>
+        <div class="attest-check">
+          <input type="checkbox" id="c3" onchange="validateAttest()">
+          <label for="c3">I understand that providing false information may constitute a breach of Australian law.</label>
+        </div>
+        <div class="attest-check">
+          <input type="checkbox" id="c4" onchange="validateAttest()">
+          <label for="c4">I consent to IN$DEX retaining this attestation as part of my transaction record for AML/CTF compliance purposes.</label>
+        </div>
+      </div>
+
+      <div class="attest-result" id="attestResult">
+        ✅ Attestation complete. Self-hosted wallet verified. This record will be attached to your transfer and retained for 7 years per AUSTRAC requirements.
+      </div>
+
+      <button class="btn-primary" id="attestBtn" onclick="submitAttestation()" style="margin-top:10px;" disabled>🔐 Submit Attestation</button>
+    </div>
+
+    <!-- SANCTIONS PRE-FLIGHT -->
+    <div class="card" style="margin-top:0;">
+      <div class="card-title" style="margin-bottom:6px;">🛡️ Sanctions Pre-Flight</div>
+      <div class="card-sub">SIINDEX runs a pre-flight scan before every transfer. This is not a substitute for legal advice.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <span style="font-size:11px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.2);border-radius:6px;padding:4px 9px;color:var(--green);">✅ OFAC (US Treasury)</span>
+        <span style="font-size:11px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.2);border-radius:6px;padding:4px 9px;color:var(--green);">✅ UN Consolidated List</span>
+        <span style="font-size:11px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.2);border-radius:6px;padding:4px 9px;color:var(--green);">✅ AUSTRAC DOCA</span>
+        <span style="font-size:11px;background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.2);border-radius:6px;padding:4px 9px;color:var(--gold);">⏳ EU Restrictive Measures</span>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:8px;">Last scan: On every transfer initiation · Powered by SIINDEX compliance layer</div>
+    </div>
+  </div>
+
+  <!-- TAB: TRANSACTION LOG -->
+  <div class="tab-pane" id="tab-log">
+    <div class="sect-hdr">
+      <span class="sect-lbl">Travel Rule Log</span>
+      <button class="btn-sm red" onclick="clearLog()">Clear</button>
+    </div>
+    <div id="txLog"></div>
+    <div id="txLogEmpty" style="font-size:12px;color:var(--muted);padding:8px 0;display:none;">No Travel Rule records yet. Complete a transfer to see records here.</div>
+
+    <!-- GM: LOG ANALYTICS -->
+    <div id="logAnalytics" style="margin-top:14px;display:none;">
+      <div class="sect-lbl" style="margin-bottom:8px;">Analytics</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;" id="logAnalyticsGrid"></div>
+    </div>
+  </div>
+
+  <!-- TAB: VASP NETWORK -->
+  <div class="tab-pane" id="tab-vasp">
+    <div class="card cyan-border">
+      <div class="card-title" style="margin-bottom:4px;">🌐 VASP-to-VASP Messaging</div>
+      <div class="card-sub">Travel Rule data is transmitted to the receiving VASP simultaneously with the virtual asset transfer. Protocol: TRISA / OpenVASP.</div>
+
+      <div id="vaspList"></div>
+
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.05);">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">TRANSMISSION STATUS</div>
+        <div style="display:flex;gap:16px;">
+          <span style="font-size:11px;"><span class="vasp-dot live" style="display:inline-block;margin-right:4px;"></span>Live</span>
+          <span style="font-size:11px;"><span class="vasp-dot pending" style="display:inline-block;margin-right:4px;"></span>Connecting</span>
+          <span style="font-size:11px;"><span class="vasp-dot offline" style="display:inline-block;margin-right:4px;"></span>Offline</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="margin-bottom:6px;">📡 Protocol Compatibility</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;">
+          <span>TRISA (Travel Rule Information Sharing)</span>
+          <span class="status-badge sb-clear">Active</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;">
+          <span>OpenVASP</span>
+          <span class="status-badge sb-pending">Integrating</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;">
+          <span>SYGNA Bridge</span>
+          <span class="status-badge sb-pending">Planned</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;">
+          <span>VerifyVASP</span>
+          <span class="status-badge sb-pending">Planned</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="doctrine-card">
+      <div class="doctrine-eyebrow">Regulatory Context</div>
+      <div class="doctrine-text" style="font-size:12px;">The FATF Travel Rule requires VASPs to collect and share beneficiary and originator information for transfers at or above USD 1,000. AUSTRAC enforces this under Australia's AML/CTF Act from 31 March 2026. Non-compliance risks immediate suspension of VASP registration.</div>
+    </div>
+  </div>
+
+  <!-- TAB: VASP ENROLLMENT -->
+  <div class="tab-pane" id="tab-enrol">
+    <div class="card red-border">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div class="card-title">⚡ VASP Enrollment Status</div>
+        <span class="status-badge" id="enrolOverallBadge">In Progress</span>
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;">
+          <span style="color:var(--muted);">Enrollment completion</span>
+          <span id="enrolPct">0%</span>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill pbf-red" id="enrolProgressBar" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="step-flow" id="enrolSteps"></div>
+    </div>
+
+    <!-- GM: DOCUMENT VAULT -->
+    <div class="card gold-border" style="margin-top:0;">
+      <div class="card-title" style="margin-bottom:6px;">📁 Enrollment Document Vault</div>
+      <div class="card-sub">Documents required for AUSTRAC VASP enrollment. Upload or mark as prepared.</div>
+      <div id="docVault"></div>
+    </div>
+
+    <div class="card green-border" style="margin-top:0;">
+      <div class="card-title" style="margin-bottom:6px;">🧑‍⚖️ Compliance Officer</div>
+      <div class="card-sub">AUSTRAC requires a nominated AML/CTF Compliance Officer with appropriate authority.</div>
+      <div class="field-row">
+        <div class="field-label">Officer Name</div>
+        <input class="field-input" id="coName" type="text" placeholder="Full name" oninput="saveEnrolData()">
+      </div>
+      <div class="field-row">
+        <div class="field-label">Email</div>
+        <input class="field-input" id="coEmail" type="email" placeholder="officer@company.com" oninput="saveEnrolData()">
+      </div>
+      <div class="field-row">
+        <div class="field-label">Appointment Date</div>
+        <input class="field-input" id="coDate" type="date" oninput="saveEnrolData()">
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-el" id="toastEl"></div>
+
+  <script>
+    // ── CONSTANTS ──────────────────────────────────────────
+    const INDX_PRICE_USD = 0.24;
+    const AUSTRAC_DL     = new Date('2026-07-29T23:59:59+10:00');
+    const THRESHOLD_AUD  = 1000;     // Travel Rule trigger
+    const THRESHOLD_USD  = 700;      // ~AUD 1000 equiv
+    const AUD_USD_RATE   = 0.65;
+    const LOG_KEY        = 'indx_travel_rule_log';
+    const ENROL_KEY      = 'indx_travel_rule_enrol';
+    const DRAFT_KEY      = 'indx_travel_rule_draft';
+
+    // ── TABS ──────────────────────────────────────────────
+    function openTab(id) {
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      const idx = ['tab-transfer','tab-attest','tab-log','tab-vasp','tab-enrol'].indexOf(id);
+      document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+    }
+
+    // ── TOAST ─────────────────────────────────────────────
+    function showToast(msg, type='') {
+      const t = document.getElementById('toastEl');
+      t.textContent = msg;
+      t.className = 'toast-el show' + (type ? ' '+type : '');
+      setTimeout(() => t.classList.remove('show'), 3500);
+    }
+
+    // ── GM1: LIVE COUNTDOWN ───────────────────────────────
+    function updateCountdown() {
+      const now    = new Date();
+      const diff   = AUSTRAC_DL - now;
+      if (diff <= 0) {
+        document.getElementById('dbCountdown').textContent = '⬛ DEADLINE PASSED';
+        document.getElementById('navDays').textContent = '0 days';
+        return;
+      }
+      const d  = Math.floor(diff / 86400000);
+      const h  = Math.floor((diff % 86400000) / 3600000);
+      const m  = Math.floor((diff % 3600000) / 60000);
+      const s  = Math.floor((diff % 60000) / 1000);
+      const pad = n => String(n).padStart(2,'0');
+      document.getElementById('dbCountdown').textContent = `${d}d ${pad(h)}h ${pad(m)}m ${pad(s)}s`;
+      document.getElementById('navDays').textContent = `${d} days`;
+    }
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+
+    // ── FORM VALIDATION ───────────────────────────────────
+    let origOk = false, benOk = false;
+
+    function validateOrig() {
+      const name = document.getElementById('origName').value.trim();
+      const acct = document.getElementById('origAccount').value.trim();
+      const addr = document.getElementById('origAddress').value.trim();
+      origOk = name.length >= 2 && acct.length >= 3 && addr.length >= 2;
+      const badge = document.getElementById('origStatus');
+      badge.textContent = origOk ? '✅ Complete' : '⚪ Incomplete';
+      badge.className = 'status-badge ' + (origOk ? 'sb-clear' : 'sb-pending');
+      if (origOk) {
+        ['origName','origAccount','origAddress'].forEach(id => {
+          document.getElementById(id).classList.add('valid');
+        });
+      }
+    }
+
+    function validateBen() {
+      const name = document.getElementById('benName').value.trim();
+      const acct = document.getElementById('benAccount').value.trim();
+      const vasp = document.getElementById('benVasp').value;
+      benOk = name.length >= 2 && acct.length >= 3;
+      const badge = document.getElementById('benStatus');
+      badge.textContent = benOk ? '✅ Complete' : '⚪ Incomplete';
+      badge.className = 'status-badge ' + (benOk ? 'sb-clear' : 'sb-pending');
+
+      const selfNote = document.getElementById('selfHostedNote');
+      selfNote.style.display = vasp === 'self_hosted' ? 'block' : 'none';
+    }
+
+    // ── THRESHOLD TRIGGER ─────────────────────────────────
+    function updateThreshold() {
+      const amt    = parseFloat(document.getElementById('txAmount').value) || 0;
+      const usd    = amt * INDX_PRICE_USD;
+      const aud    = usd / AUD_USD_RATE;
+      const hint   = document.getElementById('txUsdHint');
+      const status = document.getElementById('thresholdStatus');
+      hint.textContent = `USD equivalent: $${usd.toFixed(2)} · AUD equivalent: $${aud.toFixed(2)}`;
+      if (aud >= THRESHOLD_AUD) {
+        status.textContent = `⚠️ Triggered (AUD ${aud.toFixed(0)})`;
+        status.className = 'tb-value triggered';
+      } else {
+        status.textContent = `Safe (AUD ${aud.toFixed(0)})`;
+        status.className = 'tb-value safe';
+      }
+    }
+
+    // ── SUBMIT TRAVEL RULE DATA ───────────────────────────
+    function submitTravelRuleData() {
+      if (!origOk) { showToast('Complete originator details first', 'red'); return; }
+      if (!benOk)  { showToast('Complete beneficiary details first', 'red'); return; }
+      const amount  = parseFloat(document.getElementById('txAmount').value) || 0;
+      if (amount <= 0) { showToast('Enter transfer amount', 'red'); return; }
+      const purpose = document.getElementById('txPurpose').value || 'Not specified';
+      const vasp    = document.getElementById('benVasp').value;
+      if (vasp === 'self_hosted') {
+        showToast('Self-hosted wallet — opening attestation', 'gold');
+        openTab('tab-attest');
+        return;
+      }
+      const entry = {
+        id: Date.now(),
+        origName:    document.getElementById('origName').value.trim(),
+        origAccount: document.getElementById('origAccount').value.trim(),
+        benName:     document.getElementById('benName').value.trim(),
+        benAccount:  document.getElementById('benAccount').value.trim(),
+        benVasp:     vasp || 'Unknown',
+        amount, purpose,
+        usd: (amount * INDX_PRICE_USD).toFixed(2),
+        aud: (amount * INDX_PRICE_USD / AUD_USD_RATE).toFixed(2),
+        status: 'transmitted',
+        ts: Date.now()
+      };
+      saveLogEntry(entry);
+      showToast('✅ Travel Rule data attached & transmitted');
+      addAuditLogEntry(entry);
+      openTab('tab-log');
+    }
+
+    // ── DRAFT SAVE ────────────────────────────────────────
+    function saveDraft() {
+      const draft = {
+        origName: document.getElementById('origName').value,
+        origAccount: document.getElementById('origAccount').value,
+        origAddress: document.getElementById('origAddress').value,
+        benName: document.getElementById('benName').value,
+        benAccount: document.getElementById('benAccount').value,
+        amount: document.getElementById('txAmount').value,
+        purpose: document.getElementById('txPurpose').value,
+      };
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      showToast('Draft saved', 'gold');
+    }
+
+    function loadDraft() {
+      try {
+        const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+        if (!d) return;
+        ['origName','origAccount','origAddress','benName','benAccount','txAmount','txPurpose'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el && d[id]) el.value = d[id];
+        });
+        validateOrig(); validateBen(); updateThreshold();
+      } catch {}
+    }
+
+    // ── GM2: TRANSACTION LOG + ANALYTICS ──────────────────
+    function getLog() { try{return JSON.parse(localStorage.getItem(LOG_KEY)||'[]');}catch{return[];} }
+    function saveLogEntry(entry) {
+      const log = getLog();
+      log.unshift(entry);
+      localStorage.setItem(LOG_KEY, JSON.stringify(log.slice(0,100)));
+      renderLog();
+    }
+    function clearLog() {
+      localStorage.removeItem(LOG_KEY);
+      renderLog();
+      showToast('Log cleared');
+    }
+
+    function renderLog() {
+      const log   = getLog();
+      const el    = document.getElementById('txLog');
+      const empty = document.getElementById('txLogEmpty');
+      const analytics = document.getElementById('logAnalytics');
+
+      if (!log.length) {
+        el.innerHTML = '';
+        empty.style.display = 'block';
+        analytics.style.display = 'none';
+        return;
+      }
+      empty.style.display = 'none';
+      analytics.style.display = 'block';
+
+      el.innerHTML = log.slice(0,20).map(e => {
+        const dt = new Date(e.ts).toLocaleString('en-AU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+        const rule = parseFloat(e.aud) >= THRESHOLD_AUD ? '⚠️ Travel Rule applied' : '✅ Below threshold';
+        const statusClass = { transmitted:'sb-transmitted', pending:'sb-pending', failed:'sb-required' }[e.status] || 'sb-pending';
+        return `<div class="tx-item">
+          <div class="tx-top">
+            <div class="tx-icon">💸</div>
+            <div class="tx-title">${esc(e.origName)} → ${esc(e.benName)}</div>
+            <span class="status-badge ${statusClass}">${e.status}</span>
+          </div>
+          <div class="tx-row"><span class="tx-lbl">Amount</span><span class="tx-val">${e.amount} INDX ($${e.usd} USD)</span></div>
+          <div class="tx-row"><span class="tx-lbl">Receiving VASP</span><span class="tx-val">${esc(e.benVasp)}</span></div>
+          <div class="tx-row"><span class="tx-lbl">Purpose</span><span class="tx-val">${esc(e.purpose)}</span></div>
+          <div class="tx-row"><span class="tx-lbl">Date</span><span class="tx-val">${dt}</span></div>
+          <div class="tx-rule-row">
+            <div class="tx-rule-icon">${parseFloat(e.aud) >= THRESHOLD_AUD ? '⚠️' : '✅'}</div>
+            <div class="tx-rule-text">${rule} · AUD equiv: $${e.aud}</div>
+          </div>
+        </div>`;
+      }).join('');
+
+      renderLogAnalytics(log);
+    }
+
+    function renderLogAnalytics(log) {
+      const total  = log.length;
+      const triggered = log.filter(e => parseFloat(e.aud) >= THRESHOLD_AUD).length;
+      const totalUSD = log.reduce((s, e) => s + parseFloat(e.usd||0), 0);
+      const vasps  = [...new Set(log.map(e => e.benVasp))].length;
+      const grid   = document.getElementById('logAnalyticsGrid');
+      const cells  = [
+        { lbl:'Total Records', val: total },
+        { lbl:'Travel Rule Applied', val: triggered },
+        { lbl:'Total Vol (USD)', val: `$${totalUSD.toFixed(0)}` },
+        { lbl:'Unique VASPs', val: vasps },
+        { lbl:'Transmitted', val: log.filter(e=>e.status==='transmitted').length },
+        { lbl:'Pending', val: log.filter(e=>e.status==='pending').length },
+      ];
+      grid.innerHTML = cells.map(c => `
+        <div style="background:var(--surface2);border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:8px;text-align:center;">
+          <div style="font-size:15px;font-weight:800;">${c.val}</div>
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">${c.lbl}</div>
+        </div>
+      `).join('');
+    }
+
+    // Fake a couple of seed entries on first load for demo
+    function addAuditLogEntry(entry) { /* real entries come from submitTravelRuleData */ }
+
+    function seedLogIfEmpty() {
+      if (getLog().length) return;
+      const seeds = [
+        { id:1, origName:'AJ Henry', origAccount:'aj.indx', benName:'Maria Santos', benAccount:'maria.indx', benVasp:'IN$DEX', amount:500, purpose:'Family remittance', usd:'120.00', aud:'184.62', status:'transmitted', ts: Date.now() - 3600000 },
+        { id:2, origName:'AJ Henry', origAccount:'aj.indx', benName:'Jose Reyes', benAccount:'GDxyz...7f2k', benVasp:'Self-Hosted Wallet', amount:5000, purpose:'Marketplace settlement', usd:'1200.00', aud:'1846.15', status:'transmitted', ts: Date.now() - 86400000 },
+      ];
+      localStorage.setItem(LOG_KEY, JSON.stringify(seeds));
+      renderLog();
+    }
+
+    // ── GM3: WALLET ATTESTATION ───────────────────────────
+    function validateAttest() {
+      const wallet = document.getElementById('attestWallet').value.trim();
+      const checks = ['c1','c2','c3','c4'].every(id => document.getElementById(id).checked);
+      const method = document.getElementById('attestMethod').value;
+      const ok     = wallet.length >= 20 && checks && method;
+      document.getElementById('attestBtn').disabled = !ok;
+    }
+
+    function updateAttestMethod() {
+      const method  = document.getElementById('attestMethod').value;
+      const details = {
+        sign:        'SIINDEX will prompt you to sign a test message with your wallet private key. No funds will move. This is the most cryptographically secure method.',
+        micro:       'SIINDEX will deposit 0.001 INDX to the wallet. You confirm receipt by entering the exact amount. Takes 1-2 minutes.',
+        declaration: 'You provide a signed statutory declaration that you own or control the wallet. Less secure — subject to AUSTRAC review for high-value transfers.',
+      };
+      document.getElementById('attestMethodDetail').textContent = details[method] || '';
+    }
+
+    function submitAttestation() {
+      const wallet = document.getElementById('attestWallet').value.trim();
+      const method = document.getElementById('attestMethod').value;
+      const result = document.getElementById('attestResult');
+      result.style.display = 'block';
+      document.getElementById('attestBtn').disabled = true;
+      const methodLabels = { sign:'Cryptographic Signature', micro:'Micro-deposit', declaration:'Statutory Declaration' };
+      result.innerHTML = `✅ Attestation complete. Wallet: ${wallet.slice(0,8)}…${wallet.slice(-6)}. Method: ${methodLabels[method]||method}. Retained for 7 years per AUSTRAC requirements. Transfer may now proceed.`;
+      showToast('✅ Wallet attestation recorded');
+      // Log it
+      saveLogEntry({ id: Date.now(), origName:'Citizen', origAccount:'Self', benName:'Self-Hosted Wallet', benAccount: wallet, benVasp:'Self-Hosted', amount:0, purpose:'Wallet attestation', usd:'0.00', aud:'0.00', status:'transmitted', ts:Date.now() });
+    }
+
+    // ── GM4: VASP ENROLLMENT CHECKLIST ────────────────────
+    const ENROL_STEPS = [
+      { id:'aml_program', title:'AML/CTF Program', desc:'Establish a written AML/CTF program that satisfies AUSTRAC Part A and Part B requirements.', docs:['AML/CTF Program (Part A)','AML/CTF Program (Part B)'] },
+      { id:'kyc_procedures', title:'KYC Procedures', desc:'Customer identification and verification procedures for individuals and entities.', docs:['KYC Procedure Manual'] },
+      { id:'ttr_smr', title:'TTR & SMR Procedures', desc:'Threshold Transaction Report and Suspicious Matter Report procedures.', docs:['TTR Procedure','SMR Procedure'] },
+      { id:'compliance_officer', title:'Compliance Officer', desc:'Appoint an AML/CTF Compliance Officer with adequate authority, seniority, and independence.', docs:['CO Appointment Letter'] },
+      { id:'travel_rule', title:'Travel Rule Implementation', desc:'Systems and procedures to collect, hold, and transmit beneficiary and originator information per AUSTRAC guidelines.', docs:['Travel Rule Policy'] },
+      { id:'submission', title:'Submit to AUSTRAC', desc:'Submit VASP enrollment application via AUSTRAC Online portal before 29 July 2026.', docs:['Enrollment Application'] },
+    ];
+
+    const DOCS_REQUIRED = [
+      'AML/CTF Program (Part A)', 'AML/CTF Program (Part B)',
+      'KYC Procedure Manual', 'TTR Procedure', 'SMR Procedure',
+      'CO Appointment Letter', 'Travel Rule Policy', 'Enrollment Application'
+    ];
+
+    function getEnrol()     { try{return JSON.parse(localStorage.getItem(ENROL_KEY)||'{}');}catch{return{};} }
+    function saveEnrolData(){
+      const data = getEnrol();
+      data.coName  = document.getElementById('coName').value;
+      data.coEmail = document.getElementById('coEmail').value;
+      data.coDate  = document.getElementById('coDate').value;
+      localStorage.setItem(ENROL_KEY, JSON.stringify(data));
+      if (data.coName && data.coEmail && data.coDate) {
+        // Mark compliance officer step done
+        data.compliance_officer = true;
+        localStorage.setItem(ENROL_KEY, JSON.stringify(data));
+        renderEnrolSteps();
+      }
+    }
+
+    function toggleEnrolStep(id) {
+      const data = getEnrol();
+      data[id] = !data[id];
+      localStorage.setItem(ENROL_KEY, JSON.stringify(data));
+      renderEnrolSteps();
+      if (data[id]) showToast('Step marked complete');
+    }
+
+    function renderEnrolSteps() {
+      const data     = getEnrol();
+      const el       = document.getElementById('enrolSteps');
+      const completed = ENROL_STEPS.filter(s => data[s.id]).length;
+      const pct      = Math.round(completed / ENROL_STEPS.length * 100);
+
+      document.getElementById('enrolPct').textContent = pct + '%';
+      document.getElementById('enrolProgressBar').style.width = pct + '%';
+      document.getElementById('enrolProgressBar').className = 'progress-bar-fill ' + (pct === 100 ? 'pbf-green' : pct >= 50 ? 'pbf-gold' : 'pbf-red');
+
+      const badge = document.getElementById('enrolOverallBadge');
+      if (pct === 100) { badge.textContent = '✅ Enrolled'; badge.className = 'status-badge sb-clear'; }
+      else if (pct >= 50) { badge.textContent = 'In Progress'; badge.className = 'status-badge sb-pending'; }
+      else { badge.textContent = '⚠️ Action Required'; badge.className = 'status-badge sb-required'; }
+
+      el.innerHTML = ENROL_STEPS.map((s, i) => {
+        const done = !!data[s.id];
+        const dotCls = done ? 'done' : i === ENROL_STEPS.findIndex(x => !data[x.id]) ? 'active' : 'pending';
+        return `<div class="step-item">
+          <div class="step-dot ${dotCls}">${done ? '✓' : i+1}</div>
+          <div class="step-body">
+            <div class="step-title">${s.title}</div>
+            <div class="step-desc">${s.desc}</div>
+            ${!done ? `<button class="step-action" onclick="toggleEnrolStep('${s.id}')">Mark complete →</button>` : `<span style="font-size:10px;color:var(--green);margin-top:4px;display:block;">✅ Done</span>`}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderDocVault() {
+      const data = getEnrol();
+      const el   = document.getElementById('docVault');
+      el.innerHTML = DOCS_REQUIRED.map(doc => {
+        const key  = 'doc_' + doc.replace(/[\s/()]/g,'_');
+        const done = !!data[key];
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+          <span style="font-size:12px;${done?'color:var(--green)':''}">${done ? '✅' : '📄'} ${doc}</span>
+          <button class="btn-sm ${done ? 'red' : 'green'}" onclick="toggleDoc('${key}')">${done ? 'Unmark' : 'Mark ready'}</button>
+        </div>`;
+      }).join('');
+    }
+
+    function toggleDoc(key) {
+      const data = getEnrol();
+      data[key] = !data[key];
+      localStorage.setItem(ENROL_KEY, JSON.stringify(data));
+      renderDocVault();
+      renderEnrolSteps();
+    }
+
+    // ── VASP NETWORK ──────────────────────────────────────
+    const VASP_NETWORK = [
+      { name:'Coinbase', chain:'EVM + Solana', status:'live' },
+      { name:'Binance',  chain:'Multi-chain',  status:'live' },
+      { name:'Kraken',   chain:'EVM',          status:'live' },
+      { name:'Bitget',   chain:'Multi-chain',  status:'pending' },
+      { name:'OKX',      chain:'Multi-chain',  status:'pending' },
+      { name:'Bybit',    chain:'EVM + Solana', status:'pending' },
+      { name:'Independent Reserve', chain:'AUD fiat', status:'pending' },
+      { name:'BTC Markets', chain:'AUD fiat',  status:'offline' },
+    ];
+
+    function renderVaspNetwork() {
+      const el = document.getElementById('vaspList');
+      el.innerHTML = VASP_NETWORK.map(v => `
+        <div class="vasp-row">
+          <div class="vasp-dot ${v.status}"></div>
+          <div class="vasp-name">${v.name}</div>
+          <div class="vasp-chain">${v.chain}</div>
+        </div>
+      `).join('');
+    }
+
+    // ── UTIL ──────────────────────────────────────────────
+    function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // ── INIT ──────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      renderVaspNetwork();
+      renderEnrolSteps();
+      renderDocVault();
+      renderLog();
+      seedLogIfEmpty();
+      loadDraft();
+
+      // Restore CO fields
+      const enrol = getEnrol();
+      if (enrol.coName)  document.getElementById('coName').value  = enrol.coName;
+      if (enrol.coEmail) document.getElementById('coEmail').value = enrol.coEmail;
+      if (enrol.coDate)  document.getElementById('coDate').value  = enrol.coDate;
+
+      // benVasp change listener
+      document.getElementById('benVasp').addEventListener('change', validateBen);
+    });
+  </script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

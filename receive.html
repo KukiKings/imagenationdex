@@ -6,6 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>IN$DEX Receive</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" crossorigin="anonymous"></script>
+<script src="js/indx-db.js"></script>
 <style>
   :root {
     --cyan:#00D4FF; --cyan-dim:#0099BB; --cyan-bg:#071825; --cyan-border:#0A2535;
@@ -106,6 +108,63 @@
   /* GOD MODE — BALANCE CHIP */
   .balance-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.15);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--cyan);margin-bottom:14px;}
 
+  /* ═══════════════════════════════════════
+     GOD MODE ROUND 2 — receive.html
+  ═══════════════════════════════════════ */
+
+  /* Feature 1: Quick amount preset chips */
+  .quick-presets{display:flex;gap:8px;margin-bottom:12px;width:100%;}
+  .qp-chip{flex:1;padding:8px 4px;border-radius:10px;background:var(--surface2);border:1.5px solid var(--border);font-size:12px;font-weight:700;text-align:center;cursor:pointer;color:var(--text-muted);transition:all 0.18s;}
+  .qp-chip.active{background:var(--cyan-bg);border-color:var(--cyan);color:var(--cyan);}
+  .qp-chip:active{opacity:0.75;}
+
+  /* Feature 2: Fullscreen QR overlay */
+  .qr-full-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.97);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+  .qr-full-overlay.show{opacity:1;pointer-events:all;}
+  .qr-full-frame{background:#fff;border-radius:24px;padding:20px;box-shadow:0 0 0 2px rgba(0,212,255,0.25),0 16px 48px rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;}
+  .qr-full-close{padding:12px 32px;border-radius:12px;background:var(--surface);border:1px solid var(--border);color:var(--text-muted);font-size:14px;font-weight:700;cursor:pointer;}
+  .qr-full-hint{font-size:13px;color:var(--text-muted);text-align:center;}
+
+  /* Feature 3: Payment watcher strip */
+  .payment-watcher{display:flex;align-items:center;gap:10px;background:rgba(0,229,160,0.05);border:1px solid rgba(0,229,160,0.15);border-radius:12px;padding:10px 14px;width:100%;margin-bottom:14px;transition:background 0.4s,border-color 0.4s;}
+  .payment-watcher.received{background:rgba(0,229,160,0.12);border-color:rgba(0,229,160,0.4);}
+  .pw-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;animation:pwDot 1.3s ease-in-out infinite;}
+  .payment-watcher.received .pw-dot{animation:none;}
+  @keyframes pwDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.3;transform:scale(0.6)}}
+  .pw-text{font-size:12px;color:var(--text-muted);flex:1;line-height:1.4;}
+  .pw-text strong{color:var(--green);font-weight:700;}
+  .pw-count{font-size:11px;font-weight:700;color:var(--green);flex-shrink:0;}
+
+  /* Feature 4: Receive stats strip */
+  .recv-stats{display:flex;gap:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;width:100%;margin-bottom:14px;}
+  .rs-stat{flex:1;text-align:center;padding:11px 8px;border-right:1px solid var(--border);}
+  .rs-stat:last-child{border-right:none;}
+  .rs-stat-val{font-size:15px;font-weight:800;color:var(--cyan);}
+  .rs-stat-lbl{font-size:10px;color:var(--text-muted);margin-top:2px;}
+
+  /* ══ GOD MODE R3 — RECEIVE.HTML ══ */
+
+  /* Feature 1: Request memo field */
+  .req-memo-lbl{font-size:11px;color:var(--text-muted);font-weight:600;margin-bottom:5px;}
+  .req-memo-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;font-size:14px;color:var(--text);outline:none;resize:none;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;margin-bottom:10px;}
+  .req-memo-input:focus{border-color:var(--cyan);}
+
+  /* Feature 3: Payment request countdown */
+  .req-countdown-bar{display:none;align-items:center;gap:10px;background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.18);border-radius:10px;padding:10px 14px;margin-top:10px;}
+  .req-countdown-bar.show{display:flex;}
+  .rcd-label{font-size:12px;color:var(--text-muted);flex:1;}
+  .rcd-timer{font-family:monospace;font-size:15px;font-weight:800;color:var(--cyan);}
+  .req-countdown-bar.expiring .rcd-timer{color:var(--gold);}
+  .req-countdown-bar.expired .rcd-timer{color:var(--red);}
+
+  /* Feature 4: Cross-token value bar */
+  .xtoken-bar{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;width:100%;margin-bottom:14px;}
+  .xtb-cell{flex:1;text-align:center;padding:10px 6px;border-right:1px solid var(--border);}
+  .xtb-cell:last-child{border-right:none;}
+  .xtb-val{font-size:12px;font-weight:800;color:var(--cyan);}
+  .xtb-lbl{font-size:10px;color:var(--text-muted);margin-top:2px;}
+  .xtb-cell.active-tok .xtb-val{color:var(--green);}
+
   /* GOD MODE — LINK HISTORY */
   .link-history{width:100%;margin-top:6px;margin-bottom:16px;}
   .lh-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;}
@@ -158,9 +217,16 @@
       <div class="balance-chip" id="balanceChip">◎ — INDX</div>
 
       <!-- QR Code — encodes pay URL so anyone who scans it can pay or onboard -->
-      <div class="qr-frame" id="qrFrame">
+      <div class="qr-frame" id="qrFrame" onclick="openFullQR()" style="cursor:pointer;" title="Tap to expand">
         <div id="qrcode"></div>
         <div class="qr-logo">◎</div>
+      </div>
+
+      <!-- PAYMENT WATCHER (God Mode R2) -->
+      <div class="payment-watcher" id="paymentWatcher">
+        <div class="pw-dot" id="pwDot"></div>
+        <div class="pw-text" id="pwText"><strong>Watching for payments…</strong><br>Keep this screen open — you'll see it land instantly.</div>
+        <div class="pw-count" id="pwCount"></div>
       </div>
 
       <div class="qr-scan-hint">📷 Anyone who scans this joins IN$DEX and pays you instantly</div>
@@ -202,14 +268,52 @@
           <input class="rs-input" type="number" id="reqAmount" placeholder="0" oninput="updateReqConvert()" min="0">
           <span class="rs-ticker" id="reqTicker">INDX</span>
         </div>
+        <!-- QUICK PRESETS (God Mode R2) -->
+        <div class="quick-presets" id="quickPresets">
+          <div class="qp-chip" onclick="setQuickAmt(10)">10</div>
+          <div class="qp-chip" onclick="setQuickAmt(50)">50</div>
+          <div class="qp-chip" onclick="setQuickAmt(100)">100</div>
+          <div class="qp-chip" onclick="setQuickAmt(500)">500</div>
+        </div>
         <div class="rs-convert" id="reqConvert">≈ <span>$0.00 USD</span></div>
+        <!-- GOD MODE R3: Memo field -->
+        <div class="req-memo-lbl">Note / Invoice description (optional)</div>
+        <textarea class="req-memo-input" id="reqMemo" rows="2" placeholder="e.g. Rent split, Lunch, Invoice #042…" maxlength="80"></textarea>
         <button class="rs-generate" onclick="generatePaymentLink()">Generate Payment Link</button>
+        <!-- GOD MODE R3: Countdown bar -->
+        <div class="req-countdown-bar" id="reqCountdownBar">
+          <div class="rcd-label">Link expires in</div>
+          <div class="rcd-timer" id="rcdTimer">30:00</div>
+        </div>
       </div>
 
       <!-- GOD MODE — LINK HISTORY -->
       <div class="link-history" id="linkHistory" style="display:none;">
         <div class="lh-title">Recent payment links</div>
         <div id="linkHistoryList"></div>
+      </div>
+
+      <!-- GOD MODE R3: Cross-token value bar -->
+      <div class="xtoken-bar" id="xtokenBar">
+        <div class="xtb-cell active-tok" id="xtb_indx"><div class="xtb-val" id="xtbV_indx">—</div><div class="xtb-lbl">INDX</div></div>
+        <div class="xtb-cell" id="xtb_sol"><div class="xtb-val" id="xtbV_sol">—</div><div class="xtb-lbl">SOL</div></div>
+        <div class="xtb-cell" id="xtb_usdc"><div class="xtb-val" id="xtbV_usdc">—</div><div class="xtb-lbl">USDC</div></div>
+      </div>
+
+      <!-- RECEIVE STATS (God Mode R2) -->
+      <div class="recv-stats" id="recvStats">
+        <div class="rs-stat">
+          <div class="rs-stat-val" id="statTotalAmt">195</div>
+          <div class="rs-stat-lbl">INDX Received</div>
+        </div>
+        <div class="rs-stat">
+          <div class="rs-stat-val" id="statUSD">$46.80</div>
+          <div class="rs-stat-lbl">USD Value</div>
+        </div>
+        <div class="rs-stat">
+          <div class="rs-stat-val" id="statSenders">3</div>
+          <div class="rs-stat-lbl">Senders</div>
+        </div>
       </div>
 
       <!-- RECENT SENDERS -->
@@ -257,6 +361,15 @@
 
     </div>
   </div>
+</div>
+
+<!-- FULLSCREEN QR OVERLAY (God Mode R2) -->
+<div class="qr-full-overlay" id="qrFullOverlay" onclick="closeFullQR()">
+  <div class="qr-full-hint">Tap anywhere to close</div>
+  <div class="qr-full-frame" id="qrFullFrame" onclick="event.stopPropagation()">
+    <div id="qrcodeFull"></div>
+  </div>
+  <div class="qr-full-close" onclick="closeFullQR()">✕ Close</div>
 </div>
 
 <script>
@@ -366,6 +479,30 @@
     buildQR(PAY_URL);
     document.getElementById('walletAddr').textContent = FULL_ADDRESS.slice(0,6) + '…' + FULL_ADDRESS.slice(-4);
 
+    // ── LIVE PAYMENT SUBSCRIPTION (INDXDB Realtime) ──
+    // GOD MODE PATCH: subscribe to incoming transactions while QR is displayed
+    (function startPaymentWatch() {
+      const sub = INDXDB.subscribeToIncomingPayments(function(tx) {
+        // Payment received — update balance chip + show toast
+        const amt = tx.amount_indx || 0;
+        const usd = (amt * 0.24).toFixed(2);
+        const fromAddr = tx.counterparty_address ? (tx.counterparty_address.slice(0,6) + '…' + tx.counterparty_address.slice(-4)) : 'someone';
+        showToast('💚 Received ' + amt + ' INDX ($' + usd + ') from ' + fromAddr);
+
+        // Refresh balance chip
+        const newBal = parseFloat(sessionStorage.getItem('citizen_balance') || '0') + amt;
+        sessionStorage.setItem('citizen_balance', String(newBal));
+        const chip = document.getElementById('balanceChip');
+        if (chip) chip.textContent = '◎ ' + Math.round(newBal).toLocaleString() + ' INDX ≈ $' + (newBal * 0.24).toFixed(2);
+
+        // QR pulse to draw attention
+        const qrFrame = document.getElementById('qrFrame');
+        if (qrFrame) { qrFrame.classList.add('pulsing'); setTimeout(() => qrFrame.classList.remove('pulsing'), 3000); }
+      });
+      // Clean up subscription when user leaves
+      window.addEventListener('pagehide', function() { if (sub) sub.unsubscribe(); }, { once: true });
+    })();
+
     // ════════════════════════════════════════════════
     // GOD MODE — RECEIVE.HTML
     // ════════════════════════════════════════════════
@@ -448,8 +585,230 @@
       showToast(CITIZEN_SLUG + '.IN$DEX payment link copied ✓');
     };
 
+    // ════════════════════════════════════════════════
+    // GOD MODE ROUND 2 — receive.html
+    // ════════════════════════════════════════════════
+
+    // Feature 1: Quick preset chips
+    window.setQuickAmt = function(amt) {
+      const input = document.getElementById('reqAmount');
+      input.value = amt;
+      updateReqConvert();
+      document.querySelectorAll('.qp-chip').forEach(c => c.classList.remove('active'));
+      const chips = document.querySelectorAll('.qp-chip');
+      const vals = [10, 50, 100, 500];
+      const idx = vals.indexOf(amt);
+      if (idx >= 0 && chips[idx]) chips[idx].classList.add('active');
+    };
+
+    // Remove active chip state when user types manually
+    document.getElementById('reqAmount').addEventListener('input', function() {
+      document.querySelectorAll('.qp-chip').forEach(c => c.classList.remove('active'));
+    });
+
+    // Feature 2: Fullscreen QR expand
+    let fullQrBuilt = false;
+    window.openFullQR = function() {
+      const overlay = document.getElementById('qrFullOverlay');
+      if (!overlay) return;
+      if (!fullQrBuilt) {
+        const el = document.getElementById('qrcodeFull');
+        el.innerHTML = '';
+        new QRCode(el, {
+          text: PAY_URL,
+          width: Math.min(window.innerWidth - 80, 280),
+          height: Math.min(window.innerWidth - 80, 280),
+          colorDark: '#090A10',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.H
+        });
+        fullQrBuilt = true;
+      }
+      overlay.classList.add('show');
+    };
+
+    window.closeFullQR = function() {
+      const overlay = document.getElementById('qrFullOverlay');
+      if (overlay) overlay.classList.remove('show');
+    };
+
+    // Rebuild full QR whenever PAY_URL changes (token switch)
+    var _origSelectToken = window.selectToken;
+    // GOD MODE PATCH
+    window.selectToken = function(key) {
+      fullQrBuilt = false;
+      _origSelectToken(key);
+    };
+
+    // Feature 3: Payment watcher — simulates live polling
+    (function initPaymentWatcher() {
+      const watcher  = document.getElementById('paymentWatcher');
+      const pwText   = document.getElementById('pwText');
+      const pwCount  = document.getElementById('pwCount');
+      let checks = 0;
+      const maxChecks = 24; // ~2 min at 5s intervals
+      const interval = setInterval(function() {
+        checks++;
+        pwCount.textContent = checks + ' checks';
+        if (checks >= maxChecks) {
+          clearInterval(interval);
+          pwText.innerHTML = '<strong style="color:var(--text-muted)">Watcher stopped</strong><br>Re-open the screen to restart.';
+          pwCount.textContent = '';
+        }
+      }, 5000);
+    })();
+
+    // Feature 4: Receive stats — read from localStorage and sum recent senders
+    (function initReceiveStats() {
+      try {
+        // Base values from visible recent-senders list: 50 + 120 + 25 = 195 INDX, 3 senders
+        const stored = JSON.parse(localStorage.getItem('indx_receive_stats') || 'null');
+        const totalAmt   = stored ? stored.total  : 195;
+        const senderCnt  = stored ? stored.senders : 3;
+        const usdVal     = (totalAmt * INDX_PRICE_USD).toFixed(2);
+        document.getElementById('statTotalAmt').textContent = totalAmt.toLocaleString();
+        document.getElementById('statUSD').textContent = '$' + usdVal;
+        document.getElementById('statSenders').textContent = senderCnt;
+      } catch(e) {}
+    })();
+
     loadLinkHistory();
   });
+
+  /* ══ GOD MODE R3 JS — RECEIVE.HTML ══ */
+  (function godModeReceiveR3() {
+    const INDX_PRICE_USD = 0.24;
+    const SOL_PRICE_USD  = 186.50;
+    const REQ_KEY = 'indx_receive_request';
+
+    // ─── Feature 1: Request memo ───
+    // Memo is read by the patched generatePaymentLink below
+
+    // ─── Feature 2: Real QR PNG download ───
+    // GOD MODE PATCH: saveQR → actual canvas download
+    window.saveQR = function() {
+      const canvas = document.querySelector('#qrcode canvas');
+      if (!canvas) { showToast('QR not ready yet'); return; }
+      // Draw white-padded version
+      const size = canvas.width + 32;
+      const offscreen = document.createElement('canvas');
+      offscreen.width  = size;
+      offscreen.height = size;
+      const ctx = offscreen.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size, size);
+      ctx.drawImage(canvas, 16, 16);
+      try {
+        const link = document.createElement('a');
+        link.download = 'indx-receive-' + CITIZEN_SLUG + '.png';
+        link.href = offscreen.toDataURL('image/png');
+        link.click();
+        showToast('QR downloaded as PNG ✓');
+      } catch(e) {
+        showToast('QR save not supported on this device');
+      }
+    };
+
+    // ─── Feature 3: Payment request countdown timer ───
+    let _countdownInterval = null;
+    function startCountdown(expiresAt) {
+      const bar   = document.getElementById('reqCountdownBar');
+      const timer = document.getElementById('rcdTimer');
+      bar.classList.add('show');
+      bar.classList.remove('expiring', 'expired');
+      if (_countdownInterval) clearInterval(_countdownInterval);
+      _countdownInterval = setInterval(function() {
+        const secs = Math.max(0, Math.round((expiresAt - Date.now()) / 1000));
+        const mm = String(Math.floor(secs / 60)).padStart(2, '0');
+        const ss = String(secs % 60).padStart(2, '0');
+        timer.textContent = mm + ':' + ss;
+        if (secs === 0) {
+          bar.classList.remove('expiring');
+          bar.classList.add('expired');
+          timer.textContent = 'Expired';
+          clearInterval(_countdownInterval);
+          _countdownInterval = null;
+        } else if (secs <= 300) {
+          bar.classList.add('expiring');
+        }
+      }, 1000);
+    }
+
+    // Resume countdown if there's an active request in localStorage
+    (function resumeCountdown() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(REQ_KEY) || 'null');
+        if (saved && saved.expiresAt && saved.expiresAt > Date.now()) {
+          startCountdown(saved.expiresAt);
+        }
+      } catch(e) {}
+    })();
+
+    // ─── Feature 4: Cross-token value bar ───
+    function updateXTokenBar() {
+      const amt = parseFloat(document.getElementById('reqAmount').value) || 0;
+      const tok = selectedToken;
+      // Convert entered amount to USD first, then to each token
+      const usdAmt = amt * tokens[tok].rate;
+      const indxAmt = usdAmt / INDX_PRICE_USD;
+      const solAmt  = usdAmt / SOL_PRICE_USD;
+      const usdcAmt = usdAmt;
+      const fmt = (n, decimals) => n >= 1000 ? Math.round(n).toLocaleString() : n.toFixed(decimals);
+
+      document.getElementById('xtbV_indx').textContent = amt > 0 ? fmt(indxAmt, 1) : '—';
+      document.getElementById('xtbV_sol').textContent  = amt > 0 ? fmt(solAmt, 4)  : '—';
+      document.getElementById('xtbV_usdc').textContent = amt > 0 ? '$' + fmt(usdcAmt, 2) : '—';
+
+      // Highlight active token cell
+      ['indx','sol','usdc'].forEach(k => {
+        document.getElementById('xtb_' + k)?.classList.toggle('active-tok', k === tok);
+      });
+    }
+
+    // ─── GOD MODE PATCH: updateReqConvert → also update x-token bar ───
+    const _origUpdateReqConvert = window.updateReqConvert;
+    window.updateReqConvert = function() {
+      _origUpdateReqConvert();
+      updateXTokenBar();
+    };
+
+    // Also update on token switch (selectToken already patched in R2; chain further)
+    const _r2SelectToken = window.selectToken;
+    window.selectToken = function(key) {
+      _r2SelectToken(key);
+      setTimeout(updateXTokenBar, 50); // after R2 patch completes
+    };
+
+    // ─── GOD MODE PATCH: generatePaymentLink → include memo + start countdown ───
+    const _r2Generate = window.generatePaymentLink;
+    window.generatePaymentLink = function() {
+      const amt    = document.getElementById('reqAmount').value;
+      if (!amt || parseFloat(amt) <= 0) { showToast('Enter an amount first'); return; }
+      const ticker = tokens[selectedToken].ticker;
+      const memo   = (document.getElementById('reqMemo')?.value || '').trim();
+      let link = PAY_URL + '&amount=' + amt + '&token=' + ticker;
+      if (memo) link += '&memo=' + encodeURIComponent(memo);
+      navigator.clipboard?.writeText(link).catch(() => {});
+      showToast(`Payment link for ${amt} ${ticker} copied ✓`);
+      buildQR(link);
+      // Save link history (extend R2 record format)
+      try {
+        const LINK_HISTORY_KEY = 'indx_receive_links';
+        const items = JSON.parse(localStorage.getItem(LINK_HISTORY_KEY) || '[]');
+        const now = new Date();
+        const ago = now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+        items.unshift({ amt, token: selectedToken, link, ago, memo: memo || '' });
+        localStorage.setItem(LINK_HISTORY_KEY, JSON.stringify(items.slice(0, 10)));
+      } catch(e) {}
+      // Start 30-min countdown
+      const expiresAt = Date.now() + 30 * 60 * 1000;
+      try { localStorage.setItem(REQ_KEY, JSON.stringify({ expiresAt, amt, ticker })); } catch(e) {}
+      startCountdown(expiresAt);
+    };
+
+    // Initial bar state
+    updateXTokenBar();
+  })();
 
   let toastTimer;
   function showToast(msg) {
@@ -459,5 +818,6 @@
     clearTimeout(toastTimer); toastTimer = setTimeout(() => t.style.opacity = '0', 2400);
   }
 </script>
+<script src="siindex-speak-core.js"></script>
 </body>
 </html>

@@ -112,6 +112,27 @@
   .pf-status{font-size:12px;font-weight:700;color:var(--text-muted);}
   .pf-status.pass{color:var(--green);}
 
+  /* ── GOD MODE: FAVOURITES STRIP ── */
+  .fav-section{margin:0 20px 16px;}
+  .fav-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+  .fav-chips{display:flex;gap:8px;flex-wrap:wrap;}
+  .fav-chip{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--cyan-border);border-radius:10px;padding:8px 12px;cursor:pointer;transition:all 0.15s;}
+  .fav-chip:active{background:var(--cyan-bg);transform:scale(0.95);}
+  .fav-avatar{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--blue));display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0;}
+  .fav-name{font-size:12px;font-weight:700;color:var(--text);}
+  .fav-last{font-size:10px;color:var(--text-muted);}
+
+  /* ── GOD MODE: LIVE RATE BADGE ── */
+  .rate-badge{display:inline-flex;align-items:center;gap:6px;background:var(--green-bg);border:1px solid rgba(0,229,160,0.2);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;color:var(--green);margin-bottom:10px;}
+  .rate-live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:liveDotPulse 2s ease-in-out infinite;}
+  @keyframes liveDotPulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+  /* ── GOD MODE: HISTORY TIMESTAMPS ── */
+  .hist-chip-time{font-size:10px;color:var(--text-dim);margin-left:auto;}
+  .hist-chip-out{font-size:10px;font-weight:700;padding:1px 6px;border-radius:5px;margin-left:6px;}
+  .hist-chip-out.sent{background:rgba(0,229,160,0.1);color:var(--green);}
+  .hist-chip-out.balanced{background:rgba(0,212,255,0.08);color:var(--cyan);}
+
   /* TOAST */
   .toast{position:fixed;bottom:calc(var(--nav-h)+16px);left:50%;transform:translateX(-50%) translateY(20px);max-width:320px;width:calc(100% - 40px);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:13px;text-align:center;opacity:0;transition:opacity 0.3s,transform 0.3s;z-index:400;pointer-events:none;}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -184,7 +205,7 @@
     <!-- SIINDEX AVATAR -->
     <div class="siindex-zone">
       <div class="si-avatar-wrap">
-        <div class="si-avatar" id="siAvatar">🤖</div>
+        <div class="si-avatar" id="siAvatar">⚛️</div>
         <div class="si-ring" id="siRing"></div>
         <div class="si-ring2" id="siRing2"></div>
       </div>
@@ -206,11 +227,19 @@
       <div class="transcript-text" id="transcriptText"></div>
     </div>
 
+    <!-- ── GOD MODE: QUICK-SEND FAVOURITES ── -->
+    <div class="fav-section" id="favSection" style="display:none;">
+      <div class="fav-title">⚡ Quick Send <span style="color:var(--text-dim);font-weight:400;font-size:10px;">· tap to send instantly</span></div>
+      <div class="fav-chips" id="favChips"></div>
+    </div>
+
     <!-- CONFIRM CARD -->
     <div class="confirm-card" id="confirmCard">
-      <div class="cc-siindex">🤖 SIINDEX · Pre-flight complete · 7/7 passed</div>
+      <div class="cc-siindex">⚛️ SIINDEX · Pre-flight complete · 7/7 passed</div>
       <div class="cc-title" id="ccTitle">Send Payment</div>
       <div class="cc-sub" id="ccSub">Confirm this transaction. Say "yes" or tap below.</div>
+      <!-- GOD MODE: LIVE RATE BADGE -->
+      <div class="rate-badge"><div class="rate-live-dot"></div><span id="rateBadgeText">INDX · $0.24 USD · Live</span></div>
       <div class="cc-rows">
         <div class="cc-row"><span class="cc-label">Sending</span><span class="cc-value cyan" id="ccAmount">—</span></div>
         <div class="cc-row"><span class="cc-label">To</span><span class="cc-value" id="ccRecipient">—</span></div>
@@ -366,6 +395,103 @@ let recognition = null;
 let isListening = false;
 let pendingIntent = null;
 
+// ── GOD MODE: TTS SPOKEN RESPONSE ─────────────────────────────────
+function speakSIINDEX(text, onend) {
+  if (!window.speechSynthesis) { if (onend) onend(); return; }
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'en-AU';
+  utter.rate = 0.9;
+  utter.pitch = 1.05;
+  // Prefer a female voice if available
+  const voices = window.speechSynthesis.getVoices();
+  const femaleAU = voices.find(v => v.lang === 'en-AU' && /female|woman|samantha|karen|tessa/i.test(v.name))
+    || voices.find(v => v.lang === 'en-AU')
+    || voices.find(v => /en/i.test(v.lang));
+  if (femaleAU) utter.voice = femaleAU;
+  // 300ms buffer after TTS ends before chaining next action (e.g. listenForYes)
+  if (onend) utter.onend = () => setTimeout(onend, 300);
+  window.speechSynthesis.speak(utter);
+}
+
+// ── GOD MODE: PERSISTENT HISTORY (localStorage) ────────────────────
+const MAX_HISTORY_STORED = 40;
+function getHistoryLS() {
+  try { return JSON.parse(localStorage.getItem('indx_vw_history') || '[]'); } catch(e) { return []; }
+}
+function addToHistoryLS(cmd, outcome) {
+  let h = getHistoryLS();
+  h.unshift({ cmd, outcome: outcome || 'run', ts: Date.now() });
+  if (h.length > MAX_HISTORY_STORED) h = h.slice(0, MAX_HISTORY_STORED);
+  localStorage.setItem('indx_vw_history', JSON.stringify(h));
+}
+function fmtAgoVW(ts) {
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h ago';
+  return Math.floor(h / 24) + 'd ago';
+}
+function renderHistoryGM() {
+  const h = getHistoryLS();
+  const wrap = document.getElementById('historyWrap');
+  if (!h.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  const outcomeClass = { sent: 'sent', balance: 'balanced', earnings: 'balanced', swap: 'balanced', run: '' };
+  const outcomeLabel = { sent: 'sent', balance: 'balance', earnings: 'yield', swap: 'swap', run: '' };
+  document.getElementById('historyChips').innerHTML = h.slice(0, 5).map(item => {
+    const oc = outcomeClass[item.outcome] || '';
+    const ol = outcomeLabel[item.outcome] || '';
+    const badge = ol ? `<span class="hist-chip-out ${oc}">${ol}</span>` : '';
+    return `<div class="hist-chip" onclick="runDemo(${JSON.stringify(item.cmd)})">
+      <div class="hist-icon">🕐</div><div style="flex:1;">"${item.cmd}"</div>${badge}
+      <span class="hist-chip-time">${fmtAgoVW(item.ts)}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── GOD MODE: QUICK-SEND FAVOURITES ───────────────────────────────
+function saveFavourite(recipientName) {
+  if (!recipientName || recipientName === 'unknown') return;
+  const name = recipientName.charAt(0).toUpperCase() + recipientName.slice(1);
+  let favs = [];
+  try { favs = JSON.parse(localStorage.getItem('indx_vw_favourites') || '[]'); } catch(e) {}
+  // Move to front, dedupe
+  favs = [{ name, ts: Date.now() }, ...favs.filter(f => f.name.toLowerCase() !== name.toLowerCase())].slice(0, 6);
+  localStorage.setItem('indx_vw_favourites', JSON.stringify(favs));
+  renderFavourites();
+}
+function renderFavourites() {
+  let favs = [];
+  try { favs = JSON.parse(localStorage.getItem('indx_vw_favourites') || '[]'); } catch(e) {}
+  const section = document.getElementById('favSection');
+  const chips = document.getElementById('favChips');
+  if (!favs.length) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  chips.innerHTML = favs.map(f => {
+    const initials = f.name.slice(0, 2).toUpperCase();
+    return `<div class="fav-chip" onclick="runDemo('Send 20 INDX to ${f.name}')">
+      <div class="fav-avatar">${initials}</div>
+      <div><div class="fav-name">${f.name}</div><div class="fav-last">Send again</div></div>
+    </div>`;
+  }).join('');
+}
+
+// ── GOD MODE: LIVE RATE BADGE ──────────────────────────────────────
+let _rateVal = 0.24;
+function initRateBadge() {
+  function updateBadge() {
+    // Simulate gentle price drift (±0.001) in prototype
+    _rateVal = Math.max(0.20, Math.min(0.28, _rateVal + (Math.random() - 0.5) * 0.002));
+    const el = document.getElementById('rateBadgeText');
+    if (el) el.textContent = `INDX · $${_rateVal.toFixed(3)} USD · Live`;
+  }
+  updateBadge();
+  setInterval(updateBadge, 30000);
+}
+
 // ── State ──────────────────────────────────────────────────────────
 let state = 'idle'; // idle | listening | processing | confirm
 
@@ -384,25 +510,12 @@ function setWaveform(active) {
 }
 
 // ── COMMAND HISTORY ────────────────────────────────────────────────
-const MAX_HISTORY = 5;
-function getHistory() {
-  try { return JSON.parse(sessionStorage.getItem('vw_history') || '[]'); } catch(e) { return []; }
+// GOD MODE PATCH — history now uses localStorage via addToHistoryLS/renderHistoryGM
+function addToHistory(cmd, outcome) {
+  addToHistoryLS(cmd, outcome || 'run');
+  renderHistoryGM();
 }
-function addToHistory(cmd) {
-  let h = getHistory();
-  h = [cmd, ...h.filter(c => c !== cmd)].slice(0, MAX_HISTORY);
-  sessionStorage.setItem('vw_history', JSON.stringify(h));
-  renderHistory();
-}
-function renderHistory() {
-  const h = getHistory();
-  const wrap = document.getElementById('historyWrap');
-  if (!h.length) { wrap.style.display = 'none'; return; }
-  wrap.style.display = 'block';
-  document.getElementById('historyChips').innerHTML = h.map(cmd =>
-    `<div class="hist-chip" onclick="runDemo(${JSON.stringify(cmd)})"><div class="hist-icon">🕐</div><div>"${cmd}"</div></div>`
-  ).join('');
-}
+function renderHistory() { renderHistoryGM(); }
 
 // ── GUIDE TOGGLE ───────────────────────────────────────────────────
 function toggleGuide() {
@@ -419,7 +532,11 @@ function init() {
     document.getElementById('micBtn').style.opacity = '0.5';
   }
   checkOnline();
-  renderHistory();
+  renderHistoryGM();
+  // GOD MODE PATCH — init favourites strip, live rate badge, and TTS voice preload
+  renderFavourites();
+  initRateBadge();
+  if (window.speechSynthesis) window.speechSynthesis.getVoices(); // preload voices
 }
 
 // ── SIINDEX STATES ─────────────────────────────────────────────────
@@ -444,7 +561,7 @@ function setSIINDEX(status, label, sub) {
   }
 }
 
-function typeSIINDEX(text, cb) {
+function typeSIINDEX(text, cb, speak) {
   const bubble = document.getElementById('speechBubble');
   bubble.innerHTML = '';
   let i = 0;
@@ -455,7 +572,13 @@ function typeSIINDEX(text, cb) {
       i++;
       setTimeout(tick, 18);
     } else {
-      if (cb) cb();
+      // GOD MODE PATCH — TTS: only speak actual responses, never status messages
+      // Chain cb through TTS onend so listenForYes (and similar) never race with speech
+      if (speak) {
+        speakSIINDEX(text, cb);
+      } else {
+        if (cb) cb();
+      }
     }
   };
   tick();
@@ -501,7 +624,7 @@ function startListening() {
 
   recognition.onerror = () => {
     stopListening();
-    typeSIINDEX(SIINDEX_MESSAGES.error);
+    typeSIINDEX(SIINDEX_MESSAGES.error, null, true);
     setSIINDEX('idle', 'SIINDEX · Try again', SIINDEX_MESSAGES.error);
   };
 
@@ -593,7 +716,7 @@ function handleIntent(intent, rawText) {
       const amt = intent.amount;
       const rec = intent.recipient;
       if (amt <= 0 || rec === 'unknown') {
-        typeSIINDEX(`I heard "${rawText}" but couldn't parse a valid amount or recipient. Try again — say "Send 20 INDX to Jake".`);
+        typeSIINDEX(`I heard "${rawText}" but couldn't parse a valid amount or recipient. Try again — say "Send 20 INDX to Jake".`, null, true);
         setSIINDEX('idle', 'SIINDEX · Try again', 'Speak clearly — e.g. "Send 20 INDX to Jake"');
         return;
       }
@@ -606,7 +729,7 @@ function handleIntent(intent, rawText) {
       const bal = citizenBal || 0;
       const usd = (bal * INDX_PRICE).toFixed(2);
       const msg = `Your balance is ${bal.toLocaleString()} INDX — approximately $${usd} USD. Standing by.`;
-      typeSIINDEX(msg);
+      typeSIINDEX(msg, null, true);
       setSIINDEX('idle', 'SIINDEX · Balance', 'Here\'s what I found.');
       break;
     }
@@ -617,14 +740,14 @@ function handleIntent(intent, rawText) {
       const msg = lendBal > 0
         ? `Today you've earned approximately ${daily} INDX from Sovereign Lending at 11.2% APY. Standing by.`
         : 'No active lending position found. Deposit INDX into Sovereign Lending to start earning. Standing by.';
-      typeSIINDEX(msg);
+      typeSIINDEX(msg, null, true);
       setSIINDEX('idle', 'SIINDEX · Earnings', 'Here\'s what I found.');
       break;
     }
 
     case 'swap': {
       const msg = `Swap ${intent.amount} ${intent.from} to ${intent.to} — routing through Raydium. Tap DEX Swap to confirm this trade.`;
-      typeSIINDEX(msg);
+      typeSIINDEX(msg, null, true);
       setSIINDEX('idle', 'SIINDEX · Swap', 'Routing available.');
       setTimeout(() => {
         window.location.href = 'dex-swap.html?from=' + intent.from + '&to=' + intent.to + '&amount=' + intent.amount;
@@ -634,7 +757,7 @@ function handleIntent(intent, rawText) {
 
     default: {
       const msg = `I heard "${rawText}" but I'm not sure what action you need. Try "Send 20 INDX to Jake", "Check my balance", or "Swap 100 INDX for USDC".`;
-      typeSIINDEX(msg);
+      typeSIINDEX(msg, null, true);
       setSIINDEX('idle', 'SIINDEX · Clarify', 'Try a different command.');
     }
   }
@@ -692,11 +815,9 @@ function showConfirm(intent) {
   document.getElementById('confirmCard').style.display = 'block';
   document.getElementById('confirmCard').scrollIntoView({ behavior: 'smooth' });
 
-  typeSIINDEX(`Pre-flight complete. ${toTitle(rec)} will receive ${receives.toFixed(2)} INDX. 2% goes to the Civilisation Fund. Confirm below or say "yes".`);
+  // GOD MODE PATCH — pass listenForYes as cb so it only starts AFTER TTS finishes (no SpeechRecognition/TTS race)
+  typeSIINDEX(`Pre-flight complete. ${toTitle(rec)} will receive ${receives.toFixed(2)} INDX. 2% goes to the Civilisation Fund. Confirm below or say "yes".`, listenForYes, true);
   setSIINDEX('confirm', 'SIINDEX · Awaiting confirmation', SIINDEX_MESSAGES.confirm);
-
-  // Listen for "yes" voice confirmation
-  listenForYes();
 }
 
 function listenForYes() {
@@ -717,7 +838,7 @@ function listenForYes() {
 function cancelConfirm() {
   document.getElementById('confirmCard').style.display = 'none';
   pendingIntent = null;
-  typeSIINDEX('Cancelled. What else can I help you with?');
+  typeSIINDEX('Cancelled. What else can I help you with?', null, true);
   setSIINDEX('idle', 'SIINDEX · Standing by', 'Transaction cancelled.');
 }
 
@@ -757,6 +878,10 @@ function showSuccess(intent) {
   document.getElementById('successTitle').textContent = 'Done.';
   document.getElementById('successSub').textContent = `${intent.amount.toFixed(2)} INDX sent to ${name}. Settled on Solana in under 1 second. ${name} received ${(intent.amount * 0.98).toFixed(2)} INDX. Standing by.`;
   document.getElementById('successOverlay').classList.add('show');
+  // GOD MODE PATCH — save recipient as favourite + mark history as sent
+  saveFavourite(intent.recipient);
+  addToHistoryLS('Send ' + intent.amount.toFixed(2) + ' INDX to ' + name, 'sent');
+  renderHistoryGM();
 }
 
 function reset() {
@@ -764,7 +889,7 @@ function reset() {
   document.getElementById('transcriptWrap').style.display = 'none';
   document.getElementById('confirmCard').style.display = 'none';
   pendingIntent = null;
-  typeSIINDEX('Welcome back. What do you need?');
+  typeSIINDEX('Welcome back. What do you need?', null, true);
   setSIINDEX('idle', 'SIINDEX · Standing by', 'Tap the mic and tell me what you need.');
 }
 
@@ -780,5 +905,6 @@ function showToast(msg){
 
 init();
 </script>
+<script src="siindex-speak-core.js"></script>
 </body>
 </html>

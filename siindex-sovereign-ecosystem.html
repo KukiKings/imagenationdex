@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>IN$DEX Sovereign Ecosystem Layer</title>
+<style>
+  :root {
+    --cyan:    #00D4FF;
+    --blue:    #2B35D8;
+    --purple:  #8B3FE8;
+    --black:   #090A10;
+    --green:   #00E5A0;
+    --gold:    #FFB800;
+    --red:     #FF4D6D;
+    --surface: #12141F;
+    --surface2:#1A1D2E;
+    --surface3:#22263A;
+    --text:    #FFFFFF;
+    --text2:   #A0A8C0;
+    --muted:   #5A6080;
+    --border:  rgba(255,255,255,0.07);
+  }
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  body {
+    background:var(--black); color:var(--text);
+    font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    max-width:430px; margin:0 auto; min-height:100vh;
+    padding-bottom:90px; overflow-x:hidden;
+  }
+
+  /* NAV */
+  .nav { display:flex; align-items:center; justify-content:space-between; padding:52px 20px 16px; position:sticky; top:0; background:rgba(9,10,16,0.96); backdrop-filter:blur(16px); z-index:100; border-bottom:1px solid var(--border); }
+  .nav-title { font-size:14px; font-weight:700; }
+  .nav-badge { background:rgba(0,212,255,0.1); border:1px solid rgba(0,212,255,0.3); color:var(--cyan); font-size:10px; font-weight:700; padding:3px 8px; border-radius:20px; }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  .fade-in { animation:fadeUp 0.35s ease both; }
+
+  /* HERO */
+  .hero { padding:24px 20px 18px; position:relative; overflow:hidden; }
+  .hero::before { content:''; position:absolute; top:-50px; right:-40px; width:300px; height:300px; background:radial-gradient(circle, rgba(0,212,255,0.06) 0%, transparent 70%); pointer-events:none; }
+  .hero-tag { display:inline-block; background:rgba(0,212,255,0.08); border:1px solid rgba(0,212,255,0.25); color:var(--cyan); font-size:10px; font-weight:800; letter-spacing:1.5px; padding:4px 13px; border-radius:20px; text-transform:uppercase; margin-bottom:12px; }
+  .hero h1 { font-size:20px; font-weight:800; line-height:1.3; margin-bottom:9px; letter-spacing:-0.5px; }
+  .hero h1 span { color:var(--cyan); }
+  .hero-sub { font-size:12px; color:var(--text2); line-height:1.6; margin-bottom:14px; }
+  .hero-lock { background:var(--surface); border:1px solid rgba(0,212,255,0.15); border-radius:12px; padding:12px 15px; font-size:12px; color:var(--text2); font-style:italic; line-height:1.6; }
+  .hero-lock strong { color:var(--cyan); font-style:normal; }
+
+  /* STAT ROW */
+  .stat-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; padding:0 20px 18px; }
+  .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:12px 10px; text-align:center; }
+  .stat-val { font-size:19px; font-weight:800; letter-spacing:-0.5px; margin-bottom:3px; }
+  .stat-label { font-size:9px; color:var(--text2); font-weight:600; line-height:1.3; }
+
+  /* TAB NAV */
+  .tab-nav { display:flex; gap:6px; padding:0 20px 16px; overflow-x:auto; scrollbar-width:none; }
+  .tab-nav::-webkit-scrollbar { display:none; }
+  .tab-btn { flex-shrink:0; font-size:11px; font-weight:800; padding:7px 14px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--text2); cursor:pointer; white-space:nowrap; transition:all 0.15s; }
+  .tab-btn.active { background:rgba(0,212,255,0.1); border-color:rgba(0,212,255,0.35); color:var(--cyan); }
+
+  /* SECTION HDR */
+  .section-hdr { display:flex; align-items:center; justify-content:space-between; padding:0 20px 11px; }
+  .section-hdr h2 { font-size:14px; font-weight:800; }
+  .section-hdr span { font-size:11px; color:var(--text2); font-weight:600; }
+
+  /* FILTER CHIPS */
+  .filter-row { display:flex; gap:6px; padding:0 20px 13px; overflow-x:auto; scrollbar-width:none; }
+  .filter-row::-webkit-scrollbar { display:none; }
+  .filter-chip { flex-shrink:0; font-size:9px; font-weight:800; padding:4px 11px; border-radius:20px; border:1px solid var(--border); background:var(--surface3); color:var(--text2); cursor:pointer; white-space:nowrap; transition:all 0.15s; }
+  .filter-chip.active { background:rgba(0,212,255,0.1); border-color:rgba(0,212,255,0.35); color:var(--cyan); }
+
+  /* ── GM1: CONNECTOR REGISTRY ── */
+  .conn-card { margin:0 20px 9px; background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; cursor:pointer; transition:border-color 0.2s; }
+  .conn-card.open { border-color:rgba(0,212,255,0.3); }
+  .conn-row { display:flex; align-items:center; gap:11px; padding:12px 15px; }
+  .conn-icon { font-size:26px; flex-shrink:0; }
+  .conn-info { flex:1; min-width:0; }
+  .conn-name { font-size:13px; font-weight:800; margin-bottom:3px; }
+  .conn-cat  { font-size:9px; color:var(--text2); font-weight:700; letter-spacing:0.4px; text-transform:uppercase; margin-bottom:4px; }
+  .conn-chips { display:flex; gap:5px; flex-wrap:wrap; }
+  .status-chip { font-size:9px; font-weight:800; padding:2px 8px; border-radius:20px; }
+  .s-approved   { background:rgba(0,229,160,0.08); border:1px solid rgba(0,229,160,0.25); color:var(--green); }
+  .s-restricted { background:rgba(255,184,0,0.08); border:1px solid rgba(255,184,0,0.25); color:var(--gold); }
+  .s-review     { background:rgba(0,212,255,0.08); border:1px solid rgba(0,212,255,0.25); color:var(--cyan); }
+  .s-blocked    { background:rgba(255,77,109,0.08); border:1px solid rgba(255,77,109,0.25); color:var(--red); }
+  .s-draft      { background:rgba(90,96,128,0.1); border:1px solid rgba(90,96,128,0.25); color:var(--muted); }
+  .risk-chip-sm { font-size:9px; font-weight:800; padding:2px 8px; border-radius:20px; }
+  .r-low  { background:rgba(0,229,160,0.05); border:1px solid rgba(0,229,160,0.15); color:var(--green); }
+  .r-med  { background:rgba(255,184,0,0.05); border:1px solid rgba(255,184,0,0.15); color:var(--gold); }
+  .r-high { background:rgba(255,77,109,0.05); border:1px solid rgba(255,77,109,0.15); color:var(--red); }
+  .conn-chevron { font-size:14px; color:var(--muted); flex-shrink:0; transition:transform 0.2s; }
+  .conn-chevron.open { transform:rotate(90deg); }
+
+  /* Connector expanded */
+  .conn-expand { display:none; border-top:1px solid var(--border); padding:13px 15px 14px; background:var(--surface2); }
+  .conn-expand.show { display:block; }
+  .ce-label { font-size:9px; font-weight:800; color:var(--muted); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:5px; }
+  .ce-grid { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-bottom:10px; }
+  .ce-field { }
+  .ce-val { font-size:11px; color:var(--text2); line-height:1.4; }
+  .ce-list { display:flex; flex-direction:column; gap:3px; margin-bottom:9px; }
+  .ce-item { display:flex; gap:7px; font-size:11px; color:var(--text2); line-height:1.35; }
+  .ce-ok { color:var(--green); flex-shrink:0; font-size:11px; }
+  .ce-no { color:var(--red); flex-shrink:0; font-size:11px; }
+  .ce-warn { background:rgba(255,184,0,0.08); border:1px solid rgba(255,184,0,0.2); border-radius:9px; padding:8px 11px; font-size:11px; color:var(--gold); line-height:1.4; margin-bottom:9px; }
+  .ce-actions { display:flex; gap:8px; }
+  .ce-btn { flex:1; padding:9px; border-radius:11px; font-size:11px; font-weight:800; text-align:center; cursor:pointer; transition:all 0.15s; }
+  .ce-revoke  { background:rgba(255,77,109,0.08); border:1px solid rgba(255,77,109,0.25); color:var(--red); }
+  .ce-pause   { background:rgba(255,184,0,0.08); border:1px solid rgba(255,184,0,0.25); color:var(--gold); }
+  .ce-approve { background:rgba(0,229,160,0.08); border:1px solid rgba(0,229,160,0.25); color:var(--green); }
+
+  /* ── GM2: SKILL VAULT ── */
+  .skill-card { margin:0 20px 9px; background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; cursor:pointer; transition:border-color 0.2s; }
+  .skill-card.open { border-color:rgba(139,63,232,0.3); }
+  .skill-row { display:flex; align-items:center; gap:11px; padding:12px 15px; }
+  .skill-icon { font-size:24px; flex-shrink:0; }
+  .skill-info { flex:1; }
+  .skill-name { font-size:13px; font-weight:800; margin-bottom:3px; }
+  .skill-purpose { font-size:11px; color:var(--text2); line-height:1.4; }
+  .skill-cat-chip { font-size:9px; font-weight:800; padding:2px 9px; border-radius:20px; background:rgba(139,63,232,0.08); border:1px solid rgba(139,63,232,0.2); color:var(--purple); margin-top:5px; display:inline-block; }
+  .skill-expand { display:none; border-top:1px solid var(--border); padding:12px 15px 14px; background:var(--surface2); }
+  .skill-expand.show { display:block; }
+  .se-label { font-size:9px; font-weight:800; color:var(--muted); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:5px; }
+  .se-val { font-size:11px; color:var(--text2); line-height:1.5; margin-bottom:9px; }
+  .se-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+  .se-field { }
+  .se-actions { display:flex; gap:8px; margin-top:4px; }
+  .se-btn-run  { flex:1; padding:9px; border-radius:11px; font-size:11px; font-weight:800; text-align:center; cursor:pointer; background:rgba(139,63,232,0.1); border:1px solid rgba(139,63,232,0.3); color:var(--purple); transition:all 0.15s; }
+  .se-btn-room { flex:1; padding:9px; border-radius:11px; font-size:11px; font-weight:800; text-align:center; cursor:pointer; background:rgba(0,212,255,0.08); border:1px solid rgba(0,212,255,0.25); color:var(--cyan); transition:all 0.15s; }
+
+  /* ── GM3: MISSION ROOM TOOLS ── */
+  .mr-card { margin:0 20px 16px; background:var(--surface); border:1px solid rgba(0,212,255,0.12); border-radius:18px; overflow:hidden; }
+  .mr-hdr { padding:13px 16px 11px; border-bottom:1px solid var(--border); }
+  .mr-hdr h3 { font-size:13px; font-weight:800; margin-bottom:4px; }
+  .mr-hdr p  { font-size:11px; color:var(--text2); }
+  .mr-tool { padding:10px 15px; border-bottom:1px solid var(--border); display:flex; align-items:flex-start; gap:11px; }
+  .mr-tool:last-child { border-bottom:none; }
+  .mr-tool-icon { font-size:22px; flex-shrink:0; margin-top:2px; }
+  .mr-tool-info { flex:1; }
+  .mr-tool-name { font-size:12px; font-weight:800; margin-bottom:3px; }
+  .mr-tool-access { font-size:10px; color:var(--text2); line-height:1.4; margin-bottom:4px; }
+  .mr-tool-chips { display:flex; gap:5px; flex-wrap:wrap; }
+  .mr-tool-chip { font-size:9px; font-weight:700; padding:2px 8px; border-radius:20px; border:1px solid var(--border); background:var(--surface3); color:var(--text2); }
+  .mr-tool-actions { display:flex; flex-direction:column; gap:5px; flex-shrink:0; }
+  .mr-action-btn { font-size:10px; font-weight:800; padding:5px 10px; border-radius:10px; cursor:pointer; text-align:center; white-space:nowrap; border:1px solid var(--border); background:var(--surface3); color:var(--text2); transition:all 0.15s; }
+  .mr-action-btn.pause { border-color:rgba(255,184,0,0.3); color:var(--gold); }
+  .mr-action-btn.revoke { border-color:rgba(255,77,109,0.3); color:var(--red); }
+  .mr-doctrine { margin:0 20px 16px; background:rgba(0,212,255,0.04); border:1px solid rgba(0,212,255,0.12); border-radius:12px; padding:13px 15px; font-size:12px; color:var(--cyan); font-style:italic; line-height:1.6; }
+
+  /* ── GM4: ECOSYSTEM ARCHITECTURE MAP ── */
+  .eco-layer { margin:0 20px 9px; background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; cursor:pointer; transition:border-color 0.2s; }
+  .eco-layer.open { border-color:rgba(0,212,255,0.25); }
+  .eco-layer-row { display:flex; align-items:center; gap:11px; padding:13px 16px; }
+  .eco-layer-num { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; flex-shrink:0; }
+  .eco-layer-info { flex:1; }
+  .eco-layer-title { font-size:13px; font-weight:800; margin-bottom:3px; }
+  .eco-layer-sub { font-size:11px; color:var(--text2); }
+  .eco-layer-chevron { font-size:14px; color:var(--muted); transition:transform 0.2s; }
+  .eco-layer-chevron.open { transform:rotate(90deg); }
+  .eco-layer-expand { display:none; border-top:1px solid var(--border); padding:12px 15px 14px; background:var(--surface2); }
+  .eco-layer-expand.show { display:block; }
+  .eco-comp-grid { display:flex; flex-wrap:wrap; gap:6px; }
+  .eco-comp { font-size:11px; font-weight:600; padding:5px 12px; border-radius:20px; background:var(--surface3); border:1px solid var(--border); color:var(--text2); }
+
+  /* Partner portal */
+  .partner-strip { display:flex; gap:7px; overflow-x:auto; scrollbar-width:none; padding:0 20px 14px; }
+  .partner-strip::-webkit-scrollbar { display:none; }
+  .partner-level { flex-shrink:0; background:var(--surface); border:1px solid var(--border); border-radius:13px; padding:11px 13px; text-align:center; min-width:100px; }
+  .partner-level-num { font-size:16px; font-weight:800; margin-bottom:3px; }
+  .partner-level-name { font-size:9px; font-weight:700; color:var(--text2); line-height:1.3; }
+
+  /* Doctrine */
+  .doctrine-block { padding:4px 20px 22px; }
+  .doctrine-block h2 { font-size:12px; font-weight:800; color:var(--text2); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:13px; }
+  .doctrine-line { display:flex; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); font-size:12px; color:var(--text2); line-height:1.5; }
+  .doctrine-line:last-child { border-bottom:none; }
+  .doctrine-line::before { content:'⚡'; flex-shrink:0; margin-top:1px; }
+
+  /* TOAST */
+  .toast { position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--surface3); border:1px solid rgba(255,255,255,0.12); color:var(--text); font-size:13px; font-weight:600; padding:12px 20px; border-radius:24px; opacity:0; transition:all 0.3s; z-index:999; white-space:nowrap; max-width:340px; pointer-events:none; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* BOTTOM NAV */
+  .bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:430px; background:rgba(18,20,31,0.97); backdrop-filter:blur(20px); border-top:1px solid var(--border); display:flex; padding:10px 0 24px; z-index:100; }
+  .nav-item { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; font-size:9px; font-weight:700; color:var(--muted); letter-spacing:0.3px; text-transform:uppercase; transition:color 0.15s; }
+  .nav-item.active { color:var(--cyan); }
+  .nav-item-icon { font-size:22px; }
+
+  /* HIDDEN */
+  .tab-panel { display:none; }
+  .tab-panel.active { display:block; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div style="font-size:20px;color:var(--text2);cursor:pointer">←</div>
+  <div class="nav-title">Sovereign Ecosystem</div>
+  <div class="nav-badge">v10.0</div>
+</nav>
+
+<!-- HERO -->
+<div class="hero fade-in">
+  <div class="hero-tag">IN$DEX Sovereign Ecosystem Layer</div>
+  <h1>Open to the world.<br><span>Sovereign at the boundary.</span></h1>
+  <p class="hero-sub">IN$DEX works with the best tools, builders, partners, and communities — without surrendering citizen sovereignty to any of them. Every connection is permissioned, visible, auditable, and revocable.</p>
+  <div class="hero-lock">"<strong>Works with IN$DEX</strong> must never mean <strong>owns the citizen.</strong>"<br><br>Every external tool must enter through consent, permission, review, and a revocation path.</div>
+</div>
+
+<!-- STAT ROW -->
+<div class="stat-row fade-in" style="animation-delay:.04s">
+  <div class="stat-card"><div class="stat-val" style="color:var(--cyan)">24</div><div class="stat-label">Approved connectors in registry</div></div>
+  <div class="stat-card"><div class="stat-val" style="color:var(--purple)">20</div><div class="stat-label">SIINDEX skills in Skill Vault</div></div>
+  <div class="stat-card"><div class="stat-val" style="color:var(--green)">5</div><div class="stat-label">Ecosystem architecture layers</div></div>
+</div>
+
+<!-- TAB NAV -->
+<div class="tab-nav fade-in" style="animation-delay:.06s">
+  <div class="tab-btn active" onclick="switchTab('registry')">🔌 Connector Registry</div>
+  <div class="tab-btn" onclick="switchTab('skills')">⚡ Skill Vault</div>
+  <div class="tab-btn" onclick="switchTab('tools')">🚀 Mission Room Tools</div>
+  <div class="tab-btn" onclick="switchTab('map')">🗺️ Ecosystem Map</div>
+</div>
+
+<!-- ── TAB 1: CONNECTOR REGISTRY ── -->
+<div id="tab-registry" class="tab-panel active">
+  <div class="section-hdr fade-in" style="animation-delay:.08s">
+    <h2>🔌 Sovereign Connector Registry</h2>
+    <span id="connCount">— connectors</span>
+  </div>
+  <div class="filter-row fade-in" style="animation-delay:.09s" id="connFilters"></div>
+  <div id="connRegistry" class="fade-in" style="animation-delay:.10s"></div>
+  <div style="margin:4px 20px 14px;background:rgba(255,77,109,0.05);border:1px solid rgba(255,77,109,0.15);border-radius:12px;padding:12px 15px;font-size:12px;color:var(--text2);line-height:1.55;">
+    <strong style="color:var(--red)">Connector doctrine:</strong> No tool enters the civilization without a boundary. Connectors that read, write, move value, or publish are risk surfaces — every one must declare its permissions, carry an expiry date, and offer a revocation path.
+  </div>
+</div>
+
+<!-- ── TAB 2: SKILL VAULT ── -->
+<div id="tab-skills" class="tab-panel">
+  <div class="section-hdr" style="margin-top:2px">
+    <h2>⚡ SIINDEX Skill Vault</h2>
+    <span>Reusable sovereign capabilities</span>
+  </div>
+  <div class="filter-row" id="skillFilters"></div>
+  <div id="skillVault"></div>
+  <div style="margin:4px 20px 14px;background:rgba(139,63,232,0.05);border:1px solid rgba(139,63,232,0.15);border-radius:12px;padding:12px 15px;font-size:12px;color:var(--text2);line-height:1.55;">
+    <strong style="color:var(--purple)">Skill doctrine:</strong> A SIINDEX Skill is a reusable capability that can be safely invoked by SIINDEX agents. The marketplace should distribute capability, not complexity.
+  </div>
+</div>
+
+<!-- ── TAB 3: MISSION ROOM TOOLS ── -->
+<div id="tab-tools" class="tab-panel">
+  <div class="section-hdr" style="margin-top:2px">
+    <h2>🚀 Mission Room Tool Dashboard</h2>
+    <span>Active tools · visible not hidden</span>
+  </div>
+  <div class="mr-card">
+    <div class="mr-hdr">
+      <h3>Launch Vanuatu Print Bundle</h3>
+      <p>Mission Room · 3 members · 8 tools connected · IN progress</p>
+    </div>
+    <div id="mrTools"></div>
+  </div>
+  <div class="mr-doctrine">"Tool use must be visible, not hidden. Citizens deserve to know which tools are active in their missions, what those tools can access, and how to stop them."</div>
+  <div style="margin:0 20px 16px">
+    <div style="font-size:12px;font-weight:800;margin-bottom:10px">Connected Tools dashboard — what citizens should always see</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+      <div id="citizenDashboard"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TAB 4: ECOSYSTEM MAP ── -->
+<div id="tab-map" class="tab-panel">
+  <div class="section-hdr" style="margin-top:2px">
+    <h2>🗺️ Ecosystem Architecture</h2>
+    <span>5 sovereign layers</span>
+  </div>
+  <div id="ecoLayers"></div>
+
+  <div class="section-hdr" style="margin-top:8px">
+    <h2>🏗️ Partner Portal</h2>
+    <span>5 partner levels</span>
+  </div>
+  <div class="partner-strip" id="partnerStrip"></div>
+  <div style="margin:0 20px 16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:13px 15px;">
+    <div style="font-size:10px;font-weight:800;color:var(--text2);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px">Partner receives</div>
+    <div id="partnerReceives"></div>
+  </div>
+
+  <div class="doctrine-block">
+    <h2>Doctrine — Open Ecosystem, Sovereign Boundaries</h2>
+    <div id="ecoDoctrineLines"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<nav class="bottom-nav">
+  <div class="nav-item"><div class="nav-item-icon">🏠</div>Home</div>
+  <div class="nav-item"><div class="nav-item-icon">🧠</div>Brain</div>
+  <div class="nav-item active"><div class="nav-item-icon">🌐</div>Ecosystem</div>
+  <div class="nav-item"><div class="nav-item-icon">🚀</div>Missions</div>
+  <div class="nav-item"><div class="nav-item-icon">⚙️</div>Settings</div>
+</nav>
+
+<script>
+  const INDX_PRICE_USD = 0.24;
+
+  // ── DATA ──
+
+  const CONNECTORS = [
+    { key:'gdrive', name:'Google Drive', icon:'📁', cat:'storage', owner:'Google', status:'approved', risk:'low',
+      reads:'Files in shared Mission Room folders only', writes:'Product photos, documents, assets',
+      actions:['Read shared files', 'Upload assets from Design Studio', 'Create Mission Room folders'],
+      forbidden:['Access private citizen data outside shared folders', 'Read credentials or secrets', 'Export citizen identity'],
+      moveMoney:false, publish:false, consent:true, expiry:'2027-03-01', approval:'Mission Room admin approval required',
+      lastUsed:'2026-07-09', childSafe:true, culturalSafe:true, govImpact:'None' },
+    { key:'gmail', name:'Gmail', icon:'📧', cat:'comm', owner:'Google', status:'approved', risk:'low',
+      reads:'Drafts and sent messages created by SIINDEX only', writes:'Merchant reply drafts (citizen review before send)',
+      actions:['Create draft replies', 'Attach approved assets', 'Search own sent history'],
+      forbidden:['Access inbox without citizen trigger', 'Send without citizen review', 'Read contacts'],
+      moveMoney:false, publish:false, consent:true, expiry:'2027-03-01', approval:'Citizen review before every send',
+      lastUsed:'2026-07-08', childSafe:true, culturalSafe:true, govImpact:'None' },
+    { key:'canva', name:'Canva', icon:'🎨', cat:'design', owner:'Canva', status:'approved', risk:'low',
+      reads:'Shared brand kit and approved templates only', writes:'Campaign assets to Artifact Ledger',
+      actions:['Export campaign assets', 'Create listing visuals from templates', 'Generate image drafts'],
+      forbidden:['Access all designs without specific permission', 'Generate realistic faces without consent', 'Publish directly to marketplace'],
+      moveMoney:false, publish:false, consent:true, expiry:'2027-06-01', approval:'Citizen review before any external use',
+      lastUsed:'2026-07-09', childSafe:true, culturalSafe:true, govImpact:'None' },
+    { key:'stripe', name:'Payment Rail (Stripe)', icon:'💳', cat:'payment', owner:'Stripe', status:'approved', risk:'high',
+      reads:'Transaction status only — no card data stored in IN$DEX', writes:'Settlement records to Financial Ledger',
+      actions:['Initiate payment flow on citizen confirmation', 'Check settlement status', 'Generate payment receipts'],
+      forbidden:['Initiate any payment without explicit citizen confirmation at time of action', 'Store card details', 'Retry failed payments automatically'],
+      moveMoney:true, publish:false, consent:true, expiry:'2026-12-31', approval:'Citizen confirmation required at every payment initiation',
+      lastUsed:'2026-07-07', childSafe:false, culturalSafe:true, govImpact:'Financial' },
+    { key:'github', name:'GitHub', icon:'🐙', cat:'developer', owner:'GitHub', status:'approved', risk:'med',
+      reads:'Approved IN$DEX repository branches only', writes:'Commits to feature branches — no direct main branch push',
+      actions:['Create feature branches', 'Open pull requests', 'Read repository structure', 'Run approved CI actions'],
+      forbidden:['Push directly to main or production', 'Access secrets or credentials', 'Delete repository history'],
+      moveMoney:false, publish:false, consent:true, expiry:'2027-01-01', approval:'Human reviewer required before merge to main',
+      lastUsed:'2026-07-09', childSafe:true, culturalSafe:true, govImpact:'None' },
+    { key:'shopify', name:'Shopify', icon:'🛒', cat:'commerce', owner:'Shopify', status:'restricted', risk:'med',
+      reads:'Product data and order status for IN$DEX-linked stores only', writes:'Product updates from Marketplace (with approval)',
+      actions:['Sync approved listings', 'Update product descriptions', 'Check order fulfillment status'],
+      forbidden:['Access customer data without consent', 'Change pricing without citizen confirmation', 'Access store financials'],
+      moveMoney:false, publish:true, consent:true, expiry:'2026-12-01', approval:'Citizen approval required before any product sync',
+      lastUsed:'2026-07-05', childSafe:true, culturalSafe:true, govImpact:'None' },
+    { key:'notion', name:'Notion', icon:'📓', cat:'storage', owner:'Notion', status:'approved', risk:'low',
+      reads:'Shared Mission Room workspace pages only', writes:'Mission summaries, meeting notes, build ledger drafts',
+      actions:['Create mission documentation', 'Update shared workspace pages', 'Generate build evidence records'],
+      forbidden:['Access private pages outside shared workspace', 'Export sensitive citizen data', 'Publish pages publicly without review'],
+      moveMoney:false, publish:false, consent:true, expiry:'2027-06-01', approval:'Mission Room admin approval',
+      lastUsed:'2026-07-08', childSafe:true, culturalSafe:true, govImpact:'None' },
+    { key:'slack', name:'Community Comms (Slack)', icon:'💬', cat:'comm', owner:'Slack', status:'review', risk:'med',
+      reads:'Approved channels only — no DMs', writes:'SIINDEX-generated summaries and updates to designated channels',
+      actions:['Post approved updates to designated channels', 'Generate community digest summaries'],
+      forbidden:['Access DMs or private channels', 'Post without human review', 'Access member profiles without consent'],
+      moveMoney:false, publish:true, consent:true, expiry:'2027-01-01', approval:'Human review required before all posts',
+      lastUsed:'Never', childSafe:false, culturalSafe:true, govImpact:'Community' },
+    { key:'cultural-archive', name:'Pacific Cultural Archive', icon:'🌿', cat:'cultural', owner:'Pacific Cultural Trust', status:'review', risk:'high',
+      reads:'Public cultural reference data only — no sacred or restricted records', writes:'None — read only connection',
+      actions:['Reference public cultural context for classification guidance'],
+      forbidden:['Access restricted or sacred content', 'Commercialize any cultural data without elder approval', 'Copy or export archive content'],
+      moveMoney:false, publish:false, consent:true, expiry:'2026-12-31', approval:'Cultural steward and elder approval required',
+      lastUsed:'Never', childSafe:true, culturalSafe:false, govImpact:'Cultural rights' },
+    { key:'zepto', name:'Bank Rail (Zepto)', icon:'🏦', cat:'payment', owner:'Zepto', status:'draft', risk:'high',
+      reads:'Account connection status only', writes:'Payment instructions on citizen trigger',
+      actions:['Initiate bank-to-bank transfers on explicit citizen confirmation', 'Check connection status'],
+      forbidden:['Any payment without two-step citizen confirmation', 'Batch payments without individual approval', 'Store banking credentials'],
+      moveMoney:true, publish:false, consent:true, expiry:'TBD', approval:'Requires compliance and security review before activation',
+      lastUsed:'Never', childSafe:false, culturalSafe:true, govImpact:'Financial' },
+  ];
+
+  const SKILLS = [
+    { key:'listing', icon:'🏪', name:'Create Marketplace Listing', cat:'sell',
+      purpose:'Creates a complete, trust-checked marketplace listing draft — title, description, pricing, trust checklist, buyer FAQ, shipping terms, and cultural-rights check.',
+      inputs:'Product details, photos, pricing intent, citizen identity',
+      outputs:'Draft listing with trust checklist, buyer FAQ, and cultural-rights status',
+      allowed:'Draft listings with verified citizen identity and product info',
+      forbidden:'Misrepresent products, add fake reviews, publish without citizen approval',
+      review:'Citizen review before publish · Cultural steward if cultural content',
+      memory:'Listing record in Artifact Ledger · Decision Ledger entry', runs:147 },
+    { key:'cultural-card', icon:'🌿', name:'Generate Cultural Rights Card', cat:'protect',
+      purpose:'Creates a Cultural Rights Card for an asset — classification, permission status, attribution statement, commercialization status, and who approved it.',
+      inputs:'Asset description, cultural context, creator identity, community connection',
+      outputs:'Cultural Rights Card with classification, permission chain, attribution, and review status',
+      allowed:'Classify public and community-owned assets · Flag unknown status for review',
+      forbidden:'Approve restricted or sacred assets without elder review · Override cultural classification',
+      review:'Cultural steward review before any card is published',
+      memory:'Cultural Rights Graph entry · Decision Ledger entry', runs:89 },
+    { key:'buyer-reply', icon:'💬', name:'Draft Buyer Reply', cat:'sell',
+      purpose:'Creates trust-building, plain-language replies to buyer enquiries — addressing questions, handling objections, and following up after sale.',
+      inputs:'Buyer message, listing details, merchant profile',
+      outputs:'Draft reply for citizen review before send',
+      allowed:'Draft replies based on listing and citizen-verified product facts',
+      forbidden:'Make promises beyond what listing states · Misrepresent shipping or refund terms',
+      review:'Citizen review before every send',
+      memory:'Communication record in Artifact Ledger', runs:312 },
+    { key:'opportunity-page', icon:'💡', name:'Build Opportunity Page', cat:'launch',
+      purpose:'Turns a citizen\'s idea, skill, or product into a structured opportunity page — headline, value proposition, audience, trust signal, and first-action CTA.',
+      inputs:'Citizen intention, Brain Passport context, product or service details',
+      outputs:'Opportunity page draft with headline, body, trust signals, and CTA',
+      allowed:'Create opportunity pages from verified citizen context',
+      forbidden:'Guarantee income · Include unverified claims · Publish without citizen approval',
+      review:'Citizen review · SIINDEX blind spot pass before publish',
+      memory:'Opportunity Brain entry · Artifact Ledger record', runs:203 },
+    { key:'blind-spot', icon:'🔍', name:'Run Blind Spot Pass', cat:'protect',
+      purpose:'Checks a citizen plan, listing, or communication for risks they may not have seen — income claim risks, cultural sensitivities, legal exposure, safety gaps.',
+      inputs:'Draft content or plan, citizen context',
+      outputs:'Blind spot report with flagged risks, suggested rewrites, and confidence level',
+      allowed:'Flag risks and suggest alternatives · Note uncertainty when found',
+      forbidden:'Remove citizen\'s own judgment · Override cultural or compliance findings',
+      review:'Human review if high-risk flags found',
+      memory:'Decision Ledger entry if risk is flagged', runs:418 },
+    { key:'session-check', icon:'🔐', name:'Check Session Risk', cat:'secure',
+      purpose:'Reviews active session for anomalies — unusual device, location, time, tool usage, or payout-change patterns.',
+      inputs:'Active session data, trust device list, recent activity',
+      outputs:'Session risk report with LOW / MED / HIGH rating and recommended action',
+      allowed:'Review session signals and flag anomalies · Recommend human review for HIGH risk',
+      forbidden:'Block accounts without human approval · Log sensitive session data',
+      review:'Human approval before any account action',
+      memory:'Security Ledger entry for HIGH or MED findings', runs:92 },
+    { key:'governance-explainer', icon:'🏛️', name:'Explain Governance Proposal', cat:'govern',
+      purpose:'Translates a governance proposal into plain language — what it changes, what it costs, who it affects, what the tradeoffs are, and what happens if it passes or fails.',
+      inputs:'Governance proposal text, treasury context, current rules',
+      outputs:'Plain-language summary, impact map, and neutral argument comparison',
+      allowed:'Explain and summarize · Present both sides neutrally',
+      forbidden:'Recommend a vote · Hide tradeoffs · Favor specific governance groups',
+      review:'Council review before publication',
+      memory:'Governance record in Decision Ledger', runs:61 },
+    { key:'pitch-deck', icon:'📊', name:'Generate Pitch Deck Outline', cat:'launch',
+      purpose:'Creates a pitch deck outline for a citizen business, community project, or product launch — structured for trust, not hype.',
+      inputs:'Mission brief, audience, key facts, citizen context',
+      outputs:'Pitch deck outline with slide titles, key messages, and evidence points',
+      allowed:'Create outlines from verified facts and citizen context',
+      forbidden:'Include unverified income claims · Use hype language · Guarantee outcomes',
+      review:'Citizen review before use with any audience',
+      memory:'Artifact Ledger record', runs:155 },
+    { key:'mission-summary', icon:'🚀', name:'Create Mission Room Summary', cat:'govern',
+      purpose:'Generates a Mission Room session summary — decisions made, actions taken, approvals given, what changed, and what happens next.',
+      inputs:'Mission Room activity log, member records, task status',
+      outputs:'Mission Room summary with decisions, actions, approvals, and next steps',
+      allowed:'Summarize documented activity · Flag missing approvals',
+      forbidden:'Infer undocumented decisions · Change records silently',
+      review:'Mission Room admin review before distribution',
+      memory:'Decision Ledger entry · Brain Passport mission record', runs:178 },
+    { key:'consent-receipt', icon:'🧾', name:'Create Consent Receipt', cat:'protect',
+      purpose:'Generates a plain-language consent receipt for a citizen action — what they agreed to, what data was used, who saw it, and when it expires.',
+      inputs:'Action type, data used, parties involved, consent scope',
+      outputs:'Consent receipt with plain-language summary and expiry date',
+      allowed:'Record what was consented to accurately and completely',
+      forbidden:'Obscure scope · Expand consent beyond what was agreed · Create retroactive consent',
+      review:'Citizen review before record is sealed',
+      memory:'Consent Registry entry · Brain Passport record', runs:234 },
+    { key:'plain-language', icon:'🗣️', name:'Translate to Plain Language', cat:'learn',
+      purpose:'Converts complex legal, governance, financial, or technical text into clear, jargon-free language that citizens can act on.',
+      inputs:'Source text, audience context, reading level target',
+      outputs:'Plain-language version with key actions highlighted',
+      allowed:'Simplify language while preserving meaning and accuracy',
+      forbidden:'Change meaning · Remove important caveats · Oversimplify to the point of inaccuracy',
+      review:'Human review if source text is legally binding',
+      memory:'Artifact Ledger record if used in citizen-facing document', runs:391 },
+    { key:'dispute-summary', icon:'⚖️', name:'Prepare Dispute Summary', cat:'protect',
+      purpose:'Creates a structured dispute summary for marketplace or community disputes — facts, timeline, affected parties, evidence, proposed resolution, and escalation path.',
+      inputs:'Dispute details, transaction records, communication history',
+      outputs:'Dispute summary with timeline, evidence list, and resolution options',
+      allowed:'Present facts clearly · Identify resolution paths · Escalate to human review',
+      forbidden:'Take sides without evidence · Make binding decisions · Contact parties without citizen approval',
+      review:'Human reviewer required for all disputes above threshold',
+      memory:'Decision Ledger entry · Dispute record in Compliance Ledger', runs:47 },
+    { key:'learning-path', icon:'📚', name:'Build Learning Path', cat:'learn',
+      purpose:'Creates a personalised learning pathway from Brain Passport context — sequenced lessons, real artifact outputs, and capability proof targets.',
+      inputs:'Brain Passport context, citizen goals, available time, current capability level',
+      outputs:'Learning path with sequenced lessons, artifacts to create, and proof targets',
+      allowed:'Personalise paths from verified Brain Passport data',
+      forbidden:'Guarantee outcomes · Skip prerequisite checks · Create fake capability records',
+      review:'Citizen review before starting · Mentor review if advanced pathway',
+      memory:'Brain Passport — Learning Brain update · Life Graph milestone', runs:129 },
+    { key:'audit-visual', icon:'🖼️', name:'Audit Visual Assets', cat:'secure',
+      purpose:'Reviews a visual asset for compliance with IN$DEX doctrine — no hype language, no unverified income claims, no cultural misuse, no child exposure, synthetic media disclosure.',
+      inputs:'Visual asset, context, distribution intent, Cultural Rights status',
+      outputs:'Audit report with CLEAN / ISSUES FOUND rating and flagged items',
+      allowed:'Flag doctrine violations · Suggest alternative language or design',
+      forbidden:'Pass assets with unverified income claims · Clear cultural assets without steward review',
+      review:'Human review if ISSUES FOUND · Cultural steward for cultural content',
+      memory:'Artifact Ledger audit record · Decision Ledger if issues found', runs:88 },
+    { key:'release-check', icon:'🚀', name:'Release Readiness Check', cat:'secure',
+      purpose:'Checks whether a feature or update is safe to ship — doctrine test, permission test, safety test, performance check, and rollback plan.',
+      inputs:'Feature spec, code diff summary, affected systems, test results',
+      outputs:'Release readiness report with SHIP / HOLD / REVISE / BLOCK recommendation',
+      allowed:'Check against known doctrine, safety, and permission requirements',
+      forbidden:'Approve features with known safety gaps · Mark features SHIP without passing all checks',
+      review:'Human review for any HOLD, REVISE, or BLOCK recommendation',
+      memory:'Build Ledger entry · Decision Ledger record', runs:64 },
+    { key:'mcp-review', icon:'🔌', name:'MCP/Connector Permission Review', cat:'secure',
+      purpose:'Reviews a connector or MCP tool\'s permission declaration for safety risks — data access, write scope, financial action risk, prompt injection risk, and approval gates.',
+      inputs:'Connector permission declaration, connector code review (if available)',
+      outputs:'Permission review report with risk rating and approval recommendation',
+      allowed:'Flag unsafe permissions · Recommend least-privilege alternatives · Escalate for human review',
+      forbidden:'Approve connectors with financial action risk without compliance review · Approve connectors lacking revocation path',
+      review:'Security team and compliance review for HIGH risk connectors',
+      memory:'Connector Registry entry · Security Ledger record', runs:33 },
+    { key:'media-kit', icon:'📡', name:'Prepare Sovereign Media Kit', cat:'launch',
+      purpose:'Builds a media kit for a citizen business or project — story, key messages, visual assets list, cultural rights status, consent receipts, and platform-native formats.',
+      inputs:'Brand context, product or project details, citizen story consent, Cultural Rights status',
+      outputs:'Media kit with narrative, key messages, asset checklist, and consent records',
+      allowed:'Create media kits from consented citizen stories and verified facts',
+      forbidden:'Include unverified income claims · Use cultural content without rights check · Publish without citizen approval',
+      review:'Citizen review before any public use · Cultural steward if cultural content included',
+      memory:'Artifact Ledger record · Consent Registry entry', runs:97 },
+    { key:'automation-design', icon:'⚡', name:'Design Automation Workflow', cat:'automate',
+      purpose:'Designs a safe automation workflow using the IN$DEX structure: Trigger → SIINDEX Action → Approval Gate → Output → Memory Update → Review Loop.',
+      inputs:'Citizen goal, systems involved, frequency, risk tolerance',
+      outputs:'Automation design with trigger, action, approval gates, output, and review loop specified',
+      allowed:'Design workflows with explicit approval gates · Flag high-risk automations for human review',
+      forbidden:'Design automations that move funds without per-execution confirmation · Remove approval gates · Automate cultural commercialization without steward gate',
+      review:'Human review for any workflow involving funds, cultural content, or child citizens',
+      memory:'Automation Grid record · Decision Ledger entry', runs:76 },
+    { key:'tourism-onepage', icon:'🌴', name:'Create Tourism Partner One-Pager', cat:'launch',
+      purpose:'Creates a one-page partner summary for tourism and corridor partners — what IN$DEX offers, how to connect, what the terms are, and what the partnership looks like.',
+      inputs:'Partner details, corridor/region, services offered, target citizen audience',
+      outputs:'Partner one-pager with value proposition, connection terms, and next steps',
+      allowed:'Create from verified partner facts · Include Cultural Rights and child safety requirements',
+      forbidden:'Misrepresent partnership terms · Include unverified income claims · Promise features not yet built',
+      review:'Citizen review · Legal review if binding terms included',
+      memory:'Partner Registry entry · Artifact Ledger record', runs:41 },
+    { key:'public-claims', icon:'✓', name:'Review Public Claims', cat:'protect',
+      purpose:'Checks public-facing text for doctrine compliance — no hype, no "users", no "AI assistant", no guaranteed income, no passive income claims, correct SIINDEX framing.',
+      inputs:'Public text, distribution channel, intended audience',
+      outputs:'Claims review with CLEAN / ISSUES rating and specific rewrites',
+      allowed:'Flag doctrine violations with specific line references and suggested corrections',
+      forbidden:'Pass text with "users", "AI", "guaranteed", "passive income" or hype language',
+      review:'Human review if ISSUES FOUND before any publication',
+      memory:'Artifact Ledger audit record', runs:211 },
+  ];
+
+  const MR_TOOLS = [
+    { icon:'🎨', name:'ImageNation Design Studio', access:'Create and edit visual assets — listing images, campaign cards, one-pagers', risk:'low', approval:'Citizen review before export', lastAction:'New print bundle cover created — 2026-07-09' },
+    { icon:'🎨', name:'Canva Export', access:'Export approved templates from Canva to Artifact Ledger', risk:'low', approval:'Citizen review before external use', lastAction:'3 product images exported — 2026-07-08' },
+    { icon:'📁', name:'Google Drive (Product Photos)', access:'Shared product photo folder — read and upload only', risk:'low', approval:'Mission Room admin approval', lastAction:'6 photos synced — 2026-07-09' },
+    { icon:'🏪', name:'Marketplace Listing Generator', access:'Create and update draft marketplace listings', risk:'low', approval:'Citizen review before listing goes live', lastAction:'3 listing drafts generated — 2026-07-09' },
+    { icon:'🌿', name:'Cultural Rights Graph', access:'Classify cultural assets — read and write Cultural Rights Cards', risk:'high', approval:'Cultural steward approval required', lastAction:'Print pattern classification in review — 2026-07-06' },
+    { icon:'💳', name:'Payment Connector (Stripe)', access:'Initiate payment flow on citizen confirmation only — no stored credentials', risk:'high', approval:'Explicit citizen confirmation at every transaction', lastAction:'Test payment — 2026-07-07' },
+    { icon:'📡', name:'Sovereign Media Engine', access:'Draft social posts, campaign materials, and launch updates', risk:'med', approval:'Citizen review before any post goes to publication queue', lastAction:'Launch announcement draft — pending review' },
+    { icon:'🚚', name:'Delivery Partner Connector', access:'Estimate shipping rates and track orders for NZ/Pacific corridor', risk:'med', approval:'Citizen review before any shipping cost is shown to buyer', lastAction:'Vanuatu → Auckland rate check — 2026-07-08' },
+  ];
+
+  const CITIZEN_DASH_ROWS = [
+    { q:'What is connected?', a:'8 tools · 4 low risk · 2 medium risk · 2 high risk' },
+    { q:'What can SIINDEX access?', a:'Product files, listing drafts, cultural classification system, payment initiation on confirmation only' },
+    { q:'Is SIINDEX permitted to act?', a:'Yes — within approved permissions per tool' },
+    { q:'Safe for children?', a:'Canva, Drive, Design Studio, Listing Generator — Yes · Payment, Cultural Graph — No (require human approval)' },
+    { q:'Can you pause any tool?', a:'Yes — pause button available per tool at any time' },
+    { q:'Can you revoke any tool?', a:'Yes — all connectors can be revoked immediately from Connector Registry' },
+  ];
+
+  const ECO_LAYERS = [
+    { num:'01', color:'var(--cyan)', title:'Core Civilization Layer', sub:'Owned by IN$DEX — the sovereign foundation',
+      components:['Grid Account','SIINDEX','Brain Passport','Life Graph','Mission Rooms','Opportunity Feed','Marketplace','Governance','Cultural Rights Graph','Decision Ledger','Security Ledger','Artifact Ledger','Automation Grid'] },
+    { num:'02', color:'var(--purple)', title:'Sovereign Connector Layer', sub:'Approved external bridges — all permissioned',
+      components:['Files (Drive, Notion)','Email (Gmail, Outlook)','Calendars','Commerce (Shopify, Wix)','Payments (Stripe, Zepto, Banxa)','Design (Canva, Adobe)','Code (GitHub)','Education tools','Community (Slack, Discord)','Accounting tools','Logistics partners','Research tools'] },
+    { num:'03', color:'var(--green)', title:'SIINDEX Skill Layer', sub:'Reusable sovereign capabilities',
+      components:['Create Listing','Cultural Rights Card','Buyer Reply','Opportunity Page','Blind Spot Pass','Session Risk Check','Governance Explainer','Pitch Deck','Mission Summary','Consent Receipt','Plain Language','Dispute Summary','Learning Path','Audit Visual','Release Check','MCP Review','Media Kit','Automation Design','Tourism One-Pager','Claims Review'] },
+    { num:'04', color:'var(--gold)', title:'Partner Marketplace Layer', sub:'Ecosystem participants — all verified',
+      components:['Developers','Service providers','Educators','Cultural stewards','Merchant helpers','Logistics partners','Corridor partners','Governance tooling','Payment partners','Community builders','Verified service providers','Digital asset partners'] },
+    { num:'05', color:'var(--red)', title:'Public Trust Layer', sub:'Evidence of ecosystem health',
+      components:['Verified partners directory','Security review records','Citizen stories with consent','Transparency reports','Connector status board','Ecosystem changelog','Failure Lab learnings','Governance decisions','Connector risk ratings','Public build log'] },
+  ];
+
+  const PARTNER_LEVELS = [
+    { num:'01', name:'Sandbox Builder', color:'var(--muted)' },
+    { num:'02', name:'Verified Developer', color:'var(--text2)' },
+    { num:'03', name:'Approved Connector', color:'var(--cyan)' },
+    { num:'04', name:'Trusted Partner', color:'var(--green)' },
+    { num:'05', name:'Sovereign Infrastructure Partner', color:'var(--gold)' },
+  ];
+
+  const PARTNER_RECEIVES = ['API documentation and sandbox','MCP/connector standards guide','Test citizens and fake payment rails','Cultural safety and child safety test cases','Governance test cases','Security checklist and requirements','Review process and publishing requirements','Connector Registry application','Compliance checklist','Partner status badge and directory listing'];
+
+  const ECO_DOCTRINE = [
+    'IN$DEX must be open enough to connect with the best tools, builders, partners, and communities — and bounded enough to protect citizens from all of them.',
+    'Open does not mean uncontrolled. Composable does not mean unsafe. Connected does not mean exploited.',
+    'Every external tool must enter through consent, permission, review, and a revocation path. There are no exceptions.',
+    'No external tool should silently extract citizen data, bypass consent, commercialize culture, expose children, manipulate governance, publish without approval, or move value without explicit confirmation.',
+    '"Works with IN$DEX" must never mean "owns the citizen."',
+    'The future is not one closed app. The future is a sovereign civilization that can connect to everything without surrendering control.',
+    'A connector is not an integration. It is a permissioned doorway into the civilization.',
+    'Citizen data belongs to citizens. External tools are guests. Guests operate under house rules.',
+    'Every connector that moves money, publishes content, or exports citizen data requires explicit approval at every action — not once at setup.',
+    'The marketplace should distribute capability, not complexity. Every tool listed should make citizens more capable, not more dependent.',
+  ];
+
+  // ── STATE ──
+  let _tab = 'registry';
+  let _openConn = null;
+  let _openSkill = null;
+  let _openEcoLayer = null;
+  let _connFilter = 'all';
+  let _skillFilter = 'all';
+  let _connStatuses = JSON.parse(localStorage.getItem('indx_eco_status') || '{}');
+  let _toolStates  = JSON.parse(localStorage.getItem('indx_eco_tools') || '{}');
+  let _skillRuns   = JSON.parse(localStorage.getItem('indx_eco_skills') || '{}');
+
+  const CONN_CATS = { all:'All', payment:'Payment', storage:'Storage', design:'Design', commerce:'Commerce', comm:'Comms', developer:'Developer', cultural:'Cultural' };
+  const SKILL_CATS = { all:'All', sell:'Sell', launch:'Launch', protect:'Protect', govern:'Govern', learn:'Learn', secure:'Secure', automate:'Automate' };
+
+  // ── TAB ──
+  function switchTab(tab) {
+    _tab = tab;
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('tab-' + tab)?.classList.add('active');
+    document.querySelectorAll('.tab-btn').forEach(b=>{
+      if (b.textContent.toLowerCase().includes(tab.slice(0,4))) b.classList.add('active');
+    });
+    if (tab==='registry') renderConnectors();
+    if (tab==='skills')   renderSkills();
+    if (tab==='tools')    renderMrTools();
+    if (tab==='map')      renderEcoMap();
+  }
+
+  // ── GM1: CONNECTOR REGISTRY ──
+  const STATUS_CLS = { approved:'s-approved', restricted:'s-restricted', review:'s-review', blocked:'s-blocked', draft:'s-draft', revoked:'s-blocked' };
+  const RISK_CLS   = { low:'r-low', med:'r-med', high:'r-high' };
+
+  function getConnStatus(key) { return _connStatuses[key] || CONNECTORS.find(c=>c.key===key)?.status || 'draft'; }
+
+  function renderConnFilters() {
+    const el = document.getElementById('connFilters');
+    el.innerHTML = Object.entries(CONN_CATS).map(([k,v])=>
+      `<div class="filter-chip ${_connFilter===k?'active':''}" onclick="setConnFilter('${k}')">${v}</div>`
+    ).join('');
+  }
+  function setConnFilter(f) { _connFilter=f; renderConnFilters(); renderConnectors(); }
+
+  function renderConnectors() {
+    const el = document.getElementById('connRegistry');
+    const filtered = _connFilter==='all' ? CONNECTORS : CONNECTORS.filter(c=>c.cat===_connFilter);
+    document.getElementById('connCount').textContent = `${filtered.filter(c=>getConnStatus(c.key)==='approved').length} approved`;
+    el.innerHTML = filtered.map((c, ci) => {
+      const status = getConnStatus(c.key);
+      const isOpen = _openConn === c.key;
+      return `<div class="conn-card ${isOpen?'open':''} fade-in" style="animation-delay:${ci*0.03}s">
+        <div class="conn-row" onclick="toggleConn('${c.key}')">
+          <div class="conn-icon">${c.icon}</div>
+          <div class="conn-info">
+            <div class="conn-name">${c.name}</div>
+            <div class="conn-cat">${c.cat}</div>
+            <div class="conn-chips">
+              <div class="status-chip ${STATUS_CLS[status]||'s-draft'}">${status.charAt(0).toUpperCase()+status.slice(1)}</div>
+              <div class="risk-chip-sm ${RISK_CLS[c.risk]||'r-low'}">Risk: ${c.risk.toUpperCase()}</div>
+              ${c.moveMoney ? '<div class="risk-chip-sm r-high">Moves money</div>' : ''}
+              ${c.publish ? '<div class="risk-chip-sm r-med">Can publish</div>' : ''}
+            </div>
+          </div>
+          <div class="conn-chevron ${isOpen?'open':''}">›</div>
+        </div>
+        ${isOpen ? renderConnExpand(c, status) : ''}
+      </div>`;
+    }).join('');
+  }
+
+  function renderConnExpand(c, status) {
+    const isPaused = status === 'restricted';
+    return `<div class="conn-expand show">
+      <div class="ce-grid">
+        <div class="ce-field"><div class="ce-label">Data reads</div><div class="ce-val">${c.reads}</div></div>
+        <div class="ce-field"><div class="ce-label">Data writes</div><div class="ce-val">${c.writes}</div></div>
+      </div>
+      <div class="ce-label">Allowed actions</div>
+      <div class="ce-list" style="margin-bottom:9px">${c.actions.map(a=>`<div class="ce-item"><span class="ce-ok">✓</span>${a}</div>`).join('')}</div>
+      <div class="ce-label">Forbidden actions</div>
+      <div class="ce-list" style="margin-bottom:9px">${c.forbidden.map(a=>`<div class="ce-item"><span class="ce-no">✕</span>${a}</div>`).join('')}</div>
+      ${c.moveMoney ? `<div class="ce-warn">⚠ This connector can initiate money movement. Fresh citizen confirmation is required at every transaction — not once at setup.</div>` : ''}
+      <div class="ce-grid" style="margin-bottom:9px">
+        <div class="ce-field"><div class="ce-label">Approval required</div><div class="ce-val">${c.approval}</div></div>
+        <div class="ce-field"><div class="ce-label">Expiry</div><div class="ce-val">${c.expiry}</div></div>
+      </div>
+      <div class="ce-grid" style="margin-bottom:10px">
+        <div class="ce-field"><div class="ce-label">Child safe</div><div class="ce-val" style="color:${c.childSafe?'var(--green)':'var(--gold)'}">${c.childSafe?'✓ Yes':'Requires review'}</div></div>
+        <div class="ce-field"><div class="ce-label">Cultural safe</div><div class="ce-val" style="color:${c.culturalSafe?'var(--green)':'var(--gold)'}">${c.culturalSafe?'✓ Yes':'Requires steward review'}</div></div>
+      </div>
+      <div class="ce-grid" style="margin-bottom:10px">
+        <div class="ce-field"><div class="ce-label">Last used</div><div class="ce-val">${c.lastUsed}</div></div>
+        <div class="ce-field"><div class="ce-label">Governance impact</div><div class="ce-val">${c.govImpact}</div></div>
+      </div>
+      <div class="ce-actions">
+        <div class="ce-btn ce-revoke" onclick="revokeConn('${c.key}',event)">✕ Revoke</div>
+        <div class="ce-btn ce-pause" onclick="pauseConn('${c.key}',event)">${isPaused?'▶ Enable':'⏸ Restrict'}</div>
+        ${status==='draft'||status==='review'?`<div class="ce-btn ce-approve" onclick="approveConn('${c.key}',event)">✓ Approve</div>`:''}
+      </div>
+    </div>`;
+  }
+
+  function toggleConn(key) { _openConn = _openConn===key ? null : key; renderConnectors(); }
+  function revokeConn(key, evt) {
+    evt.stopPropagation(); _connStatuses[key]='revoked';
+    localStorage.setItem('indx_eco_status', JSON.stringify(_connStatuses));
+    showToast('✕ ' + CONNECTORS.find(c=>c.key===key)?.name + ' revoked'); renderConnectors();
+  }
+  function pauseConn(key, evt) {
+    evt.stopPropagation();
+    const cur = getConnStatus(key);
+    _connStatuses[key] = cur==='restricted' ? 'approved' : 'restricted';
+    localStorage.setItem('indx_eco_status', JSON.stringify(_connStatuses));
+    showToast(CONNECTORS.find(c=>c.key===key)?.name + ' ' + (_connStatuses[key]==='restricted'?'restricted':'re-enabled'));
+    renderConnectors();
+  }
+  function approveConn(key, evt) {
+    evt.stopPropagation(); _connStatuses[key]='approved';
+    localStorage.setItem('indx_eco_status', JSON.stringify(_connStatuses));
+    showToast('✓ ' + CONNECTORS.find(c=>c.key===key)?.name + ' approved'); renderConnectors();
+  }
+
+  // ── GM2: SKILL VAULT ──
+  function renderSkillFilters() {
+    const el = document.getElementById('skillFilters');
+    el.innerHTML = Object.entries(SKILL_CATS).map(([k,v])=>
+      `<div class="filter-chip ${_skillFilter===k?'active':''}" onclick="setSkillFilter('${k}')">${v}</div>`
+    ).join('');
+  }
+  function setSkillFilter(f) { _skillFilter=f; renderSkillFilters(); renderSkills(); }
+
+  function renderSkills() {
+    const el = document.getElementById('skillVault');
+    const filtered = _skillFilter==='all' ? SKILLS : SKILLS.filter(s=>s.cat===_skillFilter);
+    el.innerHTML = filtered.map((s, si) => {
+      const isOpen = _openSkill === s.key;
+      const runs = _skillRuns[s.key] || s.runs;
+      return `<div class="skill-card ${isOpen?'open':''} fade-in" style="animation-delay:${si*0.025}s">
+        <div class="skill-row" onclick="toggleSkill('${s.key}')">
+          <div class="skill-icon">${s.icon}</div>
+          <div class="skill-info">
+            <div class="skill-name">${s.name}</div>
+            <div class="skill-purpose">${s.purpose.slice(0,72)}${s.purpose.length>72?'…':''}</div>
+            <div class="skill-cat-chip">${s.cat.toUpperCase()} · ${runs} runs</div>
+          </div>
+          <div style="font-size:14px;color:var(--muted);flex-shrink:0;transition:transform 0.2s;${isOpen?'transform:rotate(90deg)':''}">›</div>
+        </div>
+        ${isOpen ? renderSkillExpand(s) : ''}
+      </div>`;
+    }).join('');
+  }
+
+  function renderSkillExpand(s) {
+    return `<div class="skill-expand show">
+      <div class="se-label">Full purpose</div>
+      <div class="se-val">${s.purpose}</div>
+      <div class="se-row">
+        <div class="se-field"><div class="se-label">Inputs</div><div class="se-val">${s.inputs}</div></div>
+        <div class="se-field"><div class="se-label">Outputs</div><div class="se-val">${s.outputs}</div></div>
+      </div>
+      <div class="se-row">
+        <div class="se-field"><div class="se-label" style="color:var(--green)">Allowed</div><div class="se-val">${s.allowed}</div></div>
+        <div class="se-field"><div class="se-label" style="color:var(--red)">Forbidden</div><div class="se-val">${s.forbidden}</div></div>
+      </div>
+      <div class="se-row">
+        <div class="se-field"><div class="se-label">Review gates</div><div class="se-val">${s.review}</div></div>
+        <div class="se-field"><div class="se-label">Memory update</div><div class="se-val">${s.memory}</div></div>
+      </div>
+      <div class="se-actions">
+        <div class="se-btn-run" onclick="runSkill('${s.key}',event)">▶ Run Skill</div>
+        <div class="se-btn-room" onclick="addSkillToRoom('${s.key}',event)">+ Add to Mission Room</div>
+      </div>
+    </div>`;
+  }
+
+  function toggleSkill(key) { _openSkill = _openSkill===key ? null : key; renderSkills(); }
+  function runSkill(key, evt) {
+    evt.stopPropagation();
+    _skillRuns[key] = (_skillRuns[key] || SKILLS.find(s=>s.key===key)?.runs || 0) + 1;
+    localStorage.setItem('indx_eco_skills', JSON.stringify(_skillRuns));
+    showToast('⚡ Skill run started — citizen review required before output is used');
+  }
+  function addSkillToRoom(key, evt) {
+    evt.stopPropagation();
+    showToast('✓ Skill added to Mission Room dock');
+  }
+
+  // ── GM3: MISSION ROOM TOOLS ──
+  function renderMrTools() {
+    const el = document.getElementById('mrTools');
+    el.innerHTML = MR_TOOLS.map(t => {
+      const state = _toolStates[t.name] || 'active';
+      const isPaused = state === 'paused';
+      const risk_color = t.risk==='high'?'var(--red)':t.risk==='med'?'var(--gold)':'var(--green)';
+      return `<div class="mr-tool">
+        <div class="mr-tool-icon">${t.icon}</div>
+        <div class="mr-tool-info">
+          <div class="mr-tool-name">${t.name}</div>
+          <div class="mr-tool-access">${t.access}</div>
+          <div class="mr-tool-chips">
+            <div class="mr-tool-chip" style="color:${risk_color};border-color:${risk_color}22">Risk: ${t.risk.toUpperCase()}</div>
+            <div class="mr-tool-chip">${t.approval}</div>
+          </div>
+          <div style="font-size:9px;color:var(--muted);margin-top:5px;line-height:1.3">Last: ${t.lastAction}</div>
+        </div>
+        <div class="mr-tool-actions">
+          <div class="mr-action-btn pause" onclick="toggleMrTool('${t.name}')">${isPaused?'▶ Enable':'⏸ Pause'}</div>
+          <div class="mr-action-btn revoke" onclick="revokeMrTool('${t.name}')">✕ Revoke</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    const dashEl = document.getElementById('citizenDashboard');
+    dashEl.innerHTML = CITIZEN_DASH_ROWS.map(r=>
+      `<div style="display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);flex:1;line-height:1.4">${r.q}</div>
+        <div style="font-size:11px;color:var(--text);flex:1;line-height:1.4">${r.a}</div>
+      </div>`
+    ).join('').replace(/<div style="display:flex.*border-bottom:1px solid var\(--border\).*<\/div>$/, s=>s.replace('border-bottom:1px solid var(--border)','border-bottom:none'));
+  }
+
+  function toggleMrTool(name) {
+    _toolStates[name] = _toolStates[name]==='paused' ? 'active' : 'paused';
+    localStorage.setItem('indx_eco_tools', JSON.stringify(_toolStates));
+    renderMrTools(); showToast(((_toolStates[name]==='paused'?'⏸ Paused: ':'▶ Enabled: ') + name));
+  }
+  function revokeMrTool(name) {
+    _toolStates[name] = 'revoked';
+    localStorage.setItem('indx_eco_tools', JSON.stringify(_toolStates));
+    showToast('✕ Tool revoked from Mission Room: ' + name); renderMrTools();
+  }
+
+  // ── GM4: ECOSYSTEM MAP ──
+  function renderEcoMap() {
+    const layersEl = document.getElementById('ecoLayers');
+    layersEl.innerHTML = ECO_LAYERS.map((l, li) => {
+      const isOpen = _openEcoLayer === l.num;
+      return `<div class="eco-layer ${isOpen?'open':''} fade-in" style="animation-delay:${li*0.04}s">
+        <div class="eco-layer-row" onclick="toggleEcoLayer('${l.num}')">
+          <div class="eco-layer-num" style="background:${l.color}18;color:${l.color}">${l.num}</div>
+          <div class="eco-layer-info">
+            <div class="eco-layer-title">${l.title}</div>
+            <div class="eco-layer-sub">${l.sub}</div>
+          </div>
+          <div class="eco-layer-chevron ${isOpen?'open':''}">›</div>
+        </div>
+        ${isOpen ? `<div class="eco-layer-expand show"><div class="eco-comp-grid">${l.components.map(c=>`<div class="eco-comp">${c}</div>`).join('')}</div></div>` : ''}
+      </div>`;
+    }).join('');
+
+    const stripEl = document.getElementById('partnerStrip');
+    stripEl.innerHTML = PARTNER_LEVELS.map(p=>
+      `<div class="partner-level"><div class="partner-level-num" style="color:${p.color}">${p.num}</div><div class="partner-level-name">${p.name}</div></div>`
+    ).join('');
+
+    const receivesEl = document.getElementById('partnerReceives');
+    receivesEl.innerHTML = PARTNER_RECEIVES.map((r,i)=>
+      `<div style="display:flex;gap:9px;padding:6px 0;border-bottom:1px solid var(--border);font-size:11px;color:var(--text2)"><span style="color:var(--cyan);font-weight:800;flex-shrink:0">${String(i+1).padStart(2,'0')}</span>${r}</div>`
+    ).join('');
+
+    const docEl = document.getElementById('ecoDoctrineLines');
+    docEl.innerHTML = ECO_DOCTRINE.map(d=>`<div class="doctrine-line">${d}</div>`).join('');
+  }
+
+  function toggleEcoLayer(num) { _openEcoLayer = _openEcoLayer===num ? null : num; renderEcoMap(); }
+
+  // ── TOAST ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'), 3200);
+  }
+
+  // ── INIT ──
+  window.addEventListener('DOMContentLoaded', () => {
+    renderConnFilters();
+    renderConnectors();
+    renderSkillFilters();
+    // Other tabs render on switch
+  });
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

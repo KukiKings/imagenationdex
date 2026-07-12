@@ -424,6 +424,40 @@
     cursor: pointer;
   }
 
+  /* ══ GOD MODE R2 — PROFILE.HTML ══ */
+  /* Feature 1: Profile completion meter */
+  .profile-completion-card{margin:0 20px 20px;background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:16px 18px;}
+  .pcc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .pcc-title{font-size:13px;font-weight:700;}
+  .pcc-pct{font-size:15px;font-weight:800;color:var(--cyan);}
+  .pcc-track{height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;margin-bottom:12px;}
+  .pcc-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--blue),var(--cyan));transition:width 0.9s ease;width:0%;}
+  .pcc-tasks{display:flex;flex-direction:column;gap:7px;}
+  .pcc-task{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);}
+  .pcc-task.done{color:var(--text-dim);text-decoration:line-through;}
+  .pcc-task .pct-icon{font-size:13px;flex-shrink:0;}
+  .pcc-task .pct-action{margin-left:auto;font-size:11px;font-weight:700;color:var(--cyan);cursor:pointer;white-space:nowrap;}
+  .pcc-task.done .pct-action{display:none;}
+  .pcc-complete-msg{font-size:12px;color:var(--green);font-weight:700;text-align:center;margin-top:8px;}
+
+  /* Feature 2: Inline bio editor */
+  .profile-bio-wrap{margin-top:12px;position:relative;}
+  .profile-bio{font-size:13px;color:var(--text-dim);cursor:text;border-bottom:1px dashed transparent;transition:border-color 0.2s;outline:none;min-height:18px;display:inline-block;min-width:60px;padding:2px 4px;}
+  .profile-bio:focus,.profile-bio.editing{border-bottom-color:rgba(0,212,255,0.4);color:var(--text);}
+  .bio-save-hint{font-size:10px;color:rgba(0,212,255,0.6);display:none;margin-top:4px;}
+  .bio-save-hint.show{display:block;}
+
+  /* Feature 3: Referral impact card */
+  .ref-impact-card{margin:0 20px 20px;background:linear-gradient(135deg,rgba(0,212,255,0.04),rgba(139,63,232,0.04));border:1px solid rgba(0,212,255,0.14);border-radius:16px;padding:16px 18px;}
+  .ric-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .ric-title{font-size:13px;font-weight:700;}
+  .ric-see-all{font-size:11px;color:var(--cyan);cursor:pointer;}
+  .ric-stats{display:flex;gap:0;}
+  .ric-stat{flex:1;text-align:center;padding:0 4px;border-right:1px solid var(--border);}
+  .ric-stat:last-child{border-right:none;}
+  .ric-val{font-size:16px;font-weight:800;color:var(--cyan);}
+  .ric-lbl{font-size:10px;color:var(--text-dim);margin-top:2px;}
+
   /* TOAST */
   .toast {
     position: fixed;
@@ -508,6 +542,11 @@
     <div class="badge node">📡 Node Operator</div>
     <div class="badge citizen">🏛️ Citizen</div>
   </div>
+  <!-- GOD MODE R2: Inline bio -->
+  <div class="profile-bio-wrap">
+    <div class="profile-bio" id="profileBio" contenteditable="true" spellcheck="false">Tap to add a bio…</div>
+    <div class="bio-save-hint" id="bioHint">↑ Tap away to save</div>
+  </div>
 </div>
 
 <!-- WISDOM SCORE -->
@@ -548,6 +587,16 @@
   </div>
 </div>
 
+<!-- GOD MODE R2: Profile completion meter -->
+<div class="profile-completion-card" id="profileCompCard">
+  <div class="pcc-header">
+    <div class="pcc-title">Profile Completion</div>
+    <div class="pcc-pct" id="pccPct">0%</div>
+  </div>
+  <div class="pcc-track"><div class="pcc-fill" id="pccFill"></div></div>
+  <div class="pcc-tasks" id="pccTasks"></div>
+</div>
+
 <!-- STATS -->
 <div class="stats-row">
   <div class="stat-box">
@@ -567,6 +616,20 @@
 <!-- RECENT ACTIVITY FEED -->
 <div class="section-title" id="activityTitle" style="display:none;">Recent Activity</div>
 <div class="activity-feed-section" id="activityFeed"></div>
+
+<!-- GOD MODE R2: Referral impact card -->
+<div class="ref-impact-card" id="refImpactCard">
+  <div class="ric-header">
+    <div class="ric-title">🤝 Referral Impact</div>
+    <div class="ric-see-all" onclick="window.location.href='referral.html'">See details ›</div>
+  </div>
+  <div class="ric-stats">
+    <div class="ric-stat"><div class="ric-val" id="ricShares">0</div><div class="ric-lbl">Invites Sent</div></div>
+    <div class="ric-stat"><div class="ric-val" id="ricCitizens">0</div><div class="ric-lbl">Joined</div></div>
+    <div class="ric-stat"><div class="ric-val" id="ricEarned" style="color:var(--green)">0 INDX</div><div class="ric-lbl">Earned</div></div>
+    <div class="ric-stat"><div class="ric-val" id="ricUSD">$0.00</div><div class="ric-lbl">USD Value</div></div>
+  </div>
+</div>
 
 <!-- SOVEREIGN ID CARD -->
 <div class="section-title">Sovereign Identity</div>
@@ -1036,6 +1099,128 @@
     if (h < 24) return h + 'h ago';
     return Math.floor(h/24) + 'd ago';
   }
+
+  // ══ GOD MODE R2 ══════════════════════════════════════════════
+  (function godModeProfileR2() {
+    const BIO_KEY  = 'indx_profile_bio';
+    const VIEW_KEY = 'indx_profile_views';
+
+    // Feature 2: Inline bio editor
+    function initBio() {
+      var bioEl  = document.getElementById('profileBio');
+      var hintEl = document.getElementById('bioHint');
+      if (!bioEl) return;
+      var saved = localStorage.getItem(BIO_KEY) || '';
+      if (saved) {
+        bioEl.textContent = saved;
+        bioEl.style.color = '';
+      } else {
+        bioEl.textContent = 'Tap to add a bio…';
+        bioEl.style.color = 'var(--text-dim)';
+      }
+      bioEl.addEventListener('focus', function() {
+        if (bioEl.textContent === 'Tap to add a bio…') {
+          bioEl.textContent = '';
+          bioEl.style.color = '';
+        }
+        if (hintEl) hintEl.classList.add('show');
+      });
+      bioEl.addEventListener('blur', function() {
+        var txt = bioEl.textContent.trim();
+        if (!txt) {
+          bioEl.textContent = 'Tap to add a bio…';
+          bioEl.style.color = 'var(--text-dim)';
+          localStorage.removeItem(BIO_KEY);
+        } else {
+          localStorage.setItem(BIO_KEY, txt);
+          showToast('✓ Bio saved');
+        }
+        if (hintEl) hintEl.classList.remove('show');
+        // Rebuild completion after bio change
+        buildCompletionCard();
+      });
+    }
+
+    // Feature 1: Profile completion meter
+    var PROFILE_TASKS = [
+      { label: 'Add display name',     icon: '👤', done: function(){ return !!(sessionStorage.getItem('citizen_name')); },                          action: function(){ openEditSheet(); } },
+      { label: 'Write a bio',          icon: '✍️', done: function(){ return !!(localStorage.getItem(BIO_KEY)); },                                   action: function(){ var b=document.getElementById('profileBio'); if(b)b.focus(); } },
+      { label: 'Choose an avatar',     icon: '🎭', done: function(){ return !!(localStorage.getItem('indx_profile_avatar')); },                     action: function(){ openEditSheet(); } },
+      { label: 'Complete verification',icon: '🔐', done: function(){ return parseInt(sessionStorage.getItem('citizen_wisdom')||'0')>0; },            action: function(){ window.location.href='sovereign-verify.html'; } },
+      { label: 'Make first referral',  icon: '🤝', done: function(){ return JSON.parse(localStorage.getItem('indx_ref_pending')||'[]').length>0; }, action: function(){ window.location.href='referral.html'; } }
+    ];
+
+    function buildCompletionCard() {
+      var card  = document.getElementById('profileCompCard');
+      var fill  = document.getElementById('pccFill');
+      var tasksEl = document.getElementById('pccTasks');
+      var pctEl = document.getElementById('pccPct');
+      if (!card) return;
+      var doneCount = PROFILE_TASKS.filter(function(t){ return t.done(); }).length;
+      var total = PROFILE_TASKS.length;
+      var pct = Math.round((doneCount / total) * 100);
+      pctEl.textContent = pct + '%';
+      setTimeout(function(){ fill.style.width = pct + '%'; }, 400);
+      if (pct === 100) {
+        card.style.borderColor = 'rgba(0,229,160,0.3)';
+        tasksEl.innerHTML = '<div class="pcc-complete-msg">🎉 Profile complete — you\'re fully sovereign!</div>';
+      } else {
+        tasksEl.innerHTML = PROFILE_TASKS.map(function(t, i) {
+          var isDone = t.done();
+          return '<div class="pcc-task' + (isDone ? ' done' : '') + '">' +
+            '<span class="pct-icon">' + (isDone ? '✅' : t.icon) + '</span>' +
+            '<span>' + t.label + '</span>' +
+            (isDone ? '' : '<span class="pct-action" data-task="' + i + '">Do it →</span>') +
+          '</div>';
+        }).join('');
+        tasksEl.querySelectorAll('.pct-action').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var idx = parseInt(btn.getAttribute('data-task'));
+            if (PROFILE_TASKS[idx]) PROFILE_TASKS[idx].action();
+          });
+        });
+      }
+    }
+
+    // Feature 3: Referral impact card
+    function buildReferralCard() {
+      var pending = JSON.parse(localStorage.getItem('indx_ref_pending') || '[]');
+      var totalShares   = pending.length;
+      var totalCitizens = Math.floor(totalShares * 0.6);
+      var earnedINDX    = totalCitizens * 10;
+      var earnedUSD     = (earnedINDX * 0.24).toFixed(2);
+      var el;
+      el = document.getElementById('ricShares');   if(el) el.textContent = totalShares;
+      el = document.getElementById('ricCitizens'); if(el) el.textContent = totalCitizens;
+      el = document.getElementById('ricEarned');   if(el) el.textContent = earnedINDX + ' INDX';
+      el = document.getElementById('ricUSD');      if(el) el.textContent = '$' + earnedUSD;
+    }
+
+    // Feature 4: Profile view counter
+    function updateViewCounter() {
+      var raw = JSON.parse(localStorage.getItem(VIEW_KEY) || '{"count":0,"month":""}');
+      var thisMonth = new Date().toISOString().slice(0, 7);
+      if (raw.month !== thisMonth) { raw.count = 0; raw.month = thisMonth; }
+      raw.count++;
+      localStorage.setItem(VIEW_KEY, JSON.stringify(raw));
+      var statBoxes = document.querySelectorAll('.stat-box');
+      if (statBoxes[2]) {
+        statBoxes[2].querySelector('.num').textContent = raw.count;
+        statBoxes[2].querySelector('.lbl').textContent = 'Profile Views';
+      }
+      // Also update Citizens Referred from referral pending
+      var pending = JSON.parse(localStorage.getItem('indx_ref_pending') || '[]');
+      if (statBoxes[1]) {
+        statBoxes[1].querySelector('.num').textContent = pending.length;
+      }
+    }
+
+    // Init all
+    initBio();
+    buildCompletionCard();
+    buildReferralCard();
+    updateViewCounter();
+  })();
 </script>
 
 <div class="bottom-nav-spacer"></div>
@@ -1061,5 +1246,6 @@
     <div class="nav-label">Profile</div>
   </div>
 </nav>
+<script src="siindex-speak-core.js"></script>
 </body>
 </html>

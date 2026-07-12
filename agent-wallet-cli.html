@@ -52,6 +52,10 @@
     .as-buttons{display:flex;gap:8px;}
     .btn-approve{flex:1;padding:14px;border-radius:12px;background:var(--green);border:none;color:#000;font-size:14px;font-weight:800;cursor:pointer;font-family:sans-serif;}
     .btn-reject{flex:1;padding:14px;border-radius:12px;background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.2);color:var(--red);font-size:14px;font-weight:700;cursor:pointer;font-family:sans-serif;}
+
+    /* GOD MODE: TAP-TO-COPY TX HASH */
+    .copy-tx{cursor:pointer;text-decoration:underline dotted;}
+    .copy-tx:active{opacity:0.6;}
   </style>
 </head>
 <body>
@@ -59,7 +63,7 @@
   <div class="topbar">
     <button class="tb-back" onclick="history.back()">←</button>
     <div class="tb-title">SIINDEX AGENT CLI v1.0</div>
-    <div class="tb-dot"></div>
+    <div class="tb-dot" id="tbDot"></div>
   </div>
 
   <div class="terminal" id="terminal"></div>
@@ -129,7 +133,7 @@ const MARKET_STREAM = [
   {txt:'  <span class="c-muted">Amount $40.00 below 2FA threshold ($250)</span>', delay:5000},
   {txt:'  <span class="c-green">✓ AUTO-SIGNING</span> policy check passed', delay:5300},
   {txt:'  <span class="c-muted">Broadcasting via Jito bundle...</span>', delay:5600},
-  {txt:'  <span class="c-green">✓ CONFIRMED</span> slot 284,192,841 · 0.4s · <span class="c-cyan">tx: 3xKm...9pQr</span>', delay:6000},
+  {txt:'  <span class="c-green">✓ CONFIRMED</span> slot 284,192,841 · 0.4s · <span class="c-cyan copy-tx" onclick="copyTx(\'3xKm9pQr\')">tx: 3xKm...9pQr</span>', delay:6000},
   {txt:'  <span class="c-muted">Coverage: $40.00 applied → $280/$10,000 used this month</span>', delay:6300},
   {txt:'', delay:6600},
   {txt:'<span class="c-muted">[market]</span> Monitoring price bands... INDX holding above $0.241', delay:7200},
@@ -205,7 +209,7 @@ function approveTransaction(){
   printLine('<span class="c-green">✓ 2FA APPROVED</span> biometric verified');
   printLine('  <span class="c-muted">Broadcasting via Jito bundle...</span>');
   setTimeout(()=>{
-    printLine('  <span class="c-green">✓ CONFIRMED</span> slot 284,192,998 · 0.5s · <span class="c-cyan">tx: 8mNp...4kWx</span>');
+    printLine('  <span class="c-green">✓ CONFIRMED</span> slot 284,192,998 · 0.5s · <span class="c-cyan copy-tx" onclick="copyTx(\'8mNp4kWx\')">tx: 8mNp...4kWx</span>');
     printLine('  <span class="c-muted">Coverage: $307.00 applied → $587/$10,000 used this month</span>');
     printLine('');
     printLine('<span class="c-muted">[agent]</span> Resuming market monitoring...');
@@ -238,13 +242,24 @@ const COMMANDS = {
     '  PQSI: <span class="c-green">ON</span>  MEV protection: <span class="c-green">ON</span>',
   ],
   'pause': ()=>{
-    setTimeout(()=>printLine('<span class="c-gold">⏸ Agent paused no transactions will execute</span>'),200);
+    setTimeout(()=>{
+      printLine('<span class="c-gold">⏸ Agent paused no transactions will execute</span>');
+      // GOD MODE PATCH: reflect paused state on the status dot, not just terminal text
+      const dot=document.getElementById('tbDot');
+      if(dot){dot.style.background='rgba(255,255,255,0.15)';dot.style.animation='none';}
+    },200);
     return['<span class="c-muted">Pausing agent...</span>'];
   },
   'resume': ()=>{
-    setTimeout(()=>printLine('<span class="c-green">▶ Agent resumed</span>'),200);
+    setTimeout(()=>{
+      printLine('<span class="c-green">▶ Agent resumed</span>');
+      // GOD MODE PATCH: restore the blinking active dot
+      const dot=document.getElementById('tbDot');
+      if(dot){dot.style.background='var(--green)';dot.style.animation='blink 1.2s step-end infinite';}
+    },200);
     return['<span class="c-muted">Resuming agent...</span>'];
   },
+  'clear': ()=>{term.innerHTML='';return[];},
   'help': ()=>[
     '<span class="c-cyan">COMMANDS</span>',
     '  status    agent health + coverage',
@@ -253,7 +268,9 @@ const COMMANDS = {
     '  resume    resume agent execution',
     '  scan [tx] PQSI scan a transaction',
     '  history   last 10 transactions',
+    '  clear     clear the terminal',
     '  help      this menu',
+    '  <span class="c-muted">tip: ↑ / ↓ recall previous commands · tap any tx hash to copy it</span>',
   ],
   'history': ()=>[
     '<span class="c-cyan">RECENT TRANSACTIONS</span>',
@@ -265,13 +282,43 @@ const COMMANDS = {
   ],
 };
 
-function handleInput(e){if(e.key==='Enter')sendCommand();}
+// GOD MODE: PERSISTED COMMAND HISTORY + ARROW RECALL
+let cmdHistory=JSON.parse(localStorage.getItem('indx_cli_history')||'[]');
+let historyIdx=cmdHistory.length;
+
+function handleInput(e){
+  if(e.key==='Enter'){sendCommand();return;}
+  if(e.key==='ArrowUp'){
+    e.preventDefault();
+    if(historyIdx>0){historyIdx--;document.getElementById('cliInput').value=cmdHistory[historyIdx]||'';}
+    return;
+  }
+  if(e.key==='ArrowDown'){
+    e.preventDefault();
+    if(historyIdx<cmdHistory.length-1){historyIdx++;document.getElementById('cliInput').value=cmdHistory[historyIdx]||'';}
+    else{historyIdx=cmdHistory.length;document.getElementById('cliInput').value='';}
+    return;
+  }
+}
+
+// GOD MODE: TAP-TO-COPY TX HASH
+function copyTx(hash){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(hash).catch(()=>{});
+  }
+  printLine('<span class="c-muted">✓ copied full tx signature to clipboard</span>');
+}
 
 function sendCommand(){
   const input=document.getElementById('cliInput');
   const cmd=input.value.trim().toLowerCase();
   if(!cmd)return;
   input.value='';
+  // GOD MODE PATCH: record command in persisted history
+  cmdHistory.push(cmd);
+  if(cmdHistory.length>20)cmdHistory.shift();
+  localStorage.setItem('indx_cli_history',JSON.stringify(cmdHistory));
+  historyIdx=cmdHistory.length;
   printLine(`<span class="prompt">agent@indx:~$</span> <span class="c-white">${cmd}</span>`);
   const fn=COMMANDS[cmd.split(' ')[0]];
   if(fn){
@@ -289,5 +336,6 @@ function sendCommand(){
 
 startCLI();
 </script>
+<script src="siindex-speak-core.js"></script>
 </body>
 </html>

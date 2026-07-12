@@ -126,6 +126,40 @@
   .tds-val { font-weight:700; max-width:60%; text-align:right; word-break:break-all; }
   .tds-close { width:100%; padding:14px; border-radius:12px; border:1px solid var(--border); background:none; color:var(--text-dim); font-size:14px; cursor:pointer; margin-top:20px; }
 
+  /* ══ GOD MODE R1 — HISTORY.HTML ══ */
+
+  /* Feature 1: Date range filter strip */
+  .date-filter-strip{display:none;gap:8px;padding:0 20px 12px;flex-wrap:wrap;}
+  .date-filter-strip.show{display:flex;}
+  .df-chip{padding:7px 14px;border-radius:20px;font-size:13px;font-weight:600;background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);cursor:pointer;white-space:nowrap;transition:all 0.2s;}
+  .df-chip.active{background:rgba(0,212,255,0.10);border-color:rgba(0,212,255,0.30);color:var(--cyan);}
+
+  /* Feature 2: Spending insights bar */
+  .insights-strip{margin:0 20px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:12px 14px;}
+  .insights-title{font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;}
+  .insights-bar-wrap{height:7px;border-radius:4px;overflow:hidden;display:flex;gap:1px;margin-bottom:8px;}
+  .insights-seg{height:100%;transition:width 0.7s ease;}
+  .insights-seg.earn{background:var(--green);}
+  .insights-seg.send{background:var(--red);}
+  .insights-seg.swap{background:var(--purple);}
+  .insights-seg.other{background:var(--text-dim);}
+  .insights-legend{display:flex;gap:10px;flex-wrap:wrap;}
+  .ins-leg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-dim);}
+  .ins-dot{width:7px;height:7px;border-radius:50%;}
+  .ins-dot.earn{background:var(--green);}
+  .ins-dot.send{background:var(--red);}
+  .ins-dot.swap{background:var(--purple);}
+  .ins-dot.other{background:var(--text-dim);}
+
+  /* Feature 3: Transaction star/favourite */
+  .tx-star{font-size:16px;cursor:pointer;padding:4px 6px;opacity:0.28;transition:opacity 0.2s,transform 0.2s;flex-shrink:0;-webkit-user-select:none;user-select:none;}
+  .tx-star.starred{opacity:1;transform:scale(1.18);}
+  .tds-action-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:13px;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;transition:background 0.2s;border:none;margin-top:8px;}
+  .tds-repeat{background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.25) !important;color:var(--cyan);}
+  .tds-star{background:rgba(255,184,0,0.06);border:1px solid rgba(255,184,0,0.2) !important;color:var(--gold);}
+  .tds-repeat:active{background:rgba(0,212,255,0.18);}
+  .tds-star:active{background:rgba(255,184,0,0.14);}
+
   /* BOTTOM NAV */
   .bottom-nav-spacer{height:64px;}
   .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(16,18,26,0.96);backdrop-filter:blur(16px);border-top:1px solid #252836;display:flex;z-index:80;}
@@ -135,6 +169,7 @@
   .nav-label{font-size:10px;font-weight:600;color:#F0F2FF;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
+<script src="js/indx-db.js"></script>
 </head>
 <body>
 
@@ -144,7 +179,7 @@
     <div class="header-title">Transaction History</div>
     <div class="header-sub">All activity on your sovereign wallet</div>
   </div>
-  <div class="filter-icon" onclick="showToast('📅 Date filter coming Wave 1')">⚙️</div>
+  <div class="filter-icon" onclick="toggleDateFilter()">⚙️</div>
   <div class="export-btn" onclick="exportHistory()">📋 Export</div>
 </div>
 
@@ -170,6 +205,23 @@
   </div>
 </div>
 
+<!-- GOD MODE R1: Spending insights bar -->
+<div class="insights-strip" id="insightsStrip">
+  <div class="insights-title">Activity Breakdown</div>
+  <div class="insights-bar-wrap">
+    <div class="insights-seg earn" id="insSeg_earn" style="width:34%"></div>
+    <div class="insights-seg send" id="insSeg_send" style="width:22%"></div>
+    <div class="insights-seg swap" id="insSeg_swap" style="width:27%"></div>
+    <div class="insights-seg other" id="insSeg_other" style="width:17%"></div>
+  </div>
+  <div class="insights-legend">
+    <div class="ins-leg" id="insLeg_earn"><div class="ins-dot earn"></div><span>In/Earn 34%</span></div>
+    <div class="ins-leg" id="insLeg_send"><div class="ins-dot send"></div><span>Sent 22%</span></div>
+    <div class="ins-leg" id="insLeg_swap"><div class="ins-dot swap"></div><span>Swap 27%</span></div>
+    <div class="ins-leg" id="insLeg_other"><div class="ins-dot other"></div><span>Other 17%</span></div>
+  </div>
+</div>
+
 <!-- GOD MODE: Search bar -->
 <div class="search-bar-wrap">
   <div class="search-bar">
@@ -189,6 +241,14 @@
   <div class="chip" onclick="filterTx(this,'send')">📤 Sent</div>
   <div class="chip" onclick="filterTx(this,'recv')">📥 Received</div>
   <div class="chip" onclick="filterTx(this,'mkt')">🏪 Market</div>
+</div>
+
+<!-- GOD MODE R1: Date range filter strip -->
+<div class="date-filter-strip" id="dateFilterStrip">
+  <div class="df-chip active" onclick="setDateRange(this,'all')">All Time</div>
+  <div class="df-chip" onclick="setDateRange(this,'today')">Today</div>
+  <div class="df-chip" onclick="setDateRange(this,'week')">7 Days</div>
+  <div class="df-chip" onclick="setDateRange(this,'month')">30 Days</div>
 </div>
 
 <!-- TRANSACTIONS -->
@@ -332,9 +392,8 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDgwNTgxNjIsImV4cCI6MjA2MzYzNDE2Mn0.MN3iqtmL5H68_SIyR-UeMixCPkZJO9aMuiuCJjE3OGs';
-  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // ── INDXDB shared client (canonical ANON key, singleton) ──
+  const sb = INDXDB.getClient();
 
   const DIR_META = {
     send:   { icon:'📤', cat:'send',  cls:'send',  label:'Sent',     sign:'-' },
@@ -622,6 +681,207 @@
   document.getElementById('txDetailOverlay').addEventListener('click', function(e) {
     if (e.target === this) closeTxDetail();
   });
+
+  /* ══ GOD MODE R1 JS — HISTORY.HTML ══ */
+  (function godModeHistoryR1() {
+    const FAVS_KEY = 'indx_history_favs';
+
+    // ─── Feature 1: Date range filter ───
+    function toggleDateFilter() {
+      document.getElementById('dateFilterStrip').classList.toggle('show');
+    }
+    window.toggleDateFilter = toggleDateFilter;
+
+    function parseSectionLabelDate(text) {
+      const now = new Date();
+      if (text === 'Today') return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      if (text === 'Yesterday') {
+        const y = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        y.setDate(y.getDate() - 1);
+        return y;
+      }
+      // Try "Thursday, Jul 3" → add current year
+      const candidate = text.includes(now.getFullYear()) ? text : text + ', ' + now.getFullYear();
+      const parsed = new Date(candidate);
+      if (!isNaN(parsed)) return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+      return null;
+    }
+
+    function applyDateFilter(range) {
+      const realEl = document.getElementById('txReal');
+      if (range === 'all' || !realEl || !realEl.children.length) {
+        document.querySelectorAll('#txReal .section-label, #txReal .tx-item').forEach(el => el.style.display = '');
+        return;
+      }
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      let cutoff = null;
+      if (range === 'today') {
+        cutoff = today;
+      } else if (range === 'week') {
+        cutoff = new Date(today); cutoff.setDate(cutoff.getDate() - 6);
+      } else if (range === 'month') {
+        cutoff = new Date(today); cutoff.setDate(cutoff.getDate() - 29);
+      }
+      let sectionDate = null, sectionShow = true;
+      Array.from(realEl.children).forEach(el => {
+        if (el.classList.contains('section-label')) {
+          sectionDate = parseSectionLabelDate(el.textContent.trim());
+          sectionShow = !cutoff || !sectionDate || sectionDate >= cutoff;
+          el.style.display = sectionShow ? '' : 'none';
+        } else if (el.classList.contains('tx-item')) {
+          el.style.display = sectionShow ? 'flex' : 'none';
+        }
+      });
+    }
+
+    // GOD MODE PATCH: date range chip handler
+    window.setDateRange = function(el, range) {
+      document.querySelectorAll('.df-chip').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      applyDateFilter(range);
+    };
+
+    // ─── Feature 2: Spending insights bar ───
+    function buildInsightsBar() {
+      const items = document.querySelectorAll('.tx-item');
+      let earn = 0, send = 0, swap = 0, other = 0;
+      items.forEach(item => {
+        const cat = item.dataset.cat || '';
+        if (cat === 'earn' || cat === 'recv' || cat === 'dep') earn++;
+        else if (cat === 'send' || cat === 'with') send++;
+        else if (cat === 'swap') swap++;
+        else other++;
+      });
+      const total = earn + send + swap + other;
+      if (!total) return;
+      const pct = n => Math.max(3, Math.round(n / total * 100));
+      const setLeg = (id, label) => {
+        const el = document.getElementById(id);
+        if (el) el.querySelector('span').textContent = label;
+      };
+      document.getElementById('insSeg_earn').style.width  = pct(earn)  + '%';
+      document.getElementById('insSeg_send').style.width  = pct(send)  + '%';
+      document.getElementById('insSeg_swap').style.width  = pct(swap)  + '%';
+      document.getElementById('insSeg_other').style.width = pct(other) + '%';
+      setLeg('insLeg_earn',  'In/Earn '  + pct(earn)  + '%');
+      setLeg('insLeg_send',  'Sent '     + pct(send)  + '%');
+      setLeg('insLeg_swap',  'Swap '     + pct(swap)  + '%');
+      setLeg('insLeg_other', 'Other '    + pct(other) + '%');
+    }
+
+    // ─── Feature 3: Transaction favourites ───
+    function getFavs() {
+      try { return new Set(JSON.parse(localStorage.getItem(FAVS_KEY) || '[]')); }
+      catch(e) { return new Set(); }
+    }
+    function saveFavs(set) {
+      localStorage.setItem(FAVS_KEY, JSON.stringify([...set]));
+    }
+    function toggleFav(txKey, btnEl) {
+      const favs = getFavs();
+      if (favs.has(txKey)) {
+        favs.delete(txKey);
+        btnEl.textContent = '☆ Bookmark Transaction';
+        btnEl.style.opacity = '0.7';
+        showToast('Bookmark removed');
+      } else {
+        favs.add(txKey);
+        btnEl.textContent = '★ Bookmarked';
+        btnEl.style.opacity = '1';
+        showToast('⭐ Transaction bookmarked');
+      }
+      saveFavs(favs);
+    }
+    function filterStarred() {
+      const favs = getFavs();
+      document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      document.querySelector('.chip[data-cat="fav"]')?.classList.add('active');
+      document.querySelectorAll('.tx-item').forEach(item => {
+        const key = item.dataset.favkey || '';
+        item.style.display = (key && favs.has(key)) ? 'flex' : 'none';
+      });
+    }
+    function tagTxItems() {
+      document.querySelectorAll('.tx-item').forEach(item => {
+        if (!item.dataset.favkey) {
+          const title = item.querySelector('.tx-title')?.textContent?.trim() || '';
+          const amt   = item.querySelector('.tx-amount')?.textContent?.trim() || '';
+          item.dataset.favkey = (title + amt).replace(/\s+/g, '_').substring(0, 40);
+        }
+      });
+    }
+    function initStarredChip() {
+      const filtersEl = document.querySelector('.filters');
+      if (filtersEl && !filtersEl.querySelector('[data-cat="fav"]')) {
+        const chip = document.createElement('div');
+        chip.className = 'chip';
+        chip.dataset.cat = 'fav';
+        chip.textContent = '⭐ Starred';
+        chip.onclick = filterStarred;
+        filtersEl.appendChild(chip);
+      }
+    }
+
+    // ─── Feature 4: Quick repeat send ───
+    function repeatSend(amount, title) {
+      const draftAmt = amount.replace(/[^0-9.]/g, '');
+      localStorage.setItem('indx_send_draft', JSON.stringify({ amount: draftAmt, memo: 'Repeat: ' + title.substring(0, 30) }));
+      window.location.href = 'send.html';
+    }
+
+    // ─── GOD MODE PATCH: inject star + repeat into long-press sheet ───
+    // Observe txDetailOverlay for class='open' addition, then inject action buttons
+    const overlayEl = document.getElementById('txDetailOverlay');
+    new MutationObserver(function(mutations) {
+      mutations.forEach(function(m) {
+        if (m.type === 'attributes' && m.attributeName === 'class' && overlayEl.classList.contains('open')) {
+          const tds = document.getElementById('tdsContent');
+          if (!tds || tds.querySelector('.tds-action-btn')) return;
+          const catRow = [...tds.querySelectorAll('.tds-row')].find(r => r.querySelector('.tds-lbl')?.textContent === 'Category');
+          const cat    = catRow?.querySelector('.tds-val')?.textContent?.trim() || '';
+          const amtEl  = tds.querySelector('div[style*="font-size:22px"]');
+          const titleEl = tds.querySelector('div[style*="font-size:13px"]');
+          const amt    = amtEl?.textContent?.trim() || '';
+          const title  = titleEl?.textContent?.trim() || '';
+          const txKey  = (title + amt).replace(/\s+/g, '_').substring(0, 40);
+          const favs   = getFavs();
+          const starred = favs.has(txKey);
+
+          const starBtn = document.createElement('button');
+          starBtn.className = 'tds-action-btn tds-star';
+          starBtn.textContent = starred ? '★ Bookmarked' : '☆ Bookmark Transaction';
+          starBtn.style.opacity = starred ? '1' : '0.7';
+          starBtn.onclick = function() { toggleFav(txKey, starBtn); };
+          tds.appendChild(starBtn);
+
+          if (cat === 'send' || cat === 'with') {
+            const repeatBtn = document.createElement('button');
+            repeatBtn.className = 'tds-action-btn tds-repeat';
+            repeatBtn.textContent = '🔁 Repeat Send';
+            repeatBtn.onclick = function() { closeTxDetail(); repeatSend(amt, title); };
+            tds.appendChild(repeatBtn);
+          }
+        }
+      });
+    }).observe(overlayEl, { attributes: true });
+
+    // ─── Init ───
+    function init() {
+      initStarredChip();
+      // Build insights + tag items after async data load settles
+      setTimeout(function() {
+        tagTxItems();
+        buildInsightsBar();
+      }, 900);
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  })();
 </script>
 
 <div class="bottom-nav-spacer"></div>
@@ -647,5 +907,6 @@
     <div class="nav-label">Profile</div>
   </div>
 </nav>
+<script src="siindex-speak-core.js"></script>
 </body>
 </html>

@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>PQSI Provenance Engine — IN$DEX</title>
+<style>
+  :root {
+    --cyan:    #00D4FF;
+    --blue:    #2B35D8;
+    --purple:  #8B3FE8;
+    --black:   #090A10;
+    --green:   #00E5A0;
+    --gold:    #FFB800;
+    --red:     #FF4D6D;
+    --surface: #12141F;
+    --surface2:#1A1D2E;
+    --surface3:#22263A;
+    --text:    #FFFFFF;
+    --text2:   #A0A8C0;
+    --muted:   #5A6080;
+    --border:  rgba(255,255,255,0.07);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: var(--black); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    max-width: 430px; margin: 0 auto; min-height: 100vh;
+    padding-bottom: 90px; overflow-x: hidden;
+  }
+
+  /* ── NAV ── */
+  .nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 52px 20px 16px; position: sticky; top: 0;
+    background: rgba(9,10,16,0.95); backdrop-filter: blur(16px);
+    z-index: 100; border-bottom: 1px solid var(--border);
+  }
+  .nav-back { font-size: 20px; cursor: pointer; color: var(--text2); }
+  .nav-title { font-size: 15px; font-weight: 700; }
+  .nav-badge {
+    background: rgba(139,63,232,0.15); border: 1px solid rgba(139,63,232,0.5);
+    color: var(--purple); font-size: 10px; font-weight: 700;
+    padding: 3px 8px; border-radius: 20px; letter-spacing: 0.5px;
+  }
+
+  /* ── HERO ── */
+  .hero { padding: 32px 20px 24px; text-align: center; position: relative; overflow: hidden; }
+  .hero::before {
+    content: ''; position: absolute; top: -60px; left: 50%; transform: translateX(-50%);
+    width: 340px; height: 340px;
+    background: radial-gradient(circle, rgba(139,63,232,0.14) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-tag {
+    display: inline-block;
+    background: rgba(139,63,232,0.15); border: 1px solid rgba(139,63,232,0.4);
+    color: var(--purple); font-size: 10px; font-weight: 800;
+    letter-spacing: 1.5px; padding: 5px 14px; border-radius: 20px;
+    text-transform: uppercase; margin-bottom: 16px;
+  }
+  .hero h1 { font-size: 24px; font-weight: 800; line-height: 1.25; margin-bottom: 12px; letter-spacing: -0.5px; }
+  .hero h1 span { color: var(--purple); }
+  .hero-sub { font-size: 13px; color: var(--text2); line-height: 1.6; max-width: 320px; margin: 0 auto 20px; }
+  .hero-lock {
+    background: var(--surface); border: 1px solid rgba(139,63,232,0.25);
+    border-radius: 12px; padding: 14px 16px;
+    font-size: 12px; color: var(--text2); font-style: italic; line-height: 1.55;
+  }
+  .hero-lock::before { content: '💡 '; font-style: normal; }
+
+  /* ── STAT ROW ── */
+  .stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 0 20px 24px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 10px; text-align: center; }
+  .stat-val { font-size: 17px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+  .stat-label { font-size: 10px; color: var(--text2); font-weight: 600; letter-spacing: 0.3px; line-height: 1.3; }
+
+  /* ── SECTION HEADER ── */
+  .section-hdr { display: flex; align-items: center; justify-content: space-between; padding: 0 20px 12px; }
+  .section-hdr h2 { font-size: 14px; font-weight: 800; }
+  .section-hdr span { font-size: 11px; color: var(--text2); font-weight: 600; }
+
+  /* ── CARD BASE ── */
+  .card { margin: 0 20px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; }
+  .card-hdr { display: flex; align-items: center; gap: 10px; padding: 16px 16px 12px; border-bottom: 1px solid var(--border); }
+  .card-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .card-title { font-size: 13px; font-weight: 700; }
+  .card-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  /* ── STATUS BADGE ── */
+  .status-badge { display: inline-block; font-size: 9px; font-weight: 800; padding: 3px 9px; border-radius: 20px; letter-spacing: 0.4px; white-space: nowrap; }
+  .sb-draft         { background: rgba(90,96,128,0.2);   color: var(--muted);  border: 1px solid rgba(90,96,128,0.3); }
+  .sb-verified      { background: rgba(0,212,255,0.1);   color: var(--cyan);   border: 1px solid rgba(0,212,255,0.3); }
+  .sb-needs         { background: rgba(255,184,0,0.1);   color: var(--gold);   border: 1px solid rgba(255,184,0,0.3); }
+  .sb-approved      { background: rgba(0,229,160,0.1);   color: var(--green);  border: 1px solid rgba(0,229,160,0.3); }
+  .sb-published     { background: rgba(0,229,160,0.18);  color: var(--green);  border: 1px solid rgba(0,229,160,0.5); }
+  .sb-archived      { background: rgba(90,96,128,0.15);  color: var(--muted);  border: 1px solid rgba(90,96,128,0.25); }
+  .sb-revoked       { background: rgba(255,77,109,0.1);  color: var(--red);    border: 1px solid rgba(255,77,109,0.3); }
+  .sb-corrected     { background: rgba(139,63,232,0.1);  color: var(--purple); border: 1px solid rgba(139,63,232,0.3); }
+
+  /* ── FADE IN ── */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in { animation: fadeUp 0.35s ease both; }
+
+  /* ── GM1: ARTIFACT LEDGER ── */
+  .ledger-filter { display: flex; gap: 6px; padding: 10px 16px; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+  .ledger-filter::-webkit-scrollbar { display: none; }
+  .lf-tab { font-size: 10px; font-weight: 800; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface3); color: var(--text2); cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all 0.15s; }
+  .lf-tab.active { background: rgba(139,63,232,0.15); border-color: rgba(139,63,232,0.4); color: var(--purple); }
+  .artifact-item {
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    cursor: pointer; transition: background 0.15s;
+  }
+  .artifact-item:last-child { border-bottom: none; }
+  .artifact-item:hover { background: rgba(255,255,255,0.02); }
+  .artifact-item-row { display: flex; align-items: center; gap: 10px; }
+  .artifact-item-icon { font-size: 22px; flex-shrink: 0; width: 32px; text-align: center; }
+  .artifact-item-info { flex: 1; min-width: 0; }
+  .artifact-item-type { font-size: 12px; font-weight: 700; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .artifact-item-owner { font-size: 10px; color: var(--text2); margin-bottom: 3px; }
+  .artifact-item-meta { display: flex; align-items: center; gap: 6px; }
+  .artifact-item-id { font-size: 9px; color: var(--muted); font-family: monospace; }
+  .artifact-item-ts { font-size: 9px; color: var(--muted); margin-left: auto; }
+  .artifact-chevron { font-size: 13px; color: var(--muted); flex-shrink: 0; transition: transform 0.2s; }
+  .artifact-chevron.open { transform: rotate(90deg); }
+  /* Provenance expansion */
+  .prov-panel { display: none; padding: 0 16px 14px; }
+  .prov-panel.show { display: block; }
+  .prov-section-lbl { font-size: 10px; font-weight: 800; color: var(--text2); letter-spacing: 0.5px; text-transform: uppercase; margin: 10px 0 6px; }
+  .prov-field { font-size: 11px; color: var(--text2); margin-bottom: 5px; line-height: 1.5; }
+  .prov-field strong { color: var(--text); font-weight: 700; }
+  .prov-risk-row { display: flex; gap: 8px; margin-bottom: 4px; font-size: 11px; }
+  .prov-risk-key { color: var(--text2); font-weight: 600; width: 80px; flex-shrink: 0; }
+  .prov-risk-val { flex: 1; font-weight: 600; }
+  .prov-risk-val.pass { color: var(--green); }
+  .prov-risk-val.warn { color: var(--gold); }
+  .prov-versions { font-size: 11px; color: var(--cyan); line-height: 1.55; }
+  .prov-human { font-size: 11px; line-height: 1.5; padding: 8px 10px; border-radius: 10px; margin-top: 4px; background: var(--surface3); }
+
+  /* ── GM2: PROVENANCE CARD BUILDER ── */
+  .pcb-intro { padding: 12px 16px; font-size: 12px; color: var(--text2); line-height: 1.5; border-bottom: 1px solid var(--border); }
+  .pcb-type-lbl { padding: 10px 16px 6px; font-size: 11px; font-weight: 800; color: var(--text2); letter-spacing: 0.4px; text-transform: uppercase; }
+  .pcb-chip-row { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 12px; }
+  .pcb-chip { font-size: 11px; font-weight: 700; padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface3); color: var(--text2); cursor: pointer; transition: all 0.15s; }
+  .pcb-chip.sel { background: rgba(0,212,255,0.1); border-color: rgba(0,212,255,0.4); color: var(--cyan); }
+  .pcb-context-wrap { padding: 0 16px 12px; }
+  .pcb-context { width: 100%; background: var(--surface3); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; color: var(--text); font-size: 12px; resize: none; outline: none; font-family: inherit; line-height: 1.5; }
+  .pcb-context:focus { border-color: rgba(0,212,255,0.4); }
+  .pcb-generate { margin: 0 16px 12px; padding: 11px; border-radius: 12px; font-size: 13px; font-weight: 800; text-align: center; cursor: pointer; background: rgba(139,63,232,0.15); border: 1px solid rgba(139,63,232,0.4); color: var(--purple); transition: all 0.2s; }
+  .pcb-generate:hover { background: rgba(139,63,232,0.25); }
+  .evidence-card { margin: 0 16px 16px; padding: 14px; border-radius: 14px; background: rgba(0,212,255,0.06); border: 1px solid rgba(0,212,255,0.2); display: none; }
+  .evidence-card.show { display: block; }
+  .evidence-card-title { font-size: 12px; font-weight: 800; color: var(--cyan); margin-bottom: 10px; }
+  .ev-row { display: flex; gap: 8px; margin-bottom: 8px; font-size: 11px; line-height: 1.5; }
+  .ev-lbl { color: var(--text2); font-weight: 700; width: 90px; flex-shrink: 0; }
+  .ev-val { flex: 1; color: var(--text); }
+  .ev-conf { margin-top: 6px; padding: 7px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; background: rgba(0,229,160,0.07); color: var(--green); border: 1px solid rgba(0,229,160,0.2); }
+
+  /* ── GM3: STATUS PIPELINE ── */
+  .status-group-lbl { font-size: 10px; font-weight: 800; color: var(--text2); letter-spacing: 0.5px; text-transform: uppercase; padding: 10px 16px 6px; }
+  .status-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s;
+  }
+  .status-item:last-child { border-bottom: none; }
+  .status-item:hover { background: rgba(255,255,255,0.02); }
+  .status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .status-item-lbl { font-size: 12px; font-weight: 700; flex: 1; }
+  .status-item-sub { font-size: 10px; color: var(--text2); margin-top: 1px; }
+  .status-item-count { font-size: 10px; font-weight: 800; color: var(--muted); flex-shrink: 0; }
+  .status-desc {
+    margin: 0 16px 8px; padding: 11px 13px; border-radius: 12px;
+    font-size: 11px; line-height: 1.55; color: var(--text2);
+    background: var(--surface3); border: 1px solid var(--border); display: none;
+  }
+  .status-desc.show { display: block; }
+  .status-submit { margin: 8px 16px; padding: 11px; border-radius: 12px; font-size: 13px; font-weight: 800; text-align: center; cursor: pointer; background: rgba(0,229,160,0.1); border: 1px solid rgba(0,229,160,0.3); color: var(--green); transition: all 0.2s; }
+  .status-submit:hover { background: rgba(0,229,160,0.2); }
+
+  /* ── GM4: REASONING TRAIL ── */
+  .rt-intro { padding: 12px 16px; font-size: 12px; color: var(--text2); line-height: 1.5; border-bottom: 1px solid var(--border); }
+  .rt-scenario-row { display: flex; gap: 6px; padding: 10px 16px; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+  .rt-scenario-row::-webkit-scrollbar { display: none; }
+  .rt-chip { font-size: 11px; font-weight: 800; padding: 7px 13px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface3); color: var(--text2); cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all 0.15s; }
+  .rt-chip.sel { background: rgba(139,63,232,0.15); border-color: rgba(139,63,232,0.4); color: var(--purple); }
+  .rt-empty { padding: 20px 16px; font-size: 12px; color: var(--muted); text-align: center; }
+  .rt-qa-list { }
+  .rt-qa-item { border-bottom: 1px solid var(--border); }
+  .rt-qa-item:last-child { border-bottom: none; }
+  .rt-qa-hdr {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; cursor: pointer; transition: background 0.15s;
+  }
+  .rt-qa-hdr:hover { background: rgba(255,255,255,0.02); }
+  .rt-qa-num { font-size: 10px; font-weight: 800; color: var(--purple); margin-right: 8px; flex-shrink: 0; }
+  .rt-qa-q { font-size: 12px; font-weight: 700; flex: 1; }
+  .rt-qa-arrow { font-size: 12px; color: var(--muted); flex-shrink: 0; transition: transform 0.2s; }
+  .rt-qa-arrow.open { transform: rotate(90deg); }
+  .rt-qa-answer { display: none; padding: 0 16px 12px; font-size: 12px; color: var(--text2); line-height: 1.6; }
+  .rt-qa-answer.show { display: block; }
+
+  /* ── PIONEER TABLE ── */
+  .pioneer-card { margin: 0 20px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; }
+  .pioneer-hdr { padding: 14px 16px; font-size: 13px; font-weight: 800; border-bottom: 1px solid var(--border); }
+  .pioneer-pair { border-bottom: 1px solid var(--border); }
+  .pioneer-pair:last-child { border-bottom: none; }
+  .pioneer-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); }
+  .pioneer-cell { background: var(--surface); padding: 10px 14px; font-size: 11px; line-height: 1.45; }
+  .pioneer-cell.label { color: var(--text2); font-weight: 600; }
+  .pioneer-cell.exists { color: var(--muted); }
+  .pioneer-cell.value { color: var(--cyan); font-weight: 700; }
+  .pioneer-cell.pur   { color: var(--purple); font-weight: 700; }
+
+  /* ── DOCTRINE ── */
+  .doctrine-section { padding: 8px 20px 24px; }
+  .doctrine-section h2 { font-size: 13px; font-weight: 800; color: var(--text2); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 14px; }
+  .doctrine-line { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text2); line-height: 1.5; }
+  .doctrine-line:last-child { border-bottom: none; }
+  .doctrine-line::before { content: '💡'; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--surface3); border: 1px solid rgba(255,255,255,0.12);
+    color: var(--text); font-size: 13px; font-weight: 600; padding: 12px 20px;
+    border-radius: 24px; opacity: 0; transition: all 0.3s; z-index: 999;
+    white-space: nowrap; max-width: 340px; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 430px;
+    background: rgba(18,20,31,0.97); backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border); display: flex; padding: 10px 0 24px; z-index: 100;
+  }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; font-size: 9px; font-weight: 700; color: var(--muted); letter-spacing: 0.3px; text-transform: uppercase; transition: color 0.15s; }
+  .nav-item.active { color: var(--purple); }
+  .nav-item-icon { font-size: 22px; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-back">←</div>
+  <div class="nav-title">Provenance Engine</div>
+  <div class="nav-badge">v10.0</div>
+</nav>
+
+<!-- HERO -->
+<div class="hero fade-in">
+  <div class="hero-tag">PQSI Provenance Engine — IN$DEX</div>
+  <h1>Every important<br>artifact carries<br><span>its origin.</span></h1>
+  <p class="hero-sub">A civilization cannot rely on black-box outputs. Every SIINDEX decision, design, listing, explainer, and recommendation carries its evidence, method, approval, and correction path.</p>
+  <div class="hero-lock">"Claude Science makes research reproducible. SIINDEX must make civilization decisions reproducible. An output without provenance is a trust risk."</div>
+</div>
+
+<!-- STAT ROW -->
+<div class="stat-row">
+  <div class="stat-card fade-in" style="animation-delay:0.05s">
+    <div class="stat-val" style="color:var(--purple)">20</div>
+    <div class="stat-label">Artifact types tracked with provenance</div>
+  </div>
+  <div class="stat-card fade-in" style="animation-delay:0.1s">
+    <div class="stat-val" style="color:var(--gold)">14</div>
+    <div class="stat-label">Artifact statuses from Draft to Archived</div>
+  </div>
+  <div class="stat-card fade-in" style="animation-delay:0.15s">
+    <div class="stat-val" style="color:var(--cyan)">9</div>
+    <div class="stat-label">Provenance questions every output must answer</div>
+  </div>
+</div>
+
+<!-- ── GM1: CIVILIZATION ARTIFACT LEDGER ── -->
+<div class="section-hdr fade-in" style="animation-delay:0.1s">
+  <h2>📜 Civilization Artifact Ledger</h2>
+  <span>tap to expand audit trail</span>
+</div>
+<div class="card fade-in" style="animation-delay:0.12s">
+  <div class="card-hdr">
+    <div class="card-icon" style="background:rgba(139,63,232,0.15)">🗄️</div>
+    <div>
+      <div class="card-title">Every Output — Full Provenance Record</div>
+      <div class="card-sub">Mission brief · data used · tools · agents · risk checks · version history</div>
+    </div>
+  </div>
+  <div class="ledger-filter" id="ledgerFilter"></div>
+  <div id="artifactLedger"></div>
+</div>
+
+<!-- ── GM2: PROVENANCE CARD BUILDER ── -->
+<div class="section-hdr fade-in" style="animation-delay:0.18s">
+  <h2>🔍 Provenance Card Builder</h2>
+  <span>why did SIINDEX recommend this?</span>
+</div>
+<div class="card fade-in" style="animation-delay:0.20s">
+  <div class="card-hdr">
+    <div class="card-icon" style="background:rgba(0,212,255,0.12)">🧾</div>
+    <div>
+      <div class="card-title">Plain-Language Evidence Trail</div>
+      <div class="card-sub">Select artifact type · add context · SIINDEX explains its reasoning</div>
+    </div>
+  </div>
+  <div class="pcb-intro">Citizens and councils should not have to trust a black box. Generate a plain-language explanation of how and why any artifact was produced.</div>
+  <div class="pcb-type-lbl">What type of artifact?</div>
+  <div class="pcb-chip-row" id="pcbChips"></div>
+  <div class="pcb-context-wrap">
+    <textarea class="pcb-context" id="pcbContext" rows="3" placeholder="Optional: add context. e.g. 'for my handmade prints business — Pacific market focus, cultural material involved'"></textarea>
+  </div>
+  <div class="pcb-generate" onclick="buildProvCard()">⚡ Generate Evidence Trail</div>
+  <div class="evidence-card" id="evidenceCard">
+    <div class="evidence-card-title">⚡ SIINDEX Evidence Trail</div>
+    <div class="ev-row"><div class="ev-lbl">Data used</div><div class="ev-val" id="evData">—</div></div>
+    <div class="ev-row"><div class="ev-lbl">Assumptions</div><div class="ev-val" id="evAssume">—</div></div>
+    <div class="ev-row"><div class="ev-lbl">Checks run</div><div class="ev-val" id="evChecks">—</div></div>
+    <div class="ev-row"><div class="ev-lbl">What remains uncertain</div><div class="ev-val" id="evUncertain">—</div></div>
+    <div class="ev-row"><div class="ev-lbl">Correction path</div><div class="ev-val" id="evCorrect">—</div></div>
+    <div class="ev-conf" id="evConf">—</div>
+  </div>
+</div>
+
+<!-- ── GM3: ARTIFACT STATUS PIPELINE ── -->
+<div class="section-hdr fade-in" style="animation-delay:0.26s">
+  <h2>⚙️ Artifact Status Pipeline</h2>
+  <span>14 statuses — tap to see what each means</span>
+</div>
+<div class="card fade-in" style="animation-delay:0.28s">
+  <div class="card-hdr">
+    <div class="card-icon" style="background:rgba(0,229,160,0.1)">🔁</div>
+    <div>
+      <div class="card-title">From Draft to Published — Every Gate Visible</div>
+      <div class="card-sub">No artifact ships without passing the right reviews</div>
+    </div>
+  </div>
+  <div id="statusPipeline"></div>
+  <div class="status-desc" id="statusDesc"></div>
+  <div class="status-submit" onclick="submitForReview()">→ Submit Selected Artifact for Review</div>
+</div>
+
+<!-- ── GM4: SIINDEX REASONING TRAIL ── -->
+<div class="section-hdr fade-in" style="animation-delay:0.34s">
+  <h2>🧠 SIINDEX Reasoning Trail</h2>
+  <span>9 provenance questions answered</span>
+</div>
+<div class="card fade-in" style="animation-delay:0.36s">
+  <div class="card-hdr">
+    <div class="card-icon" style="background:rgba(139,63,232,0.15)">💬</div>
+    <div>
+      <div class="card-title">Decision Provenance — Plain Language</div>
+      <div class="card-sub">Not chain-of-thought. Not private reasoning. Evidence.</div>
+    </div>
+  </div>
+  <div class="rt-intro">Select a scenario to see how SIINDEX answers all 9 canonical provenance questions. This is what any citizen or council can request for any important output.</div>
+  <div class="rt-scenario-row" id="rtScenarios"></div>
+  <div id="rtQaList"><div class="rt-empty">Select a scenario above to load the reasoning trail.</div></div>
+</div>
+
+<!-- PIONEER TABLE -->
+<div class="section-hdr fade-in" style="animation-delay:0.40s">
+  <h2>🚀 What IN$DEX Pioneers</h2>
+  <span>vs. what exists</span>
+</div>
+<div class="pioneer-card fade-in" style="animation-delay:0.42s">
+  <div class="pioneer-hdr">🌏 Provenance Engine — The World vs. IN$DEX</div>
+  <div id="pioneerTable"></div>
+</div>
+
+<!-- DOCTRINE LINES -->
+<div class="doctrine-section fade-in" style="animation-delay:0.44s">
+  <h2>Doctrine — No Orphan Outputs</h2>
+  <div id="doctrineLines"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <div class="nav-item"><div class="nav-item-icon">🏠</div>Home</div>
+  <div class="nav-item"><div class="nav-item-icon">🧠</div>Brain</div>
+  <div class="nav-item"><div class="nav-item-icon">📜</div>Ledger</div>
+  <div class="nav-item active"><div class="nav-item-icon">⚖️</div>Provenance</div>
+  <div class="nav-item"><div class="nav-item-icon">⚙️</div>Settings</div>
+</nav>
+
+<script>
+  const INDX_PRICE_USD = 0.24;
+
+  // ── DATA ──
+  const ARTIFACTS = [
+    {
+      id:'ART-2617', icon:'🌿', type:'Cultural Rights Card', owner:'Mere Taufa',
+      status:'needs-cultural', ts:'2026-07-10 09:14',
+      mission:'Document tapa weave as family-owned cultural asset for marketplace use',
+      context:'Cultural Rights Graph, Brain Passport (cultural profile), Visual Brain (approved motifs)',
+      data:'Cultural registry entry, elder witness record, Taufa family ownership docs',
+      tools:'Cultural Rights Graph API → Brain Passport Reader → Decision Ledger Writer',
+      agents:'Cultural Steward Agent, Provenance Engine',
+      versions:'v1 — draft, no attribution → v2 — elder attribution added → v3 — use restrictions added',
+      risks:[{k:'Cultural',v:'Community-owned — elder review in progress',p:false},{k:'Child Safety',v:'✓ No children involved',p:true},{k:'Consent',v:'✓ Family consent on-chain',p:true},{k:'Hype',v:'✓ No commercial claims',p:true},{k:'Accuracy',v:'Elder confirmation pending',p:false}],
+      human:'⚠ Elder review pending — Rangi Taufa (Cook Islands). Awaiting response.',
+      rollback:'v2 available — restore via Decision Ledger',
+      reuse:'Attribution required. No commercial remix without elder approval.',
+    },
+    {
+      id:'ART-2609', icon:'📊', type:'Pitch Deck', owner:'Sione Alofa',
+      status:'approved-private', ts:'2026-07-10 08:45',
+      mission:'Investor pitch for Pacific micro-remittance corridor app',
+      context:'Brain Passport (finance, Pacific diaspora), Life Graph (entrepreneurship missions), Market Intelligence',
+      data:'AU→Pacific remittance corridor data, WU/Wise competitive analysis, IN$DEX cost model',
+      tools:'Brain Passport Reader → Market Intelligence API → Visual Brain → ImageNation Design Studio',
+      agents:'Business Strategy Agent, Design Studio Agent, Provenance Engine',
+      versions:'v1 — concept only → v2 — corridor data added → v3 — competitive slides → v4 — design pass',
+      risks:[{k:'Cultural',v:'✓ Pacific context — no sacred material',p:true},{k:'Hype',v:'✓ No return guarantees',p:true},{k:'Accuracy',v:'✓ Data cited and dated (Q1 2026)',p:true},{k:'Consent',v:'✓ No private citizen data',p:true}],
+      human:'✓ Citizen approved — Sione Alofa, 2026-07-10 08:43 via Brain Passport passkey.',
+      rollback:'v3 available',
+      reuse:'Private use only — not approved for publication.',
+    },
+    {
+      id:'ART-2601', icon:'🏛️', type:'Governance Explainer', owner:'Mission Room: Treasury',
+      status:'needs-governance', ts:'2026-07-09 17:30',
+      mission:'Plain-language explainer of Q3 reserve policy options for Citizen Assembly vote',
+      context:'Treasury on-chain data (Solana), Citizen Assembly Proposal #031, IN$DEX whitepaper',
+      data:'Reserve ratio models, INDX velocity data (30-day), Q2 burn summary, 3 policy options',
+      tools:'Treasury Intelligence API → Governance Engine → Mission Room Reader → Decision Ledger Writer',
+      agents:'Governance Explainer Agent, Treasury Analyst Agent, Provenance Engine',
+      versions:'v1 — technical draft → v2 — citizen-language pass → v3 — opposing arguments added',
+      risks:[{k:'Accuracy',v:'✓ Sourced from on-chain data',p:true},{k:'Hype',v:'✓ Neutral — no advocacy',p:true},{k:'Governance',v:'Full council review required before publish',p:false},{k:'Consent',v:'✓ Public data only',p:true}],
+      human:'⚠ Governance council review pending — 3 of 5 approvals required. 0 received.',
+      rollback:'v2 available',
+      reuse:'Approved for Citizen Assembly distribution only after council sign-off.',
+    },
+    {
+      id:'ART-2588', icon:'🛒', type:'Marketplace Listing', owner:'Noa Kealoha',
+      status:'published', ts:'2026-07-09 14:22',
+      mission:'Handmade print listing for Pacific diaspora and tourist buyers',
+      context:'Visual Brain (brand colors, motifs), Cultural Rights Graph (tapa — commercial approved), Brain Passport',
+      data:'Print inventory, pricing (market-referenced at 45 INDX), cultural attribution statement',
+      tools:'Cultural Rights Graph API → Marketplace Price API → Visual Brain → Design Studio',
+      agents:'Marketplace Listing Agent, Cultural Steward Agent',
+      versions:'v1 — no attribution → v2 — cultural attribution added → v3 — price adjusted 30→45 INDX',
+      risks:[{k:'Cultural',v:'✓ Tapa — commercial use approved',p:true},{k:'Accuracy',v:'✓ Inventory count verified',p:true},{k:'Hype',v:'✓ No income guarantees',p:true},{k:'Child Safety',v:'✓ Not applicable',p:true}],
+      human:'✓ Citizen approved — Noa Kealoha. Cultural Steward Agent automated check passed.',
+      rollback:'v2 available — price revert if needed',
+      reuse:'Published — open for buyer access.',
+    },
+    {
+      id:'ART-2571', icon:'🧒', type:'Learning Pathway', owner:'Te Arepa (minor — age 14)',
+      status:'approved-private', ts:'2026-07-08 16:40',
+      mission:'Pacific history learning pathway — stages, outcomes, milestones',
+      context:'Brain Passport (learning profile, minor), Life Graph (interests: ocean navigation, history)',
+      data:'Pacific history curriculum, learning milestone model, guardian consent record',
+      tools:'Brain Passport Reader → Learning Path Engine → Child Safety Review → Guardian Consent Gate',
+      agents:'Learning Pathway Agent, Child Safety Agent, Provenance Engine',
+      versions:'v1 — concept draft → v2 — guardian review requested → v3 — age-appropriate pass applied',
+      risks:[{k:'Child Safety',v:'✓ Guardian reviewed and approved — Mele Arepa',p:true},{k:'Cultural',v:'✓ Pacific history — no restricted content',p:true},{k:'Privacy',v:'✓ Minor — no public data exposure',p:true},{k:'Consent',v:'✓ Guardian consent on-chain',p:true}],
+      human:'✓ Guardian approval: Mele Arepa (parent), 2026-07-08 16:38. Private only — no publish permitted.',
+      rollback:'v2 available',
+      reuse:'Private — Te Arepa only. No export or publish permitted.',
+    },
+    {
+      id:'ART-2548', icon:'⚖️', type:'Settlement Recommendation', owner:'SIINDEX Arbitration',
+      status:'needs-human', ts:'2026-07-10 10:02',
+      mission:'Recommend settlement path for fabric quality dispute (DSP-041)',
+      context:'Transaction record, product listing v3, buyer complaint, merchant response, prior dispute precedents',
+      data:'Order data, listing description, buyer photo evidence, merchant shipping record, 14 prior similar disputes',
+      tools:'Dispute Resolution Engine → Transaction Record API → Decision Ledger Reader/Writer',
+      agents:'Arbitration Agent, Provenance Engine',
+      versions:'v1 — initial analysis → v2 — merchant response incorporated',
+      risks:[{k:'Accuracy',v:'✓ Photographic evidence reviewed',p:true},{k:'Fairness',v:'Human review required — above 50 INDX threshold',p:false},{k:'Cultural',v:'✓ No cultural sensitivity',p:true},{k:'Consent',v:'✓ Both parties consented to arbitration',p:true}],
+      human:'⚠ Human arbitrator review required — settlement value 60 INDX exceeds auto-approve threshold.',
+      rollback:'N/A — recommendation only; no action taken',
+      reuse:'Private — parties only. Precedent may be referenced anonymously.',
+    },
+  ];
+
+  const STATUS_DEFS = [
+    { key:'draft',            cls:'sb-draft',     dot:'rgba(90,96,128,0.6)',   label:'Draft',                   sub:'Created but not yet reviewed or verified.',               req:'Begin review process to advance.' },
+    { key:'verified',         cls:'sb-verified',  dot:'rgba(0,212,255,0.7)',   label:'Verified',                sub:'Checked against sources and doctrine rules.',             req:'Advance to citizen or human review.' },
+    { key:'needs-citizen',    cls:'sb-needs',     dot:'rgba(255,184,0,0.7)',   label:'Needs Citizen Approval',  sub:'Citizen must confirm before proceeding.',                 req:'Citizen reviews via Brain Passport passkey.' },
+    { key:'needs-human',      cls:'sb-needs',     dot:'rgba(255,184,0,0.7)',   label:'Needs Human Review',      sub:'Above auto-approve threshold — human required.',          req:'Assigned human reviewer must approve.' },
+    { key:'needs-cultural',   cls:'sb-needs',     dot:'rgba(255,184,0,0.7)',   label:'Needs Cultural Review',   sub:'Cultural asset involved — elder or community review.',    req:'Elder or community authority must confirm.' },
+    { key:'needs-guardian',   cls:'sb-needs',     dot:'rgba(255,184,0,0.7)',   label:'Needs Guardian Review',   sub:'Minor citizen involved — guardian must approve.',         req:'Guardian approves via Brain Passport.' },
+    { key:'needs-governance', cls:'sb-needs',     dot:'rgba(255,184,0,0.7)',   label:'Needs Governance Review', sub:'Governance impact — council sign-off required.',          req:'Minimum council vote threshold required.' },
+    { key:'approved-private', cls:'sb-approved',  dot:'rgba(0,229,160,0.6)',   label:'Approved — Private',      sub:'Approved for citizen\'s own use. Not publishable.',       req:'Citizen may use internally.' },
+    { key:'approved-sharing', cls:'sb-approved',  dot:'rgba(0,229,160,0.7)',   label:'Approved — Sharing',      sub:'Approved for sharing with specific parties.',             req:'Citizen may share privately — not public.' },
+    { key:'approved-market',  cls:'sb-approved',  dot:'rgba(0,229,160,0.85)',  label:'Approved — Marketplace',  sub:'Approved for public marketplace listing.',               req:'Design Council and cultural checks passed.' },
+    { key:'published',        cls:'sb-published', dot:'rgba(0,229,160,1)',     label:'Published',               sub:'Live and publicly accessible.',                           req:'Active — citizen can view engagement.' },
+    { key:'archived',         cls:'sb-archived',  dot:'rgba(90,96,128,0.5)',   label:'Archived',                sub:'Closed. Stored for reference. Not active.',               req:'Viewable but not editable or live.' },
+    { key:'revoked',          cls:'sb-revoked',   dot:'rgba(255,77,109,0.8)',  label:'Revoked',                 sub:'Access or permission withdrawn. On-chain record updated.', req:'Not recoverable without new consent process.' },
+    { key:'corrected',        cls:'sb-corrected', dot:'rgba(139,63,232,0.8)', label:'Corrected',               sub:'Error found and corrected. Prior version archived.',       req:'Correction path stored in Decision Ledger.' },
+  ];
+
+  const PCB_TYPES = [
+    'Marketplace Listing','Cultural Rights Card','Governance Explainer',
+    'Pitch Deck','Learning Pathway','Settlement Recommendation',
+  ];
+
+  const PCB_EVIDENCE = {
+    'Marketplace Listing': {
+      data:'Brain Passport (skills, cultural context), Visual Brain (approved motifs), Cultural Rights Graph (commercial permission), Marketplace Price Intelligence (demand index, segment data).',
+      assume:'Tourist season active. Buyer segment engaged. Pricing at mid-market. Cultural permissions apply only to this listing.',
+      checks:'Cultural status ✓ · Hype review ✓ · Accuracy (inventory) ✓ · Consent ✓ · Child safety ✓',
+      uncertain:'Price optimality — market-referenced but not guaranteed. Future demand may vary.',
+      correct:'Citizen or cultural authority can request correction at any time. Prior version restored from Decision Ledger.',
+      conf:'Confidence: High — all cultural checks passed. Price is advisory. Listing approved for marketplace.',
+    },
+    'Cultural Rights Card': {
+      data:'Cultural Rights Graph (ownership record, permission tier), Brain Passport (citizen cultural profile), elder/community approval record, attribution statement.',
+      assume:'Cultural asset is as described. Family or community ownership is verified via Cultural Rights Graph. Commercial use does not extend beyond listed scope.',
+      checks:'Cultural status · elder review status · commercial permission scope · attribution accuracy · child safety · consent chain',
+      uncertain:'Elder review outcome — if elder declines, listing moves to Revoked status.',
+      correct:'Elder or community authority can request correction or revocation at any time. On-chain record updated immediately.',
+      conf:'Confidence: Medium — awaiting elder confirmation. Draft only until cultural review complete.',
+    },
+    'Governance Explainer': {
+      data:'On-chain treasury or governance data (Solana), source proposal document, existing whitepaper policy, prior governance decisions.',
+      assume:'Source data is current. All policy options are viable — no pre-selected recommendation. Citizens have basic governance literacy.',
+      checks:'Accuracy (on-chain sourced) · Hype (neutral framing) · Governance review required · Consent (public data only)',
+      uncertain:'Council interpretation — SIINDEX explains options neutrally but does not predict vote outcomes.',
+      correct:'Council or Mission Room can request revision at any time. All versions archived in Decision Ledger.',
+      conf:'Confidence: High on data accuracy. Outcome neutral — council decides.',
+    },
+    'Pitch Deck': {
+      data:'Brain Passport (skills, experience), Life Graph (entrepreneurship history), Market Intelligence (sector data, timing), competitive landscape data (dated and cited).',
+      assume:'Investor literacy assumed. Market data cited at source date. No return guarantees included. Cultural context accurate.',
+      checks:'Hype review (no income guarantees) · Accuracy (data cited) · Cultural review · Consent (no private citizen data)',
+      uncertain:'Investor response — SIINDEX cannot guarantee outcomes. Market conditions may change after creation.',
+      correct:'Citizen can request revision at any time. All versions in Decision Ledger. Approved-Private until citizen chooses to share.',
+      conf:'Confidence: High — data cited, hype-free, culturally reviewed.',
+    },
+    'Learning Pathway': {
+      data:'Brain Passport (learning profile, age), Life Graph (interests, completed milestones), Cultural Rights Graph (curriculum source check), guardian consent record.',
+      assume:'Learner has literacy appropriate for Stage 1. Guardian available for review. No commercial use. Content from approved curriculum only.',
+      checks:'Child safety (guardian review required) · Cultural review · Privacy (minor — no public exposure) · Consent (on-chain guardian consent)',
+      uncertain:'Learning pace — pathway adapts but cannot guarantee milestone completion timing.',
+      correct:'Guardian can request correction or removal at any time. Minor data protected — not exportable without guardian consent.',
+      conf:'Confidence: High — guardian approved. Private use only.',
+    },
+    'Settlement Recommendation': {
+      data:'Transaction record, product listing, buyer evidence (photos), merchant shipping record, prior dispute precedents (anonymised).',
+      assume:'Evidence submitted is genuine. Both parties consented to SIINDEX arbitration. Settlement value is within auto-approve threshold or human review assigned.',
+      checks:'Accuracy (evidence reviewed) · Fairness (both parties\' response included) · Cultural neutrality · Consent (arbitration agreed)',
+      uncertain:'Outcome interpretation — SIINDEX recommends; parties or human arbitrator decides. Neither party is pre-judged.',
+      correct:'Either party can request re-review with new evidence. All versions and evidence stored in Decision Ledger.',
+      conf:'Confidence: Medium — evidence reviewed but human arbitrator confirms above 50 INDX threshold.',
+    },
+  };
+
+  const REASONING_SCENARIOS = [
+    {
+      label:'Marketplace Listing',
+      qs:[
+        { q:'What produced this?', a:'SIINDEX Marketplace Listing Agent (v3.2) + Cultural Steward Agent, operating within the ImageNation Design Studio workflow on Mission Brief ART-2588.' },
+        { q:'What data was used?', a:'Brain Passport (skill: handmade prints, Cook Islands cultural context), Visual Brain (approved motifs: tapa weave, ocean horizon), Cultural Rights Graph (tapa — family-owned, commercial use approved, attribution required), Marketplace Price Intelligence (tourist segment Q2 2026 demand index: 84/100).' },
+        { q:'What brief guided it?', a:'"Create a marketplace listing for handmade tapa prints — honest, culturally attributed, priced against Pacific market demand, designed for tourist and diaspora buyers. Draft only until citizen approves."' },
+        { q:'What tools were called?', a:'Cultural Rights Graph API → Brain Passport Reader → Marketplace Price API → Visual Brain → ImageNation Design Studio → Decision Ledger Writer.' },
+        { q:'What assumptions were made?', a:'Tourist season active (Jun–Sept). Diaspora buyers active on Marketplace. Prints priced at mid-market — not luxury. Tapa motifs approved for this listing only — not transferrable to other listings.' },
+        { q:'What changed between versions?', a:'v1: no cultural attribution. v2: Taufa family attribution and elder witness added. v3: price adjusted from 30 → 45 INDX based on demand index shift.' },
+        { q:'Who approved it?', a:'Cultural Steward Agent (automated — Cultural Rights Graph confirmed). Citizen final approval: Noa Kealoha confirmed via Brain Passport passkey, 2026-07-09 14:22.' },
+        { q:'What risks were checked?', a:'Cultural status ✓ (commercial use approved) / Hype ✓ (no income guarantees) / Accuracy ✓ (inventory count verified) / Child Safety ✓ (not applicable) / Consent ✓ (family permission on-chain).' },
+        { q:'Can we reproduce this?', a:'Yes. Mission brief, data snapshot (timestamped), tool call log, and version history stored in Decision Ledger (ART-2588). Reproducible until Cultural Rights Graph entry or Visual Brain preferences change.' },
+      ],
+    },
+    {
+      label:'Governance Explainer',
+      qs:[
+        { q:'What produced this?', a:'SIINDEX Governance Explainer Agent + Treasury Analyst Agent, initiated from Mission Room: Treasury on 2026-07-09 17:30 in response to Citizen Assembly Proposal #031.' },
+        { q:'What data was used?', a:'Solana on-chain treasury reserves (Q2 snapshot), INDX velocity data (30-day), Q2 burn summary (official on-chain), Citizen Assembly Proposal #031 (source document), 3 independently modelled reserve policy options.' },
+        { q:'What brief guided it?', a:'"Explain Q3 reserve policy options in plain language for Citizen Assembly members. Neutral framing. 3 options. Include opposing arguments for each. No advocacy. Cite all data. Council must review before publish."' },
+        { q:'What tools were called?', a:'Treasury Intelligence API → Governance Engine → Mission Room Reader → Decision Ledger Writer → Design Council Review (governance dimension).' },
+        { q:'What assumptions were made?', a:'Citizen Assembly members have basic INDX literacy. Q2 data is current and final. All 3 policy options are viable — no option was pre-selected or recommended by SIINDEX.' },
+        { q:'What changed between versions?', a:'v1: technical draft (unsuitable for non-technical readers). v2: plain-language rewrite. v3: opposing arguments added to each option — required by citizen balance doctrine.' },
+        { q:'Who approved it?', a:'⚠ Governance council review in progress. 3 of 5 approvals required. 0 confirmed as of 2026-07-09 17:30. Status: Needs Governance Review — not publishable.' },
+        { q:'What risks were checked?', a:'Accuracy ✓ (on-chain sourced) / Hype ✓ (no advocacy, no returns) / Governance ⚠ (full council sign-off required) / Consent ✓ (public data only).' },
+        { q:'Can we reproduce this?', a:'Yes. Source proposal, on-chain data snapshot, version history, and all 3 option models stored in Decision Ledger (ART-2601). If data changes, a new version is created — old version archived, not deleted.' },
+      ],
+    },
+    {
+      label:'Learning Pathway — Minor',
+      qs:[
+        { q:'What produced this?', a:'SIINDEX Learning Pathway Agent + Child Safety Agent, with guardian-consent gate active throughout. Citizen: Te Arepa, age 14. Guardian: Mele Arepa (parent).' },
+        { q:'What data was used?', a:'Brain Passport — minor learning profile (interests: ocean navigation, Pacific history, visual learning style), Life Graph (completed: Cook Islands geography level 1), Cultural Rights Graph (Pacific history curriculum — no restricted content identified).' },
+        { q:'What brief guided it?', a:'"Create an age-appropriate Pacific history learning pathway for a 14-year-old. Guardian approval required at every stage. No publish. Private use only. All content must pass child-safety review before delivery."' },
+        { q:'What tools were called?', a:'Brain Passport Reader (minor profile, restricted access) → Learning Path Engine → Cultural Rights Graph API → Child Safety Review → Guardian Consent Gate → Decision Ledger Writer.' },
+        { q:'What assumptions were made?', a:'Te Arepa has literacy sufficient for Stage 1 (verified via Brain Passport). Guardian is available and willing to review. No commercial use. Content sourced only from approved Pacific history curriculum.' },
+        { q:'What changed between versions?', a:'v1: concept draft. v2: sent to guardian Mele Arepa for review. v3: two content references adjusted, reading level simplified based on guardian feedback.' },
+        { q:'Who approved it?', a:'Child Safety Agent (automated pass). Guardian approval: Mele Arepa via Brain Passport passkey, 2026-07-08 16:38. Status: Approved — Private.' },
+        { q:'What risks were checked?', a:'Child Safety ✓ (guardian reviewed and approved) / Cultural ✓ (Pacific history — no restricted content) / Privacy ✓ (minor — no public data exposure) / Consent ✓ (on-chain guardian consent).' },
+        { q:'Can we reproduce this?', a:'Yes — for Te Arepa only. All sources, versions, and guardian consent records in Decision Ledger (ART-2571). Not transferrable to another citizen. Guardian can request revision or deletion at any time.' },
+      ],
+    },
+  ];
+
+  const PIONEER_ROWS = [
+    { label:'Artifact audit trail',     exists:'No platform stores why an output was created',           pioneer:'Every artifact carries: mission brief, data, tools, agents, version history, risk checks, approval chain' },
+    { label:'Plain-language provenance',exists:'Black-box recommendations from all AI tools',             pioneer:'Any citizen can ask "Why did SIINDEX recommend this?" and receive a plain-language evidence trail' },
+    { label:'Cultural rights embedded', exists:'No design or AI tool checks cultural permissions',        pioneer:'Every cultural artifact carries its Cultural Rights Graph provenance — permission status, attribution, elder approval' },
+    { label:'14-status approval chain', exists:'Publish/draft only — no intermediate governance gates',   pioneer:'14 statuses from Draft to Corrected — every review gate visible and citizen-navigable' },
+    { label:'Guardian consent chain',   exists:'No AI tool has a guardian consent gate for minors',       pioneer:'Any artifact involving a minor carries on-chain guardian consent, approval history, and a private-only restriction' },
+    { label:'No Orphan Outputs law',    exists:'Outputs detach from their history as soon as created',    pioneer:'Doctrine enforced: every output must know where it came from, what was used, who approved, and what can be corrected' },
+  ];
+
+  const DOCTRINE = [
+    'A civilization cannot run on black-box outputs. Every important artifact must carry its evidence, source, method, approval, version history, and correction path.',
+    'An output without provenance is a trust risk. Citizens, councils, elders, and guardians should not be asked to trust what they cannot trace.',
+    'Culture without provenance becomes extraction. Every cultural artifact must carry its origin story, permission source, and revocation path.',
+    'Citizens should not be forced to trust a black box. They should be able to see what was used, what was checked, what was approved, and what can be corrected.',
+    'Claude Science makes research reproducible. SIINDEX must make civilization decisions reproducible.',
+    'IN$DEX must not create orphan content, orphan decisions, orphan automations, orphan media, orphan listings, or orphan cultural assets.',
+    'Traceability is not bureaucracy. Traceability is sovereignty.',
+    'If SIINDEX creates something and nobody can trace why, trust breaks. Provenance is not optional — it is sovereignty infrastructure.',
+    'If we cannot explain an automation, we should not run it. Every trigger, action, data read, and approval gate must be logged.',
+    'Every important SIINDEX artifact should be traceable, reviewable, reproducible, editable, reversible where possible, exportable, and defensible.',
+  ];
+
+  // ── STATE ──
+  let _ledgerFilter = 'all';
+  let _openArtifact = null;
+  let _pcbType = '';
+  let _openStatus = null;
+  let _rtScenario = null;
+  let _openQa = {};
+
+  // ── STATUS HELPERS ──
+  function getStatusDef(key) {
+    return STATUS_DEFS.find(s => s.key === key) || { cls:'sb-draft', label: key, sub:'', req:'' };
+  }
+  function statusBadge(key) {
+    const d = getStatusDef(key);
+    return `<span class="status-badge ${d.cls}">${d.label}</span>`;
+  }
+
+  // ── GM1: ARTIFACT LEDGER ──
+  const LEDGER_FILTERS = [
+    { key:'all', label:'All' },
+    { key:'needs', label:'Needs Review' },
+    { key:'approved', label:'Approved' },
+    { key:'published', label:'Published' },
+    { key:'other', label:'Archived/Revoked' },
+  ];
+
+  function initArtifactLedger() {
+    const fEl = document.getElementById('ledgerFilter');
+    fEl.innerHTML = LEDGER_FILTERS.map(f =>
+      `<div class="lf-tab ${f.key === _ledgerFilter ? 'active' : ''}" onclick="filterLedger('${f.key}')">${f.label}</div>`
+    ).join('');
+    renderLedger();
+  }
+
+  function filterLedger(key) {
+    _ledgerFilter = key;
+    document.querySelectorAll('.lf-tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    renderLedger();
+  }
+
+  function filterMatch(a, key) {
+    if (key === 'all') return true;
+    if (key === 'needs') return a.status.startsWith('needs');
+    if (key === 'approved') return a.status.startsWith('approved');
+    if (key === 'published') return a.status === 'published';
+    if (key === 'other') return a.status === 'archived' || a.status === 'revoked' || a.status === 'corrected';
+    return true;
+  }
+
+  function renderLedger() {
+    const el = document.getElementById('artifactLedger');
+    const filtered = ARTIFACTS.filter(a => filterMatch(a, _ledgerFilter));
+    if (!filtered.length) { el.innerHTML = '<div style="padding:20px 16px;font-size:12px;color:var(--muted);text-align:center">No artifacts matching this filter.</div>'; return; }
+    el.innerHTML = filtered.map(a => buildArtifactItem(a)).join('');
+  }
+
+  function buildArtifactItem(a) {
+    const isOpen = _openArtifact === a.id;
+    const sd = getStatusDef(a.status);
+    const risks = a.risks.map(r =>
+      `<div class="prov-risk-row"><div class="prov-risk-key">${r.k}</div><div class="prov-risk-val ${r.p ? 'pass' : 'warn'}">${r.v}</div></div>`
+    ).join('');
+    return `
+    <div class="artifact-item" id="ai-${a.id}">
+      <div class="artifact-item-row" onclick="toggleArtifact('${a.id}')">
+        <div class="artifact-item-icon">${a.icon}</div>
+        <div class="artifact-item-info">
+          <div class="artifact-item-type">${a.type}</div>
+          <div class="artifact-item-owner">${a.owner}</div>
+          <div class="artifact-item-meta">
+            ${statusBadge(a.status)}
+            <div class="artifact-item-id">${a.id}</div>
+            <div class="artifact-item-ts">${a.ts}</div>
+          </div>
+        </div>
+        <div class="artifact-chevron ${isOpen ? 'open' : ''}">›</div>
+      </div>
+      <div class="prov-panel ${isOpen ? 'show' : ''}" id="prov-${a.id}">
+        <div class="prov-section-lbl">Mission Brief</div>
+        <div class="prov-field">${a.mission}</div>
+        <div class="prov-section-lbl">Context &amp; Data Used</div>
+        <div class="prov-field"><strong>Context:</strong> ${a.context}</div>
+        <div class="prov-field"><strong>Data:</strong> ${a.data}</div>
+        <div class="prov-section-lbl">Tools &amp; Agents</div>
+        <div class="prov-field"><strong>Tools:</strong> ${a.tools}</div>
+        <div class="prov-field"><strong>Agents:</strong> ${a.agents}</div>
+        <div class="prov-section-lbl">Version History</div>
+        <div class="prov-versions">${a.versions}</div>
+        <div class="prov-section-lbl">Risk Checks</div>
+        ${risks}
+        <div class="prov-section-lbl">Human Review &amp; Rollback</div>
+        <div class="prov-human">${a.human}</div>
+        <div class="prov-field" style="margin-top:6px"><strong>Rollback:</strong> ${a.rollback}</div>
+        <div class="prov-field"><strong>Reuse:</strong> ${a.reuse}</div>
+      </div>
+    </div>`;
+  }
+
+  function toggleArtifact(id) {
+    if (_openArtifact === id) {
+      _openArtifact = null;
+    } else {
+      _openArtifact = id;
+    }
+    renderLedger();
+  }
+
+  // ── GM2: PROVENANCE CARD BUILDER ──
+  function initProvCardBuilder() {
+    const el = document.getElementById('pcbChips');
+    el.innerHTML = PCB_TYPES.map(t =>
+      `<div class="pcb-chip ${_pcbType === t ? 'sel' : ''}" onclick="selectPcbType('${t.replace(/'/g,"\\'")}', this)">${t}</div>`
+    ).join('');
+  }
+
+  function selectPcbType(t, el) {
+    _pcbType = t;
+    document.querySelectorAll('.pcb-chip').forEach(c => c.classList.remove('sel'));
+    el.classList.add('sel');
+    document.getElementById('evidenceCard').classList.remove('show');
+  }
+
+  function buildProvCard() {
+    if (!_pcbType) { showToast('ℹ️ Select an artifact type first.'); return; }
+    const ev = PCB_EVIDENCE[_pcbType];
+    if (!ev) { showToast('ℹ️ Evidence template not found for this type.'); return; }
+    const ctx = document.getElementById('pcbContext').value.trim();
+    document.getElementById('evData').textContent = ev.data;
+    document.getElementById('evAssume').textContent = ev.assume + (ctx ? ' Context noted: ' + ctx : '');
+    document.getElementById('evChecks').textContent = ev.checks;
+    document.getElementById('evUncertain').textContent = ev.uncertain;
+    document.getElementById('evCorrect').textContent = ev.correct;
+    document.getElementById('evConf').textContent = ev.conf;
+    document.getElementById('evidenceCard').classList.add('show');
+    localStorage.setItem('indx_prov_lasttype', _pcbType);
+    showToast('✓ Evidence trail generated for ' + _pcbType + ' — review and save to Decision Ledger.');
+  }
+
+  // ── GM3: STATUS PIPELINE ──
+  const STATUS_GROUPS = [
+    { label:'Creating',  keys:['draft','verified'] },
+    { label:'In Review', keys:['needs-citizen','needs-human','needs-cultural','needs-guardian','needs-governance'] },
+    { label:'Approved',  keys:['approved-private','approved-sharing','approved-market'] },
+    { label:'Live',      keys:['published'] },
+    { label:'Closed',    keys:['archived','revoked','corrected'] },
+  ];
+
+  const STATUS_COUNTS = {
+    'draft':2, 'verified':1, 'needs-citizen':0, 'needs-human':1, 'needs-cultural':1,
+    'needs-guardian':0, 'needs-governance':1, 'approved-private':2, 'approved-sharing':0,
+    'approved-market':0, 'published':1, 'archived':0, 'revoked':0, 'corrected':0,
+  };
+
+  function initStatusPipeline() {
+    const el = document.getElementById('statusPipeline');
+    el.innerHTML = STATUS_GROUPS.map(g => `
+      <div class="status-group-lbl">${g.label}</div>
+      ${g.keys.map(k => {
+        const d = getStatusDef(k);
+        const cnt = STATUS_COUNTS[k] || 0;
+        return `<div class="status-item" onclick="openStatus('${k}')">
+          <div class="status-dot" style="background:${d.dot}"></div>
+          <div>
+            <div class="status-item-lbl">${d.label}</div>
+            <div class="status-item-sub">${d.sub}</div>
+          </div>
+          <div class="status-item-count">${cnt > 0 ? cnt + ' artifact' + (cnt !== 1 ? 's' : '') : '—'}</div>
+        </div>`;
+      }).join('')}
+    `).join('');
+  }
+
+  function openStatus(key) {
+    const d = getStatusDef(key);
+    const descEl = document.getElementById('statusDesc');
+    if (_openStatus === key) {
+      _openStatus = null; descEl.classList.remove('show'); descEl.textContent = '';
+    } else {
+      _openStatus = key;
+      descEl.innerHTML = `<strong style="color:var(--text)">${d.label}</strong><br><span style="color:var(--text2)">${d.sub}</span><br><br><strong>What's required:</strong> ${d.req}`;
+      descEl.classList.add('show');
+    }
+  }
+
+  function submitForReview() {
+    const s = _openStatus;
+    if (!s) { showToast('ℹ️ Tap a status first to select your artifact\'s current state.'); return; }
+    const d = getStatusDef(s);
+    showToast('→ Submitting for: ' + d.label + ' — SIINDEX will notify the relevant reviewer.');
+    localStorage.setItem('indx_prov_laststatus', s);
+  }
+
+  // ── GM4: REASONING TRAIL ──
+  function initReasoningTrail() {
+    const el = document.getElementById('rtScenarios');
+    el.innerHTML = REASONING_SCENARIOS.map((s, i) =>
+      `<div class="rt-chip ${_rtScenario === i ? 'sel' : ''}" onclick="selectScenario(${i}, this)">${s.label}</div>`
+    ).join('');
+  }
+
+  function selectScenario(idx, el) {
+    _rtScenario = idx;
+    _openQa = {};
+    document.querySelectorAll('.rt-chip').forEach(c => c.classList.remove('sel'));
+    el.classList.add('sel');
+    renderQaList();
+    showToast('⚡ Reasoning trail loaded — ' + REASONING_SCENARIOS[idx].label + '. Tap any question to expand.');
+  }
+
+  function renderQaList() {
+    if (_rtScenario === null) return;
+    const sc = REASONING_SCENARIOS[_rtScenario];
+    const el = document.getElementById('rtQaList');
+    el.innerHTML = `<div class="rt-qa-list">${sc.qs.map((qa, i) => `
+      <div class="rt-qa-item">
+        <div class="rt-qa-hdr" onclick="toggleQa(${i})">
+          <div class="rt-qa-num">Q${i + 1}</div>
+          <div class="rt-qa-q">${qa.q}</div>
+          <div class="rt-qa-arrow ${_openQa[i] ? 'open' : ''}">›</div>
+        </div>
+        <div class="rt-qa-answer ${_openQa[i] ? 'show' : ''}">${qa.a}</div>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  function toggleQa(i) {
+    _openQa[i] = !_openQa[i];
+    renderQaList();
+  }
+
+  // ── PIONEER TABLE ──
+  function renderPioneerTable() {
+    document.getElementById('pioneerTable').innerHTML = PIONEER_ROWS.map(r => `
+      <div class="pioneer-pair">
+        <div class="pioneer-row">
+          <div class="pioneer-cell label">${r.label}</div>
+          <div class="pioneer-cell exists">Existing: ${r.exists}</div>
+        </div>
+        <div class="pioneer-row">
+          <div class="pioneer-cell label pur">IN$DEX pioneers</div>
+          <div class="pioneer-cell value">${r.pioneer}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  // ── DOCTRINE ──
+  function renderDoctrine() {
+    document.getElementById('doctrineLines').innerHTML = DOCTRINE.map((d, i) =>
+      `<div class="doctrine-line fade-in" style="animation-delay:${i * 0.04}s">${d}</div>`
+    ).join('');
+  }
+
+  // ── TOAST ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3400);
+  }
+
+  // ── INIT ──
+  window.addEventListener('DOMContentLoaded', () => {
+    const savedType = localStorage.getItem('indx_prov_lasttype') || '';
+    if (PCB_TYPES.includes(savedType)) _pcbType = savedType;
+
+    initArtifactLedger();
+    initProvCardBuilder();
+    initStatusPipeline();
+    initReasoningTrail();
+    renderPioneerTable();
+    renderDoctrine();
+  });
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

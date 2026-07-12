@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SIINDEX Unknowns Engine — IN$DEX</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cyan:    #00D4FF;
+    --blue:    #2B35D8;
+    --purple:  #8B3FE8;
+    --black:   #090A10;
+    --green:   #00E5A0;
+    --gold:    #FFB800;
+    --red:     #FF4D6D;
+    --surface: #12141F;
+    --surface2:#1A1D2E;
+    --surface3:#22263A;
+    --text:    #EAEAEA;
+    --text2:   #A0A8B8;
+    --muted:   #5A6070;
+    --border:  rgba(255,255,255,0.06);
+    --border2: rgba(255,255,255,0.1);
+  }
+
+  body { background: var(--black); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif; min-height: 100vh; overflow-x: hidden; }
+  .shell { max-width: 430px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; position: relative; }
+
+  /* ── TOP NAV ── */
+  .top-nav { position: sticky; top: 0; z-index: 100; background: rgba(9,10,16,0.92); backdrop-filter: blur(14px); padding: 14px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); }
+  .nav-back { width: 34px; height: 34px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; flex-shrink: 0; }
+  .nav-title { flex: 1; font-size: 15px; font-weight: 800; }
+  .nav-badge { font-size: 10px; font-weight: 700; background: rgba(0,212,255,0.12); color: var(--cyan); border: 1px solid rgba(0,212,255,0.2); border-radius: 99px; padding: 3px 9px; }
+
+  .scroll-body { flex: 1; overflow-y: auto; padding: 0 0 130px; }
+
+  /* ── HERO ── */
+  .hero { padding: 22px 20px 0; }
+  .hero-eye  { font-size: 11px; font-weight: 700; color: var(--cyan); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+  .hero-title { font-size: 25px; font-weight: 900; line-height: 1.15; margin-bottom: 8px; }
+  .hero-title em { font-style: normal; background: linear-gradient(135deg,var(--gold),#FF8C00); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .hero-sub   { font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 16px; }
+  .hero-lock  { padding: 12px 16px; background: rgba(255,184,0,0.05); border-left: 2px solid var(--gold); border-radius: 0 10px 10px 0; font-size: 12px; color: var(--gold); font-style: italic; line-height: 1.6; margin-bottom: 18px; }
+
+  /* ── BLIND SPOT PASS INPUT ── */
+  .bsp-card { margin: 0 20px; background: var(--surface); border: 1px solid rgba(0,212,255,0.22); border-radius: 18px; padding: 16px; }
+  .bsp-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px; }
+  .bsp-textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border2); border-radius: 12px; padding: 12px 14px; font-size: 13px; color: var(--text); outline: none; font-family: inherit; resize: none; height: 72px; }
+  .bsp-textarea::placeholder { color: var(--muted); }
+  .bsp-textarea:focus { border-color: rgba(0,212,255,0.4); }
+  .bsp-row { display: flex; gap: 8px; margin-top: 10px; }
+  .bsp-btn { flex: 1; background: linear-gradient(135deg,var(--cyan),var(--blue)); border: none; border-radius: 12px; padding: 13px; color: var(--black); font-size: 13px; font-weight: 800; cursor: pointer; }
+  .bsp-btn-sec { background: var(--surface2); border: 1px solid var(--border2); border-radius: 12px; padding: 13px 16px; color: var(--text2); font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .bsp-chips { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .bsp-chip { padding: 5px 10px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 20px; font-size: 11px; color: var(--text2); cursor: pointer; }
+  .bsp-chip:active { border-color: var(--gold); color: var(--gold); }
+
+  /* ── FOUR-QUADRANT GRID ── (GOD MODE F1) */
+  .quad-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 20px 0; }
+  .quad { background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; padding: 14px; cursor: pointer; transition: border-color 0.2s; }
+  .quad.active { border-width: 1px; }
+  .quad.kk  { --qc: var(--green); }
+  .quad.ku  { --qc: var(--gold); }
+  .quad.uk  { --qc: var(--cyan); }
+  .quad.uu  { --qc: var(--red); }
+  .quad.active { border-color: var(--qc); background: rgba(255,255,255,0.02); }
+  .quad-type { font-size: 9px; font-weight: 700; color: var(--qc,var(--muted)); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 5px; }
+  .quad-name { font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+  .quad-q    { font-size: 11px; color: var(--text2); line-height: 1.4; margin-bottom: 8px; }
+  .quad-count { font-size: 22px; font-weight: 900; color: var(--qc,var(--muted)); }
+  .quad-unit  { font-size: 10px; color: var(--text2); }
+  .quad-items { display: grid; gap: 4px; margin-top: 8px; display: none; }
+  .quad.expanded .quad-items { display: grid; }
+  .quad-item { font-size: 11px; color: var(--text2); padding: 5px 8px; background: var(--surface2); border-radius: 8px; line-height: 1.4; cursor: pointer; }
+  .quad-item:active { border: 1px solid var(--qc,var(--muted)); }
+
+  /* ── ACTIVE PASS SECTION ── */
+  .pass-section { margin: 14px 20px 0; display: none; }
+  .pass-section.show { display: block; }
+  .pass-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .pass-title  { font-size: 14px; font-weight: 800; flex: 1; }
+  .pass-status { font-size: 11px; color: var(--green); font-weight: 700; display: flex; align-items: center; gap: 4px; }
+  .pass-dot    { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: passPulse 1.5s infinite; }
+  @keyframes passPulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+  /* ── 9-STEP MISSION LOOP ── (GOD MODE F2) */
+  .loop-wrap { margin: 20px 20px 0; }
+  .loop-steps { display: flex; overflow-x: auto; gap: 0; padding-bottom: 4px; scrollbar-width: none; }
+  .loop-steps::-webkit-scrollbar { display: none; }
+  .loop-step { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; position: relative; min-width: 68px; }
+  .loop-step:not(:last-child)::after { content: '→'; position: absolute; right: -10px; top: 14px; font-size: 12px; color: var(--muted); z-index: 1; }
+  .loop-node { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--border2); background: var(--surface); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; transition: border-color 0.2s, background 0.2s; position: relative; z-index: 2; }
+  .loop-step.active .loop-node  { border-color: var(--cyan); background: rgba(0,212,255,0.12); box-shadow: 0 0 12px rgba(0,212,255,0.25); }
+  .loop-step.done   .loop-node  { border-color: var(--green); background: rgba(0,229,160,0.1); }
+  .loop-step.blocked.loop-node  { border-color: var(--red); }
+  .loop-step-label { font-size: 9px; font-weight: 700; color: var(--muted); text-align: center; line-height: 1.3; }
+  .loop-step.active .loop-step-label { color: var(--cyan); }
+  .loop-step.done   .loop-step-label { color: var(--green); }
+  .loop-desc { background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; padding: 12px 14px; margin-top: 10px; font-size: 12px; color: var(--text2); line-height: 1.6; min-height: 48px; }
+  .loop-desc strong { color: var(--cyan); }
+
+  /* ── CONSEQUENCE CLASSIFIER ── (GOD MODE F3) */
+  .consequence-list { display: grid; gap: 6px; margin: 0 20px; }
+  .cq-item { background: var(--surface); border: 1px solid var(--border2); border-radius: 13px; padding: 11px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: border-color 0.2s; }
+  .cq-item:active { opacity: 0.85; }
+  .cq-dot   { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .cq-body  { flex: 1; min-width: 0; }
+  .cq-label { font-size: 13px; font-weight: 700; color: var(--text); }
+  .cq-route { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .cq-action { font-size: 11px; font-weight: 700; flex-shrink: 0; }
+  .cq-item.low      { --cc: var(--green); }
+  .cq-item.medium   { --cc: var(--gold); }
+  .cq-item.high     { --cc: var(--red); }
+  .cq-item.cultural { --cc: var(--purple); }
+  .cq-item.child    { --cc: #FF8C00; }
+  .cq-item.governance{--cc: var(--blue); }
+  .cq-item.financial { --cc: var(--cyan); }
+  .cq-item.security  { --cc: var(--gold); }
+  .cq-item.legal     { --cc: var(--red); }
+  .cq-item.active   { border-color: var(--cc); }
+  .cq-dot   { background: var(--cc,var(--muted)); }
+  .cq-action { color: var(--cc,var(--muted)); }
+
+  /* ── CIVILIZATION NOTES PANEL ── (GOD MODE F4) */
+  .civnotes-panel { margin: 0 20px; background: var(--surface); border: 1px solid rgba(0,229,160,0.2); border-radius: 18px; overflow: hidden; }
+  .civnotes-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; cursor: pointer; }
+  .civnotes-title  { flex: 1; font-size: 13px; font-weight: 700; }
+  .civnotes-count  { font-size: 11px; color: var(--green); font-weight: 700; }
+  .civnotes-toggle { font-size: 16px; color: var(--muted); transition: transform 0.2s; }
+  .civnotes-body   { padding: 0 16px 16px; display: none; }
+  .civnotes-body.open { display: block; }
+  .civnotes-field  { margin-top: 12px; }
+  .civnotes-field-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 5px; }
+  .civnotes-field-val   { font-size: 12px; color: var(--text2); line-height: 1.5; min-height: 18px; }
+  .civnotes-field-val.empty { color: var(--muted); font-style: italic; }
+  .civnotes-field-val.has-content { color: var(--text); }
+  .civnotes-tag-row { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
+  .civnotes-tag { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 99px; }
+  .civnotes-tag.open-unknown  { background: rgba(255,77,109,0.12); color: var(--red); }
+  .civnotes-tag.resolved      { background: rgba(0,229,160,0.1); color: var(--green); }
+  .civnotes-tag.paused        { background: rgba(255,184,0,0.1); color: var(--gold); }
+  .civnotes-export { margin-top: 14px; padding: 10px 14px; background: rgba(0,229,160,0.06); border: 1px solid rgba(0,229,160,0.2); border-radius: 12px; font-size: 12px; color: var(--green); font-weight: 700; text-align: center; cursor: pointer; }
+  .civnotes-export:active { opacity: 0.8; }
+
+  /* ── DOCTRINE LINES ── */
+  .doctrine-grid { display: grid; gap: 8px; margin: 0 20px; }
+  .dl-item { background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; padding: 12px 14px; font-size: 12px; color: var(--text2); font-style: italic; line-height: 1.6; position: relative; padding-left: 22px; }
+  .dl-item::before { content: '"'; position: absolute; left: 12px; top: 11px; font-size: 16px; color: var(--gold); font-style: normal; }
+
+  /* ── CONSEQUENCE SHEET ── */
+  .cq-overlay { position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,0.8); display: none; align-items: flex-end; justify-content: center; }
+  .cq-overlay.show { display: flex; }
+  .cq-sheet { background: var(--surface); border-radius: 24px 24px 0 0; padding: 24px 24px 44px; width: 100%; max-width: 430px; animation: slideUp 0.3s ease; border-top: 2px solid rgba(255,255,255,0.08); }
+  .cq-sheet-title { font-size: 18px; font-weight: 900; margin-bottom: 4px; }
+  .cq-sheet-sub   { font-size: 13px; color: var(--text2); margin-bottom: 18px; line-height: 1.5; }
+  .cq-sheet-box   { background: var(--surface2); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+  .cq-sheet-box-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px; }
+  .cq-sheet-box-val   { font-size: 13px; color: var(--text); line-height: 1.5; }
+  .cq-sheet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .cq-sheet-proceed { background: var(--green); border: none; border-radius: 14px; padding: 14px; color: var(--black); font-size: 14px; font-weight: 800; cursor: pointer; }
+  .cq-sheet-pause   { background: var(--surface2); border: 1px solid var(--border2); border-radius: 14px; padding: 14px; color: var(--text2); font-size: 14px; font-weight: 700; cursor: pointer; }
+  .cq-sheet-note { font-size: 11px; color: var(--muted); text-align: center; margin-top: 10px; }
+
+  /* ── TOAST ── */
+  .toast { position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%); background: rgba(30,33,50,0.98); border: 1px solid rgba(0,212,255,0.2); color: var(--text); padding: 10px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.25s; z-index: 9999; }
+  .toast.show { opacity: 1; }
+
+  /* ── FAB ── */
+  .fab { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); max-width: 390px; width: calc(100% - 40px); z-index: 200; }
+  .fab-btn { width: 100%; padding: 16px; background: linear-gradient(135deg,var(--gold),#FF8C00); border: none; border-radius: 16px; color: var(--black); font-size: 15px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 8px 28px rgba(255,184,0,0.3); }
+
+  /* ── SECTION WRAPPER ── */
+  .section { padding: 20px 20px 0; }
+  .sec-label { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; }
+
+  /* ── UTIL ── */
+  @keyframes slideUp { from{transform:translateY(30px);opacity:0} to{transform:translateY(0);opacity:1} }
+  @keyframes fadeIn  { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
+  .fade-in { animation: fadeIn 0.35s ease; }
+  .divider { height: 1px; background: var(--border); margin: 20px 20px 0; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- NAV -->
+  <div class="top-nav">
+    <div class="nav-back" onclick="history.back()">‹</div>
+    <div class="nav-title">Unknowns Engine</div>
+    <div class="nav-badge">v10.0</div>
+  </div>
+
+  <div class="scroll-body">
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-eye">🔍 SIINDEX Blind Spot Intelligence</div>
+      <div class="hero-title">SIINDEX finds the <em>unknowns</em> before they become failure.</div>
+      <div class="hero-sub">Most citizens will begin with incomplete context. That is not their failure. It is the system's opportunity.</div>
+      <div class="hero-lock">"The citizen brings the mission. SIINDEX finds the unknowns before they become failure."</div>
+    </div>
+
+    <!-- BLIND SPOT PASS -->
+    <div class="bsp-card">
+      <div class="bsp-label">Run a Blind Spot Pass</div>
+      <textarea class="bsp-textarea" id="bspInput" placeholder="Describe your mission or decision… SIINDEX will classify what is known, unknown, and unseen."></textarea>
+      <div class="bsp-row">
+        <button class="bsp-btn" onclick="runBlindSpotPass()">🔍 Run Blind Spot Pass</button>
+        <button class="bsp-btn-sec" onclick="clearPass()">Clear</button>
+      </div>
+      <div class="bsp-chips">
+        <div class="bsp-chip" onclick="setChip('Launch handmade prints for Pacific tourists')">🎨 Launch prints store</div>
+        <div class="bsp-chip" onclick="setChip('Set up merchant payouts for my market stall')">💰 Merchant payouts</div>
+        <div class="bsp-chip" onclick="setChip('Create a governance proposal for the Citizen Assembly')">🏛️ Governance proposal</div>
+        <div class="bsp-chip" onclick="setChip('Add a learning path for child citizens')">👶 Child citizen feature</div>
+      </div>
+    </div>
+
+    <!-- FOUR-QUADRANT CLASSIFIER (GOD MODE F1) -->
+    <div class="section">
+      <div class="sec-label">Four Unknown Types</div>
+      <div class="quad-grid" id="quadGrid">
+
+        <div class="quad kk" id="quad-kk" onclick="toggleQuad('kk')">
+          <div class="quad-type">Known Knowns</div>
+          <div class="quad-name">Confirmed</div>
+          <div class="quad-q">What is clearly stated and ready to act on</div>
+          <div><span class="quad-count" id="kk-count">0</span> <span class="quad-unit">items</span></div>
+          <div class="quad-items" id="kk-items"></div>
+        </div>
+
+        <div class="quad ku" id="quad-ku" onclick="toggleQuad('ku')">
+          <div class="quad-type">Known Unknowns</div>
+          <div class="quad-name">Gaps</div>
+          <div class="quad-q">What you know you still need to decide</div>
+          <div><span class="quad-count" id="ku-count">0</span> <span class="quad-unit">items</span></div>
+          <div class="quad-items" id="ku-items"></div>
+        </div>
+
+        <div class="quad uk" id="quad-uk" onclick="toggleQuad('uk')">
+          <div class="quad-type">Unknown Knowns</div>
+          <div class="quad-name">Hidden Insight</div>
+          <div class="quad-q">What you'd recognize if shown — but can't yet describe</div>
+          <div><span class="quad-count" id="uk-count">0</span> <span class="quad-unit">items</span></div>
+          <div class="quad-items" id="uk-items"></div>
+        </div>
+
+        <div class="quad uu" id="quad-uu" onclick="toggleQuad('uu')">
+          <div class="quad-type">Unknown Unknowns</div>
+          <div class="quad-name">Blind Spots</div>
+          <div class="quad-q">What hasn't been considered at all</div>
+          <div><span class="quad-count" id="uu-count">0</span> <span class="quad-unit">items</span></div>
+          <div class="quad-items" id="uu-items"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ACTIVE PASS RESULTS -->
+    <div class="pass-section" id="passSection">
+      <div class="pass-header">
+        <div class="pass-title">Blind Spot Pass — Active</div>
+        <div class="pass-status"><div class="pass-dot"></div>Live</div>
+      </div>
+    </div>
+
+    <!-- 9-STEP MISSION LOOP (GOD MODE F2) -->
+    <div class="section" style="margin-top:4px;">
+      <div class="sec-label">9-Step Mission Loop</div>
+    </div>
+    <div class="loop-wrap">
+      <div class="loop-steps" id="loopSteps"></div>
+      <div class="loop-desc" id="loopDesc">Tap any step to see what SIINDEX does at that stage of the mission.</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- CONSEQUENCE CLASSIFIER (GOD MODE F3) -->
+    <div class="section">
+      <div class="sec-label">Consequence Classifier</div>
+    </div>
+    <div class="consequence-list" id="consequenceList"></div>
+
+    <div class="divider"></div>
+
+    <!-- CIVILIZATION NOTES (GOD MODE F4) -->
+    <div class="section">
+      <div class="sec-label">civilization-notes — This Session</div>
+    </div>
+    <div class="civnotes-panel">
+      <div class="civnotes-header" onclick="toggleCivNotes()">
+        <div class="civnotes-title">📋 civilization-notes.md</div>
+        <div class="civnotes-count" id="civNotesCount">0 entries</div>
+        <div class="civnotes-toggle" id="civNotesToggle">▸</div>
+      </div>
+      <div class="civnotes-body" id="civNotesBody">
+        <div class="civnotes-field">
+          <div class="civnotes-field-label">Original Mission</div>
+          <div class="civnotes-field-val empty" id="cn-mission">No mission declared yet.</div>
+        </div>
+        <div class="civnotes-field">
+          <div class="civnotes-field-label">Decisions Made</div>
+          <div class="civnotes-field-val empty" id="cn-decisions">None yet.</div>
+        </div>
+        <div class="civnotes-field">
+          <div class="civnotes-field-label">Unknowns Resolved</div>
+          <div class="civnotes-tag-row" id="cn-resolved"></div>
+          <div class="civnotes-field-val empty" id="cn-resolved-empty">None yet.</div>
+        </div>
+        <div class="civnotes-field">
+          <div class="civnotes-field-label">Unknowns Still Open</div>
+          <div class="civnotes-tag-row" id="cn-open"></div>
+          <div class="civnotes-field-val empty" id="cn-open-empty">None yet.</div>
+        </div>
+        <div class="civnotes-field">
+          <div class="civnotes-field-label">Risks Found</div>
+          <div class="civnotes-field-val empty" id="cn-risks">None yet.</div>
+        </div>
+        <div class="civnotes-field">
+          <div class="civnotes-field-label">Next Best Action</div>
+          <div class="civnotes-field-val empty" id="cn-next">Run a Blind Spot Pass to generate next action.</div>
+        </div>
+        <div class="civnotes-export" onclick="exportNotes()">⬇ Export as civilization-notes.md</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- DOCTRINE LINES -->
+    <div class="section">
+      <div class="sec-label">Doctrine — Locked</div>
+      <div class="doctrine-grid" id="doctrineGrid"></div>
+      <div style="height:18px;"></div>
+    </div>
+
+  </div><!-- /scroll-body -->
+
+  <!-- FAB -->
+  <div class="fab">
+    <button class="fab-btn" onclick="document.getElementById('bspInput').focus(); document.querySelector('.bsp-card').scrollIntoView({behavior:'smooth'})">
+      🔍 New Blind Spot Pass
+    </button>
+  </div>
+
+</div><!-- /shell -->
+
+<!-- CONSEQUENCE SHEET -->
+<div class="cq-overlay" id="cqOverlay">
+  <div class="cq-sheet">
+    <div class="cq-sheet-title" id="cqSheetTitle">Unknown Consequence</div>
+    <div class="cq-sheet-sub"   id="cqSheetSub">SIINDEX has classified this unknown.</div>
+    <div class="cq-sheet-box">
+      <div class="cq-sheet-box-label">Consequence Level</div>
+      <div class="cq-sheet-box-val" id="cqSheetAction">Loading…</div>
+    </div>
+    <div class="cq-sheet-box">
+      <div class="cq-sheet-box-label">SIINDEX Routing</div>
+      <div class="cq-sheet-box-val" id="cqSheetRoute">Loading…</div>
+    </div>
+    <div class="cq-sheet-actions">
+      <button class="cq-sheet-proceed" onclick="closeCqSheet('proceed')">✓ Proceed + Note</button>
+      <button class="cq-sheet-pause"   onclick="closeCqSheet('pause')">⏸ Pause for Review</button>
+    </div>
+    <div class="cq-sheet-note">Decision will be logged to civilization-notes.md</div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── CONSTANTS ──
+  const INDX_PRICE_USD = 0.24;
+
+  // ── 9-STEP LOOP DATA ──
+  const LOOP_STEPS = [
+    { emoji:'🔍', label:'Discover',   desc:'<strong>Find blind spots.</strong> Run the four-type classification. Surface what could fail, what is missing, what must be reviewed before a single line is built.' },
+    { emoji:'📋', label:'Plan',       desc:'<strong>Build the mission plan</strong> from confirmed known knowns and resolved known unknowns. No plan proceeds with unresolved high-consequence unknowns.' },
+    { emoji:'🎨', label:'Prototype',  desc:'<strong>Show rough options</strong> before committing. Unknown knowns are best surfaced through prototypes — citizens recognize what they want when they see it.' },
+    { emoji:'💬', label:'Interview',  desc:'<strong>Ask only the questions</strong> where answers would change the architecture, offer, workflow, or risk path. Do not ask what is already answerable from context.' },
+    { emoji:'🔨', label:'Build',      desc:'<strong>Execute with approval gates.</strong> All high-consequence unknowns must be resolved before this step. Builder agents act here.' },
+    { emoji:'📝', label:'Note',       desc:'<strong>Record deviations, edge cases, and decisions.</strong> Every deviation from the plan gets logged to civilization-notes.md and the Decision Ledger.' },
+    { emoji:'📖', label:'Explain',    desc:'<strong>Package the output</strong> so humans understand what changed, why it changed, what data was used, and what risks remain. No silent builds.' },
+    { emoji:'❓', label:'Quiz',       desc:'<strong>Test reviewer understanding</strong> before approval. Ask questions that prove the reviewer understands the consequence of the change — not trivia.' },
+    { emoji:'🧠', label:'Remember',   desc:'<strong>Update Brain Passport, Life Graph, Decision Ledger, Skill Vault, or Civilization Graph.</strong> Every build must leave the civilization smarter than before.' },
+  ];
+
+  // ── CONSEQUENCE CLASSIFIER DATA ──
+  const CONSEQUENCES = [
+    { key:'low',       label:'Low Consequence',        route:'Proceed and note',              action:'Proceed',      dotClass:'low',       detail:'Safe to continue. SIINDEX logs the unknown and moves forward.' },
+    { key:'medium',    label:'Medium Consequence',     route:'Ask citizen before proceeding', action:'Ask citizen',  dotClass:'medium',    detail:'SIINDEX surfaces this unknown to the citizen and waits for confirmation.' },
+    { key:'high',      label:'High Consequence',       route:'Pause for citizen confirmation',action:'Pause',        dotClass:'high',      detail:'Mission halts. Citizen must explicitly approve before SIINDEX proceeds.' },
+    { key:'cultural',  label:'Cultural Consequence',   route:'Route to cultural review',      action:'Cultural gate',dotClass:'cultural',  detail:'Cultural Steward Agent + elder/community review required. Cannot self-approve.' },
+    { key:'child',     label:'Child-Safety Consequence',route:'Guardian / human review',      action:'Guardian gate',dotClass:'child',     detail:'Guardian consent required. SIINDEX cannot proceed without explicit guardian approval.' },
+    { key:'governance',label:'Governance Consequence', route:'Governance review',             action:'Citizen Assembly gate', dotClass:'governance',detail:'Governance proposal or vote required. SIINDEX flags and pauses until resolved.' },
+    { key:'financial', label:'Financial Consequence',  route:'Compliance / security review',  action:'Compliance',   dotClass:'financial', detail:'Payout, wallet, or treasury action. Compliance and security review required.' },
+    { key:'security',  label:'Security Consequence',   route:'Security review',               action:'Security gate',dotClass:'security',  detail:'Session or identity risk. Maintain Agent escalates. Step-up auth may be required.' },
+    { key:'legal',     label:'Legal Consequence',      route:'Human / legal review',          action:'Legal gate',   dotClass:'legal',     detail:'Legal exposure. Human review required. SIINDEX cannot self-approve legal risk.' },
+  ];
+
+  // ── QUADRANT PASS TEMPLATES ──
+  const PASS_TEMPLATES = {
+    prints: {
+      mission: 'Launch handmade prints for Pacific tourists',
+      kk: ['Citizen has handmade cultural print products','Target buyers are tourists in Pacific region','Citizen has a smartphone and can use the app'],
+      ku: ['What price point works for tourists?','Which market or venue to sell from first?','What payment method do tourists prefer?'],
+      uk: ['Cultural permission status of the print designs','What "good" product photography looks like for marketplace trust','How to describe cultural provenance in a way buyers trust'],
+      uu: ['Attribution requirements for traditional patterns','Tourism seasonal demand timing','Whether designs are family-owned vs. community-owned','Export or customs rules if products ship internationally'],
+    },
+    payouts: {
+      mission: 'Set up merchant payouts for my market stall',
+      kk: ['Citizen is a verified merchant on IN$DEX','Citizen wants to receive INDX from sales'],
+      ku: ['Preferred payout frequency (daily/weekly/monthly)?','Convert to local currency or hold INDX?'],
+      uk: ['What "instant payout" means vs. settlement delay','How taxes or fees may apply in their region'],
+      uu: ['Tax reporting obligations in the citizen\'s jurisdiction','AML threshold reporting if volume is high','Whether their local carrier supports crypto receive'],
+    },
+    governance: {
+      mission: 'Create a governance proposal for the Citizen Assembly',
+      kk: ['Citizen holds INDX and has governance rights','Citizen wants to submit a proposal to Citizen Assembly'],
+      ku: ['What the proposal is about','What vote threshold is required','How long the voting window runs'],
+      uk: ['What a well-formed governance proposal looks like','What proposals have failed and why','How to write the proposal so citizens understand it'],
+      uu: ['Quorum requirements','Whether the proposal conflicts with existing doctrine','Legal implications of the proposed change','Community sentiment about this topic'],
+    },
+    child: {
+      mission: 'Add a learning path for child citizens',
+      kk: ['Feature involves users under 18','Feature involves learning content'],
+      ku: ['Age range this learning path targets','Which subjects or skills to teach','Whether children earn rewards'],
+      uk: ['What child-appropriate UX patterns look like','What child-safety design standards require'],
+      uu: ['Guardian consent requirements','Data minimization obligations for minors','COPPA / equivalent jurisdiction rules','Image or identity exposure risks','What happens to the account at age 18'],
+    },
+  };
+
+  // ── STATE ──
+  let _activeQuad = null;
+  let _activeLoopStep = null;
+  let _civNotes = { mission: '', decisions: [], resolved: [], open: [], risks: [], next: '' };
+  let _activeCq = null;
+
+  // ── TOAST ──
+  let _toastT;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(_toastT);
+    _toastT = setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  // ── CHIP SHORTCUTS ──
+  function setChip(text) {
+    document.getElementById('bspInput').value = text;
+    document.getElementById('bspInput').focus();
+  }
+
+  // ── BLIND SPOT PASS ──
+  function runBlindSpotPass() {
+    const input = document.getElementById('bspInput').value.trim();
+    if (!input) { showToast('Describe your mission first'); return; }
+
+    // Detect template
+    let tmpl = PASS_TEMPLATES.prints;
+    const il = input.toLowerCase();
+    if (il.includes('payout') || il.includes('merchant')) tmpl = PASS_TEMPLATES.payouts;
+    else if (il.includes('governance') || il.includes('meme') || il.includes('proposal')) tmpl = PASS_TEMPLATES.governance;
+    else if (il.includes('child') || il.includes('learn') || il.includes('kid')) tmpl = PASS_TEMPLATES.child;
+
+    // Populate quad counts + items
+    populateQuad('kk', tmpl.kk);
+    populateQuad('ku', tmpl.ku);
+    populateQuad('uk', tmpl.uk);
+    populateQuad('uu', tmpl.uu);
+
+    // Show pass section
+    document.getElementById('passSection').classList.add('show');
+
+    // Activate mission loop at step 0
+    setLoopStep(0);
+
+    // Update civilization notes
+    _civNotes.mission = input;
+    _civNotes.open = [...tmpl.ku, ...tmpl.uu].slice(0, 4).map(x => x.slice(0, 30) + (x.length > 30 ? '…' : ''));
+    _civNotes.risks = tmpl.uu.slice(0, 2);
+    _civNotes.next = 'Review Unknown Unknowns → run consequence classifier → plan with resolved context.';
+    renderCivNotes();
+    updateCivNotesCount();
+
+    // Animate consequence items
+    animateConsequences(input);
+
+    showToast('🔍 Blind Spot Pass complete — ' + (tmpl.kk.length + tmpl.ku.length + tmpl.uk.length + tmpl.uu.length) + ' items classified');
+
+    // Scroll to quads
+    setTimeout(() => document.getElementById('quadGrid').scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+  }
+
+  function populateQuad(type, items) {
+    const countEl = document.getElementById(type + '-count');
+    const itemsEl = document.getElementById(type + '-items');
+    if (countEl) countEl.textContent = items.length;
+    if (itemsEl) {
+      itemsEl.innerHTML = items.map((item, i) =>
+        `<div class="quad-item fade-in" style="animation-delay:${i * 0.06}s" onclick="handleQuadItem('${type}','${item.replace(/'/g,'\\\'').replace(/"/g,'\\"')}')">${item}</div>`
+      ).join('');
+    }
+    const card = document.getElementById('quad-' + type);
+    if (card) { card.classList.add('active'); card.classList.add('expanded'); }
+  }
+
+  function handleQuadItem(type, text) {
+    // Consequence depends on type
+    if (type === 'uu') {
+      // Unknown unknowns → open consequence classifier
+      openCqSheet({ key:'high', label:'Unknown Unknown', route:'Pause for citizen confirmation', action:'Pause', detail:`"${text}" — This unknown was not in the original brief. SIINDEX recommends resolving before proceeding.` });
+    } else if (type === 'uk') {
+      openCqSheet({ key:'medium', label:'Unknown Known', route:'Ask citizen', action:'Prototype or show example', detail:`"${text}" — Show a prototype or example so the citizen can recognize what they want.` });
+    } else {
+      showToast('✓ ' + text.slice(0, 40));
+    }
+  }
+
+  function toggleQuad(type) {
+    const card = document.getElementById('quad-' + type);
+    if (!card) return;
+    const expanded = card.classList.contains('expanded');
+    // Collapse all
+    ['kk','ku','uk','uu'].forEach(t => {
+      const c = document.getElementById('quad-' + t);
+      if (c) c.classList.remove('expanded');
+    });
+    if (!expanded) card.classList.add('expanded');
+  }
+
+  function clearPass() {
+    document.getElementById('bspInput').value = '';
+    ['kk','ku','uk','uu'].forEach(type => {
+      const countEl = document.getElementById(type + '-count');
+      const itemsEl = document.getElementById(type + '-items');
+      const card    = document.getElementById('quad-' + type);
+      if (countEl) countEl.textContent = '0';
+      if (itemsEl) itemsEl.innerHTML = '';
+      if (card) { card.classList.remove('active','expanded'); }
+    });
+    document.getElementById('passSection').classList.remove('show');
+    setLoopStep(null);
+    showToast('Cleared');
+  }
+
+  // ── CONSEQUENCE CLASSIFIER ──
+  function animateConsequences(input) {
+    const il = input.toLowerCase();
+    // Highlight likely consequences based on mission type
+    document.querySelectorAll('.cq-item').forEach(el => el.classList.remove('active'));
+    if (il.includes('cultural') || il.includes('print') || il.includes('pacific')) {
+      document.querySelector('.cq-item.cultural')?.classList.add('active');
+    }
+    if (il.includes('child') || il.includes('kid') || il.includes('learn')) {
+      document.querySelector('.cq-item.child')?.classList.add('active');
+    }
+    if (il.includes('payout') || il.includes('payment') || il.includes('merchant')) {
+      document.querySelector('.cq-item.financial')?.classList.add('active');
+      document.querySelector('.cq-item.security')?.classList.add('active');
+    }
+    if (il.includes('governance') || il.includes('proposal') || il.includes('vote')) {
+      document.querySelector('.cq-item.governance')?.classList.add('active');
+    }
+  }
+
+  function openCqSheet(cq) {
+    _activeCq = cq;
+    document.getElementById('cqSheetTitle').textContent = cq.label;
+    document.getElementById('cqSheetSub').textContent   = 'SIINDEX has classified this unknown and is recommending a routing path.';
+    document.getElementById('cqSheetAction').textContent = cq.detail || cq.action;
+    document.getElementById('cqSheetRoute').textContent  = cq.route;
+    document.getElementById('cqOverlay').classList.add('show');
+  }
+
+  function closeCqSheet(decision) {
+    document.getElementById('cqOverlay').classList.remove('show');
+    if (!_activeCq) return;
+
+    if (decision === 'proceed') {
+      _civNotes.decisions.push('Proceed on "' + (_activeCq.label || 'unknown') + '" — noted');
+      showToast('✓ Noted — proceeding · civilization-notes updated');
+    } else {
+      _civNotes.open.push((_activeCq.label || 'Unknown').slice(0, 28) + '…');
+      showToast('⏸ Paused for review · logged to civilization-notes');
+    }
+    renderCivNotes();
+    updateCivNotesCount();
+    _activeCq = null;
+  }
+
+  // ── 9-STEP MISSION LOOP ──
+  function setLoopStep(idx) {
+    _activeLoopStep = idx;
+    document.querySelectorAll('.loop-step').forEach((el, i) => {
+      el.classList.remove('active','done');
+      if (i < idx) el.classList.add('done');
+      if (i === idx) el.classList.add('active');
+    });
+    const desc = document.getElementById('loopDesc');
+    if (idx === null) {
+      desc.textContent = 'Tap any step to see what SIINDEX does at that stage of the mission.';
+    } else {
+      desc.innerHTML = LOOP_STEPS[idx].desc;
+    }
+  }
+
+  function renderLoopSteps() {
+    const el = document.getElementById('loopSteps');
+    el.innerHTML = LOOP_STEPS.map((s, i) => `
+      <div class="loop-step" onclick="setLoopStep(${i})">
+        <div class="loop-node">${s.emoji}</div>
+        <div class="loop-step-label">${s.label}</div>
+      </div>
+    `).join('');
+  }
+
+  // ── CONSEQUENCE LIST ──
+  function renderConsequences() {
+    const el = document.getElementById('consequenceList');
+    el.innerHTML = CONSEQUENCES.map(cq => `
+      <div class="cq-item ${cq.key}" onclick="openCqSheet(${JSON.stringify(cq).replace(/"/g,'&quot;')})">
+        <div class="cq-dot"></div>
+        <div class="cq-body">
+          <div class="cq-label">${cq.label}</div>
+          <div class="cq-route">${cq.route}</div>
+        </div>
+        <div class="cq-action">${cq.action} →</div>
+      </div>
+    `).join('');
+  }
+
+  // ── CIVILIZATION NOTES ──
+  function renderCivNotes() {
+    const set = (id, val, emptyId) => {
+      const el = document.getElementById(id);
+      if (el) {
+        if (val && (Array.isArray(val) ? val.length : val !== '')) {
+          el.textContent = Array.isArray(val) ? val.join('\n') : val;
+          el.className = 'civnotes-field-val has-content';
+        } else {
+          el.className = 'civnotes-field-val empty';
+        }
+      }
+    };
+    set('cn-mission',   _civNotes.mission);
+    set('cn-decisions', _civNotes.decisions.join('; '));
+    set('cn-risks',     _civNotes.risks.join('; '));
+    set('cn-next',      _civNotes.next);
+
+    // Resolved tags
+    const resolvedEl = document.getElementById('cn-resolved');
+    const resolvedEmptyEl = document.getElementById('cn-resolved-empty');
+    if (_civNotes.resolved.length) {
+      if (resolvedEl) resolvedEl.innerHTML = _civNotes.resolved.map(t => `<div class="civnotes-tag resolved">${t}</div>`).join('');
+      if (resolvedEmptyEl) resolvedEmptyEl.style.display = 'none';
+    } else {
+      if (resolvedEl) resolvedEl.innerHTML = '';
+      if (resolvedEmptyEl) resolvedEmptyEl.style.display = '';
+    }
+
+    // Open unknowns tags
+    const openEl = document.getElementById('cn-open');
+    const openEmptyEl = document.getElementById('cn-open-empty');
+    if (_civNotes.open.length) {
+      if (openEl) openEl.innerHTML = _civNotes.open.map(t => `<div class="civnotes-tag open-unknown">${t}</div>`).join('');
+      if (openEmptyEl) openEmptyEl.style.display = 'none';
+    } else {
+      if (openEl) openEl.innerHTML = '';
+      if (openEmptyEl) openEmptyEl.style.display = '';
+    }
+  }
+
+  function updateCivNotesCount() {
+    const total = (_civNotes.mission ? 1 : 0) + _civNotes.decisions.length + _civNotes.resolved.length + _civNotes.open.length + _civNotes.risks.length;
+    const el = document.getElementById('civNotesCount');
+    if (el) el.textContent = total + ' ' + (total === 1 ? 'entry' : 'entries');
+  }
+
+  function toggleCivNotes() {
+    const body   = document.getElementById('civNotesBody');
+    const toggle = document.getElementById('civNotesToggle');
+    if (!body) return;
+    const open = body.classList.contains('open');
+    body.classList.toggle('open');
+    if (toggle) toggle.textContent = open ? '▸' : '▾';
+  }
+
+  function exportNotes() {
+    const ts = new Date().toISOString().slice(0,10);
+    const content = `# civilization-notes.md
+Date: ${ts}
+
+## Original Mission
+${_civNotes.mission || '(none)'}
+
+## Decisions Made
+${_civNotes.decisions.length ? _civNotes.decisions.map(d => '- ' + d).join('\n') : '(none)'}
+
+## Unknowns Resolved
+${_civNotes.resolved.length ? _civNotes.resolved.map(r => '- ' + r).join('\n') : '(none)'}
+
+## Unknowns Still Open
+${_civNotes.open.length ? _civNotes.open.map(o => '- ' + o).join('\n') : '(none)'}
+
+## Risks Found
+${_civNotes.risks.length ? _civNotes.risks.map(r => '- ' + r).join('\n') : '(none)'}
+
+## Next Best Action
+${_civNotes.next || '(none)'}
+`;
+    // Copy to clipboard
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(content).then(() => {
+        showToast('📋 civilization-notes.md copied to clipboard');
+      }).catch(() => showToast('📋 Notes ready — copy manually'));
+    } else {
+      showToast('📋 Notes ready');
+    }
+  }
+
+  // ── DOCTRINE LINES ──
+  const DOCTRINE = [
+    'The citizen brings the mission. SIINDEX finds the unknowns before they become failure.',
+    'SIINDEX must not only execute missions. SIINDEX must help citizens discover what they do not yet know.',
+    'Unknown unknowns are not the enemy. Hidden high-consequence unknowns are the enemy.',
+    'Citizens should not need to know what they don\'t know. That is SIINDEX\'s job.',
+    'Every build should leave the civilization smarter than before.',
+    'Unknown knowns are best surfaced through prototypes, not interrogation.',
+    'SIINDEX does not only answer what citizens ask. SIINDEX helps citizens discover what they did not know to ask.',
+    'Most citizens will begin with incomplete context. That is not their failure. It is the system\'s opportunity.',
+  ];
+
+  function renderDoctrine() {
+    document.getElementById('doctrineGrid').innerHTML = DOCTRINE.map(d =>
+      `<div class="dl-item">${d}</div>`
+    ).join('');
+  }
+
+  // ── CONSEQUENCE SHEET EVENT (onclick needs JSON-safe cq) ──
+  document.addEventListener('click', e => {
+    const overlay = document.getElementById('cqOverlay');
+    if (e.target === overlay) closeCqSheet('pause');
+  });
+
+  // ── INIT ──
+  window.addEventListener('DOMContentLoaded', () => {
+    renderLoopSteps();
+    renderConsequences();
+    renderDoctrine();
+    renderCivNotes();
+    updateCivNotesCount();
+
+    // Consequence click wiring (data attribute approach for JSON safety)
+    document.getElementById('consequenceList').querySelectorAll('.cq-item').forEach((el, i) => {
+      el.addEventListener('click', () => openCqSheet(CONSEQUENCES[i]));
+    });
+    // Remove onclick that was set inline (to avoid JSON escape issues)
+    document.getElementById('consequenceList').querySelectorAll('.cq-item').forEach(el => {
+      el.removeAttribute('onclick');
+    });
+
+    // Enter on bsp
+    document.getElementById('bspInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); runBlindSpotPass(); }
+    });
+  });
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

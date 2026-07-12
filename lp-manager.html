@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>LP Manager · IN$DEX</title>
+<style>
+:root {
+  --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8; --black:#090A10;
+  --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+  --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+  --text:#F0F2FF; --text-muted:rgba(240,242,255,0.55); --border:rgba(240,242,255,0.09);
+  --cyan-bg:rgba(0,212,255,0.08); --cyan-dim:rgba(0,212,255,0.25);
+  --green-bg:rgba(0,229,160,0.08); --gold-bg:rgba(255,184,0,0.08);
+  --red-bg:rgba(255,77,109,0.08); --purple-bg:rgba(139,63,232,0.08);
+  --radius:14px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;max-width:430px;margin:0 auto;background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Inter',sans-serif;font-size:15px;min-height:100vh;overflow-x:hidden;}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;position:sticky;top:0;background:rgba(9,10,16,0.92);backdrop-filter:blur(18px);z-index:50;border-bottom:1px solid var(--border);}
+.tb-back{background:var(--surface2);border:none;color:var(--text);width:36px;height:36px;border-radius:10px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.tb-title{font-size:15px;font-weight:800;letter-spacing:-0.01em;}
+.tb-live{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--green);}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.5;transform:scale(0.8);}}
+
+/* HERO */
+.hero{padding:20px 16px 16px;background:linear-gradient(180deg,rgba(43,53,216,0.12) 0%,transparent 100%);}
+.hero-label{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;}
+.hero-value{font-size:38px;font-weight:900;letter-spacing:-0.02em;color:var(--text);}
+.hero-sub{font-size:13px;color:var(--text-muted);margin-top:4px;}
+.hero-sub span{color:var(--green);font-weight:700;}
+
+/* GRAND SYNC COUNTDOWN */
+.grand-sync{margin:14px 16px 0;background:linear-gradient(135deg,rgba(43,53,216,0.18),rgba(139,63,232,0.12));border:1px solid rgba(139,63,232,0.25);border-radius:16px;padding:14px 16px;}
+.gs-label{font-size:10px;font-weight:800;color:var(--purple);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;}
+.gs-timer{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.gs-unit{background:rgba(0,0,0,0.3);border-radius:10px;padding:8px 4px;text-align:center;}
+.gs-num{font-size:22px;font-weight:900;color:var(--text);letter-spacing:-0.02em;font-variant-numeric:tabular-nums;}
+.gs-lbl{font-size:9px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;}
+.gs-price{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+.gs-current{font-size:12px;color:var(--text-muted);}
+.gs-target{font-size:13px;font-weight:800;color:var(--gold);}
+.gs-prog-wrap{margin-top:6px;height:4px;background:var(--surface2);border-radius:99px;overflow:hidden;}
+.gs-prog-bar{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--cyan),var(--purple));width:9.6%;}
+
+/* STATS ROW */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 16px 0;}
+.stat-chip{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 10px 8px;text-align:center;}
+.sc-val{font-size:15px;font-weight:800;margin-bottom:2px;}
+.sc-lbl{font-size:9px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;}
+
+/* TAB BAR */
+.tab-bar{display:flex;gap:0;padding:12px 16px 0;overflow-x:auto;scrollbar-width:none;}
+.tab-bar::-webkit-scrollbar{display:none;}
+.tab{padding:8px 16px;border-radius:10px;font-size:13px;font-weight:700;color:var(--text-muted);cursor:pointer;white-space:nowrap;border:1px solid transparent;transition:all 0.18s;flex-shrink:0;}
+.tab.active{background:var(--cyan-bg);border-color:var(--cyan-dim);color:var(--cyan);}
+
+/* SCROLL BODY */
+.scroll-body{padding:14px 16px 100px;}
+
+/* SECTION HEADER */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin:18px 0 10px;}
+.sec-hdr h3{font-size:13px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;}
+.sec-btn{font-size:11px;font-weight:700;color:var(--cyan);background:none;border:none;cursor:pointer;}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px;position:relative;overflow:hidden;}
+.card-accent-cyan::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--cyan),var(--blue));}
+.card-accent-green::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--green),var(--cyan));}
+.card-accent-gold::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold),var(--purple));}
+.card-accent-purple::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--purple),var(--blue));}
+
+/* STRATEGY STATUS */
+.strat-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);}
+.strat-row:last-child{border-bottom:none;padding-bottom:0;}
+.strat-left{display:flex;align-items:center;gap:10px;}
+.strat-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.strat-name{font-size:13px;font-weight:700;}
+.strat-meta{font-size:11px;color:var(--text-muted);margin-top:1px;}
+.status-pill{padding:4px 10px;border-radius:8px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;}
+.s-active{background:rgba(0,229,160,0.15);color:var(--green);border:1px solid rgba(0,229,160,0.25);}
+.s-pending{background:rgba(255,184,0,0.12);color:var(--gold);border:1px solid rgba(255,184,0,0.2);}
+.s-setup{background:rgba(0,212,255,0.1);color:var(--cyan);border:1px solid var(--cyan-dim);}
+
+/* TREASURY DONUT */
+.donut-wrap{display:flex;align-items:center;gap:20px;margin-top:12px;}
+#treasuryDonut{flex-shrink:0;}
+.donut-legend{flex:1;}
+.legend-item{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.legend-name{font-size:12px;color:var(--text-muted);flex:1;}
+.legend-val{font-size:12px;font-weight:700;}
+
+/* LIVE TICKER */
+.ticker-box{background:var(--surface2);border-radius:12px;padding:14px;margin-bottom:10px;}
+.ticker-lbl{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px;}
+.ticker-val{font-size:24px;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:-0.01em;}
+.ticker-rate{font-size:11px;color:var(--text-muted);margin-top:2px;}
+.ticker-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+.tg-cell{background:var(--surface3);border-radius:10px;padding:10px;}
+.tg-val{font-size:15px;font-weight:800;margin-bottom:2px;}
+.tg-lbl{font-size:10px;color:var(--text-muted);font-weight:600;}
+
+/* POOL RANGE */
+.range-wrap{margin:12px 0;}
+.range-bar{height:8px;background:var(--surface2);border-radius:99px;position:relative;overflow:visible;margin:6px 0 20px;}
+.range-fill{position:absolute;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--cyan),var(--blue));}
+.range-dot{position:absolute;top:50%;transform:translate(-50%,-50%);width:16px;height:16px;border-radius:50%;background:var(--text);border:3px solid var(--cyan);z-index:2;box-shadow:0 0 10px rgba(0,212,255,0.5);}
+.range-min,.range-max{position:absolute;bottom:-18px;font-size:10px;color:var(--text-muted);font-weight:600;}
+.range-min{left:0;}.range-max{right:0;}
+.range-cur{position:absolute;top:-18px;font-size:10px;font-weight:800;color:var(--cyan);transform:translateX(-50%);}
+.range-status{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;}
+.in-range{color:var(--green);}
+.in-range::before{content:'●';font-size:8px;animation:pulse 2s infinite;}
+
+/* FEE BARS */
+.fee-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.fee-bar-lbl{font-size:11px;color:var(--text-muted);width:28px;flex-shrink:0;}
+.fee-bar-track{flex:1;height:6px;background:var(--surface2);border-radius:99px;overflow:hidden;}
+.fee-bar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--cyan),var(--blue));}
+.fee-bar-val{font-size:12px;font-weight:700;min-width:48px;text-align:right;}
+
+/* JITOSOL */
+.jito-yield{display:flex;flex-direction:column;align-items:center;padding:16px;background:linear-gradient(135deg,rgba(0,229,160,0.08),rgba(0,212,255,0.05));border-radius:12px;margin-bottom:10px;}
+.jy-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;}
+.jy-val{font-size:32px;font-weight:900;color:var(--green);font-variant-numeric:tabular-nums;letter-spacing:-0.02em;}
+.jy-unit{font-size:14px;color:var(--text-muted);margin-top:2px;}
+
+/* SIMULATOR */
+.sim-input-group{margin-bottom:16px;}
+.sim-label{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;display:flex;justify-content:space-between;margin-bottom:8px;}
+.sim-label span{color:var(--cyan);font-size:13px;text-transform:none;letter-spacing:0;}
+input[type=range]{width:100%;-webkit-appearance:none;height:4px;border-radius:99px;background:var(--surface3);outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--cyan);cursor:pointer;border:3px solid var(--black);box-shadow:0 0 8px rgba(0,212,255,0.4);}
+.sim-results{background:var(--surface2);border-radius:12px;padding:14px;margin-top:14px;}
+.sim-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);}
+.sim-row:last-child{border-bottom:none;}
+.sim-row-lbl{font-size:12px;color:var(--text-muted);}
+.sim-row-val{font-size:13px;font-weight:800;}
+.compound-toggle{display:flex;align-items:center;justify-content:space-between;margin:14px 0 0;}
+.ct-label{font-size:13px;font-weight:700;}
+.ct-sub{font-size:11px;color:var(--text-muted);}
+.toggle-switch{width:44px;height:24px;border-radius:12px;background:var(--surface3);border:none;cursor:pointer;position:relative;transition:background 0.2s;flex-shrink:0;}
+.toggle-switch.on{background:var(--cyan);}
+.toggle-knob{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.3);}
+.toggle-switch.on .toggle-knob{transform:translateX(20px);}
+
+/* CIV FUND */
+.civ-banner{background:linear-gradient(135deg,rgba(43,53,216,0.15),rgba(139,63,232,0.1));border:1px solid rgba(139,63,232,0.2);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;}
+.civ-icon{font-size:26px;}
+.civ-val{font-size:18px;font-weight:900;color:var(--purple);}
+.civ-lbl{font-size:11px;color:var(--text-muted);margin-top:2px;}
+
+/* ALPHA VAULT CTA */
+.alpha-card{background:linear-gradient(135deg,rgba(255,184,0,0.1),rgba(139,63,232,0.08));border:1px solid rgba(255,184,0,0.22);border-radius:16px;padding:18px 16px;margin-bottom:10px;}
+.alpha-tag{font-size:10px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;}
+.alpha-title{font-size:16px;font-weight:800;margin-bottom:6px;}
+.alpha-body{font-size:12px;color:var(--text-muted);line-height:1.6;margin-bottom:14px;}
+.alpha-btns{display:flex;gap:8px;}
+.alpha-btn-primary{flex:1;padding:12px;border-radius:12px;background:linear-gradient(135deg,var(--gold),rgba(255,184,0,0.7));border:none;color:#000;font-size:13px;font-weight:800;cursor:pointer;}
+.alpha-btn-sec{padding:12px 16px;border-radius:12px;background:transparent;border:1px solid var(--border);color:var(--text-muted);font-size:13px;font-weight:700;cursor:pointer;}
+
+/* ACTION BUTTONS */
+.action-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+.action-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:var(--surface);border:1px solid var(--border);border-radius:14px;cursor:pointer;text-decoration:none;transition:all 0.18s;}
+.action-btn:active{transform:scale(0.97);background:var(--surface2);}
+.ab-icon{font-size:22px;}
+.ab-label{font-size:11px;font-weight:700;color:var(--text);}
+.ab-sub{font-size:10px;color:var(--text-muted);}
+
+/* ACTIVITY FEED */
+.feed-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
+.feed-item:last-child{border-bottom:none;}
+.fi-icon{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.fi-body{flex:1;}
+.fi-title{font-size:12px;font-weight:700;}
+.fi-meta{font-size:11px;color:var(--text-muted);margin-top:1px;}
+.fi-val{font-size:12px;font-weight:800;text-align:right;}
+.fi-time{font-size:10px;color:var(--text-muted);text-align:right;margin-top:1px;}
+
+/* TOAST */
+#toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%) translateY(30px);background:var(--surface3);border:1px solid var(--border);border-radius:12px;padding:10px 18px;font-size:13px;font-weight:600;opacity:0;transition:all 0.28s;pointer-events:none;z-index:999;white-space:nowrap;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(9,10,16,0.95);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding:8px 0 20px;z-index:50;}
+.bn-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;text-decoration:none;}
+.bn-icon{font-size:20px;}
+.bn-label{font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;}
+.bn-item.active .bn-label{color:var(--cyan);}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <button class="tb-back" onclick="history.back()">←</button>
+  <div class="tb-title">💰 LP Manager</div>
+  <div class="tb-live"><div class="live-dot"></div>LIVE</div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-label">Treasury Value</div>
+  <div class="hero-value" id="heroValue">$15,847.20</div>
+  <div class="hero-sub">INDX @ <span id="indxPriceHero">$0.24</span> · 2% Civilisation Fund active</div>
+</div>
+
+<!-- GRAND SYNC COUNTDOWN -->
+<div class="grand-sync">
+  <div class="gs-label">⚡ Grand Sync TGE Countdown</div>
+  <div class="gs-timer">
+    <div class="gs-unit"><div class="gs-num" id="gsD">--</div><div class="gs-lbl">Days</div></div>
+    <div class="gs-unit"><div class="gs-num" id="gsH">--</div><div class="gs-lbl">Hours</div></div>
+    <div class="gs-unit"><div class="gs-num" id="gsM">--</div><div class="gs-lbl">Min</div></div>
+    <div class="gs-unit"><div class="gs-num" id="gsS">--</div><div class="gs-lbl">Sec</div></div>
+  </div>
+  <div class="gs-price">
+    <div class="gs-current">Current: <strong style="color:var(--cyan)">$0.24</strong> (genesis)</div>
+    <div class="gs-target">Target: $2.50 🎯</div>
+  </div>
+  <div class="gs-prog-wrap"><div class="gs-prog-bar" id="gsProgBar"></div></div>
+</div>
+
+<!-- STATS ROW -->
+<div class="stats-row">
+  <div class="stat-chip">
+    <div class="sc-val" style="color:var(--cyan);">$9,640</div>
+    <div class="sc-lbl">Pool TVL</div>
+  </div>
+  <div class="stat-chip">
+    <div class="sc-val" style="color:var(--green);" id="dailyFeesStat">$12.60</div>
+    <div class="sc-lbl">24h Fees</div>
+  </div>
+  <div class="stat-chip">
+    <div class="sc-val" style="color:var(--gold);">8.5%</div>
+    <div class="sc-lbl">Jito APY</div>
+  </div>
+</div>
+
+<!-- TAB BAR -->
+<div class="tab-bar">
+  <div class="tab active" id="tabOverview" onclick="switchTab('overview')">Overview</div>
+  <div class="tab" id="tabPool" onclick="switchTab('pool')">🌊 Pool</div>
+  <div class="tab" id="tabStaking" onclick="switchTab('staking')">⚡ Staking</div>
+  <div class="tab" id="tabSimulate" onclick="switchTab('simulate')">📊 Simulate</div>
+</div>
+
+<!-- ── OVERVIEW PANE ── -->
+<div class="scroll-body" id="paneOverview">
+
+  <!-- Treasury allocation donut -->
+  <div class="sec-hdr"><h3>Treasury Allocation</h3><button class="sec-btn" onclick="showToast('Treasury data is illustrative · connect wallet for live data')">Details →</button></div>
+  <div class="card card-accent-cyan">
+    <div class="donut-wrap">
+      <canvas id="treasuryDonut" width="110" height="110"></canvas>
+      <div class="donut-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--cyan);"></div><div class="legend-name">INDX</div><div class="legend-val" style="color:var(--cyan);">$12,000</div></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green);"></div><div class="legend-name">JitoSOL</div><div class="legend-val" style="color:var(--green);">$1,656</div></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--gold);"></div><div class="legend-name">USDC (LP)</div><div class="legend-val" style="color:var(--gold);">$1,600</div></div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--purple);"></div><div class="legend-name">SOL</div><div class="legend-val" style="color:var(--purple);">$591</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Civilisation Fund -->
+  <div class="sec-hdr"><h3>Civilisation Fund</h3></div>
+  <div class="civ-banner">
+    <div class="civ-icon">🌏</div>
+    <div>
+      <div class="civ-val" id="civFundVal">$847.32</div>
+      <div class="civ-lbl">2% of all fees collected · immutable on-chain</div>
+    </div>
+  </div>
+
+  <!-- Strategy status -->
+  <div class="sec-hdr"><h3>Strategy Status</h3></div>
+  <div class="card">
+    <div class="strat-row">
+      <div class="strat-left">
+        <div class="strat-icon" style="background:rgba(0,229,160,0.1);">🌊</div>
+        <div><div class="strat-name">Meteora DLMM Pool</div><div class="strat-meta">INDX/USDC · 0.3% fee · Spot shape</div></div>
+      </div>
+      <div class="status-pill s-active">Active</div>
+    </div>
+    <div class="strat-row">
+      <div class="strat-left">
+        <div class="strat-icon" style="background:rgba(0,212,255,0.1);">⚡</div>
+        <div><div class="strat-name">JitoSOL Staking</div><div class="strat-meta">8.2 SOL staked · 8.5% APY</div></div>
+      </div>
+      <div class="status-pill s-active">Active</div>
+    </div>
+    <div class="strat-row">
+      <div class="strat-left">
+        <div class="strat-icon" style="background:rgba(255,184,0,0.1);">🤖</div>
+        <div><div class="strat-name">Grid Bot (Bid+Ask)</div><div class="strat-meta">Meteora DLMM · ±20% range</div></div>
+      </div>
+      <div class="status-pill s-pending">Pending</div>
+    </div>
+    <div class="strat-row">
+      <div class="strat-left">
+        <div class="strat-icon" style="background:rgba(139,63,232,0.1);">🚀</div>
+        <div><div class="strat-name">Alpha Vault TGE</div><div class="strat-meta">Grand Sync · 24 Sep 2026</div></div>
+      </div>
+      <div class="status-pill s-setup">Setup Required</div>
+    </div>
+  </div>
+
+  <!-- Activity feed -->
+  <div class="sec-hdr"><h3>Recent Activity</h3><button class="sec-btn" onclick="showToast('Full history coming soon')">All →</button></div>
+  <div class="card" id="activityFeed">
+    <div class="feed-item">
+      <div class="fi-icon" style="background:rgba(0,229,160,0.1);">💸</div>
+      <div class="fi-body"><div class="fi-title">LP Fee Earned</div><div class="fi-meta">INDX/USDC pool · Meteora</div></div>
+      <div><div class="fi-val" style="color:var(--green);">+$0.42</div><div class="fi-time">Just now</div></div>
+    </div>
+    <div class="feed-item">
+      <div class="fi-icon" style="background:rgba(0,212,255,0.1);">⚡</div>
+      <div class="fi-body"><div class="fi-title">JitoSOL Yield</div><div class="fi-meta">MEV + staking reward</div></div>
+      <div><div class="fi-val" style="color:var(--cyan);">+0.0009 SOL</div><div class="fi-time">12 min ago</div></div>
+    </div>
+    <div class="feed-item">
+      <div class="fi-icon" style="background:rgba(43,53,216,0.12);">🔄</div>
+      <div class="fi-body"><div class="fi-title">Citizen Swap Routed</div><div class="fi-meta">Jupiter → INDX/USDC pool</div></div>
+      <div><div class="fi-val" style="color:var(--text);">140 INDX</div><div class="fi-time">28 min ago</div></div>
+    </div>
+    <div class="feed-item">
+      <div class="fi-icon" style="background:rgba(139,63,232,0.1);">🌏</div>
+      <div class="fi-body"><div class="fi-title">Civ Fund Allocation</div><div class="fi-meta">2% of $21.00 fees</div></div>
+      <div><div class="fi-val" style="color:var(--purple);">+$0.42</div><div class="fi-time">2 hr ago</div></div>
+    </div>
+  </div>
+
+  <!-- Alpha Vault CTA -->
+  <div class="alpha-card">
+    <div class="alpha-tag">🔐 TGE Action Required</div>
+    <div class="alpha-title">Set up Alpha Vault before Grand Sync</div>
+    <div class="alpha-body">Contact Meteora's launch team 6–8 weeks before 24 Sep 2026. Citizens pre-deposit USDC/SOL and receive INDX at genesis price ($0.24) with automatic Day 1 LP position. Deep liquidity from minute one.</div>
+    <div class="alpha-btns">
+      <button class="alpha-btn-primary" onclick="showToast('Opening meteora.ag launch program...')">Contact Meteora →</button>
+      <button class="alpha-btn-sec" onclick="switchTab('simulate')">Simulate</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── POOL PANE ── -->
+<div class="scroll-body" id="panePool" style="display:none;">
+
+  <!-- Live fee ticker -->
+  <div class="sec-hdr"><h3>Live Fee Income</h3></div>
+  <div class="ticker-box">
+    <div class="ticker-lbl">Fees earned (all time)</div>
+    <div class="ticker-val" style="color:var(--green);" id="feeTicker">$847.32</div>
+    <div class="ticker-rate">+$0.000146 / sec · $12.60 / day · $4,599 / yr</div>
+    <div class="ticker-grid">
+      <div class="tg-cell"><div class="tg-val" style="color:var(--cyan);">$12.60</div><div class="tg-lbl">24h fees</div></div>
+      <div class="tg-cell"><div class="tg-val" style="color:var(--cyan);">$88.20</div><div class="tg-lbl">7d fees</div></div>
+      <div class="tg-cell"><div class="tg-val" style="color:var(--green);">$9,640</div><div class="tg-lbl">Pool TVL</div></div>
+      <div class="tg-cell"><div class="tg-val" style="color:var(--gold);">0.3%</div><div class="tg-lbl">Fee tier</div></div>
+    </div>
+  </div>
+
+  <!-- Price range -->
+  <div class="sec-hdr"><h3>INDX/USDC Price Range</h3></div>
+  <div class="card card-accent-cyan">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div class="range-status"><span class="in-range">● IN RANGE</span></div>
+      <div style="font-size:12px;color:var(--text-muted);">Spot shape · Meteora DLMM</div>
+    </div>
+    <div class="range-wrap">
+      <div class="range-bar">
+        <div class="range-fill" style="left:0;width:100%;"></div>
+        <div class="range-dot" style="left:50%;"></div>
+        <div class="range-cur" style="left:50%;">$0.24</div>
+        <div class="range-min">$0.192</div>
+        <div class="range-max">$0.288</div>
+      </div>
+    </div>
+    <div style="height:28px;"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px;">
+      <div class="tg-cell" style="background:var(--surface2);border-radius:10px;padding:10px;">
+        <div style="font-size:13px;font-weight:800;color:var(--text);">$0.192</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Range Min</div>
+      </div>
+      <div class="tg-cell" style="background:rgba(0,212,255,0.08);border:1px solid var(--cyan-dim);border-radius:10px;padding:10px;">
+        <div style="font-size:13px;font-weight:800;color:var(--cyan);">$0.240</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Current</div>
+      </div>
+      <div class="tg-cell" style="background:var(--surface2);border-radius:10px;padding:10px;">
+        <div style="font-size:13px;font-weight:800;color:var(--text);">$0.288</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Range Max</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fee breakdown bars -->
+  <div class="sec-hdr"><h3>Fee Income Breakdown</h3></div>
+  <div class="card">
+    <div class="fee-bar-row">
+      <div class="fee-bar-lbl" style="color:var(--text-muted);font-size:11px;">24h</div>
+      <div class="fee-bar-track"><div class="fee-bar-fill" style="width:2.7%;"></div></div>
+      <div class="fee-bar-val" style="color:var(--green);">$12.60</div>
+    </div>
+    <div class="fee-bar-row">
+      <div class="fee-bar-lbl" style="color:var(--text-muted);font-size:11px;">7d</div>
+      <div class="fee-bar-track"><div class="fee-bar-fill" style="width:19%;"></div></div>
+      <div class="fee-bar-val" style="color:var(--green);">$88.20</div>
+    </div>
+    <div class="fee-bar-row">
+      <div class="fee-bar-lbl" style="color:var(--text-muted);font-size:11px;">30d</div>
+      <div class="fee-bar-track"><div class="fee-bar-fill" style="width:82%;"></div></div>
+      <div class="fee-bar-val" style="color:var(--green);">$378.00</div>
+    </div>
+    <div class="fee-bar-row" style="margin-bottom:0;">
+      <div class="fee-bar-lbl" style="color:var(--text-muted);font-size:11px;">All</div>
+      <div class="fee-bar-track"><div class="fee-bar-fill" style="width:100%;background:linear-gradient(90deg,var(--green),var(--cyan));"></div></div>
+      <div class="fee-bar-val" style="color:var(--cyan);">$847.32</div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="sec-hdr"><h3>Actions</h3></div>
+  <div class="action-grid">
+    <a class="action-btn" href="https://meteora.ag" onclick="showToast('Opening Meteora DLMM...')">
+      <div class="ab-icon">🌊</div>
+      <div class="ab-label">Add Liquidity</div>
+      <div class="ab-sub">meteora.ag</div>
+    </a>
+    <a class="action-btn" onclick="showToast('Claim fees on Meteora → My Positions')">
+      <div class="ab-icon">💸</div>
+      <div class="ab-label">Claim Fees</div>
+      <div class="ab-sub">$12.60 pending</div>
+    </a>
+    <a class="action-btn" onclick="showToast('Rebalance: widen range to $0.15–$0.40 for Grand Sync run-up')">
+      <div class="ab-icon">⚖️</div>
+      <div class="ab-label">Rebalance</div>
+      <div class="ab-sub">Adjust range</div>
+    </a>
+    <a class="action-btn" href="https://jup.ag" onclick="showToast('Opening Jupiter aggregator...')">
+      <div class="ab-icon">🪐</div>
+      <div class="ab-label">View on Jupiter</div>
+      <div class="ab-sub">jup.ag</div>
+    </a>
+  </div>
+</div>
+
+<!-- ── STAKING PANE ── -->
+<div class="scroll-body" id="paneStaking" style="display:none;">
+
+  <!-- Live yield ticker -->
+  <div class="sec-hdr"><h3>JitoSOL Live Yield</h3></div>
+  <div class="jito-yield">
+    <div class="jy-label">Total SOL earned (all time)</div>
+    <div class="jy-val" id="jitoTicker">0.312000</div>
+    <div class="jy-unit">SOL · ≈ $<span id="jitoUsd">43.68</span></div>
+  </div>
+
+  <div class="ticker-grid" style="margin-bottom:10px;">
+    <div class="tg-cell" style="background:var(--surface);border-radius:12px;padding:12px;border:1px solid var(--border);">
+      <div class="tg-val" style="color:var(--green);">8.2 SOL</div>
+      <div class="tg-lbl">Staked (JitoSOL)</div>
+    </div>
+    <div class="tg-cell" style="background:var(--surface);border-radius:12px;padding:12px;border:1px solid var(--border);">
+      <div class="tg-val" style="color:var(--gold);">8.5%</div>
+      <div class="tg-lbl">APY (MEV+)</div>
+    </div>
+    <div class="tg-cell" style="background:var(--surface);border-radius:12px;padding:12px;border:1px solid var(--border);">
+      <div class="tg-val" style="color:var(--cyan);">0.00191</div>
+      <div class="tg-lbl">SOL / day</div>
+    </div>
+    <div class="tg-cell" style="background:var(--surface);border-radius:12px;padding:12px;border:1px solid var(--border);">
+      <div class="tg-val" style="color:var(--cyan);">0.0697</div>
+      <div class="tg-lbl">SOL / month</div>
+    </div>
+  </div>
+
+  <!-- MEV info -->
+  <div class="sec-hdr"><h3>Why JitoSOL?</h3></div>
+  <div class="card card-accent-green">
+    <div class="strat-row" style="padding-top:0;">
+      <div class="strat-left">
+        <div class="strat-icon" style="background:rgba(0,229,160,0.1);">⚡</div>
+        <div><div class="strat-name">MEV Revenue Share</div><div class="strat-meta">95% of validator MEV distributed to JitoSOL holders</div></div>
+      </div>
+    </div>
+    <div class="strat-row">
+      <div class="strat-left">
+        <div class="strat-icon" style="background:rgba(0,212,255,0.1);">🔒</div>
+        <div><div class="strat-name">92% of Staked SOL</div><div class="strat-meta">Jito client runs on almost every Solana validator</div></div>
+      </div>
+    </div>
+    <div class="strat-row">
+      <div class="strat-left">
+        <div class="strat-icon" style="background:rgba(255,184,0,0.1);">💧</div>
+        <div><div class="strat-name">Fully Liquid</div><div class="strat-meta">Swap JitoSOL → SOL anytime on Orca or Raydium</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="sec-hdr"><h3>Actions</h3></div>
+  <div class="action-grid">
+    <a class="action-btn" href="https://jito.network" onclick="showToast('Opening Jito staking portal...')">
+      <div class="ab-icon">⚡</div>
+      <div class="ab-label">Stake More SOL</div>
+      <div class="ab-sub">jito.network</div>
+    </a>
+    <a class="action-btn" href="https://kamino.finance" onclick="showToast('Opening Kamino collateral loop...')">
+      <div class="ab-icon">🔄</div>
+      <div class="ab-label">Kamino Loop</div>
+      <div class="ab-sub">Borrow against JitoSOL</div>
+    </a>
+    <a class="action-btn" onclick="showToast('View JitoSOL analytics at jito.network/stake')">
+      <div class="ab-icon">📊</div>
+      <div class="ab-label">View Analytics</div>
+      <div class="ab-sub">Jito dashboard</div>
+    </a>
+    <a class="action-btn" onclick="showToast('Add yield to LP: claim → convert → deposit on Meteora')">
+      <div class="ab-icon">➕</div>
+      <div class="ab-label">Add Yield to LP</div>
+      <div class="ab-sub">Compound strategy</div>
+    </a>
+  </div>
+</div>
+
+<!-- ── SIMULATE PANE ── -->
+<div class="scroll-body" id="paneSimulate" style="display:none;">
+
+  <div class="sec-hdr"><h3>LP Fee Compounder</h3></div>
+  <div class="card card-accent-purple">
+
+    <div class="sim-input-group">
+      <div class="sim-label">LP Size (USDC)<span id="simSizeVal">$9,600</span></div>
+      <input type="range" id="simSize" min="1000" max="100000" step="500" value="9600" oninput="calcSim()">
+    </div>
+
+    <div class="sim-input-group">
+      <div class="sim-label">Daily Volume through Pool<span id="simVolVal">$4,200</span></div>
+      <input type="range" id="simVol" min="500" max="50000" step="500" value="4200" oninput="calcSim()">
+    </div>
+
+    <div class="sim-input-group">
+      <div class="sim-label">Fee Tier<span id="simFeeVal">0.3%</span></div>
+      <input type="range" id="simFee" min="1" max="3" step="1" value="2" oninput="calcSim()">
+    </div>
+
+    <div class="compound-toggle">
+      <div>
+        <div class="ct-label">Compound Fees</div>
+        <div class="ct-sub">Re-invest weekly into LP</div>
+      </div>
+      <button class="toggle-switch" id="compoundToggle" onclick="toggleCompound()">
+        <div class="toggle-knob"></div>
+      </button>
+    </div>
+
+    <div class="sim-results">
+      <div class="sim-row">
+        <div class="sim-row-lbl">Daily fee income</div>
+        <div class="sim-row-val" style="color:var(--green);" id="simDaily">$12.60</div>
+      </div>
+      <div class="sim-row">
+        <div class="sim-row-lbl">Monthly fee income</div>
+        <div class="sim-row-val" style="color:var(--cyan);" id="simMonthly">$378.00</div>
+      </div>
+      <div class="sim-row">
+        <div class="sim-row-lbl">Annual fee income</div>
+        <div class="sim-row-val" style="color:var(--cyan);" id="simAnnual">$4,599</div>
+      </div>
+      <div class="sim-row">
+        <div class="sim-row-lbl">Effective APY</div>
+        <div class="sim-row-val" style="color:var(--gold);" id="simApy">47.9%</div>
+      </div>
+      <div class="sim-row">
+        <div class="sim-row-lbl">2% Civ Fund</div>
+        <div class="sim-row-val" style="color:var(--purple);" id="simCiv">$92.00/yr</div>
+      </div>
+      <div class="sim-row" style="border-top:1px solid var(--border);margin-top:4px;padding-top:12px;">
+        <div class="sim-row-lbl" style="font-weight:700;color:var(--text);">2-year LP value</div>
+        <div class="sim-row-val" style="color:var(--gold);font-size:15px;" id="simTwoYear">$14,199</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Meteora benchmarks -->
+  <div class="sec-hdr"><h3>Meteora DLMM Benchmarks</h3></div>
+  <div class="card">
+    <div class="strat-row" style="padding-top:0;">
+      <div class="strat-left"><div><div class="strat-name">Total Volume (30d)</div><div class="strat-meta">Meteora DLMM ecosystem</div></div></div>
+      <div style="font-size:14px;font-weight:800;color:var(--cyan);">$4.49B</div>
+    </div>
+    <div class="strat-row">
+      <div class="strat-left"><div><div class="strat-name">Fees (30d)</div><div class="strat-meta">Distributed to LPs</div></div></div>
+      <div style="font-size:14px;font-weight:800;color:var(--green);">$10.27M</div>
+    </div>
+    <div class="strat-row">
+      <div class="strat-left"><div><div class="strat-name">Total Value Locked</div><div class="strat-meta">Meteora DLMM TVL</div></div></div>
+      <div style="font-size:14px;font-weight:800;color:var(--gold);">$197M</div>
+    </div>
+    <div class="strat-row">
+      <div class="strat-left"><div><div class="strat-name">Cumulative Fees (all time)</div><div class="strat-meta">Since launch</div></div></div>
+      <div style="font-size:14px;font-weight:800;color:var(--purple);">$988M</div>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<!-- BOTTOM NAV -->
+<div class="bottom-nav">
+  <a class="bn-item" href="home-v2.html"><div class="bn-icon">🏠</div><div class="bn-label">Home</div></a>
+  <a class="bn-item" href="dex-swap.html"><div class="bn-icon">🔄</div><div class="bn-label">Swap</div></a>
+  <a class="bn-item active"><div class="bn-icon">💰</div><div class="bn-label">LP</div></a>
+  <a class="bn-item" href="staking.html"><div class="bn-icon">🔒</div><div class="bn-label">Stake</div></a>
+  <a class="bn-item" href="citizen-dashboard.html"><div class="bn-icon">👤</div><div class="bn-label">Profile</div></a>
+</div>
+
+<script>
+const INDX_PRICE_USD = 0.24;
+const GRAND_SYNC = new Date('2026-09-24T00:00:00+11:00');
+const SOL_PRICE_USD = 140;
+const JITO_APY = 0.085;
+const SOL_STAKED = 8.2;
+const METEORA_DAILY_VOLUME = 4200;
+const METEORA_FEE_RATE = 0.003;
+const CIV_RATE = 0.02;
+
+// ── TOAST ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── TAB SWITCH ──
+function switchTab(t) {
+  ['overview','pool','staking','simulate'].forEach(id => {
+    document.getElementById('pane' + id.charAt(0).toUpperCase() + id.slice(1)).style.display = id === t ? 'block' : 'none';
+    document.getElementById('tab' + id.charAt(0).toUpperCase() + id.slice(1)).classList.toggle('active', id === t);
+  });
+}
+
+// ── GRAND SYNC COUNTDOWN ──
+function updateCountdown() {
+  const now = new Date();
+  const diff = GRAND_SYNC - now;
+  if (diff <= 0) {
+    ['gsD','gsH','gsM','gsS'].forEach(id => document.getElementById(id).textContent = '00');
+    return;
+  }
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  document.getElementById('gsD').textContent = String(d).padStart(2,'0');
+  document.getElementById('gsH').textContent = String(h).padStart(2,'0');
+  document.getElementById('gsM').textContent = String(m).padStart(2,'0');
+  const sEl = document.getElementById('gsS');
+  sEl.textContent = String(s).padStart(2,'0');
+  // Pulse on second tick
+  sEl.style.color = 'var(--cyan)';
+  setTimeout(() => { sEl.style.color = 'var(--text)'; }, 300);
+  // Progress: $0.24 → $2.50, show current as % of journey
+  const pct = (INDX_PRICE_USD / 2.50) * 100;
+  document.getElementById('gsProgBar').style.width = pct + '%';
+}
+setInterval(updateCountdown, 1000);
+updateCountdown();
+
+// ── LIVE FEE TICKER (Meteora pool) ──
+const FEE_BASE = 847.32;
+const FEE_PER_SEC = (METEORA_DAILY_VOLUME * METEORA_FEE_RATE) / 86400; // $0.0001458/sec
+let feeStart = Date.now();
+function updateFeeTicker() {
+  const elapsed = (Date.now() - feeStart) / 1000;
+  const total = FEE_BASE + (elapsed * FEE_PER_SEC);
+  document.getElementById('feeTicker').textContent = '$' + total.toFixed(5);
+  // Civ fund = 2% of all fees
+  document.getElementById('civFundVal').textContent = '$' + (total * CIV_RATE).toFixed(2);
+}
+setInterval(updateFeeTicker, 100);
+updateFeeTicker();
+
+// ── LIVE JITOSOL YIELD TICKER ──
+const JITO_BASE_SOL = 0.312000;
+const JITO_PER_SEC = (SOL_STAKED * JITO_APY) / (365 * 86400); // SOL per second
+let jitoStart = Date.now();
+function updateJitoTicker() {
+  const elapsed = (Date.now() - jitoStart) / 1000;
+  const totalSol = JITO_BASE_SOL + (elapsed * JITO_PER_SEC);
+  document.getElementById('jitoTicker').textContent = totalSol.toFixed(6);
+  document.getElementById('jitoUsd').textContent = (totalSol * SOL_PRICE_USD).toFixed(2);
+}
+setInterval(updateJitoTicker, 200);
+updateJitoTicker();
+
+// ── TREASURY DONUT CHART ──
+function drawDonut() {
+  const canvas = document.getElementById('treasuryDonut');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const cx = 55, cy = 55, R = 44, r = 26;
+  const slices = [
+    { val: 12000, color: '#00D4FF' },
+    { val: 1656,  color: '#00E5A0' },
+    { val: 1600,  color: '#FFB800' },
+    { val: 591,   color: '#8B3FE8' },
+  ];
+  const total = slices.reduce((s, x) => s + x.val, 0);
+  let angle = -Math.PI / 2;
+  const GAP = 0.04;
+  slices.forEach(sl => {
+    const sweep = (sl.val / total) * (Math.PI * 2) - GAP;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, angle + GAP / 2, angle + sweep + GAP / 2);
+    ctx.arc(cx, cy, r, angle + sweep + GAP / 2, angle + GAP / 2, true);
+    ctx.closePath();
+    ctx.fillStyle = sl.color;
+    ctx.fill();
+    angle += sweep + GAP;
+  });
+  // Centre text
+  ctx.fillStyle = '#F0F2FF';
+  ctx.font = 'bold 11px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('$15.8K', cx, cy - 7);
+  ctx.font = '9px -apple-system, sans-serif';
+  ctx.fillStyle = 'rgba(240,242,255,0.5)';
+  ctx.fillText('Treasury', cx, cy + 7);
+}
+drawDonut();
+
+// ── FEE SIMULATOR ──
+const FEE_TIERS = [0.001, 0.003, 0.01]; // 0.1%, 0.3%, 1%
+const FEE_TIER_LABELS = ['0.1%', '0.3%', '1%'];
+let compoundOn = false;
+function calcSim() {
+  const size = parseFloat(document.getElementById('simSize').value);
+  const vol  = parseFloat(document.getElementById('simVol').value);
+  const feeIdx = parseInt(document.getElementById('simFee').value) - 1;
+  const feeRate = FEE_TIERS[feeIdx];
+  document.getElementById('simSizeVal').textContent = '$' + size.toLocaleString();
+  document.getElementById('simVolVal').textContent = '$' + vol.toLocaleString();
+  document.getElementById('simFeeVal').textContent = FEE_TIER_LABELS[feeIdx];
+  const dailyFee = vol * feeRate;
+  const monthlyFee = dailyFee * 30;
+  const annualFee = dailyFee * 365;
+  const apy = (annualFee / size) * 100;
+  const civAnnual = annualFee * CIV_RATE;
+  // 2-year value
+  let twoYearVal;
+  if (compoundOn) {
+    // Weekly compounding: 104 periods
+    const weeklyRate = (annualFee / size) / 52;
+    twoYearVal = size * Math.pow(1 + weeklyRate, 104);
+  } else {
+    twoYearVal = size + annualFee * 2;
+  }
+  document.getElementById('simDaily').textContent = '$' + dailyFee.toFixed(2);
+  document.getElementById('simMonthly').textContent = '$' + monthlyFee.toFixed(2);
+  document.getElementById('simAnnual').textContent = '$' + Math.round(annualFee).toLocaleString();
+  document.getElementById('simApy').textContent = apy.toFixed(1) + '%';
+  document.getElementById('simCiv').textContent = '$' + Math.round(civAnnual).toLocaleString() + '/yr';
+  document.getElementById('simTwoYear').textContent = '$' + Math.round(twoYearVal).toLocaleString();
+}
+function toggleCompound() {
+  compoundOn = !compoundOn;
+  const btn = document.getElementById('compoundToggle');
+  btn.classList.toggle('on', compoundOn);
+  calcSim();
+}
+calcSim();
+
+// ── LIVE ACTIVITY FEED ──
+const FEED_EVENTS = [
+  { icon:'💸', bg:'rgba(0,229,160,0.1)', title:'LP Fee Earned', meta:'INDX/USDC pool · Meteora', val:'+$0.42', valColor:'var(--green)', time:'Just now' },
+  { icon:'⚡', bg:'rgba(0,212,255,0.1)', title:'JitoSOL Yield', meta:'MEV + staking reward', val:'+0.0009 SOL', valColor:'var(--cyan)', time:'4 min ago' },
+  { icon:'🔄', bg:'rgba(43,53,216,0.12)', title:'Citizen Swap Routed', meta:'Jupiter → INDX/USDC pool', val:'140 INDX', valColor:'var(--text)', time:'11 min ago' },
+  { icon:'🌏', bg:'rgba(139,63,232,0.1)', title:'Civ Fund Allocation', meta:'2% of $21.00 fees', val:'+$0.42', valColor:'var(--purple)', time:'25 min ago' },
+  { icon:'💸', bg:'rgba(0,229,160,0.1)', title:'LP Fee Earned', meta:'Grid cycle completed', val:'+$1.26', valColor:'var(--green)', time:'42 min ago' },
+  { icon:'⚡', bg:'rgba(0,212,255,0.1)', title:'MEV Boost', meta:'Jito bundle settled', val:'+0.0021 SOL', valColor:'var(--cyan)', time:'1 hr ago' },
+];
+let feedIdx = 0;
+setInterval(function() {
+  const feed = document.getElementById('activityFeed');
+  if (!feed) return;
+  const ev = FEED_EVENTS[feedIdx % FEED_EVENTS.length]; feedIdx++;
+  const div = document.createElement('div');
+  div.className = 'feed-item';
+  div.style.animation = 'slideIn 0.3s ease';
+  div.innerHTML = `<div class="fi-icon" style="background:${ev.bg};">${ev.icon}</div><div class="fi-body"><div class="fi-title">${ev.title}</div><div class="fi-meta">${ev.meta}</div></div><div><div class="fi-val" style="color:${ev.valColor};">${ev.val}</div><div class="fi-time">Just now</div></div>`;
+  feed.insertBefore(div, feed.firstChild);
+  while (feed.children.length > 6) feed.removeChild(feed.lastChild);
+}, 6000);
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

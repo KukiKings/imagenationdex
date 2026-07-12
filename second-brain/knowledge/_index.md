@@ -22,6 +22,9 @@ The problem IN$DEX solves. Platforms that extract value from users rather than r
 ### Sovereign by Default
 Citizens own their identity (Web3 domain), their assets (non-custodial wallet), and the value they create (INDX rewards, MemeDAO governance). Nobody can take it away.
 
+### Macro Validation — Why Now (Session 87, Jul 2026)
+External institutional signals used to validate launch timing, not just internal conviction: Larry Fink (BlackRock CEO) quote, OUSD-on-Solana consortium launch (13+ partners), X Money APY comparison (22.4% vs 6%), crypto cycle-bottom timing, 1.54B unbanked TAM. Deployed identically across home-v2.html, siindex-brief.html, and whitepaper-v1.md as a convergence argument pointing at Grand Synchronicity (24 Sep 2026).
+
 ## Technical Knowledge
 
 ### JS Audit Rules

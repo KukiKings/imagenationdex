@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>IN$DEX Liquidity Flywheel</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+    --black:#090A10; --green:#00E5A0; --gold:#FFB800;
+    --red:#FF4D6D; --surface:#12141F; --surface2:#1A1D2E;
+    --surface3:#22263A; --muted:#6B7280; --text:#E8EAF0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',system-ui,sans-serif;min-height:100vh;overflow-x:hidden;}
+
+  /* ── HEADER ── */
+  .screen-header{background:var(--surface);border-bottom:1px solid var(--surface3);padding:16px 20px;}
+  .screen-eyebrow{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:4px;}
+  .screen-title{font-size:22px;font-weight:800;color:var(--text);}
+  .screen-sub{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5;}
+
+  /* ── NAV TABS ── */
+  .nav-tabs{display:flex;border-bottom:1px solid var(--surface3);background:var(--surface);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .nav-tabs::-webkit-scrollbar{display:none;}
+  .nav-tab{flex-shrink:0;padding:12px 16px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s;}
+  .nav-tab.active{color:var(--cyan);border-bottom-color:var(--cyan);}
+
+  /* ── CONTENT ── */
+  .tab-content{display:none;padding:16px 20px 100px;}
+  .tab-content.active{display:block;}
+  .sect-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;margin-top:20px;}
+  .sect-label:first-child{margin-top:0;}
+
+  /* ── FLYWHEEL VISUAL ── */
+  .flywheel-visual{background:linear-gradient(135deg,rgba(43,53,216,.15),rgba(139,63,232,.12));border:1px solid rgba(139,63,232,.3);border-radius:20px;padding:20px;margin-bottom:16px;text-align:center;}
+  .flywheel-title{font-size:14px;font-weight:800;color:var(--purple);letter-spacing:.5px;margin-bottom:16px;}
+  .flywheel-steps{display:flex;flex-direction:column;gap:0;}
+  .fw-step{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+  .fw-step:last-child{border-bottom:none;}
+  .fw-step-num{width:28px;height:28px;border-radius:50%;background:var(--surface3);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--cyan);}
+  .fw-step-text{text-align:left;}
+  .fw-step-head{font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px;}
+  .fw-step-desc{font-size:12px;color:var(--muted);line-height:1.5;}
+  .fw-arrow{text-align:center;color:var(--purple);font-size:18px;line-height:1;}
+
+  .doctrine-strip{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+  .doctrine-line{background:var(--surface2);border-left:3px solid var(--cyan);border-radius:0 10px 10px 0;padding:10px 14px;font-size:12px;color:var(--text);font-style:italic;line-height:1.5;}
+
+  /* ── GM1: REVENUE SIMULATOR ── */
+  .sim-card{background:var(--surface2);border:1.5px solid var(--surface3);border-radius:16px;padding:16px;margin-bottom:12px;}
+  .sim-input-row{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
+  .sim-label{font-size:11px;color:var(--muted);font-weight:600;}
+  .sim-input{background:var(--surface3);border:1px solid rgba(255,255,255,.08);border-radius:10px;color:var(--text);font-size:15px;padding:10px 14px;width:100%;font-weight:600;}
+  .sim-input:focus{outline:none;border-color:rgba(0,212,255,.4);}
+  .sim-covenant-select{display:flex;gap:6px;margin-bottom:12px;}
+  .sim-cov-btn{flex:1;padding:8px 6px;border-radius:10px;border:1.5px solid var(--surface3);background:var(--surface3);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;text-align:center;transition:all .2s;}
+  .sim-cov-btn.active{border-color:var(--cyan);background:rgba(0,212,255,.1);color:var(--cyan);}
+  .sim-results{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;}
+  .sim-result-card{border-radius:12px;padding:12px;text-align:center;}
+  .sim-result-val{font-size:20px;font-weight:800;line-height:1.1;}
+  .sim-result-lbl{font-size:10px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.5px;margin-top:3px;}
+  .sim-total-row{background:var(--surface3);border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;font-size:13px;}
+  .sim-total-row span:last-child{color:var(--cyan);font-weight:700;}
+  .sim-run-btn{width:100%;background:linear-gradient(90deg,var(--blue),var(--purple));border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:700;padding:13px;cursor:pointer;margin-top:10px;}
+  .sim-run-btn:active{opacity:.85;}
+  .sim-disclaimer{font-size:10px;color:var(--muted);text-align:center;margin-top:8px;line-height:1.4;}
+
+  /* ── GM2: STREAM TRACKER ── */
+  .stream-power-bar{background:var(--surface2);border:1px solid var(--surface3);border-radius:14px;padding:14px;margin-bottom:12px;}
+  .stream-power-header{display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px;}
+  .stream-power-lbl{color:var(--muted);}
+  .stream-power-pct{color:var(--cyan);font-weight:700;}
+  .stream-power-track{height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;margin-bottom:6px;}
+  .stream-power-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--purple));border-radius:4px;transition:width .5s ease;}
+  .stream-power-note{font-size:11px;color:var(--muted);}
+
+  .stream-tier{margin-bottom:14px;}
+  .stream-tier-header{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;padding:6px 10px;border-radius:8px;margin-bottom:6px;}
+  .stream-tier-header.high{background:rgba(0,229,160,.1);color:var(--green);}
+  .stream-tier-header.medium{background:rgba(255,184,0,.1);color:var(--gold);}
+  .stream-tier-header.later{background:rgba(107,114,128,.1);color:var(--muted);}
+
+  .stream-item{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--surface3);border-radius:11px;padding:11px 13px;margin-bottom:6px;cursor:pointer;transition:border-color .2s;}
+  .stream-item:active{border-color:var(--cyan);}
+  .stream-icon{font-size:18px;flex-shrink:0;}
+  .stream-info{flex:1;}
+  .stream-name{font-size:13px;font-weight:700;color:var(--text);}
+  .stream-desc{font-size:11px;color:var(--muted);margin-top:1px;}
+  .stream-status{padding:4px 10px;border-radius:7px;font-size:10px;font-weight:700;flex-shrink:0;cursor:pointer;}
+  .stream-status.plan{background:rgba(107,114,128,.15);color:var(--muted);}
+  .stream-status.active{background:rgba(255,184,0,.15);color:var(--gold);}
+  .stream-status.live{background:rgba(0,229,160,.15);color:var(--green);}
+
+  /* ── GM3: NFT REGISTRY ── */
+  .nft-compliance-checker{background:var(--surface2);border:1.5px solid var(--surface3);border-radius:14px;padding:14px;margin-bottom:14px;}
+  .nft-check-label{font-size:11px;color:var(--cyan);font-weight:600;margin-bottom:8px;}
+  .nft-check-input{width:100%;background:var(--surface3);border:1px solid rgba(255,255,255,.08);border-radius:10px;color:var(--text);font-size:13px;padding:10px 12px;resize:none;min-height:70px;font-family:inherit;line-height:1.5;}
+  .nft-check-input:focus{outline:none;border-color:rgba(0,212,255,.4);}
+  .nft-check-btn{width:100%;background:var(--surface3);border:1.5px solid var(--surface3);border-radius:10px;color:var(--text);font-size:13px;font-weight:700;padding:10px;cursor:pointer;margin-top:8px;}
+  .nft-check-result{margin-top:10px;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.6;display:none;}
+  .nft-check-result.pass{background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.3);color:var(--green);}
+  .nft-check-result.fail{background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.3);color:var(--red);}
+
+  .nft-card{background:var(--surface2);border:1.5px solid var(--surface3);border-radius:14px;padding:14px;margin-bottom:10px;}
+  .nft-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+  .nft-card-name{font-size:13px;font-weight:800;color:var(--text);}
+  .nft-category-tag{font-size:10px;padding:3px 9px;border-radius:6px;font-weight:700;background:rgba(0,212,255,.1);color:var(--cyan);}
+  .nft-grants{font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.5;}
+  .nft-safe-tags{display:flex;flex-wrap:wrap;gap:5px;}
+  .nft-safe-tag{font-size:10px;padding:2px 8px;border-radius:5px;background:rgba(0,229,160,.1);color:var(--green);border:1px solid rgba(0,229,160,.2);}
+
+  /* ── GM4: COVENANT ROUTER ── */
+  .covenant-selector{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+  .covenant-card{background:var(--surface2);border:2px solid var(--surface3);border-radius:14px;padding:14px;cursor:pointer;transition:border-color .2s;}
+  .covenant-card.selected{border-color:var(--cyan);}
+  .covenant-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+  .covenant-card-name{font-size:13px;font-weight:700;color:var(--text);}
+  .covenant-card-tag{font-size:10px;padding:2px 8px;border-radius:5px;font-weight:600;}
+  .covenant-card-splits{font-size:11px;color:var(--muted);}
+  .covenant-alloc-bars{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+  .cov-alloc-row{display:flex;align-items:center;gap:10px;}
+  .cov-alloc-label{font-size:11px;color:var(--muted);width:120px;flex-shrink:0;}
+  .cov-alloc-track{flex:1;height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;}
+  .cov-alloc-fill{height:100%;border-radius:3px;}
+  .cov-alloc-pct{font-size:11px;font-weight:700;width:36px;text-align:right;flex-shrink:0;}
+
+  .covenant-input-row{display:flex;gap:8px;margin-bottom:10px;}
+  .covenant-input{flex:1;background:var(--surface3);border:1px solid rgba(255,255,255,.08);border-radius:10px;color:var(--text);font-size:15px;padding:10px 14px;font-weight:600;}
+  .covenant-input:focus{outline:none;border-color:rgba(0,212,255,.4);}
+  .covenant-calc-btn{background:var(--cyan);color:#000;font-size:13px;font-weight:800;border:none;border-radius:10px;padding:10px 18px;cursor:pointer;}
+  .covenant-memo{background:var(--surface3);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:14px;font-family:'SF Mono',monospace;font-size:12px;line-height:1.7;color:var(--text);white-space:pre;overflow-x:auto;margin-bottom:10px;display:none;}
+  .covenant-copy-btn{width:100%;background:var(--surface2);border:1.5px solid var(--surface3);border-radius:10px;color:var(--cyan);font-size:13px;font-weight:600;padding:11px;cursor:pointer;display:none;}
+
+  /* ── TOAST ── */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;color:var(--text);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:99;white-space:nowrap;pointer-events:none;}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="screen-header">
+  <div class="screen-eyebrow">IN$DEX Economic Layer</div>
+  <div class="screen-title">Liquidity Flywheel</div>
+  <div class="screen-sub">Real commerce → sustainable liquidity. Not speculation. Not hype.</div>
+</div>
+
+<!-- NAV TABS -->
+<div class="nav-tabs">
+  <div class="nav-tab active" onclick="switchTab('flywheel')">⚙️ Flywheel</div>
+  <div class="nav-tab" onclick="switchTab('simulator')">💹 Simulator</div>
+  <div class="nav-tab" onclick="switchTab('streams')">📋 Streams</div>
+  <div class="nav-tab" onclick="switchTab('nfts')">🪙 NFTs</div>
+  <div class="nav-tab" onclick="switchTab('covenant')">📜 Covenant</div>
+</div>
+
+<!-- TAB: FLYWHEEL -->
+<div class="tab-content active" id="tab-flywheel">
+  <div class="flywheel-visual">
+    <div class="flywheel-title">THE IN$DEX LIQUIDITY FLYWHEEL</div>
+    <div class="flywheel-steps">
+      <div class="fw-step">
+        <div class="fw-step-num">1</div>
+        <div class="fw-step-text">
+          <div class="fw-step-head">Citizens create useful activity</div>
+          <div class="fw-step-desc">Sign up · sell · learn · build · list · license · protect culture · use SIINDEX · govern · trade services · launch products · live commerce</div>
+        </div>
+      </div>
+      <div class="fw-arrow">↓</div>
+      <div class="fw-step">
+        <div class="fw-step-num">2</div>
+        <div class="fw-step-text">
+          <div class="fw-step-head">IN$DEX earns small ethical revenue</div>
+          <div class="fw-step-desc">2% seller fee · SIINDEX premium credits · Mission Room subscriptions · licensed agents · partner fees · utility NFTs · grants</div>
+        </div>
+      </div>
+      <div class="fw-arrow">↓</div>
+      <div class="fw-step">
+        <div class="fw-step-num">3</div>
+        <div class="fw-step-text">
+          <div class="fw-step-head">Revenue is routed by covenant</div>
+          <div class="fw-step-desc">30% LP · 30% Operations · 30% Vault of Virja · 10% Security/Cultural/Legal</div>
+        </div>
+      </div>
+      <div class="fw-arrow">↓</div>
+      <div class="fw-step">
+        <div class="fw-step-num">4</div>
+        <div class="fw-step-text">
+          <div class="fw-step-head">Better liquidity improves trust</div>
+          <div class="fw-step-desc">Smoother swaps · lower slippage · deeper INDX markets · stronger treasury credibility · stable marketplace rails</div>
+        </div>
+      </div>
+      <div class="fw-arrow">↓</div>
+      <div class="fw-step">
+        <div class="fw-step-num">5</div>
+        <div class="fw-step-text">
+          <div class="fw-step-head">Trust brings more citizens and builders</div>
+          <div class="fw-step-desc">The loop repeats. Flywheel accelerates. Civilization grows.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sect-label">Canonical Doctrine</div>
+  <div class="doctrine-strip">
+    <div class="doctrine-line">"Liquidity should come from useful work, not empty speculation."</div>
+    <div class="doctrine-line">"Every dollar that enters the liquidity pool should prove the civilization became more useful, more trusted, or more sovereign."</div>
+    <div class="doctrine-line">"Enterprise revenue should subsidize citizen sovereignty."</div>
+    <div class="doctrine-line">"The economy must reward contribution, not extraction."</div>
+    <div class="doctrine-line">"The token must serve the civilization. The civilization must never serve the token."</div>
+    <div class="doctrine-line">"NFTs must prove access, permission, identity, rights, trust, or legacy — not promise profit."</div>
+    <div class="doctrine-line">"Sponsorship may fund opportunity. Advertising must not own attention."</div>
+    <div class="doctrine-line">"Insights can be monetized only when citizens are not exposed."</div>
+  </div>
+</div>
+
+<!-- TAB: SIMULATOR -->
+<div class="tab-content" id="tab-simulator">
+  <div class="sect-label">Covenant Type</div>
+  <div class="sim-covenant-select">
+    <div class="sim-cov-btn active" id="covBtn-standard" onclick="selectCovenant('standard')">Standard<br><span style="font-weight:400;font-size:9px">30/30/30/10</span></div>
+    <div class="sim-cov-btn" id="covBtn-enterprise" onclick="selectCovenant('enterprise')">Enterprise<br><span style="font-weight:400;font-size:9px">40/30/20/10</span></div>
+    <div class="sim-cov-btn" id="covBtn-cultural" onclick="selectCovenant('cultural')">Cultural<br><span style="font-weight:400;font-size:9px">10/10/10/70cr</span></div>
+  </div>
+
+  <div class="sect-label">Revenue Inputs</div>
+  <div class="sim-card">
+    <div class="sim-input-row">
+      <div class="sim-label">Monthly GMV (marketplace sales volume)</div>
+      <input class="sim-input" id="simGMV" type="number" placeholder="0" oninput="runSimulator()">
+    </div>
+    <div class="sim-input-row">
+      <div class="sim-label">SIINDEX License / Premium Credits Revenue</div>
+      <input class="sim-input" id="simLicense" type="number" placeholder="0" oninput="runSimulator()">
+    </div>
+    <div class="sim-input-row">
+      <div class="sim-label">Mission Room Subscriptions Revenue</div>
+      <input class="sim-input" id="simMission" type="number" placeholder="0" oninput="runSimulator()">
+    </div>
+    <div class="sim-input-row">
+      <div class="sim-label">Partner / Corridor Sponsorships</div>
+      <input class="sim-input" id="simPartner" type="number" placeholder="0" oninput="runSimulator()">
+    </div>
+    <div class="sim-input-row">
+      <div class="sim-label">NFT Utility Sales (this month)</div>
+      <input class="sim-input" id="simNFT" type="number" placeholder="0" oninput="runSimulator()">
+    </div>
+    <div class="sim-total-row">
+      <span>Total Protocol Revenue</span>
+      <span id="simTotalRevenue">$0.00</span>
+    </div>
+  </div>
+
+  <div class="sect-label">Routing Output</div>
+  <div class="sim-results" id="simResults">
+    <div class="sim-result-card" style="background:rgba(0,212,255,.1);">
+      <div class="sim-result-val" style="color:var(--cyan);" id="simLP">$0</div>
+      <div class="sim-result-lbl">💧 Liquidity Pool</div>
+    </div>
+    <div class="sim-result-card" style="background:rgba(43,53,216,.15);">
+      <div class="sim-result-val" style="color:#7B8FFF;" id="simOps">$0</div>
+      <div class="sim-result-lbl">⚙️ Operations</div>
+    </div>
+    <div class="sim-result-card" style="background:rgba(255,184,0,.1);">
+      <div class="sim-result-val" style="color:var(--gold);" id="simVault">$0</div>
+      <div class="sim-result-lbl">🏛️ Vault of Virja</div>
+    </div>
+    <div class="sim-result-card" style="background:rgba(255,77,109,.1);">
+      <div class="sim-result-val" style="color:var(--red);" id="simSecurity">$0</div>
+      <div class="sim-result-lbl">🛡️ Security/Legal</div>
+    </div>
+  </div>
+  <div class="sim-disclaimer">All figures in USD. GMV fee is 2% per Civilisation Law. Routing applies to net protocol revenue after the 2% extraction. This is a planning tool — not a financial projection.</div>
+</div>
+
+<!-- TAB: STREAMS -->
+<div class="tab-content" id="tab-streams">
+  <div class="stream-power-bar">
+    <div class="stream-power-header">
+      <span class="stream-power-lbl">Flywheel Power</span>
+      <span class="stream-power-pct" id="streamPowerPct">0%</span>
+    </div>
+    <div class="stream-power-track"><div class="stream-power-fill" id="streamPowerFill" style="width:0%"></div></div>
+    <div class="stream-power-note" id="streamPowerNote">0 of 18 revenue streams active</div>
+  </div>
+
+  <div class="stream-tier">
+    <div class="stream-tier-header high">⬆ Highest Priority</div>
+    <div id="streamTierHigh"></div>
+  </div>
+  <div class="stream-tier">
+    <div class="stream-tier-header medium">◆ Medium Priority</div>
+    <div id="streamTierMedium"></div>
+  </div>
+  <div class="stream-tier">
+    <div class="stream-tier-header later">◇ Later Priority</div>
+    <div id="streamTierLater"></div>
+  </div>
+</div>
+
+<!-- TAB: NFTs -->
+<div class="tab-content" id="tab-nfts">
+  <div class="nft-compliance-checker">
+    <div class="nft-check-label">🔎 NFT Copy Compliance Checker</div>
+    <textarea class="nft-check-input" id="nftCheckInput" placeholder="Paste NFT marketing copy here to check for forbidden language..."></textarea>
+    <button class="nft-check-btn" onclick="checkNFTCopy()">Check for Forbidden Language</button>
+    <div class="nft-check-result" id="nftCheckResult"></div>
+  </div>
+
+  <div class="sect-label">NFT Doctrine Registry — 10 Utility Categories</div>
+  <div id="nftRegistry"></div>
+</div>
+
+<!-- TAB: COVENANT -->
+<div class="tab-content" id="tab-covenant">
+  <div class="sect-label">Select Covenant</div>
+  <div class="covenant-selector" id="covenantSelector"></div>
+
+  <div class="sect-label">Allocation Breakdown</div>
+  <div class="covenant-alloc-bars" id="covenantAllocBars"></div>
+
+  <div class="sect-label">Generate Routing Memo</div>
+  <div class="covenant-input-row">
+    <input class="covenant-input" id="covenantAmount" type="number" placeholder="Enter revenue amount ($)">
+    <button class="covenant-calc-btn" onclick="generateMemo()">Route</button>
+  </div>
+  <div class="covenant-memo" id="covenantMemo"></div>
+  <button class="covenant-copy-btn" id="covenantCopyBtn" onclick="copyMemo()">📋 Copy Routing Memo</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONSTANTS ──
+const INDX_PRICE_USD = 0.24;
+const POOL_TARGET = 100000;
+
+// ── TAB NAV ──
+function switchTab(id) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+  if (id === 'streams') renderStreams();
+  if (id === 'nfts') renderNFTs();
+  if (id === 'covenant') renderCovenantTab();
+}
+
+// ── TOAST ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function fmt(n) {
+  if (n >= 1000000) return '$' + (n / 1000000).toFixed(2) + 'M';
+  if (n >= 1000) return '$' + (n / 1000).toFixed(1) + 'K';
+  return '$' + n.toFixed(2);
+}
+
+// ── GM1: REVENUE SIMULATOR ──
+let _activeCovenant = 'standard';
+const COVENANTS = {
+  standard:   { lp: 0.30, ops: 0.30, vault: 0.30, sec: 0.10, gmvFee: 0.02, name: 'Standard 30/30/30/10' },
+  enterprise: { lp: 0.40, ops: 0.30, vault: 0.20, sec: 0.10, gmvFee: 0.02, name: 'Enterprise 40/30/20/10' },
+  cultural:   { lp: 0.10, ops: 0.10, vault: 0.10, sec: 0.10, creator: 0.70, gmvFee: 0.02, name: 'Cultural 70cr/10/10/10' },
+};
+
+function selectCovenant(key) {
+  _activeCovenant = key;
+  document.querySelectorAll('.sim-cov-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('covBtn-' + key).classList.add('active');
+  runSimulator();
+}
+
+function runSimulator() {
+  const gmv    = parseFloat(document.getElementById('simGMV').value) || 0;
+  const lic    = parseFloat(document.getElementById('simLicense').value) || 0;
+  const mis    = parseFloat(document.getElementById('simMission').value) || 0;
+  const par    = parseFloat(document.getElementById('simPartner').value) || 0;
+  const nft    = parseFloat(document.getElementById('simNFT').value) || 0;
+  const cov = COVENANTS[_activeCovenant];
+  const gmvFee = gmv * cov.gmvFee;
+  const total = gmvFee + lic + mis + par + nft;
+  document.getElementById('simTotalRevenue').textContent = fmt(total);
+  if (_activeCovenant === 'cultural') {
+    document.getElementById('simLP').textContent = fmt(total * cov.lp);
+    document.getElementById('simOps').textContent = fmt(total * cov.ops);
+    document.getElementById('simVault').textContent = fmt(total * cov.vault);
+    document.getElementById('simSecurity').textContent = '70% → Creator';
+  } else {
+    document.getElementById('simLP').textContent = fmt(total * cov.lp);
+    document.getElementById('simOps').textContent = fmt(total * cov.ops);
+    document.getElementById('simVault').textContent = fmt(total * cov.vault);
+    document.getElementById('simSecurity').textContent = fmt(total * cov.sec);
+  }
+}
+
+// ── GM2: REVENUE STREAM TRACKER ──
+const STREAMS = [
+  // Highest priority
+  { id:'s1', tier:'high', icon:'🛒', name:'2% Marketplace Fee Allocation', desc:'2% per sale → protocol revenue. GMV-linked. Grows with real commerce.', lp:'40% of fee to LP' },
+  { id:'s2', tier:'high', icon:'🤖', name:'SIINDEX Premium Automation Credits', desc:'Advanced automation for merchants, businesses, enterprises. Free tier for unbanked citizens.', lp:'30% to LP' },
+  { id:'s3', tier:'high', icon:'🚪', name:'Mission Room Subscriptions', desc:'$9–$999/month tiers. Basic free. Advanced paid. 10–30% of net revenue to LP.', lp:'10-30% to LP' },
+  { id:'s4', tier:'high', icon:'📜', name:'SIINDEX Licensed Agent Deployments', desc:'Certified sub-agent licenses for communities/enterprises. $99–$25,000/month.', lp:'40% to LP' },
+  { id:'s5', tier:'high', icon:'🏗️', name:'Genesis Builder Passes', desc:'Paid for commercial builders. Free/sponsored for unbanked. Access + credits + SIINDEX.', lp:'% to LP' },
+  { id:'s6', tier:'high', icon:'🌏', name:'Partner / Corridor Sponsorships', desc:'Tourism, remittance, education, NGO, council partners. Fixed % of revenue funds corridor LP.', lp:'% per corridor' },
+  { id:'s7', tier:'high', icon:'💻', name:'Developer Connector Marketplace Fees', desc:'Application, certification, transaction, revenue share on paid skills/connectors.', lp:'% to LP + security' },
+  // Medium priority
+  { id:'s8', tier:'medium', icon:'🎨', name:'Cultural Rights Card Licensing', desc:'Provenance + permission + attribution + commercial terms. Minting/admin/renewal fees.', lp:'Cultural covenant' },
+  { id:'s9', tier:'medium', icon:'🎓', name:'Academy Capability Proofs', desc:'SIINDEX Fluency, Trusted Seller, Governance Reader, Sovereign Developer. Course + cert fees.', lp:'% to LP' },
+  { id:'s10', tier:'medium', icon:'🎟️', name:'Live Commerce Ticket / Access NFTs', desc:'Events, workshops, product drops, cultural education, creator sessions. Platform fee.', lp:'% to LP' },
+  { id:'s11', tier:'medium', icon:'⚖️', name:'Legal / Regulatory Evidence Pack Services', desc:'Document preparation, compliance packs, regulatory evidence sets. Per-pack fee.', lp:'% to LP' },
+  { id:'s12', tier:'medium', icon:'🏪', name:'Merchant Operating Room Subscriptions', desc:'Daily brief, listing AI, customer reply, trust checklist, payout safety. $9–$49/month.', lp:'% to LP' },
+  { id:'s13', tier:'medium', icon:'🌱', name:'Grant & Impact Engine Service Fees', desc:'Community project pages, grant packs, impact reports, milestone payouts. Setup + reporting fee.', lp:'% to LP' },
+  // Later priority
+  { id:'s14', tier:'later', icon:'🏺', name:'Legacy Vault Provenance NFTs', desc:'Family story, cultural history, business origin, life milestone preservation. Storage + minting fee.', lp:'% to LP' },
+  { id:'s15', tier:'later', icon:'📊', name:'Privacy-Preserving Ecosystem Reports', desc:'Aggregate marketplace trends, corridor reports, impact dashboards. Paid to partners/public sector.', lp:'% to LP' },
+  { id:'s16', tier:'later', icon:'🏛️', name:'Enterprise / Community SIINDEX Deployments', desc:'Full platform deployments for communities, enterprises, government. Custom licensing.', lp:'40% to LP' },
+  { id:'s17', tier:'later', icon:'💹', name:'Protocol-Owned Liquidity Expansion', desc:'Treasury-owned LP positions funded by accumulated protocol revenue. Conservative, transparent.', lp:'Direct to LP' },
+  { id:'s18', tier:'later', icon:'🎙️', name:'SIINDEX Interview / Media Appearances', desc:'Verified interview packages, voice mode, clip package, authenticity badge. Per campaign.', lp:'% to LP' },
+];
+
+const STATUS_CYCLE = ['plan', 'active', 'live'];
+
+function renderStreams() {
+  const stored = JSON.parse(localStorage.getItem('indx_flywheel_streams') || '{}');
+  let live = 0, active = 0;
+  STREAMS.forEach(s => {
+    const st = stored[s.id] || 'plan';
+    if (st === 'live') live++;
+    if (st === 'active') active++;
+  });
+  const power = Math.round(((live + active * 0.5) / STREAMS.length) * 100);
+  document.getElementById('streamPowerPct').textContent = power + '%';
+  document.getElementById('streamPowerFill').style.width = power + '%';
+  document.getElementById('streamPowerNote').textContent = live + ' live · ' + active + ' active · ' + (STREAMS.length - live - active) + ' planned';
+
+  ['high','medium','later'].forEach(tier => {
+    const container = document.getElementById('streamTier' + tier.charAt(0).toUpperCase() + tier.slice(1));
+    container.innerHTML = STREAMS.filter(s => s.tier === tier).map(s => {
+      const st = stored[s.id] || 'plan';
+      return `<div class="stream-item" onclick="cycleStream('${s.id}')">
+        <div class="stream-icon">${s.icon}</div>
+        <div class="stream-info">
+          <div class="stream-name">${s.name}</div>
+          <div class="stream-desc">${s.desc}</div>
+        </div>
+        <div class="stream-status ${st}">${st.toUpperCase()}</div>
+      </div>`;
+    }).join('');
+  });
+}
+
+function cycleStream(id) {
+  const stored = JSON.parse(localStorage.getItem('indx_flywheel_streams') || '{}');
+  const curr = stored[id] || 'plan';
+  const idx = STATUS_CYCLE.indexOf(curr);
+  stored[id] = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+  localStorage.setItem('indx_flywheel_streams', JSON.stringify(stored));
+  renderStreams();
+  showToast('Stream → ' + stored[id].toUpperCase());
+}
+
+// ── GM3: NFT REGISTRY + COMPLIANCE CHECKER ──
+const FORBIDDEN_WORDS = [
+  'investment', 'invest in', 'profit', 'passive income', 'floor price',
+  'yield', 'dividend', 'royalties forever', 'guaranteed', 'will go up',
+  'moon', 'price will', 'financial return', 'earn money', 'make money',
+  'revenue share to nft holders', 'return on', 'appreciation'
+];
+
+function checkNFTCopy() {
+  const copy = document.getElementById('nftCheckInput').value.toLowerCase();
+  const result = document.getElementById('nftCheckResult');
+  if (!copy.trim()) { showToast('⚠️ Paste copy first'); return; }
+  const found = FORBIDDEN_WORDS.filter(w => copy.includes(w));
+  result.style.display = 'block';
+  if (found.length === 0) {
+    result.className = 'nft-check-result pass';
+    result.textContent = '✅ COMPLIANCE PASS — No forbidden language detected. Copy appears safe for NFT marketing under utility/access framing.';
+  } else {
+    result.className = 'nft-check-result fail';
+    result.innerHTML = '🚨 COMPLIANCE FAIL — Forbidden language detected:\n\n' + found.map(w => '  ✗ "' + w + '"').join('\n') + '\n\nRemove or replace with safe language: access · license · identity · provenance · utility · verification · certification · permission · membership · service rights · event access · storage/protection · renewal.';
+    result.style.whiteSpace = 'pre';
+  }
+}
+
+const NFT_REGISTRY = [
+  { name: 'SIINDEX Genesis Identity Token', category: 'IDENTITY / PROVENANCE', grants: 'Root identity proof for IN$DEX. Held by treasury/foundation. Anti-impersonation anchor. Not sold.', tags: ['identity','provenance','authenticity','non-transferable'] },
+  { name: 'SIINDEX Licensed Deployment NFTs', category: 'LICENSE', grants: 'Right to use one verified SIINDEX agent deployment. Scoped, expiring, with audit requirements and revenue obligations.', tags: ['license','access','limited scope','revocable','enterprise'] },
+  { name: 'Genesis Builder Pass NFTs', category: 'MEMBERSHIP / ACCESS', grants: 'Access to Genesis Builder Program: SIINDEX credits, Mission Room, Design Studio, launch templates, Capability Proof, public showcase.', tags: ['access','membership','participation','utility'] },
+  { name: 'Merchant Trust Credential NFTs', category: 'CERTIFICATION', grants: 'Trusted Merchant Proof, First 10 Sales Proof, Dispute Fairness Proof, Cultural Rights Awareness Proof. Soulbound/non-transferable.', tags: ['certification','verification','trust','soulbound'] },
+  { name: 'Cultural Rights Card NFTs', category: 'CULTURAL RIGHTS / PROVENANCE', grants: 'Provenance, permission, attribution, commercial status, licensing terms, revocation path. Cultural asset protection.', tags: ['provenance','permission','attribution','cultural rights'] },
+  { name: 'Live Commerce Ticket / Access NFTs', category: 'EVENT ACCESS', grants: 'Events, workshops, product drops, tourism experiences, creator sessions, cultural education, business bootcamps.', tags: ['event access','ticket','time-bound','in-ecosystem resale only'] },
+  { name: 'Academy Capability Proof NFTs', category: 'CERTIFICATION', grants: 'SIINDEX Fluency, Trusted Seller, Automation Safety, Governance Reader, Cultural Rights Awareness, Sovereign Developer proofs.', tags: ['certification','capability','proof','not vanity'] },
+  { name: 'IN$DEX Partner License NFTs', category: 'PARTNER LICENSE', grants: 'Approved connector status, API/MCP sandbox access, verified partner badge, marketplace listing, revenue-share agreement.', tags: ['license','partner','verified','annual renewal'] },
+  { name: 'SIINDEX Interview / Media Appearance NFTs', category: 'MEDIA LICENSE', grants: 'Verified interview package, custom intro, approved visual mode, voice mode, clip package, authenticity badge, provenance record.', tags: ['license','media','per-campaign','no price predictions'] },
+  { name: 'Sovereign Legacy Vault NFTs', category: 'LEGACY / PRESERVATION', grants: 'Family story, business origin, cultural history, creation proof, mentorship message, life milestone. Storage + provenance.', tags: ['preservation','provenance','legacy','family access','storage'] },
+];
+
+function renderNFTs() {
+  const registry = document.getElementById('nftRegistry');
+  registry.innerHTML = NFT_REGISTRY.map(nft =>
+    `<div class="nft-card">
+      <div class="nft-card-header">
+        <div class="nft-card-name">${nft.name}</div>
+        <div class="nft-category-tag">${nft.category}</div>
+      </div>
+      <div class="nft-grants">${nft.grants}</div>
+      <div class="nft-safe-tags">${nft.tags.map(t => `<div class="nft-safe-tag">${t}</div>`).join('')}</div>
+    </div>`
+  ).join('');
+}
+
+// ── GM4: LIQUIDITY COVENANT ROUTING MEMO ──
+let _selectedCovenant = 'standard';
+const COVENANT_DATA = [
+  {
+    id: 'standard', name: 'Standard Covenant', tag: 'General Protocol Revenue',
+    tagColor: 'rgba(0,212,255,.15)', tagTextColor: 'var(--cyan)',
+    splits: [
+      { label: 'Liquidity Pool', pct: 30, color: 'var(--cyan)' },
+      { label: 'Operations', pct: 30, color: '#7B8FFF' },
+      { label: 'Vault of Virja', pct: 30, color: 'var(--gold)' },
+      { label: 'Security/Legal/Cultural', pct: 10, color: 'var(--red)' },
+    ]
+  },
+  {
+    id: 'enterprise', name: 'Enterprise Covenant', tag: 'SIINDEX License / Enterprise Revenue',
+    tagColor: 'rgba(139,63,232,.15)', tagTextColor: 'var(--purple)',
+    splits: [
+      { label: 'Liquidity Pool', pct: 40, color: 'var(--cyan)' },
+      { label: 'SIINDEX Development', pct: 30, color: '#7B8FFF' },
+      { label: 'Vault of Virja', pct: 20, color: 'var(--gold)' },
+      { label: 'Security/Legal/Cultural', pct: 10, color: 'var(--red)' },
+    ]
+  },
+  {
+    id: 'cultural', name: 'Cultural Covenant', tag: 'Cultural Licensing Revenue',
+    tagColor: 'rgba(0,229,160,.1)', tagTextColor: 'var(--green)',
+    splits: [
+      { label: 'Creator / Community', pct: 70, color: 'var(--green)' },
+      { label: 'Liquidity Pool', pct: 10, color: 'var(--cyan)' },
+      { label: 'Cultural Protection Fund', pct: 10, color: 'var(--gold)' },
+      { label: 'IN$DEX Operations', pct: 10, color: '#7B8FFF' },
+    ]
+  }
+];
+
+function renderCovenantTab() {
+  const selector = document.getElementById('covenantSelector');
+  selector.innerHTML = COVENANT_DATA.map(c =>
+    `<div class="covenant-card ${c.id === _selectedCovenant ? 'selected' : ''}" onclick="selectCovenantTab('${c.id}')">
+      <div class="covenant-card-header">
+        <div class="covenant-card-name">${c.name}</div>
+        <div class="covenant-card-tag" style="background:${c.tagColor};color:${c.tagTextColor}">${c.tag}</div>
+      </div>
+      <div class="covenant-card-splits">${c.splits.map(s => s.pct + '% ' + s.label).join(' · ')}</div>
+    </div>`
+  ).join('');
+  renderCovenantBars();
+}
+
+function selectCovenantTab(id) {
+  _selectedCovenant = id;
+  document.getElementById('covenantMemo').style.display = 'none';
+  document.getElementById('covenantCopyBtn').style.display = 'none';
+  renderCovenantTab();
+}
+
+function renderCovenantBars() {
+  const cov = COVENANT_DATA.find(c => c.id === _selectedCovenant);
+  const bars = document.getElementById('covenantAllocBars');
+  bars.innerHTML = cov.splits.map(s =>
+    `<div class="cov-alloc-row">
+      <div class="cov-alloc-label">${s.label}</div>
+      <div class="cov-alloc-track"><div class="cov-alloc-fill" style="width:${s.pct}%;background:${s.color}"></div></div>
+      <div class="cov-alloc-pct" style="color:${s.color}">${s.pct}%</div>
+    </div>`
+  ).join('');
+}
+
+function generateMemo() {
+  const amount = parseFloat(document.getElementById('covenantAmount').value);
+  if (!amount || amount <= 0) { showToast('⚠️ Enter a revenue amount first'); return; }
+  const cov = COVENANT_DATA.find(c => c.id === _selectedCovenant);
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-AU', { day:'numeric', month:'long', year:'numeric' });
+  const timeStr = now.toLocaleTimeString('en-AU', { hour:'2-digit', minute:'2-digit' });
+  const lines = cov.splits.map(s => {
+    const alloc = (amount * s.pct / 100).toFixed(2);
+    return `  ${s.pct}% → ${s.label.padEnd(28)} $${alloc}`;
+  });
+  const memo = `IN$DEX LIQUIDITY COVENANT — ROUTING MEMO
+════════════════════════════════════════
+Covenant       : ${cov.name}
+Revenue Type   : ${cov.tag}
+Total Revenue  : $${amount.toFixed(2)}
+Date           : ${dateStr} · ${timeStr}
+Generated by   : SIINDEX Team Portal
+
+ROUTING BREAKDOWN:
+${lines.join('\n')}
+────────────────────────────────────────
+Total Allocated: $${amount.toFixed(2)}
+
+DOCTRINE: Every dollar that enters the liquidity
+pool should prove the civilization became more
+useful, more trusted, or more sovereign.
+
+Approved for routing: ___________________
+IN$DEX Founders · arthurjohnhenry.IN$DEX
+════════════════════════════════════════`;
+  const memoEl = document.getElementById('covenantMemo');
+  memoEl.textContent = memo;
+  memoEl.style.display = 'block';
+  document.getElementById('covenantCopyBtn').style.display = 'block';
+}
+
+function copyMemo() {
+  const text = document.getElementById('covenantMemo').textContent;
+  if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
+  showToast('📋 Routing memo copied');
+}
+
+// ── INIT ──
+document.addEventListener('DOMContentLoaded', () => {
+  renderStreams();
+  renderNFTs();
+  renderCovenantTab();
+});
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

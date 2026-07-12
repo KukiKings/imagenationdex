@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>IN$DEX — Brain Passport</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+    --black:#090A10; --green:#00E5A0; --gold:#FFB800;
+    --red:#FF4D6D; --surface:#12141F; --surface2:#1A1D2E;
+    --surface3:#22263A;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--black); color:#fff;
+    font-family:'Helvetica Neue',Arial,sans-serif;
+    max-width:430px; margin:0 auto; min-height:100vh;
+    padding-bottom:40px; }
+
+  /* NAV */
+  nav { display:flex; align-items:center; justify-content:space-between;
+    padding:16px 20px 12px; }
+  .nav-back { color:var(--cyan); font-size:13px; font-weight:600;
+    letter-spacing:.04em; cursor:pointer; }
+  .nav-title { font-size:12px; font-weight:700; letter-spacing:.08em;
+    color:rgba(255,255,255,.45); text-transform:uppercase; }
+  .nav-badge { border-radius:20px; padding:3px 9px;
+    font-size:11px; font-weight:700; }
+  .badge-empty { background:rgba(255,255,255,.06);
+    color:rgba(255,255,255,.4); }
+  .badge-partial { background:rgba(255,184,0,.12); color:var(--gold); }
+  .badge-full { background:rgba(0,229,160,.12); color:var(--green); }
+
+  /* HERO */
+  .hero { padding:20px 20px 0; }
+  .hero-label { font-size:11px; color:var(--green); font-weight:700;
+    letter-spacing:.1em; text-transform:uppercase; margin-bottom:6px; }
+  .hero-title { font-size:26px; font-weight:800; line-height:1.15; }
+  .hero-title span { color:var(--gold); }
+  .hero-sub { font-size:13px; color:rgba(255,255,255,.55);
+    margin-top:6px; line-height:1.5; }
+
+  /* SIINDEX STRIP */
+  .siindex-strip { margin:14px 20px 0;
+    background:rgba(139,63,232,.1);
+    border:1px solid rgba(139,63,232,.2); border-radius:12px;
+    padding:11px 13px; display:flex; gap:10px; align-items:flex-start; }
+  .si-icon { font-size:16px; flex-shrink:0; margin-top:1px; }
+  .si-text { font-size:12px; color:rgba(255,255,255,.65); line-height:1.5; }
+
+  /* COMPLETENESS CARD */
+  .completeness-card { margin:16px 20px 0;
+    background:var(--surface); border-radius:14px; padding:16px;
+    border:1px solid rgba(255,255,255,.06); }
+  .comp-top { display:flex; align-items:center;
+    justify-content:space-between; margin-bottom:10px; }
+  .comp-score { font-size:28px; font-weight:800; }
+  .comp-score.empty   { color:rgba(255,255,255,.3); }
+  .comp-score.partial { color:var(--gold); }
+  .comp-score.full    { color:var(--green); }
+  .comp-label { font-size:12px; color:rgba(255,255,255,.45);
+    text-align:right; }
+  .comp-bar-track { height:6px; background:var(--surface3);
+    border-radius:3px; overflow:hidden; }
+  .comp-bar-fill { height:100%; border-radius:3px;
+    transition:width .4s ease, background .4s; }
+  .comp-detail { font-size:11px; color:rgba(255,255,255,.35);
+    margin-top:8px; }
+
+  /* SECTION HEADERS */
+  .section-hd { padding:20px 20px 10px;
+    display:flex; align-items:center; justify-content:space-between; }
+  .section-title { font-size:13px; font-weight:700;
+    letter-spacing:.05em; }
+  .section-sub { font-size:11px; color:rgba(255,255,255,.4); }
+
+  /* PASSPORT SECTIONS */
+  .passport-section { margin:0 20px 10px;
+    background:var(--surface); border-radius:14px; overflow:hidden;
+    border:1px solid rgba(255,255,255,.06); }
+  .ps-header { padding:13px 14px; cursor:pointer;
+    display:flex; align-items:center; justify-content:space-between;
+    transition:background .18s; }
+  .ps-header:hover { background:rgba(255,255,255,.03); }
+  .ps-header-left { display:flex; align-items:center; gap:10px; }
+  .ps-icon { font-size:18px; }
+  .ps-title { font-size:13px; font-weight:700; }
+  .ps-count { font-size:11px; color:rgba(255,255,255,.35);
+    margin-top:1px; }
+  .ps-chevron { font-size:12px; color:rgba(255,255,255,.3);
+    transition:transform .2s; }
+  .ps-chevron.open { transform:rotate(180deg); }
+  .ps-body { display:none; padding:0 14px 14px;
+    border-top:1px solid rgba(255,255,255,.05); }
+  .ps-body.open { display:block; }
+
+  /* FORM FIELDS */
+  .field-label { font-size:11px; font-weight:700;
+    color:rgba(255,255,255,.4); letter-spacing:.05em;
+    text-transform:uppercase; margin:12px 0 6px; }
+  .field-hint { font-size:11px; color:rgba(255,255,255,.3);
+    margin-bottom:6px; line-height:1.4; }
+  .text-input { width:100%; background:var(--surface2);
+    border:1px solid rgba(255,255,255,.08); border-radius:10px;
+    padding:11px 13px; color:#fff; font-size:13px;
+    font-family:inherit; outline:none; transition:border-color .18s; }
+  .text-input:focus { border-color:var(--green); }
+  .text-input::placeholder { color:rgba(255,255,255,.25); }
+  .textarea-input { width:100%; background:var(--surface2);
+    border:1px solid rgba(255,255,255,.08); border-radius:10px;
+    padding:11px 13px; color:#fff; font-size:12px;
+    font-family:inherit; outline:none; resize:none;
+    transition:border-color .18s; line-height:1.5; }
+  .textarea-input:focus { border-color:var(--green); }
+  .textarea-input::placeholder { color:rgba(255,255,255,.25); }
+  .chip-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:2px; }
+  .opt-chip { background:var(--surface3);
+    border:1px solid rgba(255,255,255,.07);
+    border-radius:8px; padding:6px 11px; font-size:11px;
+    font-weight:600; color:rgba(255,255,255,.6);
+    cursor:pointer; transition:all .18s; }
+  .opt-chip:hover { border-color:var(--green); color:#fff; }
+  .opt-chip.selected { background:rgba(0,229,160,.12);
+    border-color:var(--green); color:var(--green); }
+
+  /* SAVE BUTTON */
+  .save-bar { padding:16px 20px 0; }
+  .save-btn { width:100%; background:var(--green); color:var(--black);
+    font-size:14px; font-weight:800; padding:15px; border:none;
+    border-radius:12px; cursor:pointer; letter-spacing:.03em;
+    transition:opacity .18s; }
+  .save-btn:disabled { opacity:.25; cursor:not-allowed; }
+  .save-btn:not(:disabled):hover { opacity:.88; }
+
+  /* PROCESSING OVERLAY */
+  .proc-overlay { position:fixed; inset:0; background:rgba(9,10,16,.97);
+    z-index:100; display:none; flex-direction:column;
+    align-items:center; justify-content:center; padding:40px 30px; }
+  .proc-overlay.active { display:flex; }
+  .proc-title { font-size:13px; font-weight:700; color:var(--green);
+    letter-spacing:.1em; text-transform:uppercase; margin-bottom:28px; }
+  .proc-step { display:flex; align-items:center; gap:14px;
+    margin:10px 0; width:100%; max-width:300px; }
+  .step-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0;
+    background:var(--surface3); transition:background .3s; }
+  .step-dot.active { background:var(--green);
+    box-shadow:0 0 8px var(--green); }
+  .step-dot.done { background:var(--green); opacity:.5; }
+  .step-label { font-size:13px; color:rgba(255,255,255,.4);
+    transition:color .3s; }
+  .step-label.active { color:#fff; }
+  .step-label.done { color:var(--green); }
+
+  /* BRIEFED RESULT CARD */
+  #briefedCard { display:none; margin:16px 20px 0;
+    background:rgba(0,229,160,.07);
+    border:1px solid rgba(0,229,160,.25); border-radius:16px;
+    padding:18px; }
+  .briefed-title { font-size:15px; font-weight:800;
+    color:var(--green); margin-bottom:8px; }
+  .briefed-sub { font-size:13px; color:rgba(255,255,255,.65);
+    line-height:1.5; margin-bottom:14px; }
+  .agent-ready-row { display:flex; flex-wrap:wrap; gap:6px; }
+  .agent-ready-chip { background:rgba(0,229,160,.1);
+    border:1px solid rgba(0,229,160,.2); border-radius:20px;
+    padding:4px 10px; font-size:11px; font-weight:700;
+    color:var(--green); }
+
+  /* SAVED PASSPORTS STRIP */
+  .passport-strip { padding:0 20px; display:flex; gap:10px;
+    overflow-x:auto; scrollbar-width:none; }
+  .passport-strip::-webkit-scrollbar { display:none; }
+  .pp-card { flex-shrink:0; width:200px; background:var(--surface);
+    border:1px solid rgba(0,229,160,.15); border-radius:12px;
+    padding:12px; }
+  .pp-name { font-size:13px; font-weight:700; margin-bottom:3px; }
+  .pp-complete { font-size:11px; color:var(--green); margin-bottom:2px; }
+  .pp-ts { font-size:10px; color:rgba(255,255,255,.3); }
+  .pp-empty { padding:0 20px; }
+  .pp-empty-box { background:var(--surface);
+    border:1px dashed rgba(255,255,255,.1); border-radius:12px;
+    padding:18px; text-align:center; }
+  .pp-empty-box p { font-size:12px; color:rgba(255,255,255,.35); }
+
+  /* GOD MODE — DRAFT + PREFILL BANNER */
+  .bp-banner { margin:10px 20px 0; border-radius:10px; padding:10px 14px;
+    display:none; align-items:center; justify-content:space-between; gap:10px; }
+  .bp-banner.visible { display:flex; }
+  .bp-draft-banner { background:rgba(0,212,255,.07);
+    border:1px solid rgba(0,212,255,.2); }
+  .bp-prefill-banner { background:rgba(0,229,160,.07);
+    border:1px solid rgba(0,229,160,.2); }
+  .bp-banner-text { font-size:12px; color:rgba(255,255,255,.7); }
+  .bp-banner-btns { display:flex; gap:6px; flex-shrink:0; }
+  .bp-restore-btn { background:var(--cyan); color:var(--black); border:none;
+    border-radius:7px; padding:5px 10px; font-size:11px;
+    font-weight:700; cursor:pointer; }
+  .bp-prefill-btn { background:var(--green); color:var(--black); border:none;
+    border-radius:7px; padding:5px 10px; font-size:11px;
+    font-weight:700; cursor:pointer; }
+  .bp-dismiss-btn { background:transparent; color:rgba(255,255,255,.35);
+    border:none; font-size:18px; cursor:pointer; padding:0 4px; }
+
+  /* GOD MODE — MILESTONE TOAST */
+  .bp-toast { position:fixed; bottom:24px; left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--surface2); border:1px solid rgba(0,229,160,.3);
+    border-radius:12px; padding:11px 18px; font-size:13px;
+    font-weight:700; color:#fff; z-index:300; white-space:nowrap;
+    opacity:0; transition:opacity .25s, transform .25s;
+    pointer-events:none; max-width:340px; text-align:center; }
+  .bp-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* GOD MODE — PASSPORT DETAIL SHEET */
+  .ppd-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7);
+    z-index:200; display:none; }
+  .ppd-overlay.open { display:block; }
+  .pp-detail-sheet { position:fixed; bottom:0; left:50%;
+    transform:translateX(-50%) translateY(100%);
+    width:100%; max-width:430px; background:var(--surface2);
+    border-radius:20px 20px 0 0; z-index:201;
+    padding:0 0 32px; max-height:82vh; overflow-y:auto;
+    transition:transform .3s cubic-bezier(.4,0,.2,1); }
+  .pp-detail-sheet.open { transform:translateX(-50%) translateY(0); }
+  .ppds-handle { width:36px; height:4px; background:rgba(255,255,255,.15);
+    border-radius:2px; margin:12px auto 0; }
+  .ppds-header { padding:14px 20px;
+    border-bottom:1px solid rgba(255,255,255,.06); }
+  .ppds-pct { font-size:11px; color:var(--green); font-weight:700;
+    letter-spacing:.07em; text-transform:uppercase; margin-bottom:4px; }
+  .ppds-name { font-size:17px; font-weight:800; }
+  .ppds-body { padding:10px 20px; }
+  .ppds-field { padding:8px 0;
+    border-bottom:1px solid rgba(255,255,255,.05); }
+  .ppds-field:last-child { border-bottom:none; }
+  .ppds-key { font-size:10px; font-weight:700;
+    color:rgba(255,255,255,.35); text-transform:uppercase;
+    letter-spacing:.06em; margin-bottom:2px; }
+  .ppds-val { font-size:12px; color:rgba(255,255,255,.75); line-height:1.5; }
+  .ppds-val.empty { color:rgba(255,255,255,.2); font-style:italic; }
+  .ppds-actions { padding:10px 20px 0; display:flex; flex-direction:column; gap:8px; }
+  .ppds-del-btn { background:rgba(255,77,109,.1); color:var(--red);
+    border:1px solid rgba(255,77,109,.2); border-radius:10px;
+    padding:12px; font-size:13px; font-weight:700; cursor:pointer; width:100%; }
+  .ppds-del-confirm { display:none; background:var(--surface3);
+    border:1px solid rgba(255,77,109,.3); border-radius:10px;
+    padding:12px 14px; }
+  .ppds-del-confirm.visible { display:block; }
+  .ppds-del-q { font-size:12px; color:rgba(255,255,255,.7); margin-bottom:10px; }
+  .ppds-del-btns { display:flex; gap:8px; }
+  .ppds-yes { flex:1; background:var(--red); color:#fff; border:none;
+    border-radius:8px; padding:10px; font-size:12px; font-weight:700; cursor:pointer; }
+  .ppds-no  { flex:1; background:var(--surface2); color:rgba(255,255,255,.6);
+    border:1px solid rgba(255,255,255,.1); border-radius:8px; padding:10px;
+    font-size:12px; font-weight:700; cursor:pointer; }
+  .ppds-close { background:var(--surface3); color:rgba(255,255,255,.5);
+    border:none; border-radius:10px; padding:12px; font-size:13px;
+    font-weight:700; cursor:pointer; width:100%; }
+
+  /* DOCTRINE FOOTER */
+  .doctrine { margin:24px 20px 0; background:var(--surface);
+    border:1px solid rgba(0,229,160,.12); border-radius:14px;
+    padding:18px; }
+  .doc-line { font-size:13px; color:rgba(255,255,255,.65);
+    line-height:1.6; margin-bottom:8px; }
+  .doc-line:last-child { margin-bottom:0; }
+  .doc-line span { color:var(--green); font-weight:700; }
+  .doc-line.small { font-size:11px; color:rgba(255,255,255,.3);
+    margin-top:4px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-back">← Grid</span>
+  <span class="nav-title">Layer 3 · Brain Passport</span>
+  <span class="nav-badge badge-empty" id="navBadge">0%</span>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-label">Citizen Delegation Layer</div>
+  <h1 class="hero-title">Your<br><span>delegation layer.</span></h1>
+  <p class="hero-sub">The brief your sovereign team reads before every mission. Complete once — SIINDEX never asks for your context again.</p>
+</div>
+
+<!-- SIINDEX STRIP -->
+<div class="siindex-strip">
+  <div class="si-icon">⚡</div>
+  <div class="si-text">A complete Brain Passport means your 10 SIINDEX agents are briefed on who you are, what you are building, and what they can act on without asking. Update it as your mission evolves.</div>
+</div>
+
+<!-- COMPLETENESS -->
+<div class="completeness-card">
+  <div class="comp-top">
+    <div class="comp-score empty" id="compScore">0%</div>
+    <div class="comp-label" id="compLabel">0 of 15 fields<br>complete</div>
+  </div>
+  <div class="comp-bar-track">
+    <div class="comp-bar-fill" id="compBar"
+      style="width:0%;background:var(--surface3)"></div>
+  </div>
+  <div class="comp-detail" id="compDetail">Fill your Brain Passport to brief your sovereign team.</div>
+</div>
+
+<!-- GOD MODE: PRE-FILL BANNER -->
+<div class="bp-banner bp-prefill-banner" id="bpPrefillBanner">
+  <span class="bp-banner-text">⚡ Grid account detected — pre-fill your name?</span>
+  <div class="bp-banner-btns">
+    <button class="bp-prefill-btn" onclick="bpApplyPrefill()">Pre-fill</button>
+    <button class="bp-dismiss-btn" onclick="bpDismissPrefill()">×</button>
+  </div>
+</div>
+
+<!-- GOD MODE: DRAFT RESTORE BANNER -->
+<div class="bp-banner bp-draft-banner" id="bpDraftBanner">
+  <span class="bp-banner-text">📋 Unsaved passport draft found — restore it?</span>
+  <div class="bp-banner-btns">
+    <button class="bp-restore-btn" onclick="bpRestoreDraft()">Restore</button>
+    <button class="bp-dismiss-btn" onclick="bpDismissDraft()">×</button>
+  </div>
+</div>
+
+<!-- SECTIONS -->
+<div class="section-hd">
+  <div class="section-title">Your Passport</div>
+  <div class="section-sub">15 fields · 5 sections</div>
+</div>
+
+<!-- SECTION 1: IDENTITY -->
+<div class="passport-section">
+  <div class="ps-header" onclick="toggleSection('s1')">
+    <div class="ps-header-left">
+      <span class="ps-icon">👤</span>
+      <div>
+        <div class="ps-title">Identity</div>
+        <div class="ps-count" id="s1count">Fields 1–2</div>
+      </div>
+    </div>
+    <span class="ps-chevron" id="s1chev">▼</span>
+  </div>
+  <div class="ps-body" id="s1body">
+    <div class="field-label">1 · Your name</div>
+    <input class="text-input" id="f1" type="text"
+      placeholder="How SIINDEX should address you"
+      oninput="update()">
+    <div class="field-label">2 · What are you building?</div>
+    <div class="field-hint">Your product, service, community project, or creative work.</div>
+    <textarea class="textarea-input" id="f2" rows="3"
+      placeholder="e.g. Handmade Vanuatu print business. Building an online store and live commerce channel."
+      oninput="update()"></textarea>
+  </div>
+</div>
+
+<!-- SECTION 2: CAPABILITY -->
+<div class="passport-section">
+  <div class="ps-header" onclick="toggleSection('s2')">
+    <div class="ps-header-left">
+      <span class="ps-icon">⚡</span>
+      <div>
+        <div class="ps-title">Capability</div>
+        <div class="ps-count" id="s2count">Fields 3–4</div>
+      </div>
+    </div>
+    <span class="ps-chevron" id="s2chev">▼</span>
+  </div>
+  <div class="ps-body" id="s2body">
+    <div class="field-label">3 · Your skills, experience, and knowledge</div>
+    <div class="field-hint">What do you know how to do? What have you built or learned before?</div>
+    <textarea class="textarea-input" id="f3" rows="3"
+      placeholder="e.g. Textile design, weaving, cultural storytelling, basic social media, small merchant experience."
+      oninput="update()"></textarea>
+    <div class="field-label">4 · Your goals</div>
+    <div class="field-hint">Short, medium, and long term.</div>
+    <textarea class="textarea-input" id="f4" rows="3"
+      placeholder="e.g. Short: first sale online. Medium: 20 regular buyers. Long: support family through cultural craft income."
+      oninput="update()"></textarea>
+  </div>
+</div>
+
+<!-- SECTION 3: ECONOMY + CULTURE -->
+<div class="passport-section">
+  <div class="ps-header" onclick="toggleSection('s3')">
+    <div class="ps-header-left">
+      <span class="ps-icon">🪶</span>
+      <div>
+        <div class="ps-title">Economy + Culture</div>
+        <div class="ps-count" id="s3count">Fields 5–8</div>
+      </div>
+    </div>
+    <span class="ps-chevron" id="s3chev">▼</span>
+  </div>
+  <div class="ps-body" id="s3body">
+    <div class="field-label">5 · Income sources</div>
+    <div class="chip-row" id="incomeChips"></div>
+    <div class="field-label" style="margin-top:14px">6 · Cultural background and obligations</div>
+    <div class="field-hint">Any cultural protocols, community obligations, or restricted knowledge relevant to your work.</div>
+    <textarea class="textarea-input" id="f6" rows="2"
+      placeholder="e.g. Ni-Vanuatu creator — certain designs require elder approval before commercial use."
+      oninput="update()"></textarea>
+    <div class="field-label">7 · Values and non-negotiables</div>
+    <textarea class="textarea-input" id="f7" rows="2"
+      placeholder="e.g. Cultural integrity above profit. No misrepresentation of my work's origin."
+      oninput="update()"></textarea>
+    <div class="field-label">8 · Risk tolerance</div>
+    <div class="chip-row" id="riskChips"></div>
+  </div>
+</div>
+
+<!-- SECTION 4: RELATIONSHIPS + GOVERNANCE -->
+<div class="passport-section">
+  <div class="ps-header" onclick="toggleSection('s4')">
+    <div class="ps-header-left">
+      <span class="ps-icon">🌏</span>
+      <div>
+        <div class="ps-title">Relationships + Governance</div>
+        <div class="ps-count" id="s4count">Fields 9–12</div>
+      </div>
+    </div>
+    <span class="ps-chevron" id="s4chev">▼</span>
+  </div>
+  <div class="ps-body" id="s4body">
+    <div class="field-label">9 · Communication preferences</div>
+    <div class="chip-row" id="commChips"></div>
+    <div class="field-label" style="margin-top:14px">10 · Family and dependant context</div>
+    <div class="chip-row" id="familyChips"></div>
+    <div class="field-label" style="margin-top:14px">11 · Governance participation</div>
+    <div class="chip-row" id="govChips"></div>
+    <div class="field-label" style="margin-top:14px">12 · Current active missions</div>
+    <div class="field-hint">What are you actively working on right now?</div>
+    <textarea class="textarea-input" id="f12" rows="2"
+      placeholder="e.g. Launching marketplace listing. Setting up live commerce. Preparing cultural asset review."
+      oninput="update()"></textarea>
+  </div>
+</div>
+
+<!-- SECTION 5: DELEGATION RULES -->
+<div class="passport-section">
+  <div class="ps-header" onclick="toggleSection('s5')">
+    <div class="ps-header-left">
+      <span class="ps-icon">🔐</span>
+      <div>
+        <div class="ps-title">Delegation Rules + Memory</div>
+        <div class="ps-count" id="s5count">Fields 13–15</div>
+      </div>
+    </div>
+    <span class="ps-chevron" id="s5chev">▼</span>
+  </div>
+  <div class="ps-body" id="s5body">
+    <div class="field-label">13 · What SIINDEX should never do without my approval</div>
+    <div class="field-hint">These are your hard limits. SIINDEX will always ask first.</div>
+    <textarea class="textarea-input" id="f13" rows="2"
+      placeholder="e.g. Move any funds. Publish any cultural content. Contact buyers on my behalf."
+      oninput="update()"></textarea>
+    <div class="field-label">14 · What SIINDEX can proceed on autonomously</div>
+    <div class="field-hint">Actions your team can take without checking first.</div>
+    <textarea class="textarea-input" id="f14" rows="2"
+      placeholder="e.g. Improve listing descriptions. Suggest pricing. Draft replies for my review."
+      oninput="update()"></textarea>
+    <div class="field-label">15 · Recent decisions, outcomes, and lessons</div>
+    <textarea class="textarea-input" id="f15" rows="2"
+      placeholder="e.g. First sale on 8 Jul. Lesson: photos matter more than description. Next: better product images."
+      oninput="update()"></textarea>
+  </div>
+</div>
+
+<!-- SAVE -->
+<div class="save-bar">
+  <button class="save-btn" id="saveBtn" onclick="savePassport()" disabled>
+    Save Brain Passport — Brief My Team →
+  </button>
+</div>
+
+<!-- BRIEFED RESULT -->
+<div id="briefedCard">
+  <div class="briefed-title">✓ Your sovereign team is briefed.</div>
+  <div class="briefed-sub" id="briefedSub"></div>
+  <div class="agent-ready-row">
+    <span class="agent-ready-chip">⚡ Opportunity Agent</span>
+    <span class="agent-ready-chip">🏪 Merchant Agent</span>
+    <span class="agent-ready-chip">✨ Creator Agent</span>
+    <span class="agent-ready-chip">📚 Learning Agent</span>
+    <span class="agent-ready-chip">🔐 Trust Agent</span>
+    <span class="agent-ready-chip">🪶 Cultural Steward</span>
+    <span class="agent-ready-chip">⚖️ Governance Agent</span>
+    <span class="agent-ready-chip">🧠 Memory Agent</span>
+    <span class="agent-ready-chip">📢 Media Agent</span>
+    <span class="agent-ready-chip">⚙️ Automation Agent</span>
+  </div>
+</div>
+
+<!-- SAVED PASSPORTS -->
+<div class="section-hd">
+  <div class="section-title">Saved Passports</div>
+  <div class="section-sub" id="ppCount">0 versions</div>
+</div>
+<div id="ppArea"></div>
+
+<!-- DOCTRINE FOOTER -->
+<div class="doctrine">
+  <div class="doc-line"><span>"A complete Brain Passport means SIINDEX never asks you to repeat your context."</span></div>
+  <div class="doc-line">The Brain Passport is not a profile. It is the brief your sovereign team reads before every mission — so they arrive knowing who you are, what you are building, and what you need.</div>
+  <div class="doc-line">Update it as your mission evolves. The team gets smarter each time.</div>
+  <div class="doc-line small">IN$DEX · Brain Passport · Layer 3 · INDX $0.24</div>
+</div>
+
+<!-- GOD MODE: MILESTONE TOAST -->
+<div class="bp-toast" id="bpToast"></div>
+
+<!-- GOD MODE: PASSPORT DETAIL SHEET -->
+<div class="ppd-overlay" id="ppdOverlay" onclick="closePpDetail()"></div>
+<div class="pp-detail-sheet" id="ppdSheet">
+  <div class="ppds-handle"></div>
+  <div class="ppds-header">
+    <div class="ppds-pct" id="ppdsPercent">—</div>
+    <div class="ppds-name" id="ppdsName">—</div>
+  </div>
+  <div class="ppds-body" id="ppdsBody"></div>
+  <div class="ppds-actions">
+    <button class="ppds-del-btn" onclick="ppdsShowConfirm()">Delete This Version</button>
+    <div class="ppds-del-confirm" id="ppdsDelConfirm">
+      <div class="ppds-del-q">Remove this passport version?</div>
+      <div class="ppds-del-btns">
+        <button class="ppds-yes" onclick="ppdsConfirmDelete()">Yes, Remove</button>
+        <button class="ppds-no" onclick="ppdsHideConfirm()">Cancel</button>
+      </div>
+    </div>
+    <button class="ppds-close" onclick="closePpDetail()">Close</button>
+  </div>
+</div>
+
+<!-- PROCESSING OVERLAY -->
+<div class="proc-overlay" id="procOverlay">
+  <div class="proc-title">Briefing Your Sovereign Team</div>
+  <div class="proc-step">
+    <div class="step-dot" id="sd0"></div>
+    <div class="step-label" id="sl0">Encrypting delegation layer…</div>
+  </div>
+  <div class="proc-step">
+    <div class="step-dot" id="sd1"></div>
+    <div class="step-label" id="sl1">Briefing 10 SIINDEX agents…</div>
+  </div>
+  <div class="proc-step">
+    <div class="step-dot" id="sd2"></div>
+    <div class="step-label" id="sl2">Setting delegation rules…</div>
+  </div>
+  <div class="proc-step">
+    <div class="step-dot" id="sd3"></div>
+    <div class="step-label" id="sl3">Activating Sovereign Team…</div>
+  </div>
+</div>
+
+<script>
+const INDX_PRICE_USD = 0.24;
+const PP_KEY = 'indx_brain_passports';
+
+// Chip options
+const INCOME_OPTS = ['Marketplace','Creator','Services','Employment','Community','None yet'];
+const RISK_OPTS   = ['Low','Moderate','High','Varies by domain'];
+const COMM_OPTS   = ['Direct','Collaborative','Visual examples','Written briefs'];
+const FAMILY_OPTS = ['Solo','Partner','Children','Extended family','Guardian of child citizen'];
+const GOV_OPTS    = ['Active voter','Observer','Proposal writer','Pending'];
+
+// Chip state
+const chips = { income:[], risk:[], comm:[], family:[], gov:[] };
+
+function initChips() {
+  renderChips('incomeChips', INCOME_OPTS, 'income', true);
+  renderChips('riskChips',   RISK_OPTS,   'risk',   false);
+  renderChips('commChips',   COMM_OPTS,   'comm',   false);
+  renderChips('familyChips', FAMILY_OPTS, 'family', true);
+  renderChips('govChips',    GOV_OPTS,    'gov',    false);
+}
+
+function renderChips(containerId, opts, key, multi) {
+  const row = document.getElementById(containerId);
+  row.innerHTML = opts.map(o =>
+    `<button class="opt-chip" id="chip_${key}_${o.replace(/\s/g,'_')}"
+      onclick="toggleChip('${key}','${o}',${multi})">${o}</button>`
+  ).join('');
+}
+
+function toggleChip(key, val, multi) {
+  if (multi) {
+    const idx = chips[key].indexOf(val);
+    if (idx > -1) chips[key].splice(idx, 1); else chips[key].push(val);
+  } else {
+    chips[key] = chips[key][0] === val ? [] : [val];
+  }
+  // Re-render chip states
+  const keyMap = {income:'incomeChips',risk:'riskChips',comm:'commChips',family:'familyChips',gov:'govChips'};
+  const opts = {income:INCOME_OPTS,risk:RISK_OPTS,comm:COMM_OPTS,family:FAMILY_OPTS,gov:GOV_OPTS};
+  opts[key].forEach(o => {
+    const el = document.getElementById('chip_' + key + '_' + o.replace(/\s/g,'_'));
+    if (el) el.classList.toggle('selected', chips[key].includes(o));
+  });
+  update();
+}
+
+function toggleSection(id) {
+  const body = document.getElementById(id + 'body');
+  const chev = document.getElementById(id + 'chev');
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  chev.classList.toggle('open', !isOpen);
+}
+
+function countFilled() {
+  const textFields = ['f1','f2','f3','f4','f6','f7','f12','f13','f14','f15'];
+  let count = 0;
+  textFields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.value.trim().length > 2) count++;
+  });
+  // Chip groups count as 1 each if at least one selected
+  ['income','risk','comm','family','gov'].forEach(k => {
+    if (chips[k].length) count++;
+  });
+  return count; // max 15
+}
+
+function update() {
+  const filled = countFilled();
+  const pct = Math.round((filled / 15) * 100);
+
+  // Score
+  const scoreEl = document.getElementById('compScore');
+  scoreEl.textContent = pct + '%';
+  scoreEl.className = 'comp-score ' + (pct === 0 ? 'empty' : pct === 100 ? 'full' : 'partial');
+
+  // Bar
+  const bar = document.getElementById('compBar');
+  bar.style.width = pct + '%';
+  bar.style.background = pct === 100 ? 'var(--green)'
+    : pct >= 50 ? 'var(--gold)' : 'var(--purple)';
+
+  // Label
+  document.getElementById('compLabel').textContent = filled + ' of 15 fields\ncomplete';
+  document.getElementById('compDetail').textContent = pct === 100
+    ? 'Your sovereign team is fully briefed. Save your passport.'
+    : pct >= 60 ? 'Strong briefing — save now or keep going.'
+    : 'Fill more fields for a stronger team briefing.';
+
+  // Nav badge
+  const badge = document.getElementById('navBadge');
+  badge.textContent = pct + '%';
+  badge.className = 'nav-badge ' + (pct === 0 ? 'badge-empty' : pct === 100 ? 'badge-full' : 'badge-partial');
+
+  // Section counts
+  const s1 = ['f1','f2'].filter(id=>document.getElementById(id)?.value.trim().length>2).length;
+  const s2 = ['f3','f4'].filter(id=>document.getElementById(id)?.value.trim().length>2).length;
+  const s3 = ['f6','f7'].filter(id=>document.getElementById(id)?.value.trim().length>2).length
+    + (chips.income.length?1:0) + (chips.risk.length?1:0);
+  const s4 = ['f12'].filter(id=>document.getElementById(id)?.value.trim().length>2).length
+    + (chips.comm.length?1:0) + (chips.family.length?1:0) + (chips.gov.length?1:0);
+  const s5 = ['f13','f14','f15'].filter(id=>document.getElementById(id)?.value.trim().length>2).length;
+  document.getElementById('s1count').textContent = `${s1}/2 complete`;
+  document.getElementById('s2count').textContent = `${s2}/2 complete`;
+  document.getElementById('s3count').textContent = `${s3}/4 complete`;
+  document.getElementById('s4count').textContent = `${s4}/4 complete`;
+  document.getElementById('s5count').textContent = `${s5}/3 complete`;
+
+  // Save button
+  const name = document.getElementById('f1').value.trim();
+  document.getElementById('saveBtn').disabled = !(filled >= 5 && name.length >= 2);
+}
+
+function savePassport() {
+  showProc(() => {
+    const passport = {
+      name:    document.getElementById('f1').value.trim(),
+      building:document.getElementById('f2').value.trim(),
+      skills:  document.getElementById('f3').value.trim(),
+      goals:   document.getElementById('f4').value.trim(),
+      income:  chips.income.join(', '),
+      culture: document.getElementById('f6').value.trim(),
+      values:  document.getElementById('f7').value.trim(),
+      risk:    chips.risk[0] || '',
+      comm:    chips.comm[0] || '',
+      family:  chips.family.join(', '),
+      gov:     chips.gov[0] || '',
+      missions:document.getElementById('f12').value.trim(),
+      neverDo: document.getElementById('f13').value.trim(),
+      canDo:   document.getElementById('f14').value.trim(),
+      memory:  document.getElementById('f15').value.trim(),
+      complete: countFilled(),
+      ts:      Date.now(),
+    };
+    const saved = JSON.parse(localStorage.getItem(PP_KEY) || '[]');
+    saved.unshift(passport);
+    if (saved.length > 10) saved.length = 10;
+    localStorage.setItem(PP_KEY, JSON.stringify(saved));
+    showBriefed(passport);
+    renderSaved();
+  });
+}
+
+function showProc(cb) {
+  const overlay = document.getElementById('procOverlay');
+  overlay.classList.add('active');
+  let i = 0;
+  function tick() {
+    if (i > 0) {
+      document.getElementById('sd'+(i-1)).className='step-dot done';
+      document.getElementById('sl'+(i-1)).className='step-label done';
+    }
+    if (i < 4) {
+      document.getElementById('sd'+i).className='step-dot active';
+      document.getElementById('sl'+i).className='step-label active';
+      i++;
+      setTimeout(tick, 680);
+    } else {
+      overlay.classList.remove('active');
+      for(let j=0;j<4;j++){
+        document.getElementById('sd'+j).className='step-dot';
+        document.getElementById('sl'+j).className='step-label';
+      }
+      cb();
+    }
+  }
+  tick();
+}
+
+function showBriefed(p) {
+  const card = document.getElementById('briefedCard');
+  const pct = Math.round((p.complete / 15) * 100);
+  document.getElementById('briefedSub').textContent =
+    `${p.name}, your team is now briefed at ${pct}% completeness. They know what you're building, what you value, and what they can act on without asking. Update your passport as your mission evolves.`;
+  card.style.display = 'block';
+  card.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function renderSaved() {
+  const saved = JSON.parse(localStorage.getItem(PP_KEY) || '[]');
+  document.getElementById('ppCount').textContent = `${saved.length} version${saved.length===1?'':'s'}`;
+  const area = document.getElementById('ppArea');
+  if (!saved.length) {
+    area.innerHTML = `<div class="pp-empty">
+      <div class="pp-empty-box">
+        <p>Save your first Brain Passport to brief your sovereign team.</p>
+      </div>
+    </div>`;
+    return;
+  }
+  area.innerHTML = `<div class="passport-strip">` +
+    saved.map(p => `<div class="pp-card">
+      <div class="pp-name">${p.name}</div>
+      <div class="pp-complete">${Math.round((p.complete/15)*100)}% complete · ${p.complete}/15 fields</div>
+      <div class="pp-ts">${new Date(p.ts).toLocaleDateString('en-AU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+    </div>`).join('') + `</div>`;
+}
+
+// ── GOD MODE JS BLOCK ──────────────────────────────────────────────────────
+
+// Feature 1: Draft Auto-Save + Restore
+const BP_DRAFT_KEY = 'indx_brain_passport_draft';
+
+function bpSaveDraft() {
+  const d = {
+    fields: {},
+    chips:  {}
+  };
+  ['f1','f2','f3','f4','f6','f7','f12','f13','f14','f15'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) d.fields[id] = el.value;
+  });
+  ['income','risk','comm','family','gov'].forEach(k => {
+    d.chips[k] = [...chips[k]];
+  });
+  // Only save if there's actually something
+  const hasContent = Object.values(d.fields).some(v => v && v.trim().length > 1)
+    || Object.values(d.chips).some(arr => arr.length > 0);
+  if (!hasContent) { localStorage.removeItem(BP_DRAFT_KEY); return; }
+  localStorage.setItem(BP_DRAFT_KEY, JSON.stringify(d));
+}
+
+function bpRestoreDraft() {
+  const raw = localStorage.getItem(BP_DRAFT_KEY);
+  if (!raw) return;
+  const d = JSON.parse(raw);
+  if (d.fields) {
+    Object.entries(d.fields).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val || '';
+    });
+  }
+  if (d.chips) {
+    Object.entries(d.chips).forEach(([k, arr]) => {
+      chips[k] = arr || [];
+    });
+    // Re-render chip visual states
+    const OPTS = {income:INCOME_OPTS,risk:RISK_OPTS,comm:COMM_OPTS,family:FAMILY_OPTS,gov:GOV_OPTS};
+    Object.keys(OPTS).forEach(k => {
+      OPTS[k].forEach(o => {
+        const el = document.getElementById('chip_' + k + '_' + o.replace(/\s/g,'_'));
+        if (el) el.classList.toggle('selected', chips[k].includes(o));
+      });
+    });
+  }
+  update();
+  document.getElementById('bpDraftBanner').classList.remove('visible');
+  localStorage.removeItem(BP_DRAFT_KEY);
+}
+
+function bpDismissDraft() {
+  document.getElementById('bpDraftBanner').classList.remove('visible');
+  localStorage.removeItem(BP_DRAFT_KEY);
+}
+
+function bpCheckDraft() {
+  if (localStorage.getItem(BP_DRAFT_KEY)) {
+    document.getElementById('bpDraftBanner').classList.add('visible');
+  }
+}
+
+// Attach draft listeners to all text fields
+function bpAttachDraftListeners() {
+  ['f1','f2','f3','f4','f6','f7','f12','f13','f14','f15'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', bpSaveDraft);
+  });
+}
+
+// Patch savePassport to clear draft on save
+const _bpOrigSave = savePassport;
+savePassport = function() {
+  localStorage.removeItem(BP_DRAFT_KEY);
+  document.getElementById('bpDraftBanner').classList.remove('visible');
+  _bpOrigSave();
+};
+
+// Patch toggleChip to also save draft
+const _bpOrigToggleChip = toggleChip;
+toggleChip = function(key, val, multi) {
+  _bpOrigToggleChip(key, val, multi);
+  bpSaveDraft();
+};
+
+// Feature 2: Completeness Milestone Toasts
+const BP_MILESTONES = {
+  25:  '⚡ 25% complete — your agents are starting to understand you.',
+  50:  '🔥 Halfway there — agents can act on income, culture + goals.',
+  75:  '🌟 75% briefed — your team is nearly fully autonomous.',
+  100: '✅ Complete passport — SIINDEX never needs to ask again.'
+};
+let _bpLastMilestonePct = 0;
+let _bpToastTimer = null;
+
+function bpShowToast(msg) {
+  const el = document.getElementById('bpToast');
+  el.textContent = msg;
+  el.classList.add('show');
+  if (_bpToastTimer) clearTimeout(_bpToastTimer);
+  _bpToastTimer = setTimeout(() => el.classList.remove('show'), 3400);
+}
+
+// GOD MODE PATCH — update: check for milestone
+const _bpOrigUpdate = update;
+update = function() {
+  const filledBefore = _bpLastMilestonePct;
+  _bpOrigUpdate();
+  const filled = countFilled();
+  const pct    = Math.round((filled / 15) * 100);
+  // Fire toast at exact crossings
+  [25, 50, 75, 100].forEach(m => {
+    if (filledBefore < m && pct >= m && BP_MILESTONES[m]) {
+      bpShowToast(BP_MILESTONES[m]);
+    }
+  });
+  _bpLastMilestonePct = pct;
+};
+
+// Feature 3: Grid Account Pre-fill
+let _bpPrefillName = '';
+
+function bpCheckPrefill() {
+  const name = sessionStorage.getItem('citizen_name') || '';
+  if (name && !document.getElementById('f1').value.trim()) {
+    _bpPrefillName = name;
+    document.getElementById('bpPrefillBanner').classList.add('visible');
+  }
+}
+
+function bpApplyPrefill() {
+  if (_bpPrefillName) {
+    document.getElementById('f1').value = _bpPrefillName;
+    update();
+    bpSaveDraft();
+  }
+  document.getElementById('bpPrefillBanner').classList.remove('visible');
+}
+
+function bpDismissPrefill() {
+  document.getElementById('bpPrefillBanner').classList.remove('visible');
+}
+
+// Feature 4: Saved Passport Detail + Delete Sheet
+let _bpActivePpIdx = null;
+
+function openPpDetail(idx) {
+  const saved = JSON.parse(localStorage.getItem(PP_KEY) || '[]');
+  const p = saved[idx];
+  if (!p) return;
+  _bpActivePpIdx = idx;
+  const pct = Math.round((p.complete / 15) * 100);
+  document.getElementById('ppdsPercent').textContent = `${pct}% COMPLETE · ${p.complete}/15 FIELDS`;
+  document.getElementById('ppdsName').textContent    = p.name || '—';
+
+  const fields = [
+    ['Building', p.building],
+    ['Skills', p.skills],
+    ['Goals', p.goals],
+    ['Income', p.income],
+    ['Culture', p.culture],
+    ['Values', p.values],
+    ['Risk', p.risk],
+    ['Communication', p.comm],
+    ['Family', p.family],
+    ['Governance', p.gov],
+    ['Active Missions', p.missions],
+    ['Never Do', p.neverDo],
+    ['Can Proceed', p.canDo],
+    ['Memory', p.memory],
+  ];
+  document.getElementById('ppdsBody').innerHTML = fields.map(([k,v]) => {
+    const empty = !v || !v.trim();
+    return `<div class="ppds-field">
+      <div class="ppds-key">${k}</div>
+      <div class="ppds-val${empty?' empty':''}">
+        ${empty ? 'Not filled' : v}
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('ppdsDelConfirm').classList.remove('visible');
+  document.getElementById('ppdOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('ppdSheet').classList.add('open'), 10);
+}
+
+function closePpDetail() {
+  document.getElementById('ppdSheet').classList.remove('open');
+  setTimeout(() => document.getElementById('ppdOverlay').classList.remove('open'), 320);
+  _bpActivePpIdx = null;
+}
+
+function ppdsShowConfirm() {
+  document.getElementById('ppdsDelConfirm').classList.add('visible');
+}
+
+function ppdsHideConfirm() {
+  document.getElementById('ppdsDelConfirm').classList.remove('visible');
+}
+
+function ppdsConfirmDelete() {
+  if (_bpActivePpIdx === null) return;
+  const saved = JSON.parse(localStorage.getItem(PP_KEY) || '[]');
+  saved.splice(_bpActivePpIdx, 1);
+  localStorage.setItem(PP_KEY, JSON.stringify(saved));
+  closePpDetail();
+  renderSaved();
+}
+
+// GOD MODE PATCH — renderSaved: make pp-cards tappable
+const _bpOrigRenderSaved = renderSaved;
+renderSaved = function() {
+  _bpOrigRenderSaved();
+  const strip = document.querySelector('.passport-strip');
+  if (!strip) return;
+  strip.querySelectorAll('.pp-card').forEach((card, i) => {
+    card.style.cursor = 'pointer';
+    card.onclick = () => openPpDetail(i);
+  });
+};
+
+// Single DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
+  initChips();
+  toggleSection('s1');
+  renderSaved();
+  update();
+  bpAttachDraftListeners();
+  bpCheckDraft();
+  bpCheckPrefill();
+});
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

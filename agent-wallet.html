@@ -113,6 +113,29 @@
     .btn-pause{width:100%;padding:14px;border-radius:14px;background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.2);color:var(--red);font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;}
 
     #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+
+    /* GOD MODE: SAVE BAR */
+    .save-bar{position:fixed;left:50%;bottom:0;transform:translate(-50%,120%);width:100%;max-width:430px;background:var(--surface2);border-top:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:10px;transition:transform 0.25s ease;z-index:50;box-shadow:0 -8px 24px rgba(0,0,0,0.35);}
+    .save-bar.show{transform:translate(-50%,0);}
+    .sb-msg{flex:1;font-size:12px;font-weight:700;color:var(--gold);}
+    .sb-btn{padding:9px 16px;border-radius:10px;border:none;font-size:12px;font-weight:800;cursor:pointer;}
+    .sb-discard{background:var(--surface3);color:var(--text-muted);}
+    .sb-save{background:linear-gradient(135deg,var(--blue),var(--purple));color:#fff;}
+
+    /* GOD MODE: LIMIT VALIDATION */
+    .limit-warn{font-size:10px;color:var(--red);margin-top:6px;font-weight:700;display:none;}
+    .limit-warn.show{display:block;}
+
+    /* GOD MODE: BLOCKED FEED */
+    .blocked-feed{display:flex;flex-direction:column;gap:6px;}
+    .blocked-item{display:flex;align-items:center;gap:10px;padding:9px 10px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);}
+    .bi-ico{font-size:15px;width:24px;text-align:center;flex-shrink:0;}
+    .bi-body{flex:1;min-width:0;}
+    .bi-reason{font-size:12px;font-weight:700;}
+    .bi-meta{font-size:10px;color:var(--text-muted);margin-top:1px;}
+    .bi-tag{font-size:9px;font-weight:800;padding:2px 7px;border-radius:20px;flex-shrink:0;}
+    .tag-blocked{background:rgba(255,77,109,0.12);color:var(--red);}
+    .tag-2fa{background:rgba(255,184,0,0.12);color:var(--gold);}
   </style>
 </head>
 <body>
@@ -154,21 +177,28 @@
         <div class="cov-note">Every transaction passing PQSI threat scan is covered up to $10,000/month. Flagged or out-of-policy transactions require your 2FA approval before executing they are not covered until approved.</div>
       </div>
 
+      <!-- GOD MODE: RECENT POLICY BLOCKS -->
+      <div class="policy-card">
+        <div class="pc-title">🚫 Recent policy blocks</div>
+        <div class="blocked-feed" id="blockedFeed"><!-- populated by JS --></div>
+      </div>
+
       <!-- SPEND LIMITS -->
       <div class="policy-card">
         <div class="pc-title">💰 Spend limits</div>
         <div class="limit-row">
           <div><div class="lr-label">Per transaction</div><div class="lr-sub">Agent cannot sign above this</div></div>
-          <div class="lr-input-wrap"><div class="lr-curr">$</div><input class="lr-input" type="number" value="500" id="perTxLimit" oninput="updateThreshold()"></div>
+          <div class="lr-input-wrap"><div class="lr-curr">$</div><input class="lr-input" type="number" value="500" id="perTxLimit" oninput="updateThreshold();markDirty();"></div>
         </div>
         <div class="limit-row">
           <div><div class="lr-label">Daily outflow cap</div><div class="lr-sub">Resets midnight AEST</div></div>
-          <div class="lr-input-wrap"><div class="lr-curr">$</div><input class="lr-input" type="number" value="2000" id="dailyLimit"></div>
+          <div class="lr-input-wrap"><div class="lr-curr">$</div><input class="lr-input" type="number" value="2000" id="dailyLimit" oninput="markDirty()"></div>
         </div>
         <div class="limit-row">
           <div><div class="lr-label">Monthly cap</div><div class="lr-sub">Hard stop requires your approval</div></div>
-          <div class="lr-input-wrap"><div class="lr-curr">$</div><input class="lr-input" type="number" value="10000" id="monthlyLimit"></div>
+          <div class="lr-input-wrap"><div class="lr-curr">$</div><input class="lr-input" type="number" value="10000" id="monthlyLimit" oninput="markDirty()"></div>
         </div>
+        <div class="limit-warn" id="limitHierarchyWarn">⚠️ Per-tx, daily and monthly caps must ascend in order or the policy is meaningless.</div>
       </div>
 
       <!-- 2FA TRIGGER THRESHOLD -->
@@ -177,7 +207,7 @@
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">Any transaction at or above this value requires your biometric approval before the agent can sign.</div>
         <div class="lr-input-wrap" style="margin-bottom:8px;">
           <div class="lr-curr">$</div>
-          <input class="lr-input" type="number" value="250" id="twoFAThreshold" oninput="updateThreshold()" style="width:120px;">
+          <input class="lr-input" type="number" value="250" id="twoFAThreshold" oninput="updateThreshold();markDirty();" style="width:120px;">
           <span style="font-size:12px;color:var(--text-muted);margin-left:4px;">and above</span>
         </div>
         <div class="threshold-vis">
@@ -189,6 +219,7 @@
           <div style="font-size:10px;color:var(--text-muted);">$1,000</div>
         </div>
         <div class="tv-labels"><span style="color:var(--green);">Agent auto-signs</span><span style="color:var(--red);">2FA required →</span></div>
+        <div class="limit-warn" id="twoFAWarn">⚠️ Threshold is above your per-transaction limit — 2FA will never trigger.</div>
       </div>
 
       <!-- CHAIN ALLOWLIST -->
@@ -264,6 +295,12 @@
     </div>
   </div>
 </div>
+<!-- GOD MODE: SAVE BAR -->
+<div class="save-bar" id="saveBar">
+  <div class="sb-msg">⚠️ Unsaved policy changes</div>
+  <button class="sb-btn sb-discard" onclick="discardPolicy()">Discard</button>
+  <button class="sb-btn sb-save" onclick="savePolicy()">Save</button>
+</div>
 <div id="toast"></div>
 
 <script>
@@ -306,6 +343,8 @@ function toggleChain(i){
   if(chains[i].id==='sol'){showToast('Solana is required cannot disable');return;}
   chains[i].on=!chains[i].on;
   renderChains();
+  // GOD MODE PATCH
+  markDirty();
 }
 
 function renderProtocols(){
@@ -323,11 +362,110 @@ function toggleProtocol(i){
   protocols[i].on=!protocols[i].on;
   renderProtocols();
   showToast(protocols[i].on?`✓ ${protocols[i].name} allowed`:`🚫 ${protocols[i].name} blocked`);
+  // GOD MODE PATCH
+  markDirty();
 }
 
 function togglePolicy(id){
   const el=document.getElementById(id);
   el.classList.toggle('on');el.classList.toggle('off');
+  // GOD MODE PATCH
+  markDirty();
+}
+
+// GOD MODE: POLICY PERSISTENCE + VALIDATION + BLOCKED FEED
+const POLICY_KEY='indx_agentwallet_policy';
+let policyDirty=false;
+
+const blockedEvents=[
+  {ico:'🦄',reason:'Uniswap V3 swap $340 blocked',meta:'Protocol not allowlisted · 2h ago',tag:'blocked'},
+  {ico:'🔐',reason:'2FA required for $310 transfer',meta:'Above threshold · 5h ago',tag:'2fa'},
+  {ico:'🟡',reason:'BSC chain transaction blocked',meta:'Chain not allowed · 1d ago',tag:'blocked'},
+];
+
+function renderBlockedFeed(){
+  const f=document.getElementById('blockedFeed');
+  if(!f)return;
+  f.innerHTML=blockedEvents.map(b=>`
+    <div class="blocked-item">
+      <div class="bi-ico">${b.ico}</div>
+      <div class="bi-body"><div class="bi-reason">${b.reason}</div><div class="bi-meta">${b.meta}</div></div>
+      <div class="bi-tag ${b.tag==='blocked'?'tag-blocked':'tag-2fa'}">${b.tag==='blocked'?'Blocked':'2FA'}</div>
+    </div>`).join('');
+}
+
+function validatePolicy(){
+  const perTx=parseFloat(document.getElementById('perTxLimit').value)||0;
+  const daily=parseFloat(document.getElementById('dailyLimit').value)||0;
+  const monthly=parseFloat(document.getElementById('monthlyLimit').value)||0;
+  const twoFA=parseFloat(document.getElementById('twoFAThreshold').value)||0;
+  const hierarchyBad=!(perTx<=daily&&daily<=monthly);
+  const twoFABad=twoFA>perTx;
+  const hw=document.getElementById('limitHierarchyWarn');
+  const tw=document.getElementById('twoFAWarn');
+  if(hw)hw.classList.toggle('show',hierarchyBad);
+  if(tw)tw.classList.toggle('show',twoFABad);
+  return !hierarchyBad&&!twoFABad;
+}
+
+function markDirty(){
+  policyDirty=true;
+  const bar=document.getElementById('saveBar');
+  if(bar)bar.classList.add('show');
+  validatePolicy();
+}
+
+function collectPolicy(){
+  return{
+    perTx:document.getElementById('perTxLimit').value,
+    daily:document.getElementById('dailyLimit').value,
+    monthly:document.getElementById('monthlyLimit').value,
+    twoFA:document.getElementById('twoFAThreshold').value,
+    chains:chains.map(c=>({id:c.id,on:c.on})),
+    protocols:protocols.map(p=>({name:p.name,on:p.on})),
+    toggles:{
+      togSim:document.getElementById('togSim').classList.contains('on'),
+      togMEV:document.getElementById('togMEV').classList.contains('on'),
+      togPQSI:document.getElementById('togPQSI').classList.contains('on'),
+      togSanction:document.getElementById('togSanction').classList.contains('on'),
+    }
+  };
+}
+
+function savePolicy(){
+  if(!validatePolicy()){showToast('⚠️ Fix policy conflicts before saving');return;}
+  localStorage.setItem(POLICY_KEY,JSON.stringify(collectPolicy()));
+  policyDirty=false;
+  const bar=document.getElementById('saveBar');
+  if(bar)bar.classList.remove('show');
+  showToast('✓ Agent policy saved');
+}
+
+function discardPolicy(){
+  loadPolicy();
+  renderChains();renderProtocols();updateThreshold();validatePolicy();
+  policyDirty=false;
+  const bar=document.getElementById('saveBar');
+  if(bar)bar.classList.remove('show');
+  showToast('Changes discarded');
+}
+
+function loadPolicy(){
+  const raw=localStorage.getItem(POLICY_KEY)||'';
+  if(!raw)return;
+  try{
+    const p=JSON.parse(raw);
+    document.getElementById('perTxLimit').value=p.perTx||'500';
+    document.getElementById('dailyLimit').value=p.daily||'2000';
+    document.getElementById('monthlyLimit').value=p.monthly||'10000';
+    document.getElementById('twoFAThreshold').value=p.twoFA||'250';
+    if(Array.isArray(p.chains))p.chains.forEach(sc=>{const c=chains.find(x=>x.id===sc.id);if(c)c.on=sc.on;});
+    if(Array.isArray(p.protocols))p.protocols.forEach(sp=>{const pr=protocols.find(x=>x.name===sp.name);if(pr)pr.on=sp.on;});
+    if(p.toggles)Object.keys(p.toggles).forEach(k=>{
+      const el=document.getElementById(k);
+      if(el){el.classList.toggle('on',!!p.toggles[k]);el.classList.toggle('off',!p.toggles[k]);}
+    });
+  }catch(e){}
 }
 
 function updateThreshold(){
@@ -355,9 +493,13 @@ function toggleAgent(){
 
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}
 
+loadPolicy();
 renderChains();
 renderProtocols();
 updateThreshold();
+renderBlockedFeed();
+validatePolicy();
 </script>
+<script src="siindex-speak-core.js"></script>
 </body>
 </html>

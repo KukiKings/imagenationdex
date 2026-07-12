@@ -78,6 +78,23 @@
   .danger-btn{width:100%;padding:14px;border-radius:12px;background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.2);color:var(--red);font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;}
   .danger-btn:active{background:rgba(255,77,109,0.15);}
 
+  /* GOD MODE: SHEETS (score breakdown + confirm) */
+  .sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);opacity:0;pointer-events:none;transition:opacity 0.25s;z-index:90;}
+  .sheet-overlay.show{opacity:1;pointer-events:auto;}
+  .bottom-sheet{position:fixed;left:50%;bottom:0;transform:translate(-50%,110%);width:100%;max-width:430px;background:var(--surface);border:1px solid var(--border);border-radius:20px 20px 0 0;padding:18px 20px 24px;z-index:95;transition:transform 0.3s ease;max-height:75vh;overflow-y:auto;box-sizing:border-box;}
+  .bottom-sheet.show{transform:translate(-50%,0);}
+  .bs-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px;}
+  .bs-title{font-size:16px;font-weight:800;margin-bottom:12px;}
+  .bs-body{font-size:13px;color:var(--text-muted);line-height:1.5;}
+
+  /* GOD MODE: SCORE BREAKDOWN */
+  .bd-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+  .bd-row:last-child{border-bottom:none;}
+  .bd-check{font-size:14px;width:18px;text-align:center;flex-shrink:0;}
+  .bd-label{flex:1;font-size:13px;font-weight:600;}
+  .bd-pts{font-size:12px;font-weight:800;}
+  .bd-total{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:13px;font-weight:800;text-align:right;}
+
   /* TOAST */
   .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1E2130;border:1px solid var(--border);border-radius:12px;padding:11px 20px;font-size:13px;font-weight:600;white-space:nowrap;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;}
   .toast.show{opacity:1;}
@@ -94,7 +111,7 @@
   <div class="scroll-body">
 
     <!-- SECURITY SCORE -->
-    <div class="score-card">
+    <div class="score-card" onclick="openScoreSheet()" style="cursor:pointer;">
       <div class="sc-row">
         <div class="sc-ring"><div class="sc-val">78</div></div>
         <div>
@@ -173,7 +190,7 @@
           </div>
           <div style="font-size:11px;font-weight:700;color:var(--green);">✓ Active</div>
         </div>
-        <div class="sr-item" onclick="showToast('Recovery key download coming soon')">
+        <div class="sr-item" id="recoveryRow" onclick="askRecoveryBackup()">
           <div class="sr-icon" style="background:rgba(255,184,0,0.1);">🗝️</div>
           <div style="flex:1;">
             <div class="sr-label">Recovery Key</div>
@@ -197,21 +214,21 @@
           </div>
           <div class="dev-current">This device</div>
         </div>
-        <div class="device-row">
+        <div class="device-row" data-device="MacBook Pro">
           <div class="dev-icon">💻</div>
           <div style="flex:1;">
             <div class="dev-name">MacBook Pro</div>
             <div class="dev-meta">Auckland, NZ · 2 days ago</div>
           </div>
-          <div class="dev-revoke" onclick="revokeDevice(this, 'MacBook Pro')">Revoke</div>
+          <div class="dev-revoke" onclick="askRevoke(this, 'MacBook Pro')">Revoke</div>
         </div>
-        <div class="device-row">
+        <div class="device-row" data-device="iPad Air">
           <div class="dev-icon">📱</div>
           <div style="flex:1;">
             <div class="dev-name">iPad Air</div>
             <div class="dev-meta">Wellington, NZ · 1 week ago</div>
           </div>
-          <div class="dev-revoke" onclick="revokeDevice(this, 'iPad Air')">Revoke</div>
+          <div class="dev-revoke" onclick="askRevoke(this, 'iPad Air')">Revoke</div>
         </div>
       </div>
     </div>
@@ -280,12 +297,163 @@
   </div>
 </div>
 
+<!-- GOD MODE: SCORE BREAKDOWN SHEET -->
+<div class="sheet-overlay" id="scoreOverlay" onclick="closeScoreSheet()"></div>
+<div class="bottom-sheet" id="scoreSheet">
+  <div class="bs-handle"></div>
+  <div class="bs-title">Security Score Breakdown</div>
+  <div id="scoreBreakdown"><!-- populated by JS --></div>
+  <button class="totp-btn" style="margin-top:16px;background:var(--surface2);color:var(--text);" onclick="closeScoreSheet()">Close</button>
+</div>
+
+<!-- GOD MODE: SHARED CONFIRM SHEET -->
+<div class="sheet-overlay" id="confirmOverlay" onclick="closeConfirmSheet()"></div>
+<div class="bottom-sheet" id="confirmSheet">
+  <div class="bs-handle"></div>
+  <div class="bs-title" id="confirmTitle">Confirm</div>
+  <div class="bs-body" id="confirmBody">Are you sure?</div>
+  <div style="display:flex;gap:10px;margin-top:16px;">
+    <button class="totp-btn" style="background:var(--surface2);color:var(--text);" onclick="closeConfirmSheet()">Cancel</button>
+    <button class="totp-btn" id="confirmActionBtn" onclick="runConfirm()">Confirm</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
+  // GOD MODE: PERSISTED SECURITY STATE
+  const SEC_KEY = 'indx_security_state';
+  let secState = Object.assign(
+    { biometric: true, pin: true, twoFA: false, recoveryBackedUp: false, loginAlerts: true, revoked: [] },
+    JSON.parse(localStorage.getItem(SEC_KEY) || '{}')
+  );
+  function saveSecState() { localStorage.setItem(SEC_KEY, JSON.stringify(secState)); }
+
+  function computeScore() {
+    let score = 55;
+    if (secState.biometric) score += 15;
+    if (secState.pin) score += 10;
+    if (secState.twoFA) score += 12;
+    if (secState.recoveryBackedUp) score += 8;
+    return score;
+  }
+
+  function updateScore() {
+    const score = computeScore();
+    document.querySelector('.sc-val').textContent = score;
+    document.getElementById('scoreBar').style.width = score + '%';
+    const title = document.querySelector('.sc-title');
+    const sub = document.querySelector('.sc-sub');
+    if (score >= 100) { title.textContent = 'Sovereign Security'; sub.textContent = 'Maximum protection active. Every factor is covered.'; }
+    else if (score >= 90) { title.textContent = 'Excellent Security'; sub.textContent = 'One factor left tap the score to see what\'s missing.'; }
+    else if (score >= 78) { title.textContent = 'Good Security'; sub.textContent = 'Enable 2FA and back up your Recovery Key to reach 100.'; }
+    else { title.textContent = 'Needs Attention'; sub.textContent = 'Your account is missing key protections tap to review.'; }
+    renderScoreBreakdown(score);
+  }
+
+  function renderScoreBreakdown(score) {
+    const el = document.getElementById('scoreBreakdown');
+    if (!el) return;
+    const items = [
+      { label: 'Base account protection', pts: 55, on: true },
+      { label: 'Biometric Unlock', pts: 15, on: secState.biometric },
+      { label: '6-Digit PIN', pts: 10, on: secState.pin },
+      { label: 'Two-Factor Authentication', pts: 12, on: secState.twoFA },
+      { label: 'Recovery Key backed up', pts: 8, on: secState.recoveryBackedUp },
+    ];
+    el.innerHTML = items.map(i => `
+      <div class="bd-row">
+        <div class="bd-check" style="color:${i.on ? 'var(--green)' : 'var(--text-dim)'};">${i.on ? '✓' : '○'}</div>
+        <div class="bd-label">${i.label}</div>
+        <div class="bd-pts" style="color:${i.on ? 'var(--green)' : 'var(--text-muted)'};">+${i.pts}</div>
+      </div>`).join('') + `<div class="bd-total">Total: ${score} / 100</div>`;
+  }
+
+  function openScoreSheet() {
+    renderScoreBreakdown(computeScore());
+    document.getElementById('scoreOverlay').classList.add('show');
+    document.getElementById('scoreSheet').classList.add('show');
+  }
+  function closeScoreSheet() {
+    document.getElementById('scoreOverlay').classList.remove('show');
+    document.getElementById('scoreSheet').classList.remove('show');
+  }
+
+  // GOD MODE: SHARED CONFIRM SHEET
+  let confirmCallback = null;
+  function openConfirm(title, body, btnLabel, btnBg, cb) {
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmBody').textContent = body;
+    const btn = document.getElementById('confirmActionBtn');
+    btn.textContent = btnLabel;
+    btn.style.background = btnBg;
+    confirmCallback = cb;
+    document.getElementById('confirmOverlay').classList.add('show');
+    document.getElementById('confirmSheet').classList.add('show');
+  }
+  function closeConfirmSheet() {
+    document.getElementById('confirmOverlay').classList.remove('show');
+    document.getElementById('confirmSheet').classList.remove('show');
+    confirmCallback = null;
+  }
+  function runConfirm() {
+    const cb = confirmCallback;
+    closeConfirmSheet();
+    if (cb) cb();
+  }
+
+  function askRevoke(el, name) {
+    openConfirm('Revoke this session?', name + ' will be signed out immediately and will need to re-authenticate to access IN$DEX again.', 'Revoke', 'var(--red)', () => revokeDevice(el, name));
+  }
+
+  function askRecoveryBackup() {
+    if (secState.recoveryBackedUp) { showToast('Recovery Key backup already confirmed'); return; }
+    openConfirm('Confirm Recovery Key backup', 'Have you securely stored your Recovery Key shard somewhere only you can access?', 'I\'ve backed it up', 'var(--green)', confirmRecoveryBackup);
+  }
+  function confirmRecoveryBackup() {
+    secState.recoveryBackedUp = true;
+    saveSecState();
+    const row = document.getElementById('recoveryRow');
+    if (row) {
+      row.querySelector('.sr-sub').textContent = 'Backup confirmed · ' + new Date().toLocaleDateString();
+      const val = row.querySelector('.sr-value');
+      val.textContent = 'Backed up';
+      val.style.color = 'var(--green)';
+    }
+    updateScore();
+    showToast('✓ Recovery Key backup confirmed +8 Security Score');
+  }
+
   // Animate score bar on load
   window.addEventListener('load', () => {
-    setTimeout(() => { document.getElementById('scoreBar').style.width = '78%'; }, 300);
+    // GOD MODE PATCH: restore persisted toggle/state before computing the real score
+    const bioT = document.getElementById('bioToggle');
+    bioT.classList.toggle('on', secState.biometric);
+    document.getElementById('bioSub').textContent = secState.biometric ? 'Face ID · Enabled' : 'Face ID · Disabled';
+    document.getElementById('pinToggle').classList.toggle('on', secState.pin);
+    if (secState.twoFA) {
+      document.getElementById('twoFASub').textContent = 'Authenticator App · Active';
+      document.getElementById('twoFAValue').textContent = 'On';
+      document.getElementById('twoFAValue').style.color = 'var(--green)';
+    }
+    if (secState.recoveryBackedUp) {
+      const row = document.getElementById('recoveryRow');
+      if (row) {
+        row.querySelector('.sr-sub').textContent = 'Backup confirmed';
+        const val = row.querySelector('.sr-value');
+        val.textContent = 'Backed up';
+        val.style.color = 'var(--green)';
+      }
+    }
+    (secState.revoked || []).forEach(name => {
+      const row = document.querySelector('.device-row[data-device="' + name + '"]');
+      if (row) {
+        const btn = row.querySelector('.dev-revoke');
+        row.style.opacity = '0.4';
+        if (btn) { btn.textContent = 'Revoked'; btn.style.color = 'var(--text-muted)'; btn.style.borderColor = 'var(--border)'; btn.onclick = null; }
+      }
+    });
+    setTimeout(() => { updateScore(); }, 300);
     // Show duress status from sovereign-identity config
     const duressOn = localStorage.getItem('indx_identity_duress_on') === 'true';
     const badge = document.getElementById('duressStatusBadge');
@@ -298,25 +466,28 @@
     const on = t.classList.toggle('on');
     document.getElementById('bioSub').textContent = on ? 'Face ID · Enabled' : 'Face ID · Disabled';
     showToast(on ? '✓ Biometric enabled' : 'Biometric disabled');
+    // GOD MODE PATCH
+    secState.biometric = on; saveSecState(); updateScore();
   }
 
   function togglePIN() {
     showToast('PIN is required for account security');
     document.getElementById('pinToggle').classList.add('on');
+    // GOD MODE PATCH
+    secState.pin = true; saveSecState(); updateScore();
   }
 
-  let twoFAEnabled = false;
   function setup2FA() {
-    if (twoFAEnabled) {
+    if (secState.twoFA) {
       showToast('2FA is already enabled');
       return;
     }
-    twoFAEnabled = true;
+    secState.twoFA = true; saveSecState();
     document.getElementById('twoFASub').textContent = 'Authenticator App · Active';
     document.getElementById('twoFAValue').textContent = 'On';
     document.getElementById('twoFAValue').style.color = 'var(--green)';
     showToast('✓ 2FA enabled +12 Security Score');
-    setTimeout(() => { document.getElementById('scoreBar').style.width = '95%'; }, 200);
+    updateScore();
   }
 
   function revokeDevice(el, name) {
@@ -325,6 +496,8 @@
     el.style.color = 'var(--text-muted)';
     el.style.borderColor = 'var(--border)';
     el.onclick = null;
+    // GOD MODE PATCH: persist the revocation so it survives reload
+    if (!secState.revoked.includes(name)) { secState.revoked.push(name); saveSecState(); }
     showToast(`✓ ${name} session revoked`);
   }
 
@@ -339,5 +512,6 @@
     setTimeout(() => t.classList.remove('show'), 2400);
   }
 </script>
+<script src="siindex-speak-core.js"></script>
 </body>
 </html>

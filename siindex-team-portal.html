@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SIINDEX Team Portal — Internal Operations</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+    --black:#090A10; --green:#00E5A0; --gold:#FFB800;
+    --red:#FF4D6D; --surface:#12141F; --surface2:#1A1D2E;
+    --surface3:#22263A; --muted:#6B7280; --text:#E8EAF0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display',system-ui,sans-serif;min-height:100vh;overflow-x:hidden;}
+
+  /* ── ACCESS GATE ── */
+  .gate-overlay{position:fixed;inset:0;background:var(--black);z-index:999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:24px;}
+  .gate-overlay.hidden{display:none;}
+  .gate-logo{font-size:13px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;}
+  .gate-title{font-size:22px;font-weight:700;color:var(--text);}
+  .gate-sub{font-size:13px;color:var(--muted);text-align:center;max-width:260px;line-height:1.5;}
+  .gate-pin-row{display:flex;gap:10px;}
+  .gate-dot{width:14px;height:14px;border-radius:50%;background:var(--surface3);border:2px solid var(--surface2);transition:all .2s;}
+  .gate-dot.filled{background:var(--cyan);border-color:var(--cyan);}
+  .gate-numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:240px;}
+  .gate-btn{background:var(--surface2);border:1.5px solid var(--surface3);border-radius:14px;color:var(--text);font-size:20px;font-weight:600;padding:18px;cursor:pointer;transition:all .15s;text-align:center;}
+  .gate-btn:active{background:var(--surface3);transform:scale(0.96);}
+  .gate-btn.del{font-size:16px;color:var(--muted);}
+  .gate-error{font-size:12px;color:var(--red);min-height:16px;text-align:center;}
+
+  /* ── HEADER ── */
+  .portal-header{background:var(--surface);border-bottom:1px solid var(--surface3);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50;}
+  .portal-logo{font-size:11px;letter-spacing:2.5px;color:var(--muted);text-transform:uppercase;}
+  .portal-title{font-size:16px;font-weight:700;color:var(--text);}
+  .portal-badge{font-size:10px;background:rgba(255,77,109,.15);color:var(--red);border:1px solid rgba(255,77,109,.3);border-radius:6px;padding:3px 8px;letter-spacing:.5px;font-weight:600;}
+  .lock-btn{background:transparent;border:1.5px solid var(--surface3);border-radius:10px;color:var(--muted);font-size:12px;padding:6px 12px;cursor:pointer;}
+
+  /* ── NAV TABS ── */
+  .nav-tabs{display:flex;gap:0;border-bottom:1px solid var(--surface3);background:var(--surface);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .nav-tabs::-webkit-scrollbar{display:none;}
+  .nav-tab{flex-shrink:0;padding:12px 18px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s;}
+  .nav-tab.active{color:var(--cyan);border-bottom-color:var(--cyan);}
+
+  /* ── CONTENT AREA ── */
+  .tab-content{display:none;padding:16px 20px 100px;}
+  .tab-content.active{display:block;}
+
+  /* ── SECTION LABELS ── */
+  .sect-label{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;margin-top:20px;}
+  .sect-label:first-child{margin-top:0;}
+
+  /* ── CARD ── */
+  .card{background:var(--surface);border:1px solid var(--surface3);border-radius:16px;padding:16px;margin-bottom:12px;}
+  .card-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;}
+  .card-sub{font-size:11px;color:var(--muted);}
+
+  /* ── GM1: TGE WAR ROOM ── */
+  .war-room-header{background:linear-gradient(135deg,rgba(43,53,216,.25),rgba(139,63,232,.2));border:1px solid rgba(43,53,216,.4);border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;}
+  .war-room-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--purple);margin-bottom:6px;}
+  .war-room-title{font-size:18px;font-weight:800;color:var(--text);margin-bottom:12px;}
+  .tge-countdown{display:flex;gap:12px;justify-content:center;margin-bottom:12px;}
+  .tge-unit{text-align:center;}
+  .tge-num{font-size:32px;font-weight:800;color:var(--cyan);font-variant-numeric:tabular-nums;line-height:1;}
+  .tge-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:4px;}
+  .tge-sep{font-size:28px;color:var(--surface3);align-self:flex-start;margin-top:4px;}
+  .tge-launch-info{font-size:12px;color:var(--muted);}
+  .tge-launch-info span{color:var(--gold);font-weight:600;}
+
+  .checklist-phase{margin-bottom:14px;}
+  .phase-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .phase-name{font-size:12px;font-weight:700;color:var(--text);}
+  .phase-progress{font-size:11px;color:var(--muted);}
+  .phase-bar{height:4px;background:var(--surface3);border-radius:2px;margin-bottom:8px;overflow:hidden;}
+  .phase-bar-fill{height:100%;border-radius:2px;transition:width .5s ease;}
+  .checklist-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--surface2);border-radius:10px;margin-bottom:6px;cursor:pointer;transition:background .15s;}
+  .checklist-item:active{background:var(--surface3);}
+  .check-box{width:18px;height:18px;border-radius:5px;border:2px solid var(--surface3);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+  .check-box.done{background:var(--green);border-color:var(--green);}
+  .check-box.done::after{content:'✓';font-size:11px;color:#000;font-weight:800;}
+  .check-text{font-size:12px;color:var(--text);line-height:1.4;flex:1;}
+  .check-tag{font-size:10px;padding:2px 7px;border-radius:5px;font-weight:600;flex-shrink:0;margin-top:2px;}
+  .check-tag.urgent{background:rgba(255,77,109,.15);color:var(--red);}
+  .check-tag.done-tag{background:rgba(0,229,160,.12);color:var(--green);}
+  .check-tag.pending{background:rgba(255,184,0,.12);color:var(--gold);}
+
+  /* ── GM2: SYSTEM HEALTH MONITOR ── */
+  .health-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  .health-card{background:var(--surface2);border:1.5px solid var(--surface3);border-radius:14px;padding:14px;cursor:pointer;transition:border-color .2s;}
+  .health-card.status-green{border-color:rgba(0,229,160,.3);}
+  .health-card.status-amber{border-color:rgba(255,184,0,.3);}
+  .health-card.status-red{border-color:rgba(255,77,109,.3);}
+  .health-dot{width:10px;height:10px;border-radius:50%;margin-bottom:8px;}
+  .health-dot.green{background:var(--green);box-shadow:0 0 8px rgba(0,229,160,.6);}
+  .health-dot.amber{background:var(--gold);box-shadow:0 0 8px rgba(255,184,0,.6);}
+  .health-dot.red{background:var(--red);box-shadow:0 0 8px rgba(255,77,109,.6);}
+  .health-name{font-size:12px;font-weight:700;color:var(--text);margin-bottom:3px;}
+  .health-status-text{font-size:11px;color:var(--muted);margin-bottom:6px;}
+  .health-link{font-size:10px;color:var(--cyan);text-decoration:none;}
+  .health-updated{font-size:10px;color:var(--muted);margin-top:4px;}
+
+  .health-summary-bar{background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:12px 16px;display:flex;justify-content:space-between;margin-bottom:16px;}
+  .health-sum-item{text-align:center;}
+  .health-sum-num{font-size:20px;font-weight:800;}
+  .health-sum-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+
+  .refresh-health-btn{width:100%;background:var(--surface2);border:1.5px solid var(--surface3);border-radius:12px;color:var(--cyan);font-size:13px;font-weight:600;padding:12px;cursor:pointer;margin-bottom:12px;}
+
+  /* ── GM3: PLATFORM KPI SNAPSHOT ── */
+  .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+  .kpi-card{background:var(--surface2);border:1.5px solid var(--surface3);border-radius:14px;padding:16px;}
+  .kpi-value{font-size:24px;font-weight:800;line-height:1.1;margin-bottom:4px;}
+  .kpi-label{font-size:11px;color:var(--muted);}
+  .kpi-delta{font-size:11px;margin-top:4px;}
+  .kpi-delta.up{color:var(--green);}
+  .kpi-delta.neutral{color:var(--muted);}
+
+  .kpi-lp-bar{background:var(--surface2);border:1px solid var(--surface3);border-radius:14px;padding:16px;margin-bottom:12px;}
+  .kpi-lp-label{display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px;}
+  .kpi-lp-label span:first-child{color:var(--muted);}
+  .kpi-lp-label span:last-child{color:var(--cyan);font-weight:700;}
+  .kpi-progress-track{height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;}
+  .kpi-progress-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--purple));border-radius:4px;transition:width .6s ease;}
+  .kpi-note{font-size:11px;color:var(--muted);margin-top:8px;}
+
+  .kpi-screen-count{background:linear-gradient(135deg,rgba(0,212,255,.08),rgba(139,63,232,.08));border:1px solid rgba(0,212,255,.2);border-radius:14px;padding:16px;text-align:center;margin-bottom:12px;}
+  .kpi-screen-num{font-size:36px;font-weight:800;color:var(--cyan);}
+  .kpi-screen-lbl{font-size:12px;color:var(--muted);margin-top:4px;}
+
+  /* ── GM4: TEAM BROADCAST + COMMS LOG ── */
+  .comms-compose{background:var(--surface2);border:1.5px solid var(--surface3);border-radius:14px;padding:14px;margin-bottom:14px;}
+  .comms-from{font-size:11px;color:var(--cyan);font-weight:600;margin-bottom:8px;}
+  .comms-textarea{width:100%;background:var(--surface3);border:1px solid rgba(255,255,255,.08);border-radius:10px;color:var(--text);font-size:13px;padding:12px;resize:none;min-height:80px;font-family:inherit;line-height:1.5;}
+  .comms-textarea:focus{outline:none;border-color:rgba(0,212,255,.4);}
+  .comms-row{display:flex;gap:8px;margin-top:10px;}
+  .comms-tag-select{flex:1;background:var(--surface3);border:1px solid rgba(255,255,255,.08);border-radius:8px;color:var(--text);font-size:12px;padding:8px 10px;}
+  .comms-send-btn{background:var(--cyan);color:#000;font-size:13px;font-weight:700;border:none;border-radius:10px;padding:8px 20px;cursor:pointer;}
+  .comms-send-btn:active{opacity:.85;}
+
+  .comms-log{margin-bottom:12px;}
+  .comms-entry{background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:14px;margin-bottom:8px;}
+  .comms-entry-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .comms-entry-from{font-size:12px;font-weight:700;}
+  .comms-entry-tag{font-size:10px;padding:2px 8px;border-radius:5px;font-weight:600;}
+  .comms-entry-tag.mission{background:rgba(0,212,255,.12);color:var(--cyan);}
+  .comms-entry-tag.alert{background:rgba(255,77,109,.12);color:var(--red);}
+  .comms-entry-tag.update{background:rgba(0,229,160,.12);color:var(--green);}
+  .comms-entry-tag.note{background:rgba(107,114,128,.15);color:var(--muted);}
+  .comms-entry-time{font-size:10px;color:var(--muted);}
+  .comms-entry-text{font-size:13px;color:var(--text);line-height:1.5;}
+  .comms-clear-btn{width:100%;background:transparent;border:1px solid var(--surface3);border-radius:10px;color:var(--muted);font-size:12px;padding:10px;cursor:pointer;margin-top:4px;}
+
+  /* ── OPS LINKS ── */
+  .ops-link-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+  .ops-link{display:flex;flex-direction:column;gap:4px;background:var(--surface2);border:1.5px solid var(--surface3);border-radius:14px;padding:14px;text-decoration:none;cursor:pointer;transition:border-color .2s;}
+  .ops-link:active{border-color:var(--cyan);}
+  .ops-link-icon{font-size:22px;margin-bottom:4px;}
+  .ops-link-name{font-size:12px;font-weight:700;color:var(--text);}
+  .ops-link-desc{font-size:11px;color:var(--muted);}
+  .ops-link-status{font-size:10px;margin-top:4px;font-weight:600;}
+  .ops-link-status.live{color:var(--green);}
+  .ops-link-status.pending{color:var(--gold);}
+
+  /* ── TOAST ── */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;color:var(--text);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:999;white-space:nowrap;pointer-events:none;}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- ACCESS GATE -->
+<div class="gate-overlay" id="gateOverlay">
+  <div class="gate-logo">S.I.I.N.D.E.X</div>
+  <div class="gate-title">Team Portal</div>
+  <div class="gate-sub">Internal operations only. Enter your 4-digit portal PIN.</div>
+  <div class="gate-pin-row" id="gatePinRow">
+    <div class="gate-dot" id="dot0"></div>
+    <div class="gate-dot" id="dot1"></div>
+    <div class="gate-dot" id="dot2"></div>
+    <div class="gate-dot" id="dot3"></div>
+  </div>
+  <div class="gate-error" id="gateError"></div>
+  <div class="gate-numpad">
+    <div class="gate-btn" onclick="gateTap('1')">1</div>
+    <div class="gate-btn" onclick="gateTap('2')">2</div>
+    <div class="gate-btn" onclick="gateTap('3')">3</div>
+    <div class="gate-btn" onclick="gateTap('4')">4</div>
+    <div class="gate-btn" onclick="gateTap('5')">5</div>
+    <div class="gate-btn" onclick="gateTap('6')">6</div>
+    <div class="gate-btn" onclick="gateTap('7')">7</div>
+    <div class="gate-btn" onclick="gateTap('8')">8</div>
+    <div class="gate-btn" onclick="gateTap('9')">9</div>
+    <div class="gate-btn" style="visibility:hidden"></div>
+    <div class="gate-btn" onclick="gateTap('0')">0</div>
+    <div class="gate-btn del" onclick="gateBack()">⌫</div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="portal-header">
+  <div>
+    <div class="portal-logo">S.I.I.N.D.E.X</div>
+    <div class="portal-title">Team Portal</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="portal-badge">🔒 INTERNAL</div>
+    <button class="lock-btn" onclick="lockPortal()">Lock</button>
+  </div>
+</div>
+
+<!-- NAV TABS -->
+<div class="nav-tabs">
+  <div class="nav-tab active" onclick="switchTab('warroom')">⚡ War Room</div>
+  <div class="nav-tab" onclick="switchTab('health')">🟢 Health</div>
+  <div class="nav-tab" onclick="switchTab('kpi')">📊 KPIs</div>
+  <div class="nav-tab" onclick="switchTab('comms')">📡 Comms</div>
+  <div class="nav-tab" onclick="switchTab('ops')">🗂️ Ops Links</div>
+</div>
+
+<!-- TAB: WAR ROOM -->
+<div class="tab-content active" id="tab-warroom">
+  <!-- TGE countdown -->
+  <div class="war-room-header">
+    <div class="war-room-label">IN$DEX TGE — Raydium CPMM</div>
+    <div class="war-room-title">24 September 2026 · AEST</div>
+    <div class="tge-countdown" id="tgeCountdown">
+      <div class="tge-unit"><div class="tge-num" id="tgeDays">--</div><div class="tge-lbl">Days</div></div>
+      <div class="tge-sep">:</div>
+      <div class="tge-unit"><div class="tge-num" id="tgeHours">--</div><div class="tge-lbl">Hours</div></div>
+      <div class="tge-sep">:</div>
+      <div class="tge-unit"><div class="tge-num" id="tgeMins">--</div><div class="tge-lbl">Mins</div></div>
+      <div class="tge-sep">:</div>
+      <div class="tge-unit"><div class="tge-num" id="tgeSecs">--</div><div class="tge-lbl">Secs</div></div>
+    </div>
+    <div class="tge-launch-info">Genesis price <span>$0.24 USDC</span> · LP tokens <span>burned at launch</span> · No rug. No exit.</div>
+  </div>
+
+  <div class="sect-label">Pre-Launch Checklist</div>
+  <div id="checklistContainer"></div>
+</div>
+
+<!-- TAB: HEALTH -->
+<div class="tab-content" id="tab-health">
+  <div class="health-summary-bar" id="healthSummaryBar">
+    <div class="health-sum-item"><div class="health-sum-num" id="healthGreenCount" style="color:var(--green)">--</div><div class="health-sum-lbl">Healthy</div></div>
+    <div class="health-sum-item"><div class="health-sum-num" id="healthAmberCount" style="color:var(--gold)">--</div><div class="health-sum-lbl">Attention</div></div>
+    <div class="health-sum-item"><div class="health-sum-num" id="healthRedCount" style="color:var(--red)">--</div><div class="health-sum-lbl">Action Needed</div></div>
+  </div>
+  <button class="refresh-health-btn" onclick="renderHealth()">↻ Refresh Health Status</button>
+  <div class="health-grid" id="healthGrid"></div>
+</div>
+
+<!-- TAB: KPIs -->
+<div class="tab-content" id="tab-kpi">
+  <div class="sect-label">Founder Pool</div>
+  <div class="kpi-grid" id="kpiGrid"></div>
+  <div class="kpi-lp-bar">
+    <div class="kpi-lp-label">
+      <span>LP Funding Progress</span>
+      <span id="kpiLPPct">--</span>
+    </div>
+    <div class="kpi-progress-track"><div class="kpi-progress-fill" id="kpiLPFill" style="width:0%"></div></div>
+    <div class="kpi-note" id="kpiLPNote">Loading from Founders Pool...</div>
+  </div>
+
+  <div class="sect-label">Build Progress</div>
+  <div class="kpi-screen-count">
+    <div class="kpi-screen-num" id="kpiScreenCount">--</div>
+    <div class="kpi-screen-lbl">Screens Built · IN$DEX Platform</div>
+  </div>
+  <div class="kpi-grid" id="kpiGrid2"></div>
+</div>
+
+<!-- TAB: COMMS -->
+<div class="tab-content" id="tab-comms">
+  <div class="comms-compose">
+    <div class="comms-from">📡 AJ Henry — Broadcast to Team</div>
+    <textarea class="comms-textarea" id="commsInput" placeholder="Write a mission update, alert, or note for the team..."></textarea>
+    <div class="comms-row">
+      <select class="comms-tag-select" id="commsTag">
+        <option value="mission">🎯 Mission</option>
+        <option value="alert">🚨 Alert</option>
+        <option value="update">✅ Update</option>
+        <option value="note">📝 Note</option>
+      </select>
+      <button class="comms-send-btn" onclick="sendComms()">Send</button>
+    </div>
+  </div>
+  <div class="sect-label">Comms Log</div>
+  <div class="comms-log" id="commsLog"></div>
+  <button class="comms-clear-btn" onclick="clearComms()">Clear Comms Log</button>
+</div>
+
+<!-- TAB: OPS LINKS -->
+<div class="tab-content" id="tab-ops">
+  <div class="sect-label">Internal Operations Screens</div>
+  <div class="ops-link-grid" id="opsLinkGrid"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONSTANTS ──
+const INDX_PRICE_USD = 0.24;
+const POOL_TARGET = 100000;
+const TGE_DATE = new Date('2026-09-24T00:00:00+11:00');
+const PORTAL_PIN_KEY = 'indx_portal_pin';
+const DEFAULT_PIN = '1919'; // AJ can change this by entering new PIN
+
+// ── PIN GATE ──
+let _pinBuffer = '';
+
+function gateTap(digit) {
+  if (_pinBuffer.length >= 4) return;
+  _pinBuffer += digit;
+  updatePinDots();
+  if (_pinBuffer.length === 4) {
+    setTimeout(checkPin, 180);
+  }
+}
+
+function gateBack() {
+  _pinBuffer = _pinBuffer.slice(0, -1);
+  updatePinDots();
+  document.getElementById('gateError').textContent = '';
+}
+
+function updatePinDots() {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('dot' + i);
+    dot.classList.toggle('filled', i < _pinBuffer.length);
+  }
+}
+
+function checkPin() {
+  const stored = localStorage.getItem(PORTAL_PIN_KEY) || DEFAULT_PIN;
+  if (_pinBuffer === stored) {
+    localStorage.setItem('indx_portal_unlocked', Date.now().toString());
+    document.getElementById('gateOverlay').classList.add('hidden');
+    initPortal();
+  } else {
+    document.getElementById('gateError').textContent = 'Incorrect PIN. Try again.';
+    _pinBuffer = '';
+    updatePinDots();
+  }
+}
+
+function lockPortal() {
+  localStorage.removeItem('indx_portal_unlocked');
+  _pinBuffer = '';
+  updatePinDots();
+  document.getElementById('gateError').textContent = '';
+  document.getElementById('gateOverlay').classList.remove('hidden');
+}
+
+// ── TAB NAV ──
+function switchTab(id) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+  if (id === 'health') renderHealth();
+  if (id === 'kpi') renderKPIs();
+  if (id === 'comms') renderComms();
+}
+
+// ── TOAST ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── GM1: TGE WAR ROOM ──
+const CHECKLIST_PHASES = [
+  {
+    name: '⚖️ Legal & Compliance',
+    color: 'var(--red)',
+    items: [
+      { id: 'l1', text: 'AUSTRAC VASP enrollment submitted (Deadline: 29 Jul 2026)', tag: 'urgent' },
+      { id: 'l2', text: 'AUSTRAC Tranche 2 AML/CTF program documented (Live: 1 Jul 2026)', tag: 'urgent' },
+      { id: 'l3', text: 'ASIC financial services licence review completed', tag: 'pending' },
+      { id: 'l4', text: 'Privacy Policy & OAIC compliance finalised', tag: 'pending' },
+      { id: 'l5', text: 'Terms of Service reviewed by legal counsel', tag: 'pending' },
+      { id: 'l6', text: 'Cultural IP rights documentation completed', tag: 'pending' },
+    ]
+  },
+  {
+    name: '🛠️ Technical',
+    color: 'var(--cyan)',
+    items: [
+      { id: 't1', text: 'Smart contracts audited by third-party firm', tag: 'pending' },
+      { id: 't2', text: 'Raydium CPMM pool creation tested on devnet', tag: 'pending' },
+      { id: 't3', text: 'LP token burn mechanism verified', tag: 'pending' },
+      { id: 't4', text: 'Frontend screens final QA pass completed', tag: 'pending' },
+      { id: 't5', text: 'SIINDEX agent systems stress-tested', tag: 'pending' },
+      { id: 't6', text: 'Security settings & session sovereignty hardened', tag: 'pending' },
+    ]
+  },
+  {
+    name: '💧 Liquidity Pool',
+    color: 'var(--purple)',
+    items: [
+      { id: 'p1', text: 'Founders Pool capital confirmed ($100,000 target)', tag: 'pending' },
+      { id: 'p2', text: '2% Civilization Fund Reserve allocated', tag: 'pending' },
+      { id: 'p3', text: 'INDX/USDC pool parameters set (genesis $0.24)', tag: 'pending' },
+      { id: 'p4', text: 'Raydium CPMM pool creation transaction signed', tag: 'pending' },
+      { id: 'p5', text: 'LP tokens burned — transaction confirmed onchain', tag: 'pending' },
+    ]
+  },
+  {
+    name: '📣 Marketing & Community',
+    color: 'var(--gold)',
+    items: [
+      { id: 'm1', text: 'Genesis Offer waitlist > 1,000 confirmed citizens', tag: 'pending' },
+      { id: 'm2', text: 'Media Kit distributed to 10+ outlets', tag: 'pending' },
+      { id: 'm3', text: 'X/Twitter launch thread pre-written & scheduled', tag: 'pending' },
+      { id: 'm4', text: 'Launch announcement video recorded', tag: 'pending' },
+      { id: 'm5', text: 'Founders + investors notified (distribution plan)', tag: 'pending' },
+    ]
+  }
+];
+
+function initWarRoom() {
+  const stored = JSON.parse(localStorage.getItem('indx_portal_checklist') || '{}');
+  const container = document.getElementById('checklistContainer');
+  let html = '';
+  CHECKLIST_PHASES.forEach(phase => {
+    const total = phase.items.length;
+    const done = phase.items.filter(i => stored[i.id]).length;
+    const pct = Math.round((done / total) * 100);
+    html += `<div class="checklist-phase">
+      <div class="phase-header">
+        <div class="phase-name">${phase.name}</div>
+        <div class="phase-progress">${done}/${total}</div>
+      </div>
+      <div class="phase-bar"><div class="phase-bar-fill" style="width:${pct}%;background:${phase.color}"></div></div>`;
+    phase.items.forEach(item => {
+      const isDone = !!stored[item.id];
+      const tagClass = isDone ? 'done-tag' : item.tag;
+      const tagLabel = isDone ? 'DONE' : item.tag.toUpperCase();
+      html += `<div class="checklist-item" onclick="toggleCheck('${item.id}')">
+        <div class="check-box ${isDone ? 'done' : ''}"></div>
+        <div class="check-text" style="${isDone ? 'opacity:.5;text-decoration:line-through' : ''}">${item.text}</div>
+        <div class="check-tag ${tagClass}">${tagLabel}</div>
+      </div>`;
+    });
+    html += '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function toggleCheck(id) {
+  const stored = JSON.parse(localStorage.getItem('indx_portal_checklist') || '{}');
+  stored[id] = !stored[id];
+  localStorage.setItem('indx_portal_checklist', JSON.stringify(stored));
+  initWarRoom();
+  showToast(stored[id] ? '✅ Task marked complete' : '↩️ Task unmarked');
+}
+
+function updateTGEWar() {
+  const now = new Date();
+  const diff = TGE_DATE - now;
+  if (diff <= 0) {
+    document.getElementById('tgeDays').textContent = '00';
+    document.getElementById('tgeHours').textContent = '00';
+    document.getElementById('tgeMins').textContent = '00';
+    document.getElementById('tgeSecs').textContent = '00';
+    return;
+  }
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
+  const secs = Math.floor((diff % 60000) / 1000);
+  document.getElementById('tgeDays').textContent = String(days).padStart(2, '0');
+  document.getElementById('tgeHours').textContent = String(hours).padStart(2, '0');
+  document.getElementById('tgeMins').textContent = String(mins).padStart(2, '0');
+  document.getElementById('tgeSecs').textContent = String(secs).padStart(2, '0');
+}
+
+// ── GM2: SYSTEM HEALTH MONITOR ──
+const HEALTH_SYSTEMS = [
+  { id: 'austrac', name: 'AUSTRAC', icon: '🏛️', screen: 'siindex-legal-defense.html',
+    desc: 'VASP enrollment pending — deadline 29 Jul 2026', status: 'red',
+    statusText: 'ACTION REQUIRED' },
+  { id: 'legal', name: 'Legal Defense', icon: '⚖️', screen: 'siindex-legal-defense.html',
+    desc: 'Defense layer active — 8 reg packs ready', status: 'amber',
+    statusText: 'IN PREPARATION' },
+  { id: 'pool', name: 'Founders Pool', icon: '💰', screen: 'founders-pool.html',
+    desc: 'Tracking active — LP target live', status: 'green',
+    statusText: 'OPERATIONAL' },
+  { id: 'security', name: 'Session Security', icon: '🛡️', screen: 'siindex-session-sovereignty.html',
+    desc: 'Security layer deployed', status: 'green',
+    statusText: 'OPERATIONAL' },
+  { id: 'orchestration', name: 'Mission Command', icon: '🎯', screen: 'siindex-orchestration-layer.html',
+    desc: 'Orchestration layer live', status: 'green',
+    statusText: 'OPERATIONAL' },
+  { id: 'media', name: 'Media Kit', icon: '📰', screen: 'siindex-media-kit.html',
+    desc: 'Press assets available', status: 'amber',
+    statusText: 'NEEDS UPDATE' },
+  { id: 'identity', name: 'Sovereign Identity', icon: '🌐', screen: 'siindex-web3-identity.html',
+    desc: 'Web3 identity layer deployed', status: 'green',
+    statusText: 'OPERATIONAL' },
+  { id: 'voice', name: 'Voice Interface', icon: '🎙️', screen: 'siindex-voice-interface.html',
+    desc: 'Voice-first citizen layer live', status: 'green',
+    statusText: 'OPERATIONAL' },
+];
+
+function renderHealth() {
+  const grid = document.getElementById('healthGrid');
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+  let green = 0, amber = 0, red = 0;
+  let html = '';
+  HEALTH_SYSTEMS.forEach(sys => {
+    if (sys.status === 'green') green++;
+    else if (sys.status === 'amber') amber++;
+    else red++;
+    html += `<div class="health-card status-${sys.status}" onclick="window.location.href='${sys.screen}'">
+      <div class="health-dot ${sys.status}"></div>
+      <div class="health-name">${sys.icon} ${sys.name}</div>
+      <div class="health-status-text">${sys.desc}</div>
+      <div class="health-link">→ Open screen</div>
+      <div class="health-updated">Checked ${timeStr}</div>
+    </div>`;
+  });
+  grid.innerHTML = html;
+  document.getElementById('healthGreenCount').textContent = green;
+  document.getElementById('healthAmberCount').textContent = amber;
+  document.getElementById('healthRedCount').textContent = red;
+}
+
+// ── GM3: PLATFORM KPI SNAPSHOT ──
+function renderKPIs() {
+  // Pull from founders-pool localStorage if available
+  const founders = JSON.parse(localStorage.getItem('indx_founders_pool_members') || '[]');
+  const active = founders.filter(f => f.status === 'active');
+  const confirmed = founders.filter(f => f.status === 'confirmed' || f.status === 'active');
+  const totalCapital = founders.reduce((s, f) => s + (f.amount || 0), 0);
+  const activeCapital = active.reduce((s, f) => s + (f.amount || 0), 0);
+  const yieldRate = parseFloat(localStorage.getItem('indx_founders_pool_rate') || '5');
+  const monthlyYield = activeCapital * (yieldRate / 100);
+  const lpPct = Math.min(100, Math.round((totalCapital / POOL_TARGET) * 100));
+  const totalIndxAllocated = Math.round(totalCapital / INDX_PRICE_USD);
+
+  const now = new Date();
+  const diff = TGE_DATE - now;
+  const daysToTGE = Math.max(0, Math.floor(diff / 86400000));
+
+  // Screen count — static known count
+  const screenCount = 120;
+
+  const grid = document.getElementById('kpiGrid');
+  grid.innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-value" style="color:var(--cyan)">$${fmtK(totalCapital)}</div>
+      <div class="kpi-label">Total Capital Raised</div>
+      <div class="kpi-delta ${totalCapital > 0 ? 'up' : 'neutral'}">${founders.length} investors recorded</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value" style="color:var(--green)">$${fmtK(monthlyYield)}</div>
+      <div class="kpi-label">Monthly LP Yield</div>
+      <div class="kpi-delta up">${yieldRate}% rate · ${active.length} active</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value" style="color:var(--gold)">${totalIndxAllocated.toLocaleString()}</div>
+      <div class="kpi-label">INDX Allocated</div>
+      <div class="kpi-delta neutral">@ $0.24 genesis</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value" style="color:var(--purple)">${confirmed.length}</div>
+      <div class="kpi-label">Confirmed Investors</div>
+      <div class="kpi-delta up">${active.length} fully active</div>
+    </div>`;
+
+  // LP progress bar
+  document.getElementById('kpiLPPct').textContent = lpPct + '%';
+  document.getElementById('kpiLPFill').style.width = lpPct + '%';
+  document.getElementById('kpiLPNote').textContent = `$${fmtK(totalCapital)} of $${fmtK(POOL_TARGET)} target · ${POOL_TARGET - totalCapital > 0 ? '$' + fmtK(POOL_TARGET - totalCapital) + ' remaining' : 'TARGET MET 🎉'}`;
+
+  document.getElementById('kpiScreenCount').textContent = screenCount + '+';
+
+  const grid2 = document.getElementById('kpiGrid2');
+  grid2.innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-value" style="color:var(--red)">${daysToTGE}</div>
+      <div class="kpi-label">Days to TGE</div>
+      <div class="kpi-delta neutral">24 Sep 2026 AEST</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value" style="color:var(--cyan)">$${INDX_PRICE_USD}</div>
+      <div class="kpi-label">INDX Genesis Price</div>
+      <div class="kpi-delta neutral">Raydium CPMM</div>
+    </div>`;
+}
+
+function fmtK(n) {
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+  return n.toFixed(2);
+}
+
+// ── GM4: TEAM BROADCAST + COMMS LOG ──
+function sendComms() {
+  const text = document.getElementById('commsInput').value.trim();
+  if (!text) { showToast('⚠️ Write a message first'); return; }
+  const tag = document.getElementById('commsTag').value;
+  const log = JSON.parse(localStorage.getItem('indx_portal_comms') || '[]');
+  log.unshift({
+    from: 'AJ Henry',
+    tag,
+    text,
+    time: new Date().toISOString()
+  });
+  localStorage.setItem('indx_portal_comms', JSON.stringify(log.slice(0, 50)));
+  document.getElementById('commsInput').value = '';
+  renderComms();
+  showToast('📡 Broadcast sent to team');
+}
+
+function renderComms() {
+  const log = JSON.parse(localStorage.getItem('indx_portal_comms') || '[]');
+  const container = document.getElementById('commsLog');
+  if (log.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px;">No messages yet. Send the first broadcast.</div>';
+    return;
+  }
+  const tagLabels = { mission: '🎯 Mission', alert: '🚨 Alert', update: '✅ Update', note: '📝 Note' };
+  container.innerHTML = log.map(entry => {
+    const d = new Date(entry.time);
+    const timeStr = d.toLocaleDateString('en-AU', { day:'numeric', month:'short' }) + ' · ' + d.toLocaleTimeString('en-AU', { hour:'2-digit', minute:'2-digit' });
+    return `<div class="comms-entry">
+      <div class="comms-entry-header">
+        <div class="comms-entry-from" style="color:var(--cyan)">${entry.from}</div>
+        <div class="comms-entry-tag ${entry.tag}">${tagLabels[entry.tag] || entry.tag}</div>
+      </div>
+      <div class="comms-entry-text">${entry.text}</div>
+      <div class="comms-entry-time">${timeStr}</div>
+    </div>`;
+  }).join('');
+}
+
+function clearComms() {
+  if (!confirm('Clear all comms log entries?')) return;
+  localStorage.removeItem('indx_portal_comms');
+  renderComms();
+  showToast('🗑️ Comms log cleared');
+}
+
+// ── OPS LINKS ──
+const OPS_LINKS = [
+  { icon: '💰', name: 'Founders Pool', desc: 'Investor tracking + LP', screen: 'founders-pool.html', status: 'live' },
+  { icon: '⚖️', name: 'Legal Defense', desc: 'Regulatory + defense', screen: 'siindex-legal-defense.html', status: 'live' },
+  { icon: '🎯', name: 'Mission Command', desc: 'Orchestration layer', screen: 'siindex-orchestration-layer.html', status: 'live' },
+  { icon: '🛡️', name: 'Session Security', desc: 'Security centre', screen: 'siindex-session-sovereignty.html', status: 'live' },
+  { icon: '🌐', name: 'Web3 Identity', desc: 'Sovereign identity', screen: 'siindex-web3-identity.html', status: 'live' },
+  { icon: '🗄️', name: 'Data Economy', desc: 'Sovereign data layer', screen: 'siindex-sovereign-data-economy.html', status: 'live' },
+  { icon: '📰', name: 'Media Kit', desc: 'Press & comms assets', screen: 'siindex-media-kit.html', status: 'live' },
+  { icon: '🎙️', name: 'Voice Interface', desc: 'Citizen voice layer', screen: 'siindex-voice-interface.html', status: 'live' },
+  { icon: '🤖', name: 'SIINDEX Brief', desc: 'Platform brief', screen: 'siindex-brief.html', status: 'live' },
+  { icon: '🧠', name: 'Brain Passport', desc: 'Citizen delegation', screen: 'brain-passport.html', status: 'live' },
+  { icon: '🏛️', name: 'Civ Admin Console', desc: 'RBAC + capacity', screen: 'siindex-civilization-admin-console.html', status: 'pending' },
+  { icon: '💻', name: 'Dev Portal', desc: 'Sovereign developer', screen: 'siindex-sovereign-developer.html', status: 'pending' },
+];
+
+function initOpsLinks() {
+  const grid = document.getElementById('opsLinkGrid');
+  grid.innerHTML = OPS_LINKS.map(link =>
+    `<div class="ops-link" onclick="${link.status === 'live' ? "window.location.href='" + link.screen + "'" : "showToast('🔨 Coming soon — " + link.name + "')" }">
+      <div class="ops-link-icon">${link.icon}</div>
+      <div class="ops-link-name">${link.name}</div>
+      <div class="ops-link-desc">${link.desc}</div>
+      <div class="ops-link-status ${link.status}">${link.status === 'live' ? '● LIVE' : '○ COMING SOON'}</div>
+    </div>`
+  ).join('');
+}
+
+// ── INIT ──
+function initPortal() {
+  initWarRoom();
+  renderHealth();
+  renderKPIs();
+  renderComms();
+  initOpsLinks();
+  updateTGEWar();
+  setInterval(updateTGEWar, 1000);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Check if already unlocked this session (within 4 hours)
+  const unlocked = parseInt(localStorage.getItem('indx_portal_unlocked') || '0');
+  const fourHours = 4 * 60 * 60 * 1000;
+  if (unlocked && (Date.now() - unlocked) < fourHours) {
+    document.getElementById('gateOverlay').classList.add('hidden');
+    initPortal();
+  }
+  // Otherwise gate stays visible, initPortal called after PIN
+});
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

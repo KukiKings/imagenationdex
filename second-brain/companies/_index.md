@@ -20,11 +20,38 @@
 - **[[anthropic]]** — AI build partner + underlying SIINDEX model
 - **[[elevenlabs]]** — voice synthesis (Samara X voice locked, Session 65e; wired live Session 79)
 
+## Treasury / DeFi Infrastructure (illustrative — Session 83, Phase 2 real integration)
+
+- **[[meteora]]** — DLMM fee model referenced in lp-manager.html; ⚠️ conflicts with Session 63's canonical Raydium CPMM LP decision, needs reconciliation
+- **[[jito]]** — JitoSOL liquid staking yield ticker
+- **[[kamino]]** — lending/leverage strategy deep-link
+- **[[jupiter]]** — swap aggregator strategy deep-link
+- **[[streamflow]]** — token vesting/streaming protocol; 12-month founder cliff for team/treasury INDX (Session 114, launch strategy doc), planning-only
+
+## Wallet Adapter Integrations (Session 100 — `js/indx-wallet.js`)
+
+- **[[phantom]]** — primary Solana wallet adapter target (also listed as competitor below — dual role)
+- **[[backpack]]** — secondary Solana wallet adapter target (xNFT platform)
+
+## Regulatory / Compliance (Session 119, 10 Jul 2026)
+
+- **[[austrac]]** — Australian VASP/AML regulator; Travel Rule mandatory 31 Mar 2026, enrollment deadline 29 Jul 2026 (P0 across platform)
+
+## Onchain Infrastructure — Planning (Session 119, 10 Jul 2026)
+
+- **[[solsplits]]** — on-chain revenue-splitting protocol; planned implementation for covenant-based routing (30/30/30/10)
+
+## Reference Case Studies (Session 119, 10 Jul 2026)
+
+- **[[arup]]** — $25.6M deepfake fraud case, cited as justification for identity-verification/anti-clone build priority
+
 ## Competitors
 
-- Phantom Wallet — wallet-only, no P2P commerce, KYC friction
+- [[phantom|Phantom Wallet]] — wallet-only, no P2P commerce, KYC friction
 - XRP/Ripple — payments-focused, not creator economy
 - Centralised exchanges (Binance, Coinbase) — KYC mandatory, extract value from users
+- X Money — APY comparison rival cited in whitepaper Macro Validation section (Session 87, Task #64)
+- **[[western-union]]** — primary named fee-comparison benchmark across all 4 Pacific corridor screens (Session 119 x31: WU 9–10% vs IN$DEX 0.5%); Wise / MoneyGram / Bank Wire also referenced as baselines in `siindex-pacific-corridor.html`
 
 ## What Makes IN$DEX Different
 

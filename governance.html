@@ -133,6 +133,21 @@
   .vs-val{font-size:18px;font-weight:800;}
   .vs-label{font-size:10px;color:var(--text-muted);margin-top:2px;}
 
+  /* ── GOD MODE R3 — GOVERNANCE ── */
+  .draft-dot{display:none;width:8px;height:8px;border-radius:50%;background:var(--gold);margin-left:8px;vertical-align:middle;animation:ddpulse 1.4s ease-in-out infinite;}
+  @keyframes ddpulse{0%,100%{opacity:1;}50%{opacity:0.25;}}
+  .draft-dot.show{display:inline-block;}
+  .prop-bk-btn{background:none;border:none;font-size:16px;cursor:pointer;padding:2px 4px;opacity:0.4;transition:opacity 0.15s;flex-shrink:0;line-height:1;}
+  .prop-bk-btn.saved{opacity:1;}
+  .proposal-card.bookmarked{border-color:rgba(255,184,0,0.3);}
+  .ws-celebration{position:fixed;top:0;left:50%;transform:translateX(-50%) translateY(-100%);width:100%;max-width:430px;background:linear-gradient(135deg,rgba(0,229,160,0.1),rgba(43,53,216,0.08));border-bottom:1px solid rgba(0,229,160,0.3);padding:14px 20px;display:flex;align-items:center;gap:12px;z-index:300;transition:transform 0.4s cubic-bezier(0.32,0.72,0,1);backdrop-filter:blur(12px);}
+  .ws-celebration.show{transform:translateX(-50%) translateY(0);}
+  .ws-cel-icon{font-size:26px;flex-shrink:0;}
+  .ws-cel-text{font-size:13px;font-weight:700;line-height:1.35;}
+  .ws-cel-sub{font-size:11px;color:var(--text2);margin-top:2px;}
+  @keyframes wsBadgeFlash{0%,100%{background:var(--gold-bg);color:var(--gold);}50%{background:rgba(255,184,0,0.4);color:#fff;}}
+  .ws-badge-flash{animation:wsBadgeFlash 0.55s ease 3;}
+
   /* TOAST */
   #toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface2);border:1px solid var(--border2);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;opacity:0;transition:all 0.3s;z-index:200;white-space:nowrap;pointer-events:none;}
 
@@ -391,6 +406,15 @@
   </div>
 </div>
 
+<!-- GOD MODE R3 — WS CELEBRATION BANNER -->
+<div class="ws-celebration" id="wsCelebration">
+  <div class="ws-cel-icon">⚖️</div>
+  <div>
+    <div class="ws-cel-text" id="wsCelText">+5 Wisdom Earned</div>
+    <div class="ws-cel-sub" id="wsCelSub">Your vote shapes IN$DEX.</div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <div class="bottom-nav"></div>
@@ -468,7 +492,7 @@ function renderCard(p) {
       <span class="proposal-tag active-tag">ACTIVE</span>
       <div class="proposal-body">
         <div class="proposal-title">${esc(p.title)}</div>
-        <div class="proposal-author">Proposed by MemeDAO · ${relTime(p.created_at)}</div>
+        <div class="proposal-author">Proposed by Citizen Assembly · ${relTime(p.created_at)}</div>
       </div>
     </div>
     <div class="proposal-desc">${esc(p.description)}</div>
@@ -863,6 +887,227 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadMyVotes();
   await loadProposals();
 });
+
+// ════════════════════════════════════════════
+// GOD MODE ROUND 3 — GOVERNANCE
+// ════════════════════════════════════════════
+(function govGodModeR3() {
+  const DRAFT_KEY = 'indx_gov_draft';
+  const BK_KEY    = 'indx_gov_bookmarks';
+
+  // ── 1. DRAFT PROPOSAL PERSISTENCE ──
+  (function addDraftDot() {
+    const sheetTitle = document.querySelector('#proposeSheet .sheet-title');
+    if (!sheetTitle || document.getElementById('draftDot')) return;
+    const dot = document.createElement('span');
+    dot.id = 'draftDot';
+    dot.className = 'draft-dot';
+    sheetTitle.appendChild(dot);
+  })();
+
+  function saveDraft() {
+    const title   = document.getElementById('propTitle')?.value || '';
+    const desc    = document.getElementById('propDesc')?.value  || '';
+    const outcome = document.getElementById('propOutcome')?.value || '';
+    const cat     = selectedCat || '';
+    const hasData = !!(title || desc || outcome || cat);
+    const dot = document.getElementById('draftDot');
+    if (dot) dot.classList.toggle('show', hasData);
+    if (hasData) {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, desc, outcome, cat }));
+    } else {
+      localStorage.removeItem(DRAFT_KEY);
+    }
+  }
+
+  function restoreDraft() {
+    try {
+      const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+      if (!d) return;
+      if (d.title)   document.getElementById('propTitle').value   = d.title;
+      if (d.desc)    document.getElementById('propDesc').value    = d.desc;
+      if (d.outcome) document.getElementById('propOutcome').value = d.outcome;
+      if (d.cat) {
+        document.querySelectorAll('.cat-chip').forEach(c => {
+          if (c.textContent.trim() === d.cat.trim()) { c.classList.add('selected'); selectedCat = d.cat; }
+        });
+      }
+      if (d.title || d.desc) showToast('📋 Draft restored');
+      validatePropose();
+    } catch(e) {}
+  }
+
+  ['propTitle','propDesc','propOutcome'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', saveDraft);
+  });
+
+  const _origSelectCat = window.selectCat;
+  // GOD MODE PATCH
+  window.selectCat = function(el) {
+    _origSelectCat(el);
+    saveDraft();
+  };
+
+  const _origOpenPropose = window.openPropose;
+  // GOD MODE PATCH
+  window.openPropose = function() {
+    _origOpenPropose();
+    setTimeout(restoreDraft, 50);
+  };
+
+  const _origSubmitProposal = window.submitProposal;
+  // GOD MODE PATCH
+  window.submitProposal = async function() {
+    await _origSubmitProposal();
+    localStorage.removeItem(DRAFT_KEY);
+    const dot = document.getElementById('draftDot');
+    if (dot) dot.classList.remove('show');
+  };
+
+  if (localStorage.getItem(DRAFT_KEY)) {
+    const dot = document.getElementById('draftDot');
+    if (dot) setTimeout(() => dot.classList.add('show'), 500);
+  }
+
+  // ── 2. PROPOSAL BOOKMARKS ──
+  function getBookmarks() {
+    try { return JSON.parse(localStorage.getItem(BK_KEY) || '[]'); } catch(e) { return []; }
+  }
+  function saveBookmarks(bks) { localStorage.setItem(BK_KEY, JSON.stringify(bks)); }
+
+  window.toggleBookmark = function(propId, btn) {
+    const bks = getBookmarks();
+    const idx = bks.indexOf(propId);
+    const card = document.getElementById('card_' + propId);
+    if (idx === -1) {
+      bks.push(propId);
+      btn.textContent = '⭐';
+      btn.classList.add('saved');
+      if (card) card.classList.add('bookmarked');
+      showToast('🔖 Proposal saved to watchlist');
+    } else {
+      bks.splice(idx, 1);
+      btn.textContent = '🔖';
+      btn.classList.remove('saved');
+      if (card) card.classList.remove('bookmarked');
+      showToast('Removed from watchlist');
+    }
+    saveBookmarks(bks);
+  };
+
+  function injectBookmarkButtons() {
+    document.querySelectorAll('.proposal-card[id^="card_"]').forEach(card => {
+      if (card.querySelector('.prop-bk-btn')) return;
+      const propId = card.id.replace('card_', '');
+      const header = card.querySelector('.proposal-header');
+      if (!header) return;
+      const btn = document.createElement('button');
+      btn.id = 'bkbtn_' + propId;
+      btn.className = 'prop-bk-btn';
+      btn.textContent = '🔖';
+      btn.onclick = function(e) { e.stopPropagation(); window.toggleBookmark(propId, btn); };
+      const bodyEl = header.querySelector('.proposal-body');
+      if (bodyEl) header.insertBefore(btn, bodyEl);
+    });
+    const bks = getBookmarks();
+    bks.forEach(id => {
+      const btn  = document.getElementById('bkbtn_' + id);
+      const card = document.getElementById('card_' + id);
+      if (btn)  { btn.textContent = '⭐'; btn.classList.add('saved'); }
+      if (card) card.classList.add('bookmarked');
+    });
+  }
+
+  // ── 3. SWIPE-TO-VOTE GESTURE ──
+  function injectSwipeGestures() {
+    document.querySelectorAll('.proposal-card[id^="card_"]').forEach(card => {
+      if (card.dataset.swipeR3) return;
+      card.dataset.swipeR3 = '1';
+      const propId = card.id.replace('card_', '');
+      let sx = 0, sy = 0, dx = 0, locked = false;
+
+      card.addEventListener('touchstart', e => {
+        sx = e.touches[0].clientX;
+        sy = e.touches[0].clientY;
+        dx = 0; locked = false;
+        card.style.transition = 'none';
+      }, {passive:true});
+
+      card.addEventListener('touchmove', e => {
+        const cx = e.touches[0].clientX;
+        const cy = e.touches[0].clientY;
+        const cdx = cx - sx, cdy = cy - sy;
+        if (!locked) {
+          if (Math.abs(cdy) > 10) return;
+          if (Math.abs(cdx) < 8) return;
+          locked = true;
+        }
+        dx = cdx;
+        e.preventDefault();
+        const shift = Math.sign(dx) * Math.min(Math.abs(dx) * 0.30, 28);
+        card.style.transform = `translateX(${shift}px)`;
+        if      (dx > 45)  card.style.background = 'rgba(0,229,160,0.08)';
+        else if (dx < -45) card.style.background = 'rgba(255,77,109,0.08)';
+        else               card.style.background = '';
+      }, {passive:false});
+
+      card.addEventListener('touchend', () => {
+        card.style.transition = 'transform 0.22s ease, background 0.22s';
+        card.style.transform  = '';
+        setTimeout(() => { if (card) card.style.background = ''; }, 240);
+        if      (dx >  70) castVote(propId, 'for');
+        else if (dx < -70) castVote(propId, 'against');
+        dx = 0; locked = false;
+      });
+    });
+  }
+
+  // ── 4. LIVE WS PROGRESS PULSE ON VOTE ──
+  const _origCastVote = window.castVote;
+  // GOD MODE PATCH
+  window.castVote = async function(propId, choice) {
+    await _origCastVote(propId, choice);
+    const prevWS = parseInt(sessionStorage.getItem('citizen_wisdom') || String(WISDOM_SCORE));
+    const newWS  = prevWS + 5;
+    const pct    = Math.min(100, (newWS / VOTE_THRESHOLD) * 100);
+    const fill   = document.getElementById('gateBarFill');
+    const badge  = document.getElementById('wisdomBadge');
+    if (fill)  { fill.style.transition = 'width 0.7s'; fill.style.width = pct + '%'; }
+    if (badge) {
+      badge.textContent = 'Wisdom ' + newWS;
+      badge.classList.add('ws-badge-flash');
+      setTimeout(() => badge.classList.remove('ws-badge-flash'), 1800);
+    }
+    const banner  = document.getElementById('wsCelebration');
+    const celText = document.getElementById('wsCelText');
+    const celSub  = document.getElementById('wsCelSub');
+    if (banner && celText && celSub) {
+      if (newWS >= VOTE_THRESHOLD && prevWS < VOTE_THRESHOLD) {
+        celText.textContent = '🎉 Voting Unlocked!';
+        celSub.textContent  = 'You hit Wisdom Score 50 — you can now vote on every proposal.';
+      } else {
+        celText.textContent = '+5 Wisdom Earned for voting';
+        celSub.textContent  = 'Your score: ' + newWS + '. Your vote shapes IN$DEX.';
+      }
+      banner.classList.add('show');
+      setTimeout(() => banner.classList.remove('show'), 3500);
+    }
+  };
+
+  // ── HOOK INTO LOADPROPOSALS (chain on top of R2 patch) ──
+  const _origLoadP_R3 = window.loadProposals;
+  // GOD MODE PATCH
+  window.loadProposals = async function() {
+    await _origLoadP_R3();
+    setTimeout(() => {
+      injectBookmarkButtons();
+      injectSwipeGestures();
+    }, 450);
+  };
+
+})();
 </script>
+<script src="siindex-speak-core.js"></script>
 </body>
 </html>
