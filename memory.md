@@ -1,5 +1,31 @@
 ---
 
+## Session 119 continued x33 (part 4) — 12 Jul 2026 — Cook Islands Entity + God Mode sweep
+
+**CANONICAL FACT — AJ IS A COOK ISLANDS CITIZEN**
+- AJ (Arthur John Henry) holds Cook Islands citizenship
+- IN$DEX will be incorporated in the Cook Islands as the primary protocol entity
+- Three reasons confirmed by AJ:
+  1. Citizenship — AJ has the right to incorporate domestically (not as a foreign investor)
+  2. Tax haven status — Cook Islands tax structure benefits IN$DEX and its citizens
+  3. Cook Islands International Trust — the most powerful offshore asset protection trust in the world; backs the sovereign wealth / legacy vault layer of IN$DEX
+- Dual structure: Cook Islands entity (protocol, INDX token, IP, global ops) + Australian ABN entity (regulated AUSTRAC-registered operations serving AU customers)
+- Australian entity: "Image Nation Decentralised Exchange" — ABN registered, not yet confirmed as Pty Ltd
+- AUSTRAC deadline: 29 Jul 2026 — must enrol Australian entity regardless of Cook Islands progress
+- Cook Islands Trust infrastructure aligns directly with `indx-legacy-vault.html` and citizen wealth protection doctrine
+- The Pacific-first identity of IN$DEX is now anchored in the founder's own nationality — not just market strategy
+- The Cook Islands corridor (`remittance.html` — NZ corridors Cook Islands first) is now a PERSONAL corridor for AJ, not just commercial
+
+**Session x33 part 4 — Audit Results**
+- Full JS validation: 244 HTML files — ZERO broken scripts (4 fixed: citizen-dashboard, indx-sovereign-settlement, siindex-session-sovereignty, siindex-avatar)
+- Platform Navigator: 126 → 243 screens wired (115 new, 14 new sections)
+- AUSTRAC VASP enrollment checklist created: `austrac-vasp-enrollment.md`
+- Git commits: 68fdcb1 (4 syntax fixes), navigator expansion commit — both require AJ to push from Terminal
+
+**God Mode Sweep — beginning priority queue**
+
+---
+
 ## Session 119 continued x33 (part 3) — 12 Jul 2026 — INDX TOKEN MINTED ON SOLANA MAINNET 🎉
 
 **INDX TOKEN — LIVE ON SOLANA MAINNET**
