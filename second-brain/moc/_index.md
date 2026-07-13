@@ -192,12 +192,30 @@ High-level summaries that link bodies of work together. Build these when a topic
 - **Cook Islands Entity** — AJ confirmed as Cook Islands citizen; IN$DEX protocol entity to incorporate in [[../companies/cook-islands|Cook Islands]] (Cook Islands International Trust backs legacy vault layer), dual structure alongside Australian ABN entity ("Image Nation Decentralised Exchange")
 - **Full JS validation** — 244 HTML files, ZERO broken scripts (4 fixed); Platform Navigator 126→243 screens wired (115 new, 14 new sections); `austrac-vasp-enrollment.md` checklist created; 2 git commits pending AJ push from Terminal
 
+### God Mode Sweep — 5 Screens + 3 New SI Screens — 2026-07-13 (Session 119 continued x34)
+- imagenation-design-studio.html ✅ (God Mode R1 — Quick Launch Templates, Brief Save & History, Design Session Cost Estimator, Council Review Tracker)
+- siindex-prompt-optimiser.html ✅ (new — 4-D Methodology stepper, 6-platform selector, DETAIL/BASIC mode, prompt builder, history)
+- siindex-writing-mode.html ✅ (new — 50+ banned word scanner, 8-point style checklist, score/10 with grade, auto-rewrite engine, history)
+- siindex-readability-guardian.html ✅ (new — 10-point screen audit, WCAG contrast checker, button label improver, Citizen Protection Mode demo)
+- account-recovery.html ✅ (God Mode R2 — Session Resume banner, INDX/USD value on success, Recovery Attempt Log, Verify Method Preference)
+- God Mode sweep status: ~107 orphaned screens still to sweep after account-recovery.html
+
+### SIINDEX Living Interface System — 2026-07-13 (Session 119 continued x35)
+- siindex-living-interface.html ✅ (new, God Mode from birth, 764 lines — SIINDEX Embodiment Layer design system: Armor Mode Gallery 8 modes, Living Icon System 16 icons × 4 states, Command Mode Demo, Performance + Accessibility Guardrails)
+- index.html — SIINDEX section 21 → 22 screens
+- Doctrine locked: "The app transforms around the citizen's mission." / "Motion must explain — not decorate." / "SIINDEX's form changes by mission. Her identity stays stable." / Build phases L1 Static → L2 Animated → L3 Real-time 3D → L4 Cinematic; 8 armor modes (Citizen Guide, Interview, Sovereign Keynote, Security Sentinel, Cultural Steward, Governance, Builder, Liquidity)
+
+### Trust Before Transaction + God Mode Audit Doctrine — 2026-07-13 (Session 119 continued x36)
+- trust-before-transaction.html ✅ (new, God Mode from birth — SIINDEX 6-layer animated trust check: Identity → Limits → PQSI → Compliance → Cultural → Final; 6 pre-set scenarios; 6 trust states; consent receipt generator TBT-[id] → `indx_tbt_hist`; Decision Ledger history)
+- index.html — SIINDEX Core 24 → 25 screens
+- God Mode Audit Doctrine locked (12 dimensions): voice-first as the primary action; Trust Before Transaction required ahead of any money/listing/cultural-asset/vote/action; terminology replacements ("AI"→SIINDEX Synthetic Intelligence, "MemeDAO"→IN$DEX Citizen Governance, "no KYC"→progressive verification, "180+ countries"→Pacific-first corridors expanding, "no rug"→transparent supply + audits); 6 trust states; core principle loop: Citizen speaks → SIINDEX understands → App reshapes → Trust checked → Citizen approves → IN$DEX records; strongest line: "The bank never came. So we built a civilization."
+
 ### Screens — In Progress / Pending
 - God Mode queue: live-stream.html, creator-onboarding.html (unchanged — only two screens left in the original God Mode backlog since 2026-07-04's rollout; all Build-Completion Prompt queue screens now complete as of 2026-07-11)
 - ⚠️ **Growing backlog:** multi-day git backlog spanning Sessions 81 through 119 (2026-06-27 onward in places) — ~290 dirty files, 9 days since last push (last push: 3 Jul 2026, commit b97158e) as of 2026-07-12. Highest-priority cleanup item (P0-A); AJ must push manually from Terminal.
 - ⚠️ **Open conflict:** lp-manager.html (Session 83) models LP fees on Meteora DLMM; Session 63 canonically locked Raydium CPMM for the INDX/USDC pool. Needs AJ reconciliation — still unresolved as of 2026-07-11.
 - ⏳ Builder Discipline (Session 114) + Unknowns Engine (Session 117) doctrine not yet folded into SIINDEX Master Prompt (currently v3) — flagged as next revision (v4) candidate
-- ⏳ AUSTRAC VASP Travel Rule enrollment — deadline 29 Jul 2026, treated as P0 since 2026-07-10, not yet complete
+- ⏳ AUSTRAC VASP Travel Rule enrollment — deadline 29 Jul 2026 (16 days remaining as of 2026-07-13), treated as P0 since 2026-07-10, not yet complete
 - ⏳ Onchain revenue infrastructure (SolSplits Revenue Router, Token-2022 Transfer Hook, Streamflow distribution) — planning-only, flagged by AJ for automation (Session 119 x17)
 
 ### Infrastructure — Complete
@@ -248,6 +266,9 @@ High-level summaries that link bodies of work together. Build these when a topic
 
 ## moc-brand-rules
 
+**Platform name:** IN$DEX — always with the dollar sign in place of the S, in prose, docs, and UI copy. Never "INDEX", "Index", or "IN$DEX" without the $. (Exceptions that are NOT brand-name violations: `index.html`/`_index.md` are literal filenames per web/repo convention, not the brand name; `INDX` is the separate token ticker; `SIINDEX` is the platform's SI — Synthetic Intelligence, never "AI".)
+**SI, not AI:** SIINDEX is Synthetic Intelligence (SI). Never call her "AI" or "Sovereign Intelligence" — locked Session 77, reinforced as a terminology-replacement rule in the God Mode Audit Doctrine (Session 119 x36, 13 Jul 2026).
+**Token ticker:** INDX (no dollar sign — this is the SPL token symbol, distinct from the IN$DEX platform name)
 **Price:** $0.24 USD (genesis) | $2.50 target (Grand Synchronicity 24 Sep 2026)
 **JS constant:** `INDX_PRICE_USD = 0.24`
 **Currency:** USD only — no A$, AUD

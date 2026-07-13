@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Trust Before Transaction — IN$DEX</title>
+<style>
+:root{
+  --cyan:#00D4FF;--blue:#2B35D8;--purple:#8B3FE8;
+  --black:#090A10;--green:#00E5A0;--gold:#FFB800;
+  --red:#FF4D6D;--surface:#12141F;--surface2:#1A1D2E;--surface3:#22263A;
+  --text:#F0F2FF;--text2:#9CA3B8;--text-muted:#5A6178;
+  --border:rgba(255,255,255,0.06);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;max-width:430px;margin:0 auto;min-height:100vh;padding-bottom:64px;}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;gap:12px;padding:16px 16px 12px;border-bottom:1px solid var(--border);}
+.topbar-back{width:34px;height:34px;border-radius:10px;background:var(--surface2);border:none;color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.topbar-title{flex:1;font-size:15px;font-weight:800;}
+.topbar-mode{font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;background:rgba(255,77,109,0.12);color:var(--red);border:1px solid rgba(255,77,109,0.25);white-space:nowrap;}
+
+/* ── SIINDEX BRIEF ── */
+.si-brief{padding:16px;background:linear-gradient(135deg,rgba(255,77,109,0.06),rgba(43,53,216,0.06));border-bottom:1px solid var(--border);}
+.si-brief-row{display:flex;align-items:flex-start;gap:12px;}
+.si-orb{width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 35% 35%,rgba(255,100,130,0.8),var(--red) 55%,rgba(43,53,216,0.5));box-shadow:0 0 18px rgba(255,77,109,0.4);flex-shrink:0;animation:siPulse 2.4s ease-in-out infinite;}
+@keyframes siPulse{0%,100%{box-shadow:0 0 14px rgba(255,77,109,0.35);}50%{box-shadow:0 0 28px rgba(255,77,109,0.65);}}
+.si-brief-name{font-size:11px;font-weight:700;color:var(--red);margin-bottom:4px;letter-spacing:0.04em;}
+.si-brief-quote{font-size:13px;color:var(--text);line-height:1.55;}
+
+/* ── DOCTRINE PILLS ── */
+.doctrine{display:flex;gap:7px;padding:12px 16px;overflow-x:auto;scrollbar-width:none;}
+.doctrine::-webkit-scrollbar{display:none;}
+.doc-pill{flex-shrink:0;font-size:11px;font-weight:600;padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--text-muted);white-space:nowrap;transition:background 0.3s,color 0.3s,border-color 0.3s;}
+.doc-pill.lit{background:rgba(0,229,160,0.1);border-color:rgba(0,229,160,0.3);color:var(--green);}
+
+/* ── SECTION HEAD ── */
+.sec-head{padding:16px 16px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);}
+
+/* ── SCENARIO SCROLL ── */
+.scen-scroll{display:flex;gap:8px;padding:0 16px 14px;overflow-x:auto;scrollbar-width:none;}
+.scen-scroll::-webkit-scrollbar{display:none;}
+.scen-card{flex-shrink:0;width:116px;background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:12px;cursor:pointer;transition:border-color 0.2s,transform 0.15s;}
+.scen-card:active{transform:scale(0.96);}
+.scen-card.active{border-color:var(--cyan);background:rgba(0,212,255,0.05);}
+.scen-icon{font-size:22px;margin-bottom:7px;}
+.scen-label{font-size:11px;font-weight:700;line-height:1.35;margin-bottom:3px;}
+.scen-type{font-size:10px;color:var(--text-muted);}
+
+/* ── TRANSACTION PREVIEW ── */
+.tx-preview{margin:0 16px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:16px;display:none;animation:fadeUp 0.35s ease;}
+.tx-preview.visible{display:block;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.tx-row{display:flex;justify-content:space-between;align-items:flex-end;padding:9px 0;border-bottom:1px solid var(--border);}
+.tx-row:last-child{border-bottom:none;padding-bottom:0;}
+.tx-label{font-size:12px;color:var(--text-muted);}
+.tx-value{font-size:13px;font-weight:700;text-align:right;}
+.tx-value.amount{font-size:20px;font-weight:900;color:var(--cyan);}
+.tx-usd{font-size:11px;color:var(--text-muted);text-align:right;margin-top:2px;}
+.risk-low{color:var(--green);}
+.risk-medium{color:var(--gold);}
+.risk-high{color:var(--red);}
+.risk-cultural{color:var(--purple);}
+.risk-info{color:var(--cyan);}
+.risk-extreme{color:var(--red);}
+
+/* ── TRUST LAYERS ── */
+.layers-wrap{margin:0 16px 12px;display:none;}
+.layers-wrap.visible{display:block;}
+.layers-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;}
+.layer-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--surface);border:1px solid var(--border);margin-bottom:6px;transition:border-color 0.3s,background 0.3s,opacity 0.3s;}
+.layer-icon{font-size:15px;width:22px;text-align:center;flex-shrink:0;}
+.layer-label{flex:1;font-size:13px;}
+.layer-status{font-size:11px;font-weight:700;width:64px;text-align:right;transition:color 0.3s;}
+.layer-row.pending{opacity:0.45;}
+.layer-row.running{border-color:rgba(0,212,255,0.35);background:rgba(0,212,255,0.05);}
+.layer-row.running .layer-status{color:var(--cyan);}
+.layer-row.pass{border-color:rgba(0,229,160,0.25);background:rgba(0,229,160,0.04);}
+.layer-row.pass .layer-status{color:var(--green);}
+.layer-row.warn{border-color:rgba(255,184,0,0.3);background:rgba(255,184,0,0.05);}
+.layer-row.warn .layer-status{color:var(--gold);}
+.layer-row.flag{border-color:rgba(255,77,109,0.3);background:rgba(255,77,109,0.06);}
+.layer-row.flag .layer-status{color:var(--red);}
+.layer-row.cultural{border-color:rgba(139,63,232,0.3);background:rgba(139,63,232,0.06);}
+.layer-row.cultural .layer-status{color:var(--purple);}
+
+/* ── TRUST STATE CARD ── */
+.state-card{margin:0 16px 12px;border-radius:16px;padding:16px;display:none;}
+.state-card.visible{display:block;animation:fadeUp 0.4s ease;}
+.state-card.state-safe{background:rgba(0,229,160,0.07);border:1.5px solid rgba(0,229,160,0.25);}
+.state-card.state-needs_approval{background:rgba(0,212,255,0.07);border:1.5px solid rgba(0,212,255,0.25);}
+.state-card.state-needs_info{background:rgba(255,184,0,0.07);border:1.5px solid rgba(255,184,0,0.25);}
+.state-card.state-human_review{background:rgba(255,184,0,0.07);border:1.5px solid rgba(255,184,0,0.25);}
+.state-card.state-cultural_review{background:rgba(139,63,232,0.07);border:1.5px solid rgba(139,63,232,0.25);}
+.state-card.state-blocked{background:rgba(255,77,109,0.07);border:1.5px solid rgba(255,77,109,0.25);}
+
+.state-top{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.state-badge-icon{font-size:30px;flex-shrink:0;}
+.state-badge-text{flex:1;}
+.state-badge-label{font-size:16px;font-weight:800;}
+.state-badge-sub{font-size:11px;color:var(--text2);margin-top:3px;}
+.state-card.state-safe .state-badge-label{color:var(--green);}
+.state-card.state-needs_approval .state-badge-label{color:var(--cyan);}
+.state-card.state-needs_info .state-badge-label{color:var(--gold);}
+.state-card.state-human_review .state-badge-label{color:var(--gold);}
+.state-card.state-cultural_review .state-badge-label{color:var(--purple);}
+.state-card.state-blocked .state-badge-label{color:var(--red);}
+
+.si-says-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:7px;}
+.si-says-body{font-size:13px;color:var(--text);line-height:1.6;padding:12px;background:rgba(0,0,0,0.2);border-radius:10px;margin-bottom:12px;}
+.state-record{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--text-muted);line-height:1.5;}
+.state-record-icon{flex-shrink:0;font-size:14px;margin-top:1px;}
+
+/* ── ACTION BUTTONS ── */
+.action-row{display:flex;gap:8px;padding:0 16px 10px;}
+.btn-approve,.btn-decline{flex:1;padding:14px;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;display:none;transition:opacity 0.2s;}
+.btn-approve{background:var(--green);color:#000;}
+.btn-approve:active{opacity:0.85;}
+.btn-decline{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+.action-row.show-approve .btn-approve{display:block;}
+.action-row.show-decline .btn-decline{display:block;}
+
+.ask-row{padding:0 16px 12px;display:none;}
+.ask-row.visible{display:block;}
+.btn-ask{width:100%;padding:13px;background:transparent;color:var(--cyan);border:1.5px solid rgba(0,212,255,0.25);border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;transition:background 0.2s;}
+.btn-ask:active{background:rgba(0,212,255,0.08);}
+
+/* ── CONSENT RECEIPT ── */
+.receipt-wrap{margin:0 16px 12px;display:none;}
+.receipt-wrap.visible{display:block;animation:fadeUp 0.4s ease;}
+.receipt-card{background:var(--surface2);border:1.5px solid rgba(0,229,160,0.25);border-radius:16px;padding:16px;}
+.receipt-header{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.receipt-header-icon{font-size:22px;}
+.receipt-title{font-size:14px;font-weight:800;}
+.receipt-id{font-size:10px;color:var(--text-muted);margin-top:2px;font-family:monospace;}
+.r-row{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.r-row:last-child{border-bottom:none;padding-bottom:0;}
+.r-key{color:var(--text-muted);}
+.r-val{font-weight:700;color:var(--green);text-align:right;max-width:60%;}
+.receipt-footer{margin-top:14px;padding:10px 12px;background:rgba(0,229,160,0.05);border-radius:10px;font-size:11px;color:var(--text-muted);line-height:1.6;}
+
+/* ── PAST RECEIPTS ── */
+.hist-empty{font-size:13px;color:var(--text-muted);text-align:center;padding:24px 16px;}
+.hist-row{display:flex;align-items:center;gap:12px;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;margin:0 16px 8px;}
+.hist-icon{font-size:18px;flex-shrink:0;}
+.hist-info{flex:1;min-width:0;}
+.hist-label{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hist-time{font-size:10px;color:var(--text-muted);margin-top:2px;font-family:monospace;}
+.hist-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:6px;flex-shrink:0;}
+.hist-badge.approved{background:rgba(0,229,160,0.12);color:var(--green);}
+.hist-badge.declined{background:rgba(255,77,109,0.12);color:var(--red);}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--surface3);color:var(--text);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;pointer-events:none;transition:transform 0.3s ease,opacity 0.3s ease;opacity:0;z-index:999;max-width:320px;text-align:center;white-space:nowrap;}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <button class="topbar-back" onclick="history.back()">←</button>
+  <div class="topbar-title">Trust Before Transaction</div>
+  <div class="topbar-mode">🛡️ Sentinel</div>
+</div>
+
+<!-- SIINDEX BRIEF -->
+<div class="si-brief">
+  <div class="si-brief-row">
+    <div class="si-orb"></div>
+    <div>
+      <div class="si-brief-name">SIINDEX · Security Sentinel Mode</div>
+      <div class="si-brief-quote">Before anything moves, I check. I show you the cost, the risk, and what happens next. Nothing proceeds without your approval.</div>
+    </div>
+  </div>
+</div>
+
+<!-- DOCTRINE PILLS -->
+<div class="doctrine" id="doctrinePills">
+  <div class="doc-pill" id="pill0">What is happening</div>
+  <div class="doc-pill" id="pill1">What it costs</div>
+  <div class="doc-pill" id="pill2">What the risk is</div>
+  <div class="doc-pill" id="pill3">What you control</div>
+  <div class="doc-pill" id="pill4">What gets recorded</div>
+</div>
+
+<!-- SCENARIO PICKER -->
+<div class="sec-head">Try a scenario</div>
+<div class="scen-scroll" id="scenScroll"></div>
+
+<!-- TRANSACTION PREVIEW -->
+<div class="tx-preview" id="txPreview">
+  <div class="tx-row">
+    <div class="tx-label">Action</div>
+    <div class="tx-value" id="txType">—</div>
+  </div>
+  <div class="tx-row">
+    <div class="tx-label">To</div>
+    <div class="tx-value" id="txRecipient">—</div>
+  </div>
+  <div class="tx-row">
+    <div>
+      <div class="tx-label">Amount</div>
+      <div class="tx-value amount" id="txIndx">—</div>
+      <div class="tx-usd" id="txUSD"></div>
+    </div>
+  </div>
+  <div class="tx-row">
+    <div class="tx-label">Fee (98/2 Law)</div>
+    <div class="tx-value" id="txFee">—</div>
+  </div>
+  <div class="tx-row">
+    <div class="tx-label">Settlement</div>
+    <div class="tx-value" id="txTiming">—</div>
+  </div>
+  <div class="tx-row">
+    <div class="tx-label">Risk level</div>
+    <div class="tx-value" id="txRisk">—</div>
+  </div>
+</div>
+
+<!-- TRUST LAYERS -->
+<div class="layers-wrap" id="layersWrap">
+  <div class="layers-title">SIINDEX is checking</div>
+  <div id="layersList"></div>
+</div>
+
+<!-- TRUST STATE CARD -->
+<div class="state-card" id="stateCard">
+  <div class="state-top">
+    <div class="state-badge-icon" id="stateIcon"></div>
+    <div class="state-badge-text">
+      <div class="state-badge-label" id="stateLabel"></div>
+      <div class="state-badge-sub" id="stateSub"></div>
+    </div>
+  </div>
+  <div class="si-says-label">SIINDEX says</div>
+  <div class="si-says-body" id="stateSiSays"></div>
+  <div class="state-record">
+    <div class="state-record-icon">📋</div>
+    <div id="stateRecordText"></div>
+  </div>
+</div>
+
+<!-- ACTION BUTTONS -->
+<div class="action-row" id="actionRow">
+  <button class="btn-approve" onclick="handleApprove()">Approve</button>
+  <button class="btn-decline" onclick="handleDecline()">Decline</button>
+</div>
+<div class="ask-row" id="askRow">
+  <button class="btn-ask" onclick="handleAsk()">Ask SIINDEX to explain</button>
+</div>
+
+<!-- CONSENT RECEIPT -->
+<div class="receipt-wrap" id="receiptWrap">
+  <div class="receipt-card">
+    <div class="receipt-header">
+      <div class="receipt-header-icon">🧾</div>
+      <div>
+        <div class="receipt-title">Consent Receipt</div>
+        <div class="receipt-id" id="rId">—</div>
+      </div>
+    </div>
+    <div class="r-row"><div class="r-key">Action</div><div class="r-val" id="rAction">—</div></div>
+    <div class="r-row"><div class="r-key">To</div><div class="r-val" id="rRecipient">—</div></div>
+    <div class="r-row"><div class="r-key">Amount</div><div class="r-val" id="rAmount">—</div></div>
+    <div class="r-row"><div class="r-key">Fee</div><div class="r-val" id="rFee">—</div></div>
+    <div class="r-row"><div class="r-key">Citizen approved</div><div class="r-val" id="rTime">—</div></div>
+    <div class="r-row"><div class="r-key">SIINDEX trust check</div><div class="r-val">✅ Passed</div></div>
+    <div class="r-row"><div class="r-key">Decision Ledger</div><div class="r-val">Recorded</div></div>
+    <div class="receipt-footer">This is your proof. SIINDEX recorded your approval and the trust check result. You can access this receipt in your Decision Ledger at any time.</div>
+  </div>
+</div>
+
+<!-- PAST RECEIPTS -->
+<div class="sec-head">Consent receipt history</div>
+<div id="histContainer">
+  <div class="hist-empty" id="histEmpty">No receipts yet. Try a scenario above.</div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+const INDX_PRICE_USD = 0.24;
+const _TBT_KEY = 'indx_tbt_hist';
+
+var SCENARIOS = [
+  {
+    id: 'send_mum',
+    label: 'Send $50 to Mum',
+    icon: '💸',
+    type: 'Send',
+    recipient: 'Maria K. (mum.indx)',
+    indxAmount: 208.33,
+    feeIndx: 4.17,
+    feeLabel: '4.17 INDX (2% — 98/2 Law)',
+    timing: '4 seconds',
+    riskClass: 'low',
+    riskLabel: 'Low',
+    state: 'safe',
+    siSays: 'I have checked this transaction. Maria K. is a trusted, verified contact in your history and the amount is within your normal pattern. Everything looks right. Nothing moves until you approve.'
+  },
+  {
+    id: 'new_contact',
+    label: 'Send to new contact',
+    icon: '❓',
+    type: 'Send',
+    recipient: 'jayden_s.indx (first send)',
+    indxAmount: 500,
+    feeIndx: 10,
+    feeLabel: '10 INDX (2% — 98/2 Law)',
+    timing: '4 seconds',
+    riskClass: 'medium',
+    riskLabel: 'Medium',
+    state: 'needs_approval',
+    siSays: 'I have not seen this recipient before. I cannot verify their identity from your history. I will proceed only with your explicit approval. If you did not choose to send to this person, decline now.'
+  },
+  {
+    id: 'cultural_art',
+    label: 'Publish cultural artwork',
+    icon: '🪶',
+    type: 'Publish',
+    recipient: 'IN$DEX Marketplace',
+    indxAmount: 0,
+    feeIndx: 0,
+    feeLabel: 'Free',
+    timing: 'Pending review',
+    riskClass: 'cultural',
+    riskLabel: 'Cultural review',
+    state: 'cultural_review',
+    siSays: 'This listing may carry cultural knowledge or traditional meaning. I have flagged it for Cultural Steward review before publishing. Nothing has been posted yet. I will notify you when the review is complete.'
+  },
+  {
+    id: 'large_withdraw',
+    label: 'Withdraw $5,000',
+    icon: '🏦',
+    type: 'Withdraw',
+    recipient: 'ANZ Bank ••4421',
+    indxAmount: 20833,
+    feeIndx: 416.67,
+    feeLabel: '416.67 INDX (2% — 98/2 Law)',
+    timing: '2 hours (pending review)',
+    riskClass: 'high',
+    riskLabel: 'High value',
+    state: 'human_review',
+    siSays: 'This withdrawal exceeds my automatic approval limit. A member of the Sovereign Support team will review this before anything moves. I will notify you when the review is complete. No funds have left your account.'
+  },
+  {
+    id: 'suspicious',
+    label: 'Urgent: send all funds',
+    icon: '🚨',
+    type: 'Send',
+    recipient: 'Unknown wallet address',
+    indxAmount: 0,
+    feeIndx: 0,
+    feeLabel: '—',
+    timing: '—',
+    riskClass: 'extreme',
+    riskLabel: 'Extreme risk',
+    state: 'blocked',
+    siSays: 'I have blocked this action. The urgency, the unknown recipient, and the all-funds instruction match a known scam pattern in my memory. No money has moved and no data has been shared. If someone asked you to do this, please contact Sovereign Support immediately.'
+  },
+  {
+    id: 'buy_indx',
+    label: 'Buy 833 INDX',
+    icon: '⬆️',
+    type: 'Buy',
+    recipient: 'IN$DEX Exchange',
+    indxAmount: 833,
+    feeIndx: 8.33,
+    feeLabel: '8.33 INDX (1% exchange fee)',
+    timing: 'Instant',
+    riskClass: 'info',
+    riskLabel: 'Verify needed',
+    state: 'needs_info',
+    siSays: 'To complete this purchase I need to confirm your linked payment method is verified. This is a one-time check. No funds will move until your payment source is confirmed. Tap below to begin verification.'
+  }
+];
+
+var STATE_META = {
+  safe:           {icon:'✅', label:'Safe to proceed',           sub:'SIINDEX trust check passed — 6 of 6 layers clear', showApprove:true,  showDecline:true,  showAsk:true},
+  needs_approval: {icon:'👆', label:'Needs your approval',       sub:'New or unverified recipient detected',              showApprove:true,  showDecline:true,  showAsk:true},
+  needs_info:     {icon:'ℹ️', label:'Needs more information',    sub:'Payment method verification required',              showApprove:false, showDecline:true,  showAsk:true},
+  human_review:   {icon:'👤', label:'Needs human review',        sub:'Amount exceeds automatic approval threshold',       showApprove:false, showDecline:true,  showAsk:true},
+  cultural_review:{icon:'🪶', label:'Cultural review in progress',sub:'Cultural content flag raised',                     showApprove:false, showDecline:true,  showAsk:true},
+  blocked:        {icon:'🛡️', label:'Blocked for your protection',sub:'Extreme risk or scam pattern detected',            showApprove:false, showDecline:false, showAsk:true}
+};
+
+var TRUST_LAYERS = [
+  {icon:'🔐', label:'Identity verified'},
+  {icon:'⚖️', label:'Limits within range'},
+  {icon:'🛡️', label:'PQSI pattern scan'},
+  {icon:'📋', label:'Compliance check'},
+  {icon:'🪶', label:'Cultural flags'},
+  {icon:'✅', label:'Final assessment'}
+];
+
+// For each state: which layer triggers it, and what class that layer gets
+var TRIGGERS = {
+  safe:           {triggerIdx: -1, cls: 'pass'},
+  needs_approval: {triggerIdx:  2, cls: 'warn'},
+  needs_info:     {triggerIdx:  0, cls: 'warn'},
+  human_review:   {triggerIdx:  1, cls: 'warn'},
+  cultural_review:{triggerIdx:  4, cls: 'cultural'},
+  blocked:        {triggerIdx:  2, cls: 'flag'}
+};
+
+var STATE_STATUS_LABEL = {pass:'Pass', warn:'Review', cultural:'Flag', flag:'Blocked'};
+
+var currentScen = null;
+var timers = [];
+
+function init() {
+  buildScenCards();
+  renderHistory();
+}
+
+function clearTimers() {
+  timers.forEach(function(t){ clearTimeout(t); });
+  timers = [];
+}
+
+function buildScenCards() {
+  var el = document.getElementById('scenScroll');
+  el.innerHTML = SCENARIOS.map(function(s) {
+    return '<div class="scen-card" id="sc_' + s.id + '" onclick="selectScen(\'' + s.id + '\')">' +
+      '<div class="scen-icon">' + s.icon + '</div>' +
+      '<div class="scen-label">' + s.label + '</div>' +
+      '<div class="scen-type">' + s.type + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function selectScen(id) {
+  clearTimers();
+  resetView();
+
+  var s = SCENARIOS.filter(function(x){ return x.id === id; })[0];
+  if (!s) return;
+  currentScen = s;
+
+  document.querySelectorAll('.scen-card').forEach(function(c){ c.classList.remove('active'); });
+  var sc = document.getElementById('sc_' + id);
+  if (sc) sc.classList.add('active');
+
+  // Light pill 0 (What is happening) + pill 1 (What it costs)
+  lightPill(0); lightPill(1);
+
+  populateTxPreview(s);
+  document.getElementById('txPreview').classList.add('visible');
+  document.getElementById('layersWrap').classList.add('visible');
+  animateLayers(s);
+}
+
+function resetView() {
+  document.getElementById('txPreview').classList.remove('visible');
+  document.getElementById('layersWrap').classList.remove('visible');
+  document.getElementById('stateCard').className = 'state-card';
+  document.getElementById('actionRow').className = 'action-row';
+  document.getElementById('askRow').className = 'ask-row';
+  document.getElementById('receiptWrap').classList.remove('visible');
+  // Reset doctrine pills
+  for (var i = 0; i < 5; i++) {
+    var p = document.getElementById('pill' + i);
+    if (p) p.classList.remove('lit');
+  }
+}
+
+function lightPill(idx) {
+  var p = document.getElementById('pill' + idx);
+  if (p) p.classList.add('lit');
+}
+
+function populateTxPreview(s) {
+  document.getElementById('txType').textContent = s.type;
+  document.getElementById('txRecipient').textContent = s.recipient;
+
+  if (s.state === 'blocked') {
+    document.getElementById('txIndx').textContent = 'All balance';
+    document.getElementById('txUSD').textContent = '';
+  } else if (s.indxAmount > 0) {
+    var indxStr = s.indxAmount >= 1000
+      ? (s.indxAmount / 1000).toFixed(2) + 'K INDX'
+      : s.indxAmount.toFixed(2) + ' INDX';
+    document.getElementById('txIndx').textContent = indxStr;
+    var usd = (s.indxAmount * INDX_PRICE_USD).toFixed(2);
+    document.getElementById('txUSD').textContent = '≈ $' + usd + ' USD at $' + INDX_PRICE_USD + ' per INDX';
+  } else {
+    document.getElementById('txIndx').textContent = 'No transfer';
+    document.getElementById('txUSD').textContent = s.type === 'Publish' ? '(Listing action — no funds moved)' : '';
+  }
+
+  document.getElementById('txFee').textContent = s.feeLabel;
+  document.getElementById('txTiming').textContent = s.timing;
+  var riskEl = document.getElementById('txRisk');
+  riskEl.textContent = s.riskLabel;
+  riskEl.className = 'tx-value risk-' + s.riskClass;
+}
+
+function animateLayers(s) {
+  var list = document.getElementById('layersList');
+  list.innerHTML = TRUST_LAYERS.map(function(l, i) {
+    return '<div class="layer-row pending" id="lr_' + i + '">' +
+      '<div class="layer-icon">' + l.icon + '</div>' +
+      '<div class="layer-label">' + l.label + '</div>' +
+      '<div class="layer-status">—</div>' +
+    '</div>';
+  }).join('');
+
+  var trig = TRIGGERS[s.state];
+  var delay = 0;
+
+  for (var i = 0; i < TRUST_LAYERS.length; i++) {
+    (function(idx) {
+      delay += 380;
+      var t1 = setTimeout(function() {
+        var row = document.getElementById('lr_' + idx);
+        if (!row) return;
+        row.classList.remove('pending');
+        row.classList.add('running');
+        row.querySelector('.layer-status').textContent = '…';
+
+        var t2 = setTimeout(function() {
+          row.classList.remove('running');
+          var isTrig = (trig.triggerIdx === idx);
+          var pastTrig = (trig.triggerIdx !== -1 && idx > trig.triggerIdx);
+
+          if (isTrig) {
+            row.classList.add(trig.cls);
+            row.querySelector('.layer-status').textContent = STATE_STATUS_LABEL[trig.cls];
+          } else if (!pastTrig) {
+            row.classList.add('pass');
+            row.querySelector('.layer-status').textContent = 'Pass';
+          } else {
+            row.classList.add('pending');
+            row.querySelector('.layer-status').textContent = '—';
+          }
+
+          var lastIdx = trig.triggerIdx === -1 ? TRUST_LAYERS.length - 1 : trig.triggerIdx;
+          if (idx === lastIdx) {
+            lightPill(2); // "What the risk is"
+            var t3 = setTimeout(function() { showTrustState(s); }, 380);
+            timers.push(t3);
+          }
+        }, 280);
+        timers.push(t2);
+      }, delay);
+      timers.push(t1);
+    })(i);
+
+    if (trig.triggerIdx !== -1 && i >= trig.triggerIdx) break;
+  }
+}
+
+function showTrustState(s) {
+  var meta = STATE_META[s.state];
+  var card = document.getElementById('stateCard');
+  card.className = 'state-card state-' + s.state + ' visible';
+
+  document.getElementById('stateIcon').textContent = meta.icon;
+  document.getElementById('stateLabel').textContent = meta.label;
+  document.getElementById('stateSub').textContent = meta.sub;
+  document.getElementById('stateSiSays').textContent = s.siSays;
+
+  var recordMsg = s.state === 'blocked'
+    ? 'This blocked attempt has been logged in your Decision Ledger. You can review it any time.'
+    : 'This check will be recorded in your Decision Ledger regardless of your decision below.';
+  document.getElementById('stateRecordText').textContent = recordMsg;
+
+  // Buttons
+  var ar = document.getElementById('actionRow');
+  ar.className = 'action-row'
+    + (meta.showApprove ? ' show-approve' : '')
+    + (meta.showDecline ? ' show-decline' : '');
+  document.getElementById('askRow').className = meta.showAsk ? 'ask-row visible' : 'ask-row';
+
+  lightPill(3); // "What you control"
+}
+
+function handleApprove() {
+  if (!currentScen) return;
+  var s = currentScen;
+  var now = new Date();
+  var rid = 'TBT-' + now.getTime().toString(36).toUpperCase().slice(-8);
+  var timeStr = now.toLocaleString('en-AU', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'short', year:'numeric'});
+
+  // Fill receipt
+  document.getElementById('rId').textContent = rid;
+  document.getElementById('rAction').textContent = s.type;
+  document.getElementById('rRecipient').textContent = s.recipient;
+
+  var amtStr = s.indxAmount > 0
+    ? s.indxAmount.toFixed(2) + ' INDX ($' + (s.indxAmount * INDX_PRICE_USD).toFixed(2) + ' USD)'
+    : 'No transfer';
+  document.getElementById('rAmount').textContent = amtStr;
+  document.getElementById('rFee').textContent = s.feeIndx > 0 ? s.feeIndx.toFixed(2) + ' INDX' : s.feeLabel;
+  document.getElementById('rTime').textContent = timeStr;
+
+  document.getElementById('actionRow').className = 'action-row';
+  document.getElementById('askRow').className = 'ask-row';
+  document.getElementById('receiptWrap').classList.add('visible');
+
+  lightPill(4); // "What gets recorded"
+
+  saveToHistory({id: rid, label: s.label, icon: s.icon, ts: now.getTime(), status: 'approved'});
+  renderHistory();
+  showToast('✅ Approved — consent receipt recorded');
+}
+
+function handleDecline() {
+  document.getElementById('actionRow').className = 'action-row';
+  document.getElementById('askRow').className = 'ask-row';
+  lightPill(4);
+
+  if (currentScen) {
+    var now = new Date();
+    var rid = 'TBT-' + now.getTime().toString(36).toUpperCase().slice(-8);
+    saveToHistory({id: rid, label: currentScen.label, icon: currentScen.icon, ts: now.getTime(), status: 'declined'});
+    renderHistory();
+  }
+  showToast('Declined — action cancelled. Nothing moved.');
+}
+
+function handleAsk() {
+  if (!currentScen) return;
+  var msgs = {
+    safe: 'SIINDEX: All 6 trust layers passed. This is a normal, verified transaction. I am ready when you are.',
+    needs_approval: 'SIINDEX: I flagged this because the recipient is new. Approving means you trust this address. Decline if you have any doubt.',
+    needs_info: 'SIINDEX: Your payment method needs a one-time verification. No funds move until this is complete.',
+    human_review: 'SIINDEX: Large withdrawals require a human check. This protects your funds from automated errors.',
+    cultural_review: 'SIINDEX: Cultural content needs a Cultural Steward to confirm it is appropriate to publish.',
+    blocked: 'SIINDEX: This matches a scam pattern. All-funds + urgency + unknown address is a classic attack. I blocked it automatically.'
+  };
+  showToast(msgs[currentScen.state] || 'SIINDEX: I am here to protect you before anything moves.');
+}
+
+/* ── HISTORY (localStorage) ── */
+function saveToHistory(entry) {
+  var hist = JSON.parse(localStorage.getItem(_TBT_KEY) || '[]');
+  hist.unshift(entry);
+  if (hist.length > 25) hist = hist.slice(0, 25);
+  localStorage.setItem(_TBT_KEY, JSON.stringify(hist));
+}
+
+function renderHistory() {
+  var hist = JSON.parse(localStorage.getItem(_TBT_KEY) || '[]');
+  var container = document.getElementById('histContainer');
+  if (!hist.length) {
+    container.innerHTML = '<div class="hist-empty">No receipts yet. Try a scenario above.</div>';
+    return;
+  }
+  container.innerHTML = hist.map(function(h) {
+    var d = new Date(h.ts);
+    var label = d.toLocaleString('en-AU', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'short'});
+    return '<div class="hist-row">' +
+      '<div class="hist-icon">' + h.icon + '</div>' +
+      '<div class="hist-info">' +
+        '<div class="hist-label">' + h.label + '</div>' +
+        '<div class="hist-time">' + label + ' · ' + h.id + '</div>' +
+      '</div>' +
+      '<div class="hist-badge ' + h.status + '">' + (h.status === 'approved' ? 'Approved' : 'Declined') + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 3200);
+}
+
+document.addEventListener('DOMContentLoaded', function() { init(); });
+</script>
+</body>
+</html>

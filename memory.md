@@ -1,5 +1,23 @@
 ---
 
+## Session 119 continued x36 — 13 Jul 2026 — Trust Before Transaction + God Mode Audit Doctrine
+
+**What was built**
+- `trust-before-transaction.html` — NEW SCREEN (God Mode from birth). Trust Before Transaction system — SIINDEX 6-layer animated trust check, 6 pre-set scenarios, 6 trust states, consent receipt generator, Decision Ledger history. Features: (1) 6-Scenario system: safe / needs_approval / needs_info / human_review / cultural_review / blocked. (2) Animated trust layers: Identity → Limits → PQSI → Compliance → Cultural → Final. (3) Consent receipt: TBT-[id], persisted to indx_tbt_hist. (4) Doctrine pills animate with progress. SIINDEX Security Sentinel mode with red orb pulse.
+- `index.html` — SIINDEX Core updated 24 → 25 screens.
+
+**God Mode Audit Doctrine locked (12 dimensions)**
+- Voice-first first action: Speak to SIINDEX, not menu, not token
+- Trust Before Transaction before any money, listing, cultural asset, vote, or action
+- Replace: "AI" → SIINDEX Synthetic Intelligence; "MemeDAO" → IN$DEX Citizen Governance; "no KYC" → progressive verification; "180+ countries" → Pacific-first corridors expanding; "no rug" → transparent supply + audits
+- 6 trust states: safe / needs_approval / needs_info / human_review / cultural_review / blocked
+- Strongest line: "The bank never came. So we built a civilization."
+- Core principle: Citizen speaks → SIINDEX understands → App reshapes → Trust checked → Citizen approves → IN$DEX records
+
+**AUSTRAC reminder**: Enrol at https://online.austrac.gov.au by 29 July 2026 — 16 days remaining.
+
+---
+
 ## Session 119 continued x35 — 13 Jul 2026 — SIINDEX Living Interface System
 
 **What was built**

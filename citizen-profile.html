@@ -472,9 +472,47 @@ function drawWSRing(score, total) {
   requestAnimationFrame(frame);
 }
 
+// ── IDENTITY WIRING — ?citizen= URL param with sessionStorage fallback ──
+// No param (or param = own domain) → my profile from sessionStorage.
+// Param present → viewing that citizen (demo stats until Grid backend, Phase 6).
+const WS_GATES = [[50,'Governance voting'],[100,'Sovereign Yield'],[150,'Fee reduction'],[200,'Sovereign Elder']];
+function slugToName(slug){ return slug.split(/[-_.]/).filter(Boolean).map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(' '); }
+const _cpParam = (new URLSearchParams(window.location.search).get('citizen') || '').toLowerCase().replace(/\.in\$dex$/i,'').trim();
+const _cpMySlug = (sessionStorage.getItem('citizen_web3_domain') || '').toLowerCase().replace(/\.in\$dex$/i,'');
+const IS_OWN_PROFILE = !_cpParam || (_cpMySlug && _cpParam === _cpMySlug);
+function initProfileIdentity(){
+  if (!IS_OWN_PROFILE && _cpParam !== 'kiri') {
+    const name = slugToName(_cpParam);
+    PROFILE_HANDLE = _cpParam + '.IN$DEX';
+    document.querySelector('.profile-name').textContent = name;
+    document.querySelector('.profile-handle').textContent = PROFILE_HANDLE;
+    document.querySelector('.avatar').textContent = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    document.querySelector('.profile-bio').textContent = 'Sovereign citizen of ImageNation. Full profile details appear when this citizen connects their Grid Account.';
+  } else if (IS_OWN_PROFILE && sessionStorage.getItem('citizen_name')) {
+    const name = sessionStorage.getItem('citizen_name');
+    const domain = sessionStorage.getItem('citizen_web3_domain') || (name.toLowerCase().split(' ')[0] + '.IN$DEX');
+    PROFILE_HANDLE = domain;
+    document.querySelector('.profile-name').textContent = name;
+    document.querySelector('.profile-handle').textContent = domain;
+    document.querySelector('.avatar').textContent = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    document.querySelector('.profile-bio').textContent = 'This is your sovereign profile — how other citizens see you.';
+    const fb = document.getElementById('followBtn'); if (fb) fb.style.display = 'none';
+    const mb = document.querySelector('.btn-msg'); if (mb) mb.style.display = 'none';
+  }
+  // Wisdom Score — live for own profile, demo (82) for viewed citizens until backend
+  let score = 82;
+  if (IS_OWN_PROFILE) { const w = parseInt(sessionStorage.getItem('citizen_wisdom')); if (!isNaN(w)) score = Math.max(0, Math.min(200, w)); }
+  const gate = WS_GATES.find(g => score < g[0]);
+  const tier = score>=200?'Sovereign Elder':score>=150?'Elder':score>=100?'Sovereign':score>=50?'Governor':'Citizen';
+  const wsVal = document.querySelector('.ws-val'); if (wsVal) wsVal.textContent = score;
+  const wsTitle = document.querySelector('.ws-title'); if (wsTitle) wsTitle.textContent = gate ? ('/ ' + gate[0] + ' to unlock ' + gate[1]) : '· maximum tier reached';
+  const wsLabel = document.querySelector('.ws-label'); if (wsLabel) wsLabel.textContent = 'Wisdom Score · ' + tier;
+  drawWSRing(score, gate ? gate[0] : 200);
+}
+
 // ── GOD MODE: FOLLOW PERSISTENCE ──
 const FOLLOWS_KEY = 'indx_profile_follows';
-const PROFILE_HANDLE = 'kiri.IN$DEX';
+let PROFILE_HANDLE = 'kiri.IN$DEX';
 function loadFollowState() {
   const saved = JSON.parse(localStorage.getItem(FOLLOWS_KEY) || '{}');
   if (saved[PROFILE_HANDLE]) {
@@ -558,7 +596,7 @@ function applyFiltersAndSort() {
 
 // ── GOD MODE: DOMContentLoaded ──
 document.addEventListener('DOMContentLoaded', () => {
-  drawWSRing(82, 100);
+  initProfileIdentity();
   injectPriceLabels();
   loadFollowState();
 });
@@ -576,7 +614,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('followBtn');
     btn.textContent = following ? 'Following' : 'Follow';
     btn.classList.toggle('following', following);
-    showToast(following ? '✓ Following kiri.IN$DEX' : 'Unfollowed kiri.IN$DEX');
+    showToast(following ? '✓ Following ' + PROFILE_HANDLE : 'Unfollowed ' + PROFILE_HANDLE);
     // GOD MODE PATCH — persist follow state
     saveFollowState();
   }

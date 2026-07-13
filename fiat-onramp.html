@@ -86,6 +86,33 @@
     .btn-back-text{width:100%;padding:12px;border-radius:14px;background:transparent;border:1px solid var(--border);color:var(--text-muted);font-size:14px;font-weight:700;cursor:pointer;}
 
     #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+
+    /* GOD MODE — Pacific First section */
+    .pacific-header{display:flex;align-items:center;gap:8px;padding:10px 0 6px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--cyan);}
+    .pacific-divider{height:1px;background:var(--border);margin:10px 0 6px;}
+    .world-header{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);}
+
+    /* GOD MODE — Last purchase card */
+    .last-purchase{background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.15);border-radius:14px;padding:13px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;cursor:pointer;}
+    .lp-icon{font-size:22px;flex-shrink:0;}
+    .lp-info{flex:1;}
+    .lp-title{font-size:12px;font-weight:700;color:var(--cyan);}
+    .lp-detail{font-size:11px;color:var(--text-muted);margin-top:2px;}
+    .lp-reuse{font-size:11px;font-weight:700;padding:5px 12px;border-radius:8px;background:rgba(0,212,255,0.1);color:var(--cyan);border:none;cursor:pointer;white-space:nowrap;}
+
+    /* GOD MODE — SIINDEX coaching strip */
+    .si-coach{background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.12);border-radius:12px;padding:11px 14px;margin-bottom:14px;display:flex;align-items:flex-start;gap:10px;}
+    .sc-orb{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 35% 35%,rgba(0,212,255,0.9),var(--blue));flex-shrink:0;margin-top:1px;}
+    .sc-text{font-size:12px;color:var(--text-muted);line-height:1.6;}
+    .sc-text strong{color:var(--cyan);}
+
+    /* GOD MODE — Amount guard */
+    .amount-guard{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:10px;margin-bottom:10px;font-size:12px;font-weight:700;transition:background 0.2s,color 0.2s;}
+    .amount-guard.valid{background:rgba(0,229,160,0.07);color:var(--green);}
+    .amount-guard.invalid{background:rgba(255,77,109,0.07);color:var(--red);}
+    .amount-guard.warn{background:rgba(255,184,0,0.07);color:var(--gold);}
+    .ag-label{display:flex;align-items:center;gap:6px;}
+    .ag-limits{font-size:11px;font-weight:600;opacity:0.7;}
   </style>
 </head>
 <body>
@@ -115,6 +142,17 @@
     <div class="pane active" id="step1">
       <div style="font-size:16px;font-weight:800;margin-bottom:4px;">Where are you?</div>
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">We'll show the best payment methods for your country.</div>
+
+      <!-- GOD MODE — Last purchase card -->
+      <div class="last-purchase" id="lastPurchaseCard" style="display:none;" onclick="reuseLastPurchase()">
+        <div class="lp-icon">🔁</div>
+        <div class="lp-info">
+          <div class="lp-title">Continue where you left off</div>
+          <div class="lp-detail" id="lastPurchaseDetail">—</div>
+        </div>
+        <button class="lp-reuse">Reuse →</button>
+      </div>
+
       <div class="country-search">
         <div class="cs-ico">🔍</div>
         <input class="cs-input" id="countrySearch" placeholder="Search country…" oninput="filterCountries()">
@@ -152,8 +190,20 @@
         <div class="np-btn" onclick="numpad('0')">0</div>
         <div class="np-btn np-del" onclick="numpad('del')">⌫</div>
       </div>
+      <!-- GOD MODE — Amount guard -->
+      <div class="amount-guard valid" id="amountGuard">
+        <div class="ag-label">✓ Amount valid</div>
+        <div class="ag-limits">Min $5 USD · Max per method</div>
+      </div>
+
+      <!-- GOD MODE — SIINDEX coaching strip -->
+      <div class="si-coach">
+        <div class="sc-orb"></div>
+        <div class="sc-text" id="siCoachText">Enter an amount to see what your INDX buys you at genesis price.</div>
+      </div>
+
       <div style="font-size:12px;color:var(--text-muted);text-align:center;margin-bottom:14px;">1 INDX = <strong style="color:var(--cyan);">$0.24 USD</strong> · Exchange rate locked at checkout</div>
-      <button class="btn-next" onclick="nextStep()">Continue →</button>
+      <button class="btn-next" id="btnContinue" onclick="nextStep()">Continue →</button>
     </div>
 
     <!-- STEP 3: METHOD -->
@@ -204,7 +254,63 @@
 </div>
 <div id="toast"></div>
 <script>
-const countries=[
+const INDX_PRICE_USD = 0.24;
+const _HIST_KEY = 'indx_onramp_hist';
+
+// GOD MODE — Pacific-first country list
+const PACIFIC = [
+  {flag:'🇦🇺',name:'Australia',currency:'AUD',symbol:'A$',rate:1.52,pacific:true, // AUDIT-EXEMPT: fiat display only
+   methods:[
+    {ico:'⚡',name:'PayID',sub:'Instant · NPP',time:'< 60 sec',fee:0.8,limit:'$6.5K/day',bg:'rgba(0,229,160,0.1)'},
+    {ico:'🏦',name:'BSB Transfer',sub:'All Australian banks',time:'1–2 days',fee:0.5,limit:'$32K/day',bg:'rgba(0,212,255,0.08)'},
+    {ico:'💳',name:'Card',sub:'Visa / Mastercard',time:'Instant',fee:2.0,limit:'$3.2K/day',bg:'rgba(43,53,216,0.1)'},
+   ]},
+  {flag:'🇳🇿',name:'New Zealand',currency:'NZD',symbol:'NZ$',rate:1.64,pacific:true,
+   methods:[
+    {ico:'⚡',name:'POLi / Bank Transfer',sub:'All NZ banks',time:'< 2 hr',fee:0.8,limit:'$10K/day',bg:'rgba(0,229,160,0.1)'},
+    {ico:'💳',name:'Card',sub:'Visa / Mastercard',time:'Instant',fee:2.0,limit:'$5K/day',bg:'rgba(0,212,255,0.08)'},
+   ]},
+  {flag:'🇼🇸',name:'Samoa',currency:'WST',symbol:'T',rate:2.75,pacific:true,
+   methods:[
+    {ico:'🏦',name:'ANZ Pacific',sub:'BSP · National Bank',time:'< 4 hr',fee:1.5,limit:'T2,000/day',bg:'rgba(0,229,160,0.1)'},
+    {ico:'📱',name:'Digicel Money',sub:'Instant · Mobile Money',time:'< 1 min',fee:1.8,limit:'T500/day',bg:'rgba(0,212,255,0.08)'},
+    {ico:'💵',name:'KlickEx',sub:'Pacific remittance corridor',time:'< 1 hr',fee:1.2,limit:'T5,000/day',bg:'rgba(43,53,216,0.1)'},
+   ]},
+  {flag:'🇫🇯',name:'Fiji',currency:'FJD',symbol:'FJ$',rate:2.24,pacific:true,
+   methods:[
+    {ico:'🏦',name:'BSP Fiji',sub:'Bank South Pacific',time:'< 2 hr',fee:1.2,limit:'FJ$5K/day',bg:'rgba(0,229,160,0.1)'},
+    {ico:'📱',name:'Digicel Money',sub:'Instant · Mobile Money',time:'< 1 min',fee:1.8,limit:'FJ$1K/day',bg:'rgba(0,212,255,0.08)'},
+    {ico:'💵',name:'KlickEx',sub:'Pacific remittance corridor',time:'< 1 hr',fee:1.2,limit:'FJ$10K/day',bg:'rgba(43,53,216,0.1)'},
+   ]},
+  {flag:'🇨🇰',name:'Cook Islands',currency:'NZD',symbol:'NZ$',rate:1.64,pacific:true,
+   methods:[
+    {ico:'🏦',name:'ANZ Cook Islands',sub:'Bank transfer',time:'< 2 hr',fee:1.0,limit:'NZ$5K/day',bg:'rgba(0,229,160,0.1)'},
+    {ico:'📱',name:'Bluesky Pacific',sub:'Mobile Money',time:'< 30 min',fee:1.5,limit:'NZ$1K/day',bg:'rgba(0,212,255,0.08)'},
+   ]},
+  {flag:'🇹🇴',name:'Tonga',currency:'TOP',symbol:'T$',rate:2.41,pacific:true,
+   methods:[
+    {ico:'🏦',name:'BSP Tonga',sub:'Bank South Pacific',time:'< 4 hr',fee:1.5,limit:'T$2K/day',bg:'rgba(0,229,160,0.1)'},
+    {ico:'📱',name:'TeleCash',sub:'Mobile Money',time:'< 1 min',fee:2.0,limit:'T$500/day',bg:'rgba(0,212,255,0.08)'},
+   ]},
+  {flag:'🇻🇺',name:'Vanuatu',currency:'VUV',symbol:'Vt',rate:119,pacific:true,
+   methods:[
+    {ico:'🏦',name:'BSP Vanuatu',sub:'ANZ · BRED Bank',time:'< 4 hr',fee:1.5,limit:'Vt200K/day',bg:'rgba(0,229,160,0.1)'},
+    {ico:'📱',name:'M-Pesa Vanuatu',sub:'Mobile Money',time:'< 1 min',fee:2.0,limit:'Vt50K/day',bg:'rgba(0,212,255,0.08)'},
+   ]},
+  {flag:'🇵🇬',name:'Papua New Guinea',currency:'PGK',symbol:'K',rate:3.87,pacific:true,
+   methods:[
+    {ico:'🏦',name:'BSP PNG',sub:'Westpac · Kina Bank',time:'< 2 hr',fee:1.2,limit:'K10K/day',bg:'rgba(0,229,160,0.1)'},
+    {ico:'📱',name:'MiCash',sub:'Mobile Money',time:'< 1 min',fee:1.8,limit:'K2K/day',bg:'rgba(0,212,255,0.08)'},
+   ]},
+];
+
+const WORLD = [
+  {flag:'🇺🇸',name:'United States',currency:'USD',symbol:'$',rate:1,
+   methods:[
+    {ico:'🏦',name:'ACH Transfer',sub:'All US banks',time:'1–3 days',fee:0.5,limit:'$10k/day',bg:'rgba(0,229,160,0.1)'},
+    {ico:'💳',name:'Card',sub:'Visa / Mastercard',time:'Instant',fee:2.0,limit:'$5k/day',bg:'rgba(0,212,255,0.08)'},
+    {ico:'📱',name:'Venmo / PayPal',sub:'Instant · E-wallet',time:'< 1 min',fee:1.8,limit:'$2k/day',bg:'rgba(43,53,216,0.1)'},
+   ]},
   {flag:'🇳🇬',name:'Nigeria',currency:'NGN',symbol:'₦',rate:1590,
    methods:[
     {ico:'📱',name:'OPay',sub:'Instant · Wallet',time:'< 1 min',fee:1.5,limit:'₦500k/day',bg:'rgba(0,229,160,0.1)'},
@@ -241,52 +347,120 @@ const countries=[
     {ico:'📱',name:'Vodafone Cash',sub:'Instant · Mobile Money',time:'< 1 min',fee:1.5,limit:'₵3k/day',bg:'rgba(0,212,255,0.08)'},
     {ico:'🏦',name:'Bank Transfer',sub:'GCB, Ecobank',time:'< 2 hr',fee:0.8,limit:'₵50k/day',bg:'rgba(43,53,216,0.1)'},
    ]},
-  {flag:'🇦🇺',name:'Australia',currency:'AUD',symbol:'A$',rate:1.52, // AUDIT-EXEMPT: fiat corridor currency — display only in selector, all INDX pricing remains USD
-   methods:[
-    {ico:'⚡',name:'PayID',sub:'Instant · NPP',time:'< 60 sec',fee:0.8,limit:'$6.5K/day',bg:'rgba(0,229,160,0.1)'},
-    {ico:'🏦',name:'BSB Transfer',sub:'All Australian banks',time:'1–2 days',fee:0.5,limit:'$32K/day',bg:'rgba(0,212,255,0.08)'},
-    {ico:'💳',name:'Card',sub:'Visa / Mastercard',time:'Instant',fee:2.0,limit:'$3.2K/day',bg:'rgba(43,53,216,0.1)'},
-   ]},
-  {flag:'🇺🇸',name:'United States',currency:'USD',symbol:'$',rate:1,
-   methods:[
-    {ico:'🏦',name:'ACH Transfer',sub:'All US banks',time:'1–3 days',fee:0.5,limit:'$10k/day',bg:'rgba(0,229,160,0.1)'},
-    {ico:'💳',name:'Card',sub:'Visa / Mastercard',time:'Instant',fee:2.0,limit:'$5k/day',bg:'rgba(0,212,255,0.08)'},
-    {ico:'📱',name:'Venmo / PayPal',sub:'Instant · E-wallet',time:'< 1 min',fee:1.8,limit:'$2k/day',bg:'rgba(43,53,216,0.1)'},
-   ]},
 ];
 
-let step=1;
-let selectedCountry=countries[0];
-let amtStr='5000';
-let selectedMethod=null;
-let filteredCountries=countries;
+const countries = PACIFIC.concat(WORLD);
+
+let step=1, selectedCountry=PACIFIC[0], amtStr='50', selectedMethod=null;
+let filteredPacific=PACIFIC, filteredWorld=WORLD;
+
+// GOD MODE — Load history
+function loadHistory(){
+  try {
+    var hist = JSON.parse(localStorage.getItem(_HIST_KEY)||'[]');
+    if(hist.length>0){
+      var last = hist[0];
+      var card = document.getElementById('lastPurchaseCard');
+      var detail = document.getElementById('lastPurchaseDetail');
+      detail.textContent = last.country+' · '+last.amount+' · via '+last.method;
+      card.style.display='flex';
+      card._last = last;
+    }
+  } catch(e){}
+}
+
+function reuseLastPurchase(){
+  var card = document.getElementById('lastPurchaseCard');
+  var last = card._last;
+  if(!last) return;
+  var c = countries.find(function(x){return x.name===last.country;});
+  if(c){ selectCountry(c.name); }
+}
+
+// GOD MODE — Amount guard + SIINDEX coaching
+function updateCalc(){
+  var local=parseFloat(amtStr)||0;
+  var usd=local/selectedCountry.rate;
+  var indx=usd/INDX_PRICE_USD;
+  document.getElementById('usdEquiv').textContent='≈ $'+usd.toFixed(2)+' USD';
+  document.getElementById('indxOut').textContent='≈ '+indx.toFixed(2)+' INDX';
+
+  // Guard
+  var guard = document.getElementById('amountGuard');
+  var btn = document.getElementById('btnContinue');
+  var MIN_USD = 5;
+  if(usd < MIN_USD && local > 0){
+    guard.className='amount-guard invalid';
+    guard.querySelector('.ag-label').textContent='✕ Min $'+MIN_USD+' USD ('+Math.ceil(MIN_USD*selectedCountry.rate).toLocaleString()+' '+selectedCountry.currency+')';
+    btn.style.opacity='0.4'; btn.style.pointerEvents='none';
+  } else if(local===0){
+    guard.className='amount-guard warn';
+    guard.querySelector('.ag-label').textContent='Enter an amount to continue';
+    btn.style.opacity='0.4'; btn.style.pointerEvents='none';
+  } else {
+    guard.className='amount-guard valid';
+    guard.querySelector('.ag-label').textContent='✓ Amount valid — '+indx.toFixed(1)+' INDX';
+    btn.style.opacity='1'; btn.style.pointerEvents='auto';
+  }
+
+  // SIINDEX coaching
+  updateCoaching(usd, indx);
+}
+
+function updateCoaching(usd, indx){
+  var el = document.getElementById('siCoachText');
+  if(usd<=0){el.innerHTML='Enter an amount to see what your INDX buys you at genesis price.';return;}
+  var weeks = Math.round((new Date('2026-09-24')-new Date())/604800000);
+  var msg = '';
+  if(usd<10){
+    msg='At genesis price, <strong>'+indx.toFixed(1)+' INDX</strong> gives you your first stake in the civilization. Every INDX earns Wisdom Score points and unlocks governance rights.';
+  } else if(usd<50){
+    msg='<strong>'+indx.toFixed(1)+' INDX</strong> at genesis. That\'s '+indx.toFixed(1)+' governance votes at TGE in '+weeks+' weeks. Small stake, real sovereignty.';
+  } else if(usd<200){
+    msg='<strong>'+indx.toFixed(1)+' INDX</strong> qualifies you for the Founders Pool allocation at TGE. You\'re building a meaningful position in the civilization.';
+  } else {
+    msg='<strong>'+indx.toFixed(1)+' INDX</strong> — a Citizen Founding stake. At TGE this positions you in the top tier for governance weight and early liquidity access.';
+  }
+  el.innerHTML=msg;
+}
 
 function filterCountries(){
-  const q=document.getElementById('countrySearch').value.toLowerCase();
-  filteredCountries=countries.filter(c=>c.name.toLowerCase().includes(q)||c.currency.toLowerCase().includes(q));
+  var q=document.getElementById('countrySearch').value.toLowerCase();
+  filteredPacific=PACIFIC.filter(function(c){return c.name.toLowerCase().includes(q)||c.currency.toLowerCase().includes(q);});
+  filteredWorld=WORLD.filter(function(c){return c.name.toLowerCase().includes(q)||c.currency.toLowerCase().includes(q);});
   buildCountryList();
 }
 
 function buildCountryList(){
-  document.getElementById('countryList').innerHTML=filteredCountries.map(c=>`
-    <div class="country-item" onclick="selectCountry('${c.name}')">
-      <div class="ci-flag">${c.flag}</div>
-      <div class="ci-info">
-        <div class="ci-country">${c.name}</div>
-        <div class="ci-methods">${c.methods.map(m=>m.name).join(' · ')}</div>
-      </div>
-      <div class="ci-arrow">→</div>
-    </div>`).join('');
+  var html='';
+  if(filteredPacific.length>0){
+    html+='<div class="pacific-header">🌊 Pacific First</div>';
+    html+=filteredPacific.map(function(c){return countryItemHTML(c);}).join('');
+  }
+  if(filteredWorld.length>0){
+    if(filteredPacific.length>0) html+='<div class="pacific-divider"></div><div class="world-header">🌍 World</div>';
+    html+=filteredWorld.map(function(c){return countryItemHTML(c);}).join('');
+  }
+  document.getElementById('countryList').innerHTML=html;
+}
+
+function countryItemHTML(c){
+  return '<div class="country-item" onclick="selectCountry(\''+c.name+'\')">' +
+    '<div class="ci-flag">'+c.flag+'</div>' +
+    '<div class="ci-info"><div class="ci-country">'+c.name+'</div>' +
+    '<div class="ci-methods">'+c.methods.map(function(m){return m.name;}).join(' · ')+'</div></div>' +
+    '<div class="ci-arrow">→</div></div>';
 }
 
 function selectCountry(name){
-  selectedCountry=countries.find(c=>c.name===name);
-  amtStr='5000';
+  selectedCountry=countries.find(function(c){return c.name===name;});
+  amtStr='50';
   document.getElementById('currFlagDisp').textContent=selectedCountry.flag;
   document.getElementById('currCodeDisp').textContent=selectedCountry.currency;
-  // quick amounts
-  const qs=[5,10,20,50].map(usd=>Math.round(usd*selectedCountry.rate));
-  document.getElementById('quickRow').innerHTML=qs.map(a=>`<div class="qr-btn" onclick="setAmt(${a})">${selectedCountry.symbol}${a.toLocaleString()}</div>`).join('');
+  var qs=[5,10,20,50].map(function(usd){return Math.round(usd*selectedCountry.rate);});
+  document.getElementById('quickRow').innerHTML=qs.map(function(a){
+    return '<div class="qr-btn" onclick="setAmt('+a+')">'+selectedCountry.symbol+a.toLocaleString()+'</div>';
+  }).join('');
   document.getElementById('amtInput').value=amtStr;
   updateCalc();
   buildMethodList();
@@ -294,27 +468,16 @@ function selectCountry(name){
 }
 
 function buildMethodList(){
-  document.getElementById('methodList').innerHTML=selectedCountry.methods.map(m=>`
-    <div class="method-card" onclick="selectMethod('${m.name}','${m.time}',${m.fee})">
-      <div class="mc-top">
-        <div class="mc-ico" style="background:${m.bg};">${m.ico}</div>
-        <div>
-          <div class="mc-name">${m.name}</div>
-          <div class="mc-time">⚡ ${m.time}</div>
-        </div>
-      </div>
-      <div class="mc-details">
-        <div class="mc-fee">Fee: ${m.fee}%</div>
-        <div class="mc-limit">Limit: ${m.limit}</div>
-      </div>
-    </div>`).join('');
+  document.getElementById('methodList').innerHTML=selectedCountry.methods.map(function(m){
+    return '<div class="method-card" onclick="selectMethod(\''+m.name+'\',\''+m.time+'\','+m.fee+')">' +
+      '<div class="mc-top"><div class="mc-ico" style="background:'+m.bg+';">'+m.ico+'</div>' +
+      '<div><div class="mc-name">'+m.name+'</div><div class="mc-time">⚡ '+m.time+'</div></div></div>' +
+      '<div class="mc-details"><div class="mc-fee">Fee: '+m.fee+'%</div><div class="mc-limit">Limit: '+m.limit+'</div></div>' +
+      '</div>';
+  }).join('');
 }
 
-function setAmt(a){
-  amtStr=String(a);
-  document.getElementById('amtInput').value=amtStr;
-  updateCalc();
-}
+function setAmt(a){amtStr=String(a);document.getElementById('amtInput').value=amtStr;updateCalc();}
 
 function numpad(k){
   if(k==='del')amtStr=amtStr.slice(0,-1)||'0';
@@ -324,26 +487,18 @@ function numpad(k){
   updateCalc();
 }
 
-function updateCalc(){
-  const local=parseFloat(amtStr)||0;
-  const usd=local/selectedCountry.rate;
-  const indx=usd/0.24;
-  document.getElementById('usdEquiv').textContent=`≈ $${usd.toFixed(2)} USD`;
-  document.getElementById('indxOut').textContent=`≈ ${indx.toFixed(2)} INDX`;
-}
-
 function selectMethod(name,time,fee){
   selectedMethod={name,time,fee};
-  const local=parseFloat(amtStr)||0;
-  const usd=local/selectedCountry.rate;
-  const feeAmt=usd*fee/100;
-  const indx=(usd-feeAmt)/0.24;
+  var local=parseFloat(amtStr)||0;
+  var usd=local/selectedCountry.rate;
+  var feeAmt=usd*fee/100;
+  var indx=(usd-feeAmt)/INDX_PRICE_USD;
   document.getElementById('confIndx').textContent=indx.toFixed(2)+' INDX';
-  document.getElementById('confUsd').textContent=`≈ $${(usd-feeAmt).toFixed(2)} USD at today's rate`;
-  document.getElementById('confPay').textContent=`${local.toLocaleString()} ${selectedCountry.currency}`;
-  document.getElementById('confPayUsd').textContent=`≈ $${usd.toFixed(2)}`;
+  document.getElementById('confUsd').textContent='≈ $'+(usd-feeAmt).toFixed(2)+' USD at today\'s rate';
+  document.getElementById('confPay').textContent=local.toLocaleString()+' '+selectedCountry.currency;
+  document.getElementById('confPayUsd').textContent='≈ $'+usd.toFixed(2);
   document.getElementById('confMethod').textContent=name;
-  document.getElementById('confFee').textContent=`${fee}% · $${feeAmt.toFixed(2)}`;
+  document.getElementById('confFee').textContent=fee+'% · $'+feeAmt.toFixed(2);
   document.getElementById('confTime').textContent=time;
   nextStep();
 }
@@ -353,28 +508,39 @@ function prevStep(){if(step>1){step--;showStep();}}
 function goBack(){if(step>1)prevStep();else history.back();}
 
 function showStep(){
-  for(let i=1;i<=4;i++){
+  for(var i=1;i<=4;i++){
     document.getElementById('step'+i).classList.toggle('active',i===step);
-    const dot=document.getElementById('sd'+i);
+    var dot=document.getElementById('sd'+i);
     dot.className='step-dot '+(i<step?'done':i===step?'active':'pending');
     if(i<4)document.getElementById('sl'+i).className='step-line'+(i<step?' done':'');
   }
 }
 
 function confirmBuy(){
-  const local=parseFloat(amtStr)||0;
-  const usd=local/selectedCountry.rate;
-  const fee=selectedMethod.fee;
-  const indx=((usd*(1-fee/100))/0.24).toFixed(2);
-  showToast(`🎉 Buying ${indx} INDX redirecting to ${selectedMethod.name}…`);
+  var local=parseFloat(amtStr)||0;
+  var usd=local/selectedCountry.rate;
+  var fee=selectedMethod.fee;
+  var indx=((usd*(1-fee/100))/INDX_PRICE_USD).toFixed(2);
+
+  // GOD MODE PATCH — save to history
+  try {
+    var hist=JSON.parse(localStorage.getItem(_HIST_KEY)||'[]');
+    hist.unshift({country:selectedCountry.name, amount:local.toLocaleString()+' '+selectedCountry.currency, method:selectedMethod.name, indx:indx, time:new Date().toLocaleString('en-AU',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})});
+    if(hist.length>20)hist=hist.slice(0,20);
+    localStorage.setItem(_HIST_KEY,JSON.stringify(hist));
+  } catch(e){}
+
+  showToast('Buying '+indx+' INDX — redirecting to '+selectedMethod.name+'…');
 }
 
-function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',3000);}
+function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(function(){t.style.opacity='0';},3000);}
 
 // init
 buildCountryList();
-document.getElementById('quickRow').innerHTML=[5000,10000,20000,50000].map(a=>`<div class="qr-btn" onclick="setAmt(${a})">₦${a.toLocaleString()}</div>`).join('');
+var initQs=[10,20,50,100].map(function(a){return '<div class="qr-btn" onclick="setAmt('+Math.round(a*selectedCountry.rate)+')">'+selectedCountry.symbol+Math.round(a*selectedCountry.rate).toLocaleString()+'</div>';});
+document.getElementById('quickRow').innerHTML=initQs.join('');
 updateCalc();
+loadHistory();
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

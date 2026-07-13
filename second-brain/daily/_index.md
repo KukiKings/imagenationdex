@@ -105,12 +105,12 @@ Next: AJ to push ~290-file git backlog from Terminal. Complete AUSTRAC DCE regis
 
 ---
 
-### 2026-07-13 (nightly brain pass only — no new build session logged yet)
+### 2026-07-13
 
-Built: Nothing new in memory.md as of this pass; consolidation-only run covering the previously-unlogged Session 119 x33 content (INDX mint, Cook Islands entity, AUSTRAC correction) into second-brain.
-Decisions: None new today; see 2026-07-12 entry above for the decisions this pass surfaced from memory.md.
-State: Same as end of 07-12 — INDX minted on mainnet, AUSTRAC unenrolled (17 days left), ~290-file git backlog unpushed. No indication AJ has run a build session yet today.
-Next: Same priority order as 07-12 — push backlog, AUSTRAC enrollment, Raydium CPMM LP setup for the now-live INDX mint, God Mode queue, Meteora/Raydium reconciliation, Stripe wiring, AJ as Founder #1.
+Built: Session 119 continued x34–x36. x34: God Mode sweep across 5 screens — imagenation-design-studio.html (R1), account-recovery.html (R2), plus 3 new screens (siindex-prompt-optimiser.html, siindex-writing-mode.html, siindex-readability-guardian.html). x35: siindex-living-interface.html (new, God Mode from birth) — SIINDEX Embodiment Layer design system (Armor Mode Gallery, Living Icon System, Command Mode Demo, Performance/Accessibility Guardrails). x36: trust-before-transaction.html (new, God Mode from birth) — 6-layer animated trust check, 6 scenarios, consent receipt generator, Decision Ledger. Nightly brain pass (this run): consolidated x34–x36 into moc/decisions indexes (previous nightly pass had run before these sessions landed); no new orphan people/company/project entities found.
+Decisions: SIINDEX Living Interface System doctrine locked (8 armor modes, Living Icon System, Command Mode, L1→L4 build phases). God Mode Audit Doctrine locked (12 dimensions — voice-first, Trust Before Transaction gate, terminology replacements, 6 trust states).
+State: God Mode sweep continues (~107 orphaned screens still queued after account-recovery.html, per x34 note). INDX still minted on mainnet, LP pairing pending. AUSTRAC still NOT ENROLLED — 16 days remaining. ~290-file git backlog still unpushed (unless AJ has pushed manually since 07-12 — not verifiable from files alone).
+Next: Continue God Mode sweep queue. AJ to push git backlog from Terminal. Complete AUSTRAC DCE registration + VASP enrollment before 29 Jul 2026. Set up Raydium CPMM LP pool for the now-minted INDX. Finish long-standing God Mode queue (live-stream, creator-onboarding). Reconcile Meteora vs Raydium LP conflict. Wire Stripe product IDs. Add AJ as Founder #1.
 
 ---
 
