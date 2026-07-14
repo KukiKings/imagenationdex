@@ -580,7 +580,14 @@ Fiat ramps alone do not solve the unbanked problem. The coconut girl in the Cook
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-14 (Session 120 — PWA layer live: manifest, service worker, offline golden path. AUSTRAC enrolled: AAN 263945366.)
+> Last updated: 2026-07-14 (Session 120 — Golden path hardened: Safe-to-Proceed strips, voice command, a11y layer on all 5+2 golden screens. PWA live. AUSTRAC AAN 263945366.)
+
+### Session 120 continued x2 (2026-07-14) — Golden Path Hardening (Completion Commander task 3)
+
+- ✅ `indx-golden.js` — **NEW shared hardening layer**, wired into all 7 golden-path screens (speak-to-siindex, grid-account-onboarding, onboarding-flow, receive, send, withdraw-fiat, help). Features: (1) **Safe-to-Proceed status strip** — aria-live status under the topbar: green "Safe to proceed… every sensitive action creates a consent receipt" (links siindex-trust-compliance.html) / gold offline variant with canonical wording — answers "Is this safe? / What needs approval? / What happens when signal drops?"; (2) **SIINDEX Help FAB** — 60px labeled 🛟 HELP button on every screen → help.html (on help.html becomes ASK → speak-to-siindex.html) — answers "How do I ask SIINDEX for help?"; (3) **Voice command FAB + sheet** — 🎙️ SPEAK button (suppressed on speak-to-siindex which has native voice), Web Speech API en-AU with typed fallback, 6 route intents (send/receive/cash out/help/grid account/home) + "stop"; every interpretation shows a tap-to-confirm card — **voice prepares, tap approves, voice never executes**; (4) **Accessibility pass** — :focus-visible cyan outlines app-wide, prefers-reduced-motion kill-switch, auto aria-labels on icon-only back buttons + nav items, 60px tap targets on FABs with icon+text labels; (5) **Offline sensitive-action guard** — wraps executeSend/confirmWithdraw at runtime: blocked offline via INDXPWA.guardSensitive() (money movement always waits for signal).
+- ✅ `sw.js` → **v2** — indx-golden.js added to precache, version bump purges v1 caches on deploy.
+- Audits: price CLEAN (CSS rgba false positives only), A$ CLEAN, seed CLEAN, consent-link target verified, node --check OK on both JS files.
+- Readiness status: **Needs citizen testing** — code-complete and statically verified; canonization awaits the cheap-Android + aeroplane-mode walk-through (Completion Commander task 10 gate).
 
 ### Session 120 continued (2026-07-14) — PWA Layer (Completion Commander task 2) + AUSTRAC enrolment
 

@@ -1,7 +1,7 @@
 /* IN$DEX Service Worker — Golden Path offline shell
    Canon: offline is read + draft only. No sensitive execution offline.
    Update strategy: bump VERSION → old caches deleted on activate. */
-const VERSION = 'indx-v1';
+const VERSION = 'indx-v2';
 const SHELL = 'indx-shell-' + VERSION;
 const PAGES = 'indx-pages-' + VERSION;
 
@@ -18,6 +18,7 @@ const PRECACHE = [
   '/offline-fallback.html',
   '/manifest.json',
   '/indx-pwa.js',
+  '/indx-golden.js',
   '/siindex-speak-core.js',
   '/assets/icon-192.png'
 ];
