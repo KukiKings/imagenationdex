@@ -580,7 +580,19 @@ Fiat ramps alone do not solve the unbanked problem. The coconut girl in the Cook
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-14 (Session 120 — citizen-profile.html identity wiring, Wallet nav canonized to portfolio.html, merchant-coach 430px wrapper)
+> Last updated: 2026-07-14 (Session 120 — PWA layer live: manifest, service worker, offline golden path. AUSTRAC enrolled: AAN 263945366.)
+
+### Session 120 continued (2026-07-14) — PWA Layer (Completion Commander task 2) + AUSTRAC enrolment
+
+- ✅ **AUSTRAC ENROLMENT SUBMITTED** — AAN 263945366. Enrolled as VASP (all 5 services) + RSP (independent remittance dealer), sole trader Arthur Henry ABN 95 579 343 955, commencement 24 Sep 2026. Deadline beaten by 15 days. Compliance-readiness folder drafted (AML/CTF Part A+B, business description, travel rule, record-keeping — status: needs legal review).
+- ✅ `manifest.json` — **NEW**. Installable PWA: standalone display, portrait, brand black theme, start_url /speak-to-siindex.html (doctrine: the citizen speaks first), shortcuts Receive/Send/Get Help, icons 192/512 + maskable-512 generated from brand favicon.
+- ✅ `sw.js` — **NEW service worker**. Precaches the golden path (speak-to-siindex, grid-account-onboarding, onboarding-flow, receive, send, withdraw-fiat, help, index, offline-fallback). Cache-first for shell, network-first for other pages, stale-while-revalidate for assets, network-only for cross-origin (Supabase/CDN — live data never cached). GET-only interception: writes/sensitive actions always require network. Versioned cache purge on update.
+- ✅ `indx-pwa.js` — **NEW runtime**. SW registration; offline banner with canonical wording ("You are offline. SIINDEX saved your progress. Nothing sensitive will move until you are online and approve it."); back-online draft notice; Add-to-Home-Screen install bar (dismissible, persisted); `INDXPWA.drafts` safe-draft queue (recipient_draft/send_draft/note/help_request_draft/onboarding_progress only — 40-cap, localStorage `indx_offline_drafts`); `INDXPWA.guardSensitive()` for screens to block sensitive execution offline.
+- ✅ `offline-fallback.html` — **NEW**. Large-text offline page: what still works (receive details, onboarding progress, send drafts, help, speak) vs what waits for signal. Named to avoid colliding with existing offline.html (Sovereign Mesh screen — untouched).
+- ✅ 9 screens wired (manifest link + indx-pwa.js + theme-color): speak-to-siindex, grid-account-onboarding, onboarding-flow, receive, send, withdraw-fiat, help, index, home-v3.
+- ✅ `vercel.json` — 3 fixes: (1) static route pattern now serves .json/.webmanifest (manifest.json previously 404'd), (2) **Permissions-Policy microphone=() → microphone=(self)** — mic was fully blocked, killing voice-first doctrine, (3) sw.js no-cache + Service-Worker-Allowed headers, manifest content-type.
+- Audits: price CLEAN (CSS false positives only), A$ CLEAN, seed CLEAN, all offline-fallback links resolve. sw.js/indx-pwa.js node --check OK, both JSON files validated.
+- ⚠️ Flagged for AJ decision: vercel.json "/" route still serves home-v2.html; canon says home-v3.html is the homepage (Session x26). One-line change, awaiting confirmation.
 
 ### Session 120 (2026-07-14) — Completion sweep: citizen-profile wiring + Wallet nav + merchant-coach layout
 

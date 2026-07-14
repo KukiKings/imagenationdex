@@ -1,0 +1,36 @@
+# AUSTRAC Compliance Readiness Folder — IN$DEX
+> Prepared by SIINDEX · 14 July 2026 · **Status: DRAFTS — need legal review before submission**
+> These documents are working drafts to accelerate registration. They are not legal advice. A licensed AML/CTF advisor or lawyer must review before anything is submitted to AUSTRAC.
+
+## Deadline
+**29 July 2026** — enrolment must be submitted by this date to keep operating during assessment (transitional rule). Penalty for operating unregistered: up to AUD $22.2M per contravention.
+
+## Two-step process
+1. **Enrol** (AJ, personally, at https://online.austrac.gov.au) → receive AUSTRAC Account Number (AAN)
+2. **Register** (AUSTRAC emails PDF form) → attach/reference the documents in this folder
+
+## Folder contents
+| File | What it is | AUSTRAC requirement |
+|---|---|---|
+| `01-aml-ctf-program-part-a.md` | Risk assessment, governance, monitoring, reporting | AML/CTF Program Part A |
+| `02-aml-ctf-program-part-b.md` | Customer identification (KYC/CIP), tiers, screening | AML/CTF Program Part B |
+| `03-business-description.md` | Plain-language description of IN$DEX services | Business description |
+| `04-travel-rule-compliance.md` | How transfer data is collected and transmitted | Travel Rule (live 1 Jul 2026) |
+| `05-record-keeping-policy.md` | 7-year records: what, where, how | Record-keeping obligation |
+
+## What only AJ can supply (blanks marked ⬜ in the documents)
+- ABN / ACN / registered office address / date services commenced
+- Director details (full legal name, DOB, residential address, citizenship, declarations)
+- Beneficial owners at 25%+
+- AML/CTF Compliance Officer confirmation (currently drafted as AJ — see Part A §3 note about external advisor)
+
+## Registration status log
+- 2026-07-14 — Documents drafted. Enrolment not yet started at time of drafting.
+- ✅ 2026-07-14 — **Enrolment SUBMITTED** — beat the 29 Jul deadline by 15 days. Enrolled as both VASP (all 5 services: exchange w/ money, exchange w/ VA, value transfer, safekeeping, offer/sale financial services) and RSP (independent remittance dealer). Commencement declared: 24 Sep 2026.
+- ✅ **AUSTRAC Account Number (AAN): 263945366** — quote in all AUSTRAC contact.
+- ⬜ Registration form received from AUSTRAC (watch imagenationdex@gmail.com)
+- ⬜ Legal review of this folder completed by: ______
+- ⬜ Registration submitted
+
+## Enrolled entity (as declared 2026-07-14)
+Arthur Henry (sole trader) · ABN 95 579 343 955 · t/a **Image Nation Decentralised Exchange** · Principal place of business: Victoria 3175 · AML/CTF Compliance Officer: Arthur Henry (Founder) · Contact: imagenationdex@gmail.com
