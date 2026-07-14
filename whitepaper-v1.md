@@ -588,6 +588,7 @@ Fiat ramps alone do not solve the unbanked problem. The coconut girl in the Cook
 - ✅ `sw.js` → **v2** — indx-golden.js added to precache, version bump purges v1 caches on deploy.
 - Audits: price CLEAN (CSS rgba false positives only), A$ CLEAN, seed CLEAN, consent-link target verified, node --check OK on both JS files.
 - Readiness status: **Needs citizen testing** — code-complete and statically verified; canonization awaits the cheap-Android + aeroplane-mode walk-through (Completion Commander task 10 gate).
+- ✅ `home-v2.html` — **SIINDEX Ambient Welcome overlay REMOVED** (AJ decision, 14 Jul): full-screen typing splash duplicated the SIINDEX section on the same page, blocked scrolling, delayed the hero. Homepage now leads with value immediately. HTML block + CSS + init call all removed; dismissSIAmbient() retained as no-op; JS syntax verified.
 
 ### Session 120 continued (2026-07-14) — PWA Layer (Completion Commander task 2) + AUSTRAC enrolment
 

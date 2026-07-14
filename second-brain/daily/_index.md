@@ -114,6 +114,15 @@ Next: Continue God Mode sweep queue. AJ to push git backlog from Terminal. Compl
 
 ---
 
+### 2026-07-14
+
+Built: **AUSTRAC ENROLMENT SUBMITTED** — AAN 263945366, VASP (5 services) + RSP, Arthur Henry sole trader ABN 95 579 343 955 t/a Image Nation Decentralised Exchange, commencement 24 Sep 2026, 15 days before deadline. New compliance-readiness/ folder (AML/CTF Part A+B, business description, Travel Rule, record-keeping — drafts, need legal review). Session 120: citizen-profile wiring, Wallet nav, coach 430px, AUD fixes. PWA layer (manifest, sw.js, indx-pwa.js, offline-fallback, icons). Golden path hardening via new indx-golden.js (Safe-to-Proceed, voice command, a11y, offline guards) across ~10 screens. Nightly brain pass: created squads.md orphan stub (Grid Account = Squads v4 multisig custody); updated austrac.md line in companies index; consolidated moc/decisions indexes.
+Decisions: Enrol now as sole trader (not wait for entity structure). VASP + RSP dual enrolment. Grid Account custody = Squads v4 2-of-3 MPC declared to AUSTRAC. PWA distribution over app stores. Compliance docs are drafts pending legal review.
+State: **P0-A CLOSED — git backlog fully pushed, working tree clean, HEAD == origin/main.** **P0-B enrolment step DONE** — registration form + legal review still pending. ⚠️ No memory.md session entry exists for the AUSTRAC enrolment, PWA layer, or golden-path commits — reconstructed from git log by nightly pass. God Mode queue unchanged (live-stream, creator-onboarding + ~107 sweep). Meteora vs Raydium LP conflict still open. LP pool for minted INDX still pending.
+Next: Log 14 Jul work properly in memory.md. Watch imagenationdex@gmail.com for AUSTRAC registration form; get legal review of compliance-readiness/ drafts. Flip corridor stepper enrolment step `current`→`done`. Confirm Squads v4 Grid Account implementation plan (declared to regulator, not yet built). Raydium CPMM LP setup. Wire Stripe product IDs. Add AJ as Founder #1.
+
+---
+
 ## Template
 
 ```

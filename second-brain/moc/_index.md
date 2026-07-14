@@ -210,12 +210,20 @@ High-level summaries that link bodies of work together. Build these when a topic
 - index.html — SIINDEX Core 24 → 25 screens
 - God Mode Audit Doctrine locked (12 dimensions): voice-first as the primary action; Trust Before Transaction required ahead of any money/listing/cultural-asset/vote/action; terminology replacements ("AI"→SIINDEX Synthetic Intelligence, "MemeDAO"→IN$DEX Citizen Governance, "no KYC"→progressive verification, "180+ countries"→Pacific-first corridors expanding, "no rug"→transparent supply + audits); 6 trust states; core principle loop: Citizen speaks → SIINDEX understands → App reshapes → Trust checked → Citizen approves → IN$DEX records; strongest line: "The bank never came. So we built a civilization."
 
+### Session 120 + AUSTRAC Enrolment + PWA Layer — 2026-07-14 (compiled by nightly pass from git log — ⚠️ no memory.md session entry exists for most of this)
+- **Session 120** (commit 51ef6c3) — citizen-profile wiring, Wallet nav, merchant-coach 430px, AUD fixes; touched citizen-profile, listing-detail, order-status, search, feed, merchant-coach, sovereign-id, trust-before-transaction
+- **✅ AUSTRAC ENROLMENT SUBMITTED (14 Jul 2026, 15 days before deadline)** — AAN **263945366**; enrolled as VASP (all 5 services) + RSP (independent remittance dealer); entity: Arthur Henry sole trader, ABN 95 579 343 955, t/a Image Nation Decentralised Exchange, Victoria 3175; commencement declared 24 Sep 2026. New `compliance-readiness/` folder: AML/CTF Program Part A + Part B, business description, Travel Rule compliance, record-keeping policy, README status log — **all DRAFTS, need legal review before registration submission**. Next: AUSTRAC emails registration form to imagenationdex@gmail.com. See [[../companies/austrac|austrac]].
+- **PWA layer** ✅ (commit 97afd2b) — manifest.json, sw.js service worker, indx-pwa.js, offline-fallback.html, app icons (192/512/maskable); vercel.json + index.html/home-v3.html wired
+- **Golden path hardening** ✅ (commit 7006fe4) — new `indx-golden.js` (Safe-to-Proceed, voice command, a11y, offline guards) across send, receive, help, onboarding-flow, grid-account-onboarding, speak-to-siindex, withdraw-fiat, whitepaper-v1.md + more
+- **Grid Account custody declared** — Squads Protocol v4 multisig, 2-of-3 MPC keys (device/cloud/recovery), in AUSTRAC drafts + grid-account-onboarding.html — see [[../companies/squads|squads]] (new orphan stub, nightly pass 2026-07-14)
+- **✅ GIT BACKLOG CLEARED** — working tree clean, HEAD (7006fe4) == origin/main; the ~290-file / 9-day P0-A backlog was committed and pushed 12–14 Jul
+
 ### Screens — In Progress / Pending
 - God Mode queue: live-stream.html, creator-onboarding.html (unchanged — only two screens left in the original God Mode backlog since 2026-07-04's rollout; all Build-Completion Prompt queue screens now complete as of 2026-07-11)
-- ⚠️ **Growing backlog:** multi-day git backlog spanning Sessions 81 through 119 (2026-06-27 onward in places) — ~290 dirty files, 9 days since last push (last push: 3 Jul 2026, commit b97158e) as of 2026-07-12. Highest-priority cleanup item (P0-A); AJ must push manually from Terminal.
+- ✅ **RESOLVED 2026-07-14:** the multi-day git backlog (~290 dirty files, Sessions 81–119) is fully committed and pushed — working tree clean, HEAD == origin/main as of nightly pass 2026-07-14. P0-A closed.
 - ⚠️ **Open conflict:** lp-manager.html (Session 83) models LP fees on Meteora DLMM; Session 63 canonically locked Raydium CPMM for the INDX/USDC pool. Needs AJ reconciliation — still unresolved as of 2026-07-11.
 - ⏳ Builder Discipline (Session 114) + Unknowns Engine (Session 117) doctrine not yet folded into SIINDEX Master Prompt (currently v3) — flagged as next revision (v4) candidate
-- ⏳ AUSTRAC VASP Travel Rule enrollment — deadline 29 Jul 2026 (16 days remaining as of 2026-07-13), treated as P0 since 2026-07-10, not yet complete
+- ✅ **AUSTRAC ENROLMENT SUBMITTED 2026-07-14** (AAN 263945366, VASP + RSP) — 15 days before the 29 Jul deadline. Remaining: registration form from AUSTRAC (watch imagenationdex@gmail.com), legal review of compliance-readiness/ drafts, registration submission; corridor page enrolment steppers can flip `current`→`done`
 - ⏳ Onchain revenue infrastructure (SolSplits Revenue Router, Token-2022 Transfer Hook, Streamflow distribution) — planning-only, flagged by AJ for automation (Session 119 x17)
 
 ### Infrastructure — Complete

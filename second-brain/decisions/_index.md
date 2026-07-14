@@ -110,6 +110,16 @@ Format: Date | Decision | Why | Alternatives considered
 
 **13 Jul 2026 (Session 119 x36)** | God Mode Audit Doctrine locked (12 dimensions) — voice-first as primary action; Trust Before Transaction required ahead of any money/listing/cultural-asset/vote/action; canonical terminology replacements ("AI"→SIINDEX Synthetic Intelligence, "MemeDAO"→IN$DEX Citizen Governance, "no KYC"→progressive verification, "180+ countries"→Pacific-first corridors expanding, "no rug"→transparent supply + audits); 6 trust states (safe/needs_approval/needs_info/human_review/cultural_review/blocked) | Standardizes pre-transaction trust checking and terminology across all future God Mode passes instead of relying on screen-by-screen judgment calls | Per-screen ad hoc trust/consent UI rejected — inconsistent citizen protection and compliance posture
 
+**14 Jul 2026** | AUSTRAC enrolment submitted as sole trader — Arthur Henry, ABN 95 579 343 955, t/a Image Nation Decentralised Exchange — rather than waiting for the Cook Islands / company structure | Beats the 29 Jul deadline by 15 days; transitional rule allows operating during assessment; sole-trader ABN already existed | Waiting for full dual-entity incorporation rejected — deadline risk outweighed structural neatness (entity can be updated with AUSTRAC later)
+
+**14 Jul 2026** | Enrolled as BOTH VASP (all 5 services: exchange w/ money, exchange w/ VA, value transfer, safekeeping, offer/sale financial services) and RSP (independent remittance dealer); commencement declared 24 Sep 2026 | Full service coverage avoids re-enrolment when corridors go live; commencement date aligned to Grand Synchronicity launch | Narrower single-service enrolment rejected — Pacific remittance corridors require RSP status
+
+**14 Jul 2026** | Grid Account custody declared to AUSTRAC as Squads Protocol v4 multisig, 2-of-3 MPC keys (device/cloud/recovery), no seed phrases, no unilateral platform control | Regulator-ready custody narrative consistent with "recovery words" doctrine and progressive verification | Single-key platform custody rejected — creates both regulatory and trust exposure (note: on-chain implementation status unconfirmed — declared model must be built before launch)
+
+**14 Jul 2026** | compliance-readiness/ folder ships as DRAFTS requiring legal review before registration submission | Accelerates registration while acknowledging none of it is legal advice | Submitting drafts directly rejected — AML/CTF program must survive professional scrutiny
+
+**14 Jul 2026 (Session 120 + follow-on commits)** | IN$DEX ships as a PWA (manifest, service worker, offline fallback, installable icons) + `indx-golden.js` golden-path hardening (Safe-to-Proceed, voice command, a11y, offline guards) | Pacific-first users on low-connectivity mobile need installable, offline-capable app without app-store gatekeeping | Native app store distribution rejected/deferred — store review friction and 30% platform tax
+
 ## Template
 
 ```

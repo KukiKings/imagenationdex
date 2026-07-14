@@ -35,7 +35,7 @@
 
 ## Regulatory / Compliance (Session 119, 10 Jul 2026)
 
-- **[[austrac]]** — Australian VASP/AML regulator; Travel Rule mandatory 31 Mar 2026, enrollment deadline 29 Jul 2026 (P0 across platform); NOT YET ENROLLED as of 12 Jul 2026 (17 days remaining) — corridor page steppers corrected `done`→`current` (Session 119 x33)
+- **[[austrac]]** — Australian VASP/AML regulator; Travel Rule mandatory 31 Mar 2026. ✅ **ENROLMENT SUBMITTED 14 Jul 2026** (15 days early) — AAN 263945366, enrolled as VASP (all 5 services) + RSP (independent remittance dealer), entity: Arthur Henry sole trader ABN 95 579 343 955 t/a Image Nation Decentralised Exchange, commencement declared 24 Sep 2026. Next: registration form (watch imagenationdex@gmail.com), legal review of compliance-readiness/ drafts, then registration. Corridor page steppers still `current` — can flip to `done` for the enrolment step.
 
 ## Incorporation / Jurisdiction (Session 119 x33, 12 Jul 2026)
 
@@ -44,6 +44,10 @@
 ## Token Infrastructure (Session 119 x33, 12 Jul 2026)
 
 - **[[smithii]]** — Solana token creation/multisender toolkit used to mint INDX on mainnet and transfer full supply to protocol wallet
+
+## Custody Infrastructure (compliance-readiness drafts, 14 Jul 2026)
+
+- **[[squads]]** — Squads Protocol v4 multisig declared as Grid Account custody model (2-of-3 MPC keys: device/cloud/recovery; no seed phrases, no unilateral platform control); cited in AUSTRAC AML/CTF Program Part A + business description; implementation status unconfirmed
 
 ## Onchain Infrastructure — Planning (Session 119, 10 Jul 2026)
 
