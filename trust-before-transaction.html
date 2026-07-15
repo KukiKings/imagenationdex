@@ -738,15 +738,22 @@ async function handleLiveApprove(s) {
   var p = s.pending;
   var result = null;
   var rpcError = null;
+  var now = new Date();
+  // Computed up front so the same code becomes both the on-screen receipt ID and the
+  // receipt_code written into consent_receipts — client and server agree on one identifier.
+  var rid = 'TBT-' + now.getTime().toString(36).toUpperCase().slice(-8);
 
   if (!citizenId) {
     rpcError = 'We can\'t confirm your account. Nothing was sent.';
   } else {
     try {
       var rpcName = p.type === 'withdraw' ? 'withdraw_indx' : 'transfer_indx';
+      var recipientLabel = p.recipientLabel || p.recipient;
       var body = p.type === 'withdraw'
-        ? { p_citizen_id: citizenId, p_amount: p.amountIndx, p_method: p.method, p_destination: p.recipient }
-        : { p_sender_id: citizenId, p_amount: p.amountIndx, p_recipient_address: p.recipient };
+        ? { p_citizen_id: citizenId, p_amount: p.amountIndx, p_method: p.method, p_destination: p.recipient,
+            p_receipt_code: rid, p_risk_state: s.state, p_si_says: s.siSays, p_recipient_label: recipientLabel, p_fee_label: p.feeLabel }
+        : { p_sender_id: citizenId, p_amount: p.amountIndx, p_recipient_address: p.recipient,
+            p_receipt_code: rid, p_risk_state: s.state, p_si_says: s.siSays, p_recipient_label: recipientLabel, p_fee_label: p.feeLabel };
 
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + rpcName, {
         method: 'POST',
@@ -770,9 +777,6 @@ async function handleLiveApprove(s) {
   liveExecuting = false;
   sessionStorage.removeItem(_PENDING_KEY);
 
-  var now = new Date();
-  var rid = 'TBT-' + now.getTime().toString(36).toUpperCase().slice(-8);
-
   if (rpcError) {
     card.className = 'state-card state-failed visible';
     document.getElementById('stateIcon').textContent = STATE_META.failed.icon;
@@ -780,6 +784,9 @@ async function handleLiveApprove(s) {
     document.getElementById('stateSub').textContent = STATE_META.failed.sub;
     document.getElementById('stateSiSays').textContent = rpcError;
     document.getElementById('stateRecordText').textContent = 'This attempt is recorded in your Decision Ledger.';
+    // Nothing executed (the RPC never wrote a receipt), so log the failure ourselves —
+    // RLS only allows client inserts for outcome IN ('declined','failed'), never 'approved'.
+    await logConsentReceipt(citizenId, rid, p, s, 'failed', rpcError);
     saveToHistory({id: rid, label: s.label + ' — failed', icon: '⚠️', ts: now.getTime(), status: 'declined'});
     renderHistory();
     showToast('❌ ' + rpcError);
@@ -793,7 +800,10 @@ async function handleLiveApprove(s) {
     return;
   }
 
-  // Confirmed success — sync real balance, show a real receipt
+  // Confirmed success — sync real balance, show a real receipt.
+  // Note: the real consent_receipts row was already written server-side, atomically with
+  // the transfer/withdrawal, inside transfer_indx/withdraw_indx. The localStorage entry
+  // below is just the on-device "recent activity" list — Supabase is the source of truth.
   sessionStorage.setItem('citizen_balance', String(Math.round(result.new_balance)));
   if (result.new_wisdom !== undefined) sessionStorage.setItem('citizen_wisdom', String(result.new_wisdom));
 
@@ -824,19 +834,27 @@ async function handleLiveApprove(s) {
   }
 }
 
-function handleDecline() {
+async function handleDecline() {
   document.getElementById('actionRow').className = 'action-row';
   document.getElementById('askRow').className = 'ask-row';
   lightPill(4);
 
+  var isLive = !!(currentScen && currentScen.live);
+  var rid = null;
+
   if (currentScen) {
     var now = new Date();
-    var rid = 'TBT-' + now.getTime().toString(36).toUpperCase().slice(-8);
+    rid = 'TBT-' + now.getTime().toString(36).toUpperCase().slice(-8);
     saveToHistory({id: rid, label: currentScen.label, icon: currentScen.icon, ts: now.getTime(), status: 'declined'});
     renderHistory();
   }
 
-  if (currentScen && currentScen.live) {
+  if (isLive) {
+    // Nothing executed — no RPC ran, so no receipt exists yet. Log it ourselves;
+    // RLS allows client inserts here because outcome 'declined' can never be mistaken
+    // for proof that money moved.
+    var citizenId = sessionStorage.getItem('citizen_id');
+    await logConsentReceipt(citizenId, rid, currentScen.pending, currentScen, 'declined');
     sessionStorage.removeItem(_PENDING_KEY);
     showToast('Declined — nothing moved. Returning…');
     setTimeout(function() {
@@ -846,6 +864,29 @@ function handleDecline() {
   }
 
   showToast('Declined — action cancelled. Nothing moved.');
+}
+
+// Client-side logging for outcomes where nothing executed (declined / failed).
+// RLS on consent_receipts blocks any client insert with outcome='approved' — only the
+// transfer_indx/withdraw_indx RPCs (SECURITY DEFINER) can write those, so a receipt can
+// never be forged as proof of an approval that never happened.
+async function logConsentReceipt(citizenId, code, pending, scen, outcome, siSaysOverride) {
+  if (!citizenId || !pending) return;
+  try {
+    await sb.from('consent_receipts').insert({
+      citizen_id: citizenId,
+      receipt_code: code,
+      action_type: pending.type === 'withdraw' ? 'withdraw' : 'send',
+      recipient: pending.recipientLabel || pending.recipient || null,
+      amount_indx: pending.amountIndx || null,
+      fee_label: pending.feeLabel || null,
+      risk_state: scen ? scen.state : null,
+      outcome: outcome,
+      si_says: siSaysOverride || (scen ? scen.siSays : null)
+    });
+  } catch (e) {
+    console.error('[trust-before-transaction] failed to log consent receipt:', e);
+  }
 }
 
 function handleAsk() {
@@ -870,14 +911,49 @@ function saveToHistory(entry) {
   localStorage.setItem(_TBT_KEY, JSON.stringify(hist));
 }
 
-function renderHistory() {
-  var hist = JSON.parse(localStorage.getItem(_TBT_KEY) || '[]');
+async function renderHistory() {
   var container = document.getElementById('histContainer');
-  if (!hist.length) {
+  var citizenId = sessionStorage.getItem('citizen_id');
+  var rows = [];
+
+  // Real receipts (send/withdraw actually executed or genuinely declined/failed) — source of truth.
+  if (citizenId) {
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_consent_receipts', {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_citizen_id: citizenId, p_limit: 25 })
+      });
+      if (res.ok) {
+        const real = await res.json();
+        if (Array.isArray(real)) {
+          rows = real.map(function(r) {
+            return {
+              id: r.receipt_code,
+              label: (r.action_type === 'withdraw' ? 'Cash Out' : 'Send') + (r.recipient ? ' · ' + r.recipient : ''),
+              icon: r.action_type === 'withdraw' ? '💵' : '💸',
+              ts: new Date(r.created_at).getTime(),
+              status: r.outcome === 'approved' ? 'approved' : 'declined'
+            };
+          });
+        }
+      }
+    } catch (e) {
+      console.error('[trust-before-transaction] failed to load real consent receipts:', e);
+    }
+  }
+
+  // Demo scenario history stays local-only — these are teaching examples, not real money movement.
+  var demoHist = JSON.parse(localStorage.getItem(_TBT_KEY) || '[]');
+  rows = rows.concat(demoHist);
+  rows.sort(function(a, b) { return b.ts - a.ts; });
+  rows = rows.slice(0, 25);
+
+  if (!rows.length) {
     container.innerHTML = '<div class="hist-empty">No receipts yet. Try a scenario above.</div>';
     return;
   }
-  container.innerHTML = hist.map(function(h) {
+  container.innerHTML = rows.map(function(h) {
     var d = new Date(h.ts);
     var label = d.toLocaleString('en-AU', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'short'});
     return '<div class="hist-row">' +

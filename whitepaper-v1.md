@@ -580,7 +580,17 @@ Fiat ramps alone do not solve the unbanked problem. The coconut girl in the Cook
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-15 (Session 121 continued x2 — Task 6: Trust Before Transaction is now a real approval gate for send/withdraw, not just a demo. Task 7 (Consent Receipts) next. Master canon v13 received + archived, not yet built.)
+> Last updated: 2026-07-15 (Session 121 continued x3 — Task 7: Consent Receipts are now real, Supabase-backed, and tamper-resistant. Task 8 not yet named.)
+
+### Session 121 continued x3 (2026-07-15) — Completion Commander Task 7: Consent Receipts
+
+- ✅ New table `consent_receipts` — append-only per Security Law 7 (RLS + trigger blocks both UPDATE and DELETE, stricter than the existing `security_events` pattern which only blocked UPDATE). Client/anon can only INSERT rows with `outcome IN ('declined','failed')` — an `outcome='approved'` row can only be written by `transfer_indx`/`withdraw_indx` themselves (SECURITY DEFINER), atomically with the real balance change and transaction row. No one can forge proof of an approval that never happened.
+- ✅ `transfer_indx` and `withdraw_indx` extended with optional params (`p_receipt_code`, `p_risk_state`, `p_si_says`, `p_recipient_label`, `p_fee_label`) so each RPC writes its own consent receipt in the same transaction as the money movement. Caught and fixed a real bug mid-build: `CREATE OR REPLACE` with added params created a second function overload instead of replacing the original — dropped the old 4-arg signatures so only one version of each function exists.
+- ✅ New read-only RPCs: `get_consent_receipts(p_citizen_id, p_limit)` (per-citizen history, no open SELECT policy exists) and `get_consent_receipt_count()` (public aggregate, no PII — mirrors `get_waitlist_count`).
+- ✅ `trust-before-transaction.html` — `handleLiveApprove()` now passes the receipt fields into the RPC call; `handleDecline()` and the RPC-failure path log their own declined/failed receipts client-side; `renderHistory()` fetches real receipts for the logged-in citizen and merges them with the still-local 6-scenario demo history (demo stays illustrative, per AJ's Task 6 "keep both" decision).
+- ✅ `indx-trust-dashboard.html` — the "Consent Receipts" stat was a fake animated count (`4412`, no backend at all). Removed the fake target, added a Supabase client, and wired it to `get_consent_receipt_count()` — shows the real number (0 right now, honestly, same as the citizens count elsewhere on this page).
+- Spec-first: 2 questions put to AJ before writing anything (new table vs. localStorage, dashboard honesty) — both recommended defaults confirmed.
+- All touched files: inline-script syntax verified (`new Function()`), price/AUD/seed-phrase/domain-format audits CLEAN.
 
 ### Session 121 continued x2 (2026-07-15) — Completion Commander Task 6: Trust Before Transaction screen-flow
 

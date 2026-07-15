@@ -243,9 +243,13 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
   </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" crossorigin="anonymous"></script>
 <script>
 // ── CONSTANTS ──────────────────────────────────────────────────────────────
 const INDX_PRICE_USD = 0.24;
+const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ── GM1: STAT TARGETS (pre-launch projections) ────────────────────────────
 const STAT_TARGETS = {
@@ -254,7 +258,6 @@ const STAT_TARGETS = {
   savings:  8701,
   listings: 213,
   culture:  89,
-  receipts: 4412,
   rooms:    156,
   disputes: 34,
   blocked:  67,
@@ -278,7 +281,9 @@ function initStats() {
   animCount(document.getElementById('statSavings'), STAT_TARGETS.savings, '$', '', 2200);
   animCount(document.getElementById('statListings'), STAT_TARGETS.listings, '', '', 1600);
   animCount(document.getElementById('statCulture'), STAT_TARGETS.culture, '', '', 1400);
-  animCount(document.getElementById('statReceipts'), STAT_TARGETS.receipts, '', '', 2100);
+  // statReceipts is intentionally NOT in this projection list — it's wired to a real
+  // Supabase count (loadRealReceiptCount below), not a pre-launch projection. It will
+  // honestly show 0 until real consent receipts exist, same as the citizens count.
   animCount(document.getElementById('statRooms'), STAT_TARGETS.rooms, '', '', 1500);
   animCount(document.getElementById('statDisputes'), STAT_TARGETS.disputes, '', '', 1300);
   animCount(document.getElementById('statBlocked'), STAT_TARGETS.blocked, '', '', 1200);
@@ -342,6 +347,25 @@ function initSavingsTicker() {
   }, 3000);
 }
 
+// ── REAL CONSENT RECEIPT COUNT (Task 7 — no fake data here) ────────────────
+async function loadRealReceiptCount() {
+  const el = document.getElementById('statReceipts');
+  if (!el) return;
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_consent_receipt_count', {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: '{}'
+    });
+    if (!res.ok) { el.textContent = '0'; return; }
+    const count = await res.json();
+    animCount(el, Number(count) || 0, '', '', 1400);
+  } catch (e) {
+    console.error('[indx-trust-dashboard] failed to load consent receipt count:', e);
+    el.textContent = '0';
+  }
+}
+
 // ── TOAST ─────────────────────────────────────────────────────────────────
 function showToast(msg, ms) {
   const t = document.getElementById('toast');
@@ -353,6 +377,7 @@ function showToast(msg, ms) {
 // ── INIT ──────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   initStats();
+  loadRealReceiptCount();
   renderFeed();
   initSavingsTicker();
   setInterval(rotateFeed, 5000);
