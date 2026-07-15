@@ -95,6 +95,8 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 .state-card.state-human_review{background:rgba(255,184,0,0.07);border:1.5px solid rgba(255,184,0,0.25);}
 .state-card.state-cultural_review{background:rgba(139,63,232,0.07);border:1.5px solid rgba(139,63,232,0.25);}
 .state-card.state-blocked{background:rgba(255,77,109,0.07);border:1.5px solid rgba(255,77,109,0.25);}
+.state-card.state-failed{background:rgba(255,77,109,0.07);border:1.5px solid rgba(255,77,109,0.25);}
+.state-card.state-processing{background:rgba(0,212,255,0.07);border:1.5px solid rgba(0,212,255,0.25);}
 
 .state-top{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
 .state-badge-icon{font-size:30px;flex-shrink:0;}
@@ -107,6 +109,8 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 .state-card.state-human_review .state-badge-label{color:var(--gold);}
 .state-card.state-cultural_review .state-badge-label{color:var(--purple);}
 .state-card.state-blocked .state-badge-label{color:var(--red);}
+.state-card.state-failed .state-badge-label{color:var(--red);}
+.state-card.state-processing .state-badge-label{color:var(--cyan);}
 
 .si-says-label{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:7px;}
 .si-says-body{font-size:13px;color:var(--text);line-height:1.6;padding:12px;background:rgba(0,0,0,0.2);border-radius:10px;margin-bottom:12px;}
@@ -186,8 +190,16 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
   <div class="doc-pill" id="pill4">What gets recorded</div>
 </div>
 
+<!-- LIVE MODE BANNER (shown only when a real pending transaction was handed off from send/withdraw) -->
+<div class="si-brief" id="liveBanner" style="display:none;background:linear-gradient(135deg,rgba(0,212,255,0.08),rgba(0,229,160,0.06));">
+  <div class="si-brief-row">
+    <div style="font-size:20px;">🔒</div>
+    <div><div class="si-brief-name" style="color:var(--cyan);">Real transaction — review below</div><div class="si-brief-quote" style="font-size:12px;">This came from your own action. Nothing has moved yet.</div></div>
+  </div>
+</div>
+
 <!-- SCENARIO PICKER -->
-<div class="sec-head">Try a scenario</div>
+<div class="sec-head" id="scenSecHead">Try a scenario</div>
 <div class="scen-scroll" id="scenScroll"></div>
 
 <!-- TRANSACTION PREVIEW -->
@@ -283,9 +295,17 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" crossorigin="anonymous"></script>
 <script>
 const INDX_PRICE_USD = 0.24;
 const _TBT_KEY = 'indx_tbt_hist';
+const _PENDING_KEY = 'indx_pending_tx';
+const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const LARGE_AMOUNT_INDX = 500; // simple real threshold — not a fraud model, just a caution line
+var isLiveMode = false;
+var liveExecuting = false;
 
 var SCENARIOS = [
   {
@@ -293,7 +313,7 @@ var SCENARIOS = [
     label: 'Send $50 to Mum',
     icon: '💸',
     type: 'Send',
-    recipient: 'Maria K. (mum.indx)',
+    recipient: 'Maria K. (mum.IN$DEX)',
     indxAmount: 208.33,
     feeIndx: 4.17,
     feeLabel: '4.17 INDX (2% — 98/2 Law)',
@@ -308,7 +328,7 @@ var SCENARIOS = [
     label: 'Send to new contact',
     icon: '❓',
     type: 'Send',
-    recipient: 'jayden_s.indx (first send)',
+    recipient: 'jayden_s.IN$DEX (first send)',
     indxAmount: 500,
     feeIndx: 10,
     feeLabel: '10 INDX (2% — 98/2 Law)',
@@ -386,7 +406,9 @@ var STATE_META = {
   needs_info:     {icon:'ℹ️', label:'Needs more information',    sub:'Payment method verification required',              showApprove:false, showDecline:true,  showAsk:true},
   human_review:   {icon:'👤', label:'Needs human review',        sub:'Amount exceeds automatic approval threshold',       showApprove:false, showDecline:true,  showAsk:true},
   cultural_review:{icon:'🪶', label:'Cultural review in progress',sub:'Cultural content flag raised',                     showApprove:false, showDecline:true,  showAsk:true},
-  blocked:        {icon:'🛡️', label:'Blocked for your protection',sub:'Extreme risk or scam pattern detected',            showApprove:false, showDecline:false, showAsk:true}
+  blocked:        {icon:'🛡️', label:'Blocked for your protection',sub:'Extreme risk or scam pattern detected',            showApprove:false, showDecline:false, showAsk:true},
+  processing:     {icon:'⚡', label:'Processing…',                sub:'Talking to the network',                          showApprove:false, showDecline:false, showAsk:false},
+  failed:         {icon:'⚠️', label:'Nothing was sent',            sub:'The network rejected this action',                showApprove:false, showDecline:false, showAsk:false}
 };
 
 var TRUST_LAYERS = [
@@ -416,6 +438,88 @@ var timers = [];
 function init() {
   buildScenCards();
   renderHistory();
+
+  var raw = sessionStorage.getItem(_PENDING_KEY);
+  if (raw) {
+    try {
+      var pending = JSON.parse(raw);
+      if (pending && pending.type) {
+        enterLiveMode(pending);
+        return;
+      }
+    } catch (e) { console.error('[trust-before-transaction] bad pending tx JSON:', e); }
+  }
+}
+
+async function enterLiveMode(pending) {
+  isLiveMode = true;
+  document.getElementById('liveBanner').style.display = 'flex';
+  document.getElementById('scenSecHead').style.display = 'none';
+  document.getElementById('scenScroll').style.display = 'none';
+
+  var s = await classifyLiveTransaction(pending);
+  currentScen = s;
+
+  lightPill(0); lightPill(1);
+  populateTxPreview(s);
+  document.getElementById('txPreview').classList.add('visible');
+  document.getElementById('layersWrap').classList.add('visible');
+  animateLayers(s);
+}
+
+// Real, simple risk classification — grounded in what we can actually verify:
+// (1) has this citizen sent to this recipient before, (2) is the amount above a plain threshold.
+// This is NOT a fraud-detection system. It only ever produces 'safe' or 'needs_approval' —
+// we never fabricate a 'blocked' / 'human_review' / 'cultural_review' outcome for a real
+// transaction, because there is no real backing system (review queue, scam model, cultural
+// steward queue) behind those states yet. Faking them would be worse than not having them.
+async function classifyLiveTransaction(pending) {
+  var citizenId = sessionStorage.getItem('citizen_id');
+  var isLarge = pending.amountIndx >= LARGE_AMOUNT_INDX;
+  var isNewRecipient = false;
+  var reasons = [];
+
+  if (pending.type === 'send' && citizenId && pending.recipient) {
+    try {
+      const { data } = await sb.from('transactions')
+        .select('id')
+        .eq('citizen_id', citizenId)
+        .eq('direction', 'send')
+        .eq('counterparty_address', pending.recipient)
+        .limit(1);
+      isNewRecipient = !data || data.length === 0;
+    } catch (e) {
+      console.error('[trust-before-transaction] recipient history check failed:', e);
+      // Unknown — be cautious, not falsely reassuring
+      isNewRecipient = true;
+    }
+  }
+
+  if (isNewRecipient) reasons.push('this recipient has no prior send history with your account');
+  if (isLarge) reasons.push('the amount is at or above your ' + LARGE_AMOUNT_INDX + ' INDX review threshold');
+
+  var state = (isNewRecipient || isLarge) ? 'needs_approval' : 'safe';
+  var siSays = state === 'safe'
+    ? 'I have checked this transaction against your account history. Nothing unusual found. Nothing moves until you approve.'
+    : 'I want you to review this before it moves: ' + reasons.join(' and ') + '. If this is what you intended, approve below. If not, decline — nothing will happen.';
+
+  return {
+    id: 'live',
+    live: true,
+    pending: pending,
+    label: pending.type === 'withdraw' ? 'Cash Out' : 'Send',
+    icon: pending.type === 'withdraw' ? '💵' : '💸',
+    type: pending.type === 'withdraw' ? 'Withdraw' : 'Send',
+    recipient: pending.recipientLabel || pending.recipient || '—',
+    indxAmount: pending.amountIndx,
+    feeIndx: pending.feeIndx || 0,
+    feeLabel: pending.feeLabel || '—',
+    timing: pending.timing || (pending.type === 'withdraw' ? 'Pending — payout channel not yet live' : '4 seconds'),
+    riskClass: isLarge ? 'medium' : (isNewRecipient ? 'medium' : 'low'),
+    riskLabel: isLarge ? 'Above review threshold' : (isNewRecipient ? 'New recipient' : 'Normal'),
+    state: state,
+    siSays: siSays
+  };
 }
 
 function clearTimers() {
@@ -580,8 +684,14 @@ function showTrustState(s) {
   lightPill(3); // "What you control"
 }
 
-function handleApprove() {
-  if (!currentScen) return;
+async function handleApprove() {
+  if (!currentScen || liveExecuting) return;
+
+  if (currentScen.live) {
+    await handleLiveApprove(currentScen);
+    return;
+  }
+
   var s = currentScen;
   var now = new Date();
   var rid = 'TBT-' + now.getTime().toString(36).toUpperCase().slice(-8);
@@ -610,6 +720,110 @@ function handleApprove() {
   showToast('✅ Approved — consent receipt recorded');
 }
 
+// Real approval path — actually calls the network, only shows a receipt on confirmed success.
+async function handleLiveApprove(s) {
+  liveExecuting = true;
+  document.getElementById('actionRow').className = 'action-row';
+  document.getElementById('askRow').className = 'ask-row';
+
+  var card = document.getElementById('stateCard');
+  card.className = 'state-card state-processing visible';
+  document.getElementById('stateIcon').textContent = STATE_META.processing.icon;
+  document.getElementById('stateLabel').textContent = STATE_META.processing.label;
+  document.getElementById('stateSub').textContent = STATE_META.processing.sub;
+  document.getElementById('stateSiSays').textContent = 'Sending your approval to the network now. Do not close this screen.';
+  document.getElementById('stateRecordText').textContent = '';
+
+  var citizenId = sessionStorage.getItem('citizen_id');
+  var p = s.pending;
+  var result = null;
+  var rpcError = null;
+
+  if (!citizenId) {
+    rpcError = 'We can\'t confirm your account. Nothing was sent.';
+  } else {
+    try {
+      var rpcName = p.type === 'withdraw' ? 'withdraw_indx' : 'transfer_indx';
+      var body = p.type === 'withdraw'
+        ? { p_citizen_id: citizenId, p_amount: p.amountIndx, p_method: p.method, p_destination: p.recipient }
+        : { p_sender_id: citizenId, p_amount: p.amountIndx, p_recipient_address: p.recipient };
+
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + rpcName, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const resBody = await res.json();
+      if (!res.ok || resBody?.message || resBody?.code) {
+        rpcError = resBody?.message || 'The network rejected this action.';
+      } else if (resBody && resBody.new_balance !== undefined) {
+        result = resBody;
+      } else {
+        rpcError = 'No confirmation was returned. Nothing was sent.';
+      }
+    } catch (e) {
+      console.error('[trust-before-transaction] live approve failed:', e);
+      rpcError = 'Could not reach the network. Nothing was sent — no balance was deducted.';
+    }
+  }
+
+  liveExecuting = false;
+  sessionStorage.removeItem(_PENDING_KEY);
+
+  var now = new Date();
+  var rid = 'TBT-' + now.getTime().toString(36).toUpperCase().slice(-8);
+
+  if (rpcError) {
+    card.className = 'state-card state-failed visible';
+    document.getElementById('stateIcon').textContent = STATE_META.failed.icon;
+    document.getElementById('stateLabel').textContent = STATE_META.failed.label;
+    document.getElementById('stateSub').textContent = STATE_META.failed.sub;
+    document.getElementById('stateSiSays').textContent = rpcError;
+    document.getElementById('stateRecordText').textContent = 'This attempt is recorded in your Decision Ledger.';
+    saveToHistory({id: rid, label: s.label + ' — failed', icon: '⚠️', ts: now.getTime(), status: 'declined'});
+    renderHistory();
+    showToast('❌ ' + rpcError);
+    // Let the citizen go back and try again
+    var ar = document.getElementById('actionRow');
+    ar.className = 'action-row show-decline';
+    document.querySelector('.btn-decline').textContent = 'Back';
+    document.querySelector('.btn-decline').onclick = function() {
+      window.location.href = s.pending.returnUrl || 'citizen-dashboard.html';
+    };
+    return;
+  }
+
+  // Confirmed success — sync real balance, show a real receipt
+  sessionStorage.setItem('citizen_balance', String(Math.round(result.new_balance)));
+  if (result.new_wisdom !== undefined) sessionStorage.setItem('citizen_wisdom', String(result.new_wisdom));
+
+  card.className = 'state-card';
+  var timeStr = now.toLocaleString('en-AU', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'short', year:'numeric'});
+  document.getElementById('rId').textContent = rid;
+  document.getElementById('rAction').textContent = s.type;
+  document.getElementById('rRecipient').textContent = s.recipient;
+  document.getElementById('rAmount').textContent = s.indxAmount.toFixed(2) + ' INDX ($' + (s.indxAmount * INDX_PRICE_USD).toFixed(2) + ' USD)';
+  document.getElementById('rFee').textContent = s.feeLabel;
+  document.getElementById('rTime').textContent = timeStr;
+  document.getElementById('receiptWrap').classList.add('visible');
+  lightPill(4);
+
+  saveToHistory({id: rid, label: s.label, icon: s.icon, ts: now.getTime(), status: 'approved'});
+  renderHistory();
+  showToast(p.type === 'withdraw' ? '✅ Withdrawal recorded' : '✅ Sent — confirmed');
+
+  // Add a way back to where they came from
+  var receiptCard = document.querySelector('#receiptWrap .receipt-card');
+  if (receiptCard && !document.getElementById('liveReturnBtn')) {
+    var btn = document.createElement('button');
+    btn.id = 'liveReturnBtn';
+    btn.textContent = p.type === 'withdraw' ? 'Back to Cash Out' : 'Back to Send';
+    btn.style.cssText = 'width:100%;padding:14px;border-radius:12px;background:var(--cyan);border:none;color:#000;font-size:14px;font-weight:800;cursor:pointer;margin-top:12px;';
+    btn.onclick = function() { window.location.href = p.returnUrl || 'citizen-dashboard.html'; };
+    receiptCard.appendChild(btn);
+  }
+}
+
 function handleDecline() {
   document.getElementById('actionRow').className = 'action-row';
   document.getElementById('askRow').className = 'ask-row';
@@ -621,11 +835,22 @@ function handleDecline() {
     saveToHistory({id: rid, label: currentScen.label, icon: currentScen.icon, ts: now.getTime(), status: 'declined'});
     renderHistory();
   }
+
+  if (currentScen && currentScen.live) {
+    sessionStorage.removeItem(_PENDING_KEY);
+    showToast('Declined — nothing moved. Returning…');
+    setTimeout(function() {
+      window.location.href = (currentScen.pending && currentScen.pending.returnUrl) || 'citizen-dashboard.html';
+    }, 900);
+    return;
+  }
+
   showToast('Declined — action cancelled. Nothing moved.');
 }
 
 function handleAsk() {
   if (!currentScen) return;
+  if (currentScen.live) { showToast('SIINDEX: ' + currentScen.siSays); return; }
   var msgs = {
     safe: 'SIINDEX: All 6 trust layers passed. This is a normal, verified transaction. I am ready when you are.',
     needs_approval: 'SIINDEX: I flagged this because the recipient is new. Approving means you trust this address. Decline if you have any doubt.',

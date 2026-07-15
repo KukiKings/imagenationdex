@@ -580,7 +580,16 @@ Fiat ramps alone do not solve the unbanked problem. The coconut girl in the Cook
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-15 (Session 121 continued — Task 5: live Supabase wiring for the golden path complete. New `withdraw_indx` RPC. Task 6 (Trust Before Transaction screen-flow) next.)
+> Last updated: 2026-07-15 (Session 121 continued x2 — Task 6: Trust Before Transaction is now a real approval gate for send/withdraw, not just a demo. Task 7 (Consent Receipts) next. Master canon v13 received + archived, not yet built.)
+
+### Session 121 continued x2 (2026-07-15) — Completion Commander Task 6: Trust Before Transaction screen-flow
+
+- ✅ `trust-before-transaction.html` — **now a real approval gate, not just a demo.** Detects a real pending transaction handed off from send.html/withdraw-fiat.html via `sessionStorage.indx_pending_tx`, classifies risk with real (not fabricated) signals — new-recipient check via a live `transactions` query, amount ≥ 500 INDX threshold — runs the existing 6-layer animated trust check, and on Approve actually calls `transfer_indx`/`withdraw_indx`, syncs real balance/wisdom, shows a genuine receipt or genuine failure state. On Decline, nothing executes. The original 6-scenario "Try a scenario" demo picker is untouched and still works when no real transaction is pending (AJ confirmed: keep both).
+- ✅ `send.html` — **fixed a real dead button**: the live "Confirm & Send" control was wired to `holdStart()`/`holdCancel()`, which don't exist anywhere in the codebase — every citizen's first send attempt was silently non-functional until a second attempt swapped in a different working button. Replaced with a plain tap button that hands off to trust-before-transaction.html. Retired `executeSend()` and `showSendFailure()` (superseded).
+- ✅ `withdraw-fiat.html` — `confirmWithdraw()` now builds a pending withdrawal and redirects to trust-before-transaction.html instead of calling `withdraw_indx` directly. Retired `doWithdraw()`.
+- Spec-first: 3 architecture questions put to AJ before writing code (execution model / demo picker fate / risk-classification depth) — all 3 recommended defaults confirmed.
+- Master canon v13 (7 systems + Part 11 "Missing Sovereignty Layers," 18 modules) received from AJ mid-session, archived verbatim with overlap notes at `god-mode-canon-v13.md` — NOT built, AJ's call was to keep going on the active queue.
+- All 3 touched files: inline-script syntax verified (`new Function()` check), script-tag balance verified, price/AUD/seed-phrase/domain-format audits CLEAN.
 
 ### Session 121 continued (2026-07-15) — Completion Commander Task 5: Live Supabase wiring for the golden path
 

@@ -334,8 +334,9 @@ function openSafetySheet(){
   document.getElementById('safetyOverlay').classList.add('open');
 }
 
-async function confirmWithdraw(){
-  const btn = document.getElementById('ssConfirmBtn');
+// Builds the pending withdrawal and hands off to trust-before-transaction.html —
+// that screen owns the real approval check + the actual withdraw_indx call now.
+function confirmWithdraw(){
   if (!citizenId) {
     showToast('⚠️ Finish registering your Grid Account first — nothing was sent');
     document.getElementById('safetyOverlay').classList.remove('open');
@@ -347,62 +348,32 @@ async function confirmWithdraw(){
     return;
   }
 
-  // Save last used PayID
   const payidInput = document.getElementById('payidVal').value.trim();
   if (method === 'payid' && payidInput) {
     localStorage.setItem('indx_withdrawfiat_last_payid', payidInput);
   }
 
-  btn.disabled = true;
-  btn.textContent = 'Processing…';
-
   const dest = method === 'payid' ? (payidInput || 'mobile wallet')
              : method === 'bsb'   ? 'bank account'
              : 'cash agent';
+  const methodLabel = methods[method].label;
 
-  try {
-    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/withdraw_indx', {
-      method: 'POST',
-      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ p_citizen_id: citizenId, p_amount: amt, p_method: method, p_destination: dest })
-    });
-    const body = await res.json();
-
-    if (!res.ok || body?.message || body?.code) {
-      throw new Error(body?.message || 'Withdrawal was rejected by the network.');
-    }
-
-    // Confirmed — real balance decrement from the RPC result
-    sessionStorage.setItem('citizen_balance', String(Math.round(body.new_balance)));
-    document.getElementById('safetyOverlay').classList.remove('open');
-    doWithdraw(true);
-
-  } catch (e) {
-    console.error('[withdraw-fiat] withdraw_indx failed:', e);
-    document.getElementById('safetyOverlay').classList.remove('open');
-    doWithdraw(false, e.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Yes, Cash Out →';
-  }
+  const pending = {
+    type: 'withdraw',
+    amountIndx: amt,
+    method: method,
+    recipient: dest,
+    recipientLabel: methodLabel + ' · ' + dest,
+    feeIndx: parseFloat((amt * methods[method].fee).toFixed(4)),
+    feeLabel: (amt * INDX_PRICE_USD * methods[method].fee).toFixed(2) + ' USD (' + (methods[method].fee * 100) + '%)',
+    timing: 'Pending — payout channel not yet live',
+    returnUrl: 'withdraw-fiat.html'
+  };
+  sessionStorage.setItem('indx_pending_tx', JSON.stringify(pending));
+  document.getElementById('safetyOverlay').classList.remove('open');
+  window.location.href = 'trust-before-transaction.html';
 }
 
-function doWithdraw(success, errorMsg){
-  if (success) {
-    // Honest status: the INDX side is confirmed and recorded now. The fiat payout
-    // rail (bank/mobile wallet settlement) isn't wired to a live provider yet —
-    // say so plainly instead of promising a delivery time we can't back up.
-    showToast('✅ Withdrawal recorded — SIINDEX will confirm once your payout channel is live');
-    const newBal = parseInt(sessionStorage.getItem('citizen_balance') || '0');
-    document.querySelector('.bc-bal').textContent = newBal.toLocaleString() + ' INDX';
-    document.querySelector('.bc-aud').textContent = '≈ $' + (newBal * INDX_PRICE_USD).toFixed(2) + ' USD';
-    document.getElementById('withdrawAmt').value = '';
-    updateSummary();
-    loadWithdrawHistory();
-  } else {
-    showToast('❌ ' + (errorMsg || 'Withdrawal failed — nothing was deducted'));
-  }
-}
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}
 </script>
 <script src="siindex-speak-core.js"></script>
