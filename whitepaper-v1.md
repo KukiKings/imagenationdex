@@ -580,7 +580,15 @@ Fiat ramps alone do not solve the unbanked problem. The coconut girl in the Cook
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-15 (Session 121 continued x7 — instant-onboard.html now a real two-device invite-and-pay flow: real QR to real onboarding, real Supabase-backed pledge/fulfillment, real payment on confirmed account creation. Biometric/Solana-mint honestly relabeled as preview until that infra exists. business-onboarding.html and quickstart-onboarding.html still fake, next up.)
+> Last updated: 2026-07-15 (Session 121 continued x8 — business-onboarding.html now writes real citizens rows (account_type + business_metadata) instead of localStorage-only. Found and fixed a live pay.html bug — the entire /pay/slug payment-link feature was broken for every citizen due to a .indx/.IN$DEX case mismatch. quickstart-onboarding.html/create-pin.html is the last fake flow remaining.)
+
+### Session 121 continued x8 (2026-07-15) — business-onboarding.html real wiring + pay.html bug fix
+
+- business-onboarding.html was localStorage-only (no Supabase call anywhere) — businesses "created" through it existed only in that one browser, despite the completion screen claiming to be "live... on the IN$DEX network." Less severe than creator-onboarding/instant-onboard (no fabricated money/NFT/score), but still not real.
+- Added `citizens.business_metadata` (jsonb) and a new `update_business_profile` RPC (SECURITY DEFINER, since anon sessions can't UPDATE their own row directly under RLS) — this is an UPDATE to an existing real citizen's row (business setup is an add-on to a personal account already created via the golden path), not a new signup. Handles a real domain-collision case (`DOMAIN_TAKEN`) honestly.
+- Added a real-account guard: the screen now requires `sessionStorage.citizen_id` before allowing setup, matching the pattern used elsewhere this session.
+- **Found a live bug while checking the payment-link route:** `pay.html` looked up citizens by `web3_domain=eq.SLUG.indx` (lowercase) in two places — since every real citizen's domain is `.IN$DEX`, the entire `/pay/<slug>` feature could never find a real recipient for anyone, not just business accounts. Fixed both occurrences. Also flagged (not fixed) a separate error-handling gap in the same file's transfer-result check, worth its own dedicated look.
+- Audits CLEAN on both touched files.
 
 ### Session 121 continued x7 (2026-07-15) — instant-onboard.html: real two-device invite flow
 

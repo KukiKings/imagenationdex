@@ -170,6 +170,11 @@ html,body{min-height:100%;background:var(--black);color:var(--text);font-family:
       <p class="hero-sub">No card readers. No monthly fees. No middlemen. Accept payments from anyone in seconds.</p>
     </div>
 
+    <div class="resume-banner" id="needAccountBanner" style="background:rgba(255,77,109,0.07);border-color:rgba(255,77,109,0.18);">
+      <div class="rb-dot" style="background:var(--red);"></div>
+      <div class="rb-body">Finish registering your personal Grid Account first — a business is added to a real citizen account, not created on its own.</div>
+    </div>
+
     <!-- GOD MODE F4: RESUME BANNER -->
     <div class="resume-banner" id="resumeBanner">
       <div class="rb-dot"></div>
@@ -200,8 +205,8 @@ html,body{min-height:100%;background:var(--black);color:var(--text);font-family:
       </div>
     </div>
 
-    <button class="btn-primary" onclick="goScreen(1)">Set up my business →</button>
-    <button class="btn-secondary" onclick="goScreen(1)">Already have an account? Sign in</button>
+    <button class="btn-primary" id="startSetupBtn" onclick="goScreen(1)">Set up my business →</button>
+    <button class="btn-secondary" onclick="window.location.href='login.html'">Already have an account? Sign in</button>
     <div class="law-strip">2% Civilisation Law · Immutable · Every transaction builds communities</div>
   </div>
 
@@ -306,7 +311,7 @@ html,body{min-height:100%;background:var(--black);color:var(--text);font-family:
       <!-- populated by JS based on business type -->
     </div>
 
-    <button class="btn-primary" id="streamsNextBtn" onclick="goScreen(4)">Generate my payment QR →</button>
+    <button class="btn-primary" id="streamsNextBtn" onclick="proceedToQR()">Generate my payment QR →</button>
   </div>
 
   <!-- ── SCREEN 4: QR + SHARE ── -->
@@ -372,6 +377,24 @@ const INDX_PRICE = 0.24;
 // Traditional payment processor avg: Stripe 2.9%+30c, PayPal 3.49%, Square 2.6%
 const TRADITIONAL_RATE = 0.032; // 3.2% average all-in
 
+// ── REAL SUPABASE WIRING (2026-07-15 fix — was localStorage-only before) ──
+const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+async function bizRpc(name, body) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + name, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const json = await res.json();
+  if (!res.ok || json?.message || json?.code) {
+    const err = new Error(json?.message || 'Request failed');
+    err.raw = json;
+    throw err;
+  }
+  return json;
+}
+
 // ── State ────────────────────────────────────────────────────────
 let currentScreen = 0;
 let selectedType = '';
@@ -395,6 +418,14 @@ const BK = {
 
 function bSave(key, val) { try { localStorage.setItem(BK[key], JSON.stringify(val)); } catch(_) {} }
 function bLoad(key, def) { try { return JSON.parse(localStorage.getItem(BK[key]) ?? JSON.stringify(def)); } catch(_) { return def; } }
+
+// ── Require a real citizen account before allowing business setup ──
+(function checkRealAccount() {
+  if (!sessionStorage.getItem('citizen_id')) {
+    document.getElementById('needAccountBanner').classList.add('show');
+    document.getElementById('startSetupBtn').disabled = true;
+  }
+})();
 
 // ── GOD MODE F4: Resume detection ────────────────────────────────
 (function checkResume() {
@@ -527,6 +558,32 @@ function toggleStream(el, key) {
   bSave('streams', selectedStreams);
 }
 
+// Persist the chosen income streams to the real account before showing the QR —
+// the QR screen displays a real, saved business identity, not just a local draft.
+async function proceedToQR() {
+  const citizenId = sessionStorage.getItem('citizen_id');
+  if (!citizenId) { showToast('⚠️ Finish registering your personal Grid Account first'); return; }
+
+  const btn = document.getElementById('streamsNextBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try {
+    await bizRpc('update_business_profile', {
+      p_citizen_id: citizenId,
+      p_account_type: selectedType || 'merchant',
+      p_streams: selectedStreams
+    });
+    btn.disabled = false;
+    btn.textContent = 'Generate my payment QR →';
+    goScreen(4);
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = 'Generate my payment QR →';
+    console.error('[business-onboarding] stream save failed:', e);
+    showToast('❌ Could not save your streams — check your connection and try again');
+  }
+}
+
 // ── GOD MODE F2: Savings calculator ──────────────────────────────
 function recalcSavings(revenue) {
   const rev = parseFloat(revenue) || 0;
@@ -542,37 +599,68 @@ function recalcSavings(revenue) {
 // init calculator on load
 recalcSavings(bLoad('revenue', 5000));
 
-// ── Business details save + validation ───────────────────────────
-function saveDetails() {
+// ── Business details save + validation — now a real Supabase write ──
+async function saveDetails() {
+  const citizenId = sessionStorage.getItem('citizen_id');
+  if (!citizenId) { showToast('⚠️ Finish registering your personal Grid Account first'); return; }
+
   const name = document.getElementById('bizName').value.trim();
   const phone = document.getElementById('bizPhone').value.trim();
-  const domain = document.getElementById('bizDomain').value.trim();
+  const domainInput = document.getElementById('bizDomain').value.trim();
   const reg = document.getElementById('bizReg').value.trim();
 
   if (!name) { showToast('Enter your business name to continue'); return; }
   if (!phone) { showToast('Enter a mobile number for payment notifications'); return; }
 
-  bizData = { name, phone, domain, reg };
-  bSave('name', name);
-  bSave('phone', phone);
-  bSave('domain', domain || autoSlug(name) + '.IN$DEX');
-  bSave('reg', reg);
+  const currentDomain = sessionStorage.getItem('citizen_web3_domain') || '';
+  // Only pass a domain to change if the citizen actually typed a different one —
+  // leaving it blank (or unchanged) keeps their existing real domain, it doesn't
+  // silently invent a new unclaimed one.
+  const domainToSet = (domainInput && domainInput.toLowerCase() !== currentDomain.toLowerCase()) ? domainInput : null;
 
-  // Auto-fill domain if blank
-  if (!domain) {
-    const slug = autoSlug(name);
-    document.getElementById('bizDomain').value = slug + '.IN$DEX';
-    bizData.domain = slug + '.IN$DEX';
-    bSave('domain', bizData.domain);
+  const btn = document.getElementById('detailsNextBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  try {
+    const result = await bizRpc('update_business_profile', {
+      p_citizen_id: citizenId,
+      p_account_type: selectedType || 'merchant',
+      p_business_name: name,
+      p_business_phone: phone,
+      p_web3_domain: domainToSet,
+      p_registration: reg || null,
+      p_streams: null
+    });
+
+    const finalDomain = result.web3_domain || currentDomain || (autoSlug(name) + '.IN$DEX');
+    bizData = { name, phone, domain: finalDomain, reg };
+    bSave('name', name);
+    bSave('phone', phone);
+    bSave('domain', finalDomain);
+    bSave('reg', reg);
+    document.getElementById('bizDomain').value = finalDomain;
+
+    // Real account now reflects this — update the canonical session keys too.
+    sessionStorage.setItem('citizen_web3_domain', finalDomain);
+    sessionStorage.setItem('merchant_name', name);
+    sessionStorage.setItem('merchant_domain', finalDomain);
+    sessionStorage.setItem('merchant_phone', phone);
+
+    btn.disabled = false;
+    btn.textContent = 'Continue →';
+    showToast('✅ Business details saved to your account');
+    setTimeout(() => goScreen(3), 600);
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = 'Continue →';
+    console.error('[business-onboarding] save failed:', e);
+    if ((e.message || '').includes('DOMAIN_TAKEN')) {
+      showToast('❌ That domain is already taken — try another');
+    } else {
+      showToast('❌ Could not save — check your connection and try again');
+    }
   }
-
-  // Store in sessionStorage for cross-screen use
-  sessionStorage.setItem('merchant_name', name);
-  sessionStorage.setItem('merchant_domain', bizData.domain);
-  sessionStorage.setItem('merchant_phone', phone);
-
-  showToast('✅ Business details saved!');
-  setTimeout(() => goScreen(3), 600);
 }
 
 function autoSlug(name) {
