@@ -1407,6 +1407,33 @@
                 });
               } catch(e) { /* non-critical — attribution is best-effort */ }
             }
+
+            // Fulfil an instant-onboard.html pledge, if this citizen arrived via one.
+            // Separate mechanism from the ?ref= referral system above (distinct URL
+            // param, distinct table) — this one actually moves INDX from whoever sent
+            // the invite, atomically, only once this account is confirmed real.
+            const urlInstant = new URLSearchParams(window.location.search).get('instant') || '';
+            if (urlInstant) {
+              try {
+                const fRes = await fetch('https://zljgthfzbalsunuoohcd.supabase.co/rest/v1/rpc/fulfill_instant_invite', {
+                  method: 'POST',
+                  headers: {
+                    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA',
+                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA',
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({ p_invite_code: urlInstant, p_new_citizen_id: data.id })
+                });
+                const fBody = await fRes.json();
+                if (fBody?.success && fBody?.payment_sent) {
+                  // Reflect the arrived payment in this device's own session so the
+                  // rest of the app (balance display etc.) is correct immediately —
+                  // it was already written for real server-side above.
+                  const newBal = 50 + Number(fBody.amount_indx || 0);
+                  sessionStorage.setItem('citizen_balance', String(newBal));
+                }
+              } catch(e) { console.error('[onboarding-flow] instant invite fulfillment failed (non-critical, account still created):', e); }
+            }
           }
 
           // ── DUPLICATE HANDLING ──

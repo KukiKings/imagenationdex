@@ -5,7 +5,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>IN$DEX Instant Onboard</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" crossorigin="anonymous"></script>
 <style>
+  .need-account-banner{margin:16px 20px;padding:16px;background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.25);border-radius:14px;font-size:13px;color:#FF4D6D;line-height:1.6;text-align:center;}
+  .preview-link{display:block;text-align:center;padding:0 20px 8px;font-size:12px;color:var(--text-muted);text-decoration:underline;cursor:pointer;}
+  .waiting-card{margin:0 20px 20px;background:var(--surface);border:1.5px solid var(--cyan);border-radius:16px;padding:20px;text-align:center;display:none;}
+  .waiting-card.show{display:block;}
+  .waiting-spin{width:32px;height:32px;border-radius:50%;border:3px solid var(--surface3);border-top-color:var(--cyan);margin:0 auto 12px;animation:spin 0.9s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .waiting-text{font-size:13px;color:var(--text-muted);line-height:1.5;}
   :root {
     --cyan:#00D4FF; --cyan-bg:#071825; --black:#090A10; --surface:#12141F;
     --surface2:#1A1D2E; --surface3:#22263A; --border:#2A2D38;
@@ -237,10 +245,12 @@
 
   <div class="scroll-body">
 
+    <div class="need-account-banner" id="needAccountBanner" style="display:none;">⚠️ Finish registering your own Grid Account first — you need a real IN$DEX account before you can send a real invite.</div>
+
     <div class="hero">
-      <div class="hero-label">⚡ 90 seconds</div>
+      <div class="hero-label">⚡ Invite &amp; send</div>
       <div class="hero-title">Get anyone on <span>IN$DEX</span><br>right now</div>
-      <div class="hero-sub">Show them the QR code. They scan, onboard in 90 seconds, and receive your payment instantly no bank account, no ID documents.</div>
+      <div class="hero-sub">Show them the QR code. When they finish creating their own account, your INDX lands in their wallet automatically — no bank account, no ID documents.</div>
     </div>
 
     <!-- AMOUNT TO SEND -->
@@ -260,28 +270,36 @@
         <div class="qr-box">
           <div id="joinQr" role="img" aria-label="QR code linking to imagenationdex.com/join"></div>
         </div>
-        <div class="qr-sub">Points to <strong>imagenationdex.com/join</strong><br>Works on any phone, no app needed first</div>
-        <div class="qr-timer" id="qrTimer">⏱ Refreshes in 4:59</div>
+        <div class="qr-sub">Real IN$DEX sign-up link<br>Works on any phone, no app needed first</div>
+        <div class="qr-timer" id="qrTimer">⏱ Valid for 2 hours</div>
       </div>
+    </div>
+
+    <!-- WAITING STATE -->
+    <div class="waiting-card" id="waitingCard">
+      <div class="waiting-spin"></div>
+      <div class="waiting-text" id="waitingText">Waiting for them to finish creating their account…</div>
     </div>
 
     <div class="or-divider">
       <div class="line"></div>
-      <span>OR ENTER THEIR NUMBER</span>
+      <span>OR SHARE THE LINK</span>
       <div class="line"></div>
     </div>
 
-    <!-- PHONE FALLBACK -->
+    <!-- SHARE LINK FALLBACK -->
     <div class="phone-section">
-      <div class="section-label">Their mobile number</div>
+      <div class="section-label">Share via text, WhatsApp, anything</div>
       <div class="phone-row">
         <div class="dial-btn">🇦🇺 +61</div>
         <div class="phone-input-wrap">
-          <input class="phone-input" type="tel" id="phoneInput" placeholder="Mobile number" inputmode="numeric">
+          <input class="phone-input" type="tel" id="phoneInput" placeholder="Their number (optional)" inputmode="numeric">
         </div>
       </div>
-      <button class="send-phone-btn" onclick="triggerSMSOnboard()">Send Onboard Link via SMS</button>
+      <button class="send-phone-btn" onclick="shareOnboardLink()">Share Onboard Link</button>
     </div>
+
+    <div class="preview-link" onclick="playPreviewAnimation()">▶ Preview: what verification will look like</div>
 
     <!-- GOD MODE PATCH — Face Scan Panel (shown after QR detected) -->
     <div class="face-scan-panel" id="faceScanPanel">
@@ -327,22 +345,22 @@
       <div class="step-row">
         <div class="step-num">2</div>
         <div class="step-text">
-          <div class="step-h">Phone + face scan 90 seconds</div>
-          <div class="step-s">Their identity is verified through liveness detection. No documents. No waiting.</div>
+          <div class="step-h">Name + phone number</div>
+          <div class="step-s">No documents. Full biometric liveness verification is in development — today this step is name + phone.</div>
         </div>
       </div>
       <div class="step-row">
         <div class="step-num">3</div>
         <div class="step-text">
           <div class="step-h">Web3 wallet + domain created</div>
-          <div class="step-s">They receive a sovereign wallet and a Web3 domain name theirs forever.</div>
+          <div class="step-s">They receive a real sovereign wallet and a Web3 domain name theirs forever.</div>
         </div>
       </div>
       <div class="step-row">
         <div class="step-num">4</div>
         <div class="step-text">
-          <div class="step-h">Your payment arrives instantly</div>
-          <div class="step-s">The moment they finish onboarding, your INDX lands in their wallet. They're ready to spend, save, or send.</div>
+          <div class="step-h">Your payment lands automatically</div>
+          <div class="step-s">The moment their account is confirmed, your INDX moves into their wallet for real. This screen updates automatically — no need to refresh.</div>
         </div>
       </div>
     </div>
@@ -368,8 +386,8 @@
 <!-- GOD MODE PATCH — CPT Mint Overlay -->
 <div class="mint-overlay" id="mintOverlay">
   <div class="mint-logo">🔐</div>
-  <div class="mint-title">Creating your Sovereign Identity</div>
-  <div class="mint-sub">This takes 3–5 seconds. Your face becomes an on-chain NFT.</div>
+  <div class="mint-title">Creating your Sovereign Identity (Preview)</div>
+  <div class="mint-sub">This is a preview of the planned flow — real biometric verification and on-chain minting aren't live yet.</div>
   <div class="mint-stages">
     <div class="mint-stage" id="mStage1">
       <div class="ms-icon">🧬</div>
@@ -409,57 +427,15 @@
 <div class="overlay" id="successOverlay">
   <div class="success-card" id="successCard">
     <div class="pulse-ring">✓</div>
-    <div class="s-title">She's in!</div>
+    <div class="s-title">They're in!</div>
     <div class="s-name" id="sName">New Citizen</div>
     <div class="s-domain" id="sDomain">citizen.IN$DEX</div>
-    <div class="s-pill">⚡ Wallet created · Payment sent</div>
+    <div class="s-pill" id="sPill">⚡ Wallet created · Payment sent</div>
     <div class="s-row"><span class="s-label">Sent</span><span id="sSent" style="color:var(--cyan);font-weight:700;">50 INDX</span></div>
     <div class="s-row"><span class="s-label">USD value</span><span id="sUsd">≈ $12.00</span></div>
     <div class="s-row"><span class="s-label">Web3 domain</span><span id="sDom2" style="color:var(--green);">citizen.IN$DEX</span></div>
-    <div class="s-row"><span class="s-label">Wisdom Score</span><span style="color:var(--gold);">10 pts Welcome bonus</span></div>
-    <!-- GOD MODE PATCH — Biometric Science Card -->
-    <div class="bio-science-card">
-      <div class="bsc-title">🧬 Your Citizen Proof Token — What makes it unbreakable</div>
-      <div class="bsc-grid">
-        <div class="bsc-item">
-          <div class="bsc-icon">📐</div>
-          <div class="bsc-val">80</div>
-          <div class="bsc-label">Facial nodal points measured</div>
-        </div>
-        <div class="bsc-item">
-          <div class="bsc-icon">👁️</div>
-          <div class="bsc-val">1 in 1.2T</div>
-          <div class="bsc-label">Iris pattern uniqueness</div>
-        </div>
-        <div class="bsc-item">
-          <div class="bsc-icon">🔑</div>
-          <div class="bsc-val">3-shard</div>
-          <div class="bsc-label">MPC key — never assembled</div>
-        </div>
-        <div class="bsc-item">
-          <div class="bsc-icon">🔒</div>
-          <div class="bsc-val">ZK proof</div>
-          <div class="bsc-label">Face stays on-device only</div>
-        </div>
-      </div>
-      <div class="bsc-footer">Your face contains <strong>hundreds of unique geometry markers</strong> — depth of eye sockets, cheekbone width, jaw angle, nose bridge, lip contour — combined with a vascular iris map that has never appeared twice in human history. This is your sovereign identity. Nobody can copy it.</div>
-    </div>
-
-    <!-- GOD MODE PATCH — Live Reward Counters -->
-    <div class="reward-reveal" id="rewardReveal">
-      <div class="rr-item" id="rrWelcome">
-        <div class="rr-left"><div class="rr-icon">🎉</div><div class="rr-label">Welcome Bonus</div></div>
-        <div class="rr-val gold" id="rrWelcomeVal">+0 WS</div>
-      </div>
-      <div class="rr-item" id="rrCpt">
-        <div class="rr-left"><div class="rr-icon">🏆</div><div class="rr-label">CPT Minted</div></div>
-        <div class="rr-val cyan" id="rrCptVal">+0 WS</div>
-      </div>
-      <div class="rr-item" id="rrRef" style="display:none;">
-        <div class="rr-left"><div class="rr-icon">🎟</div><div class="rr-label">Referral Bonus</div></div>
-        <div class="rr-val green" id="rrRefVal">+0 INDX</div>
-      </div>
-    </div>
+    <div class="s-row"><span class="s-label">Your Wisdom Score</span><span style="color:var(--gold);">+5 pts for the invite</span></div>
+    <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:10px;line-height:1.5;">They completed their own registration on their own device — this confirms it's real and recorded, not a preview.</div>
 
     <!-- WHAT NOW -->
     <div class="what-now">
@@ -493,6 +469,122 @@
   const INDX_RATE = 0.24;
   const INDX_PRICE_USD = 0.24;
 
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // ── REAL TWO-DEVICE INVITE (2026-07-15 fix — replaces the hardcoded-fake-citizen flow) ──
+  let currentInviteCode = null;
+  let pollTimer = null;
+
+  async function rpc(name, body) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + name, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json?.message || 'Request failed');
+    return json;
+  }
+
+  async function initInstantOnboard() {
+    const citizenId = sessionStorage.getItem('citizen_id');
+    if (!citizenId) {
+      document.getElementById('needAccountBanner').style.display = 'block';
+      document.querySelector('.qr-section').style.display = 'none';
+      document.querySelector('.or-divider').style.display = 'none';
+      document.querySelector('.phone-section').style.display = 'none';
+      document.querySelector('.amount-card .amount-edit').style.pointerEvents = 'none';
+      return;
+    }
+    await ensureInvite(sendAmountINDX);
+  }
+
+  async function ensureInvite(amount) {
+    const citizenId = sessionStorage.getItem('citizen_id');
+    if (!citizenId) return;
+    stopPolling();
+    document.getElementById('waitingCard').classList.remove('show');
+    try {
+      const result = await rpc('create_instant_invite', { p_referrer_id: citizenId, p_amount_indx: amount });
+      currentInviteCode = result.invite_code;
+      renderInviteQr(currentInviteCode);
+      startPolling();
+    } catch (e) {
+      console.error('[instant-onboard] failed to create invite:', e);
+      showToast('Could not create an invite right now — check your connection and try again.');
+    }
+  }
+
+  function inviteUrl(code) {
+    return 'https://www.imagenationdex.com/onboarding-flow.html?instant=' + encodeURIComponent(code);
+  }
+
+  function renderInviteQr(code) {
+    const el = document.getElementById('joinQr');
+    if (!el || typeof QRCode === 'undefined') return;
+    el.innerHTML = '';
+    new QRCode(el, {
+      text: inviteUrl(code),
+      width: 180, height: 180,
+      colorDark: '#0A0A1F', colorLight: '#FFFFFF',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+  }
+
+  function startPolling() {
+    document.getElementById('waitingCard').classList.add('show');
+    document.getElementById('waitingText').textContent = 'Waiting for them to finish creating their account…';
+    pollTimer = setInterval(async () => {
+      if (!currentInviteCode) return;
+      try {
+        const status = await rpc('get_instant_invite_status', { p_invite_code: currentInviteCode });
+        if (status.status === 'fulfilled') {
+          stopPolling();
+          document.getElementById('waitingCard').classList.remove('show');
+          showSuccess(status.citizen_name || 'New Citizen', status.web3_domain || '—', status.amount_indx, status.payment_sent);
+        } else if (status.status === 'expired') {
+          stopPolling();
+          document.getElementById('waitingText').textContent = 'This invite expired. Tap "Edit" to create a new one.';
+        }
+      } catch (e) {
+        console.error('[instant-onboard] status check failed:', e);
+      }
+    }, 3000);
+  }
+
+  function stopPolling() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  }
+
+  async function shareOnboardLink() {
+    if (!currentInviteCode) { showToast('Creating your invite — try again in a moment'); return; }
+    const url = inviteUrl(currentInviteCode);
+    const text = 'Join me on IN$DEX — tap this link to create your account: ';
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Join IN$DEX', text, url }); return; }
+      catch (e) { /* user cancelled share sheet — fall through to clipboard */ }
+    }
+    try {
+      await navigator.clipboard.writeText(text + url);
+      showToast('Link copied — share it via SMS, WhatsApp, or however you like');
+    } catch (e) {
+      showToast('Copy this link: ' + url);
+    }
+  }
+
+  // Preview-only — plays the illustrative verification animation. Not tied to any
+  // real account creation; the real flow above never calls into this.
+  function playPreviewAnimation() {
+    startFaceScan('Preview Citizen', 'preview.IN$DEX');
+  }
+
+  function finishPreview() {
+    document.getElementById('mintOverlay').classList.remove('show');
+    showToast('▶ Preview complete — real biometric verification and Solana minting ship in a later build');
+  }
+
   // GOD MODE PATCH — Face scan, CPT mint, biometric reveal, reward counters
 
   // ── FACE SCAN ────────────────────────────────────────────────────────
@@ -525,8 +617,8 @@
       c.innerHTML = `<div style="background:#12141F;border-radius:24px 24px 0 0;padding:28px 24px 44px;width:100%;max-width:430px;">
         <div style="width:40px;height:4px;background:#2A2D38;border-radius:2px;margin:0 auto 20px;"></div>
         <div style="font-size:22px;text-align:center;margin-bottom:10px;">🔐</div>
-        <div style="font-size:18px;font-weight:900;text-align:center;margin-bottom:8px;">Face scan consent</div>
-        <div style="font-size:13px;color:#6B7080;text-align:center;line-height:1.6;margin-bottom:20px;">Your face is <strong style="color:#EAEAEA;">never uploaded or stored</strong>. It is converted into a mathematical proof on your device only. The proof — not the photo — is minted as your Citizen Proof Token on Solana.</div>
+        <div style="font-size:18px;font-weight:900;text-align:center;margin-bottom:8px;">Face scan preview</div>
+        <div style="font-size:13px;color:#6B7080;text-align:center;line-height:1.6;margin-bottom:20px;">This is a <strong style="color:#EAEAEA;">preview animation</strong> of the planned verification flow — no camera is used and nothing real happens here. When this ships for real, your face will never be uploaded or stored: it becomes a mathematical proof on your device only.</div>
         <div style="background:#0A1F18;border:1px solid rgba(0,229,160,0.2);border-radius:12px;padding:12px 14px;margin-bottom:20px;">
           <div style="font-size:11px;color:#00E5A0;font-weight:700;margin-bottom:6px;">What happens to your face scan:</div>
           <div style="font-size:11px;color:#6B7080;line-height:1.6;">✓ Converted to 80 nodal measurements on-device<br>✓ Turned into a ZK proof — the photo is discarded<br>✓ Only the proof goes on-chain as your CPT NFT<br>✓ Your face data never leaves this device</div>
@@ -615,8 +707,7 @@
           // Reveal CPT card
           document.getElementById('mintCptCard').classList.add('show');
           setTimeout(() => {
-            overlay.classList.remove('show');
-            showSuccess(name, domain);
+            finishPreview();
           }, 1800);
         });
       });
@@ -639,40 +730,6 @@
       stat.classList.add('done');
       if (cb) cb();
     }, duration);
-  }
-
-  // ── REWARD COUNTERS ──────────────────────────────────────────────────
-  function animateCounter(elId, target, suffix, duration) {
-    const el = document.getElementById(elId);
-    let current = 0;
-    const step = Math.ceil(target / (duration / 40));
-    const timer = setInterval(() => {
-      current = Math.min(current + step, target);
-      el.textContent = '+' + current + ' ' + suffix;
-      if (current >= target) clearInterval(timer);
-    }, 40);
-  }
-
-  function triggerRewardReveal(hasReferral) {
-    // Welcome bonus
-    setTimeout(() => {
-      document.getElementById('rrWelcome').classList.add('show');
-      animateCounter('rrWelcomeVal', 10, 'WS', 600);
-    }, 300);
-    // CPT mint bonus
-    setTimeout(() => {
-      document.getElementById('rrCpt').classList.add('show');
-      animateCounter('rrCptVal', 25, 'WS', 700);
-    }, 700);
-    // Referral bonus
-    if (hasReferral) {
-      const refBonus = parseInt(sessionStorage.getItem('referral_bonus') || '50');
-      document.getElementById('rrRef').style.display = 'flex';
-      setTimeout(() => {
-        document.getElementById('rrRef').classList.add('show');
-        animateCounter('rrRefVal', refBonus, 'INDX', 900);
-      }, 1100);
-    }
   }
 
   function updateAmountDisplay() {
@@ -698,6 +755,7 @@
     sendAmountINDX = v;
     updateAmountDisplay();
     document.getElementById('amountOverlay').classList.remove('show');
+    if (sessionStorage.getItem('citizen_id')) ensureInvite(v);
   }
 
   // QR timer countdown
@@ -709,15 +767,6 @@
     const s = seconds % 60;
     document.getElementById('qrTimer').textContent = `⏱ Refreshes in ${m}:${s.toString().padStart(2,'0')}`;
   }, 1000);
-
-  // GOD MODE PATCH — trigger face scan → CPT mint → success (was direct showSuccess)
-  let scanTimer;
-  function startScanWatch() {
-    scanTimer = setTimeout(() => {
-      startFaceScan('Nia Tuilagi', 'nia.IN$DEX');
-    }, 8000);
-  }
-  startScanWatch();
 
   // ── PROGRESS BAR ─────────────────────────────────────────────────
   function setProgressStep(n) {
@@ -739,27 +788,17 @@
     setTimeout(() => showToast('🎟 Referral code ' + _refCode + ' applied — welcome bonus incoming!'), 800);
   }
 
-  function triggerSMSOnboard() {
-    const phone = document.getElementById('phoneInput').value.trim();
-    if (!phone) { showToast('Enter their mobile number first'); return; }
-    showToast('Onboard link sent via SMS ✓');
-    setProgressStep(2);
-    // GOD MODE PATCH — route through face scan → CPT mint
-    setTimeout(() => startFaceScan('New Citizen', 'citizen.IN$DEX'), 2000);
-  }
-
-  function showSuccess(name, domain) {
+  function showSuccess(name, domain, amount, paymentSent) {
     setProgressStep(3);
-    const usd = (sendAmountINDX * INDX_RATE).toFixed(2);
+    const amt = Number(amount) || 0;
+    const usd = (amt * INDX_RATE).toFixed(2);
     document.getElementById('sName').textContent = name;
     document.getElementById('sDomain').textContent = domain;
-    document.getElementById('sSent').textContent = sendAmountINDX + ' INDX';
-    document.getElementById('sUsd').textContent = '≈ $' + usd + ' USD';
+    document.getElementById('sPill').textContent = paymentSent ? '⚡ Wallet created · Payment sent' : '⚡ Wallet created · Payment not sent';
+    document.getElementById('sSent').textContent = paymentSent ? (amt + ' INDX') : 'Not sent — check your balance';
+    document.getElementById('sUsd').textContent = paymentSent ? ('≈ $' + usd + ' USD') : '—';
     document.getElementById('sDom2').textContent = domain;
     document.getElementById('successOverlay').classList.add('show');
-    // GOD MODE PATCH — trigger reward counters after overlay shows
-    const hasRef = !!sessionStorage.getItem('referral_code');
-    setTimeout(() => triggerRewardReveal(hasRef), 600);
   }
 
   let toastTimer;
@@ -781,23 +820,11 @@
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous"></script>
 <script>
-// ── REAL SCANNABLE JOIN QR (fake SVG replaced 2026-07-14, x39c doctrine) ──
-// ISO 18004 via qrcode.js · dark-on-light for cheap Android cameras · correctLevel H
-(function () {
-  var el = document.getElementById('joinQr');
-  if (!el || typeof QRCode === 'undefined') return;
-  var joinUrl = 'https://www.imagenationdex.com/join';
-  var ref = sessionStorage.getItem('referral_code');
-  if (ref) joinUrl += '?ref=' + encodeURIComponent(ref);
-  new QRCode(el, {
-    text: joinUrl,
-    width: 180,
-    height: 180,
-    colorDark: '#0A0A1F',
-    colorLight: '#FFFFFF',
-    correctLevel: QRCode.CorrectLevel.H
-  });
-})();
+// ── REAL TWO-DEVICE INVITE INIT (2026-07-15 fix) ──
+// Runs after QRCode lib is loaded. Creates a real, amount-pledged, single-use invite
+// via Supabase and renders the QR pointing at it — replaces the old hardcoded-fake-
+// citizen demo timer that used to fire here.
+initInstantOnboard();
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

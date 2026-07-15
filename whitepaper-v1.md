@@ -580,7 +580,17 @@ Fiat ramps alone do not solve the unbanked problem. The coconut girl in the Cook
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-15 (Session 121 continued x5 — onboarding system audit found 5 separate entry points, only 2 were real. Fixed creator-onboarding.html's fabricated success screen. 3 more (instant-onboard, business-onboarding, quickstart-onboarding) still fake, flagged for next session.)
+> Last updated: 2026-07-15 (Session 121 continued x7 — instant-onboard.html now a real two-device invite-and-pay flow: real QR to real onboarding, real Supabase-backed pledge/fulfillment, real payment on confirmed account creation. Biometric/Solana-mint honestly relabeled as preview until that infra exists. business-onboarding.html and quickstart-onboarding.html still fake, next up.)
+
+### Session 121 continued x7 (2026-07-15) — instant-onboard.html: real two-device invite flow
+
+- AJ named the QR/face/phone/NFT/instant-domain/wallet surface as the most important growth lever in the app. Audit found the QR itself was real but everything after it was scripted theater culminating in a hardcoded fake citizen name (`'Nia Tuilagi'`) — worse than creator-onboarding.html's violation since it fabricated an entire second person's existence, not just a false outcome for a real one.
+- Also discovered the QR's actual destination (`imagenationdex.com/join`) was routed by `vercel.json` to `waitlist.html`, not any onboarding flow — a pre-existing gap unrelated to today's fix.
+- Built a real two-device flow: new `instant_invites` table (RLS with zero client policies — every read/write via SECURITY DEFINER RPC) + `create_instant_invite`/`get_instant_invite_status`/`fulfill_instant_invite`. The referrer's screen creates a real pledge, the QR points at real onboarding (`onboarding-flow.html?instant=<code>`), and the moment the invited person's account is confirmed real, the pledged INDX moves atomically — never faked, and honestly reported if the referrer's balance can't cover it.
+- Kept the existing generic referral system (`referrals`/`complete_referral`) completely untouched — it has a "one permanent code, single use ever" design that would have broken if reused for this repeatable pledge use case, so this is a deliberately separate, additive mechanism (`?instant=` param, distinct from `?ref=`).
+- Face-scan and Solana-mint animations kept, but fully disconnected from the real flow and relabeled "(Preview)" throughout, per AJ's explicit direction — not deleted, not presented as real.
+- Fake reward-counter UI and "biometric science card" removed from the success screen (both described the other person's process this device never witnessed); replaced with a plain real summary.
+- Audits CLEAN on both touched files (instant-onboard.html, onboarding-flow.html); every onclick/oninput handler verified to resolve.
 
 ### Session 121 continued x5 (2026-07-15) — Onboarding system audit
 
