@@ -580,7 +580,16 @@ Fiat ramps alone do not solve the unbanked problem. The coconut girl in the Cook
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-15 (Session 121 continued x4 — worked the standing open-items list since "Task 8" was never actually scoped: security_events immutability retrofit + send.html dead quick-sheet fix. Phase 6 items and Workstream-3-blocked receive.html item correctly left open.)
+> Last updated: 2026-07-15 (Session 121 continued x5 — onboarding system audit found 5 separate entry points, only 2 were real. Fixed creator-onboarding.html's fabricated success screen. 3 more (instant-onboard, business-onboarding, quickstart-onboarding) still fake, flagged for next session.)
+
+### Session 121 continued x5 (2026-07-15) — Onboarding system audit
+
+- AJ asked to verify onboarding is "god mode, canonized, bulletproof, and working." Found the onboarding "system" is actually 5 independent entry points: the real golden path (`grid-account-onboarding.html`/`onboarding-flow.html`, Task 5), an honest preference screen (`onboarding-choice.html`), and three screens with zero Supabase wiring at all (`creator-onboarding.html`, `instant-onboard.html`, `business-onboarding.html`) plus a fourth dead-end chain (`quickstart-onboarding.html` → `create-pin.html`).
+- 🔴 `creator-onboarding.html` was the worst finding of the session: its "Claim Genesis Spot" button did nothing but flip to a hardcoded success screen claiming "+10 INDX deposited ✓", "Genesis Badge — Minted on Solana ✓", "+20 Wisdom Score added ✓" — none of which had ever happened, for anyone, ever. No network call was even attempted.
+- ✅ Fixed: real `citizens` INSERT (10 INDX + 20 wisdom, matching the screen's own existing promised numbers), auto-generated + collision-resolved `.IN$DEX` domain, canonical sessionStorage keys, genuine failure state if the insert fails. Softened the "Minted on Solana" claim to "Recorded to your account" since no real Solana minting infrastructure exists yet (same gap blocking `receive.html`'s address).
+- New column `citizens.account_type` (default `'citizen'`, open text) — AJ confirmed one shared table for every account type rather than separate tables per onboarding flow.
+- ⚠️ Still open, same severity class, next session: `instant-onboard.html` (fake biometric/NFT-mint flow), `business-onboarding.html` (parallel non-canonical session keys, no real record), `quickstart-onboarding.html`/`create-pin.html` (dead end). Recommend business-onboarding first — `merchant-epos.html` already expects a real `citizen_id`.
+- Audits CLEAN on the touched file; verified every onclick/oninput handler resolves to a defined function.
 
 ### Session 121 continued x4 (2026-07-15) — Open-items pass (no defined Task 8)
 

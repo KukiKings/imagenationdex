@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Become a Creator | Sovereign Social | IN$DEX</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" crossorigin="anonymous"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{
@@ -63,6 +64,9 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 .field-input:focus{border-color:rgba(0,212,255,0.4);}
 .nation-select{width:100%;background:var(--surface2);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px 16px;color:var(--text);font-size:15px;outline:none;margin-bottom:16px;-webkit-appearance:none;}
 .char-count{font-size:11px;color:var(--muted);text-align:right;margin-top:-12px;margin-bottom:16px;}
+.claim-error{display:none;font-size:12px;color:var(--red);background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.2);border-radius:10px;padding:10px 12px;margin-bottom:14px;line-height:1.5;}
+.claim-error.show{display:block;}
+.btn-primary[disabled]{opacity:0.5;pointer-events:none;}
 
 /* STEP 4 — GENESIS CLAIM */
 .claim-screen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;}
@@ -170,8 +174,9 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
     <div class="field-label">Your Story (optional)</div>
     <input class="field-input" id="creatorBio" type="text" placeholder="One line — what you create" maxlength="80" oninput="updateCount(this,'bioCount')">
     <div class="char-count"><span id="bioCount">0</span>/80</div>
+    <div class="claim-error" id="claimError"></div>
     <div style="flex:1;"></div>
-    <button class="btn-primary" onclick="claimGenesis()">Claim Genesis Spot →</button>
+    <button class="btn-primary" id="claimBtn" onclick="claimGenesis()">Claim Genesis Spot →</button>
     <button class="btn-ghost" onclick="nextStep(2)">← Back</button>
   </div>
 </div>
@@ -189,7 +194,7 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
       </div>
       <div class="claim-row">
         <span class="claim-label">Genesis Badge</span>
-        <span class="claim-val">Minted on Solana ✓</span>
+        <span class="claim-val">Recorded to your account ✓</span>
       </div>
       <div class="claim-row">
         <span class="claim-label">Wisdom Score</span>
@@ -197,7 +202,7 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
       </div>
       <div class="claim-row">
         <span class="claim-label">Pacific First Boost</span>
-        <span class="claim-val">30 days active ✓</span>
+        <span class="claim-val">Starts today ✓</span>
       </div>
       <div class="claim-row">
         <span class="claim-label">Platform Fee</span>
@@ -206,7 +211,7 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
     </div>
     <div class="si-quote">
       <div class="si-name">SIINDEX</div>
-      <div class="si-text">"You're in. Genesis Creator badge minted. 10 INDX added to your Grid Account. Your first post will reach the Pacific First feed. Standing by."</div>
+      <div class="si-text">"You're in. Genesis Creator badge recorded. 10 INDX added to your Grid Account. Your first post will reach the Pacific First feed. Standing by."</div>
     </div>
     <button class="btn-primary" onclick="nextStep(5)">Publish My First Post →</button>
   </div>
@@ -251,6 +256,14 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 </div>
 
 <script>
+const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Genesis Creator program constants — must match what step 4's copy actually promises.
+const CREATOR_BONUS_INDX = 10;
+const CREATOR_BONUS_WISDOM = 20;
+
 function nextStep(n){
   document.querySelectorAll('.step').forEach(s=>s.classList.remove('active'));
   document.getElementById('step'+n).classList.add('active');
@@ -261,10 +274,96 @@ function updateCount(el,id){
   document.getElementById(id).textContent=el.value.length;
 }
 
-function claimGenesis(){
-  const name=document.getElementById('creatorName').value.trim();
-  if(!name){document.getElementById('creatorName').focus();return;}
-  nextStep(4);
+function showClaimError(msg){
+  var el = document.getElementById('claimError');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+function slugify(name){
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 24) || 'creator';
+}
+
+// Real account creation — no step-4 advance unless this actually succeeds.
+// (2026-07-15 fix: this used to skip straight to a hardcoded "success" screen with no
+// backend call at all — claiming a deposit, a Solana mint, and a score change that never
+// happened. Now it does the real thing or shows a real error; nothing is faked.)
+async function claimGenesis(){
+  const name = document.getElementById('creatorName').value.trim();
+  if(!name){ document.getElementById('creatorName').focus(); return; }
+
+  var el = document.getElementById('claimError');
+  el.classList.remove('show');
+
+  // Resuming this session with an account already created — don't double-claim.
+  if (sessionStorage.getItem('citizen_id')) {
+    nextStep(4);
+    return;
+  }
+
+  var btn = document.getElementById('claimBtn');
+  btn.disabled = true;
+  btn.textContent = 'Claiming your spot…';
+
+  const nation = document.getElementById('creatorNation').value || '';
+  const bio = document.getElementById('creatorBio').value.trim();
+  var baseSlug = slugify(name);
+  var domain = baseSlug;
+  var lastError = null;
+
+  // Up to 4 attempts: base slug, then slug+2/3/4-digit suffix on collision.
+  // (No manual domain field on this screen, unlike grid-account-onboarding.html,
+  // so we resolve collisions automatically instead of asking the creator to retype.)
+  for (var attempt = 0; attempt < 4; attempt++) {
+    domain = attempt === 0 ? baseSlug : baseSlug + Math.floor(Math.random() * 900 + 100);
+    try {
+      const { data, error } = await sb.from('citizens').insert({
+        citizen_name: name,
+        web3_domain: domain + '.IN$DEX',
+        indx_balance: CREATOR_BONUS_INDX,
+        wisdom_score: CREATOR_BONUS_WISDOM,
+        kyc_tier: 0,
+        genesis_citizen: true,
+        account_type: 'creator'
+      }).select('id').single();
+
+      if (error) {
+        if (error.code === '23505' && (error.message || '').includes('web3_domain')) {
+          lastError = error;
+          continue; // try again with a new suffix
+        }
+        throw error;
+      }
+
+      // Confirmed success — real row exists. Set canonical session keys.
+      sessionStorage.setItem('citizen_id', data.id);
+      sessionStorage.setItem('citizen_name', name);
+      sessionStorage.setItem('citizen_web3_domain', domain + '.IN$DEX');
+      sessionStorage.setItem('citizen_wisdom', String(CREATOR_BONUS_WISDOM));
+      sessionStorage.setItem('citizen_balance', String(CREATOR_BONUS_INDX));
+      sessionStorage.setItem('citizen_genesis', '1');
+      sessionStorage.setItem('citizen_kyc_tier', '0');
+      if (nation) sessionStorage.setItem('citizen_nation', nation);
+      if (bio) sessionStorage.setItem('citizen_creator_bio', bio);
+
+      btn.disabled = false;
+      btn.textContent = 'Claim Genesis Spot →';
+      nextStep(4);
+      return;
+    } catch (e) {
+      console.error('[creator-onboarding] account creation failed:', e);
+      btn.disabled = false;
+      btn.textContent = 'Claim Genesis Spot →';
+      showClaimError('We couldn\'t reach the network. Nothing was created — no INDX moved, no badge assigned. Please try again.');
+      return;
+    }
+  }
+
+  // Ran out of retry attempts — genuinely rare, but don't pretend it worked.
+  btn.disabled = false;
+  btn.textContent = 'Claim Genesis Spot →';
+  showClaimError('Could not assign your Creator address after several tries. Please try again in a moment.');
+  console.error('[creator-onboarding] gave up after domain collisions:', lastError);
 }
 
 // Update slots dynamically from sessionStorage if available
