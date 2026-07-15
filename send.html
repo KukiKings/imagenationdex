@@ -1000,29 +1000,53 @@ checkDraft();
 ════════════════════════════════════════════════ */
 
 // Feature R2-1: Send history quick-sheet
-const SEND_HIST_KEY = 'indx_pay_hist';
-
-function logSend(amount, ticker, recipientLabel, usd, currency, localFmt) {
-  var hist = JSON.parse(localStorage.getItem(SEND_HIST_KEY) || '[]');
-  hist.unshift({ amount: amount, token: ticker, recipientLabel: recipientLabel, usd: usd, corridorCurrency: currency, localAmt: localFmt, ts: Date.now() });
-  localStorage.setItem(SEND_HIST_KEY, JSON.stringify(hist.slice(0, 20)));
-}
-
-function openSendHistory() {
-  var hist = JSON.parse(localStorage.getItem(SEND_HIST_KEY) || '[]');
+// UPDATED (open-items pass, 2026-07-15): this used to read a localStorage cache
+// (indx_pay_hist) written by logSend(), called from the old in-page executeSend().
+// Since Task 6 moved real execution to trust-before-transaction.html, nothing has
+// called logSend() since — the cache was stale/frozen, showing sends that stopped
+// updating. Rather than re-wire a second write path into another page's flow (and
+// keep two sources of truth in sync), this now reads the real `transactions` table
+// directly — the exact same source history.html itself reads. No fake/stale data,
+// no duplicate cache to drift out of sync.
+async function openSendHistory() {
   var list = document.getElementById('shList');
   if (!list) return;
-  if (!hist.length) {
-    list.innerHTML = '<div class="sh-empty">No sends yet.<br>History appears after your first send.</div>';
-  } else {
-    list.innerHTML = hist.slice(0, 10).map(function(h) {
-      var d = new Date(h.ts);
-      var label = d.toLocaleDateString('en', { day:'numeric', month:'short' }) + ' · ' + d.toLocaleTimeString('en', { hour:'2-digit', minute:'2-digit' });
-      return '<div class="sh-item"><div><div class="sh-pair">→ ' + (h.recipientLabel || 'Recipient') + '</div><div class="sh-meta">' + h.token + ' · ' + label + '</div></div><div class="sh-right"><div class="sh-amt">' + h.amount + ' ' + h.token + '</div><div class="sh-recv">' + (h.localAmt ? h.localAmt + ' ' + h.corridorCurrency : '$' + h.usd + ' USD') + '</div></div></div>';
-    }).join('');
-  }
+  list.innerHTML = '<div class="sh-empty">Loading…</div>';
   document.getElementById('sendHistOverlay').classList.add('show');
   document.getElementById('sendHistSheet').classList.add('show');
+
+  var citizenId = sessionStorage.getItem('citizen_id');
+  if (!citizenId) {
+    list.innerHTML = '<div class="sh-empty">Finish registering your Grid Account to see send history.</div>';
+    return;
+  }
+
+  try {
+    const { data: hist, error } = await sb.from('transactions')
+      .select('*')
+      .eq('citizen_id', citizenId)
+      .eq('direction', 'send')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (error) throw error;
+
+    if (!hist || !hist.length) {
+      list.innerHTML = '<div class="sh-empty">No sends yet.<br>History appears after your first send.</div>';
+      return;
+    }
+    list.innerHTML = hist.map(function(h) {
+      var d = new Date(h.created_at);
+      var label = d.toLocaleDateString('en', { day:'numeric', month:'short' }) + ' · ' + d.toLocaleTimeString('en', { hour:'2-digit', minute:'2-digit' });
+      var token = h.token || 'INDX';
+      var recipientLabel = h.counterparty_address || 'Recipient';
+      var recvStr = h.corridor ? (h.amount_usd ? h.amount_usd.toFixed(2) + ' ' + h.corridor : h.corridor) : ('$' + (h.amount_usd || (h.amount_indx * INDX_PRICE_USD)).toFixed(2) + ' USD');
+      return '<div class="sh-item"><div><div class="sh-pair">→ ' + recipientLabel + '</div><div class="sh-meta">' + token + ' · ' + label + '</div></div><div class="sh-right"><div class="sh-amt">' + Number(h.amount_indx).toFixed(2) + ' ' + token + '</div><div class="sh-recv">' + recvStr + '</div></div></div>';
+    }).join('');
+  } catch (e) {
+    console.error('[send.html] failed to load real send history:', e);
+    list.innerHTML = '<div class="sh-empty">Could not load history right now.</div>';
+  }
 }
 
 function closeSendHistory() {
@@ -1102,9 +1126,11 @@ function animateSendStepper() {
 
 // NOTE: the old executeSend() (both the original definition and this God Mode override)
 // has been retired. Execution now happens on trust-before-transaction.html after real
-// approval — see goToTrustGate() above. Kept buildStepperHTML/animateSendStepper/logSend
-// below since trust-before-transaction.html's receipt flow covers the same ground and
-// history.html reads the same logSend cache.
+// approval — see goToTrustGate() above. buildStepperHTML/animateSendStepper are kept as
+// unused-but-harmless dead code (no longer called from anywhere in this file — safe to
+// remove in a future cleanup pass). logSend()/SEND_HIST_KEY were removed entirely in the
+// 2026-07-15 open-items pass: openSendHistory() now reads the real `transactions` table
+// directly (see above), the same source history.html reads — no more stale local cache.
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

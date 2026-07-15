@@ -580,7 +580,15 @@ Fiat ramps alone do not solve the unbanked problem. The coconut girl in the Cook
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-15 (Session 121 continued x3 — Task 7: Consent Receipts are now real, Supabase-backed, and tamper-resistant. Task 8 not yet named.)
+> Last updated: 2026-07-15 (Session 121 continued x4 — worked the standing open-items list since "Task 8" was never actually scoped: security_events immutability retrofit + send.html dead quick-sheet fix. Phase 6 items and Workstream-3-blocked receive.html item correctly left open.)
+
+### Session 121 continued x4 (2026-07-15) — Open-items pass (no defined Task 8)
+
+- AJ referenced "Task 8" assuming it had been scoped; it hadn't (checked memory.md, gotchas.md, this file — no record). Asked directly rather than guess at scope for money-adjacent work. AJ confirmed: work the standing open-items list instead.
+- ✅ `security_events` — immutability trigger now blocks DELETE as well as UPDATE (previously UPDATE only), matching the stricter standard set by Task 7's `consent_receipts` table and the literal wording of Security Law 7.
+- ✅ `send.html` — the Send History quick-sheet (📨 icon) had gone stale after Task 6 retired the code path that fed it. Rather than patch in a second write path (which would've created two sources of truth for the same data), `openSendHistory()` now reads the real `transactions` table directly — same source `history.html` already uses. Dead `logSend()`/`indx_pay_hist` cache removed.
+- Correctly left alone: `buy-indx.html` Stripe key and `savings-goals.html` (both explicitly Phase 6, we're in Phase 5), `receive.html` placeholder address (blocked on Workstream 3 — no real token mint / Grid Account MPC wallets yet), SIINDEX security-scan reporting gap (needs AJ's own review, not a code fix).
+- Both touched files: syntax verified, price/AUD/seed-phrase/domain-format audits CLEAN.
 
 ### Session 121 continued x3 (2026-07-15) — Completion Commander Task 7: Consent Receipts
 
