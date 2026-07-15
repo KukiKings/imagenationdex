@@ -580,7 +580,16 @@ Fiat ramps alone do not solve the unbanked problem. The coconut girl in the Cook
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-15 (Session 121 continued x8 — business-onboarding.html now writes real citizens rows (account_type + business_metadata) instead of localStorage-only. Found and fixed a live pay.html bug — the entire /pay/slug payment-link feature was broken for every citizen due to a .indx/.IN$DEX case mismatch. quickstart-onboarding.html/create-pin.html is the last fake flow remaining.)
+> Last updated: 2026-07-15 (Session 121 continued x9 — quickstart-onboarding.html/create-pin.html now real. This closes the full 5-flow onboarding audit: creator-onboarding, instant-onboard, business-onboarding, onboarding-choice, quickstart-onboarding are all real now. No fake account creation remains anywhere in onboarding.)
+
+### Session 121 continued x9 (2026-07-15) — quickstart-onboarding.html + create-pin.html real wiring (onboarding audit CLOSED)
+
+- quickstart-onboarding.html was fully fake at the core: hardcoded `TAKEN_DOMAINS` array instead of a real domain check, `claimDomain()` was a bare timeout with no Supabase call, `enterApp()` never created a real citizen or set any canonical sessionStorage key — despite the completion slide claiming "+50 INDX Genesis Bonus," "Grid Account Secured ✓," "Your wallet: 50 INDX."
+- Fixed to match the golden-path (`onboarding-flow.html`) exactly: real `citizens` domain-availability check, real INSERT in `claimDomain()` with the same genesis values (`indx_balance:50, wisdom_score:25, kyc_tier:0, genesis_citizen:true`), all 7 canonical sessionStorage keys set on success. Handles both real unique constraints on `citizens` (`web3_domain`, `phone_number`) — domain collision gets a real "just taken, try X" retry; duplicate phone loads the person's real existing account ("welcome back") instead of blocking or faking a second one.
+- Fake phone-OTP claim ("✓ Code sent") removed — no real SMS/OTP provider exists in this codebase yet (same gap as instant-onboard.html originally had). Changed to an honest "✓ Phone number saved," which is true once the real INSERT runs.
+- create-pin.html (a Face ID enrollment screen despite its filename) had zero real camera access and claimed "Face ID enabled. Your wallet is protected." — false. Applied the same "(Preview)" relabeling AJ approved for instant-onboard.html's face-scan sequence: kept the animation, relabeled it a preview, and made the copy honestly point to the Grid Account's 2-of-3 MPC keys as what's actually protecting the account today.
+- **Onboarding system audit is now fully closed.** All 5 entry points create real citizens with real Supabase data. Remaining gaps (SMS/OTP provider, biometric camera capture, Solana NFT minting) are infrastructure that doesn't exist yet — consistently labeled "(Preview)"/"coming soon" across every flow rather than faked, per AJ's standing direction.
+- Audits: price/AUD/seed-phrase/domain-format CLEAN on both files. Script syntax clean. Every onclick/oninput handler resolves to a defined function.
 
 ### Session 121 continued x8 (2026-07-15) — business-onboarding.html real wiring + pay.html bug fix
 

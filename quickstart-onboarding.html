@@ -297,9 +297,9 @@
 
         <div class="bonus-hero">
           <span class="bonus-confetti">✅</span>
-          <div class="bonus-title">You're all set.</div>
+          <div class="bonus-title" id="bonusTitle">You're all set.</div>
           <div class="bonus-amount" id="bonusAmount">+50</div>
-          <div class="bonus-label">INDX Genesis Bonus</div>
+          <div class="bonus-label" id="bonusLabel">INDX Genesis Bonus</div>
           <div class="bonus-aud" id="bonusAud">≈ $12.00 USD FREE</div>
           <!-- value updated dynamically by God Mode JS -->
         </div>
@@ -360,7 +360,12 @@
 <!-- Toast -->
 <div id="toast" style="position:fixed;bottom:40px;left:50%;transform:translateX(-50%);background:#1A1D25;border:1px solid #2A2D38;color:#EAEAEA;padding:10px 20px;border-radius:12px;font-size:14px;z-index:999;pointer-events:none;opacity:0;transition:opacity 0.3s;white-space:nowrap;"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
   let currentSlide = 0;
   const totalSlides = 5; // 0,1,2,3,4 (OTP slide is overlaid)
   const SLIDE_NAMES = ['hero','phone','name','domain','bonus'];
@@ -387,9 +392,10 @@
   }
 
   function sendOTP() {
-    const phone = document.getElementById('phoneInput').value;
-    // Demo: skip real OTP, go straight to name
-    showToast('✓ Code sent to ' + phone);
+    // No SMS/OTP provider is wired up yet — we don't claim to have sent or
+    // verified a code. The phone number is saved for real at account
+    // creation (claimDomain), not verified here.
+    showToast('✓ Phone number saved');
     setTimeout(() => goTo(2), 600);
   }
 
@@ -441,8 +447,7 @@
     goTo(3);
   };
 
-  // ── DOMAIN ──
-  const TAKEN_DOMAINS = ['maria', 'admin', 'index', 'sol', 'indx', 'sovereign', 'test', 'john', 'james'];
+  // ── DOMAIN ── (real availability check against the citizens table)
   let domainTimer = null;
 
   function checkDomain() {
@@ -465,38 +470,128 @@
     cta.disabled = true;
 
     clearTimeout(domainTimer);
-    domainTimer = setTimeout(() => {
+    domainTimer = setTimeout(async () => {
       if (raw.length < 3) {
         status.textContent = '⚠ Must be at least 3 characters';
         status.className = 'domain-status taken';
         return;
       }
-      const taken = TAKEN_DOMAINS.includes(raw);
-      if (taken) {
-        status.textContent = '✗ ' + raw + '.IN$DEX is taken try another';
+      try {
+        const { data, error } = await sb
+          .from('citizens')
+          .select('id')
+          .eq('web3_domain', raw + '.IN$DEX')
+          .maybeSingle();
+        if (error) throw error;
+        if (data) {
+          status.textContent = '✗ ' + raw + '.IN$DEX is taken — try another';
+          status.className = 'domain-status taken';
+          cta.disabled = true;
+        } else {
+          status.textContent = '✓ ' + raw + '.IN$DEX is available!';
+          status.className = 'domain-status available';
+          savedDomain = raw;
+          cta.disabled = false;
+        }
+      } catch (e) {
+        console.error('[quickstart] domain availability check failed:', e);
+        status.textContent = '⚠ Could not check availability — check your signal';
         status.className = 'domain-status taken';
         cta.disabled = true;
-      } else {
-        status.textContent = '✓ ' + raw + '.IN$DEX is available!';
-        status.className = 'domain-status available';
-        savedDomain = raw;
-        cta.disabled = false;
       }
     }, 500);
   }
 
-  function claimDomain() {
+  // Real account creation — this is where the citizen actually comes into
+  // existence on the network. Nothing on the bonus slide is true until this
+  // succeeds.
+  async function claimDomain() {
     const btn = document.getElementById('domainCta');
-    btn.textContent = 'Minting your domain…';
+    btn.textContent = 'Creating your account…';
     btn.disabled = true;
 
-    setTimeout(() => {
+    const rawPhone = (document.getElementById('phoneInput')?.value || '').trim();
+    const countryMatch = (document.getElementById('countryBtn')?.textContent || '').match(/\+\d+/);
+    const fullPhone = rawPhone ? ((countryMatch ? countryMatch[0] : '') + ' ' + rawPhone).trim() : null;
+
+    try {
+      const { data, error } = await sb.from('citizens').insert({
+        citizen_name: savedName,
+        phone_number: fullPhone,
+        web3_domain: savedDomain + '.IN$DEX',
+        indx_balance: 50,
+        genesis_citizen: true,
+        wisdom_score: 25,
+        kyc_tier: 0
+      }).select('id').single();
+
+      if (error) throw error;
+
+      sessionStorage.setItem('citizen_id', data.id);
+      sessionStorage.setItem('citizen_name', savedName);
+      sessionStorage.setItem('citizen_wisdom', '25');
+      sessionStorage.setItem('citizen_balance', '50');
+      sessionStorage.setItem('citizen_web3_domain', savedDomain + '.IN$DEX');
+      sessionStorage.setItem('citizen_genesis', 'true');
+      sessionStorage.setItem('citizen_kyc_tier', '0');
+
       showToast('🎉 ' + savedDomain + '.IN$DEX is yours!');
-      // Update bonus slide
       document.getElementById('domainSummary').textContent = savedDomain;
       document.getElementById('domainDisplay').textContent = savedDomain + '.IN$DEX';
       setTimeout(() => goTo(4), 700);
-    }, 1200);
+
+    } catch (e) {
+      console.error('[quickstart] citizen insert failed:', e);
+
+      if (e?.code === '23505') {
+        const detail = e.message || e.details || '';
+        const isDomainCollision = detail.includes('web3_domain') || !fullPhone;
+
+        if (isDomainCollision) {
+          const suggestion = savedDomain.replace(/\d+$/, '') + (parseInt((savedDomain.match(/\d+$/) || ['1'])[0]) + 1 || 2);
+          const status = document.getElementById('domainStatus');
+          status.textContent = '✗ ' + savedDomain + '.IN$DEX was just claimed — try ' + suggestion;
+          status.className = 'domain-status taken';
+          btn.textContent = 'Claim my free domain →';
+          btn.disabled = true;
+          return;
+        }
+
+        // Duplicate phone — this person already has an account. Carry on
+        // with the existing one instead of blocking or faking a new one.
+        try {
+          const { data: existing } = await sb
+            .from('citizens').select('id, citizen_name, web3_domain, indx_balance, wisdom_score, kyc_tier, genesis_citizen')
+            .eq('phone_number', fullPhone).single();
+          if (existing?.id) {
+            sessionStorage.setItem('citizen_id', existing.id);
+            sessionStorage.setItem('citizen_name', existing.citizen_name || savedName);
+            sessionStorage.setItem('citizen_wisdom', String(existing.wisdom_score ?? 0));
+            sessionStorage.setItem('citizen_balance', String(existing.indx_balance ?? 0));
+            sessionStorage.setItem('citizen_web3_domain', existing.web3_domain || (savedDomain + '.IN$DEX'));
+            sessionStorage.setItem('citizen_genesis', String(!!existing.genesis_citizen));
+            sessionStorage.setItem('citizen_kyc_tier', String(existing.kyc_tier ?? 0));
+            showToast('Welcome back — this phone already has an account');
+            document.getElementById('domainSummary').textContent = (existing.web3_domain || savedDomain + '.IN$DEX').replace('.IN$DEX','');
+            document.getElementById('domainDisplay').textContent = existing.web3_domain || (savedDomain + '.IN$DEX');
+            document.getElementById('bonusTitle').textContent = 'Welcome back.';
+            document.getElementById('bonusAmount').textContent = existing.indx_balance ?? 0;
+            document.getElementById('bonusLabel').textContent = 'INDX in your wallet';
+            document.getElementById('bonusAud').textContent = '≈ $' + ((existing.indx_balance ?? 0) * INDX_PRICE_USD).toFixed(2) + ' USD';
+            document.getElementById('balSummary').textContent = (existing.indx_balance ?? 0) + ' INDX';
+            setTimeout(() => goTo(4), 700);
+            return;
+          }
+        } catch (e2) { /* fall through to generic error below */ }
+      }
+
+      // Genuine failure — don't advance, don't fake success.
+      const status = document.getElementById('domainStatus');
+      status.textContent = '⚠ Could not connect — check your signal and try again';
+      status.className = 'domain-status taken';
+      btn.textContent = 'Claim my free domain →';
+      btn.disabled = false;
+    }
   }
 
   // ── ENTER APP ──
