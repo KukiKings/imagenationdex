@@ -806,6 +806,7 @@ async function executeSend() {
     ? (parseFloat(usd) * selectedCorridor.rate).toFixed(selectedCorridor.rate > 100 ? 0 : 2)
     : usd;
   const localFmt = parseFloat(localAmt).toLocaleString();
+  const memoVal = (document.getElementById('memoInput')?.value || '').trim();
 
   card.innerHTML = `
     <div style="text-align:center;padding:20px 0;">
@@ -817,38 +818,57 @@ async function executeSend() {
   // ── transfer_indx RPC (atomic: balance + 98/2 + transaction + wisdom) ──
   const citizenId = sessionStorage.getItem('citizen_id');
   const amtIndx = selectedToken === 'INDX' ? parseFloat(amountStr) : parseFloat(usd) / 0.24;
-  if (citizenId) {
-    try {
-      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/transfer_indx', {
-        method: 'POST',
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          p_sender_id:         citizenId,
-          p_amount:            parseFloat(amtIndx.toFixed(4)),
-          p_recipient_address: recipientPhone || recipientName || 'unknown'
-        })
-      });
-      const result = await res.json();
-      if (result && result.new_balance !== undefined) sessionStorage.setItem('citizen_balance', String(Math.round(result.new_balance)));
-      if (result && result.new_wisdom   !== undefined) sessionStorage.setItem('citizen_wisdom',  String(result.new_wisdom));
-      // GOD MODE PATCH — log full transaction record via INDXDB
-      await INDXDB.insertTransaction({
-        direction:            'send',
-        amount_indx:          parseFloat(amtIndx.toFixed(4)),
-        counterparty_address: recipientPhone || recipientName || 'unknown',
-        memo:                 memoVal || null,
-        corridor:             selectedCorridor ? selectedCorridor.currency : null,
-        status:               'complete',
-        tx_hash:              result?.tx_hash || null
-      });
-    } catch(e) {
-      // Fallback: optimistic balance update
-      const prevBal = parseInt(sessionStorage.getItem('citizen_balance') || '0');
-      sessionStorage.setItem('citizen_balance', String(Math.max(0, prevBal - Math.round(amtIndx))));
+
+  // No real identity — do not fake a transfer that never happened.
+  if (!citizenId) {
+    showSendFailure('We can\'t confirm your account yet. Finish registration (Grid Account) before sending, then try again.');
+    return;
+  }
+
+  let result = null;
+  let rpcError = null;
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/transfer_indx', {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        p_sender_id:         citizenId,
+        p_amount:            parseFloat(amtIndx.toFixed(4)),
+        p_recipient_address: recipientPhone || recipientName || 'unknown'
+      })
+    });
+    const body = await res.json();
+    if (!res.ok || body?.message || body?.code) {
+      // PostgREST/RAISE EXCEPTION shape — sender not found, insufficient balance, etc.
+      rpcError = body?.message || 'Transfer was rejected by the network.';
+    } else if (body && body.new_balance !== undefined) {
+      result = body;
+    } else {
+      rpcError = 'Transfer did not return a confirmation. Nothing was sent.';
     }
-  } else {
-    const prevBal = parseInt(sessionStorage.getItem('citizen_balance') || '0');
-    sessionStorage.setItem('citizen_balance', String(Math.max(0, prevBal - Math.round(amtIndx))));
+  } catch (e) {
+    console.error('[send] transfer_indx failed:', e);
+    rpcError = 'Could not reach the network. Nothing was sent — no balance was deducted.';
+  }
+
+  if (rpcError) {
+    showSendFailure(rpcError);
+    return;
+  }
+
+  // Confirmed success — sync real balance/wisdom from the RPC result
+  sessionStorage.setItem('citizen_balance', String(Math.round(result.new_balance)));
+  if (result.new_wisdom !== undefined) sessionStorage.setItem('citizen_wisdom', String(result.new_wisdom));
+
+  // NOTE: transfer_indx already inserts the canonical transaction row server-side.
+  // Only patch it with memo/corridor context here — do not insert a second duplicate row.
+  if (result.tx_id && (memoVal || selectedCorridor)) {
+    try {
+      await sb.from('transactions').update({
+        memo: memoVal || null,
+        corridor: selectedCorridor ? selectedCorridor.currency : null
+      }).eq('id', result.tx_id);
+    } catch (e) { console.error('[send] tx memo patch failed (non-critical):', e); }
   }
 
   setTimeout(() => {
@@ -869,6 +889,21 @@ async function executeSend() {
         </div>
       </div>`;
   }, 1800);
+}
+
+// Genuine failure state — no fake "Sent!" message, no balance deduction.
+function showSendFailure(message) {
+  const card = document.getElementById('confirmCard');
+  card.innerHTML = `
+    <div style="text-align:center;padding:8px;">
+      <div style="font-size:52px;margin-bottom:12px;">⚠️</div>
+      <div style="font-size:20px;font-weight:800;margin-bottom:8px;color:var(--red,#FF4D6D);">Send failed</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:24px;line-height:1.6;">${message}</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button onclick="executeSend()" style="width:100%;padding:14px;border-radius:12px;background:var(--cyan);border:none;color:#000;font-size:15px;font-weight:700;cursor:pointer;">Try Again</button>
+        <button onclick="document.getElementById('confirmOverlay').classList.remove('show')" style="width:100%;padding:14px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:15px;font-weight:600;cursor:pointer;">Cancel</button>
+      </div>
+    </div>`;
 }
 
 function resetSend() {
@@ -1143,10 +1178,9 @@ function animateSendStepper() {
 }
 
 // GOD MODE PATCH — executeSend: add stepper + history logging
-var _origExecuteSend = window.executeSend;
+// (this is the version that actually runs — it overrides the earlier definition)
 window.executeSend = async function() {
   var card = document.getElementById('confirmCard');
-  if (!card) { _origExecuteSend(); return; }
   var t       = TOKENS[selectedToken];
   var usd     = (parseFloat(amountStr) * t.rate).toFixed(2);
   var localAmt = selectedCorridor
@@ -1157,33 +1191,49 @@ window.executeSend = async function() {
   var flag     = selectedCorridor ? selectedCorridor.flag : '🌏';
   var recLabel = recipientName || (selectedDialCode + ' ' + document.getElementById('phoneInput').value.trim());
 
+  var citizenId = sessionStorage.getItem('citizen_id');
+  var amtIndx   = selectedToken === 'indx' ? parseFloat(amountStr) : parseFloat(usd) / 0.24;
+
+  // No real identity — do not fake a transfer that never happened.
+  if (!citizenId) {
+    showSendFailure('We can\'t confirm your account yet. Finish registration (Grid Account) before sending, then try again.');
+    return;
+  }
+
   // Show stepper
   card.innerHTML = buildStepperHTML();
   setTimeout(animateSendStepper, 50);
 
-  // Supabase RPC
-  var citizenId = sessionStorage.getItem('citizen_id');
-  var amtIndx   = selectedToken === 'indx' ? parseFloat(amountStr) : parseFloat(usd) / 0.24;
-  if (citizenId) {
-    try {
-      var res = await fetch(SUPABASE_URL + '/rest/v1/rpc/transfer_indx', {
-        method: 'POST',
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ p_sender_id: citizenId, p_amount: parseFloat(amtIndx.toFixed(4)), p_recipient_address: recipientPhone || recipientName || 'unknown' })
-      });
-      var result = await res.json();
-      if (result && result.new_balance !== undefined) sessionStorage.setItem('citizen_balance', String(Math.round(result.new_balance)));
-      if (result && result.new_wisdom   !== undefined) sessionStorage.setItem('citizen_wisdom',  String(result.new_wisdom));
-    } catch(e) {
-      var prevBal = parseInt(sessionStorage.getItem('citizen_balance') || '0');
-      sessionStorage.setItem('citizen_balance', String(Math.max(0, prevBal - Math.round(amtIndx))));
+  var result = null;
+  var rpcError = null;
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/rpc/transfer_indx', {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_sender_id: citizenId, p_amount: parseFloat(amtIndx.toFixed(4)), p_recipient_address: recipientPhone || recipientName || 'unknown' })
+    });
+    var body = await res.json();
+    if (!res.ok || body?.message || body?.code) {
+      rpcError = body?.message || 'Transfer was rejected by the network.';
+    } else if (body && body.new_balance !== undefined) {
+      result = body;
+    } else {
+      rpcError = 'Transfer did not return a confirmation. Nothing was sent.';
     }
-  } else {
-    var prevBal = parseInt(sessionStorage.getItem('citizen_balance') || '0');
-    sessionStorage.setItem('citizen_balance', String(Math.max(0, prevBal - Math.round(amtIndx))));
+  } catch(e) {
+    console.error('[send] transfer_indx failed:', e);
+    rpcError = 'Could not reach the network. Nothing was sent — no balance was deducted.';
   }
 
-  // Log to history
+  if (rpcError) {
+    showSendFailure(rpcError);
+    return;
+  }
+
+  sessionStorage.setItem('citizen_balance', String(Math.round(result.new_balance)));
+  if (result.new_wisdom !== undefined) sessionStorage.setItem('citizen_wisdom', String(result.new_wisdom));
+
+  // Log to local history cache (display only — transfer_indx already wrote the canonical row)
   logSend(amountStr, t.ticker, recLabel, usd, currency, localFmt);
 
   setTimeout(function() {

@@ -119,12 +119,13 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 </style>
 <meta name="theme-color" content="#090A10">
 <link rel="manifest" href="/manifest.json">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" crossorigin="anonymous"></script>
 <script src="/indx-pwa.js" defer></script>
 <script src="/indx-golden.js" defer></script>
 </head>
 <body>
 
-<div class="demo-banner">⚡ DEMO PROTOTYPE — No real KYC. No real identity checks. Sandbox only.</div>
+<div class="demo-banner">🔐 Tier 0 verification — starter access. Full ID not required to begin.</div>
 <div class="progress-bar"><div class="progress-fill" id="pFill" style="width:10%"></div></div>
 
 <!-- ════ SCREEN 1: WELCOME ════ -->
@@ -243,9 +244,9 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
     <div class="account-card">
       <div class="ac-row"><div class="ac-key">Name</div><div class="ac-val" id="displayName">Citizen</div></div>
       <div class="ac-row"><div class="ac-key">Domain</div><div class="ac-val cyan" id="displayDomain">citizen.IN$DEX</div></div>
-      <div class="ac-row"><div class="ac-key">Status</div><div class="ac-val green">✅ Demo — Starter Access</div></div>
+      <div class="ac-row"><div class="ac-key">Status</div><div class="ac-val green" id="accountStatus">✅ Starter Access</div></div>
       <div class="ac-row"><div class="ac-key">Genesis gift</div><div class="ac-val cyan">50 INDX ($12.00 USD)</div></div>
-      <div class="ac-row"><div class="ac-key">Wisdom Score</div><div class="ac-val">10 pts — Citizen Awakening</div></div>
+      <div class="ac-row"><div class="ac-key">Wisdom Score</div><div class="ac-val">25 pts — Citizen Awakening</div></div>
       <div class="ac-row"><div class="ac-key">Brain Passport</div><div class="ac-val green">Created — starter profile</div></div>
     </div>
 
@@ -296,7 +297,7 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
       <div class="next-body"><div class="next-name">Find your best opportunity</div><div class="next-sub">SIINDEX maps income paths to your skills</div></div>
       <div class="next-arrow">→</div>
     </a>
-    <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:20px;line-height:1.6;padding:0 8px;">This is a demo Grid Account. No real funds, no real identity data. To create a production account, launch IN$DEX on September 24.</div>
+    <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:20px;line-height:1.6;padding:0 8px;" id="accountDisclaimer">Your Grid Account is registered. Full production launch — with Solana settlement live — arrives 24 September 2026.</div>
   </div>
 </div>
 
@@ -305,10 +306,14 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 <script>
 const INDX_PRICE_USD = 0.24;
 const _GAO_KEY = 'indx_gao_state';
+const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 var STEPS_PROGRESS = {1:10,2:30,3:52,4:72,5:100};
 var selectedLoc = null;
 var selectedPurpose = null;
+var domainCheckTimer = null;
 
 var PURPOSE_LABELS = {send:'Sender',receive:'Receiver',sell:'Merchant',build:'Builder',learn:'Learner',culture:'Cultural Steward',govern:'Governance Citizen',all:'Sovereign Citizen'};
 var PURPOSE_BP = {send:'Payment pioneer',receive:'Recipient ready',sell:'Market maker',build:'Income builder',learn:'Knowledge seeker',culture:'Cultural protector',govern:'Governance voice',all:'Sovereign citizen'};
@@ -324,12 +329,28 @@ function goTo(step) {
 function checkDomain() {
   var d = document.getElementById('domain').value.trim().toLowerCase();
   var status = document.getElementById('domainStatus');
-  if (d.length >= 3) {
-    status.style.display = 'flex';
-    status.textContent = '✅ Available — ' + d + '.IN$DEX is yours';
-  } else {
-    status.style.display = 'none';
-  }
+  if (d.length < 3) { status.style.display = 'none'; return; }
+
+  status.style.display = 'flex';
+  status.textContent = '⏳ Checking availability…';
+
+  clearTimeout(domainCheckTimer);
+  domainCheckTimer = setTimeout(async function() {
+    try {
+      const { data } = await sb.from('citizens').select('id').eq('web3_domain', d + '.IN$DEX').maybeSingle();
+      if (data) {
+        status.textContent = '❌ ' + d + '.IN$DEX is already taken — try another';
+        status.style.color = 'var(--red)';
+      } else {
+        status.textContent = '✅ Available — ' + d + '.IN$DEX is yours';
+        status.style.color = 'var(--green)';
+      }
+    } catch (e) {
+      // No live confirmation possible — say so plainly, don't fake a check
+      status.textContent = '⚠️ Could not verify availability right now';
+      status.style.color = 'var(--gold)';
+    }
+  }, 500);
 }
 
 function goNextName() {
@@ -352,18 +373,89 @@ function selPurpose(el, id) {
   selectedPurpose = id;
 }
 
-function buildAccountScreen() {
+async function buildAccountScreen() {
   var fname = document.getElementById('fname').value.trim() || 'Citizen';
   var domain = document.getElementById('domain').value.trim().toLowerCase() || 'citizen';
+  var phone = document.getElementById('phone').value.trim();
   document.getElementById('displayName').textContent = fname;
   document.getElementById('displayDomain').textContent = domain + '.IN$DEX';
   var bpLabel = PURPOSE_BP[selectedPurpose] || 'Explorer';
   document.getElementById('bpPurpose').textContent = bpLabel;
 
-  // Save to localStorage
+  // Keep a local draft so the form can restore on return visit
   var state = {name:fname, domain:domain, purpose:selectedPurpose, loc:selectedLoc, ts:Date.now()};
   localStorage.setItem(_GAO_KEY, JSON.stringify(state));
-  showToast('✅ Grid Account ready — ' + fname + ' · ' + domain + '.IN$DEX');
+
+  // Already have a live citizen this session (e.g. resumed) — don't create a duplicate
+  if (sessionStorage.getItem('citizen_id')) {
+    showToast('✅ Welcome back — ' + fname + ' · ' + domain + '.IN$DEX');
+    return;
+  }
+
+  var statusEl = document.getElementById('accountStatus');
+  var discEl = document.getElementById('accountDisclaimer');
+
+  try {
+    const { data, error } = await sb.from('citizens').insert({
+      citizen_name: fname,
+      phone_number: phone || null,
+      web3_domain: domain + '.IN$DEX',
+      indx_balance: 50,
+      genesis_citizen: true,
+      wisdom_score: 25,
+      kyc_tier: 0
+    }).select('id').single();
+
+    if (error) throw error;
+
+    sessionStorage.setItem('citizen_id', data.id);
+    sessionStorage.setItem('citizen_name', fname);
+    sessionStorage.setItem('citizen_web3_domain', domain + '.IN$DEX');
+    sessionStorage.setItem('citizen_wisdom', '25');
+    sessionStorage.setItem('citizen_balance', '50');
+    sessionStorage.setItem('citizen_genesis', 'true');
+    sessionStorage.setItem('citizen_kyc_tier', '0');
+
+    showToast('✅ Grid Account ready — ' + fname + ' · ' + domain + '.IN$DEX');
+
+  } catch (e) {
+    console.error('[grid-account-onboarding] citizen insert failed:', e);
+
+    // Duplicate domain or phone — say so plainly, don't pretend success
+    if (e && e.code === '23505') {
+      var detail = e.message || e.details || '';
+      if (detail.includes('web3_domain')) {
+        statusEl.textContent = '⚠️ Domain taken';
+        statusEl.className = 'ac-val';
+        statusEl.style.color = 'var(--gold)';
+        discEl.textContent = domain + '.IN$DEX was claimed by someone else just now. Go back and choose a different name to finish registration.';
+        showToast('❌ ' + domain + '.IN$DEX was just taken — pick another name');
+        return;
+      }
+      if (detail.includes('phone_number')) {
+        // Existing citizen with this phone — look them up and continue as them
+        const { data: existing } = await sb.from('citizens').select('id,citizen_name,web3_domain,wisdom_score,indx_balance,genesis_citizen,kyc_tier').eq('phone_number', phone).single();
+        if (existing) {
+          sessionStorage.setItem('citizen_id', existing.id);
+          sessionStorage.setItem('citizen_name', existing.citizen_name || fname);
+          sessionStorage.setItem('citizen_web3_domain', existing.web3_domain || (domain + '.IN$DEX'));
+          sessionStorage.setItem('citizen_wisdom', String(existing.wisdom_score || 0));
+          sessionStorage.setItem('citizen_balance', String(existing.indx_balance || 0));
+          sessionStorage.setItem('citizen_genesis', String(existing.genesis_citizen || false));
+          sessionStorage.setItem('citizen_kyc_tier', String(existing.kyc_tier || 0));
+          showToast('✅ Welcome back, ' + (existing.citizen_name || fname));
+          return;
+        }
+      }
+    }
+
+    // Any other failure (network, RLS, etc.) — be honest, don't fake a ready account
+    statusEl.textContent = '⚠️ Not saved yet';
+    statusEl.className = 'ac-val';
+    statusEl.style.color = 'var(--gold)';
+    discEl.textContent = 'We could not reach the network to save your Grid Account. Check your connection and reopen this page to finish registration — your details above are held locally for now.';
+    showToast('⚠️ Could not save to the network — please retry with signal');
+  }
 }
 
 function showToast(msg) {

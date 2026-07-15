@@ -84,6 +84,7 @@
   </style>
 <meta name="theme-color" content="#090A10">
 <link rel="manifest" href="/manifest.json">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" crossorigin="anonymous"></script>
 <script src="/indx-pwa.js" defer></script>
 <script src="/indx-golden.js" defer></script>
 </head>
@@ -93,6 +94,7 @@
     <button class="tb-back" onclick="history.back()">←</button>
     <div class="tb-title">💵 Cash Out</div>
   </div>
+  <div class="demo-banner" id="noAccountBanner" style="display:none;background:rgba(255,184,0,0.1);border-bottom:1px solid rgba(255,184,0,0.2);padding:8px 16px;font-size:11px;font-weight:700;color:var(--gold);">⚠️ Finish registering your Grid Account before cashing out.</div>
   <div class="scroll-body">
     <div class="section">
       <div class="balance-card">
@@ -186,17 +188,8 @@
 
       <!-- HISTORY -->
       <div style="font-size:12px;font-weight:800;color:var(--text-muted);text-transform:uppercase;margin:20px 0 10px;">Recent withdrawals</div>
-      <div class="form-card" style="padding:0 16px;">
-        <div class="hist-item">
-          <div class="hi-ico">⚡</div>
-          <div class="hi-body"><div class="hi-name">Instant · GCash · +63 917 XXX 842</div><div class="hi-detail">2 Jun · Instant · Confirmed</div></div>
-          <div class="hi-amt"><div class="hi-aud">$24.00 USD</div><div class="hi-indx">100 INDX</div></div>
-        </div>
-        <div class="hist-item">
-          <div class="hi-ico">🏦</div>
-          <div class="hi-body"><div class="hi-name">BSB 062-000 · Acc ****4821</div><div class="hi-detail">28 May · 1 day · Confirmed</div></div>
-          <div class="hi-amt"><div class="hi-aud">$128.00</div><div class="hi-indx">250 INDX</div></div>
-        </div>
+      <div class="form-card" style="padding:0 16px;" id="withdrawHistCard">
+        <div style="padding:14px 0;font-size:12px;color:var(--text-muted);text-align:center;">Loading…</div>
       </div>
     </div>
   </div>
@@ -206,12 +199,12 @@
   <div class="safety-sheet">
     <div class="ss-handle"></div>
     <div class="ss-title">Confirm Cash Out</div>
-    <div class="ss-sub">Review before sending. This cannot be undone.</div>
+    <div class="ss-sub">Review before sending. Your INDX balance is deducted immediately — this cannot be undone.</div>
     <div class="ss-row"><div class="ss-lbl">Sending to</div><div class="ss-val" id="ssDestination">—</div></div>
     <div class="ss-row"><div class="ss-lbl">INDX amount</div><div class="ss-val" id="ssIndxAmt">—</div></div>
     <div class="ss-row"><div class="ss-lbl">You receive</div><div class="ss-val" id="ssReceive" style="color:var(--green);">—</div></div>
     <div class="ss-row"><div class="ss-lbl">Method</div><div class="ss-val" id="ssMethod">—</div></div>
-    <button class="ss-btn" onclick="confirmWithdraw()">Yes, Cash Out →</button>
+    <button class="ss-btn" id="ssConfirmBtn" onclick="confirmWithdraw()">Yes, Cash Out →</button>
     <button class="ss-cancel" onclick="document.getElementById('safetyOverlay').classList.remove('open')">Cancel</button>
   </div>
 </div>
@@ -219,13 +212,62 @@
 <div id="toast"></div>
 <script>
 const INDX_PRICE_USD = 0.24;
+const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let method='payid';
 const methods={payid:{time:'~60 seconds',fee:0.008,label:'Instant Transfer'},bsb:{time:'1–2 business days',fee:0.005,label:'Bank Transfer'},cash:{time:'Same day',fee:0.01,label:'Cash Agent'}};
 
 // ── GOD MODE: FEATURE 1 — Balance from sessionStorage ──
-const citizenBalance = parseInt(sessionStorage.getItem('citizen_balance') || '1240');
+const citizenId = sessionStorage.getItem('citizen_id');
+const citizenBalance = parseInt(sessionStorage.getItem('citizen_balance') || '0');
 document.querySelector('.bc-bal').textContent = citizenBalance.toLocaleString() + ' INDX';
 document.querySelector('.bc-aud').textContent = '≈ $' + (citizenBalance * INDX_PRICE_USD).toFixed(2) + ' USD';
+
+// No confirmed identity — don't let anyone submit a withdrawal that can't be honoured.
+if (!citizenId) {
+  document.getElementById('noAccountBanner').style.display = 'flex';
+  const wBtn = document.getElementById('withdrawBtn');
+  if (wBtn) wBtn.disabled = true;
+}
+
+// ── Real withdrawal history (replaces old hardcoded sample rows) ──
+async function loadWithdrawHistory() {
+  const histCard = document.getElementById('withdrawHistCard');
+  if (!citizenId) {
+    histCard.innerHTML = '<div style="padding:14px 0;font-size:12px;color:var(--text-muted);text-align:center;">Finish registration to see your withdrawal history.</div>';
+    return;
+  }
+  try {
+    const { data, error } = await sb.from('transactions')
+      .select('*')
+      .eq('citizen_id', citizenId)
+      .eq('direction', 'withdraw')
+      .order('created_at', { ascending: false })
+      .limit(5);
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      histCard.innerHTML = '<div style="padding:14px 0;font-size:12px;color:var(--text-muted);text-align:center;">No withdrawals yet.</div>';
+      return;
+    }
+    histCard.innerHTML = data.map(function(tx) {
+      const meth = tx.metadata?.method || 'payid';
+      const ico = meth === 'bsb' ? '🏦' : meth === 'cash' ? '💵' : '⚡';
+      const dateStr = new Date(tx.created_at).toLocaleDateString('en-AU', { day: '2-digit', month: 'short' });
+      const statusLabel = tx.status === 'complete' ? 'Confirmed' : tx.status === 'failed' ? 'Failed' : 'Pending';
+      const usd = (tx.amount_usd !== null && tx.amount_usd !== undefined) ? tx.amount_usd : (tx.amount_indx * INDX_PRICE_USD);
+      return '<div class="hist-item">' +
+        '<div class="hi-ico">' + ico + '</div>' +
+        '<div class="hi-body"><div class="hi-name">' + (tx.counterparty_address || 'Withdrawal') + '</div><div class="hi-detail">' + dateStr + ' · ' + statusLabel + '</div></div>' +
+        '<div class="hi-amt"><div class="hi-aud">$' + Number(usd).toFixed(2) + '</div><div class="hi-indx">' + Number(tx.amount_indx).toLocaleString() + ' INDX</div></div>' +
+      '</div>';
+    }).join('');
+  } catch (e) {
+    console.error('[withdraw-fiat] loadWithdrawHistory failed:', e);
+    histCard.innerHTML = '<div style="padding:14px 0;font-size:12px;color:var(--text-muted);text-align:center;">Could not load history right now.</div>';
+  }
+}
+loadWithdrawHistory();
 
 // ── GOD MODE: FEATURE 2 — Load saved recipient ──
 (function loadSavedRecipient() {
@@ -272,7 +314,7 @@ function updateSummary(){
   setTimeout(()=>previewEl.classList.remove('updated'),600);
   document.getElementById('feeAmt').textContent='$'+fee.toFixed(2)+' ('+(methods[method].fee*100)+'%)';
   document.getElementById('receiveAmt').textContent='$'+recv.toFixed(2)+' USD';
-  document.getElementById('withdrawBtn').disabled=amt<=0||amt>citizenBalance;
+  document.getElementById('withdrawBtn').disabled = amt<=0 || amt>citizenBalance || !citizenId;
 }
 
 // ── GOD MODE: FEATURE 4 — Safety confirm sheet ──
@@ -292,17 +334,75 @@ function openSafetySheet(){
   document.getElementById('safetyOverlay').classList.add('open');
 }
 
-function confirmWithdraw(){
+async function confirmWithdraw(){
+  const btn = document.getElementById('ssConfirmBtn');
+  if (!citizenId) {
+    showToast('⚠️ Finish registering your Grid Account first — nothing was sent');
+    document.getElementById('safetyOverlay').classList.remove('open');
+    return;
+  }
+  const amt = parseFloat(document.getElementById('withdrawAmt').value) || 0;
+  if (amt <= 0 || amt > citizenBalance) {
+    showToast('⚠️ Check the amount and try again');
+    return;
+  }
+
   // Save last used PayID
   const payidInput = document.getElementById('payidVal').value.trim();
   if (method === 'payid' && payidInput) {
     localStorage.setItem('indx_withdrawfiat_last_payid', payidInput);
   }
-  document.getElementById('safetyOverlay').classList.remove('open');
-  doWithdraw();
+
+  btn.disabled = true;
+  btn.textContent = 'Processing…';
+
+  const dest = method === 'payid' ? (payidInput || 'mobile wallet')
+             : method === 'bsb'   ? 'bank account'
+             : 'cash agent';
+
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/withdraw_indx', {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_citizen_id: citizenId, p_amount: amt, p_method: method, p_destination: dest })
+    });
+    const body = await res.json();
+
+    if (!res.ok || body?.message || body?.code) {
+      throw new Error(body?.message || 'Withdrawal was rejected by the network.');
+    }
+
+    // Confirmed — real balance decrement from the RPC result
+    sessionStorage.setItem('citizen_balance', String(Math.round(body.new_balance)));
+    document.getElementById('safetyOverlay').classList.remove('open');
+    doWithdraw(true);
+
+  } catch (e) {
+    console.error('[withdraw-fiat] withdraw_indx failed:', e);
+    document.getElementById('safetyOverlay').classList.remove('open');
+    doWithdraw(false, e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Yes, Cash Out →';
+  }
 }
 
-function doWithdraw(){showToast('💵 Withdrawal initiated — funds on their way');}
+function doWithdraw(success, errorMsg){
+  if (success) {
+    // Honest status: the INDX side is confirmed and recorded now. The fiat payout
+    // rail (bank/mobile wallet settlement) isn't wired to a live provider yet —
+    // say so plainly instead of promising a delivery time we can't back up.
+    showToast('✅ Withdrawal recorded — SIINDEX will confirm once your payout channel is live');
+    const newBal = parseInt(sessionStorage.getItem('citizen_balance') || '0');
+    document.querySelector('.bc-bal').textContent = newBal.toLocaleString() + ' INDX';
+    document.querySelector('.bc-aud').textContent = '≈ $' + (newBal * INDX_PRICE_USD).toFixed(2) + ' USD';
+    document.getElementById('withdrawAmt').value = '';
+    updateSummary();
+    loadWithdrawHistory();
+  } else {
+    showToast('❌ ' + (errorMsg || 'Withdrawal failed — nothing was deducted'));
+  }
+}
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}
 </script>
 <script src="siindex-speak-core.js"></script>
