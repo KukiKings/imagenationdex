@@ -497,12 +497,20 @@ async function buyNFT(priceStr, nftId) {
     showToast('Insufficient balance. Top up your wallet to continue.');
     return;
   }
+  if (!nftId) {
+    // No real listing behind this card yet (gallery/demo item) — say so
+    // honestly instead of faking a purchase. Previously this silently
+    // debited the real balance and showed a fake success toast even when
+    // there was no real listing id and even on a network error.
+    showToast('This piece isn\'t listed for real purchase yet — preview only.');
+    return;
+  }
   showToast('⏳ Processing purchase…');
   try {
     const res = await fetch(`${SUPA_URL}/rest/v1/rpc/purchase_listing`, {
       method: 'POST',
       headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ p_buyer_id: buyerId, p_listing_id: nftId || 'nft_demo' })
+      body: JSON.stringify({ p_buyer_id: buyerId, p_listing_id: nftId })
     });
     const data = await res.json();
     if (data && data.success) {
@@ -510,13 +518,13 @@ async function buyNFT(priceStr, nftId) {
       sessionStorage.setItem('citizen_balance', newBal.toFixed(6));
       showToast(`✅ NFT purchased! ${indxAmt} INDX · Seller received ${(indxAmt * 0.98).toFixed(2)} INDX (98%)`);
     } else {
-      // Demo mode success
-      const newBal = bal - indxAmt;
-      sessionStorage.setItem('citizen_balance', newBal.toFixed(6));
-      showToast(`✅ Done. ${indxAmt} INDX sent · 98% to seller · 2% Civilisation Fund`);
+      // Real rejection from the backend (sold, insufficient funds, listing
+      // gone, etc.) — show the real reason. Do NOT deduct balance or fake
+      // a success toast here; that was the bug.
+      showToast(data?.error || 'Could not complete purchase. Try again.');
     }
   } catch(e) {
-    showToast(`✅ Done. ${indxAmt} INDX sent to seller. Standing by.`);
+    showToast('Connection error. Purchase not completed — your balance was not charged.');
   }
 }
 
