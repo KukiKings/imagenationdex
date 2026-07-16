@@ -6,6 +6,7 @@
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <title>Join IN$DEX — The Sovereign Economy</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <style>
 :root{
   --cyan:#00D4FF;--blue:#2B35D8;--purple:#8B3FE8;--black:#090A10;
@@ -469,6 +470,14 @@ const JOIN_REF_KEY   = 'indx_join_ref';
 const JOIN_DONE_KEY  = 'indx_join_complete';
 const BASE58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
+// ── SUPABASE (real citizen creation — this is index.html's labelled
+// "Primary join flow"; it previously never created a real account, only a
+// fabricated non-UUID citizen_id, which broke every subsequent real RPC
+// call for anyone who joined through here. Fixed 2026-07-16. ──
+const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 let selectedRole = null;
 let phoneNumber  = '';
 let citizenName  = '';
@@ -586,15 +595,76 @@ function validateRole(){
 function goS4(){
   citizenName = document.getElementById('nameInput').value.trim();
   localStorage.setItem(JOIN_ROLE_KEY, selectedRole);
-  // set sessionStorage
-  const citizenId = slugify(citizenName)+'.indx';
+  // Display-only slug for the wallet-gen animation and QR/pay-link vanity
+  // name. The REAL citizen_id (a Supabase UUID) is set later in
+  // createRealCitizen() once the account actually exists.
+  const displaySlug = slugify(citizenName)+'.indx';
   sessionStorage.setItem('citizen_name', citizenName);
-  sessionStorage.setItem('citizen_id', citizenId);
-  sessionStorage.setItem('citizen_wisdom', '10');
-  sessionStorage.setItem('citizen_balance', '0');
-  sessionStorage.setItem('citizen_web3_domain', citizenId);
   showScreen('s4');
-  runWalletGen(citizenId);
+  runWalletGen(displaySlug);
+}
+
+async function createRealCitizen(slug, attempt){
+  attempt = attempt || 0;
+  const isPhone = phoneNumber.length > 0;
+  const domain = attempt > 0 ? slug + attempt : slug;
+  const { data, error } = await sb.from('citizens').insert({
+    citizen_name: citizenName,
+    phone_number: isPhone ? phoneNumber : null,
+    web3_domain: domain + '.IN$DEX',
+    indx_balance: 50,
+    genesis_citizen: true,
+    wisdom_score: 25,
+    kyc_tier: 0,
+    referred_by: (referrer && referrer.id) || null
+  }).select('id').single();
+
+  if (error) {
+    if (error.code === '23505') {
+      const detail = error.message || error.details || '';
+      // Duplicate phone number — this is a returning citizen, not a new
+      // signup. Log them into their existing account instead of endlessly
+      // retrying a domain suffix that was never the problem.
+      if (isPhone && detail.includes('phone_number')) {
+        const { data: existing } = await sb
+          .from('citizens').select('id, citizen_name, web3_domain, indx_balance, wisdom_score')
+          .eq('phone_number', phoneNumber).single();
+        if (existing?.id) {
+          sessionStorage.setItem('citizen_id', existing.id);
+          sessionStorage.setItem('citizen_name', existing.citizen_name || citizenName);
+          sessionStorage.setItem('citizen_wisdom', String(existing.wisdom_score ?? 0));
+          sessionStorage.setItem('citizen_balance', String(existing.indx_balance ?? 0));
+          sessionStorage.setItem('citizen_web3_domain', existing.web3_domain || (domain + '.IN$DEX'));
+          return { ok:true, id: existing.id, existingAccount:true };
+        }
+      }
+      // Domain collision — try a numbered variant, up to 3 times.
+      if (attempt < 3) {
+        return createRealCitizen(slug, attempt + 1);
+      }
+    }
+    return { ok:false, error };
+  }
+
+  sessionStorage.setItem('citizen_id', data.id);
+  sessionStorage.setItem('citizen_wisdom', '25');
+  sessionStorage.setItem('citizen_balance', '50');
+  sessionStorage.setItem('citizen_web3_domain', domain + '.IN$DEX');
+  sessionStorage.setItem('citizen_genesis', 'true');
+
+  // Referral attribution — best-effort, non-blocking. Real account
+  // creation above already succeeded regardless of this outcome.
+  if (referrer && referrer.id) {
+    try {
+      await fetch(SUPABASE_URL + '/rest/v1/rpc/complete_referral', {
+        method: 'POST',
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_referral_code: referrer.id, p_referred_citizen_id: data.id })
+      });
+    } catch(e) { /* non-critical — attribution is best-effort */ }
+  }
+
+  return { ok:true, id:data.id };
 }
 
 // ── SCREEN 4: WALLET GEN ─────────────────────────────────────────
@@ -646,7 +716,18 @@ function runWalletGen(citizenId){
   nextStage();
 }
 
-function onWalletReady(){
+async function onWalletReady(){
+  document.getElementById('genStatus').textContent = 'Registering your account…';
+  const slug = slugify(citizenName);
+  const result = await createRealCitizen(slug);
+
+  if (!result.ok) {
+    document.getElementById('walletTitle').textContent = 'Almost there…';
+    document.getElementById('genStatus').textContent = 'Could not create your account — check your connection and try again.';
+    showToast('⚠️ Account creation failed. Please retry.');
+    return; // do not advance to a dashboard backed by a non-existent citizen
+  }
+
   document.getElementById('walletTitle').textContent = 'Wallet ready, '+citizenName+'!';
   document.getElementById('genStatus').textContent   = 'Your sovereign wallet is live';
   document.getElementById('walletSphere').textContent = '🔓';
@@ -670,8 +751,9 @@ function goS5(){
 }
 
 function setupSellerQr(){
-  const citizenId = sessionStorage.getItem('citizen_id') || slugify(citizenName)+'.indx';
-  const payLink   = location.origin + '/pay.html?to=' + citizenId;
+  // pay.html reads the ?to= domain slug, not the raw citizen_id UUID.
+  const domain  = sessionStorage.getItem('citizen_web3_domain') || (slugify(citizenName)+'.IN$DEX');
+  const payLink = location.origin + '/pay.html?to=' + encodeURIComponent(domain);
   const wrap = document.getElementById('sellerQrWrap');
   wrap.innerHTML = '';
   try{
@@ -684,24 +766,43 @@ function setupSellerQr(){
       correctLevel: QRCode.CorrectLevel.M
     });
   } catch(e){
-    wrap.innerHTML = '<div style="font-size:12px;color:#888;text-align:center;padding:10px;">QR — '+citizenId+'</div>';
+    wrap.innerHTML = '<div style="font-size:12px;color:#888;text-align:center;padding:10px;">QR — '+domain+'</div>';
   }
-  document.getElementById('sellerQrLabel').textContent = citizenId + ' · tap to share';
+  document.getElementById('sellerQrLabel').textContent = domain + ' · tap to share';
 }
 
 function shareQr(){
-  const citizenId = sessionStorage.getItem('citizen_id') || slugify(citizenName)+'.indx';
-  const msg = 'Pay me with IN$DEX: ' + location.origin + '/pay.html?to=' + citizenId;
-  if(navigator.share){ navigator.share({ text: msg, url: location.origin+'/pay.html?to='+citizenId }); }
+  const domain = sessionStorage.getItem('citizen_web3_domain') || (slugify(citizenName)+'.IN$DEX');
+  const url = location.origin + '/pay.html?to=' + encodeURIComponent(domain);
+  const msg = 'Pay me with IN$DEX: ' + url;
+  if(navigator.share){ navigator.share({ text: msg, url: url }); }
   else{ navigator.clipboard.writeText(msg).then(()=>showToast('📋 Payment link copied!')); }
 }
 
-function createListing(){
+async function createListing(){
   const name  = document.getElementById('prodName').value.trim();
   const price = document.getElementById('prodPrice').value;
   if(!name || !price){ showToast('⚠️ Add a name and price first'); return; }
   const usd = (parseFloat(price) * INDX_PRICE_USD).toFixed(2);
-  showToast('🏪 "'+name+'" listed at '+price+' INDX ($'+usd+')!');
+  const sellerId = sessionStorage.getItem('citizen_id');
+  if (!sellerId) { showToast('⚠️ Account not ready yet — try again in a moment'); return; }
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/create_listing', {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_seller_id: sellerId, p_title: name, p_description: null, p_price_indx: parseFloat(price) })
+    });
+    const data = await res.json();
+    if (data && data.success) {
+      showToast('🏪 "'+name+'" listed at '+price+' INDX ($'+usd+')!');
+    } else {
+      showToast(data?.error || '⚠️ Could not create listing — try again');
+      return;
+    }
+  } catch(e) {
+    showToast('⚠️ Connection error — listing not created');
+    return;
+  }
   setTimeout(()=>window.location.href='citizen-dashboard.html', 1800);
 }
 
