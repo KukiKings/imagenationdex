@@ -1150,20 +1150,41 @@
       return;
     }
 
-    // Payment succeeded INSERT confirmed transaction
+    // Payment succeeded — credit via the real credit_stripe_purchase RPC.
+    // Previously this did a direct client-side `sb.from('citizens').update()`,
+    // which citizens' RLS policies (all gated on auth.uid() = auth_user_id)
+    // silently block for this app's anon-key-only sessions — confirmed live:
+    // the balance was NEVER actually credited despite a real Stripe charge
+    // going through. Fixed 2026-07-16 with an atomic, idempotent RPC.
     if (citizenId) {
-      await sb.from('transactions').insert({
-        citizen_id: citizenId,
-        amount_indx: total,
-        direction: 'receive',
-        counterparty_address: `stripe:${result.paymentIntent.id}`,
-        status: 'complete'
-      });
-      // Update citizen balance
-      const currentBal = parseInt(sessionStorage.getItem('citizen_balance') || '0');
-      const newBal = currentBal + total;
-      sessionStorage.setItem('citizen_balance', String(newBal));
-      await sb.from('citizens').update({ indx_balance: newBal }).eq('id', citizenId);
+      try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/credit_stripe_purchase`, {
+          method: 'POST',
+          headers: { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + SUPABASE_ANON, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            p_citizen_id: citizenId,
+            p_amount_indx: total,
+            p_amount_usd: usd,
+            p_stripe_payment_intent_id: result.paymentIntent.id
+          })
+        });
+        const data = await res.json();
+        if (data && data.success) {
+          sessionStorage.setItem('citizen_balance', String(data.new_balance));
+        } else {
+          // Real payment succeeded but the credit failed server-side (e.g.
+          // already credited, or a genuine error) — don't claim success on
+          // a balance that wasn't actually moved. The Stripe charge already
+          // went through, so surface this loudly rather than silently.
+          document.getElementById('card-errors').textContent =
+            'Payment received but crediting your balance failed (' + (data?.error || 'unknown error') + '). Contact support with reference ' + result.paymentIntent.id + '.';
+          return;
+        }
+      } catch (e) {
+        document.getElementById('card-errors').textContent =
+          'Payment received but we could not confirm your balance credit. Contact support with reference ' + result.paymentIntent.id + '.';
+        return;
+      }
     }
 
     genesisUsed = true;
