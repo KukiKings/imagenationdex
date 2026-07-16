@@ -120,20 +120,20 @@
     </div>
   </div>
 
-  <div style="margin:14px 20px 0;background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.25);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--text-muted);line-height:1.5;">
-    ⚠️ <strong>Not connected yet.</strong> No real Insurance Pool, staking, or bug-bounty payout system exists yet — the numbers below are illustrative of the design, and "Stake" saves a local preview only. No real INDX is staked or earns premiums.
+  <div style="margin:14px 20px 0;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.25);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--text-muted);line-height:1.5;">
+    🛡️ <strong>Real staking, real pool.</strong> Staking here moves real INDX from your Grid Account into a real Insurance Pool. What's still preview: an actual claims-payout/adjudication process — the pool holds real value today, but there's no automated way to file and get paid a claim yet.
   </div>
 
   <div class="scroll-body">
 
     <!-- POOL HERO -->
     <div class="pool-hero">
-      <div class="ph-label">Total Insurance Pool (illustrative)</div>
-      <div class="ph-val">842,400 INDX</div>
-      <div class="ph-sub">$421,200 · Design: funded by 2% of protocol fees — not connected yet</div>
+      <div class="ph-label">Total Insurance Pool</div>
+      <div class="ph-val" id="poolTotal">— INDX</div>
+      <div class="ph-sub" id="poolUsd">≈ $0.00 USD</div>
       <div class="ph-stats">
-        <div><div class="phs-val" style="color:var(--green)">3.2%</div><div class="phs-label">Staker APY (planned)</div></div>
-        <div><div class="phs-val" style="color:var(--cyan)">128</div><div class="phs-label">Stakers (example)</div></div>
+        <div><div class="phs-val" style="color:var(--green)" id="poolApy">—%</div><div class="phs-label">Staker APY</div></div>
+        <div><div class="phs-val" style="color:var(--cyan)" id="poolStakers">—</div><div class="phs-label">Stakers</div></div>
         <div><div class="phs-val" style="color:var(--gold)">0</div><div class="phs-label">Active Claims</div></div>
       </div>
     </div>
@@ -221,26 +221,17 @@
           <div class="apy-row" style="margin-bottom:0;"><span class="apy-label">Pool share</span><span class="apy-val" id="poolShare">0.00%</span></div>
         </div>
         <button class="stake-btn" onclick="stakeToPool()">Stake to Insurance Pool</button>
-        <div style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:10px;line-height:1.6;">7-day unstaking cooldown. Premiums distributed weekly. Stakers bear coverage risk proportional to pool share.</div>
+        <div style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:10px;line-height:1.6;">Unstake anytime below — no lock-up yet. Premium distribution and claims payout are still preview.</div>
+      </div>
+
+      <div style="padding:0 20px 4px;">
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Your Active Stakes</div>
+        <div id="myStakesList"><div style="font-size:12px;color:var(--text-muted);padding:8px 0;">Log in to see your stakes.</div></div>
       </div>
 
       <div style="padding:0 20px;">
-        <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Top Stakers (illustrative example)</div>
-        <div class="claim-row" style="padding:10px 0;">
-          <div class="cr-icon">🥇</div>
-          <div class="cr-title">aiko.IN$DEX</div>
-          <div class="cr-amount" style="color:var(--green)">42,000 INDX</div>
-        </div>
-        <div class="claim-row" style="padding:10px 0;">
-          <div class="cr-icon">🥈</div>
-          <div class="cr-title">sione.IN$DEX</div>
-          <div class="cr-amount" style="color:var(--green)">28,500 INDX</div>
-        </div>
-        <div class="claim-row" style="padding:10px 0;">
-          <div class="cr-icon">🥉</div>
-          <div class="cr-title">mele.IN$DEX</div>
-          <div class="cr-amount" style="color:var(--green)">15,200 INDX</div>
-        </div>
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Top Stakers</div>
+        <div id="topStakersList"><div style="font-size:12px;color:var(--text-muted);padding:8px 0;">Loading…</div></div>
       </div>
       <div style="height:12px;"></div>
     </div>
@@ -330,8 +321,8 @@
 
 <div class="overlay" id="overlay">
   <div class="success-card">
-    <div class="sc-icon">⚠️</div>
-    <div class="sc-title">Preview only — not staked</div>
+    <div class="sc-icon" id="scIcon">🛡️</div>
+    <div class="sc-title" id="scTitle">Staked</div>
     <div class="sc-sub" id="stakeMsg">You are now earning premiums and providing coverage to the Republic.</div>
     <button class="done-btn" onclick="document.getElementById('overlay').classList.remove('show')">Done</button>
   </div>
@@ -339,38 +330,137 @@
 <div class="toast" id="toast"></div>
 
 <script>
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  const INDX_PRICE_USD = 0.24;
+  const citizenId = sessionStorage.getItem('citizen_id');
+  let poolStats = { total_staked: 0, apy_rate: 0.04, staker_count: 0 };
+  let myStakes = [];
+
+  async function rpc(name, body) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + name, {
+      method: 'POST', headers: SB_HEADERS, body: JSON.stringify(body)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'Request failed');
+    return data;
+  }
+
   function switchTab(name) {
     ['coverage','stake','bounty'].forEach(t => {
       document.getElementById('tab-'+t).classList.toggle('active', t===name);
       document.getElementById('panel-'+t).style.display = t===name ? 'block' : 'none';
     });
   }
-  function updateAPY() {
-    const amt = parseFloat(document.getElementById('stakeAmt').value) || 0;
-    const apy = 0.032;
-    document.getElementById('monthlyEst').textContent = (amt * apy / 12).toFixed(1) + ' INDX';
-    document.getElementById('annualEst').textContent = (amt * apy).toFixed(1) + ' INDX';
-    document.getElementById('poolShare').textContent = ((amt / 842400) * 100).toFixed(3) + '%';
-  }
-  function setMaxStake() {
-    const real = parseFloat(sessionStorage.getItem('citizen_balance'));
-    document.getElementById('stakeAmt').value = (real && real > 0) ? real : 0;
+
+  async function loadPoolStats() {
+    try {
+      poolStats = await rpc('get_pool_stats', {});
+    } catch (e) { /* leave defaults */ }
+    document.getElementById('poolTotal').textContent = Number(poolStats.total_staked).toLocaleString(undefined,{maximumFractionDigits:2}) + ' INDX';
+    document.getElementById('poolUsd').textContent = '≈ $' + (poolStats.total_staked * INDX_PRICE_USD).toFixed(2) + ' USD';
+    document.getElementById('poolApy').textContent = (poolStats.apy_rate * 100).toFixed(1) + '%';
+    document.getElementById('poolStakers').textContent = poolStats.staker_count;
     updateAPY();
   }
-  function stakeToPool() {
-    // Preview only — no real Insurance Pool exists, so this deliberately does not
-    // debit any real balance or grant any real APY/premium earnings.
+
+  async function loadTopStakers() {
+    const el = document.getElementById('topStakersList');
+    try {
+      const rows = await rpc('get_top_stakers', { p_limit: 3 });
+      if (!rows || rows.length === 0) {
+        el.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0;">No stakers yet — be the first.</div>';
+        return;
+      }
+      const medals = ['🥇','🥈','🥉'];
+      el.innerHTML = rows.map((r,i) => `<div class="claim-row" style="padding:10px 0;">
+        <div class="cr-icon">${medals[i]||'🏅'}</div>
+        <div class="cr-title">${r.web3_domain || 'Anonymous citizen'}</div>
+        <div class="cr-amount" style="color:var(--green)">${Number(r.total_staked).toLocaleString(undefined,{maximumFractionDigits:0})} INDX</div>
+      </div>`).join('');
+    } catch (e) { el.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0;">Could not load.</div>'; }
+  }
+
+  async function loadMyStakes() {
+    const el = document.getElementById('myStakesList');
+    if (!citizenId) return;
+    try {
+      myStakes = (await rpc('get_my_stakes', { p_citizen_id: citizenId })).filter(s => s.status === 'active');
+    } catch (e) { myStakes = []; }
+    if (myStakes.length === 0) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0;">No active stakes yet.</div>';
+      return;
+    }
+    el.innerHTML = myStakes.map(s => `<div class="claim-row" style="padding:10px 0;">
+      <div class="cr-icon">🔒</div>
+      <div class="cr-title">Staked ${new Date(s.staked_at).toLocaleDateString()}</div>
+      <div class="cr-amount" style="color:var(--green)">${Number(s.amount).toLocaleString(undefined,{maximumFractionDigits:2})} INDX</div>
+      <div class="max-btn" style="margin-left:8px;" onclick="unstake('${s.id}')">Unstake</div>
+    </div>`).join('');
+  }
+
+  function updateAPY() {
+    const amt = parseFloat(document.getElementById('stakeAmt').value) || 0;
+    const apy = poolStats.apy_rate || 0.04;
+    document.getElementById('monthlyEst').textContent = (amt * apy / 12).toFixed(2) + ' INDX';
+    document.getElementById('annualEst').textContent = (amt * apy).toFixed(2) + ' INDX';
+    const projectedTotal = (poolStats.total_staked || 0) + amt;
+    document.getElementById('poolShare').textContent = (projectedTotal > 0 ? (amt / projectedTotal) * 100 : 0).toFixed(3) + '%';
+  }
+
+  async function setMaxStake() {
+    if (!citizenId) { showToast('Log in to stake'); return; }
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + citizenId + '&select=indx_balance', { headers: SB_HEADERS });
+      const rows = await res.json();
+      const bal = rows && rows[0] ? parseFloat(rows[0].indx_balance) : 0;
+      document.getElementById('stakeAmt').value = bal || 0;
+    } catch (e) { document.getElementById('stakeAmt').value = 0; }
+    updateAPY();
+  }
+
+  async function stakeToPool() {
     const amt = parseFloat(document.getElementById('stakeAmt').value) || 0;
     if (!amt) { showToast('Enter an amount to stake'); return; }
-    document.getElementById('stakeMsg').textContent = `Preview only — ${amt} INDX was not actually staked, and no real premiums are being earned. No Insurance Pool is connected yet.`;
-    document.getElementById('overlay').classList.add('show');
+    if (!citizenId) { showToast('Log in to stake to the Insurance Pool'); return; }
+    try {
+      await rpc('stake_to_pool', { p_citizen_id: citizenId, p_amount: amt });
+      document.getElementById('scIcon').textContent = '🛡️';
+      document.getElementById('scTitle').textContent = 'Staked';
+      document.getElementById('stakeMsg').textContent = `${amt} INDX moved from your balance into the real Insurance Pool. You can unstake anytime from "Your Active Stakes."`;
+      document.getElementById('overlay').classList.add('show');
+      document.getElementById('stakeAmt').value = '';
+      await Promise.all([loadPoolStats(), loadTopStakers(), loadMyStakes()]);
+    } catch (e) {
+      showToast('Could not stake: ' + e.message);
+    }
   }
+
+  async function unstake(stakeId) {
+    if (!citizenId) return;
+    try {
+      await rpc('unstake_from_pool', { p_citizen_id: citizenId, p_stake_id: stakeId });
+      document.getElementById('scIcon').textContent = '✅';
+      document.getElementById('scTitle').textContent = 'Unstaked';
+      document.getElementById('stakeMsg').textContent = 'Your INDX has been returned to your balance.';
+      document.getElementById('overlay').classList.add('show');
+      await Promise.all([loadPoolStats(), loadTopStakers(), loadMyStakes()]);
+    } catch (e) {
+      showToast('Could not unstake: ' + e.message);
+    }
+  }
+
   function showToast(msg) {
     const t = document.getElementById('toast');
     t.textContent = msg;
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2400);
   }
+
+  loadPoolStats();
+  loadTopStakers();
+  loadMyStakes();
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

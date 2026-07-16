@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SIINDEX Console — IN$DEX</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+    --black:#090A10; --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+    --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+    --text:#E8EAFF; --text2:#A0A8C8; --text3:#5A6080;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:430px;margin:0 auto;min-height:100vh;padding-bottom:32px;}
+  .topbar{position:sticky;top:0;z-index:100;background:rgba(9,10,16,0.95);backdrop-filter:blur(12px);border-bottom:1px solid rgba(0,212,255,0.15);padding:16px 20px;display:flex;align-items:center;gap:12px;}
+  .back-btn{width:34px;height:34px;border-radius:50%;background:var(--surface2);border:1px solid var(--surface3);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+  .topbar-title{font-size:16px;font-weight:800;}
+  .topbar-sub{font-size:11px;color:var(--text3);margin-top:1px;}
+
+  .disclosure{margin:14px 20px 0;background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.2);border-radius:12px;padding:12px 14px;font-size:11.5px;color:var(--text2);line-height:1.55;}
+
+  .section{margin:16px 20px 0;}
+  .section-title{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+  .refresh-btn{font-size:11px;color:var(--cyan);cursor:pointer;font-weight:600;}
+
+  /* KILL SWITCH */
+  .kill-card{background:var(--surface);border:1px solid var(--surface3);border-radius:16px;padding:18px;}
+  .kill-status{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .kill-dot{width:12px;height:12px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);}
+  .kill-dot.engaged{background:var(--red);box-shadow:0 0 10px var(--red);}
+  .kill-label{font-size:15px;font-weight:800;}
+  .kill-detail{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:14px;}
+  .kill-btn{width:100%;padding:14px;border-radius:12px;border:none;font-size:14px;font-weight:800;cursor:pointer;}
+  .kill-btn.pause{background:var(--red);color:#fff;}
+  .kill-btn.resume{background:var(--green);color:#000;}
+
+  /* CARDS/LISTS */
+  .card{background:var(--surface);border:1px solid var(--surface3);border-radius:14px;padding:14px 16px;margin-bottom:8px;}
+  .agent-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+  .agent-row:last-child{border-bottom:none;}
+  .agent-name{font-size:13px;font-weight:700;flex:1;}
+  .agent-domain{font-size:10px;color:var(--text3);}
+  .risk-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:6px;flex-shrink:0;}
+  .risk-0{background:rgba(160,168,200,0.12);color:var(--text2);}
+  .risk-1{background:rgba(0,229,160,0.12);color:var(--green);}
+  .risk-2{background:rgba(0,212,255,0.12);color:var(--cyan);}
+  .risk-3{background:rgba(255,184,0,0.12);color:var(--gold);}
+  .risk-4,.risk-5{background:rgba(255,77,109,0.12);color:var(--red);}
+
+  .intent-row{padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+  .intent-row:last-child{border-bottom:none;}
+  .intent-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;}
+  .intent-domain{font-size:12px;font-weight:700;}
+  .intent-status{font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--surface2);color:var(--text2);text-transform:uppercase;}
+  .intent-meta{font-size:11px;color:var(--text3);}
+
+  .empty-mini{font-size:12px;color:var(--text3);padding:12px 0;text-align:center;}
+  .stat-row{display:flex;gap:8px;margin-bottom:12px;}
+  .stat-box{flex:1;background:var(--surface2);border-radius:10px;padding:10px;text-align:center;}
+  .stat-val{font-size:18px;font-weight:800;color:var(--cyan);}
+  .stat-lbl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.04em;margin-top:2px;}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:11px 20px;font-size:13px;font-weight:600;white-space:nowrap;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;}
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="back-btn" onclick="window.location.href='citizen-dashboard.html'">←</div>
+  <div>
+    <div class="topbar-title">🧠 SIINDEX Console</div>
+    <div class="topbar-sub">Orchestrator status · AJ only</div>
+  </div>
+</div>
+
+<div class="disclosure">This console reads real Supabase tables: <strong>agent_registry, citizen_intents, council_reviews, siindex_kill_switch</strong>. It's the first real cockpit view into SIINDEX's Orchestration Plane — see <code>siindex-master-architecture-v1.md</code> for what's doctrine vs. what's live today.</div>
+
+<div class="section">
+  <div class="section-title">Sovereign Pause</div>
+  <div class="kill-card">
+    <div class="kill-status">
+      <div class="kill-dot" id="killDot"></div>
+      <div class="kill-label" id="killLabel">Loading…</div>
+    </div>
+    <div class="kill-detail" id="killDetail">Checking status…</div>
+    <button class="kill-btn pause" id="killBtn" onclick="toggleKillSwitch()" disabled>Loading…</button>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Agent Registry <span class="refresh-btn" onclick="loadAgents()">Refresh</span></div>
+  <div class="card">
+    <div class="stat-row">
+      <div class="stat-box"><div class="stat-val" id="agentCount">—</div><div class="stat-lbl">Registered</div></div>
+      <div class="stat-box"><div class="stat-val" id="agentActiveCount">—</div><div class="stat-lbl">Active</div></div>
+    </div>
+    <div id="agentList"><div class="empty-mini">Loading…</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Recent Citizen Intents <span class="refresh-btn" onclick="loadIntents()">Refresh</span></div>
+  <div class="card">
+    <div id="intentList"><div class="empty-mini">Loading…</div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Council Reviews <span class="refresh-btn" onclick="loadCouncil()">Refresh</span></div>
+  <div class="card">
+    <div id="councilList"><div class="empty-mini">No Level 4+ intents reviewed yet.</div></div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+
+async function rpc(name, body) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + name, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Request failed');
+  return data;
+}
+async function select(table, query) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?' + query, { headers: SB_HEADERS });
+  if (!res.ok) throw new Error('read failed: ' + table);
+  return res.json();
+}
+
+let killEngaged = false;
+
+async function loadKillSwitch() {
+  try {
+    const rows = await select('siindex_kill_switch', 'id=eq.1&select=*');
+    const row = rows[0];
+    killEngaged = !!row.engaged;
+    document.getElementById('killDot').classList.toggle('engaged', killEngaged);
+    document.getElementById('killLabel').textContent = killEngaged ? 'PAUSED — SIINDEX halted' : 'Active — SIINDEX operating normally';
+    document.getElementById('killDetail').textContent = killEngaged
+      ? `Engaged by ${row.engaged_by || 'unknown'} at ${new Date(row.engaged_at).toLocaleString()}. Reason: ${row.reason || '—'}. All Level 2+ actions are refused by siindex-gate/siindex-classify until this is released.`
+      : 'All Orchestrator Edge Functions check this flag first, on every call. Engaging it here immediately halts Level 2+ actions platform-wide.';
+    const btn = document.getElementById('killBtn');
+    btn.disabled = false;
+    btn.textContent = killEngaged ? 'Release Sovereign Pause' : 'Engage Sovereign Pause';
+    btn.className = 'kill-btn ' + (killEngaged ? 'resume' : 'pause');
+  } catch (e) {
+    document.getElementById('killLabel').textContent = 'Could not load';
+    document.getElementById('killDetail').textContent = e.message;
+  }
+}
+
+async function toggleKillSwitch() {
+  const next = !killEngaged;
+  let reason = null;
+  if (next) {
+    reason = prompt('Reason for engaging the Sovereign Pause (required, logged to security_events):');
+    if (!reason) { showToast('Reason required — not engaged.'); return; }
+  }
+  try {
+    await rpc('toggle_kill_switch', { p_engaged: next, p_engaged_by: 'AJ (console)', p_reason: reason });
+    showToast(next ? 'Sovereign Pause engaged — SIINDEX halted.' : 'Sovereign Pause released.');
+    await loadKillSwitch();
+  } catch (e) {
+    showToast('Failed: ' + e.message);
+  }
+}
+
+async function loadAgents() {
+  const list = document.getElementById('agentList');
+  try {
+    const rows = await select('agent_registry', 'select=agent_name,domain,risk_class,status&order=risk_class.desc');
+    document.getElementById('agentCount').textContent = rows.length;
+    document.getElementById('agentActiveCount').textContent = rows.filter(r => r.status === 'active').length;
+    if (rows.length === 0) { list.innerHTML = '<div class="empty-mini">No agents registered.</div>'; return; }
+    list.innerHTML = rows.map(r => `<div class="agent-row">
+      <div><div class="agent-name">${r.agent_name}</div><div class="agent-domain">${r.domain}</div></div>
+      <span class="risk-badge risk-${r.risk_class}">L${r.risk_class}</span>
+    </div>`).join('');
+  } catch (e) { list.innerHTML = '<div class="empty-mini">Could not load: ' + e.message + '</div>'; }
+}
+
+async function loadIntents() {
+  const list = document.getElementById('intentList');
+  try {
+    const rows = await select('citizen_intents', 'select=domain,status,risk_level,created_at&order=created_at.desc&limit=15');
+    if (rows.length === 0) { list.innerHTML = '<div class="empty-mini">No intents logged yet — this fills up as citizens use SIINDEX-classified actions.</div>'; return; }
+    list.innerHTML = rows.map(r => `<div class="intent-row">
+      <div class="intent-top"><span class="intent-domain">${r.domain} · L${r.risk_level}</span><span class="intent-status">${r.status}</span></div>
+      <div class="intent-meta">${new Date(r.created_at).toLocaleString()}</div>
+    </div>`).join('');
+  } catch (e) { list.innerHTML = '<div class="empty-mini">Could not load: ' + e.message + '</div>'; }
+}
+
+async function loadCouncil() {
+  const list = document.getElementById('councilList');
+  try {
+    const rows = await select('council_reviews', 'select=role,verdict,notes,reviewed_at&order=reviewed_at.desc&limit=10');
+    if (rows.length === 0) return;
+    list.innerHTML = rows.map(r => `<div class="intent-row">
+      <div class="intent-top"><span class="intent-domain">${r.role}</span><span class="intent-status">${r.verdict}</span></div>
+      <div class="intent-meta">${r.notes || ''} · ${new Date(r.reviewed_at).toLocaleString()}</div>
+    </div>`).join('');
+  } catch (e) { /* leave default empty message */ }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+loadKillSwitch();
+loadAgents();
+loadIntents();
+loadCouncil();
+</script>
+</body>
+</html>
