@@ -604,9 +604,17 @@
       const data = await res.json();
       if (data && data.success) {
         publishedListingId = data.listing_id;
-        // Update sessionStorage wisdom
-        const curWisdom = parseInt(sessionStorage.getItem('citizen_wisdom') || '0');
-        sessionStorage.setItem('citizen_wisdom', curWisdom + 5);
+        // Real wisdom award via the award_wisdom RPC (was previously faked
+        // client-side with no backend - fixed as part of the full-app audit).
+        try {
+          const wRes = await fetch(`${SUPA_URL}/rest/v1/rpc/award_wisdom`, {
+            method: 'POST',
+            headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ p_citizen_id: sellerId, p_points: 5, p_reason: 'listing_published' })
+          });
+          const newScore = await wRes.json();
+          if (wRes.ok && typeof newScore === 'number') sessionStorage.setItem('citizen_wisdom', String(newScore));
+        } catch (e) { /* non-fatal - listing itself already succeeded */ }
 
         document.getElementById('successSub').textContent =
           `"${title}" is live at ${indxVal} INDX ($${usdVal.toFixed(2)}). You keep 98% of every sale.`;
