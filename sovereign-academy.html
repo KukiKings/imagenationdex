@@ -1376,6 +1376,24 @@ const TRACKS = [
   }
 ];
 
+// ── SUPABASE (real wisdom award — was fake sessionStorage-only bump) ──
+const SUPA_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+
+async function awardWisdomReal(points, reason) {
+  const citizenId = sessionStorage.getItem('citizen_id');
+  if (!citizenId) return null; // not logged in — preview-only, no real citizen to credit
+  try {
+    const res = await fetch(`${SUPA_URL}/rest/v1/rpc/award_wisdom`, {
+      method: 'POST',
+      headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_citizen_id: citizenId, p_points: points, p_reason: reason })
+    });
+    const newScore = await res.json();
+    return (res.ok && typeof newScore === 'number') ? newScore : null;
+  } catch (e) { return null; } // non-fatal — lesson completion itself must not be blocked
+}
+
 // ── STATE ──
 const MAX_XP = TRACKS.reduce((s,t) => s + t.xpTotal, 0);
 let completed = JSON.parse(localStorage.getItem('academy_completed') || '{}');
@@ -1560,8 +1578,10 @@ function completeLessonFlow() {
   if (!alreadyDone) {
     completed[key] = true;
     localStorage.setItem('academy_completed', JSON.stringify(completed));
+    // Optimistic local display; corrected below once the real award_wisdom
+    // RPC responds (was previously a pure sessionStorage fabrication with
+    // no backend — fixed 2026-07-16, same pattern as create-listing.html).
     wisdomScore += xpEarned;
-    sessionStorage.setItem('citizen_wisdom', String(wisdomScore));
 
     // Check if entire track is now complete
     const trackDone = activeTrack.lessons_data.every((_, idx) => !!completed[activeTrack.id + '_' + idx]);
@@ -1569,6 +1589,17 @@ function completeLessonFlow() {
     if (trackDone && !nftAlreadyMinted) {
       pendingTrackNFT = activeTrack;
     }
+
+    awardWisdomReal(xpEarned, 'academy_lesson_' + key).then(realScore => {
+      if (realScore !== null) {
+        wisdomScore = realScore;
+        sessionStorage.setItem('citizen_wisdom', String(wisdomScore));
+        const totalEl = document.getElementById('completeTotal');
+        if (totalEl) totalEl.textContent = 'Wisdom Score: ' + wisdomScore + ' / 200';
+      }
+      // realScore === null: not logged in, or the call failed — local
+      // preview score stands but is never written back as if it were real.
+    });
   }
 
   document.getElementById('lessonScreen').classList.remove('active');
