@@ -517,9 +517,14 @@ async function confirmPayment() {
     });
     const result = await res.json();
 
-    if (result?.error) throw new Error(result.error);
+    // PostgREST/RPC failures come back as a non-2xx HTTP status with a
+    // {message, code, ...} body — not {error} — so check res.ok first.
+    if (!res.ok || result?.message || result?.code) {
+      throw new Error(result?.message || 'The network rejected this payment.');
+    }
 
-    // Success
+    // Success — real transfer_indx result, update local balance from what the RPC returned
+    if (result?.new_balance !== undefined) sessionStorage.setItem('citizen_balance', String(result.new_balance));
     document.getElementById('confirmOverlay').classList.remove('show');
     document.getElementById('successSub').innerHTML =
       `${amt} INDX sent to <strong>${TARGET_SLUG}.IN$DEX</strong>.<br>Standing by.`;
@@ -528,7 +533,7 @@ async function confirmPayment() {
   } catch(e) {
     btn.textContent = 'Confirm & Send →';
     btn.disabled = false;
-    showToast('Payment failed. Try again.');
+    showToast(e?.message && e.message !== 'The network rejected this payment.' ? e.message : 'Payment failed. Try again.');
   }
 }
 

@@ -185,22 +185,20 @@
 
       <div class="frozen-status">
         <div class="fs-row"><div class="fs-lbl">Frozen at</div><div class="fs-val" id="frozenAt"></div></div>
-        <div class="fs-row"><div class="fs-lbl">Transactions blocked</div><div class="fs-val" style="color:var(--red);" id="blockedCount">0</div></div>
-        <div class="fs-row"><div class="fs-lbl">Pending orders cancelled</div><div class="fs-val">3</div></div>
-        <div class="fs-row"><div class="fs-lbl">SIINDEX alert</div><div class="fs-val" style="color:var(--green);">Sent ✓</div></div>
-        <div class="fs-row"><div class="fs-lbl">Your balance</div><div class="fs-val" style="color:var(--cyan);">1,240 INDX SAFE</div></div>
+        <div class="fs-row"><div class="fs-lbl">Real transfers, withdrawals & purchases</div><div class="fs-val" style="color:var(--red);">Blocked ✓</div></div>
+        <div class="fs-row"><div class="fs-lbl">SIINDEX security log</div><div class="fs-val" style="color:var(--green);">Recorded ✓</div></div>
+        <div class="fs-row"><div class="fs-lbl">Your balance</div><div class="fs-val" style="color:var(--cyan);" id="balanceRow">— INDX</div></div>
       </div>
 
       <div class="unfreeze-steps">
-        <div class="us-title">To unfreeze your account:</div>
-        <div class="us-step"><div class="us-num">1</div><div class="us-text">Verify your identity via biometrics or SMS code</div></div>
-        <div class="us-step"><div class="us-num">2</div><div class="us-text">Approve via your Guardian or Cloud Key no phrases needed</div></div>
-        <div class="us-step"><div class="us-num">3</div><div class="us-text">Change your PIN and revoke any suspicious devices</div></div>
+        <div class="us-title">Unfreezing from this device:</div>
+        <div class="us-step"><div class="us-num">1</div><div class="us-text">You're already signed in here, so tapping Unfreeze below lifts the block immediately — enforced server-side on every transfer, withdrawal and purchase.</div></div>
+        <div class="us-step"><div class="us-num">2</div><div class="us-text">If it wasn't you who froze it, or you've lost this device, use account recovery instead — don't unfreeze from a device you don't trust.</div></div>
       </div>
 
-      <button class="btn-primary" onclick="startUnfreeze()">🔓 Unfreeze my account</button>
+      <button class="btn-primary" onclick="startUnfreeze()">🔓 Unfreeze my account (this device)</button>
       <button class="btn-danger" onclick="reportStolen()">🚨 Report device stolen + contact support</button>
-      <button class="btn-ghost" onclick="window.location.href='account-recovery.html'">🔑 Need account recovery?</button>
+      <button class="btn-ghost" onclick="window.location.href='account-recovery.html'">🔑 Lost this device? Recover your account</button>
     </div>
 
   </div>
@@ -223,15 +221,38 @@
 
 <div id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  const citizenId = sessionStorage.getItem('citizen_id');
+
   let holdTimer = null;
   let holdInterval = null;
   let freezeStart = null;
   let frozenTimerInterval = null;
-  let blockedCount = 0;
 
-  // Show active state by default
-  document.getElementById('activeState').style.display = 'block';
+  async function loadFreezeState() {
+    if (!citizenId) { document.getElementById('activeState').style.display = 'block'; return; }
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + encodeURIComponent(citizenId) + '&select=account_frozen,account_frozen_at,indx_balance', { headers: SB_HEADERS });
+      const rows = await res.json();
+      const row = rows && rows[0];
+      const bal = document.getElementById('balanceRow');
+      if (bal && row) bal.textContent = Number(row.indx_balance || 0).toLocaleString(undefined,{maximumFractionDigits:2}) + ' INDX SAFE';
+      if (row && row.account_frozen) {
+        freezeStart = new Date(row.account_frozen_at || Date.now());
+        document.getElementById('frozenAt').textContent = freezeStart.toLocaleTimeString();
+        document.getElementById('activeState').style.display = 'none';
+        document.getElementById('frozenState').style.display = 'block';
+        startFrozenTimer();
+      } else {
+        document.getElementById('activeState').style.display = 'block';
+      }
+    } catch (e) { document.getElementById('activeState').style.display = 'block'; }
+  }
+  loadFreezeState();
 
   function startHold() {
     let elapsed = 0;
@@ -258,23 +279,26 @@
     document.getElementById('holdLabel').textContent = '🔴 Hold 3 seconds to freeze';
   }
 
-  function executeFreeze() {
-    freezeStart = new Date();
-    document.getElementById('frozenAt').textContent = freezeStart.toLocaleTimeString();
-    document.getElementById('activeState').style.display = 'none';
-    document.getElementById('frozenState').style.display = 'block';
-    startFrozenTimer();
-    // simulate blocked transactions ticking up
-    setInterval(() => {
-      if (Math.random() > 0.7) {
-        blockedCount++;
-        document.getElementById('blockedCount').textContent = blockedCount;
-      }
-    }, 3000);
-    showToast('🧊 Account frozen all transactions blocked');
+  async function executeFreeze() {
+    if (!citizenId) { showToast('Sign in to freeze your account'); return; }
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/set_account_freeze', {
+        method: 'POST', headers: SB_HEADERS,
+        body: JSON.stringify({ p_citizen_id: citizenId, p_frozen: true, p_reason: 'citizen_emergency_freeze' })
+      });
+      const data = await res.json();
+      if (!res.ok || !data || data.success === false) { showToast('Could not freeze account — try again'); return; }
+      freezeStart = new Date();
+      document.getElementById('frozenAt').textContent = freezeStart.toLocaleTimeString();
+      document.getElementById('activeState').style.display = 'none';
+      document.getElementById('frozenState').style.display = 'block';
+      startFrozenTimer();
+      showToast('🧊 Account frozen — real transfers, withdrawals and purchases are now blocked.');
+    } catch (e) { showToast('Could not freeze account — connection error'); }
   }
 
   function startFrozenTimer() {
+    clearInterval(frozenTimerInterval);
     frozenTimerInterval = setInterval(() => {
       const diff = Math.floor((new Date() - freezeStart) / 1000);
       const m = String(Math.floor(diff / 60)).padStart(2, '0');
@@ -283,27 +307,56 @@
     }, 1000);
   }
 
-  function startUnfreeze() {
-    window.location.href = 'account-recovery.html';
+  async function startUnfreeze() {
+    if (!citizenId) { showToast('Sign in to unfreeze your account'); return; }
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/set_account_freeze', {
+        method: 'POST', headers: SB_HEADERS,
+        body: JSON.stringify({ p_citizen_id: citizenId, p_frozen: false })
+      });
+      const data = await res.json();
+      if (!res.ok || !data || data.success === false) { showToast('Could not unfreeze — try again'); return; }
+      clearInterval(frozenTimerInterval);
+      document.getElementById('frozenState').style.display = 'none';
+      document.getElementById('activeState').style.display = 'block';
+      showToast('✅ Account unfrozen — real transfers, withdrawals and purchases are allowed again.');
+    } catch (e) { showToast('Could not unfreeze — connection error'); }
   }
 
-  function reportStolen() {
-    showToast('🚨 Report submitted SIINDEX security team notified');
-    setTimeout(() => showToast('Support team will contact you within 30 minutes'), 3000);
+  // Reports a real security_events row (T3) so there's a genuine trace, even though
+  // there's no live support-ticketing system yet to guarantee a callback time — so we
+  // don't promise a specific response window we can't back up.
+  async function logCitizenReport(reasonText) {
+    if (!citizenId) return false;
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/set_account_freeze', {
+        method: 'POST', headers: SB_HEADERS,
+        body: JSON.stringify({ p_citizen_id: citizenId, p_frozen: true, p_reason: 'citizen_report: ' + reasonText })
+      });
+      return res.ok;
+    } catch (e) { return false; }
+  }
+
+  async function reportStolen() {
+    const ok = await logCitizenReport('device_stolen');
+    showToast(ok ? '🚨 Reported and account frozen — logged to your security record.' : 'Could not log report — try again');
   }
 
   function showReportModal() {
     document.getElementById('reportModal').classList.add('show');
   }
 
+  let _selectedReason = 'unspecified';
   function selectReason(el) {
     document.querySelectorAll('.reason-option').forEach(r => r.classList.remove('selected'));
     el.classList.add('selected');
+    _selectedReason = el.textContent.trim();
   }
 
-  function submitReport() {
+  async function submitReport() {
     document.getElementById('reportModal').classList.remove('show');
-    showToast('Report submitted ✓ SIINDEX will investigate');
+    const ok = await logCitizenReport(_selectedReason);
+    showToast(ok ? '✓ Reported and logged to your security record.' : 'Could not submit report — try again');
   }
 
   function showToast(msg) {

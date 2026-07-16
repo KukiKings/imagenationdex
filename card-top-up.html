@@ -259,12 +259,15 @@
     <div class="trust-text"><strong>PQSI pre-flight active.</strong> Every top-up is scanned before funds move. Your deposit is protected end-to-end.</div>
   </div>
 
+  <!-- HONEST DISCLOSURE: no real payment processor connected yet -->
+  <div style="margin:0 20px 16px;padding:12px 14px;background:rgba(255,184,0,0.06);border:1px solid rgba(255,184,0,0.2);border-radius:12px;font-size:11px;color:var(--text-muted);line-height:1.6;">⚠️ Apple Pay, Google Pay, card, bank, and cash top-ups aren't connected to a real payment processor yet — this needs a licensed provider (e.g. Stripe) with real credentials. Nothing here moves real money or credits your real balance until that's wired up.</div>
+
   <!-- CTA -->
   <div class="cta-wrap">
     <button class="cta-btn" id="ctaBtn" onclick="showConfirm()">
       <span>💳</span> <span id="ctaLabel">Top Up $50.00</span>
     </button>
-    <div class="cta-sub" id="ctaSub">Funds available instantly · 2% SovereignPay fee goes to Civilisation Fund</div>
+    <div class="cta-sub" id="ctaSub">Not connected to a real payment processor yet — see notice above</div>
   </div>
 
 </div>
@@ -274,7 +277,7 @@
   <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title">Confirm Top-Up</div>
-    <div class="sheet-sub">Review the details before your funds are added.</div>
+    <div class="sheet-sub">⚠️ This payment method isn't connected to a real processor yet — confirming will not move real money or change your real balance.</div>
     <div class="confirm-summary">
       <div class="cs-row">
         <div class="cs-label">Top-up amount</div>
@@ -301,22 +304,8 @@
       <span style="font-size:16px;">🛡️</span>
       <div class="pqsi-confirm-text"><strong>PQSI pre-flight: Cleared T0.</strong> No threats detected. Transaction approved to proceed.</div>
     </div>
-    <button class="confirm-btn" onclick="executeTopUp()">Confirm — Add Money Now →</button>
+    <button class="confirm-btn" onclick="executeTopUp()">Not connected yet — can't add real money</button>
     <button class="cancel-btn" onclick="closeConfirm()">Cancel</button>
-  </div>
-</div>
-
-<!-- SUCCESS SCREEN -->
-<div class="success-overlay" id="successOverlay">
-  <div class="success-ring">✅</div>
-  <div class="success-title">Money added!</div>
-  <div class="success-sub">Your card is loaded and ready to spend anywhere on Earth.</div>
-  <div class="success-detail">
-    <div class="sd-amount" id="successAmount">$50.00</div>
-    <div class="sd-sub" id="successSub">added to your IN$DEX card · Available now</div>
-  </div>
-  <div style="width:100%">
-    <button class="success-btn" onclick="window.location.href='my-card.html'">View My Card →</button>
   </div>
 </div>
 
@@ -333,10 +322,24 @@
     cash:   { label:'Cash at IN$DEX Merchant', time:'Instant',          fee:'Free' },
   };
 
-  function init() {
-    const bal = parseFloat(sessionStorage.getItem('citizen_balance') || '0');
-    const usd = (bal * INDX_PRICE_USD).toFixed(2);
-    document.getElementById('currentBalance').textContent = '$48.00 USDC';
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  const citizenId = sessionStorage.getItem('citizen_id');
+  let currentBalanceUsd = 0;
+
+  async function init() {
+    let usdBal = 0;
+    if (citizenId) {
+      try {
+        const res = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + citizenId + '&select=indx_balance', { headers: SB_HEADERS });
+        const rows = await res.json();
+        const indxBal = rows && rows[0] ? parseFloat(rows[0].indx_balance) : 0;
+        usdBal = indxBal * INDX_PRICE_USD;
+      } catch (e) {}
+    }
+    currentBalanceUsd = usdBal;
+    document.getElementById('currentBalance').textContent = '$' + usdBal.toFixed(2) + ' (' + (usdBal / INDX_PRICE_USD).toFixed(0) + ' INDX)';
     // Update INDX equivalents on presets
     PRESETS.forEach(p => {
       const indx = (p / INDX_PRICE_USD).toFixed(0);
@@ -396,14 +399,13 @@
   function showConfirm() {
     if (selectedAmount <= 0) return;
     const m = METHOD_LABELS[selectedMethod];
-    const currentBal = 48.00;
-    const newBal = (currentBal + selectedAmount).toFixed(2);
+    const newBal = (currentBalanceUsd + selectedAmount).toFixed(2);
     const indx = (selectedAmount / INDX_PRICE_USD).toFixed(0);
     document.getElementById('confirmAmount').textContent = '$' + selectedAmount.toFixed(2) + ' USDC';
     document.getElementById('confirmMethod').textContent = m.label;
     document.getElementById('confirmIndx').textContent = selectedMethod === 'apple' || selectedMethod === 'google' ? 'N/A — paying with ' + m.label : '≈ ' + Number(indx).toLocaleString() + ' INDX';
     document.getElementById('confirmTime').textContent = m.time;
-    document.getElementById('confirmNewBal').textContent = '$' + newBal + ' USDC';
+    document.getElementById('confirmNewBal').textContent = 'Would be $' + newBal + ' — not applied (not connected)';
     document.getElementById('confirmOverlay').classList.add('show');
   }
 
@@ -415,15 +417,28 @@
     if (e.target.id === 'confirmOverlay') closeConfirm();
   }
 
+  // No real payment processor is connected yet (Apple Pay / Google Pay / card /
+  // bank / cash-at-merchant all require a licensed provider like Stripe with
+  // real credentials — see buy-indx.html for an existing Stripe Elements
+  // scaffold awaiting real keys). Crediting real INDX here without a real
+  // payment behind it would let anyone mint free spendable balance, so this
+  // deliberately does NOT touch indx_balance. Honest disclosure only.
   function executeTopUp() {
     closeConfirm();
-    // Update sessionStorage balance (demo)
-    const bal = parseFloat(sessionStorage.getItem('citizen_balance') || '0');
-    const added = selectedAmount / INDX_PRICE_USD;
-    sessionStorage.setItem('citizen_balance', (bal + added).toFixed(2));
-    document.getElementById('successAmount').textContent = '$' + selectedAmount.toFixed(2);
-    document.getElementById('successSub').textContent = 'added via ' + METHOD_LABELS[selectedMethod].label + ' · Available now';
-    document.getElementById('successOverlay').classList.add('show');
+    showToast('⚠️ Not connected to a real payment processor yet — no money was added.');
+  }
+
+  function showToast(msg) {
+    let t = document.getElementById('toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'toast';
+      t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#22263A;border:1px solid #2A2D38;color:#EAEAEA;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:999;max-width:360px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.4);';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg; t.style.opacity = '1';
+    clearTimeout(window._tt);
+    window._tt = setTimeout(() => { t.style.opacity = '0'; }, 3500);
   }
 
   document.addEventListener('DOMContentLoaded', init);

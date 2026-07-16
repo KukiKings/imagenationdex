@@ -70,23 +70,25 @@
   <div class="scroll-body">
     <div class="section">
 
+      <div style="background:rgba(255,184,0,0.06);border:1px solid rgba(255,184,0,0.25);border-radius:12px;padding:12px 14px;font-size:11.5px;color:var(--text-muted);line-height:1.5;margin-bottom:14px;">
+        ⚠️ <strong style="color:var(--gold);">Not live yet.</strong> Sovereign Lending is a planned post-launch feature (roadmap Wave 2, targeted Q1 2027) — no real loan engine exists today. Your collateral figures below reflect your real staked INDX; the borrowing flow is a preview only and never adds real money to your balance.
+      </div>
+
       <!-- ACTIVE LOAN -->
-      <div class="active-loan">
+      <div class="active-loan" id="activeLoanCard" style="display:none;">
         <div class="al-header">
           <div class="al-title">Active loan</div>
-          <div class="al-badge">REPAYING</div>
+          <div class="al-badge" style="background:rgba(255,184,0,0.12);color:var(--gold);">PREVIEW ONLY</div>
         </div>
-        <div class="al-row"><div class="al-lbl">Borrowed</div><div style="font-weight:700;">$150.00</div></div>
-        <div class="al-row"><div class="al-lbl">Outstanding</div><div style="font-weight:700;color:var(--gold);">$87.40</div></div>
-        <div class="al-row"><div class="al-lbl">Next payment</div><div style="font-weight:700;">$18.25 · in 6 days</div></div>
-        <div class="al-row"><div class="al-lbl">Repaid</div><div style="color:var(--green);font-weight:700;">41.7%</div></div>
-        <div class="progress-bar"><div class="pb-fill" style="width:41.7%;"></div></div>
-        <button style="width:100%;padding:10px;border-radius:10px;background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.2);color:var(--green);font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;" onclick="showToast('Repay now $87.40 full settlement')">Repay now →</button>
+        <div class="al-row"><div class="al-lbl">Borrowed (preview)</div><div style="font-weight:700;" id="alBorrowed">$0.00</div></div>
+        <div class="al-row"><div class="al-lbl">Status</div><div style="font-weight:700;color:var(--gold);">Not a real loan — nothing disbursed</div></div>
+        <button style="width:100%;padding:10px;border-radius:10px;background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.2);color:var(--red);font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;" onclick="clearLoanPreview()">Remove preview</button>
       </div>
+      <div id="noLoanNote" style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">No active loan — Sovereign Lending isn't live yet.</div>
 
       <!-- COLLATERAL -->
       <div class="collateral-card">
-        <div class="cc-title">Your collateral</div>
+        <div class="cc-title">Your real staked INDX (informational — not usable as loan collateral yet)</div>
         <div class="gauge-wrap">
           <svg class="gauge-svg" width="90" height="90" viewBox="0 0 90 90">
             <circle cx="45" cy="45" r="36" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="10"/>
@@ -94,14 +96,14 @@
             <defs><linearGradient id="gGrad" x1="0%" y1="0%"><stop offset="0%" stop-color="#00E5A0"/><stop offset="100%" stop-color="#00D4FF"/></linearGradient></defs>
           </svg>
           <div class="gauge-info">
-            <div class="gi-value">1,240 INDX</div>
-            <div class="gi-label">Total staked</div>
-            <div class="gi-ltv" style="color:var(--cyan);">LTV 50% $317.60 available</div>
+            <div class="gi-value" id="giValue">— INDX</div>
+            <div class="gi-label">Total staked (real)</div>
+            <div class="gi-ltv" style="color:var(--text-muted);">Lending not connected yet</div>
           </div>
         </div>
-        <div class="coll-row"><div class="coll-lbl">Collateral value</div><div style="font-weight:700;">$635.20</div></div>
-        <div class="coll-row"><div class="coll-lbl">Used as collateral</div><div style="font-weight:700;">340 INDX</div></div>
-        <div class="coll-row"><div class="coll-lbl">Available to borrow</div><div style="font-weight:700;color:var(--green);">$317.60</div></div>
+        <div class="coll-row"><div class="coll-lbl">Collateral value (illustrative)</div><div style="font-weight:700;" id="collValue">$0.00</div></div>
+        <div class="coll-row"><div class="coll-lbl">Used as collateral</div><div style="font-weight:700;color:var(--text-muted);">not applicable — no loans live</div></div>
+        <div class="coll-row"><div class="coll-lbl">Available to borrow</div><div style="font-weight:700;color:var(--text-muted);">not connected yet</div></div>
       </div>
 
       <!-- LOAN TIERS -->
@@ -159,26 +161,75 @@
         ⚠️ <strong style="color:var(--gold);">Never borrow more than you can repay.</strong> If INDX price falls 50%, your collateral is automatically sold to repay the loan. Your Wisdom Score decreases on liquidation.
       </div>
 
-      <button class="btn-borrow" onclick="showToast('🏦 Loan disbursed $150 added to wallet')">Borrow $150</button>
+      <button class="btn-borrow" onclick="previewBorrow()">Save Preview (not a real loan)</button>
     </div>
   </div>
 </div>
 <div id="toast"></div>
 <script>
-function selectTier(el,amt,rate,days){
-  document.querySelectorAll('.tier-card').forEach(c=>c.classList.remove('active'));
-  el.classList.add('active');
-  const monthly=(amt*rate/100);const total=amt+monthly*(days/30);const coll=(amt/0.24)*2;
-  document.getElementById('rsAmt').textContent='$'+amt.toFixed(2);
-  document.getElementById('rsRate').textContent=rate+'% / month';
-  document.getElementById('rsTerm').textContent=days+' days';
-  document.getElementById('rsMonthly').textContent='$'+(total/(days/30)).toFixed(2);
-  document.getElementById('rsTotal').textContent='$'+total.toFixed(2);
-  document.getElementById('rsColl').textContent=coll.toFixed(0)+' INDX';
-  document.getElementById('liqPrice').textContent=(0.24*0.5).toFixed(3);
-  document.querySelector('.btn-borrow').textContent='Borrow $'+amt;
-}
-function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  const citizenId = sessionStorage.getItem('citizen_id');
+  let selectedAmt = 150;
+
+  async function rpc(name, body) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + name, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (!res.ok) throw new Error((data && data.message) || 'Request failed');
+    return data;
+  }
+
+  async function loadRealCollateral() {
+    if (!citizenId) return;
+    try {
+      const result = await rpc('get_staking_positions', { p_citizen_id: citizenId });
+      const positions = Array.isArray(result) ? result : (result.positions || []);
+      const totalStaked = positions.reduce((sum, p) => sum + (parseFloat(p.amount_indx) || 0), 0);
+      document.getElementById('giValue').textContent = totalStaked.toFixed(2) + ' INDX';
+      document.getElementById('collValue').textContent = '$' + (totalStaked * 0.24).toFixed(2);
+    } catch (e) { /* real staking data unavailable */ }
+  }
+  loadRealCollateral();
+
+  function renderLoanPreview() {
+    let p; try { p = JSON.parse(localStorage.getItem('indx_loan_preview')||'null'); } catch(e) { p = null; }
+    const card = document.getElementById('activeLoanCard');
+    const note = document.getElementById('noLoanNote');
+    if (!p) { card.style.display='none'; note.style.display='block'; return; }
+    note.style.display='none';
+    card.style.display='block';
+    document.getElementById('alBorrowed').textContent = '$' + p.amt.toFixed(2);
+  }
+  function clearLoanPreview() {
+    localStorage.removeItem('indx_loan_preview');
+    renderLoanPreview();
+    showToast('Preview removed');
+  }
+  renderLoanPreview();
+
+  function selectTier(el,amt,rate,days){
+    document.querySelectorAll('.tier-card').forEach(c=>c.classList.remove('active'));
+    el.classList.add('active');
+    selectedAmt = amt;
+    const monthly=(amt*rate/100);const total=amt+monthly*(days/30);const coll=(amt/0.24)*2;
+    document.getElementById('rsAmt').textContent='$'+amt.toFixed(2);
+    document.getElementById('rsRate').textContent=rate+'% / month';
+    document.getElementById('rsTerm').textContent=days+' days';
+    document.getElementById('rsMonthly').textContent='$'+(total/(days/30)).toFixed(2);
+    document.getElementById('rsTotal').textContent='$'+total.toFixed(2);
+    document.getElementById('rsColl').textContent=coll.toFixed(0)+' INDX';
+    document.getElementById('liqPrice').textContent=(0.24*0.5).toFixed(3);
+    document.querySelector('.btn-borrow').textContent='Save Preview — $'+amt+' (not real)';
+  }
+
+  function previewBorrow() {
+    localStorage.setItem('indx_loan_preview', JSON.stringify({ amt: selectedAmt, ts: Date.now() }));
+    showToast('Saved as a preview — no real loan issued, no money added to your balance');
+    renderLoanPreview();
+  }
+
+  function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

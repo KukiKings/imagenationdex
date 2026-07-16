@@ -103,9 +103,9 @@
     <div class="claim-token">INDX</div>
     <div class="claim-usd" id="claimUsd">≈ $12.00 USD</div>
     <div class="from-row">
-      <div class="from-avatar">AJ</div>
+      <div class="from-avatar">🎁</div>
       <div>
-        <div class="from-name" id="fromName">Arthur Henry</div>
+        <div class="from-name" id="fromName">Someone on IN$DEX</div>
         <div class="from-label">sent you this payment</div>
       </div>
     </div>
@@ -180,114 +180,78 @@
 
   <!-- CTA -->
   <div class="cta-wrap">
-    <button class="cta-btn" onclick="startClaim()">Claim My $<span id="ctaUsd">12.00</span> Now →</button>
+    <button class="cta-btn" id="claimBtn" onclick="startClaim()">Claim My $<span id="ctaUsd">12.00</span> Now →</button>
     <div class="cta-sub">Free to join · No bank account needed · No documents<br>Your money, your wallet, your sovereignty.</div>
   </div>
 
 </div>
 
-<!-- ONBOARDING OVERLAY -->
-<div class="overlay" id="onboardOverlay">
-  <div class="ob-card" id="obCard">
-    <!-- step 1 -->
-    <div class="ob-step-label">Step 1 of 3</div>
-    <div class="ob-progress">
-      <div class="ob-dot active" id="dot1"></div>
-      <div class="ob-dot" id="dot2"></div>
-      <div class="ob-dot" id="dot3"></div>
-    </div>
-    <div class="ob-icon">📱</div>
-    <div class="ob-title">Confirm your number</div>
-    <div class="ob-sub">We sent the payment to this number. Tap confirm to verify it's you.</div>
-    <button class="ob-btn" onclick="obStep2()">Confirm it's me</button>
-  </div>
-</div>
-
 <script>
   const INDX_RATE = 0.24;
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
 
-  // Parse URL params
   const params = new URLSearchParams(window.location.search);
-  const amount = parseInt(params.get('amount')) || 50;
-  const sender = params.get('from') || 'Arthur Henry';
+  const inviteCode = params.get('instant') || params.get('code') || '';
+  let expiryTimer = null;
 
-  document.getElementById('claimAmount').textContent = amount;
-  document.getElementById('claimUsd').textContent = '≈ $' + (amount * INDX_RATE).toFixed(2) + ' USD';
-  document.getElementById('fromName').textContent = sender;
-  document.getElementById('ctaUsd').textContent = (amount * INDX_RATE).toFixed(2);
+  async function rpc(name, body) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + name, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(body) });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json?.message || 'Request failed');
+    return json;
+  }
 
-  // Expiry timer
-  let expiry = 86387;
-  setInterval(() => {
-    expiry--;
-    if (expiry < 0) expiry = 0;
-    const h = Math.floor(expiry / 3600);
-    const m = Math.floor((expiry % 3600) / 60);
-    const s = expiry % 60;
-    document.getElementById('expiresTimer').textContent =
-      `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-  }, 1000);
+  function showNotClaimable(msg) {
+    document.querySelector('.claim-hero').innerHTML = `<div class="money-badge">⚠️</div><div class="claim-title">${msg}</div>`;
+    document.querySelector('.expires-bar').style.display = 'none';
+    document.querySelector('.steps-wrap').style.display = 'none';
+    document.getElementById('claimBtn').style.display = 'none';
+    document.querySelector('.cta-sub').textContent = 'Ask whoever sent this for a fresh link.';
+  }
+
+  async function init() {
+    if (!inviteCode) {
+      showNotClaimable("This link isn't valid — no gift code was included.");
+      return;
+    }
+    try {
+      const status = await rpc('get_instant_invite_status', { p_invite_code: inviteCode });
+      if (status.status === 'not_found') { showNotClaimable("This link isn't valid — no gift found for this code."); return; }
+      if (status.status === 'expired') { showNotClaimable('This gift link has expired.'); return; }
+      if (status.status === 'fulfilled') { showNotClaimable('This gift has already been claimed.'); return; }
+
+      // status.status === 'pending' — real, unclaimed gift.
+      const amount = status.amount_indx || 0;
+      document.getElementById('claimAmount').textContent = amount;
+      document.getElementById('claimUsd').textContent = '≈ $' + (amount * INDX_RATE).toFixed(2) + ' USD';
+      document.getElementById('ctaUsd').textContent = (amount * INDX_RATE).toFixed(2);
+
+      if (status.expires_at) {
+        const expiryMs = new Date(status.expires_at).getTime();
+        expiryTimer = setInterval(() => {
+          const remaining = Math.max(0, Math.floor((expiryMs - Date.now()) / 1000));
+          const h = Math.floor(remaining / 3600);
+          const m = Math.floor((remaining % 3600) / 60);
+          const s = remaining % 60;
+          document.getElementById('expiresTimer').textContent =
+            `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+          if (remaining <= 0) clearInterval(expiryTimer);
+        }, 1000);
+      }
+    } catch (e) {
+      showNotClaimable("Couldn't check this link right now — check your connection and try again.");
+    }
+  }
+  init();
 
   function startClaim() {
-    document.getElementById('onboardOverlay').classList.add('show');
+    if (!inviteCode) return;
+    // Real account creation + real fulfill_instant_invite happen on the actual
+    // onboarding flow — this page doesn't fake liveness/wallet-creation itself.
+    window.location.href = 'onboarding-flow.html?instant=' + encodeURIComponent(inviteCode);
   }
-
-  function obStep2() {
-    const card = document.getElementById('obCard');
-    document.getElementById('dot1').classList.remove('active');
-    document.getElementById('dot1').classList.add('done');
-    document.getElementById('dot2').classList.add('active');
-    card.innerHTML = `
-      <div class="ob-step-label">Step 2 of 3</div>
-      <div class="ob-progress">
-        <div class="ob-dot done"></div>
-        <div class="ob-dot active"></div>
-        <div class="ob-dot"></div>
-      </div>
-      <div class="ob-icon">👁️</div>
-      <div class="ob-title">Quick liveness check</div>
-      <div class="ob-sub">Look at your camera and blink slowly. Takes about 30 seconds. No documents. No passport.</div>
-      <button class="ob-btn" onclick="obStep3()">Start Face Scan</button>`;
-  }
-
-  function obStep3() {
-    const card = document.getElementById('obCard');
-    card.innerHTML = `
-      <div class="ob-step-label">Creating your wallet…</div>
-      <div class="ob-progress">
-        <div class="ob-dot done"></div>
-        <div class="ob-dot done"></div>
-        <div class="ob-dot active"></div>
-      </div>
-      <div class="ob-icon" style="animation:spin 1s linear infinite;display:inline-block;">⚡</div>
-      <div class="ob-title">Setting up your wallet</div>
-      <div class="ob-sub">Creating your Grid Account and Web3 domain…</div>`;
-    setTimeout(obSuccess, 2500);
-  }
-
-  function obSuccess() {
-    const usd = (amount * INDX_RATE).toFixed(2);
-    const card = document.getElementById('obCard');
-    card.innerHTML = `
-      <div class="success-wrap">
-        <div class="confetti">🎉</div>
-        <div class="suc-title">You're in!</div>
-        <div class="suc-domain">citizen.IN$DEX</div>
-        <div class="suc-box">
-          <div class="suc-row"><span class="suc-label">Received</span><span class="suc-val" style="color:var(--cyan)">${amount} INDX</span></div>
-          <div class="suc-row"><span class="suc-label">Value</span><span class="suc-val">$${usd} USD</span></div>
-          <div class="suc-row"><span class="suc-label">Wisdom Score</span><span class="suc-val" style="color:var(--gold)">+10 Welcome bonus</span></div>
-          <div class="suc-row"><span class="suc-label">IN$DEX Card</span><span class="suc-val" style="color:var(--green)">Ready to order</span></div>
-        </div>
-        <button class="suc-btn" onclick="window.location.href='citizen-dashboard.html'">Open My Wallet →</button>
-        <button class="suc-btn2" onclick="window.location.href='my-card.html'">Get My IN$DEX Card</button>
-      </div>`;
-  }
-
-  // Spin animation
-  const style = document.createElement('style');
-  style.textContent = '@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}';
-  document.head.appendChild(style);
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

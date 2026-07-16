@@ -213,54 +213,13 @@
   <div class="section-title">Card Actions</div>
   <div style="padding:0 20px;">
     <button class="lost-btn report" onclick="showLostSheet()">🚨 Report Lost or Stolen</button>
-    <button class="lost-btn replace" onclick="showToast('📦 Replacement card ordered. Arrives in 5–10 days.')">💳 Order Replacement Card</button>
+    <button class="lost-btn replace" onclick="showToast('Request noted — SIINDEX will follow up on a replacement.')">💳 Order Replacement Card</button>
   </div>
 
-  <!-- SECURITY HISTORY -->
+  <!-- SECURITY HISTORY — real entries from security_events, loaded by loadSecurityLog() -->
   <div class="section-title">Security Log</div>
-  <div class="sec-hist" style="padding:0 16px;">
-    <div class="sh-item">
-      <div class="sh-dot green"></div>
-      <div class="sh-body">
-        <div class="sh-event">PQSI pre-flight: Cleared — Coconut Stall Avarua</div>
-        <div class="sh-time">Today 10:14 AM · T0 · Cook Islands</div>
-      </div>
-    </div>
-    <div class="sh-item">
-      <div class="sh-dot gold"></div>
-      <div class="sh-body">
-        <div class="sh-event">Unusual location flagged — Kuala Lumpur transaction paused</div>
-        <div class="sh-time">Yesterday 3:42 PM · T1 · SIINDEX review</div>
-      </div>
-    </div>
-    <div class="sh-item">
-      <div class="sh-dot green"></div>
-      <div class="sh-body">
-        <div class="sh-event">PQSI pre-flight: Cleared — ATM BSP Nadi</div>
-        <div class="sh-time">2 days ago · T0 · Fiji</div>
-      </div>
-    </div>
-    <div class="sh-item">
-      <div class="sh-dot green"></div>
-      <div class="sh-body">
-        <div class="sh-event">Freeze toggled OFF — Card reactivated</div>
-        <div class="sh-time">3 days ago 9:18 AM · Manual action</div>
-      </div>
-    </div>
-    <div class="sh-item">
-      <div class="sh-dot red"></div>
-      <div class="sh-body">
-        <div class="sh-event">Card frozen — Citizen action</div>
-        <div class="sh-time">3 days ago 9:14 AM · Manual action</div>
-      </div>
-    </div>
-    <div class="sh-item">
-      <div class="sh-dot green"></div>
-      <div class="sh-body">
-        <div class="sh-event">SIM swap check: No change detected</div>
-        <div class="sh-time">5 days ago · T0 · Daily scan</div>
-      </div>
-    </div>
+  <div class="sec-hist" id="secHistList" style="padding:0 16px;">
+    <div class="sh-item"><div class="sh-body"><div class="sh-event" style="color:var(--text-muted);">Loading…</div></div></div>
   </div>
 
 </div>
@@ -286,42 +245,83 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
-  let isFrozen = false;
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  const citizenId = sessionStorage.getItem('citizen_id');
+
+  // These channel toggles are a citizen preference only — real per-channel enforcement
+  // (distinguishing NFC vs ATM vs FX at the transaction layer) isn't built yet. The card's
+  // ONE real, enforced state is card_frozen, wired to set_card_freeze()/report_card_lost()
+  // below. Saying so here rather than pretending each toggle blocks a real payment channel.
   const controlState = { ctrlOnline:true, ctrlNFC:true, ctrlATM:true, ctrlFX:true, ctrlP2P:true, ctrlSubs:true };
 
-  function toggleFreeze() {
-    isFrozen = !isFrozen;
+  let isFrozen = false;
+
+  function renderFreezeUI(frozen, blocked) {
+    isFrozen = frozen;
     const hero = document.getElementById('freezeHero');
     const icon = document.getElementById('freezeIcon');
     const status = document.getElementById('freezeStatus');
     const sub = document.getElementById('freezeSub');
     const btn = document.getElementById('freezeToggleBtn');
     const prop = document.getElementById('freezePropLabel');
-    if (isFrozen) {
+    if (frozen) {
       hero.className = 'freeze-hero frozen';
-      icon.textContent = '🔴';
-      status.className = 'fh-status frozen'; status.textContent = 'Card Frozen';
-      sub.textContent = 'All payments blocked instantly. Apple Pay, Google Pay and all tokenised payments are frozen.';
-      btn.className = 'freeze-toggle-btn frozen'; btn.textContent = 'Unfreeze Card';
-      prop.textContent = 'Freeze propagated to Apple Pay, Google Pay & all tokenised environments ✓';
-      showToast('🔒 Card frozen. No transactions can proceed. Tap Unfreeze when safe.');
+      icon.textContent = blocked ? '🚨' : '🔴';
+      status.className = 'fh-status frozen';
+      status.textContent = blocked ? 'Card Blocked — Reported Stolen' : 'Card Frozen';
+      sub.textContent = blocked
+        ? 'Your card has been blocked. Contact support for a replacement.'
+        : 'All real payments through your INDX balance are blocked while frozen.';
+      btn.className = 'freeze-toggle-btn frozen';
+      btn.textContent = 'Unfreeze Card';
+      btn.style.display = blocked ? 'none' : 'block';
+      prop.textContent = 'Enforced on every transfer, withdrawal and marketplace purchase — checked server-side, not just in this screen.';
     } else {
       hero.className = 'freeze-hero active';
       icon.textContent = '🟢';
       status.className = 'fh-status active'; status.textContent = 'Card Active';
-      sub.textContent = 'Your IN$DEX card is live and protected by PQSI across all payment channels.';
+      sub.textContent = 'Your IN$DEX card is live. Real transfers, withdrawals and purchases are allowed.';
       btn.className = 'freeze-toggle-btn active'; btn.textContent = 'Freeze Card';
-      prop.textContent = 'Freeze instantly propagates to Apple Pay, Google Pay & all tokenised payments';
-      showToast('✅ Card unfrozen. PQSI protection resumed. Ready to spend.');
+      btn.style.display = 'block';
+      prop.textContent = 'Freezing here blocks real transfers, withdrawals and purchases immediately.';
     }
+  }
+
+  async function loadCardState() {
+    if (!citizenId) { renderFreezeUI(false, false); return; }
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + encodeURIComponent(citizenId) + '&select=card_frozen,card_lost_reported_at', { headers: SB_HEADERS });
+      const rows = await res.json();
+      const row = rows && rows[0];
+      renderFreezeUI(!!(row && row.card_frozen), !!(row && row.card_lost_reported_at));
+    } catch (e) { renderFreezeUI(false, false); }
+  }
+
+  async function toggleFreeze() {
+    if (!citizenId) { showToast('Sign in to manage your card'); return; }
+    const next = !isFrozen;
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/set_card_freeze', {
+        method: 'POST', headers: SB_HEADERS,
+        body: JSON.stringify({ p_citizen_id: citizenId, p_frozen: next })
+      });
+      const data = await res.json();
+      if (!res.ok || !data || data.success === false) { showToast('Could not update card — try again'); return; }
+      renderFreezeUI(next, false);
+      showToast(next ? '🔒 Card frozen — real transfers, withdrawals and purchases are now blocked.' : '✅ Card unfrozen — ready to spend.');
+      loadSecurityLog();
+    } catch (e) { showToast('Could not update card — connection error'); }
   }
 
   function toggleControl(id, name) {
     controlState[id] = !controlState[id];
     const btn = document.getElementById(id);
     btn.className = 'ctrl-toggle ' + (controlState[id] ? 'on' : 'off');
-    showToast(controlState[id] ? '✅ ' + name + ' enabled.' : '🔒 ' + name + ' disabled.');
+    showToast((controlState[id] ? '✅ ' : '🔒 ') + name + ' preference saved.');
   }
 
   function showLostSheet() {
@@ -332,17 +332,49 @@
     if (!e || e.target.id === 'lostOverlay') document.getElementById('lostOverlay').classList.remove('show');
   }
 
-  function reportLost() {
+  async function reportLost() {
     closeLostSheet();
-    isFrozen = true;
-    document.getElementById('freezeHero').className = 'freeze-hero frozen';
-    document.getElementById('freezeIcon').textContent = '🚨';
-    document.getElementById('freezeStatus').className = 'fh-status frozen';
-    document.getElementById('freezeStatus').textContent = 'Card Blocked — Reported Stolen';
-    document.getElementById('freezeSub').textContent = 'Your card has been permanently blocked. PQSI T4 lockdown active. Replacement dispatched.';
-    document.getElementById('freezeToggleBtn').style.display = 'none';
-    showToast('🚨 Card blocked. PQSI T4 active. Replacement card dispatched. You\'re safe.');
+    if (!citizenId) { showToast('Sign in to report your card'); return; }
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/report_card_lost', {
+        method: 'POST', headers: SB_HEADERS,
+        body: JSON.stringify({ p_citizen_id: citizenId })
+      });
+      const data = await res.json();
+      if (!res.ok || !data || data.success === false) { showToast('Could not report card — try again'); return; }
+      renderFreezeUI(true, true);
+      showToast('🚨 Card blocked. Real transfers, withdrawals and purchases are now blocked.');
+      loadSecurityLog();
+    } catch (e) { showToast('Could not report card — connection error'); }
   }
+
+  // ── SECURITY LOG — real entries from security_events (zone: card_freeze, card_lost) ──
+  async function loadSecurityLog() {
+    const el = document.getElementById('secHistList');
+    if (!citizenId) { el.innerHTML = '<div class="sh-item"><div class="sh-body"><div class="sh-event" style="color:var(--text-muted);">Sign in to see your card security log.</div></div></div>'; return; }
+    try {
+      const url = SUPABASE_URL + '/rest/v1/security_events?zone=in.(card_freeze,card_lost)&detail->>citizen_id=eq.' + encodeURIComponent(citizenId) + '&order=created_at.desc&limit=10&select=tier,description,created_at';
+      const res = await fetch(url, { headers: SB_HEADERS });
+      const rows = await res.json();
+      if (!rows || !rows.length) {
+        el.innerHTML = '<div class="sh-item"><div class="sh-body"><div class="sh-event" style="color:var(--text-muted);">No card security events yet.</div></div></div>';
+        return;
+      }
+      el.innerHTML = rows.map(function(r) {
+        const dotClass = r.tier === 'T3' || r.tier === 'T4' ? 'red' : (r.tier === 'T2' ? 'gold' : 'green');
+        const d = new Date(r.created_at);
+        return '<div class="sh-item"><div class="sh-dot ' + dotClass + '"></div><div class="sh-body">' +
+          '<div class="sh-event">' + r.description + '</div>' +
+          '<div class="sh-time">' + d.toLocaleString('en-AU', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) + ' · ' + r.tier + '</div>' +
+        '</div></div>';
+      }).join('');
+    } catch (e) {
+      el.innerHTML = '<div class="sh-item"><div class="sh-body"><div class="sh-event" style="color:var(--text-muted);">Could not load security log.</div></div></div>';
+    }
+  }
+
+  loadCardState();
+  loadSecurityLog();
 
   function showToast(msg) {
     let t = document.getElementById('toast');

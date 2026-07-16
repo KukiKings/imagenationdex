@@ -858,18 +858,12 @@
       </div>
       <div class="stat-item">
         <span class="stat-sym">SOL</span>
-        <span class="stat-price">$200.00</span>
-        <span class="stat-chg up">↑ +2.1%</span>
+        <span class="stat-price" style="color:var(--text-muted);">ref. $200</span>
       </div>
       <div class="stat-item">
         <span class="stat-sym">Liquidity</span>
-        <span class="stat-price">$1.8M</span>
+        <span class="stat-price" style="color:var(--text-muted);">no LP yet</span>
       </div>
-    </div>
-
-    <!-- MOMENTUM TICKER -->
-    <div class="momentum-strip">
-      <div class="momentum-track" id="momentumTrack"></div>
     </div>
 
     <!-- PRICE CHART -->
@@ -897,6 +891,10 @@
 
     <!-- SWAP CARD -->
     <div class="section">
+      <!-- DISCLOSURE -->
+      <div style="background:rgba(255,184,0,0.06);border:1px solid rgba(255,184,0,0.25);border-radius:12px;padding:12px 14px;font-size:11.5px;color:var(--text-muted);line-height:1.5;margin-bottom:14px;">
+        ⚠️ <strong style="color:#FFB800;">Preview mode.</strong> SovSwap isn't connected to a live Solana DEX yet — no Raydium pool is seeded, so no swap here actually executes or moves tokens. Your real INDX balance is shown accurately; SOL/USDC/USDT/BTC/ETH balances and prices below are illustrative reference values, not your real holdings.
+      </div>
       <!-- Market / Limit toggle -->
       <div class="swap-mode-toggle">
         <div class="smt-chip active" id="modeMarket" onclick="setSwapMode('market')">Market</div>
@@ -1045,15 +1043,16 @@
           </div>
         </div>
         <div class="dca-summary" id="dcaSummary">Enter an amount and order count to preview your DCA plan.</div>
-        <button class="dca-submit" onclick="submitDCAOrder()">Start DCA Plan</button>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.4;">⚠ No real recurring-order engine exists yet — this saves your plan as a preview only. Nothing executes automatically.</div>
+        <button class="dca-submit" onclick="submitDCAOrder()">Save DCA Plan (preview only)</button>
       </div>
 
       <!-- Fee Savings Banner -->
       <div class="savings-banner" id="savingsBanner">
         <div class="sb-icon">💰</div>
         <div class="sb-body">
-          <div class="sb-title">Saved vs CEX this month</div>
-          <div class="sb-sub">IN$DEX 2% · Coinbase avg 2.75%</div>
+          <div class="sb-title">What you'd save vs CEX (2% vs Coinbase avg 2.75%)</div>
+          <div class="sb-sub">Illustrative only — no real swaps have executed yet</div>
         </div>
         <div class="sb-val" id="savingsVal">$0.00</div>
       </div>
@@ -1125,7 +1124,7 @@
 <div class="history-sheet" id="historySheet">
   <div class="sheet-handle" style="margin:14px auto 0;width:36px;height:4px;border-radius:99px;background:var(--border);"></div>
   <div class="hist-header">
-    <div class="hist-title">📋 Swap History</div>
+    <div class="hist-title">📋 Preview Log (not real swaps)</div>
     <button class="hist-close" onclick="closeHistory()">✕</button>
   </div>
   <div class="hist-list" id="histList"></div>
@@ -1204,7 +1203,7 @@ function openHistory() {
   const h = JSON.parse(localStorage.getItem('indx_swap_hist') || '[]');
   const list = document.getElementById('histList');
   if (!h.length) {
-    list.innerHTML = '<div class="hist-empty">No swaps yet.<br>Your history appears here after your first swap.</div>';
+    list.innerHTML = '<div class="hist-empty">No preview swaps yet.<br>Nothing here is a real, executed trade — SovSwap isn\'t connected to a live DEX yet.</div>';
   } else {
     list.innerHTML = h.map(s => {
       const d = new Date(s.ts);
@@ -1243,14 +1242,40 @@ function toggleFav(symbol, event) {
     : TOKENS);
 }
 
-// ── TOKEN DATA ──
+// ── SUPABASE (real INDX balance only — no other asset is actually custodied) ──
+const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+const citizenId = sessionStorage.getItem('citizen_id');
+
+async function loadRealIndxBalance() {
+  if (!citizenId) return;
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + citizenId + '&select=indx_balance', { headers: SB_HEADERS });
+    const rows = await res.json();
+    const bal = rows && rows[0] ? parseFloat(rows[0].indx_balance) : null;
+    if (bal !== null && !isNaN(bal)) {
+      const indx = TOKENS.find(t => t.symbol === 'INDX');
+      indx.balance = bal.toFixed(2);
+      indx.usdBal = '$' + (bal * INDX_PRICE_USD_FIXED).toFixed(2);
+      updateUI();
+      renderPicker(TOKENS);
+    }
+  } catch (e) { /* real balance unavailable — leave placeholder */ }
+}
+
+// INDX price is canon-fixed at $0.24 USD — never invent a different value or simulate live movement.
+const INDX_PRICE_USD_FIXED = 0.24;
+
+// ── TOKEN DATA ── (SOL/USDC/USDT/BTC/ETH: illustrative reference values only — IN$DEX does not
+// custody these assets for citizens today; only indx_balance is a real, backed number)
 const TOKENS = [
-  { symbol:'SOL',  name:'Solana',          cls:'sol',  logo:'◎',   balance:'12.45',  usdBal:'$2,490',  price:200,   change:+2.1  },
-  { symbol:'INDX', name:'IN$DEX',          cls:'indx', logo:'IN$', balance:'50',     usdBal:'$12',     price:0.24,  change:+4.2  },
-  { symbol:'USDC', name:'USD Coin',         cls:'usdc', logo:'$',   balance:'250.00', usdBal:'$250',    price:1,     change:0     },
-  { symbol:'USDT', name:'Tether',           cls:'usdt', logo:'₮',   balance:'0.00',   usdBal:'$0',      price:1,     change:0     },
-  { symbol:'BTC',  name:'Bitcoin (Wrapped)', cls:'btc', logo:'₿',   balance:'0.002',  usdBal:'$130',    price:65000, change:-0.8  },
-  { symbol:'ETH',  name:'Ethereum (Neon)',  cls:'eth',  logo:'Ξ',   balance:'0.00',   usdBal:'$0',      price:3200,  change:+1.3  },
+  { symbol:'SOL',  name:'Solana',          cls:'sol',  logo:'◎',   balance:'0.00',   usdBal:'not connected',  price:200,   change:+2.1  },
+  { symbol:'INDX', name:'IN$DEX',          cls:'indx', logo:'IN$', balance:'0',      usdBal:'—',              price:0.24,  change:0     },
+  { symbol:'USDC', name:'USD Coin',         cls:'usdc', logo:'$',   balance:'0.00',   usdBal:'not connected',  price:1,     change:0     },
+  { symbol:'USDT', name:'Tether',           cls:'usdt', logo:'₮',   balance:'0.00',   usdBal:'not connected',  price:1,     change:0     },
+  { symbol:'BTC',  name:'Bitcoin (Wrapped)', cls:'btc', logo:'₿',   balance:'0.00',   usdBal:'not connected',  price:65000, change:-0.8  },
+  { symbol:'ETH',  name:'Ethereum (Neon)',  cls:'eth',  logo:'Ξ',   balance:'0.00',   usdBal:'not connected',  price:3200,  change:+1.3  },
 ];
 
 let fromToken = TOKENS[0]; // SOL
@@ -1263,6 +1288,7 @@ window.addEventListener('DOMContentLoaded', () => {
   renderPicker(TOKENS);
   drawChart();
   updateChartPair();
+  loadRealIndxBalance();
 });
 
 function updateUI() {
@@ -1563,33 +1589,28 @@ function executeSwap() {
   // Show loading state on button
   const btn = document.getElementById('swapBtn');
   btn.classList.add('loading');
-  btn.textContent = 'Confirming on Solana…';
+  btn.textContent = 'Not connected — previewing…';
 
   setTimeout(() => {
     const input = document.getElementById('fromAmount').value;
     const out = document.getElementById('outputAmount').textContent;
     logSwap(fromToken.symbol, input, toToken.symbol, out);
-    document.getElementById('successTitle').textContent = 'Swap Complete ✓';
-    document.getElementById('successSub').textContent = `${input} ${fromToken.symbol} → ${out} ${toToken.symbol}\n98% of value stays in your portal.`;
-    document.getElementById('successTx').textContent = randomTx();
+    document.getElementById('successTitle').textContent = 'Preview only — not a real swap';
+    document.getElementById('successSub').textContent = `${input} ${fromToken.symbol} → ${out} ${toToken.symbol} (illustrative)\nNo tokens actually moved — SovSwap isn't connected to a live Solana DEX yet.`;
+    document.getElementById('successTx').textContent = 'no real transaction';
     document.getElementById('successOverlay').classList.add('active');
     btn.classList.remove('loading');
     btn.textContent = 'Swap ' + fromToken.symbol + ' → ' + toToken.symbol;
     // Reset
     document.getElementById('fromAmount').value = '';
     calcOutput();
-  }, 1800);
+  }, 1200);
 }
 
 function closeSuccess() {
   document.getElementById('successOverlay').classList.remove('active');
 }
 
-function randomTx() {
-  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz123456789';
-  const rand = n => Array.from({length:n}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
-  return rand(4) + '…' + rand(4);
-}
 
 // ── NAV ──
 function navTap(el, label) {
@@ -1678,7 +1699,7 @@ function submitLimitOrder() {
   orders.unshift({ from: fromToken.symbol, to: toToken.symbol, targetPrice: target, tif: tifValue, ts: Date.now() });
   localStorage.setItem('indx_limit_orders', JSON.stringify(orders.slice(0, 10)));
   setSwapMode('market');
-  showToast('⚡ Limit order placed · ' + fromToken.symbol + ' → ' + toToken.symbol + ' @ ' + target.toFixed(4) + ' · expires ' + tifValue);
+  showToast('⚡ Saved as a preview · ' + fromToken.symbol + ' → ' + toToken.symbol + ' @ ' + target.toFixed(4) + ' · no real order-book monitoring exists yet');
 }
 
 // Feature 2: Fee Savings Counter (accumulates per swap)
@@ -1819,30 +1840,6 @@ function setQuickAmt(pct) {
   calcOutput();
 }
 
-// Feature R2-3: Momentum ticker — simulated recent swap activity
-(function initMomentumTicker() {
-  const PAIRS = [
-    ['SOL','INDX',  ['0.5','1.2','2.4','0.8','3.1']],
-    ['USDC','INDX', ['50','120','250','80','400']],
-    ['SOL','USDC',  ['1.0','3.2','0.5','2.1']],
-    ['BTC','INDX',  ['0.001','0.002','0.003']],
-    ['ETH','SOL',   ['0.1','0.5','0.3']],
-    ['INDX','USDC', ['100','400','200','50']],
-    ['USDC','SOL',  ['100','250','500']],
-  ];
-  const AGES = ['just now','4s','9s','15s','22s','34s','48s','1m','2m'];
-  function makeItem() {
-    const p = PAIRS[Math.floor(Math.random() * PAIRS.length)];
-    const amt = p[2][Math.floor(Math.random() * p[2].length)];
-    const age = AGES[Math.floor(Math.random() * AGES.length)];
-    return '<div class="momentum-item">🔄 <span class="mi-amt">' + amt + ' ' + p[0] + '</span> → <span class="mi-pair">' + p[1] + '</span> <span class="mi-age">' + age + ' ago</span></div><span class="momentum-sep">·</span>';
-  }
-  const track = document.getElementById('momentumTrack');
-  if (!track) return;
-  const half = Array.from({length: 14}, makeItem).join('');
-  track.innerHTML = half + half; // doubled for seamless loop
-})();
-
 // Feature R2-4: Confetti burst on swap success
 function launchConfetti() {
   const canvas = document.getElementById('confettiCanvas');
@@ -1966,10 +1963,10 @@ function submitDCAOrder() {
   if (!amt || amt <= 0) { showToast('Enter an amount per buy'); return; }
   if (!orders || orders < 2) { showToast('Enter at least 2 orders'); return; }
   let dcaPlans = JSON.parse(localStorage.getItem('indx_dca_plans') || '[]');
-  dcaPlans.unshift({ from: fromToken.symbol, to: toToken.symbol, amt, orders, freq: dcaFreq, ts: Date.now(), active: true });
+  dcaPlans.unshift({ from: fromToken.symbol, to: toToken.symbol, amt, orders, freq: dcaFreq, ts: Date.now(), active: false });
   localStorage.setItem('indx_dca_plans', JSON.stringify(dcaPlans.slice(0, 5)));
   setSwapMode('market');
-  showToast('📅 DCA plan started · ' + fromToken.symbol + ' → ' + toToken.symbol + ' · ' + orders + ' orders ' + dcaFreq);
+  showToast('📅 Saved as a preview · ' + fromToken.symbol + ' → ' + toToken.symbol + ' · not actually executing yet');
 }
 
 // Feature R3-2: Animated swap progress stepper
@@ -2019,23 +2016,20 @@ window.executeSwap = function() {
   closeConfirm();
   showSwapProgress();
   var btn = document.getElementById('swapBtn');
-  if (btn) { btn.classList.add('loading'); btn.textContent = 'Confirming on Solana…'; }
+  if (btn) { btn.classList.add('loading'); btn.textContent = 'Not connected — previewing…'; }
   var input = document.getElementById('fromAmount').value;
   var out   = document.getElementById('outputAmount').textContent;
   setTimeout(function() {
     hideSwapProgress();
     logSwap(fromToken.symbol, input, toToken.symbol, out);
-    var addSavingsAmount = (parseFloat(input) || 0) * fromToken.price;
-    if (addSavingsAmount > 0) addSavings(addSavingsAmount);
-    document.getElementById('successTitle').textContent = 'Swap Complete ✓';
-    document.getElementById('successSub').textContent = input + ' ' + fromToken.symbol + ' → ' + out + ' ' + toToken.symbol + '\n98% of value stays in your portal.';
-    document.getElementById('successTx').textContent = randomTx();
+    document.getElementById('successTitle').textContent = 'Preview only — not a real swap';
+    document.getElementById('successSub').textContent = input + ' ' + fromToken.symbol + ' → ' + out + ' ' + toToken.symbol + ' (illustrative)\nNo tokens actually moved — SovSwap isn\'t connected to a live Solana DEX yet.';
+    document.getElementById('successTx').textContent = 'no real transaction';
     document.getElementById('successOverlay').classList.add('active');
     if (btn) { btn.classList.remove('loading'); btn.textContent = 'Swap ' + fromToken.symbol + ' → ' + toToken.symbol; }
     document.getElementById('fromAmount').value = '';
     calcOutput();
-    setTimeout(launchConfetti, 100);
-  }, 1800);
+  }, 1200);
 };
 
 // Feature R3-3: Gas reserve warning
@@ -2123,29 +2117,16 @@ document.addEventListener('DOMContentLoaded', function() {
   renderPairPins();
 });
 
-// Feature 4: 24h market stats micro-ticker
+// Feature 4: 24h market stats strip
+// INDX price is canon-fixed at $0.24 USD (no LP is seeded yet, so there is no live market price to
+// simulate) — do not animate or nudge it. SOL price/volume/liquidity figures are reference values only.
 (function initStatsTicker() {
-  const INDX_PRICE_USD = 0.24;
-  // Simulate subtle INDX price micro-movement ±0.001 every 6s
-  let indxPrice = INDX_PRICE_USD;
-  let indxChg   = 4.2;
-  let vol       = 284;
-  setInterval(function() {
-    const nudge = (Math.random() - 0.49) * 0.002;
-    indxPrice = Math.max(0.20, Math.min(0.30, indxPrice + nudge));
-    indxChg  += (Math.random() - 0.49) * 0.1;
-    vol      += Math.round((Math.random()-0.5)*8);
-    const priceEl = document.getElementById('indxStatPrice');
-    const chgEl   = document.getElementById('indxStatChg');
-    const volEl   = document.getElementById('statVol');
-    if (priceEl) priceEl.textContent = '$' + indxPrice.toFixed(4);
-    if (chgEl) {
-      const up = indxChg >= 0;
-      chgEl.textContent = (up ? '↑ +' : '↓ ') + Math.abs(indxChg).toFixed(1) + '%';
-      chgEl.className = 'stat-chg ' + (up ? 'up' : 'dn');
-    }
-    if (volEl) volEl.textContent = '$' + vol + 'K';
-  }, 6000);
+  const priceEl = document.getElementById('indxStatPrice');
+  const chgEl   = document.getElementById('indxStatChg');
+  const volEl   = document.getElementById('statVol');
+  if (priceEl) priceEl.textContent = '$0.24';
+  if (chgEl) { chgEl.textContent = 'Fixed — no LP yet'; chgEl.className = 'stat-chg'; chgEl.style.color = 'var(--text-muted)'; }
+  if (volEl) volEl.textContent = 'n/a';
 })();
 </script>
 <script src="siindex-speak-core.js"></script>

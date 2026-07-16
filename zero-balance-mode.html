@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Zero-Balance Mode IN$DEX</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+    --black:#090A10; --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+    --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+    --border:rgba(255,255,255,0.07);
+    --text:#F0F2FF; --text-muted:rgba(240,242,255,0.5); --text-dim:rgba(240,242,255,0.25);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+  .shell{max-width:430px;margin:0 auto;min-height:100vh;padding-bottom:40px;}
+  .topbar{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--black);z-index:10;}
+  .back-btn{width:36px;height:36px;border-radius:10px;background:var(--surface2);border:none;color:var(--text);font-size:18px;cursor:pointer;}
+  .topbar-title{font-size:16px;font-weight:800;flex:1;}
+  .zb-badge{font-size:10px;font-weight:700;color:var(--gold);background:rgba(255,184,0,0.1);border:1px solid rgba(255,184,0,0.25);padding:3px 8px;border-radius:20px;}
+
+  .intro{padding:16px;font-size:13px;color:var(--text-muted);line-height:1.55;}
+  .intro strong{color:var(--text);}
+
+  .section{padding:0 16px;margin-top:18px;}
+  .section-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:8px;}
+  .row{display:flex;align-items:center;gap:12px;padding:12px 0;cursor:pointer;}
+  .row + .row{border-top:1px solid var(--border);}
+  .row-icon{width:36px;height:36px;border-radius:10px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+  .row-label{font-size:13px;font-weight:700;flex:1;}
+  .row-sub{font-size:11px;color:var(--text-muted);margin-top:2px;}
+  .row-chevron{font-size:13px;color:var(--text-dim);}
+
+  .gridacct-line{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;}
+  .gridacct-line .k{color:var(--text-muted);}
+  .gridacct-line .v{font-weight:700;}
+
+  .btn{width:100%;padding:12px;border-radius:10px;border:none;font-size:13px;font-weight:700;cursor:pointer;margin-top:8px;}
+  .btn-red{background:rgba(255,77,109,0.1);border:1px solid rgba(255,77,109,0.25);color:var(--red);}
+  .btn-cyan{background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.25);color:var(--cyan);}
+
+  .empty{font-size:12px;color:var(--text-dim);padding:8px 0;}
+  .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:11px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+  .toast.show{opacity:1;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <button class="back-btn" onclick="window.history.back()">←</button>
+    <div class="topbar-title">Zero-Balance Mode</div>
+    <div class="zb-badge">ESSENTIAL ACCESS</div>
+  </div>
+
+  <div class="intro">
+    <strong>This screen keeps working even with no data balance</strong> — where your carrier plan supports it. It only covers essential sovereignty functions, not general browsing. Everything below links to a real, working part of IN$DEX — nothing here is a placeholder.
+  </div>
+
+  <!-- GRID ACCOUNT STATUS -->
+  <div class="section">
+    <div class="section-title">Grid Account Status</div>
+    <div class="card" id="gridAcctCard">
+      <div class="gridacct-line"><span class="k">Citizen</span><span class="v" id="gaName">—</span></div>
+      <div class="gridacct-line"><span class="k">INDX balance</span><span class="v" id="gaBalance">—</span></div>
+      <div class="gridacct-line"><span class="k">Wisdom Score</span><span class="v" id="gaWisdom">—</span></div>
+      <div class="gridacct-line"><span class="k">Account status</span><span class="v" id="gaStatus">—</span></div>
+    </div>
+  </div>
+
+  <!-- CREDENTIALS -->
+  <div class="section">
+    <div class="section-title">Your Credentials</div>
+    <div class="card">
+      <div id="credList" class="empty">Loading…</div>
+    </div>
+  </div>
+
+  <!-- NOTICES / RECENT CONNECTIVITY EVENTS -->
+  <div class="section">
+    <div class="section-title">Important Notices</div>
+    <div class="card">
+      <div id="noticeList" class="empty">Loading…</div>
+    </div>
+  </div>
+
+  <!-- ESSENTIAL ACTIONS -->
+  <div class="section">
+    <div class="section-title">Essential Actions</div>
+    <div class="card">
+      <div class="row" onclick="goToMyDomain()">
+        <div class="row-icon">🪪</div>
+        <div style="flex:1;"><div class="row-label">Present offline credentials</div><div class="row-sub">Your real, shareable Sovereign Domain page</div></div>
+        <div class="row-chevron">›</div>
+      </div>
+      <div class="row" onclick="window.location.href='contact.html'">
+        <div class="row-icon">💬</div>
+        <div style="flex:1;"><div class="row-label">Contact citizen support</div><div class="row-sub">Real support contact, not a bot loop</div></div>
+        <div class="row-chevron">›</div>
+      </div>
+      <div class="row" onclick="window.location.href='account-recovery.html'">
+        <div class="row-icon">🔑</div>
+        <div style="flex:1;"><div class="row-label">Start identity recovery</div><div class="row-sub">Real phone-verification recovery flow</div></div>
+        <div class="row-chevron">›</div>
+      </div>
+      <div class="row" onclick="window.location.href='sovereign-academy.html'">
+        <div class="row-icon">📘</div>
+        <div style="flex:1;"><div class="row-label">Financial-literacy guidance</div><div class="row-sub">Sovereign Academy — works on low data</div></div>
+        <div class="row-chevron">›</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROTECTIVE ACTIONS -->
+  <div class="section">
+    <div class="section-title">Protective Actions</div>
+    <div class="card">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">These are real actions — they immediately change your account's real state.</div>
+      <button class="btn btn-red" onclick="confirmReportStolen()">📵 Report device stolen (freezes card for real)</button>
+      <button class="btn btn-red" onclick="confirmFreeze()">🛑 Freeze all outbound transfers now</button>
+      <button class="btn btn-cyan" onclick="confirmRiskReport()">⚠️ Report suspected SIM swap / connectivity risk</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
+<script>
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  const citizenId = sessionStorage.getItem('citizen_id');
+
+  async function rpc(name, body) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + name, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(body) });
+    return res.json();
+  }
+
+  async function loadGridAccount() {
+    if (!citizenId) {
+      document.getElementById('gaName').textContent = 'Not signed in';
+      return;
+    }
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + citizenId + '&select=citizen_name,indx_balance,wisdom_score,account_frozen,card_frozen', { headers: SB_HEADERS });
+      const rows = await res.json();
+      const c = rows[0];
+      if (!c) return;
+      document.getElementById('gaName').textContent = c.citizen_name || '—';
+      document.getElementById('gaBalance').textContent = (parseFloat(c.indx_balance) || 0).toLocaleString() + ' INDX';
+      document.getElementById('gaWisdom').textContent = (c.wisdom_score ?? 0) + ' pts';
+      const statusEl = document.getElementById('gaStatus');
+      if (c.account_frozen) { statusEl.textContent = 'Frozen'; statusEl.style.color = 'var(--red)'; }
+      else if (c.card_frozen) { statusEl.textContent = 'Card frozen'; statusEl.style.color = 'var(--gold)'; }
+      else { statusEl.textContent = 'Active'; statusEl.style.color = 'var(--green)'; }
+    } catch (e) {
+      document.getElementById('gaName').textContent = 'Could not load — try again';
+    }
+  }
+
+  async function loadCredentials() {
+    const el = document.getElementById('credList');
+    if (!citizenId) { el.textContent = 'Sign in to see your credentials.'; return; }
+    try {
+      const list = await rpc('get_my_credentials', { p_citizen_id: citizenId });
+      if (!Array.isArray(list) || list.length === 0) { el.textContent = 'No credentials issued yet.'; return; }
+      el.innerHTML = list.map(c =>
+        '<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;"><strong>' + c.credential_type + '</strong> — ' +
+        (c.issuer_name || c.issuer_type) + '</div>'
+      ).join('');
+    } catch (e) {
+      el.textContent = 'Could not load credentials — try again.';
+    }
+  }
+
+  async function loadNotices() {
+    const el = document.getElementById('noticeList');
+    if (!citizenId) { el.textContent = 'Sign in to see notices.'; return; }
+    try {
+      const list = await rpc('get_connectivity_events', { p_citizen_id: citizenId, p_limit: 5 });
+      if (!Array.isArray(list) || list.length === 0) { el.textContent = 'No connectivity notices yet.'; return; }
+      el.innerHTML = list.map(e => {
+        const t = new Date(e.created_at);
+        const label = t.toLocaleDateString('en-NZ', { day: 'numeric', month: 'short' });
+        return '<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;">' +
+          '<strong>' + e.event_type.replace(/_/g,' ') + '</strong> · ' + label +
+          (e.restricted ? ' <span style="color:var(--gold);">· restricted</span>' : '') + '</div>';
+      }).join('');
+    } catch (e) {
+      el.textContent = 'Could not load notices — try again.';
+    }
+  }
+
+  async function confirmReportStolen() {
+    if (!citizenId) { showToast('Sign in first'); return; }
+    if (!confirm('Report this device/card as stolen? This immediately and really freezes your card.')) return;
+    const data = await rpc('report_card_lost', { p_citizen_id: citizenId });
+    if (data && data.success) { showToast('✓ Card frozen for real. Standing by.'); loadGridAccount(); }
+    else { showToast('Could not complete — try again'); }
+  }
+
+  async function confirmFreeze() {
+    if (!citizenId) { showToast('Sign in first'); return; }
+    if (!confirm('Freeze ALL outbound transfers now? This is real and immediate.')) return;
+    const data = await rpc('set_account_freeze', { p_citizen_id: citizenId, p_frozen: true, p_reason: 'zero_balance_mode_manual_freeze' });
+    if (data && data.success) { showToast('✓ Account frozen for real. Standing by.'); loadGridAccount(); }
+    else { showToast('Could not complete — try again'); }
+  }
+
+  async function confirmRiskReport() {
+    if (!citizenId) { showToast('Sign in first'); return; }
+    if (!confirm('Report a suspected SIM swap or connectivity risk? This will really freeze your account as a precaution until you review it.')) return;
+    const data = await rpc('report_connectivity_risk', { p_citizen_id: citizenId, p_risk_type: 'citizen_reported_suspected_sim_swap' });
+    if (data && data.success) { showToast('✓ Reported. Account frozen as a precaution.'); loadGridAccount(); loadNotices(); }
+    else { showToast('Could not complete — try again'); }
+  }
+
+  function goToMyDomain() {
+    const domain = sessionStorage.getItem('citizen_web3_domain') || '';
+    const slug = domain.toLowerCase().replace(/\.in\$dex$/i, '').replace(/[^a-z0-9-]/g, '');
+    if (!slug) { showToast('No domain on file yet — claim one first'); return; }
+    window.location.href = 'domain.html?slug=' + encodeURIComponent(slug);
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  loadGridAccount();
+  loadCredentials();
+  loadNotices();
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

@@ -269,13 +269,15 @@
         <div class="pm-opt" onclick="selectPM(this,'usdc')">💵 USDC</div>
         <div class="pm-opt" onclick="selectPM(this,'sol')">◎ SOL</div>
       </div>
+      <div style="font-size:11px;color:var(--text-muted);margin:-8px 0 14px;line-height:1.5;">USDC and SOL balances aren't tracked in your account yet — bill payments run on your real INDX balance for now.</div>
 
       <div class="pp-summary">
         <div class="pps-row"><div class="pps-lbl">Bill amount</div><div id="sumBill"></div></div>
         <div class="pps-row"><div class="pps-lbl">You pay in INDX</div><div id="sumIndx" style="color:var(--cyan);"></div></div>
-        <div class="pps-row"><div class="pps-lbl">Protocol converts</div><div id="sumConvert">INDX → USD via DEX</div></div>
         <div class="pps-row"><div class="pps-lbl">98/2 fee</div><div id="sumFee" style="color:var(--gold);">0 INDX</div></div>
+        <div class="pps-row"><div class="pps-lbl">Your balance after</div><div id="sumAfter" style="color:var(--text-muted);"></div></div>
       </div>
+      <div style="font-size:11px;color:var(--text-muted);margin:-8px 0 14px;line-height:1.5;">⚠️ This debits your real IN$DEX balance and logs a real transaction. Settlement to the biller's own bank (BPay/ACH network) isn't connected yet, so payments show as <strong style="color:var(--text)">Pending</strong> — this is a real infrastructure gap, not a fake result.</div>
 
       <div class="schedule-row">
         <div>
@@ -292,27 +294,8 @@
 
     <!-- RECENT PAYMENTS -->
     <div class="section-title">Recent payments</div>
-    <div class="recent-card">
-      <div class="rp-item">
-        <div class="rp-icon">💡</div>
-        <div class="rp-info"><div class="rp-name">AGL Energy</div><div class="rp-date">Jun 1 · Ref 9412780</div></div>
-        <div style="text-align:right;"><div class="rp-amt">-$142</div><div class="rp-repeat">Monthly</div></div>
-      </div>
-      <div class="rp-item">
-        <div class="rp-icon">📱</div>
-        <div class="rp-info"><div class="rp-name">Telstra Mobile</div><div class="rp-date">May 28 · Ref 00123456</div></div>
-        <div style="text-align:right;"><div class="rp-amt">-$65</div><div class="rp-repeat">Monthly</div></div>
-      </div>
-      <div class="rp-item">
-        <div class="rp-icon">🌊</div>
-        <div class="rp-info"><div class="rp-name">Sydney Water</div><div class="rp-date">May 15 · Ref SW7824</div></div>
-        <div><div class="rp-amt">-$88</div></div>
-      </div>
-      <div class="rp-item">
-        <div class="rp-icon">🏠</div>
-        <div class="rp-info"><div class="rp-name">Rent 12 Smith St</div><div class="rp-date">May 1 · via PayID</div></div>
-        <div style="text-align:right;"><div class="rp-amt">-$1,400</div><div class="rp-repeat">Monthly</div></div>
-      </div>
+    <div class="recent-card" id="recentCard">
+      <div class="ss-empty" style="padding:20px 16px;text-align:center;color:var(--text-muted);font-size:13px;">Loading real payment history…</div>
     </div>
 
     <div style="height:20px;"></div>
@@ -352,6 +335,13 @@
 </div>
 
 <script>
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  const citizenId = sessionStorage.getItem('citizen_id');
+  const INDX_PRICE_USD = 0.24;
+  const BPAY_FEE = 2.00; // avg BPay fee per bill — used only for the "fees saved" comparison, not a real charge
+
   const BILLERS = [
     { id:1, icon:'💡', name:'AGL Energy', cat:'utilities' },
     { id:2, icon:'🔥', name:'Origin Gas', cat:'utilities' },
@@ -378,6 +368,7 @@
   let schedOn = false;
   let currentCat = 'all';
   let searchVal = '';
+  let payInFlight = false;
 
   function renderBillers() {
     const filtered = BILLERS.filter(b =>
@@ -414,6 +405,10 @@
   }
 
   function selectPM(el, pm) {
+    if (pm !== 'indx') {
+      showToast((pm === 'usdc' ? 'USDC' : 'SOL') + " isn't tracked in your account yet — paying in INDX");
+      return;
+    }
     payMethod = pm;
     document.querySelectorAll('.pm-opt').forEach(o => o.classList.remove('active'));
     el.classList.add('active');
@@ -423,17 +418,16 @@
   function updatePaySummary() {
     const amt = parseFloat(document.getElementById('ppAmt').value) || 0;
     const ref = document.getElementById('ppRef').value;
-    const rate = { indx: 0.24, usdc: 1.00, sol: 142.00 }[payMethod];
-    const tokenAmt = (amt / rate).toFixed(2);
+    const tokenAmt = (amt / INDX_PRICE_USD).toFixed(2);
     const fee = (tokenAmt * 0.02).toFixed(2);
-    const sym = { indx:'INDX', usdc:'USDC', sol:'SOL' }[payMethod];
+    const afterBal = (currentBalanceIndx - parseFloat(tokenAmt)).toFixed(2);
     document.getElementById('sumBill').textContent = amt > 0 ? '$' + amt.toFixed(2) + ' USD' : '';
-    document.getElementById('sumIndx').textContent = amt > 0 ? tokenAmt + ' ' + sym : '';
-    document.getElementById('sumConvert').textContent = sym + ' → USD via DEX';
-    document.getElementById('sumFee').textContent = amt > 0 ? fee + ' ' + sym : '0 INDX';
-    document.getElementById('payBtn').disabled = !(amt > 0 && ref.length > 3);
+    document.getElementById('sumIndx').textContent = amt > 0 ? tokenAmt + ' INDX' : '';
+    document.getElementById('sumFee').textContent = amt > 0 ? fee + ' INDX' : '0 INDX';
+    document.getElementById('sumAfter').textContent = amt > 0 ? afterBal + ' INDX' : '';
+    document.getElementById('payBtn').disabled = !(amt > 0 && ref.length > 3) || payInFlight;
     document.getElementById('payBtn').textContent = amt > 0
-      ? `Pay $${amt.toFixed(2)} USD (${tokenAmt} ${sym})`
+      ? `Pay $${amt.toFixed(2)} USD (${tokenAmt} INDX)`
       : 'Pay bill';
   }
 
@@ -446,15 +440,6 @@
     k.style.right = schedOn ? '3px' : 'auto';
   }
 
-  function doPay() {
-    const amt = parseFloat(document.getElementById('ppAmt').value);
-    const name = selectedBiller ? selectedBiller.name : 'biller';
-    showToast(`✓ $${amt.toFixed(2)} paid to ${name}${schedOn ? ' · Monthly auto-pay set' : ''}`);
-    document.getElementById('ppAmt').value = '';
-    document.getElementById('ppRef').value = '';
-    updatePaySummary();
-  }
-
   function showToast(msg) {
     const t = document.getElementById('toast');
     t.textContent = msg; t.style.opacity = '1';
@@ -464,58 +449,48 @@
   renderBillers();
 
   // ════════════════════════════════════════════════
-  // GOD MODE — BILL-PAY.HTML
+  // REAL BACKEND — bill-pay.html (fixed 2026-07-16, x23)
+  // Every action below calls a real Supabase RPC (pay_bill,
+  // get_bill_pay_history, get_bill_pay_schedules, cancel_bill_pay_schedule).
+  // No localStorage-only fake state remains. Actual settlement to the
+  // biller's own bank (BPay/ACH network) is a genuine infrastructure gap —
+  // payments are real INDX debits logged as 'pending', not fabricated.
   // ════════════════════════════════════════════════
-  const INDX_PRICE_USD = 0.24;
-  const LAST_BILLER_KEY  = 'indx_billpay_last';
-  const BALANCE_KEY_BP   = 'indx_billpay_balance';
+  let currentBalanceIndx = 0;
 
-  // 1. BALANCE SYNC — pull from sessionStorage and update balance bar
-  (function syncBalance() {
-    const bal = parseInt(sessionStorage.getItem('citizen_balance') || '0');
-    if (bal > 0) {
-      document.querySelector('.bb-val').textContent = bal.toLocaleString() + ' INDX';
-      document.querySelector('.bb-lbl').textContent = 'Your INDX balance';
-      // Update USD estimate
-      const usdVal = (bal * INDX_PRICE_USD).toFixed(2);
-      document.querySelectorAll('.balance-bar .bb-lbl')[1] && (document.querySelectorAll('.balance-bar div')[1].querySelector('.bb-lbl').textContent = '≈ $' + usdVal);
-    }
-  })();
-
-  // 2. LAST BILLER QUICK TAP
-  function loadLastBiller() {
+  async function syncBalance() {
+    if (!citizenId) return;
     try {
-      const raw = localStorage.getItem(LAST_BILLER_KEY);
-      if (!raw) return;
-      const d = JSON.parse(raw);
-      if (!d || !d.id) return;
-      const bar = document.getElementById('lastBillerBar');
-      document.getElementById('lbbIcon').textContent = d.icon || '⚡';
-      document.getElementById('lbbName').textContent = 'Pay ' + d.name + ' again';
-      bar.classList.add('show');
-      bar._billerId = d.id;
-    } catch(e) {}
+      const res = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + citizenId + '&select=indx_balance', { headers: SB_HEADERS });
+      const rows = await res.json();
+      const bal = rows && rows[0] ? parseFloat(rows[0].indx_balance) : 0;
+      currentBalanceIndx = bal;
+      document.querySelector('.bb-val').textContent = bal.toLocaleString(undefined,{maximumFractionDigits:2}) + ' INDX';
+      const usdVal = (bal * INDX_PRICE_USD).toFixed(2);
+      const rateEl = document.querySelectorAll('.balance-bar div')[1];
+      if (rateEl) rateEl.querySelector('.bb-lbl').textContent = '≈ $' + usdVal;
+    } catch (e) {
+      showToast('Could not load your real balance right now');
+    }
   }
 
   function quickPayLastBiller() {
-    try {
-      const raw = localStorage.getItem(LAST_BILLER_KEY);
-      if (!raw) return;
-      const d = JSON.parse(raw);
-      selectBiller(d.id);
-      if (d.ref)  { document.getElementById('ppRef').value = d.ref; }
-      if (d.amt)  { document.getElementById('ppAmt').value = d.amt; }
-      updatePaySummary();
-      showToast('Last biller loaded — review and pay');
-    } catch(e) {}
-  }
-
-  function saveLastBiller(billerObj, ref, amt) {
-    try {
-      localStorage.setItem(LAST_BILLER_KEY, JSON.stringify({
-        id: billerObj.id, icon: billerObj.icon, name: billerObj.name, ref, amt
-      }));
-    } catch(e) {}
+    const bar = document.getElementById('lastBillerBar');
+    if (!bar._last) return;
+    const d = bar._last;
+    const match = BILLERS.find(b => b.name === d.biller_name);
+    if (match) selectBiller(match.id);
+    else {
+      selectedBiller = { id: 0, icon: '🧾', name: d.biller_name, cat: d.category || 'all' };
+      document.getElementById('ppIcon').textContent = selectedBiller.icon;
+      document.getElementById('ppName').textContent = selectedBiller.name;
+      document.getElementById('ppCat').textContent = selectedBiller.cat;
+      document.getElementById('payPanel').style.display = 'block';
+    }
+    if (d.reference) document.getElementById('ppRef').value = d.reference;
+    if (d.amount_usd) document.getElementById('ppAmt').value = d.amount_usd;
+    updatePaySummary();
+    showToast('Last biller loaded — review and pay');
   }
 
   // 3. AMOUNT PRESETS
@@ -529,109 +504,146 @@
     document.querySelectorAll('.ap-chip').forEach(c => c.classList.remove('ap-active'));
   }
 
-  // 4. PAY CONFIRMATION OVERLAY — intercept doPay() with confirm step
-  const origDoPay = doPay;
-  window.doPay = function() {
+  // 4. PAY CONFIRMATION OVERLAY
+  function doPay() {
     const amt  = parseFloat(document.getElementById('ppAmt').value);
     const ref  = document.getElementById('ppRef').value.trim();
     const name = selectedBiller ? selectedBiller.name : 'biller';
     if (!amt || amt <= 0) { showToast('Enter an amount'); return; }
     if (!ref) { showToast('Enter a reference number'); return; }
+    if (!citizenId) { showToast('No citizen session found — please log in'); return; }
 
-    const rate    = { indx: INDX_PRICE_USD, usdc: 1.00, sol: 142.00 }[payMethod];
-    const sym     = { indx:'INDX', usdc:'USDC', sol:'SOL' }[payMethod];
-    const tokenAmt = (amt / rate).toFixed(2);
-    const fee     = (parseFloat(tokenAmt) * 0.02).toFixed(2);
+    const tokenAmt = (amt / INDX_PRICE_USD).toFixed(2);
+    const fee      = (parseFloat(tokenAmt) * 0.02).toFixed(2);
 
     document.getElementById('csBpSub').textContent    = 'Confirm your bill payment';
     document.getElementById('csBpBiller').textContent = (selectedBiller ? selectedBiller.icon + ' ' : '') + name;
     document.getElementById('csBpRef').textContent    = ref;
     document.getElementById('csBpAmt').textContent    = '$' + amt.toFixed(2) + ' USD';
-    document.getElementById('csBpToken').textContent  = tokenAmt + ' ' + sym;
-    document.getElementById('csBpFee').textContent    = fee + ' ' + sym;
+    document.getElementById('csBpToken').textContent  = tokenAmt + ' INDX';
+    document.getElementById('csBpFee').textContent    = fee + ' INDX';
     document.getElementById('csBpSched').textContent  = schedOn ? 'Monthly auto-pay on' : 'One-time only';
 
     document.getElementById('confirmOverlayBp').classList.add('show');
-  };
+  }
 
   function closePayConfirm() {
     document.getElementById('confirmOverlayBp').classList.remove('show');
   }
 
-  function executePayConfirmed() {
+  async function executePayConfirmed() {
+    if (payInFlight) return;
     const amt  = parseFloat(document.getElementById('ppAmt').value);
     const ref  = document.getElementById('ppRef').value.trim();
     const name = selectedBiller ? selectedBiller.name : 'biller';
-    closePayConfirm();
-    showToast('✓ $' + amt.toFixed(2) + ' paid to ' + name + (schedOn ? ' · Monthly auto-pay set' : ''));
-    if (selectedBiller) saveLastBiller(selectedBiller, ref, amt);
-    loadLastBiller();
-    document.getElementById('ppAmt').value = '';
-    document.getElementById('ppRef').value = '';
-    updatePaySummary();
+    payInFlight = true;
+
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/pay_bill', {
+        method: 'POST', headers: SB_HEADERS,
+        body: JSON.stringify({
+          p_citizen_id: citizenId,
+          p_biller_name: name,
+          p_biller_icon: selectedBiller ? selectedBiller.icon : '🧾',
+          p_biller_category: selectedBiller ? selectedBiller.cat : null,
+          p_reference: ref,
+          p_amount_usd: amt,
+          p_schedule_recurring: schedOn
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const msg = (err.message || '').includes('ACCOUNT_FROZEN') ? 'Your account is frozen — bill payment blocked'
+          : (err.message || '').includes('Insufficient') ? "You don't have enough INDX for this bill"
+          : 'Payment failed — please try again';
+        closePayConfirm();
+        showToast(msg);
+        return;
+      }
+      const result = await res.json();
+      closePayConfirm();
+      showToast('✓ $' + amt.toFixed(2) + ' paid to ' + name + (schedOn ? ' · Monthly auto-pay set' : '') + ' · Pending settlement');
+      document.getElementById('ppAmt').value = '';
+      document.getElementById('ppRef').value = '';
+      updatePaySummary();
+      await Promise.all([syncBalance(), renderRecentPayments(), updateSpendCard(), loadLastBiller()]);
+    } catch (e) {
+      closePayConfirm();
+      showToast('Payment failed — network error');
+    } finally {
+      payInFlight = false;
+    }
   }
 
-  loadLastBiller();
-
-  // ════════════════════════════════════════════════
-  // GOD MODE R2 — BILL-PAY.HTML
-  // ════════════════════════════════════════════════
-  const HIST_KEY   = 'indx_billpay_hist';
-  const SCHED_KEY  = 'indx_billpay_sched';
-  const BPAY_FEE   = 2.00; // avg BPay fee per bill
-
-  // ── 1. PAYMENT HISTORY PERSISTENCE ──────────────
-  function getBPHist() {
-    try { return JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); } catch(e) { return []; }
-  }
-  function saveBPHist(h) {
-    try { localStorage.setItem(HIST_KEY, JSON.stringify(h.slice(0,40))); } catch(e) {}
+  // ── PAYMENT HISTORY (real) ──────────────
+  async function getBPHist() {
+    if (!citizenId) return [];
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_bill_pay_history', {
+        method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId, p_limit: 20 })
+      });
+      return await res.json();
+    } catch (e) { return []; }
   }
 
-  function renderRecentPayments() {
-    const hist = getBPHist();
-    if (!hist.length) return;
-    const card = document.querySelector('.recent-card');
-    if (!card) return;
+  async function renderRecentPayments() {
+    const card = document.getElementById('recentCard');
+    const hist = await getBPHist();
+    if (!hist.length) {
+      card.innerHTML = '<div class="ss-empty" style="padding:20px 16px;text-align:center;color:var(--text-muted);font-size:13px;">No real payments yet.<br>Pay a bill to see it here.</div>';
+      return;
+    }
     card.innerHTML = hist.slice(0,6).map(h => `
       <div class="rp-item">
-        <div class="rp-icon">${h.icon || '🧾'}</div>
+        <div class="rp-icon">🧾</div>
         <div class="rp-info">
-          <div class="rp-name">${h.name}</div>
-          <div class="rp-date">${h.date} · Ref ${h.ref.substring(0,10)}</div>
+          <div class="rp-name">${h.biller_name}</div>
+          <div class="rp-date">${new Date(h.created_at).toLocaleDateString('en-AU',{day:'numeric',month:'short'})} · Ref ${(h.reference||'').substring(0,10)}</div>
         </div>
         <div style="text-align:right;">
-          <div class="rp-amt">-$${parseFloat(h.amt).toFixed(0)}</div>
-          ${h.sched ? '<div class="rp-repeat">Monthly</div>' : ''}
+          <div class="rp-amt">-$${parseFloat(h.amount_usd).toFixed(0)}</div>
+          <div class="rp-repeat" style="background:rgba(255,184,0,0.08);color:var(--gold);">${h.status}</div>
         </div>
       </div>`).join('');
   }
 
-  // ── 2. MONTHLY SPEND TRACKER ─────────────────────
-  function updateSpendCard() {
-    const hist = getBPHist();
+  async function loadLastBiller() {
+    const hist = await getBPHist();
+    const bar = document.getElementById('lastBillerBar');
+    if (!hist.length) { bar.classList.remove('show'); return; }
+    const d = hist[0];
+    document.getElementById('lbbIcon').textContent = '🧾';
+    document.getElementById('lbbName').textContent = 'Pay ' + d.biller_name + ' again';
+    bar.classList.add('show');
+    bar._last = d;
+  }
+
+  // ── MONTHLY SPEND TRACKER (real) ─────────────────────
+  async function updateSpendCard() {
+    const hist = await getBPHist();
     const now = new Date();
     const thisMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-    const monthly = hist.filter(h => (h.isoDate || '').startsWith(thisMonth));
-    const total = monthly.reduce((s,h) => s + parseFloat(h.amt || 0), 0);
+    const monthly = hist.filter(h => (h.created_at || '').startsWith(thisMonth));
+    const total = monthly.reduce((s,h) => s + parseFloat(h.amount_usd || 0), 0);
     const saved = monthly.length * BPAY_FEE;
     document.getElementById('scTotal').textContent = '$' + total.toFixed(0);
     document.getElementById('scCount').textContent = monthly.length;
     document.getElementById('scSaved').textContent = '$' + saved.toFixed(2);
-    // Update savings badge sub-text
     const allSaved = hist.length * BPAY_FEE;
     if (allSaved > 0) {
-      document.getElementById('sbSub').textContent =
-        `You've saved $${allSaved.toFixed(2)} in bank fees with IN$DEX`;
+      document.getElementById('sbSub').textContent = `You've saved $${allSaved.toFixed(2)} in bank fees with IN$DEX`;
     }
   }
 
-  // ── 3. SCHEDULED BILLS MANAGER ───────────────────
-  function getScheduled() {
-    try { return JSON.parse(localStorage.getItem(SCHED_KEY) || '[]'); } catch(e) { return []; }
-  }
-  function saveScheduled(s) {
-    try { localStorage.setItem(SCHED_KEY, JSON.stringify(s)); } catch(e) {}
+  // ── SCHEDULED BILLS MANAGER (real) ───────────────────
+  async function getScheduled() {
+    if (!citizenId) return [];
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_bill_pay_schedules', {
+        method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId })
+      });
+      return await res.json();
+    } catch (e) { return []; }
   }
 
   function openSchedSheet() {
@@ -642,80 +654,47 @@
     document.getElementById('schedOverlay').classList.remove('open');
   }
 
-  function renderSchedList() {
-    const list = getScheduled();
+  async function renderSchedList() {
+    const list = await getScheduled();
     const el = document.getElementById('schedList');
     if (!list.length) {
       el.innerHTML = '<div class="ss-empty">No scheduled payments yet.<br>Enable recurring when paying a bill.</div>';
       return;
     }
-    // Compute next due date (1st of next month)
     function nextDue() {
       const d = new Date(); d.setDate(1); d.setMonth(d.getMonth()+1);
       return d.toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});
     }
-    el.innerHTML = list.map((s,i) => `
+    el.innerHTML = list.map(s => `
       <div class="ss-item">
-        <div class="ss-icon">${s.icon || '🧾'}</div>
+        <div class="ss-icon">${s.biller_icon || '🧾'}</div>
         <div class="ss-info">
-          <div class="ss-name">${s.name}</div>
-          <div class="ss-next">Next: ${nextDue()} · Ref ${s.ref.substring(0,8)}</div>
+          <div class="ss-name">${s.biller_name}</div>
+          <div class="ss-next">Next: ${nextDue()} · Ref ${(s.reference||'').substring(0,8)}</div>
         </div>
         <div>
-          <div class="ss-amt">$${parseFloat(s.amt).toFixed(0)}/mo</div>
-          <div class="ss-cancel" onclick="cancelSched(${i})">Cancel</div>
+          <div class="ss-amt">$${parseFloat(s.amount_usd).toFixed(0)}/mo</div>
+          <div class="ss-cancel" onclick="cancelSched('${s.id}')">Cancel</div>
         </div>
       </div>`).join('');
   }
 
-  function cancelSched(idx) {
-    const list = getScheduled();
-    const name = list[idx] ? list[idx].name : 'payment';
-    list.splice(idx, 1);
-    saveScheduled(list);
-    renderSchedList();
-    showToast('🗑 Cancelled recurring ' + name);
+  async function cancelSched(scheduleId) {
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/cancel_bill_pay_schedule', {
+        method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId, p_schedule_id: scheduleId })
+      });
+      if (!res.ok) { showToast('Could not cancel — try again'); return; }
+      showToast('🗑 Recurring payment cancelled');
+      renderSchedList();
+    } catch (e) { showToast('Could not cancel — network error'); }
   }
 
-  // ── 4. GOD MODE PATCH — executePayConfirmed saves to history + scheduled ──
-  const _origExecPay = executePayConfirmed;
-  window.executePayConfirmed = function() {
-    const amt  = parseFloat(document.getElementById('ppAmt').value) || 0;
-    const ref  = (document.getElementById('ppRef').value || '').trim();
-    const now  = new Date();
-    const dateStr = now.toLocaleDateString('en-AU',{day:'numeric',month:'short'});
-    const isoDate = now.toISOString().substring(0,7);
-
-    if (selectedBiller && amt > 0) {
-      // Save to history
-      const hist = getBPHist();
-      hist.unshift({
-        icon: selectedBiller.icon, name: selectedBiller.name,
-        amt, ref: ref || 'N/A', date: dateStr, isoDate,
-        sched: schedOn, method: payMethod
-      });
-      saveBPHist(hist);
-
-      // Save to scheduled if recurring is on
-      if (schedOn) {
-        const scheds = getScheduled();
-        const exists = scheds.findIndex(s => s.id === selectedBiller.id);
-        const entry = { id: selectedBiller.id, icon: selectedBiller.icon, name: selectedBiller.name, amt, ref };
-        if (exists >= 0) scheds[exists] = entry; else scheds.push(entry);
-        saveScheduled(scheds);
-      }
-
-      // Update UI
-      renderRecentPayments();
-      updateSpendCard();
-    }
-
-    _origExecPay();
-  };
-
   // Init on load
+  syncBalance();
   renderRecentPayments();
   updateSpendCard();
+  loadLastBiller();
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

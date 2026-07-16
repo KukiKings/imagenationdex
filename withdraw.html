@@ -656,27 +656,28 @@
 
   <div class="section">
     <div class="section-label">Saved Accounts</div>
+    <div style="font-size:11px;color:var(--text-dim);margin:-6px 0 10px;line-height:1.5;">⚠️ No real saved-bank-account storage exists yet — these two are illustrative examples. Enter your real details below so your withdrawal goes to the right place.</div>
     <div class="saved-list">
       <div class="saved-card selected" id="saved1" onclick="selectSaved(1)">
         <div class="saved-icon">🏦</div>
         <div class="saved-info">
-          <div class="saved-name">Commonwealth Bank</div>
-          <div class="saved-detail">BSB 062-000 · •••• 4821</div>
+          <div class="saved-name">Example: Commonwealth Bank</div>
+          <div class="saved-detail">BSB 062-000 · •••• 4821 (example only)</div>
         </div>
         <div class="saved-check">✓</div>
       </div>
       <div class="saved-card" id="saved2" onclick="selectSaved(2)">
         <div class="saved-icon">💳</div>
         <div class="saved-info">
-          <div class="saved-name">NAB Savings</div>
-          <div class="saved-detail">BSB 083-000 · •••• 7392</div>
+          <div class="saved-name">Example: NAB Savings</div>
+          <div class="saved-detail">BSB 083-000 · •••• 7392 (example only)</div>
         </div>
         <div class="saved-check">✓</div>
       </div>
     </div>
 
     <div style="text-align:center; margin-bottom:20px;">
-      <div onclick="showNewAccountForm()" style="font-size:14px; color:var(--cyan); cursor:pointer; font-weight:600;">+ Add New Account</div>
+      <div onclick="showNewAccountForm()" style="font-size:14px; color:var(--cyan); cursor:pointer; font-weight:600;">+ Enter Real Bank Details</div>
     </div>
 
     <!-- New account form (hidden by default) -->
@@ -704,7 +705,7 @@
 
   <div class="info-box">
     <div class="icon">⏱</div>
-    <div class="text">Bank transfers typically arrive within <strong>1–2 business days</strong>. INDX is converted to USD at the current rate at time of processing.</div>
+    <div class="text">Your real INDX balance is debited and logged immediately. Actual bank settlement (typically 1–2 business days once real payment rails are connected) isn't automated yet — your withdrawal stays <strong>Pending</strong> until it is.</div>
   </div>
 
 </div>
@@ -862,19 +863,38 @@
 <script>
   let currentTab = 'bank';
   const INDX_PRICE_USD = 0.24; // USD per INDX
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  const citizenId = sessionStorage.getItem('citizen_id');
 
-  // ── GOD MODE: FEATURE 1 — Balance from sessionStorage ──
-  const citizenBalance = parseInt(sessionStorage.getItem('citizen_balance') || '1250');
-  (function applyBalance() {
+  async function rpc(name, body) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + name, {
+      method: 'POST', headers: SB_HEADERS, body: JSON.stringify(body)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || 'Request failed');
+    return data;
+  }
+
+  // ── Real balance from Supabase (was sessionStorage guess with a fake 1250 default) ──
+  let citizenBalance = 0;
+  async function applyBalance() {
     const balEl = document.getElementById('balanceIndx');
     const audEl = document.getElementById('balanceAud');
-    if (balEl) balEl.textContent = citizenBalance.toLocaleString() + ' INDX';
+    if (!citizenId) { if (balEl) balEl.textContent = '— INDX'; return; }
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + citizenId + '&select=indx_balance', { headers: SB_HEADERS });
+      const rows = await res.json();
+      citizenBalance = rows && rows[0] ? parseFloat(rows[0].indx_balance) : 0;
+    } catch (e) { citizenBalance = 0; }
+    if (balEl) balEl.textContent = citizenBalance.toLocaleString(undefined,{maximumFractionDigits:2}) + ' INDX';
     if (audEl) audEl.textContent = '≈ $' + (citizenBalance * INDX_PRICE_USD).toFixed(2);
-    // Update Max chip amounts
     document.querySelectorAll('.chip.max').forEach(c => {
       c.setAttribute('onclick', `setAmount(currentTab, ${citizenBalance})`);
     });
-  })();
+  }
+  applyBalance();
 
   // ---- TAB SWITCHING ----
   function switchTab(tab) {
@@ -934,7 +954,7 @@
       ? '$' + (receive * INDX_PRICE_USD).toFixed(2) + ' USD'
       : receive.toFixed(4) + ' INDX';
 
-    document.getElementById('confirmBtn').disabled = (amt > 1250 || amt <= 0);
+    document.getElementById('confirmBtn').disabled = (amt > citizenBalance || amt <= 0);
   }
 
   // ---- SAVED ACCOUNTS ----
@@ -988,16 +1008,42 @@
   }
 
   // ---- CONFIRM FLOW ----
+  let pendingWithdraw = null;
+
   function openConfirmSheet() {
     const amt = getAmount();
     if (amt <= 0) return;
+    if (!citizenId) { showToast('No citizen session found — please log in'); return; }
 
     const civil = amt * 0.02;
     const receive = amt - civil;
-    const bankNames = ['Commonwealth Bank ••4821', 'NAB Savings ••7392'];
-    const dest = currentTab === 'bank'
-      ? bankNames[selectedSaved - 1]
-      : (document.getElementById('walletAddr').value.slice(0,8) + '...' || 'No address');
+
+    let dest, recipientLabel, method;
+    if (currentTab === 'bank') {
+      const bsb = document.querySelector('#newAccountForm .form-input')?.value || '';
+      const acc = document.querySelectorAll('#newAccountForm .form-input')[1]?.value || '';
+      const bankName = document.querySelectorAll('#newAccountForm .form-input')[3]?.value || '';
+      if (bsb && acc) {
+        dest = bsb + ' ' + acc;
+        recipientLabel = bankName || 'Bank account';
+      } else {
+        const bankNames = ['Commonwealth Bank ••4821 (example)', 'NAB Savings ••7392 (example)'];
+        dest = bankNames[selectedSaved - 1];
+        recipientLabel = dest;
+      }
+      method = 'bank';
+    } else {
+      const addr = document.getElementById('walletAddr').value.trim();
+      if (addr.length < 32) {
+        showToast('⚠️ Enter a valid wallet address first');
+        return;
+      }
+      dest = addr;
+      const net = document.getElementById('cryptoToken').textContent || 'SOL';
+      recipientLabel = net + ' wallet ' + addr.slice(0,6) + '…' + addr.slice(-4);
+      method = net.toLowerCase();
+    }
+    pendingWithdraw = { amt, dest, recipientLabel, method };
 
     document.getElementById('sheetAmount').textContent = amt.toFixed(2) + ' INDX';
     document.getElementById('sheetAmountSub').textContent = currentTab === 'bank'
@@ -1005,8 +1051,8 @@
       : 'to crypto wallet';
 
     document.getElementById('sheetSubText').textContent = currentTab === 'bank'
-      ? 'Funds arrive in 1–2 business days'
-      : 'Irreversible double-check address';
+      ? 'Real INDX debit now · bank settlement not automated yet'
+      : 'Irreversible — double-check address';
 
     document.getElementById('sheetDetails').innerHTML = `
       <div class="confirm-row">
@@ -1023,15 +1069,6 @@
       </div>
     `;
 
-    // Validate crypto addr
-    if (currentTab === 'crypto') {
-      const addr = document.getElementById('walletAddr').value.trim();
-      if (addr.length < 32) {
-        showToast('⚠️ Enter a valid wallet address first');
-        return;
-      }
-    }
-
     document.getElementById('sheetDefault').style.display = 'block';
     document.getElementById('sheetProcessing').style.display = 'none';
     document.getElementById('sheetSuccess').style.display = 'none';
@@ -1042,46 +1079,45 @@
     document.getElementById('confirmOverlay').classList.remove('open');
   }
 
-  function executeWithdraw() {
+  async function executeWithdraw() {
+    if (!pendingWithdraw) return;
     document.getElementById('sheetDefault').style.display = 'none';
     document.getElementById('sheetProcessing').style.display = 'block';
+    document.getElementById('processingSub').textContent = 'Debiting your real INDX balance…';
 
-    const steps = currentTab === 'bank'
-      ? ['Converting INDX to USD…', 'Initiating bank transfer…', 'Confirming on Solana…']
-      : ['Broadcasting to network…', 'Awaiting confirmation…', 'Finalising…'];
-
-    let i = 0;
-    const interval = setInterval(() => {
-      if (i < steps.length) {
-        document.getElementById('processingSub').textContent = steps[i];
-        i++;
-      } else {
-        clearInterval(interval);
-        showSuccess();
-      }
-    }, 900);
+    try {
+      const result = await rpc('withdraw_indx', {
+        p_citizen_id: citizenId,
+        p_amount: pendingWithdraw.amt,
+        p_method: pendingWithdraw.method,
+        p_destination: pendingWithdraw.dest,
+        p_recipient_label: pendingWithdraw.recipientLabel
+      });
+      showSuccess(result);
+      await applyBalance();
+    } catch (e) {
+      document.getElementById('sheetProcessing').style.display = 'none';
+      document.getElementById('sheetDefault').style.display = 'block';
+      const msg = e.message.includes('ACCOUNT_FROZEN') ? 'Your account is frozen — withdrawal blocked'
+        : e.message.includes('Insufficient') ? "You don't have enough INDX for this withdrawal"
+        : 'Withdrawal failed — please try again';
+      showToast(msg);
+    }
   }
 
-  function showSuccess() {
+  function showSuccess(result) {
     document.getElementById('sheetProcessing').style.display = 'none';
     document.getElementById('sheetSuccess').style.display = 'block';
 
-    const amt = getAmount();
-    const dest = currentTab === 'bank' ? 'Commonwealth Bank' : 'your crypto wallet';
+    const amt = pendingWithdraw ? pendingWithdraw.amt : getAmount();
+    const dest = pendingWithdraw ? pendingWithdraw.recipientLabel : (currentTab === 'bank' ? 'your bank' : 'your crypto wallet');
     document.getElementById('successSubText').textContent =
       currentTab === 'bank'
-        ? `$${(amt * INDX_PRICE_USD * 0.98).toFixed(2)} USD will arrive in ${dest} within 1–2 business days.`
-        : `${(amt * 0.98).toFixed(4)} INDX sent to ${dest}.`;
+        ? `$${(amt * INDX_PRICE_USD * 0.98).toFixed(2)} USD queued for ${dest} — real debit done, bank settlement pending (not automated yet).`
+        : `${(amt * 0.98).toFixed(4)} INDX logged to ${dest} — real debit done, on-chain send is not automated yet.`;
 
-    const hash = randomHash();
+    const hash = result && result.tx_id ? result.tx_id.slice(0,12) + '…' : '';
     document.getElementById('txHash').innerHTML = 'TX: <span>' + hash + '</span>';
-  }
-
-  function randomHash() {
-    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-    let h = '';
-    for (let i = 0; i < 12; i++) h += chars[Math.floor(Math.random() * chars.length)];
-    return h + '…';
   }
 
   // ---- TOAST ----
@@ -1268,37 +1304,30 @@
     }
   };
 
-  // ── GOD MODE: FEATURE 8 — Withdrawal History Feed ──
-  const WD_HIST_KEY = 'indx_withdraw_hist';
-  function loadWdHist(){ return JSON.parse(localStorage.getItem(WD_HIST_KEY)||'[]'); }
-  function saveWdHist(h){ localStorage.setItem(WD_HIST_KEY, JSON.stringify(h.slice(-20))); }
-  function renderWdHist(){
-    const hist = loadWdHist();
+  // ── Real withdrawal history (was localStorage-only) ──
+  async function renderWdHist(){
     const list = document.getElementById('wdHistList');
     const empty = document.getElementById('wdHistEmpty');
+    if (!citizenId) { empty.style.display=''; empty.textContent='Log in to see your real withdrawal history.'; return; }
+    let hist = [];
+    try { hist = await rpc('get_withdrawal_history', { p_citizen_id: citizenId, p_limit: 15 }); } catch (e) {}
     list.querySelectorAll('.wd-hist-item').forEach(e=>e.remove());
-    if(hist.length===0){ empty.style.display=''; return; }
+    if(!hist.length){ empty.style.display=''; empty.textContent='No withdrawals yet.'; return; }
     empty.style.display='none';
-    hist.slice().reverse().forEach(h=>{
+    hist.forEach(h=>{
       const el=document.createElement('div'); el.className='wd-hist-item';
-      const d=new Date(h.ts);
+      const d=new Date(h.created_at);
       const dateStr=d.toLocaleDateString('en-AU',{day:'numeric',month:'short'});
-      const icon = h.tab==='bank' ? '🏦' : '🔗';
-      el.innerHTML=`<div class="wd-hist-icon">${icon}</div><div><div class="wd-hist-name">${dateStr}</div><div class="wd-hist-date">${h.tab==='bank'?'Bank transfer':'Crypto send'}</div></div><div class="wd-hist-right"><div class="wd-hist-indx">-${parseFloat(h.indx).toFixed(2)} INDX</div><div class="wd-hist-usd">$${(h.indx*0.24).toFixed(2)}</div></div>`;
+      const icon = h.method==='bank' ? '🏦' : '🔗';
+      el.innerHTML=`<div class="wd-hist-icon">${icon}</div><div><div class="wd-hist-name">${dateStr}</div><div class="wd-hist-date">${h.method==='bank'?'Bank transfer':'Crypto send'} · ${h.status}</div></div><div class="wd-hist-right"><div class="wd-hist-indx">-${parseFloat(h.amount_indx).toFixed(2)} INDX</div><div class="wd-hist-usd">$${(h.amount_indx*0.24).toFixed(2)}</div></div>`;
       list.appendChild(el);
     });
   }
-  // Patch executeWithdraw to save to history
+  // Refresh history after a successful withdrawal
   const _origExecWd = executeWithdraw;
-  executeWithdraw = function(){
-    const amt = getAmount();
-    if(amt > 0){
-      const hist = loadWdHist();
-      hist.push({ ts: Date.now(), indx: amt, tab: currentTab });
-      saveWdHist(hist);
-      renderWdHist();
-    }
-    _origExecWd();
+  executeWithdraw = async function(){
+    await _origExecWd();
+    renderWdHist();
   };
   renderWdHist();
 

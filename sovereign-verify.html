@@ -347,19 +347,23 @@
     </div>
     <div class="tier-divider"></div>
     <div class="verify-form">
-      <div style="font-size:13px; color:var(--text-dim); margin-bottom:4px;">Link your phone or email PayID no bank account number needed.</div>
-      <div class="form-group">
-        <div class="form-label">PayID (phone or email)</div>
-        <input class="form-input" id="payidInput" type="text" placeholder="+61 400 000 000 or you@email.com">
-      </div>
-      <div class="form-group">
-        <div class="form-label">Verify with OTP</div>
-        <div class="otp-row">
-          <input class="form-input" id="otpInput" type="text" placeholder="6-digit code" maxlength="6" inputmode="numeric">
-          <div class="send-otp-btn" onclick="sendOTP()">Send Code</div>
+      <div style="font-size:13px; color:var(--text-dim); margin-bottom:4px;" id="tier2Intro">Link your phone number no bank account number needed. (Email PayID isn't wired up yet — use phone for now.)</div>
+      <div id="tier2FormFields">
+        <div class="form-group">
+          <div class="form-label">PayID (phone number)</div>
+          <input class="form-input" id="payidInput" type="text" placeholder="+61 400 000 000">
         </div>
+        <div class="form-group">
+          <div class="form-label">Verify with OTP</div>
+          <div class="otp-row">
+            <input class="form-input" id="otpInput" type="text" placeholder="6-digit code" maxlength="6" inputmode="numeric">
+            <div class="send-otp-btn" onclick="sendOTP()">Send Code</div>
+          </div>
+        </div>
+        <div id="tier2Error" style="color:var(--red);font-size:12px;margin-bottom:4px;"></div>
+        <button class="verify-btn" id="tier2VerifyBtn" onclick="verifyTier2()">✓ Verify PayID</button>
       </div>
-      <button class="verify-btn" onclick="verifyTier2()">✓ Verify PayID</button>
+      <div id="tier2AlreadyDone" style="display:none;font-size:13px;color:var(--green);font-weight:600;text-align:center;">✓ Verified. You're already at Tier 2.</div>
     </div>
   </div>
 </div>
@@ -428,14 +432,42 @@
   <div class="success-card">
     <div class="success-icon">✅</div>
     <div class="success-title">Verified Citizen!</div>
-    <div class="success-sub">Your PayID is linked. You can now deposit and withdraw up to <strong>$1,300/month</strong>. Your Wisdom Score has been boosted by +10.</div>
+    <div class="success-sub">Your PayID is linked. You can now deposit and withdraw up to <strong>$2,000/month</strong>. Your Wisdom Score has been boosted by +10.</div>
     <button class="success-btn" onclick="window.location.href='citizen-dashboard.html'">Back to Dashboard</button>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  const { createClient } = supabase;
+  const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const citizenId = sessionStorage.getItem('citizen_id');
+
+  // Load the citizen's REAL kyc_tier on page load — previously this screen always showed
+  // "Unlock Now" for Tier 2 regardless of whether the citizen had already verified.
+  async function loadRealTierState() {
+    if (!citizenId) return;
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + citizenId + '&select=kyc_tier', { headers: SB_HEADERS });
+      const rows = await res.json();
+      const tier = (rows[0] && rows[0].kyc_tier) || 0;
+      if (tier >= 1) {
+        document.getElementById('tier2FormFields').style.display = 'none';
+        document.getElementById('tier2AlreadyDone').style.display = 'block';
+        const statusEl = document.querySelector('#tier2card .tier-status');
+        if (statusEl) { statusEl.textContent = 'Complete'; statusEl.className = 'tier-status done'; }
+        document.getElementById('tier2card').classList.remove('next');
+        document.getElementById('tier2card').classList.add('active');
+      }
+    } catch (e) { /* falls back to showing the verify form */ }
+  }
+  loadRealTierState();
+
   function toggleTier(id) {
     const body = document.getElementById(id + 'body');
     const arrow = document.getElementById(id + 'arrow');
@@ -460,24 +492,63 @@
     el.classList.add('active');
   }
 
+  // ── REAL OTP send — same Supabase Auth phone mechanism proven in login.html ──
   let otpSent = false;
-  function sendOTP() {
+  async function sendOTP() {
     const payid = document.getElementById('payidInput').value.trim();
+    const errEl = document.getElementById('tier2Error');
+    errEl.textContent = '';
     if (!payid) { showToast('⚠️ Enter your PayID first'); return; }
-    otpSent = true;
-    showToast('📨 Code sent to ' + payid);
+    if (payid.includes('@')) {
+      errEl.textContent = 'Email PayID verification isn\'t built yet — use your phone number for now.';
+      return;
+    }
+    if (!citizenId) { errEl.textContent = 'Sign in first to verify a PayID'; return; }
+    try {
+      const { error } = await sb.auth.signInWithOtp({ phone: payid });
+      if (error) { errEl.textContent = error.message; return; }
+      otpSent = true;
+      showToast('📨 Real code sent to ' + payid);
+    } catch (e) {
+      errEl.textContent = 'Could not send code — try again';
+    }
   }
 
-  function verifyTier2() {
+  // ── REAL verification — Supabase Auth OTP check, then real kyc_tier/Wisdom upgrade ──
+  async function verifyTier2() {
+    const payid = document.getElementById('payidInput').value.trim();
     const otp = document.getElementById('otpInput').value.trim();
-    if (!document.getElementById('payidInput').value.trim()) {
-      showToast('⚠️ Enter your PayID first'); return;
+    const errEl = document.getElementById('tier2Error');
+    errEl.textContent = '';
+    if (!payid) { showToast('⚠️ Enter your PayID first'); return; }
+    if (!citizenId) { errEl.textContent = 'Sign in first to verify a PayID'; return; }
+    if (!/^\d{6}$/.test(otp)) { showToast('⚠️ Enter the 6-digit code sent to you'); return; }
+    if (!otpSent) { errEl.textContent = 'Send a code first'; return; }
+
+    const btn = document.getElementById('tier2VerifyBtn');
+    btn.disabled = true; btn.textContent = 'Verifying…';
+    try {
+      const { error: otpError } = await sb.auth.verifyOtp({ phone: payid, token: otp, type: 'sms' });
+      if (otpError) {
+        errEl.textContent = otpError.message || 'Wrong code — try again';
+        btn.disabled = false; btn.textContent = '✓ Verify PayID';
+        return;
+      }
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/verify_payid_tier2', {
+        method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId, p_payid: payid })
+      });
+      const data = await res.json();
+      if (!data || !data.success) {
+        errEl.textContent = 'Could not upgrade your tier — try again';
+        btn.disabled = false; btn.textContent = '✓ Verify PayID';
+        return;
+      }
+      sessionStorage.setItem('citizen_kyc_tier', '1');
+      document.getElementById('successOverlay').classList.add('open');
+    } catch (e) {
+      errEl.textContent = 'Could not verify — try again';
+      btn.disabled = false; btn.textContent = '✓ Verify PayID';
     }
-    if (otp.length < 4) {
-      showToast('⚠️ Enter the 6-digit code sent to you'); return;
-    }
-    // Simulate verify
-    document.getElementById('successOverlay').classList.add('open');
   }
 
   function showToast(msg) {

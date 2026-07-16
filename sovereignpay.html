@@ -591,20 +591,21 @@ async function executePayment() {
   const btn    = document.getElementById('sendBtn');
 
   if (!citizenId) {
-    logPayment(name, domain, amt);
-    document.getElementById('successTitle').textContent = 'Sent!';
-    document.getElementById('successSub').textContent = amt + ' INDX sent to ' + name + '. Settled on Solana in under 1 second. Zero bank needed.';
-    document.getElementById('successTx').textContent = randomTx();
-    document.getElementById('successOverlay').classList.add('active');
+    // No citizen session — forward to onboarding instead of faking a transfer
+    // that never happened (same convention as pay.html's joinAndPay()).
+    const dest = new URL('onboarding-flow.html', window.location.href);
+    dest.searchParams.set('after_join', 'sovereignpay.html');
+    window.location.href = dest.toString();
     return;
   }
 
   btn.textContent = 'Sending…'; btn.disabled = true;
   try {
+    const cleanDomain = domain.toLowerCase().replace(/\.indx$/i, '') + '.IN$DEX';
     const { data, error } = await sb.rpc('transfer_indx', {
       p_sender_id:          citizenId,
-      p_recipient_domain:   domain,
-      p_amount_indx:        amt,
+      p_recipient_address:  cleanDomain,
+      p_amount:             amt,
       p_note:               note || null
     });
     if (error) throw error;
@@ -615,10 +616,11 @@ async function executePayment() {
       if (balEl) balEl.textContent = parseFloat(data.new_balance).toFixed(2) + ' INDX';
     }
     logPayment(name, domain, amt);
-    const txHash = (data && data.tx_hash) || randomTx();
+    // Real transaction id from transfer_indx — never a fabricated hash.
+    const txRef = data && data.tx_id ? String(data.tx_id) : null;
     document.getElementById('successTitle').textContent = 'Sent!';
-    document.getElementById('successSub').textContent = amt + ' INDX sent to ' + name + '. Settled on Solana in under 1 second. Zero bank needed.';
-    document.getElementById('successTx').textContent = txHash.length > 12 ? txHash.slice(0,4) + '…' + txHash.slice(-4) : txHash;
+    document.getElementById('successSub').textContent = amt + ' INDX sent to ' + name + '. Sent instantly. Zero bank needed.';
+    document.getElementById('successTx').textContent = txRef ? (txRef.slice(0,4) + '…' + txRef.slice(-4)) : '—';
     document.getElementById('successOverlay').classList.add('active');
   } catch(e) {
     showToast('❌ ' + (e.message || 'Transfer failed. Try again.'));

@@ -186,6 +186,10 @@
   <!-- DRAFT SAVE INDICATOR -->
   <div class="draft-bar"><div class="draft-dot" id="draftDot" style="background:var(--text-muted)"></div><span id="draftStatus">Draft unsaved</span></div>
 
+  <div style="margin:0 24px 4px;background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.25);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--text2,var(--text-muted));line-height:1.5;">
+    ⚠️ <strong>Not connected yet.</strong> No real Solana NFT minting or IPFS/Arweave storage exists — "Mint" below saves a local preview only, it doesn't create a real NFT or move any SOL. Everything you design here (name, traits, royalty %, benefits) is saved so it's ready once minting is real.
+  </div>
+
   <!-- GOD MODE: Creator Level Card -->
   <div class="creator-level-card" id="creatorLevelCard">
     <div class="clc-badge" id="clcBadge">🌱</div>
@@ -194,8 +198,8 @@
       <div class="clc-sub" id="clcSub">First drop coming!</div>
     </div>
     <div class="clc-stats">
-      <div class="clc-stat"><div class="clc-sv" id="clcTotalNfts">0</div><div class="clc-sl">NFTs</div></div>
-      <div class="clc-stat"><div class="clc-sv" id="clcTotalEditions">0</div><div class="clc-sl">Editions</div></div>
+      <div class="clc-stat"><div class="clc-sv" id="clcTotalNfts">0</div><div class="clc-sl">Previews</div></div>
+      <div class="clc-stat"><div class="clc-sv" id="clcTotalEditions">0</div><div class="clc-sl">Editions (planned)</div></div>
     </div>
   </div>
 
@@ -219,10 +223,11 @@
     </div>
 
     <!-- UPLOAD -->
+    <input type="file" id="realFileInput" accept="audio/*,image/*,video/*" style="display:none;" onchange="handleRealFile(event)">
     <div class="upload-zone" id="uploadZone" onclick="triggerUpload()">
       <div class="upload-icon" id="uploadIcon">🎵</div>
       <div class="upload-title">Upload your track or artwork</div>
-      <div class="upload-sub">Your fans will see this when they hold your NFT.</div>
+      <div class="upload-sub">Picked here for real — but it isn't uploaded to IPFS/Arweave yet, so it won't actually attach to an NFT.</div>
       <div class="upload-types">
         <div class="upload-type">MP3</div>
         <div class="upload-type">WAV</div>
@@ -382,13 +387,13 @@
       </div>
 
       <div class="fee-box">
-        <div class="fee-row"><span class="fee-label">Minting fee</span><span class="fee-val">0.2 SOL</span></div>
+        <div class="fee-row"><span class="fee-label">Minting fee (illustrative)</span><span class="fee-val">0.2 SOL</span></div>
         <div class="fee-row"><span class="fee-label">Solana network</span><span class="fee-val">~$0.001</span></div>
         <div class="fee-row"><span class="fee-label">IN$DEX platform</span><span class="fee-val">2% on sales</span></div>
         <hr class="fee-divider"/>
         <div class="fee-row"><span class="fee-total">Total upfront</span><span class="fee-total-val">0.2 SOL (~$37.30)</span></div>
       </div>
-      <button class="mint-btn" id="mintBtnMain" onclick="startMint()">⚡ Mint My NFT →</button>
+      <button class="mint-btn" id="mintBtnMain" onclick="startMint()">⚡ Preview My NFT →</button>
     </div>
   </div>
 
@@ -485,9 +490,16 @@
   }
 
   function triggerUpload() {
+    document.getElementById('realFileInput').click();
+  }
+  function handleRealFile(evt) {
+    const file = evt.target.files && evt.target.files[0];
+    if (!file) return;
     const zone = document.getElementById('uploadZone');
     zone.classList.add('has-file');
-    zone.innerHTML = '<div style="font-size:48px">🎵</div><div style="font-size:14px;font-weight:700;margin-top:8px;color:var(--green)">✓ island-breeze-vol1.mp3</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px">3:47 · 6.2 MB · Tap to change</div>';
+    const kb = (file.size / 1024).toFixed(0);
+    const sizeLabel = kb > 1024 ? (file.size / (1024*1024)).toFixed(1) + ' MB' : kb + ' KB';
+    zone.innerHTML = '<div style="font-size:48px">📄</div><div style="font-size:14px;font-weight:700;margin-top:8px;color:var(--green)">✓ ' + file.name + '</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px">' + sizeLabel + ' · Tap to change · Not yet uploaded anywhere</div>';
   }
 
   function toggleBenefit(id) {
@@ -514,31 +526,23 @@
 
   function startMint() {
     document.getElementById('mintOverlay').classList.add('show');
-    const steps = [
-      [1000, '⚡', 'Signing transaction…', 'ZK-proof identity verified'],
-      [2500, '🔗', 'Writing to Solana…', 'Broadcasting to 1,200+ validators'],
-      [4000, '🖼', 'Uploading metadata…', 'Pinning artwork to IPFS'],
-      [6000, '✅', 'NFT minted!', 'Your NFT is live on the IN$DEX marketplace'],
-    ];
-    steps.forEach(([delay, icon, title, sub]) => {
-      setTimeout(() => {
-        document.getElementById('mintAnim').textContent = icon;
-        document.getElementById('mintAnim').style.animation = icon === '✅' ? 'none' : 'spin 2s linear infinite';
-        document.getElementById('mintTitle').textContent = title;
-        document.getElementById('mintSub').textContent = sub;
-        if (icon === '✅') {
-          document.getElementById('txHash').textContent = '7xKm…3nBp View on Solscan';
-          const btn = document.createElement('button');
-          btn.className = 'success-btn';
-          btn.textContent = 'View on Marketplace →';
-          btn.onclick = () => window.location.href = 'nft-marketplace.html';
-          document.getElementById('mintOverlay').appendChild(btn);
-        } else {
-          const shortHash = 'Tx: ' + Math.random().toString(36).substr(2, 8).toUpperCase() + '…';
-          document.getElementById('txHash').textContent = shortHash;
-        }
-      }, delay);
-    });
+    document.getElementById('mintAnim').textContent = '⚡';
+    document.getElementById('mintAnim').style.animation = 'spin 2s linear infinite';
+    document.getElementById('mintTitle').textContent = 'Saving your preview…';
+    document.getElementById('mintSub').textContent = 'No real Solana transaction is happening — this just saves your design locally.';
+    document.getElementById('txHash').textContent = 'No real transaction — preview only';
+    setTimeout(() => {
+      document.getElementById('mintAnim').textContent = '⚠️';
+      document.getElementById('mintAnim').style.animation = 'none';
+      document.getElementById('mintTitle').textContent = 'Preview saved — nothing minted';
+      document.getElementById('mintSub').textContent = 'No real NFT was created and no SOL was spent. This design is saved so it\'s ready once real minting is connected.';
+      document.getElementById('txHash').textContent = 'No real transaction — preview only';
+      const btn = document.createElement('button');
+      btn.className = 'success-btn';
+      btn.textContent = 'Back to Marketplace →';
+      btn.onclick = () => window.location.href = 'nft-marketplace.html';
+      document.getElementById('mintOverlay').appendChild(btn);
+    }, 1400);
   }
 
   // ════════════════════════════════════════════════
@@ -664,7 +668,7 @@
     updateGSStrip();
   };
 
-  // GOD MODE PATCH — startMint: save to creator history on success
+  // GOD MODE PATCH — startMint: save to local preview history (not a real mint)
   const _origStartMint = startMint;
   window.startMint = function() {
     _origStartMint();
@@ -679,7 +683,7 @@
       saveCreatorHist(hist);
       renderCreatorLevel();
       try { localStorage.removeItem(TRAIT_KEY); } catch(e) {}
-    }, 6200);
+    }, 1500);
   };
 
   // Init — GOD MODE

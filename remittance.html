@@ -324,8 +324,8 @@
       <div class="status-trail">
         <div class="status-step done"><div class="ss-dot"></div><div class="ss-label">Sent</div><div class="ss-time">Now</div></div>
         <div class="status-step done"><div class="ss-dot"></div><div class="ss-label">Processing</div><div class="ss-time">1 sec</div></div>
-        <div class="status-step done"><div class="ss-dot"></div><div class="ss-label">Settled on Solana</div><div class="ss-time">45 sec</div></div>
-        <div class="status-step" id="stNotify"><div class="ss-dot"></div><div class="ss-label" id="notifyLabel">Recipient notified via SMS</div><div class="ss-time">SMS sent</div></div>
+        <div class="status-step done"><div class="ss-dot"></div><div class="ss-label">Settled instantly</div><div class="ss-time">45 sec</div></div>
+        <div class="status-step" id="stNotify"><div class="ss-dot"></div><div class="ss-label" id="notifyLabel">Recipient can view it now</div><div class="ss-time">Available</div></div>
       </div>
     </div>
 
@@ -374,7 +374,7 @@
     <div class="is-label">Their name (optional)</div>
     <input class="is-input" type="text" id="inviteName" placeholder="e.g. Maria" oninput="resetLinkBox()">
     <div class="is-amount-pill">Sending <strong id="inviteAmtDisplay">—</strong> · They receive <strong id="inviteRecvDisplay">—</strong></div>
-    <button class="btn-generate" onclick="generateLink()">Generate Sovereign Link</button>
+    <button class="btn-generate" id="generateLinkBtn" onclick="generateLink()">Generate Sovereign Link</button>
     <div class="link-box" id="linkBox">
       <div class="link-url" id="linkUrl"></div>
       <div class="link-actions">
@@ -504,22 +504,25 @@ async function doSend(){
   const btn = document.getElementById('sendBtn');
   btn.disabled=true; btn.textContent='Sending…';
   if(!citizenId){
-    // Demo mode — simulate success
-    setTimeout(()=>{showSuccess(amt,recName,recDetail,indxAmt);btn.disabled=false;btn.textContent='Send Money';},1200);
+    // No citizen session — forward to onboarding instead of faking a transfer that
+    // never happened (same convention as pay.html's joinAndPay()).
+    const dest = new URL('onboarding-flow.html', window.location.href);
+    dest.searchParams.set('after_join', 'remittance.html');
+    window.location.href = dest.toString();
     return;
   }
   try{
-    const domain = recName.toLowerCase().replace(/\s+/g,'') + '.indx';
+    const domain = recName.toLowerCase().replace(/\s+/g,'').replace(/\.indx$/i,'') + '.IN$DEX';
     const recvFx = amt * curr.rate * 0.992;
     const {data,error} = await sb.rpc('transfer_indx',{
-      p_sender_id:        citizenId,
-      p_recipient_domain: domain,
-      p_amount_indx:      indxAmt,
-      p_note:             `Remittance to ${recName} · ${curr.curr}`
+      p_sender_id:         citizenId,
+      p_recipient_address: domain,
+      p_amount:             indxAmt,
+      p_note:              `Remittance to ${recName} · ${curr.curr}`
     });
     if(error) throw error;
     if(data && data.new_balance!==undefined) sessionStorage.setItem('citizen_balance', data.new_balance);
-    showSuccess(amt, recName, recDetail, indxAmt);
+    showSuccess(amt, recName, recDetail, indxAmt, data && data.tx_id);
   }catch(e){
     showToast('❌ '+(e.message||'Transfer failed'));
   }finally{
@@ -529,13 +532,14 @@ async function doSend(){
 let _lastSavings = null;
 let _lastRecipient = null;
 
-function showSuccess(amt, name, detail, indxAmt){
+function showSuccess(amt, name, detail, indxAmt, txId){
   const recvLocal = (amt * curr.rate * 0.992).toLocaleString('en-AU',{maximumFractionDigits:0});
-  const txHash = Array.from({length:8},()=>Math.floor(Math.random()*16).toString(16)).join('')+'...';
+  // Real transaction id from transfer_indx when available — never a fabricated hash.
+  const txRef = txId ? String(txId).slice(0,8) : null;
 
   document.getElementById('successMsg').innerHTML =
     `<strong>${recvLocal} ${curr.curr}</strong> sent to ${name}.<br>
-     <span style="font-size:12px;color:rgba(240,242,255,0.4);">TX: ${txHash} · 98/2 Civilisation Law applied</span>`;
+     <span style="font-size:12px;color:rgba(240,242,255,0.4);">${txRef ? 'Ref: ' + txRef + ' · ' : ''}98/2 Civilisation Law applied</span>`;
 
   // Savings vs WU
   const wuPct = wuFee[activeKey] || 0.060;
@@ -550,9 +554,11 @@ function showSuccess(amt, name, detail, indxAmt){
     document.getElementById('savingsCard').style.display = 'none';
   }
 
-  // Status trail — step 4 animates in after 1.5s
+  // Status trail — step 4. NOTE: no SMS provider is wired up yet (same gap as the
+  // OTP flow in biometric-kyc.html), so this can't honestly claim "notified via SMS".
+  // It shows what's actually true: the funds are in their account now.
   document.getElementById('stNotify').classList.remove('done');
-  document.getElementById('notifyLabel').textContent = name + ' notified via SMS';
+  document.getElementById('notifyLabel').textContent = name + ' can view it now';
   setTimeout(() => document.getElementById('stNotify').classList.add('done'), 1500);
 
   // Save recipient prompt
@@ -618,23 +624,28 @@ function resetLinkBox() {
   document.getElementById('linkBox').style.display = 'none';
   _inviteLink = '';
 }
-function generateLink() {
+async function generateLink() {
   const phone = document.getElementById('invitePhone').value.trim();
   const name  = document.getElementById('inviteName').value.trim();
   if (!phone) { showToast('Enter their phone number'); return; }
+  if (!citizenId) { showToast('You need an IN$DEX account first — this creates a real pledge from your balance.'); return; }
   const amt = parseFloat(document.getElementById('sendAmt').value) || 0;
-  const senderSlug = (sessionStorage.getItem('citizen_name') || citizenName || 'sender').toLowerCase().replace(/\s+/g,'');
-  const params = new URLSearchParams({
-    from: senderSlug + '.indx',
-    amount: amt || '',
-    currency: curr.curr,
-    phone: phone,
-    ...(name && {name: name})
-  });
-  _inviteLink = 'https://imagenationdex.vercel.app/sms-claim?' + params.toString();
-  _inviteData = { phone, name: name || 'your contact', amt, currency: curr.curr };
-  document.getElementById('linkUrl').textContent = _inviteLink;
-  document.getElementById('linkBox').style.display = 'block';
+  if (amt <= 0) { showToast('Enter an amount to send first'); return; }
+  const indxAmt = amt / INDX_PRICE;
+  const genBtn = document.getElementById('generateLinkBtn');
+  genBtn.disabled = true;
+  try {
+    const { data, error } = await sb.rpc('create_instant_invite', { p_referrer_id: citizenId, p_amount_indx: indxAmt });
+    if (error) throw error;
+    _inviteLink = 'https://www.imagenationdex.com/onboarding-flow.html?instant=' + encodeURIComponent(data.invite_code);
+    _inviteData = { phone, name: name || 'your contact', amt, currency: curr.curr };
+    document.getElementById('linkUrl').textContent = _inviteLink;
+    document.getElementById('linkBox').style.display = 'block';
+  } catch (e) {
+    showToast('Could not create a real invite link — check your connection and try again.');
+  } finally {
+    genBtn.disabled = false;
+  }
 }
 function sendViaSMS() {
   if (!_inviteLink) return;

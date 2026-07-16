@@ -2077,30 +2077,52 @@
     draw();
   }
 
-  // ── EARNED WHILE AWAY ──
+  // ── EARNED WHILE AWAY ── grounded in real tables: transactions, wisdom_actions,
+  // security_events. No number here is fabricated — if there was no real activity,
+  // the stats show 0 rather than a random "SIINDEX was busy" figure.
   const EWA_VISIT_KEY = 'indx_dash_last_visit';
-  function checkEwa() {
+  async function checkEwa() {
     const last = parseInt(localStorage.getItem(EWA_VISIT_KEY) || '0');
     const now = Date.now();
+    const lastIso = last ? new Date(last).toISOString() : null;
     localStorage.setItem(EWA_VISIT_KEY, now.toString());
     if (!last || (now - last) < 1800000) return; // first visit or <30 min gap
     const gapHrs = (now - last) / 3600000;
-    const decisions = Math.round(gapHrs * 247 + Math.random() * 80);
-    const offers = Math.round(gapHrs * 14 + Math.random() * 20);
-    const indxEvents = Math.round(Math.random() * 6) + 1;
+    const citizenId = sessionStorage.getItem('citizen_id');
+
+    let indxEvents = 0, wisdomActions = 0, securityChecks = 0;
+    try {
+      const sb = INDXDB.getClient();
+      if (citizenId) {
+        // Wisdom awards are logged into security_events (zone='wisdom', citizen_id nested
+        // in detail jsonb) — there is no separate wisdom_actions table.
+        const [{ count: txCount }, { count: wsCount }] = await Promise.all([
+          sb.from('transactions').select('id', { count: 'exact', head: true }).eq('citizen_id', citizenId).gt('created_at', lastIso),
+          sb.from('security_events').select('id', { count: 'exact', head: true }).eq('zone', 'wisdom').eq('detail->>citizen_id', citizenId).gt('created_at', lastIso)
+        ]);
+        indxEvents = txCount || 0;
+        wisdomActions = wsCount || 0;
+      }
+      const { count: secCount } = await sb.from('security_events').select('id', { count: 'exact', head: true }).gt('created_at', lastIso);
+      securityChecks = secCount || 0;
+    } catch (e) { /* leave at 0 — no fabricated fallback */ }
+
     const decEl = document.getElementById('ewaDecisions');
     const offEl = document.getElementById('ewaOffers');
     const indEl = document.getElementById('ewaINDX');
     const msgEl = document.getElementById('ewaMsg');
-    if (decEl) decEl.textContent = decisions.toLocaleString();
-    if (offEl) offEl.textContent = offers;
-    if (indEl) indEl.textContent = indxEvents;
+    if (decEl) decEl.textContent = wisdomActions.toLocaleString();
+    if (offEl) offEl.textContent = securityChecks.toLocaleString();
+    if (indEl) indEl.textContent = indxEvents.toLocaleString();
     const hrs = Math.round(gapHrs);
     if (msgEl) msgEl.textContent = 'In the ' + (hrs < 2 ? 'last hour' : 'last ' + hrs + ' hours') + ', SIINDEX kept your account protected and active.';
-    setTimeout(() => {
-      const ov = document.getElementById('ewaOverlay');
-      if (ov) ov.style.display = 'flex';
-    }, 1800);
+    // Only show the overlay if there's real activity worth surfacing
+    if (indxEvents > 0 || wisdomActions > 0 || securityChecks > 0) {
+      setTimeout(() => {
+        const ov = document.getElementById('ewaOverlay');
+        if (ov) ov.style.display = 'flex';
+      }, 1800);
+    }
   }
   function closeEwa() {
     const ov = document.getElementById('ewaOverlay');
@@ -2123,12 +2145,21 @@
     const ov = document.getElementById('pqsiOverlay');
     if (ov) ov.style.display = 'none';
   }
-  function runPqsiScan() {
+  async function runPqsiScan() {
     closePqsiSheet();
     localStorage.setItem(PQSI_SCAN_KEY, Date.now().toString());
     const lbl = document.getElementById('pqsiTimeLabel');
     if (lbl) lbl.textContent = 'just now';
-    showToast('🛡️ PQSI scan complete — T0 CLEAR');
+    try {
+      const sb = INDXDB.getClient();
+      const { data, error } = await sb.rpc('get_platform_security_status');
+      if (error || !data) { showToast('🛡️ Scan ran, but status is unavailable right now'); return; }
+      showToast(data.clear
+        ? '🛡️ PQSI scan complete — T0 CLEAR'
+        : '🛡️ PQSI scan complete — ' + data.tier + ' flagged (' + data.open_count + ' open). SIINDEX is on it.');
+    } catch (e) {
+      showToast('🛡️ Scan ran, but status is unavailable right now');
+    }
   }
 
   // ── DAILY STREAK TRACKER ──
@@ -2870,8 +2901,8 @@
     </div>
     <div class="ewa-msg" id="ewaMsg">While you were away, SIINDEX kept your account protected and active.</div>
     <div class="ewa-stats">
-      <div class="ewa-stat"><div class="ewa-stat-val" id="ewaDecisions">–</div><div class="ewa-stat-lbl">SI decisions made</div></div>
-      <div class="ewa-stat"><div class="ewa-stat-val" id="ewaOffers">–</div><div class="ewa-stat-lbl">market offers checked</div></div>
+      <div class="ewa-stat"><div class="ewa-stat-val" id="ewaDecisions">–</div><div class="ewa-stat-lbl">wisdom actions logged</div></div>
+      <div class="ewa-stat"><div class="ewa-stat-val" id="ewaOffers">–</div><div class="ewa-stat-lbl">security checks run</div></div>
       <div class="ewa-stat"><div class="ewa-stat-val" id="ewaINDX">–</div><div class="ewa-stat-lbl">INDX earning events</div></div>
     </div>
     <button class="ewa-cta" onclick="closeEwa()">Let's go →</button>

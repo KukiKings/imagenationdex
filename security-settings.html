@@ -134,13 +134,13 @@
           </div>
           <div class="toggle on" id="bioToggle"></div>
         </div>
-        <div class="sr-item" onclick="togglePIN()">
+        <div class="sr-item" onclick="showToast('PIN is always required as a fallback — this can\'t be turned off')">
           <div class="sr-icon" style="background:rgba(0,212,255,0.1);">🔢</div>
           <div style="flex:1;">
             <div class="sr-label">6-Digit PIN</div>
             <div class="sr-sub" id="pinSub">Required as fallback</div>
           </div>
-          <div class="toggle on" id="pinToggle"></div>
+          <div style="font-size:11px;font-weight:700;color:var(--green);">✓ Always on</div>
         </div>
       </div>
     </div>
@@ -209,49 +209,34 @@
         <div class="device-row">
           <div class="dev-icon">📱</div>
           <div style="flex:1;">
-            <div class="dev-name">iPhone 15 Pro</div>
-            <div class="dev-meta">Auckland, NZ · Active now</div>
+            <div class="dev-name">This device</div>
+            <div class="dev-meta">Current session</div>
           </div>
-          <div class="dev-current">This device</div>
-        </div>
-        <div class="device-row" data-device="MacBook Pro">
-          <div class="dev-icon">💻</div>
-          <div style="flex:1;">
-            <div class="dev-name">MacBook Pro</div>
-            <div class="dev-meta">Auckland, NZ · 2 days ago</div>
-          </div>
-          <div class="dev-revoke" onclick="askRevoke(this, 'MacBook Pro')">Revoke</div>
-        </div>
-        <div class="device-row" data-device="iPad Air">
-          <div class="dev-icon">📱</div>
-          <div style="flex:1;">
-            <div class="dev-name">iPad Air</div>
-            <div class="dev-meta">Wellington, NZ · 1 week ago</div>
-          </div>
-          <div class="dev-revoke" onclick="askRevoke(this, 'iPad Air')">Revoke</div>
+          <div class="dev-current">Active</div>
         </div>
       </div>
+      <div class="gm-pref-note" style="font-size:11px;color:var(--text-muted);padding:8px 4px 0;">Multi-device session tracking isn't built yet — SIINDEX can only show and manage the device you're on right now.</div>
     </div>
 
     <!-- ACTIVITY LOG -->
     <div class="section">
       <div class="section-title">Recent Activity</div>
       <div class="setting-row">
-        <div class="sr-item" onclick="showToast('Full activity log coming soon')">
+        <div class="sr-item" onclick="openActivityLog()">
           <div class="sr-icon" style="background:rgba(0,212,255,0.1);">📋</div>
           <div style="flex:1;">
             <div class="sr-label">View Activity Log</div>
-            <div class="sr-sub">Sign-ins, transactions, settings changes</div>
+            <div class="sr-sub">Real security events for this account</div>
           </div>
           <div class="sr-chevron">›</div>
         </div>
-        <div class="sr-item" onclick="showToast('Login alerts are on for all new devices')">
+        <div class="sr-item">
           <div class="sr-icon" style="background:rgba(0,229,160,0.1);">🔔</div>
           <div style="flex:1;">
-            <div class="sr-label">Login Alerts</div>
-            <div class="sr-sub">Notify on new device sign-in</div>
+            <div class="sr-label">Security Logging</div>
+            <div class="sr-sub">Every security event is always recorded — there's no per-channel toggle yet</div>
           </div>
-          <div class="toggle on" id="alertToggle"></div>
+          <div style="font-size:11px;font-weight:700;color:var(--green);">✓ Always on</div>
         </div>
       </div>
     </div>
@@ -318,16 +303,58 @@
   </div>
 </div>
 
+<!-- REAL 2FA SETUP SHEET -->
+<div class="sheet-overlay" id="totpOverlay" onclick="closeTotpSheet()"></div>
+<div class="bottom-sheet" id="totpSheet">
+  <div class="bs-handle"></div>
+  <div class="bs-title">Set up Authenticator App</div>
+  <div class="bs-body" style="margin-bottom:14px;">Scan this real QR code with Google Authenticator, Authy, or any TOTP app — then enter the 6-digit code it shows you.</div>
+  <div id="totpQr" style="display:flex;justify-content:center;background:#fff;border-radius:14px;padding:14px;margin-bottom:12px;"></div>
+  <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-bottom:14px;">Can't scan? Enter manually: <span id="totpSecretText" style="color:var(--cyan);font-family:monospace;letter-spacing:0.05em;"></span></div>
+  <input class="input-field" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;color:var(--text);font-size:18px;letter-spacing:0.3em;text-align:center;margin-bottom:10px;" type="tel" maxlength="6" id="totpCodeInput" placeholder="000000">
+  <div id="totpError" style="color:var(--red);font-size:12px;text-align:center;margin-bottom:8px;"></div>
+  <button class="totp-btn" id="totpVerifyBtn" onclick="submitTotpVerify()">Verify & enable</button>
+  <button class="totp-btn" style="margin-top:8px;background:var(--surface2);color:var(--text);" onclick="closeTotpSheet()">Cancel</button>
+</div>
+
+<!-- REAL ACTIVITY LOG SHEET -->
+<div class="sheet-overlay" id="activityOverlay" onclick="closeActivityLog()"></div>
+<div class="bottom-sheet" id="activitySheet">
+  <div class="bs-handle"></div>
+  <div class="bs-title">Recent Activity</div>
+  <div id="activityList" class="bs-body">Loading…</div>
+  <button class="totp-btn" style="margin-top:16px;background:var(--surface2);color:var(--text);" onclick="closeActivityLog()">Close</button>
+</div>
+
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous"></script>
 <script>
-  // GOD MODE: PERSISTED SECURITY STATE
-  const SEC_KEY = 'indx_security_state';
-  let secState = Object.assign(
-    { biometric: true, pin: true, twoFA: false, recoveryBackedUp: false, loginAlerts: true, revoked: [] },
-    JSON.parse(localStorage.getItem(SEC_KEY) || '{}')
-  );
-  function saveSecState() { localStorage.setItem(SEC_KEY, JSON.stringify(secState)); }
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  const citizenId = sessionStorage.getItem('citizen_id');
+
+  // REAL per-citizen security state, loaded from Supabase (get_security_settings) — replaces the old localStorage-only theater
+  let secState = { biometric: true, pin: true, twoFA: false, recoveryBackedUp: false };
+
+  async function loadSecState() {
+    if (!citizenId) return; // guest/demo session — nothing real to load
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_security_settings', {
+        method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId })
+      });
+      const data = await res.json();
+      if (data) {
+        const prefs = data.security_prefs || {};
+        secState.biometric = prefs.biometric_enabled !== false;
+        secState.pin = true;
+        secState.twoFA = !!data.totp_enabled;
+        secState.recoveryBackedUp = !!prefs.recovery_key_backed_up;
+      }
+    } catch (e) { /* falls back to defaults above */ }
+  }
 
   function computeScore() {
     let score = 55;
@@ -402,17 +429,23 @@
     if (cb) cb();
   }
 
-  function askRevoke(el, name) {
-    openConfirm('Revoke this session?', name + ' will be signed out immediately and will need to re-authenticate to access IN$DEX again.', 'Revoke', 'var(--red)', () => revokeDevice(el, name));
+  async function updateSecPref(key, value) {
+    if (!citizenId) return { success: false, error: 'NO_SESSION' };
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/update_security_pref', {
+      method: 'POST', headers: SB_HEADERS,
+      body: JSON.stringify({ p_citizen_id: citizenId, p_key: key, p_value: value })
+    });
+    return res.json();
   }
 
   function askRecoveryBackup() {
     if (secState.recoveryBackedUp) { showToast('Recovery Key backup already confirmed'); return; }
     openConfirm('Confirm Recovery Key backup', 'Have you securely stored your Recovery Key shard somewhere only you can access?', 'I\'ve backed it up', 'var(--green)', confirmRecoveryBackup);
   }
-  function confirmRecoveryBackup() {
+  async function confirmRecoveryBackup() {
+    const result = await updateSecPref('recovery_key_backed_up', true);
+    if (!result || result.success === false) { showToast('Could not save — try again'); return; }
     secState.recoveryBackedUp = true;
-    saveSecState();
     const row = document.getElementById('recoveryRow');
     if (row) {
       row.querySelector('.sr-sub').textContent = 'Backup confirmed · ' + new Date().toLocaleDateString();
@@ -424,13 +457,12 @@
     showToast('✓ Recovery Key backup confirmed +8 Security Score');
   }
 
-  // Animate score bar on load
-  window.addEventListener('load', () => {
-    // GOD MODE PATCH: restore persisted toggle/state before computing the real score
+  // Load real state, then render — replaces the old localStorage-restore-on-load pattern
+  window.addEventListener('load', async () => {
+    await loadSecState();
     const bioT = document.getElementById('bioToggle');
     bioT.classList.toggle('on', secState.biometric);
     document.getElementById('bioSub').textContent = secState.biometric ? 'Face ID · Enabled' : 'Face ID · Disabled';
-    document.getElementById('pinToggle').classList.toggle('on', secState.pin);
     if (secState.twoFA) {
       document.getElementById('twoFASub').textContent = 'Authenticator App · Active';
       document.getElementById('twoFAValue').textContent = 'On';
@@ -445,60 +477,134 @@
         val.style.color = 'var(--green)';
       }
     }
-    (secState.revoked || []).forEach(name => {
-      const row = document.querySelector('.device-row[data-device="' + name + '"]');
-      if (row) {
-        const btn = row.querySelector('.dev-revoke');
-        row.style.opacity = '0.4';
-        if (btn) { btn.textContent = 'Revoked'; btn.style.color = 'var(--text-muted)'; btn.style.borderColor = 'var(--border)'; btn.onclick = null; }
-      }
-    });
     setTimeout(() => { updateScore(); }, 300);
-    // Show duress status from sovereign-identity config
+    // Show duress status from sovereign-identity config (real local device flag set by sovereign-identity.html)
     const duressOn = localStorage.getItem('indx_identity_duress_on') === 'true';
     const badge = document.getElementById('duressStatusBadge');
     if (badge) badge.textContent = duressOn ? 'Armed ›' : 'Set up ›';
     if (badge && duressOn) badge.style.color = 'var(--red)';
   });
 
-  function toggleBiometric() {
+  async function toggleBiometric() {
     const t = document.getElementById('bioToggle');
     const on = t.classList.toggle('on');
     document.getElementById('bioSub').textContent = on ? 'Face ID · Enabled' : 'Face ID · Disabled';
-    showToast(on ? '✓ Biometric enabled' : 'Biometric disabled');
-    // GOD MODE PATCH
-    secState.biometric = on; saveSecState(); updateScore();
-  }
-
-  function togglePIN() {
-    showToast('PIN is required for account security');
-    document.getElementById('pinToggle').classList.add('on');
-    // GOD MODE PATCH
-    secState.pin = true; saveSecState(); updateScore();
-  }
-
-  function setup2FA() {
-    if (secState.twoFA) {
-      showToast('2FA is already enabled');
+    const result = await updateSecPref('biometric_enabled', on);
+    if (!result || result.success === false) {
+      t.classList.toggle('on', !on);
+      document.getElementById('bioSub').textContent = !on ? 'Face ID · Enabled' : 'Face ID · Disabled';
+      showToast('Could not save — try again');
       return;
     }
-    secState.twoFA = true; saveSecState();
-    document.getElementById('twoFASub').textContent = 'Authenticator App · Active';
-    document.getElementById('twoFAValue').textContent = 'On';
-    document.getElementById('twoFAValue').style.color = 'var(--green)';
-    showToast('✓ 2FA enabled +12 Security Score');
-    updateScore();
+    showToast(on ? '✓ Biometric enabled' : 'Biometric disabled');
+    secState.biometric = on; updateScore();
   }
 
-  function revokeDevice(el, name) {
-    el.closest('.device-row').style.opacity = '0.4';
-    el.textContent = 'Revoked';
-    el.style.color = 'var(--text-muted)';
-    el.style.borderColor = 'var(--border)';
-    el.onclick = null;
-    // GOD MODE PATCH: persist the revocation so it survives reload
-    if (!secState.revoked.includes(name)) { secState.revoked.push(name); saveSecState(); }
-    showToast(`✓ ${name} session revoked`);
+  // ── REAL 2FA: RFC 6238 TOTP via setup_totp / verify_totp_setup / disable_totp RPCs ──
+  function setup2FA() {
+    if (!citizenId) { showToast('Sign in to set up 2FA'); return; }
+    if (secState.twoFA) {
+      openConfirm('Turn off 2FA?', 'Your account will no longer require an authenticator code to sign in.', 'Turn off', 'var(--red)', disable2FA);
+      return;
+    }
+    startTotpSetup();
+  }
+
+  async function startTotpSetup() {
+    showToast('Generating your real 2FA secret…');
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/setup_totp', {
+        method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId })
+      });
+      const data = await res.json();
+      if (!data || !data.success) { showToast('Could not start 2FA setup — try again'); return; }
+      document.getElementById('totpSecretText').textContent = data.secret;
+      document.getElementById('totpCodeInput').value = '';
+      document.getElementById('totpError').textContent = '';
+      const qrEl = document.getElementById('totpQr');
+      qrEl.innerHTML = '';
+      new QRCode(qrEl, { text: data.otpauth_uri, width: 180, height: 180 });
+      document.getElementById('totpOverlay').classList.add('show');
+      document.getElementById('totpSheet').classList.add('show');
+    } catch (e) {
+      showToast('Could not start 2FA setup — try again');
+    }
+  }
+
+  function closeTotpSheet() {
+    document.getElementById('totpOverlay').classList.remove('show');
+    document.getElementById('totpSheet').classList.remove('show');
+  }
+
+  async function submitTotpVerify() {
+    const code = document.getElementById('totpCodeInput').value.trim();
+    const errEl = document.getElementById('totpError');
+    if (!/^\d{6}$/.test(code)) { errEl.textContent = 'Enter the 6-digit code from your app'; return; }
+    errEl.textContent = '';
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/verify_totp_setup', {
+        method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId, p_code: code })
+      });
+      const data = await res.json();
+      if (!data || !data.success) {
+        errEl.textContent = data && data.error === 'INVALID_CODE' ? 'Wrong code — check your app and try again' : 'Could not verify — try again';
+        return;
+      }
+      secState.twoFA = true;
+      closeTotpSheet();
+      document.getElementById('twoFASub').textContent = 'Authenticator App · Active';
+      document.getElementById('twoFAValue').textContent = 'On';
+      document.getElementById('twoFAValue').style.color = 'var(--green)';
+      showToast('✓ 2FA enabled +12 Security Score');
+      updateScore();
+    } catch (e) {
+      errEl.textContent = 'Could not verify — try again';
+    }
+  }
+
+  async function disable2FA() {
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/disable_totp', {
+        method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId })
+      });
+      const data = await res.json();
+      if (!data || !data.success) { showToast('Could not disable 2FA — try again'); return; }
+      secState.twoFA = false;
+      document.getElementById('twoFASub').textContent = 'Not set up · Tap to enable';
+      document.getElementById('twoFAValue').textContent = 'Off';
+      document.getElementById('twoFAValue').style.color = 'var(--red)';
+      showToast('2FA turned off');
+      updateScore();
+    } catch (e) {
+      showToast('Could not disable 2FA — try again');
+    }
+  }
+
+  // ── REAL activity log — reads this citizen's actual security_events rows ──
+  async function openActivityLog() {
+    document.getElementById('activityOverlay').classList.add('show');
+    document.getElementById('activitySheet').classList.add('show');
+    const list = document.getElementById('activityList');
+    if (!citizenId) { list.innerHTML = 'Sign in to see your activity.'; return; }
+    list.textContent = 'Loading…';
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/security_events?detail->>citizen_id=eq.' + citizenId + '&order=created_at.desc&limit=15', { headers: SB_HEADERS });
+      const rows = await res.json();
+      if (!Array.isArray(rows) || rows.length === 0) { list.innerHTML = 'No recorded activity yet.'; return; }
+      list.innerHTML = rows.map(r => {
+        const t = new Date(r.created_at);
+        const label = t.toLocaleDateString('en-NZ', { day: 'numeric', month: 'short' }) + ' ' + t.toLocaleTimeString('en-NZ', { hour: '2-digit', minute: '2-digit' });
+        return '<div style="display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">' +
+          '<div><div style="font-weight:700;font-size:13px;color:var(--text);">' + (r.description || r.zone) + '</div>' +
+          '<div style="font-size:11px;color:var(--text-muted);">' + label + ' · ' + r.tier + '</div></div></div>';
+      }).join('');
+    } catch (e) {
+      list.innerHTML = 'Could not load activity — try again.';
+    }
+  }
+  function closeActivityLog() {
+    document.getElementById('activityOverlay').classList.remove('show');
+    document.getElementById('activitySheet').classList.remove('show');
   }
 
   function confirmDeactivate() {

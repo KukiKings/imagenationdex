@@ -184,6 +184,10 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
       <div class="topbar-title">Music <span>&</span> Artist</div>
     </div>
 
+    <div style="margin:12px 20px 0;background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.25);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--text-muted);line-height:1.5;">
+      ⚠️ <strong>Not connected yet.</strong> No real NFT minting, ticketing, or merch fulfillment exists on Solana — "Mint & List" saves a local preview only. The ticket and merch examples below are illustrative, not real listings.
+    </div>
+
     <!-- TAB BAR -->
     <div class="tab-bar">
       <div class="tab active" id="tab-releases" onclick="switchTab('releases')">🎵 Releases</div>
@@ -242,7 +246,7 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
           <div class="cnc-earn">+ 0.5 INDX Wisdom bonus on first mint</div>
         </div>
 
-        <!-- DEMO: existing release -->
+        <!-- PREVIEW: saved mint (local only, not a real release) -->
         <div class="release-card" id="demoRelease" style="display:none">
           <div class="rc-art" style="background:linear-gradient(135deg,rgba(139,63,232,0.3),rgba(43,53,216,0.3));">💿</div>
           <div class="rc-body">
@@ -276,7 +280,7 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
           <div class="cnc-earn">Earn on primary sale + every ticket resale</div>
         </div>
 
-        <!-- DEMO TICKET -->
+        <!-- ILLUSTRATIVE EXAMPLE (not a real ticket) -->
         <div class="ticket-card">
           <div class="tc-top">
             <div class="tc-icon">🎸</div>
@@ -316,7 +320,7 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
           <div class="cnc-earn">Physical + digital ownership in one token</div>
         </div>
 
-        <div class="merch-row">
+        <div class="merch-row" title="Illustrative examples — not real listings">
           <div class="merch-card">
             <div class="merch-art">👕</div>
             <div class="merch-name">Artist Tee — Black</div>
@@ -507,6 +511,13 @@ let mintCount = 0;
   if (params.get('tab') === 'tickets') switchTab('tickets');
 })();
 
+function updatePriceHint() {
+  // Real pre-existing bug fix: this handler was referenced by the price input's
+  // oninput but was never defined, so the "≈ $X USD each" hint never updated.
+  const price = parseFloat(document.getElementById('releasePrice').value) || 0;
+  document.getElementById('releasePriceHint').textContent = '≈ $' + (price * INDX_PRICE).toFixed(2) + ' USD each';
+}
+
 function switchTab(tab) {
   ['releases','tickets','merch'].forEach(t => {
     document.getElementById('tab-' + t).classList.toggle('active', t === tab);
@@ -544,44 +555,43 @@ function toggleGiveaway(btn) {
 function mintNFT() {
   let title = '', icon = '🎵', successTitle = '', successSub = '';
 
+  // Preview only — no real Solana NFT minting exists. Deliberately does NOT touch
+  // sessionStorage.citizen_wisdom or any real balance/score: several real screens
+  // gate real privileges on wisdom thresholds, so a fake bump here would be a
+  // genuine privilege-escalation bug, not just fake UI (same fix as skill-point-nft.html).
   if (mintType === 'album' || mintType === 'single') {
     title = document.getElementById('releaseTitle').value.trim();
     if (!title) { showToast('Add a release title first'); return; }
-    const price = parseFloat(document.getElementById('releasePrice').value) || 10;
     const editions = parseInt(document.getElementById('releaseEditions').value) || 100;
     icon = '💿';
-    successTitle = 'Album minted.';
-    successSub = 'Your fans can now own a piece of your music. Every resale earns you a royalty — forever. Standing by.';
+    successTitle = 'Preview saved — nothing minted';
+    successSub = 'No real Solana NFT was created and your Wisdom Score wasn\'t changed. This is saved locally so it\'s ready once minting is real.';
     mintCount++;
     document.getElementById('statReleases').textContent = mintCount;
-    // Show demo release card
+    // Show preview release card
     document.getElementById('demoRelease').style.display = 'flex';
     document.getElementById('demoReleaseTitle').textContent = title;
-    document.getElementById('demoReleaseType').textContent = (mintType === 'single' ? 'Single NFT' : 'Album NFT') + ' · ' + editions + ' editions';
-    // Award wisdom
-    const w = parseInt(sessionStorage.getItem('citizen_wisdom') || '0');
-    sessionStorage.setItem('citizen_wisdom', w + 10);
+    document.getElementById('demoReleaseType').textContent = (mintType === 'single' ? 'Single (preview)' : 'Album (preview)') + ' · ' + editions + ' editions';
   } else if (mintType === 'ticket') {
     title = document.getElementById('ticketEvent').value.trim();
     if (!title) { showToast('Add event name first'); return; }
     icon = '🎫';
-    successTitle = 'Concert NFTs minted.';
-    successSub = 'Tickets are live. Scan to buy. Giveaway activated. Every resale earns you a royalty. Standing by.';
+    successTitle = 'Preview saved — no real tickets exist';
+    successSub = 'No real ticket NFTs were created — no ticketing backend is connected yet. This is saved locally only.';
   } else if (mintType === 'merch') {
     title = document.getElementById('merchName').value.trim();
     if (!title) { showToast('Add item name first'); return; }
     icon = '👕';
-    successTitle = 'Merch tokenized.';
-    successSub = 'Every buyer gets an NFT receipt — on-chain proof of authenticity. No counterfeits. Standing by.';
+    successTitle = 'Preview saved — nothing tokenized';
+    successSub = 'No real NFT receipt was created — no merch fulfillment backend is connected yet. This is saved locally only.';
   }
 
-  const nftId = 'INDX-' + mintType.toUpperCase() + '-' + String(Date.now()).slice(-6);
   closeMintSheet();
   setTimeout(() => {
     document.getElementById('soIcon').textContent = icon;
     document.getElementById('soTitle').textContent = successTitle;
     document.getElementById('soSub').textContent = successSub;
-    document.getElementById('soNftId').textContent = nftId;
+    document.getElementById('soNftId').textContent = 'No real token — preview only';
     document.getElementById('successOverlay').classList.add('show');
   }, 300);
 }

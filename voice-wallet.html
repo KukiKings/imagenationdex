@@ -372,7 +372,7 @@
 <div class="success-overlay" id="successOverlay">
   <div class="success-icon">✅</div>
   <div class="success-title" id="successTitle">Done.</div>
-  <div class="success-sub" id="successSub">Payment sent. Settled on Solana in under 1 second. Zero bank needed.</div>
+  <div class="success-sub" id="successSub">Payment sent instantly. Zero bank needed.</div>
   <button class="success-btn" onclick="reset()">Back to Voice Wallet</button>
 </div>
 
@@ -849,19 +849,24 @@ async function executeTransaction() {
   btn.textContent = 'Sending…'; btn.disabled = true;
 
   if (!citizenId) {
-    // Demo mode
-    showSuccess(intent);
+    // No citizen session — forward to onboarding instead of faking a transfer
+    // that never happened (same convention as pay.html's joinAndPay()).
+    const dest = new URL('onboarding-flow.html', window.location.href);
+    dest.searchParams.set('after_join', 'voice-wallet.html');
+    window.location.href = dest.toString();
     return;
   }
 
   try {
+    const cleanDomain = intent.recipient.toLowerCase().replace(/\.indx$/i, '') + '.IN$DEX';
     const { data, error } = await sb.rpc('transfer_indx', {
-      p_sender_id:        citizenId,
-      p_recipient_domain: intent.recipient.toLowerCase(),
-      p_amount_indx:      intent.amount,
-      p_note:             'Voice wallet transfer'
+      p_sender_id:          citizenId,
+      p_recipient_address:  cleanDomain,
+      p_amount:             intent.amount,
+      p_note:               'Voice wallet transfer'
     });
     if (error) throw error;
+    if (data && !data.success) throw new Error(data.error || 'Transfer failed');
     if (data && data.new_balance !== undefined) {
       sessionStorage.setItem('citizen_balance', data.new_balance);
     }
@@ -876,7 +881,7 @@ function showSuccess(intent) {
   document.getElementById('confirmCard').style.display = 'none';
   const name = toTitle(intent.recipient);
   document.getElementById('successTitle').textContent = 'Done.';
-  document.getElementById('successSub').textContent = `${intent.amount.toFixed(2)} INDX sent to ${name}. Settled on Solana in under 1 second. ${name} received ${(intent.amount * 0.98).toFixed(2)} INDX. Standing by.`;
+  document.getElementById('successSub').textContent = `${intent.amount.toFixed(2)} INDX sent to ${name}. Sent instantly. ${name} received ${(intent.amount * 0.98).toFixed(2)} INDX. Standing by.`;
   document.getElementById('successOverlay').classList.add('show');
   // GOD MODE PATCH — save recipient as favourite + mark history as sent
   saveFavourite(intent.recipient);

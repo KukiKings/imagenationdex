@@ -88,7 +88,7 @@
     <div class="si-avatar">⚡</div>
     <div>
       <div class="si-name">SIINDEX</div>
-      <div class="si-text">I'll create a secure claim link. Your recipient taps it, completes a 90-second setup, and the INDX lands in their new wallet. No bank needed. Standing by.</div>
+      <div class="si-text">I'll create a real claim link. Your recipient taps it, completes a 90-second setup, and the INDX lands in their new wallet — if you still have the balance when they claim it. You share the link yourself; nothing is texted or messaged for you yet. Standing by.</div>
     </div>
   </div>
 
@@ -104,33 +104,47 @@
     </div>
   </div>
 
-  <div class="field-label">Send to</div>
-  <input class="field-input" type="text" placeholder="Phone number or IN$DEX handle" id="recipientInput" oninput="updatePreview()">
+  <div class="field-label">Who's this for? (label only — not sent anywhere)</div>
+  <input class="field-input" type="text" placeholder="Phone number or name, just for your reference" id="recipientInput">
 
-  <div class="field-label">Personal message (optional)</div>
-  <textarea class="message-input" placeholder="Add a message they'll see this when they claim their gift..." id="messageInput"></textarea>
+  <div style="margin:0 0 14px;background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.25);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--text2);line-height:1.5;">
+    ⚠️ There's no SMS/text integration yet — this doesn't message your recipient. Once the link is created below, you'll need to share it yourself (text, WhatsApp, in person).
+  </div>
 
   <div class="no-wallet">
     <div class="no-wallet-icon">✅</div>
-    <div class="no-wallet-text"><strong>No wallet needed to receive.</strong> Your recipient gets a link. They tap it, scan their face, and their wallet is created in 90 seconds. The INDX is waiting for them.</div>
+    <div class="no-wallet-text"><strong>No wallet needed to receive.</strong> Your recipient gets a link. They tap it, scan their face, and their wallet is created in 90 seconds. If your balance still covers the amount when they claim, the INDX moves to them for real.</div>
   </div>
 
   <div class="preview-card" id="previewCard" style="display:none">
-    <div class="preview-label">Gift Link Preview</div>
-    <div class="preview-link" id="previewLink">index.finance/gift/...</div>
-    <div class="preview-exp">Expires in 30 days · One-time claim · $12.00 USD value</div>
+    <div class="preview-label">Your Gift Link</div>
+    <div class="preview-link" id="previewLink">—</div>
+    <div class="preview-exp" id="previewExp">Expires in 24 hours · One-time claim</div>
+    <button class="qa-btn" style="width:100%;margin-top:10px;" onclick="shareGiftLink()">Share Link →</button>
   </div>
 
 </div>
 
 <div class="cta-bar">
-  <button class="send-btn" onclick="createGift()">Create Gift Link</button>
+  <button class="send-btn" onclick="createGift()" id="createBtn">Create Gift Link</button>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
   let amount = 50;
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  let currentInviteCode = null;
+  let pollTimer = null;
+
+  async function rpc(name, body) {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + name, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(body) });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json?.message || 'Request failed');
+    return json;
+  }
 
   function setAmount(val) {
     amount = val;
@@ -139,31 +153,69 @@
     document.querySelectorAll('.qa-btn').forEach(b => {
       b.classList.toggle('selected', b.textContent === val + ' INDX');
     });
-    updatePreview();
   }
 
-  function updatePreview() {
-    const recipient = document.getElementById('recipientInput').value.trim();
-    const preview = document.getElementById('previewCard');
-    if (recipient) {
-      preview.style.display = 'block';
-      const slug = recipient.replace(/[^a-zA-Z0-9]/g,'').toLowerCase().substring(0,8) || 'friend';
-      document.getElementById('previewLink').textContent = 'index.finance/gift/' + slug + '-' + amount + 'indx-' + Math.random().toString(36).substring(2,6);
-      document.querySelector('.preview-exp').textContent = `Expires in 30 days · One-time claim · $${(amount*0.24).toFixed(2)} USD value`;
-    } else {
-      preview.style.display = 'none';
-    }
+  function inviteUrl(code) {
+    return 'https://www.imagenationdex.com/onboarding-flow.html?instant=' + encodeURIComponent(code);
   }
 
-  function createGift() {
-    const recipient = document.getElementById('recipientInput').value.trim();
-    if (!recipient) {
-      showToast('Enter a phone number or handle first.');
+  async function createGift() {
+    const citizenId = sessionStorage.getItem('citizen_id');
+    if (!citizenId) {
+      showToast('You need an IN$DEX account first — this creates a real invite from your balance.');
       return;
     }
-    const msg = document.getElementById('messageInput').value.trim();
-    showToast(`Done. ${amount} INDX gift created for ${recipient}. They'll receive the claim link now. Standing by.`);
-    setTimeout(() => { window.location.href = 'index.html'; }, 3000);
+    const btn = document.getElementById('createBtn');
+    btn.textContent = 'Creating…';
+    btn.disabled = true;
+    try {
+      const result = await rpc('create_instant_invite', { p_referrer_id: citizenId, p_amount_indx: amount });
+      currentInviteCode = result.invite_code;
+      const url = inviteUrl(currentInviteCode);
+      document.getElementById('previewCard').style.display = 'block';
+      document.getElementById('previewLink').textContent = url;
+      document.getElementById('previewExp').textContent = `Expires in 24 hours · One-time claim · $${(amount*0.24).toFixed(2)} USD value`;
+      showToast('Real gift link created. Share it below — the INDX moves when they claim it, if your balance still covers it.');
+      startPolling();
+    } catch (e) {
+      showToast('Could not create the gift link — check your connection and try again.');
+    } finally {
+      btn.textContent = 'Create Gift Link';
+      btn.disabled = false;
+    }
+  }
+
+  function startPolling() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(async () => {
+      if (!currentInviteCode) return;
+      try {
+        const status = await rpc('get_instant_invite_status', { p_invite_code: currentInviteCode });
+        if (status.status === 'fulfilled') {
+          clearInterval(pollTimer);
+          if (status.payment_sent) {
+            showToast(`Done. ${status.amount_indx} INDX really sent to ${status.citizen_name || 'your recipient'}. Standing by.`);
+          } else {
+            showToast(`${status.citizen_name || 'Your recipient'} claimed the link, but your balance didn't cover it at claim time — no INDX moved.`);
+          }
+        } else if (status.status === 'expired') {
+          clearInterval(pollTimer);
+          showToast('This gift link expired unclaimed.');
+        }
+      } catch (e) { /* silent retry next tick */ }
+    }, 4000);
+  }
+
+  async function shareGiftLink() {
+    if (!currentInviteCode) return;
+    const url = inviteUrl(currentInviteCode);
+    const text = `I sent you ${amount} INDX on IN$DEX — tap this link to claim it: `;
+    if (navigator.share) {
+      try { await navigator.share({ title: 'IN$DEX Gift', text, url }); return; }
+      catch (e) { /* cancelled, fall through */ }
+    }
+    try { await navigator.clipboard.writeText(url); showToast('Link copied — paste it to your recipient.'); }
+    catch (e) { showToast('Copy this link: ' + url); }
   }
 
   function showToast(msg) {

@@ -84,28 +84,28 @@
 
   <div class="hero">
     <div class="hero-icon">🛡️</div>
-    <div class="hero-title">Protect your account</div>
-    <div class="hero-sub">Add 3 trusted people. If you ever lose access, 2 of them can restore your wallet instantly.</div>
+    <div class="hero-title">Add trusted contacts</div>
+    <div class="hero-sub">Save up to 3 people you trust. Right now, real account recovery works via your phone number (see Account Recovery) automatic Guardian-approval recovery is on the roadmap, not live yet.</div>
   </div>
 
   <div class="siindex-banner">
     <div class="si-avatar">⚡</div>
     <div>
       <div class="si-name">SIINDEX</div>
-      <div class="si-text">Your Grid Account uses MPC keys no recovery words, ever. Guardians are your safety net. Choose 3 people you trust completely. They don't need to know your PIN. Standing by.</div>
+      <div class="si-text">Your Grid Account uses MPC keys no recovery words, ever. Saving trusted contacts here is real and stored on your profile. Automatic guardian-approval recovery isn't built yet — I'll let you know when it is. Standing by.</div>
     </div>
   </div>
 
   <div class="no-seed-badge">
     <div class="no-seed-icon">✅</div>
-    <div class="no-seed-text"><strong>No recovery words.</strong> Your wallet uses 2-of-3 MPC keys. Guardians replace the recovery words recovery safer and impossible to steal.</div>
+    <div class="no-seed-text"><strong>No recovery words.</strong> Your wallet uses 2-of-3 MPC keys. Trusted contacts saved here are real, but they can't yet approve a recovery for you — that automated flow isn't built.</div>
   </div>
 
   <div class="how-it-works">
-    <div class="hiw-title">How Guardian Recovery works</div>
+    <div class="hiw-title">How Guardian Recovery will work (roadmap not live yet)</div>
     <div class="hiw-row">
       <div class="hiw-num">1</div>
-      <div class="hiw-text">You add 3 guardians family, friends, or trusted colleagues who are IN$DEX citizens.</div>
+      <div class="hiw-text">You add up to 3 guardians family, friends, or trusted colleagues. This part is real and saved today.</div>
     </div>
     <div class="hiw-row">
       <div class="hiw-num">2</div>
@@ -113,7 +113,7 @@
     </div>
     <div class="hiw-row">
       <div class="hiw-num">3</div>
-      <div class="hiw-text">2 of your 3 guardians approve the recovery request. Your wallet is restored in seconds.</div>
+      <div class="hiw-text">Not live yet: guardians approving a recovery request. Today, use the real phone-verification recovery in Account Recovery instead.</div>
     </div>
   </div>
 
@@ -125,10 +125,10 @@
       <input class="guardian-input" id="g1-input" type="text" placeholder="IN$DEX handle or phone number" oninput="updateProgress()">
       <button class="invite-btn" onclick="sendInvite(1)">Invite</button>
     </div>
-    <div class="guardian-hint">They'll get a notification to accept. They don't see your balance.</div>
+    <div class="guardian-hint">Saved to your profile for real. No automatic notification is sent yet let them know yourself for now.</div>
     <div class="guardian-status" id="g1-status" style="display:none">
       <div class="status-dot pending"></div>
-      <span class="status-text">Invite sent awaiting acceptance</span>
+      <span class="status-text">Saved</span>
     </div>
   </div>
 
@@ -141,7 +141,7 @@
     <div class="guardian-hint">Choose someone in a different location from Guardian 1.</div>
     <div class="guardian-status" id="g2-status" style="display:none">
       <div class="status-dot pending"></div>
-      <span class="status-text">Invite sent awaiting acceptance</span>
+      <span class="status-text">Saved</span>
     </div>
   </div>
 
@@ -154,7 +154,7 @@
     <div class="guardian-hint">Your most trusted backup. Could be a family member.</div>
     <div class="guardian-status" id="g3-status" style="display:none">
       <div class="status-dot pending"></div>
-      <span class="status-text">Invite sent awaiting acceptance</span>
+      <span class="status-text">Saved</span>
     </div>
   </div>
 
@@ -178,19 +178,63 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  const citizenId = sessionStorage.getItem('citizen_id');
   let invitedCount = 0;
 
-  function sendInvite(num) {
+  // Load any guardians already saved for real, so this screen reflects actual state on revisit
+  async function loadExistingGuardians() {
+    if (!citizenId) return;
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_guardians', {
+        method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId })
+      });
+      const list = await res.json();
+      (list || []).forEach((g, i) => {
+        if (i >= 3) return;
+        const num = i + 1;
+        document.getElementById('g' + num + '-input').value = g.identifier;
+        document.getElementById('g' + num + '-status').style.display = 'flex';
+        document.getElementById('g' + num + '-card').classList.add('filled');
+        const label = document.querySelector('#g' + num + '-status .status-text');
+        if (label) label.textContent = g.resolved ? 'Saved · found on IN$DEX' : 'Saved · not on IN$DEX yet';
+      });
+      updateProgress();
+    } catch (e) { /* screen still works empty if this fails */ }
+  }
+  loadExistingGuardians();
+
+  async function sendInvite(num) {
     const input = document.getElementById('g' + num + '-input');
-    if (!input.value.trim()) {
+    const value = input.value.trim();
+    if (!value) {
       showToast('Enter a handle or phone number first.');
       return;
     }
-    document.getElementById('g' + num + '-status').style.display = 'flex';
-    document.getElementById('g' + num + '-card').classList.add('filled');
-    showToast(`Invite sent to ${input.value}. Standing by.`);
-    updateProgress();
+    if (!citizenId) {
+      showToast('Sign in to save a guardian.');
+      return;
+    }
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/add_guardian', {
+        method: 'POST', headers: SB_HEADERS,
+        body: JSON.stringify({ p_citizen_id: citizenId, p_identifier: value })
+      });
+      const data = await res.json();
+      if (!data || !data.success) { showToast('Could not save — try again.'); return; }
+      document.getElementById('g' + num + '-status').style.display = 'flex';
+      document.getElementById('g' + num + '-card').classList.add('filled');
+      const label = document.querySelector('#g' + num + '-status .status-text');
+      if (label) label.textContent = data.resolved ? 'Saved · found on IN$DEX' : 'Saved · not on IN$DEX yet';
+      showToast(data.resolved ? `Saved. ${value} is already an IN$DEX citizen.` : `Saved. Let ${value} know yourself no automatic notification yet.`);
+      updateProgress();
+    } catch (e) {
+      showToast('Could not save — try again.');
+    }
   }
 
   function updateProgress() {
@@ -222,7 +266,7 @@
       showToast('Add at least 2 guardians to continue.');
       return;
     }
-    showToast('Done. Guardians saved. Your account is protected. Standing by.');
+    showToast('Done. Trusted contacts saved to your profile. Standing by.');
     setTimeout(() => { window.location.href = 'citizen-dashboard.html'; }, 2200);
   }
 

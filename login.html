@@ -346,6 +346,69 @@ function onPhoneInput() {
   document.getElementById('phoneError').textContent = '';
 }
 
+let toastTimer;
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#1A1D25;border:1px solid #2A2D38;color:#EAEAEA;padding:10px 20px;border-radius:12px;font-size:14px;z-index:999;pointer-events:none;transition:opacity 0.3s;white-space:nowrap;max-width:90vw;text-align:center;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg; t.style.opacity = '1';
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.style.opacity = '0', 2400);
+}
+
+// ── QUICK SIGN IN (WebAuthn passkey login is not built yet — no credential
+// registration flow exists anywhere on the platform, so this never claims a
+// fake biometric success. It's honest: prefill the last phone used on this
+// device and send the citizen straight into the real OTP flow.) ──────────
+function quickSignIn() {
+  const last = localStorage.getItem('indx_last_phone');
+  if (last) {
+    document.getElementById('phoneInput').value = last.replace(/^\+\d+/, '');
+    onPhoneInput();
+    showToast('Enter code to confirm it\'s you');
+  } else {
+    showToast('Quick Sign In isn\'t set up on this device yet — sign in with your phone number');
+  }
+}
+
+// ── PROTECTION MODE TOGGLE ────────────────────────────────────────────────
+// Uses the same localStorage/sessionStorage keys as citizen-protection-mode.html
+// so the flag is consistent platform-wide, rather than a dead no-op switch.
+function requestProtectionToggle() {
+  const sw = document.getElementById('protectionSwitch');
+  const chip = document.getElementById('safeChip');
+  const isOn = localStorage.getItem('indx_protection_mode') === '1';
+  const nowOn = !isOn;
+  localStorage.setItem('indx_protection_mode', nowOn ? '1' : '0');
+  sessionStorage.setItem('protection_mode', nowOn ? '1' : '0');
+  sw.classList.toggle('on', nowOn);
+  if (chip) {
+    chip.textContent = nowOn ? '🛡️ Guarded — outbound transactions frozen' : '✅ Safe to Proceed';
+    chip.classList.toggle('safe', !nowOn);
+    chip.classList.toggle('guarded', nowOn);
+  }
+  showToast(nowOn ? '🛡️ Protection Mode ON — outbound transactions frozen' : 'Protection Mode off');
+}
+
+(function initLoginState() {
+  // Show Quick Sign In only once we have a real phone number to prefill from a prior visit
+  const qBtn = document.getElementById('quickSignInBtn');
+  if (qBtn && localStorage.getItem('indx_last_phone')) qBtn.style.display = 'block';
+
+  const sw = document.getElementById('protectionSwitch');
+  const chip = document.getElementById('safeChip');
+  const isOn = localStorage.getItem('indx_protection_mode') === '1';
+  if (sw) sw.classList.toggle('on', isOn);
+  if (chip) {
+    chip.textContent = isOn ? '🛡️ Guarded — outbound transactions frozen' : '✅ Safe to Proceed';
+    chip.classList.toggle('safe', !isOn);
+    chip.classList.toggle('guarded', isOn);
+  }
+})();
+
 async function sendOTP() {
   const raw = document.getElementById('phoneInput').value.replace(/\D/g, '');
   fullPhone = selectedDial + raw;
@@ -361,6 +424,7 @@ async function sendOTP() {
     return;
   }
 
+  localStorage.setItem('indx_last_phone', fullPhone);
   document.getElementById('otpSentMsg').textContent = `Code sent to ${fullPhone}`;
   goToStep('stepOTP');
   document.getElementById('d0').focus();

@@ -175,7 +175,7 @@
           <div class="tc-feat">✅ Tax report generation</div>
           <div class="tc-feat">❌ Institutional RWA (>$160K)</div>
         </div>
-        <button class="upgrade-btn btn-cyan" onclick="startKYC(1)">Verify with Fractal ID →</button>
+        <button class="upgrade-btn btn-cyan" onclick="startKYC(1)">Verify with Fractal ID → <span style="font-weight:400;opacity:0.7;">(not connected yet)</span></button>
       </div>
 
       <div class="tier-card" style="margin-top:8px;margin-bottom:8px;">
@@ -201,7 +201,7 @@
           <div class="tc-feat">✅ Multi-jurisdiction tax reports</div>
           <div class="tc-feat">✅ Dedicated compliance manager</div>
         </div>
-        <button class="upgrade-btn btn-gold" onclick="startKYC(2)">Apply for Institutional Access →</button>
+        <button class="upgrade-btn btn-gold" onclick="startKYC(2)">Apply for Institutional Access → <span style="font-weight:400;opacity:0.7;">(not connected yet)</span></button>
       </div>
     </div>
 
@@ -210,43 +210,40 @@
       <div class="tax-section">
         <div class="form-label">Financial Year</div>
         <div class="tax-year-row">
-          <div class="ty-btn active" onclick="setYear(this,'2024')">FY2024</div>
-          <div class="ty-btn" onclick="setYear(this,'2023')">FY2023</div>
-          <div class="ty-btn" onclick="setYear(this,'2022')">FY2022</div>
+          <div class="ty-btn" onclick="setYear(this,2025)">FY2025</div>
+          <div class="ty-btn active" onclick="setYear(this,2026)">FY2026</div>
         </div>
-        <div class="form-label">Summary FY2024</div>
+        <div class="form-label">Summary <span id="taxYearLabel">FY2026</span></div>
         <div class="tax-summary">
           <div class="ts-row">
-            <div class="ts-label">Total Sales Revenue</div>
-            <div class="ts-val" style="color:var(--green)">$1,245.50</div>
+            <div class="ts-label">INDX Received (all sources)</div>
+            <div class="ts-val" style="color:var(--green)" id="tsReceived">—</div>
           </div>
           <div class="ts-row">
-            <div class="ts-label">Capital Gains (INDX)</div>
-            <div class="ts-val" style="color:var(--green)">$312.00</div>
+            <div class="ts-label">— of which Staking Rewards</div>
+            <div class="ts-val" style="color:var(--green)" id="tsStaking">—</div>
           </div>
           <div class="ts-row">
-            <div class="ts-label">Staking Rewards</div>
-            <div class="ts-val" style="color:var(--green)">$84.60</div>
+            <div class="ts-label">INDX Sent</div>
+            <div class="ts-val" style="color:var(--text-muted)" id="tsSent">—</div>
           </div>
           <div class="ts-row">
-            <div class="ts-label">Royalty Income</div>
-            <div class="ts-val" style="color:var(--green)">$0.00</div>
+            <div class="ts-label">Real Transactions This Year</div>
+            <div class="ts-val" id="tsCount">—</div>
           </div>
           <div class="ts-row">
-            <div class="ts-label">Civilisation Fund (2%)</div>
-            <div class="ts-val" style="color:var(--text-muted)">-$24.91</div>
+            <div class="ts-label">Estimated Civilisation Fund (2%)</div>
+            <div class="ts-val" style="color:var(--text-muted)" id="tsFund">—</div>
           </div>
           <div class="ts-row" style="border-top:1px solid var(--border);">
-            <div class="ts-label" style="font-weight:700;color:var(--text)">Estimated Taxable Income</div>
-            <div class="ts-val" style="color:var(--gold)">$1,617.19</div>
+            <div class="ts-label" style="font-weight:700;color:var(--text)">Estimated Income (USD)</div>
+            <div class="ts-val" style="color:var(--gold)" id="tsIncome">—</div>
           </div>
         </div>
-        <div style="font-size:11px;color:var(--text-dim);margin-bottom:14px;line-height:1.6;">⚠️ This is an estimate only. Tax obligations vary by jurisdiction. Consult a qualified tax professional. IN$DEX is not a licensed financial adviser.</div>
-        <button class="export-btn" onclick="showToast('Generating CSV report…')">📥 Export CSV (NZIR compatible)</button>
-        <button class="export-btn" onclick="showToast('Generating ATO report…')">📥 Export for ATO (Australia)</button>
-        <button class="export-btn" onclick="showToast('Generating IRS report…')">📥 Export for IRS (USA)</button>
+        <div style="font-size:11px;color:var(--text-dim);margin-bottom:14px;line-height:1.6;" id="taxNote">⚠️ Loading real transaction data…</div>
+        <button class="export-btn" onclick="exportTaxCsv()">📥 Export real transactions as CSV</button>
         <div style="padding:12px;background:var(--purple-bg);border:1px solid rgba(139,63,232,0.2);border-radius:10px;font-size:12px;color:var(--text-muted);line-height:1.6;margin-top:4px;">
-          Multi-jurisdiction reporting requires <strong style="color:var(--purple)">Tier 1 KYC</strong>. Currently showing estimated NZ data only.
+          This export is a plain, real record of your IN$DEX transactions — it is not validated against any specific tax authority's official format (NZIR/ATO/IRS). Give it to your accountant or tax software as a starting point, not a finished filing.
         </div>
       </div>
     </div>
@@ -319,26 +316,98 @@
 <div class="toast" id="toast"></div>
 
 <script>
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  const citizenId = sessionStorage.getItem('citizen_id');
+
+  let currentTaxYear = new Date().getFullYear();
+  let currentTaxTransactions = [];
+
   function switchTab(name) {
     ['kyc','tax','legal'].forEach(t => {
       document.getElementById('tab-'+t).classList.toggle('active', t===name);
       document.getElementById('panel-'+t).style.display = t===name ? 'block' : 'none';
     });
+    if (name === 'tax') loadTaxData(currentTaxYear);
   }
+
+  async function loadTaxData(year) {
+    currentTaxYear = year;
+    document.getElementById('taxYearLabel').textContent = 'FY' + year;
+    document.getElementById('taxNote').textContent = '⚠️ Loading real transaction data…';
+    if (!citizenId) {
+      document.getElementById('taxNote').textContent = '⚠️ No citizen session found. Log in to see your real transaction data.';
+      return;
+    }
+    try {
+      const [summaryRes, txRes] = await Promise.all([
+        fetch(SUPABASE_URL + '/rest/v1/rpc/get_tax_summary', {
+          method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId, p_year: year })
+        }),
+        fetch(SUPABASE_URL + '/rest/v1/rpc/get_tax_transactions', {
+          method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId, p_year: year })
+        })
+      ]);
+      const summary = await summaryRes.json();
+      const txs = await txRes.json();
+      currentTaxTransactions = Array.isArray(txs) ? txs : [];
+
+      document.getElementById('tsReceived').textContent = (summary.indx_received ?? 0).toLocaleString() + ' INDX';
+      document.getElementById('tsStaking').textContent = (summary.staking_rewards_indx ?? 0).toLocaleString() + ' INDX';
+      document.getElementById('tsSent').textContent = (summary.indx_sent ?? 0).toLocaleString() + ' INDX';
+      document.getElementById('tsCount').textContent = summary.transaction_count ?? 0;
+      document.getElementById('tsFund').textContent = '$' + (summary.estimated_civilisation_fund_usd ?? 0).toFixed(2);
+      document.getElementById('tsIncome').textContent = '$' + (summary.estimated_income_usd ?? 0).toFixed(2);
+      document.getElementById('taxNote').textContent = '⚠️ ' + (summary.note || 'Estimate only. Not tax advice. Consult a qualified tax professional.');
+    } catch (e) {
+      document.getElementById('taxNote').textContent = '⚠️ Could not load transaction data right now. Try again shortly.';
+    }
+  }
+
   function setYear(el, year) {
     document.querySelectorAll('.ty-btn').forEach(b => b.classList.remove('active'));
     el.classList.add('active');
-    showToast('Loading FY'+year+' data…');
+    loadTaxData(year);
   }
+
+  function exportTaxCsv() {
+    if (!currentTaxTransactions.length) {
+      showToast('No real transactions to export for FY' + currentTaxYear);
+      return;
+    }
+    const header = ['date','direction','amount_indx','amount_usd','memo','status','tx_hash'];
+    const rows = currentTaxTransactions.map(tx => header.map(k => {
+      const v = tx[k] == null ? '' : String(tx[k]).replace(/"/g,'""');
+      return '"' + v + '"';
+    }).join(','));
+    const csv = [header.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'indx-transactions-FY' + currentTaxYear + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast('Downloaded ' + currentTaxTransactions.length + ' real transactions');
+  }
+
   function startKYC(tier) {
-    showToast('Opening Fractal ID verification Tier '+tier);
+    showToast('Fractal ID is not connected yet — Tier ' + tier + ' verification isn\'t live.');
   }
+
   function showToast(msg) {
     const t = document.getElementById('toast');
     t.textContent = msg;
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2400);
   }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('panel-tax').style.display !== 'none') loadTaxData(currentTaxYear);
+  });
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

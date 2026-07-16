@@ -675,7 +675,7 @@ html,body{background:var(--black);color:var(--text);font-family:-apple-system,Bl
     🔐 Funds in escrow · Confirm receipt when delivered · Seller paid on confirmation
   </div>
   <button onclick="closeSuccess()" style="width:100%;max-width:300px;padding:16px;border-radius:14px;background:linear-gradient(135deg,var(--cyan),var(--blue));border:none;color:#000;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:10px;">Continue Shopping</button>
-  <button class="dispute-btn" style="max-width:300px;" onclick="showToast('Dispute opened — SIINDEX will contact the seller within 24 hours');closeSuccess();">⚠️ Something wrong? Dispute this trade</button>
+  <button class="dispute-btn" style="max-width:300px;" onclick="closeSuccess();window.location.href='dispute.html'">⚠️ Something wrong? Dispute this trade</button>
 </div>
 
 <!-- MAKE OFFER SHEET (God Mode) -->
@@ -791,13 +791,12 @@ async function executeBuy() {
   closeDetail();
 
   if (!citizenId) {
-    // Demo success
-    setTimeout(() => {
-      document.getElementById('successMsg').innerHTML =
-        `<strong>${l.emoji} ${l.title}</strong><br>${l.price} INDX sent. Seller received ${(l.price*0.98).toFixed(2)} INDX (98%). 2% to Civilisation Fund. Standing by.`;
-      document.getElementById('successOverlay').classList.add('show');
-    }, 800);
-    btn.disabled = false; btn.textContent = 'Buy Now →';
+    // No citizen session — this was a fake "demo success" with no real transaction.
+    // Forward to onboarding instead of pretending a purchase happened (same convention
+    // as pay.html's joinAndPay()).
+    const dest = new URL('onboarding-flow.html', window.location.href);
+    dest.searchParams.set('after_join', 'p2p-marketplace.html');
+    window.location.href = dest.toString();
     return;
   }
 
@@ -807,10 +806,16 @@ async function executeBuy() {
       p_listing_id: activeId,
       p_amount_indx: l.price
     });
-    if (!error) {
-      const bal = parseFloat(sessionStorage.getItem('citizen_balance') || '0');
-      sessionStorage.setItem('citizen_balance', (bal - l.price).toFixed(4));
+    // Real RPC failures (including "no such listing" since this grid is
+    // showcase content not yet backed by live `listings` rows) must not
+    // show the success screen.
+    if (error) {
+      showToast('❌ ' + (error.message || 'Purchase failed — try again'));
+      btn.disabled = false; btn.textContent = 'Buy Now →';
+      return;
     }
+    const bal = parseFloat(sessionStorage.getItem('citizen_balance') || '0');
+    sessionStorage.setItem('citizen_balance', (bal - l.price).toFixed(4));
     document.getElementById('successMsg').innerHTML =
       `<strong>${l.emoji} ${l.title}</strong><br>${l.price} INDX sent. Seller received ${(l.price*0.98).toFixed(2)} INDX (98%). 2% to Civilisation Fund. Standing by.`;
     document.getElementById('successOverlay').classList.add('show');
@@ -1025,13 +1030,17 @@ function submitOffer() {
   if (amt <= 0) { showToast('Enter your offer amount'); return; }
   if (amt >= l.price) { showToast('Offer must be below list price of ' + l.price + ' INDX'); return; }
   if (amt < l.price * 0.5) { showToast('Minimum offer is 50% of list price — try ' + Math.ceil(l.price * 0.5) + ' INDX'); return; }
+  // NOTE: this grid is showcase content, not real `listings` rows (the listings table
+  // has no live inventory yet), so there is no real seller account to notify or an
+  // `sb.rpc`/`sb.from` call that could ever succeed against these ids. Saving locally
+  // and being honest that it's a preview, rather than claiming a seller will respond.
   try {
     var offers = JSON.parse(localStorage.getItem('indx_p2p_offers') || '[]');
     offers.unshift({ id: _offerActiveId, title: l.title, offer: amt, listed: l.price, ts: Date.now(), status: 'pending' });
     localStorage.setItem('indx_p2p_offers', JSON.stringify(offers.slice(0, 20)));
   } catch(e) {}
   closeMakeOffer();
-  showToast('✓ Offer of ' + amt + ' INDX sent — seller will respond within 24h');
+  showToast('Saved — real offers open once live sellers list on the marketplace');
 }
 
 // Feature 4: Urgency signals injected into detail sheet

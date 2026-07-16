@@ -69,10 +69,13 @@
   </div>
   <div class="scroll-body">
     <div class="section">
+      <div style="background:rgba(255,184,0,0.06);border:1px solid rgba(255,184,0,0.25);border-radius:12px;padding:12px 14px;font-size:11.5px;color:var(--text-muted);line-height:1.5;margin-bottom:14px;">
+        ⚠️ <strong style="color:var(--gold);">Not connected yet.</strong> No real Wormhole/LayerZero integration exists, and IN$DEX doesn't custody ETH/BNB/BTC/MATIC balances today. Everything below is illustrative — bridging here doesn't move or credit any real assets.
+      </div>
       <div class="bridge-hero">
-        <div class="bh-title">Average bridge time</div>
+        <div class="bh-title">Average bridge time (once connected)</div>
         <div class="bh-time">~3 min</div>
-        <div class="bh-sub">Powered by Wormhole + LayerZero</div>
+        <div class="bh-sub">Not yet connected to Wormhole or LayerZero</div>
       </div>
 
       <!-- FROM / TO -->
@@ -97,7 +100,7 @@
 
       <!-- SEND -->
       <div class="asset-select">
-        <div class="as-top"><span>You send</span><span>Balance: 0.42 ETH</span></div>
+        <div class="as-top"><span>You send</span><span id="sendBal">Not connected — no external wallet linked</span></div>
         <div class="as-row">
           <div class="as-token" id="assetBtn" onclick="cycleAsset()">
             <span id="assetIco">Ξ</span><span id="assetName">ETH</span> ▾
@@ -128,22 +131,17 @@
         <div class="fee-row"><div class="fee-lbl">You receive (est.)</div><div id="finalReceive" style="color:var(--green);font-weight:700;"></div></div>
       </div>
 
-      <button class="btn-bridge" id="bridgeBtn" onclick="doBridge()" disabled>Bridge Assets</button>
+      <button class="btn-bridge" id="bridgeBtn" onclick="doBridge()" disabled>Save Preview (not a real bridge)</button>
 
       <!-- PENDING TX -->
       <div style="font-size:12px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.07em;margin-top:20px;margin-bottom:10px;">Recent bridge</div>
-      <div class="status-card">
+      <div id="noBridgeNote" style="font-size:12px;color:var(--text-muted);">No real bridges yet — this feature isn't connected to Wormhole or LayerZero.</div>
+      <div class="status-card" id="bridgePreviewCard" style="display:none;">
         <div class="sc-header">
-          <div class="sc-title">0.12 ETH → 468 INDX</div>
-          <div class="sc-badge badge-done">COMPLETE</div>
+          <div class="sc-title" id="bpTitle"></div>
+          <div class="sc-badge" style="background:rgba(255,184,0,0.12);color:var(--gold);">PREVIEW ONLY</div>
         </div>
-        <div class="steps">
-          <div class="step"><div class="step-dot dot-done">✓</div><div class="step-txt active">Locked on Ethereum</div></div>
-          <div class="step"><div class="step-dot dot-done">✓</div><div class="step-txt active">Wormhole confirmation</div></div>
-          <div class="step"><div class="step-dot dot-done">✓</div><div class="step-txt active">Minted on Solana</div></div>
-          <div class="step"><div class="step-dot dot-done">✓</div><div class="step-txt active">INDX credited to Grid Account</div></div>
-        </div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:10px;">Completed 2h ago · 2m 47s</div>
+        <div style="font-size:12px;color:var(--gold);margin-top:6px;">Saved as a preview — no real cross-chain transaction was sent, nothing was credited.</div>
       </div>
     </div>
   </div>
@@ -160,7 +158,7 @@ function updateEstimate(){
   document.getElementById('sendUSD').textContent='≈ $'+usdVal.toFixed(2);
   if(amt>0){
     document.getElementById('receiveAmt').textContent=indxVal.toFixed(2);
-    document.getElementById('receiveUSD').textContent='≈ $'+(indxVal*0.24)+' USD'.toFixed(2);
+    document.getElementById('receiveUSD').textContent='≈ $'+(indxVal*0.24).toFixed(2)+' USD';
     document.getElementById('finalReceive').textContent=indxVal.toFixed(2)+' INDX';
     document.getElementById('bridgeBtn').disabled=false;
   } else {
@@ -168,9 +166,27 @@ function updateEstimate(){
     document.getElementById('bridgeBtn').disabled=true;
   }
 }
-function swapChains(){showToast('Bridging back to ETH swap direction set');}
-function toggleFromChain(){showToast('Chain selector ETH, BNB, BTC, MATIC available');}
-function doBridge(){showToast('🌉 Bridge initiated confirm in wallet');}
+function swapChains(){showToast('Direction swapped (preview only)');}
+function toggleFromChain(){showToast('Chain selector — ETH, BNB, BTC, MATIC (preview only)');}
+function renderBridgePreview(){
+  let p; try { p = JSON.parse(localStorage.getItem('indx_bridge_preview')||'null'); } catch(e) { p = null; }
+  const card = document.getElementById('bridgePreviewCard');
+  const note = document.getElementById('noBridgeNote');
+  if (!p) { card.style.display='none'; note.style.display='block'; return; }
+  note.style.display='none';
+  card.style.display='block';
+  document.getElementById('bpTitle').textContent = p.sendAmt + ' ' + p.sendSym + ' → ' + p.receiveAmt + ' INDX';
+}
+function doBridge(){
+  const a=assets[assetIdx];
+  const amt=parseFloat(document.getElementById('sendAmt').value)||0;
+  const indxVal=(amt*a.usd*0.95)/0.24;
+  if (amt<=0) { showToast('Enter an amount first'); return; }
+  localStorage.setItem('indx_bridge_preview', JSON.stringify({ sendAmt: amt, sendSym: a.name, receiveAmt: indxVal.toFixed(2), ts: Date.now() }));
+  showToast('Saved as a preview — no real bridge protocol is connected, nothing was sent or credited');
+  renderBridgePreview();
+}
+renderBridgePreview();
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}
 </script>
 <script src="siindex-speak-core.js"></script>
