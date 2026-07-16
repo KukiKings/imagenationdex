@@ -601,7 +601,15 @@ Fiat ramps alone do not solve the unbanked problem. The coconut girl in the Cook
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-16 (Session 121 continued x39 — SIINDEX v1: real Orchestrator schema + Edge Functions, real Dispute + Insurance Fund backends, SIINDEX Console screen. See below.)
+> Last updated: 2026-07-16 (Session 121 continued x43 — fake-claims queue fully cleared, 7 more real bugs fixed including a broken Primary join flow. See below.)
+
+### Session 121 continued x40-x43 (2026-07-16) — Full-app dead-button sweep + fake-claims queue cleared + Mac slowdown fixed
+
+Continuation of the full-app integrity sweep (task #104/#109). Real bugs found and fixed, each independently verified (syntax check + price/AUD/seed audits) and committed: **income-streams.html** (fabricated combined-withdraw ticker was crediting real balance), **sovereign-social.html** (fake SovToken tip deducted real balance with zero settlement), **trading-challenge.html** (most severe — real INDX entry fees collected for a funded-allocation payout program with no backend ever able to pay out), **sovereign-academy.html** (lesson-complete wisdom credit wired to the real `award_wisdom` RPC), **data-marketplace.html** (fake data-sale credited real balance), **join.html** (the app's own screen catalog labels this the "Primary join flow" — it fabricated a non-UUID citizen_id and never created a real Supabase citizen, breaking every subsequent RPC call for anyone who signed up through it; rewrote to do a real `citizens` insert with genesis bonus, referral attribution, and duplicate-phone/domain-collision handling, live-verified against Supabase), and **nft-marketplace.html** (a "Demo mode success" fallback faked purchase success — including charging real balance — on RPC failure and on network errors; the NFT cards have no real listing_id at all, so this now declines honestly instead of faking a transaction). governance.html was checked and confirmed already correctly wired to the real vote/wisdom RPCs from an earlier fix.
+
+Also fixed the `cast_governance_vote` server-side wisdom-bypass (the RPC trusted a client-supplied wisdom score for a governance gate instead of re-deriving it from `citizens.wisdom_score` — verified live both directions) and diagnosed/fixed a real Mac performance issue via computer-use (heavy Brave tabs + this session's own Claude Helper process).
+
+Full details: memory.md x42-x43, gotchas.md #27.
 
 ### Session 121 continued x37-x39 (2026-07-16) — SIINDEX Master Architecture doc + git root-cause fix + SIINDEX v1 real build
 
