@@ -601,7 +601,17 @@ Fiat ramps alone do not solve the unbanked problem. The coconut girl in the Cook
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-16 (Session 121 continued x43 — fake-claims queue fully cleared, 7 more real bugs fixed including a broken Primary join flow. See below.)
+> Last updated: 2026-07-16 (Session 121 continued x44 — crucial-first pass found and fixed a real Stripe purchase silently not crediting balance, plus the entire lending pool was dead. See below.)
+
+### Session 121 continued x44 (2026-07-16) — Crucial-first pass: lending pool was silently dead, real Stripe purchases weren't crediting balance
+
+AJ: "Do the crucial ones first, and then do the rest" (continuing the broader ~190-screen fake-claims sweep). Two severe, previously-undetected findings:
+
+1. **The entire lending pool (`deposit_to_pool`, `withdraw_from_pool`, `borrow_from_pool`, `repay_loan`) was non-functional.** All 4 already-deployed RPCs — backing `sovereign-lending.html`/`lending-dashboard.html`, previously logged "verified" — referenced a `citizens.updated_at` column that has never existed, plus wrong `security_events` columns, plus (2 of them) a check-constraint violation on closing a position. Every real call would have hard-failed. Fixed all 4, plus built a new `stake_indx` RPC to properly fix `staking.html` (which had its own bug: a silently-swallowed insert failure that still showed "Staked!" and deducted the client balance regardless). Live-verified the full deposit→withdraw→borrow→repay cycle plus the 150% collateral-ratio hard-stop end-to-end.
+
+2. **Most severe finding of the session: real Stripe card purchases in `buy-indx.html` were not crediting the citizen's balance.** The frontend credited balance via a direct client-side `sb.from('citizens').update(...)` call; `citizens`' RLS policies require a real Supabase Auth session that this app never creates anywhere (citizen_id is a plain client-stored value). Verified live as an anon-role write: the balance was left completely unchanged. Real customer money would have been charged via Stripe with the balance credit silently no-op'ing every time. Built and live-verified `credit_stripe_purchase` — atomic, idempotent on the Stripe payment_intent id — and rewired the frontend to surface a loud error (with payment reference) rather than silent success if this ever happens again.
+
+Also fixed `marketplace.html`'s demo-listing fake "Purchase Complete!" message (now an honest preview). Full detail: memory.md x44, gotchas.md #28-#29.
 
 ### Session 121 continued x40-x43 (2026-07-16) — Full-app dead-button sweep + fake-claims queue cleared + Mac slowdown fixed
 
