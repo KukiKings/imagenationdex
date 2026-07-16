@@ -546,6 +546,7 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
   <div id="tipPickerView">
     <div class="sheet-title">Send a SovToken 🌟</div>
     <div class="sheet-sub" id="tipSheetCreator">Choose your tier and support this creator.</div>
+    <div style="background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.25);border-radius:10px;padding:8px 12px;margin-bottom:10px;font-size:11px;line-height:1.4;color:var(--text2);">Preview mode — SovToken sending isn't wired to real settlement yet. No INDX leaves your wallet.</div>
     <div class="tip-tier-grid" id="tipTierGrid">
       <div class="tip-tier-row" onclick="selectTipTier(this,1,'Wave','~$0.24')" data-indx="1">
         <div class="tip-tier-left"><span class="tip-tier-emoji">🌊</span><div><div class="tip-tier-name">Wave</div><div class="tip-tier-effect">Animated wave reaction</div></div></div>
@@ -569,7 +570,7 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
   <div class="tip-confirm-anim" id="tipConfirmView">
     <div class="tip-confirm-emoji" id="tipConfirmEmoji">🌊</div>
     <div style="font-size:18px;font-weight:800;margin:12px 0 6px;" id="tipConfirmMsg">SovToken sent!</div>
-    <div style="font-size:13px;color:var(--text2);" id="tipConfirmSub">Your reaction is live. Creator earned instantly.</div>
+    <div style="font-size:13px;color:var(--text2);" id="tipConfirmSub">Your reaction is live (preview). Real settlement isn't wired up yet.</div>
     <button style="margin-top:20px;padding:14px 32px;border-radius:14px;background:var(--surface3);border:none;color:var(--text2);font-size:14px;font-weight:700;cursor:pointer;" onclick="closeTipSheet()">Done</button>
   </div>
 </div>
@@ -651,21 +652,20 @@ function selectTipTier(el, indx, label, usd) {
 
 function sendTip() {
   if (!selectedTipIndx) return;
-  // Deduct from session balance
-  const bal = parseFloat(sessionStorage.getItem('citizen_balance') || '0');
-  const newBal = Math.max(0, bal - selectedTipIndx);
-  sessionStorage.setItem('citizen_balance', newBal.toFixed(6));
-  // Log to localStorage
+  // PREVIEW ONLY — no real balance is debited. SovToken send has no backend
+  // settlement yet (no creator wallet crediting, no transaction record), so
+  // this must not touch the real citizen_balance key other screens read.
+  // Log to localStorage as a preview-only interaction history.
   const tips = JSON.parse(localStorage.getItem('indx_sovereign_tips') || '[]');
-  tips.unshift({ to: currentCreator, indx: selectedTipIndx, label: selectedTipLabel, ts: Date.now() });
+  tips.unshift({ to: currentCreator, indx: selectedTipIndx, label: selectedTipLabel, ts: Date.now(), preview: true });
   localStorage.setItem('indx_sovereign_tips', JSON.stringify(tips.slice(0,20)));
   // Show confirm
   document.getElementById('tipPickerView').style.display = 'none';
   document.getElementById('tipConfirmEmoji').textContent = selectedTipEmoji;
-  document.getElementById('tipConfirmMsg').textContent = selectedTipLabel + ' SovToken sent!';
-  document.getElementById('tipConfirmSub').textContent = selectedTipIndx + ' INDX sent to ' + currentCreator + '. Your reaction is live.';
+  document.getElementById('tipConfirmMsg').textContent = selectedTipLabel + ' SovToken (preview)!';
+  document.getElementById('tipConfirmSub').textContent = selectedTipIndx + ' INDX would be sent to ' + currentCreator + ' once settlement is live.';
   document.getElementById('tipConfirmView').classList.add('show');
-  showSSToast(selectedTipEmoji + ' ' + selectedTipIndx + ' INDX sent to ' + currentCreator + '!');
+  showSSToast(selectedTipEmoji + ' Preview — ' + selectedTipIndx + ' INDX would be sent to ' + currentCreator);
 }
 
 // Wire "Send one" link on SovTokens section
