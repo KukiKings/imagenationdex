@@ -573,10 +573,19 @@
 <!-- ── TOAST ── -->
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
   // ══════════════════════════════════════════════════════
   // GOD MODE — SECURITY CENTRE ENHANCEMENTS
   // ══════════════════════════════════════════════════════
+
+  // Real device registry (Presence Layer, 17 Jul 2026) — replaces the
+  // hardcoded fake TRUSTED_DEVICES list that used to live here. See
+  // siindex-presence-capability-layer-v1.md.
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let realTrustedDeviceCount = 1; // updated once real devices load
 
   // Feature 1 — Security Health Score
   function computeAndRenderHealthScore() {
@@ -585,7 +594,7 @@
     const sdmOn         = localStorage.getItem('indx_sec_shared_device') === '1';
     const sessionAge    = (Date.now() - parseInt(sessionStorage.getItem('indx_sec_session_start') || Date.now())) / 60000;
     const authMethod    = sessionStorage.getItem('citizen_auth_method') || 'passkey';
-    const trustedCount  = 3; // current + 2 pre-populated
+    const trustedCount  = realTrustedDeviceCount; // real count from devices table, not fabricated
 
     const factors = [
       { icon:'🔑', label:'Authentication method', tip:'passkey.html',  score: authMethod === 'passkey' ? 25 : authMethod === 'totp' ? 12 : 5,  max:25 },
@@ -857,45 +866,103 @@
   }
   setInterval(tickIdle, 1000);
 
-  // ── TRUSTED DEVICES ──
-  const TRUSTED_DEVICES = [
-    { icon: '💻', name: 'MacBook Pro', meta: 'Last active 2h ago · AU', risk: 'green', id: 'td1' },
-    { icon: '📱', name: 'iPad (home)', meta: 'Last active 3 days ago · AU', risk: 'green', id: 'td2' },
-  ];
+  // ── TRUSTED DEVICES (real, via devices table + register_device/
+  // get_citizen_devices/revoke_device RPCs — no fabricated device list) ──
+  let realDevices = [];
 
-  function renderTrustedDevices() {
+  function deviceIcon(label) {
+    const l = (label || '').toLowerCase();
+    if (l.includes('iphone') || l.includes('android') || l.includes('mobile')) return '📱';
+    if (l.includes('ipad') || l.includes('tablet')) return '📱';
+    return '💻';
+  }
+
+  function timeAgo(iso) {
+    if (!iso) return 'Not yet verified';
+    const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+    if (mins < 1) return 'Active now';
+    if (mins < 60) return mins + 'm ago';
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs + 'h ago';
+    return Math.floor(hrs / 24) + 'd ago';
+  }
+
+  async function loadRealDevices() {
+    const citizenId = sessionStorage.getItem('citizen_id');
     const list = document.getElementById('trustedDevicesList');
-    list.innerHTML = TRUSTED_DEVICES.map(d => `
-      <div class="device-item" id="${d.id}">
-        <div class="device-icon-wrap trusted">${d.icon}</div>
-        <div class="device-body">
-          <div class="device-name">${d.name}</div>
-          <div class="device-meta">${d.meta}</div>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-          <div class="device-risk-dot ${d.risk}"></div>
-          <div style="font-size:10px;color:var(--muted);cursor:pointer;" onclick="signOutDevice('${d.id}','${d.name}')">Sign out</div>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  function signOutDevice(id, name) {
-    const el = document.getElementById(id);
-    if (el) { el.style.opacity = '0.35'; el.style.pointerEvents = 'none'; }
-    addLedgerEntry('sign_out', '🔒 Session signed out', name + ' signed out remotely', 'pass');
-    showToast('✅ ' + name + ' signed out');
-  }
-
-  function confirmSignOutAll() {
-    if (confirm('Sign out all devices? You will remain logged in on this device only.')) {
-      TRUSTED_DEVICES.forEach(d => {
-        const el = document.getElementById(d.id);
-        if (el) { el.style.opacity = '0.35'; el.style.pointerEvents = 'none'; }
-      });
-      addLedgerEntry('sign_out_all', '🔐 Signed out everywhere', 'All other sessions revoked', 'pass');
-      showToast('✅ All other sessions signed out');
+    if (!citizenId) {
+      if (list) list.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:12px;">Log in to see your real device list.</div>';
+      return;
     }
+    try {
+      // Register "this device" once per browser (remembered via localStorage),
+      // so the list always includes the device actually viewing this screen.
+      let deviceId = localStorage.getItem('indx_this_device_id');
+      if (!deviceId) {
+        const ua = navigator.userAgent;
+        const label = /iPad|iPhone|iPod/.test(ua) ? 'iPhone/iPad' : /Android/.test(ua) ? 'Android device' : 'Browser';
+        const { data, error } = await sb.rpc('register_device', {
+          p_citizen_id: citizenId, p_device_label: label, p_user_agent: ua
+        });
+        if (!error && data && data.success) {
+          deviceId = data.device_id;
+          localStorage.setItem('indx_this_device_id', deviceId);
+        }
+      }
+
+      const { data, error } = await sb.rpc('get_citizen_devices', { p_citizen_id: citizenId });
+      if (error) throw error;
+      realDevices = (data && data.devices) || [];
+      realTrustedDeviceCount = realDevices.filter(d => !d.revoked_at).length || 1;
+
+      if (!list) return;
+      const active = realDevices.filter(d => !d.revoked_at);
+      if (active.length === 0) {
+        list.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:12px;">No devices registered yet.</div>';
+        return;
+      }
+      list.innerHTML = active.map(d => `
+        <div class="device-item" id="dev-${d.id}">
+          <div class="device-icon-wrap trusted">${deviceIcon(d.device_label)}</div>
+          <div class="device-body">
+            <div class="device-name">${d.device_label}${d.id === deviceId ? ' <span class="device-current-tag">CURRENT</span>' : ''}</div>
+            <div class="device-meta">${timeAgo(d.last_verified_at || d.first_paired_at)} · ${d.trust_level}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+            <div class="device-risk-dot ${d.security_state === 'normal' ? 'green' : 'yellow'}"></div>
+            ${d.id === deviceId ? '' : `<div style="font-size:10px;color:var(--muted);cursor:pointer;" onclick="signOutDevice('${d.id}','${d.device_label.replace(/'/g,"")}')">Sign out</div>`}
+          </div>
+        </div>
+      `).join('');
+    } catch (e) {
+      if (list) list.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:12px;">Couldn\'t load devices — try again shortly.</div>';
+    }
+  }
+
+  async function signOutDevice(id, name) {
+    const { data, error } = await sb.rpc('revoke_device', { p_device_id: id, p_reason: 'citizen_signed_out_remotely' });
+    if (error || !data || !data.success) {
+      showToast('❌ Could not sign out ' + name + ' — try again');
+      return;
+    }
+    const el = document.getElementById('dev-' + id);
+    if (el) { el.style.opacity = '0.35'; el.style.pointerEvents = 'none'; }
+    addLedgerEntry('sign_out', '🔒 Session signed out', name + ' signed out remotely — real device revoked', 'pass');
+    showToast('✅ ' + name + ' signed out');
+    loadRealDevices();
+  }
+
+  async function confirmSignOutAll() {
+    if (!confirm('Sign out all other devices? You will remain logged in on this device only.')) return;
+    const citizenId = sessionStorage.getItem('citizen_id');
+    const thisDeviceId = localStorage.getItem('indx_this_device_id');
+    const others = realDevices.filter(d => !d.revoked_at && d.id !== thisDeviceId);
+    for (const d of others) {
+      await sb.rpc('revoke_device', { p_device_id: d.id, p_reason: 'citizen_signed_out_all' });
+    }
+    addLedgerEntry('sign_out_all', '🔐 Signed out everywhere', others.length + ' other real device(s) revoked', 'pass');
+    showToast('✅ ' + others.length + ' other device(s) signed out');
+    loadRealDevices();
   }
 
   // ── VAULT MODE ──
@@ -1072,9 +1139,9 @@
   }
 
   // ── DOMContentLoaded ──
-  window.addEventListener('DOMContentLoaded', () => {
+  window.addEventListener('DOMContentLoaded', async () => {
     updateSessionMeta();
-    renderTrustedDevices();
+    await loadRealDevices();
     initVault();
     renderLedger();
     logPageOpen();

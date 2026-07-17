@@ -14,8 +14,8 @@ Every customer ("citizen") is identified before any designated service is provid
 
 | Tier | Identity collected | Verification method | Capability cap |
 |---|---|---|---|
-| **Tier 0** | Full name, mobile number (SMS OTP verified), country | Phone possession + OTP; device binding | Receive/hold; transfers up to **$1,000 AUD-equivalent per month**; no fiat cash-out |
-| **Tier 1** | Tier 0 + government-issued photo ID + biometric liveness scan (on-device) | Document verification + liveness match; biometrics never leave the device (ZK-proof attestation) | Up to **$10,000 AUD-equivalent per month**; fiat cash-out enabled |
+| **Tier 0** | Full name, mobile number (SMS OTP verified), country | Phone possession + OTP; device binding | Receive/hold; transfers up to **$1,000 USD-equivalent per month**; no fiat cash-out |
+| **Tier 1** | Tier 0 + government-issued photo ID + biometric liveness scan (on-device) | Document verification + liveness match; biometrics never leave the device (ZK-proof attestation) | Up to **$10,000 USD-equivalent per month**; fiat cash-out enabled |
 | **Tier 2** | Tier 1 + proof of address, source of funds/wealth declaration | Enhanced CDD review by Compliance Officer | Full platform limits; merchant/business features |
 | **Tier 3+** | Case-by-case ECDD | Manual review | High-value/corporate |
 

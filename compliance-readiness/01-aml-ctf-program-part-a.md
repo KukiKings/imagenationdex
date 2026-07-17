@@ -56,7 +56,7 @@ Monitoring is implemented through the PQSI tiered-alert framework, applied to ev
 | T3 | Alert | Transactions halted for the account, immediate alert + email to Compliance Officer |
 | T4 | Critical | Full platform halt; resumption requires the Compliance Officer's explicit written authorisation |
 
-**Rule triggers include:** velocity anomalies per Grid Account; structuring patterns (repeated just-below-threshold transfers); transfers to newly created or screened-negative wallets; corridor-limit breaches; sanctions-list matches; 2FA is mandatory above AUD-equivalent $500 per transaction (citizen-adjustable downward only).
+**Rule triggers include:** velocity anomalies per Grid Account; structuring patterns (repeated just-below-threshold transfers); transfers to newly created or screened-negative wallets; corridor-limit breaches; sanctions-list matches; 2FA is mandatory above USD-equivalent $500 per transaction (citizen-adjustable downward only).
 
 ## 5. Reporting Obligations
 

@@ -28,9 +28,10 @@
 - 2026-07-14 — Documents drafted. Enrolment not yet started at time of drafting.
 - ✅ 2026-07-14 — **Enrolment SUBMITTED** — beat the 29 Jul deadline by 15 days. Enrolled as both VASP (all 5 services: exchange w/ money, exchange w/ VA, value transfer, safekeeping, offer/sale financial services) and RSP (independent remittance dealer). Commencement declared: 24 Sep 2026.
 - ✅ **AUSTRAC Account Number (AAN): 263945366** — quote in all AUSTRAC contact.
-- ⬜ Registration form received from AUSTRAC (watch imagenationdex@gmail.com)
+- ✅ 2026-07-17 — **Registration form SUBMITTED** via AUSTRAC Online. Receipt number **NEWREG-CGAHBH-115011**, submitted 08:06:08 PM UTC+10:00. Compliance Officer on file: Arthur Henry, imagenationdex@gmail.com.
+- ⚠️ 2026-07-17, 8:17 PM — AUSTRAC sent an automated reminder [NewReg-32011] to submit supporting documentation: formation/incorporation evidence, ownership/beneficial ownership structure, ML/TF risk assessment, AML/CTF policies, personnel due diligence checks, and address of designated-service locations. Says "you may submit the documents by replying to this email." A draft reply referencing this folder is being prepared for AJ's review — not sent.
 - ⬜ Legal review of this folder completed by: ______
-- ⬜ Registration submitted
+- ⬜ Formation/incorporation evidence and beneficial-ownership documentation — not yet drafted as attachable files (currently only declared as facts in this folder, not supporting documents)
 
 ## Enrolled entity (as declared 2026-07-14)
 Arthur Henry (sole trader) · ABN 95 579 343 955 · t/a **Image Nation Decentralised Exchange** · Principal place of business: Victoria 3175 · AML/CTF Compliance Officer: Arthur Henry (Founder) · Contact: imagenationdex@gmail.com
