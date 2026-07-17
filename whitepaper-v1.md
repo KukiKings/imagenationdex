@@ -601,14 +601,22 @@ Fiat ramps alone do not solve the unbanked problem. The coconut girl in the Cook
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-17 (Session 121 continued x49 — REG-22048 AUSTRAC IND Remitter registration filled through Declaration, ticked, NOT yet submitted. See below.)
+> Last updated: 2026-07-17 (Session 121 continued x50 — UER-162931 Update Enrolment details SUBMITTED, receipt UPDATEENROL-CGAHBH-131402. See below.)
 
-### Session 121 continued x49 (2026-07-17) — REG-22048 AUSTRAC IND Remitter registration: filled through Declaration, NOT submitted
+### Session 121 continued x50 (2026-07-17) — UER-162931 Update Enrolment details SUBMITTED
 
-- **Compliance filing (not a codebase change)** — Completed the remaining sections of the live AUSTRAC "Register an IND Remitter business" form (REG-22048): Customer Due Diligence (PEP screening + source-of-wealth/funds process, grounded in `02-aml-ctf-program-part-b.md`), Employee Training, Key Personnel, Key Personnel Details, Unlawful Activity, Summary & Review, and Declaration.
+- **Compliance filing (not a codebase change)** — Resumed and completed the live AUSTRAC "Update Enrolment details" form (UER-162931), which AJ had started himself and left at step 2 of 13. Advanced through Where you operate, Type of business, Designated services, Business details, Business structure, Beneficial owners, Business contact, Business operations, AML/CTF officer, and Industry levy — all pre-filled correctly and consistent with canonical facts (ABN 95579343955 sole trader, VIC 3175, 5/5 virtual asset services + independent remittance dealer, Arthur Henry as AML/CTF officer and sole beneficial owner).
+- Summary & Review scrolled end-to-end: zero errors, zero stale display artifacts — clean first pass, no Pega bug this time.
+- Filled the Declaration's "Details of the person submitting" sub-section (Job title, Relationship to the business, DOB, Telephone) with the standard reinforcement pattern.
+- AJ said "submit" alone; flagged that ticking and submitting have been two separate explicit steps tonight and asked for clarification. AJ confirmed "tick and submit."
+- **SUBMITTED 2026-07-17, 11:32:20 PM UTC+10:00. Receipt: UPDATEENROL-CGAHBH-131402.** All three AUSTRAC filings from tonight are now submitted: VASP registration (115011), RSP/remittance registration (115012), and this enrolment update (131402).
+
+### Session 121 continued x49 (2026-07-17) — REG-22048 AUSTRAC IND Remitter registration SUBMITTED
+
+- **Compliance filing (not a codebase change)** — Completed and submitted the live AUSTRAC "Register an IND Remitter business" form (REG-22048): Customer Due Diligence (PEP screening + source-of-wealth/funds process, grounded in `02-aml-ctf-program-part-b.md`), Employee Training, Key Personnel, Key Personnel Details, Unlawful Activity, Summary & Review, and Declaration.
 - Resolved a recurring Pega display bug on the "professional experience" field (stale "Cannot be blank" despite valid content) by fully clearing and retyping it via real character-by-character keystrokes rather than JS-set + synthetic keystroke.
 - AJ ticked "I agree" via explicit instruction. First Submit attempt correctly caught 5 genuinely empty required fields under "Details of the person submitting" (Job title, Relationship to the business, DOB, Telephone, Postal address) — filled with Arthur Henry's established details and re-verified.
-- **Form is fully filled, "I agree" ticked, zero visible errors — submission has NOT happened.** Awaiting AJ's next explicit "submit" at the top of the next session.
+- **SUBMITTED 2026-07-17, 10:57:23 PM UTC+10:00. Receipt: NEWREG-CGAHBH-115012.** This is IN$DEX's RSP/remittance registration, separate from and in addition to the VASP registration (receipt 115011) submitted earlier the same day.
 
 ### Session 121 continued x48 (2026-07-17) — SIINDEX Sovereign Presence and Capability Layer: mapped, honest subset shipped, real fake-device bug fixed
 
