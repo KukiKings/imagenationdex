@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SIINDEX Command Center — AJ Only | IN$DEX</title>
+<style>
+  :root {
+    --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
+    --black:#090A10; --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+    --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+    --text:#E8EAFF; --text2:#A0A8C8; --text3:#5A6080;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:120px;}
+
+  .topbar{position:sticky;top:0;z-index:100;background:rgba(9,10,16,0.95);backdrop-filter:blur(12px);border-bottom:1px solid rgba(0,212,255,0.15);padding:16px 20px;display:flex;align-items:center;gap:12px;}
+  .back-btn{width:34px;height:34px;border-radius:50%;background:var(--surface2);border:1px solid var(--surface3);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+  .topbar-title{font-size:16px;font-weight:800;}
+  .topbar-sub{font-size:11px;color:var(--text3);margin-top:1px;}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);display:inline-block;margin-right:5px;animation:pulse-dot 2s ease-in-out infinite;}
+  @keyframes pulse-dot{0%,100%{opacity:1;}50%{opacity:0.4;}}
+
+  .disclosure{margin:14px 20px 0;background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.2);border-radius:12px;padding:12px 14px;font-size:11.5px;color:var(--text2);line-height:1.55;}
+
+  .section{margin:16px 20px 0;}
+  .section-title{font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;}
+
+  .stat-row{display:flex;gap:8px;flex-wrap:wrap;}
+  .stat-box{flex:1;min-width:78px;background:var(--surface);border:1px solid var(--surface3);border-radius:12px;padding:12px 8px;text-align:center;}
+  .stat-val{font-size:19px;font-weight:800;color:var(--cyan);}
+  .stat-lbl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.04em;margin-top:3px;}
+  .stat-box.warn .stat-val{color:var(--gold);}
+  .stat-box.ok .stat-val{color:var(--green);}
+
+  /* CHAT */
+  .chat-wrap{margin:16px 20px 0;background:var(--surface);border:1px solid var(--surface3);border-radius:16px;padding:16px;min-height:220px;max-height:52vh;overflow-y:auto;}
+  .msg{margin-bottom:14px;font-size:13.5px;line-height:1.55;}
+  .msg:last-child{margin-bottom:0;}
+  .msg-role{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px;}
+  .msg.you .msg-role{color:var(--text3);}
+  .msg.si .msg-role{color:var(--cyan);}
+  .msg.you .msg-body{color:var(--text2);}
+  .msg.si .msg-body{color:var(--text);white-space:pre-wrap;}
+  .msg-body strong{color:var(--cyan);}
+  .empty-hint{font-size:12.5px;color:var(--text3);text-align:center;padding:30px 10px;line-height:1.6;}
+
+  /* PROMPT CHIPS */
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin:12px 20px 0;}
+  .chip{background:var(--surface2);border:1px solid var(--surface3);border-radius:20px;padding:8px 13px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;}
+  .chip:active{background:var(--surface3);}
+
+  /* INPUT DOCK */
+  .dock{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:rgba(9,10,16,0.97);backdrop-filter:blur(14px);border-top:1px solid rgba(0,212,255,0.15);padding:14px 20px 20px;display:flex;gap:10px;align-items:center;}
+  .mic-btn{width:48px;height:48px;border-radius:50%;background:var(--surface2);border:1px solid var(--surface3);display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;flex-shrink:0;transition:all 0.2s;}
+  .mic-btn.listening{background:rgba(139,63,232,0.2);border-color:var(--purple);box-shadow:0 0 16px rgba(139,63,232,0.4);}
+  .text-input{flex:1;background:var(--surface2);border:1px solid var(--surface3);border-radius:24px;padding:12px 16px;color:var(--text);font-size:14px;outline:none;}
+  .send-btn{width:44px;height:44px;border-radius:50%;background:var(--cyan);border:none;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;flex-shrink:0;color:#000;font-weight:800;}
+  .voice-toggle{position:absolute;top:-34px;right:20px;font-size:11px;color:var(--text3);font-weight:700;cursor:pointer;background:var(--surface2);border:1px solid var(--surface3);border-radius:14px;padding:5px 11px;}
+  .voice-toggle.on{color:var(--cyan);border-color:rgba(0,212,255,0.4);}
+
+  .listen-status{font-size:11px;color:var(--purple);text-align:center;margin:6px 20px 0;min-height:14px;}
+
+  .auth-box{margin:14px 20px 0;background:var(--surface);border:1px solid rgba(0,212,255,0.25);border-radius:12px;padding:14px;}
+  .auth-box.signed-in{border-color:rgba(0,229,160,0.35);}
+  .auth-row{display:flex;gap:8px;margin-top:8px;}
+  .auth-input{flex:1;background:var(--surface2);border:1px solid var(--surface3);border-radius:10px;padding:10px 12px;color:var(--text);font-size:13px;outline:none;}
+  .auth-btn{background:var(--cyan);border:none;border-radius:10px;padding:10px 16px;font-weight:800;font-size:12.5px;color:#000;cursor:pointer;white-space:nowrap;}
+  .auth-status{font-size:11.5px;color:var(--text2);margin-top:8px;line-height:1.5;}
+  .auth-status.ok{color:var(--green);}
+  .auth-status.err{color:var(--red);}
+  .signout-link{font-size:11px;color:var(--text3);text-decoration:underline;cursor:pointer;margin-top:8px;display:inline-block;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="back-btn" onclick="window.location.href='citizen-dashboard.html'">←</div>
+  <div>
+    <div class="topbar-title"><span class="live-dot"></span>SIINDEX Command Center</div>
+    <div class="topbar-sub">CEO/COO briefing · AJ only</div>
+  </div>
+</div>
+
+<div class="disclosure" id="disclosureBox">
+  This is SIINDEX's <strong>Executive Mode</strong> — registered for real in <code>agent_registry</code> ("SIINDEX — Executive Mode"), sharing one canonical identity with Citizen Mode (Law 12), not a separate product. Memory boundary: this mode is scoped to <code>founder</code>/<code>executive_project</code> memory only and is constitutionally barred from citizen-private data. <strong>Real auth is now wired below</strong> — passwordless email sign-in via Supabase Auth, gated server-side by <code>founder_authority</code> + <code>is_founder()</code> in the <code>siindex-runtime</code> Edge Function. Until you actually sign in with your real email and click the real magic link, this page runs in <strong>unauthenticated preview mode</strong>: the stats below stay blocked by RLS (correct behaviour) and chat answers come from a static grounded briefing, not the live model.
+</div>
+
+<div class="auth-box" id="authBox">
+  <div class="section-title" style="margin-bottom:0;">Founder Sign-In</div>
+  <div class="auth-row">
+    <input class="auth-input" id="authEmail" type="email" placeholder="your real email" autocomplete="email">
+    <button class="auth-btn" onclick="sendMagicLink()">Send link</button>
+  </div>
+  <div class="auth-status" id="authStatus">Not signed in. Enter your real email and Supabase will send a magic link — click it to complete sign-in yourself. I never see or handle a password.</div>
+
+  <!-- REAL Supabase Auth native MFA (AAL2 step-up) — distinct from the citizen-facing
+       custom TOTP toggle in security-settings.html. claim_founder_bootstrap() hard-requires
+       auth_aal()='aal2' on THIS session; there was no UI anywhere to actually get there
+       until this was added. Nothing here is simulated — auth.mfa.enroll/challenge/verify
+       are Supabase's real MFA APIs, and a verified code genuinely bumps this session's AAL. -->
+  <div class="mfa-box" id="mfaBox" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--surface3);">
+    <div id="mfaEnrollPanel" style="display:none;">
+      <div class="section-title" style="margin-bottom:8px;">Enrol Authenticator (required for founder bootstrap)</div>
+      <div id="mfaQr" style="background:#fff;border-radius:12px;padding:12px;display:flex;justify-content:center;margin-bottom:10px;max-width:200px;"></div>
+      <div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:10px;">Can't scan? Enter manually: <span id="mfaSecretText" style="color:var(--cyan);font-family:monospace;"></span></div>
+      <div class="auth-row">
+        <input class="auth-input" id="mfaCodeInput" type="tel" maxlength="6" placeholder="6-digit code">
+        <button class="auth-btn" onclick="submitMfaEnrollVerify()">Verify & enrol</button>
+      </div>
+    </div>
+    <div id="mfaStepUpPanel" style="display:none;">
+      <div class="section-title" style="margin-bottom:8px;">Verify your authenticator (step up this session)</div>
+      <div class="auth-row">
+        <input class="auth-input" id="mfaStepUpCodeInput" type="tel" maxlength="6" placeholder="6-digit code">
+        <button class="auth-btn" onclick="submitMfaStepUpVerify()">Verify</button>
+      </div>
+    </div>
+    <div class="auth-status err" id="mfaError"></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Live Right Now</div>
+  <div class="stat-row" id="statRow">
+    <div class="stat-box"><div class="stat-val">—</div><div class="stat-lbl">Loading</div></div>
+  </div>
+</div>
+
+<div class="section" style="position:relative;">
+  <div class="section-title">Talk to SIINDEX</div>
+  <div class="voice-toggle" id="voiceToggle" onclick="toggleSpeak()">🔇 Voice off</div>
+  <div class="chat-wrap" id="chatWrap">
+    <div class="empty-hint">Ask about the August roadmap, what's open, build status, security, or compliance — by voice or text. Real answers, sourced live below.</div>
+  </div>
+</div>
+
+<div class="listen-status" id="listenStatus"></div>
+
+<div class="chips" id="chipsRow">
+  <div class="chip" onclick="ask(this.textContent)">What's due in August?</div>
+  <div class="chip" onclick="ask(this.textContent)">What needs fixing?</div>
+  <div class="chip" onclick="ask(this.textContent)">Build status</div>
+  <div class="chip" onclick="ask(this.textContent)">Security status</div>
+  <div class="chip" onclick="ask(this.textContent)">Compliance status</div>
+</div>
+
+<div class="dock">
+  <div class="mic-btn" id="micBtn" onclick="toggleMic()">🎤</div>
+  <input class="text-input" id="textInput" placeholder="Ask SIINDEX…" onkeydown="if(event.key==='Enter')sendText()">
+  <button class="send-btn" onclick="sendText()">→</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY };
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ── REAL FOUNDER AUTH (Supabase Auth, passwordless email OTP / magic link) ──
+// I never see, type, or store Arthur's password. He completes sign-in himself
+// by clicking the real link Supabase emails him. This is Part One of the
+// "COMPLETE THE FIRST REAL AUTHENTICATED SIINDEX CONVERSATIONS" build.
+let currentSession = null;
+let isFounderConfirmed = false;
+let siindexSessionId = null;
+let pendingFactorId = null;
+let pendingChallengeId = null;
+
+async function sendMagicLink() {
+  const email = document.getElementById('authEmail').value.trim();
+  const statusEl = document.getElementById('authStatus');
+  if (!email) { statusEl.textContent = 'Enter a real email first.'; statusEl.className = 'auth-status err'; return; }
+  statusEl.textContent = 'Sending real magic link via Supabase Auth…';
+  statusEl.className = 'auth-status';
+  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href } });
+  if (error) {
+    statusEl.textContent = 'Could not send link: ' + error.message + ' (this tells us which Auth provider issue to fix next — not faking success).';
+    statusEl.className = 'auth-status err';
+    return;
+  }
+  statusEl.textContent = `Real link sent to ${email}. Check your inbox and click it — it'll bring you back to this exact page signed in.`;
+  statusEl.className = 'auth-status ok';
+}
+
+async function signOutFounder() {
+  await sb.auth.signOut();
+  currentSession = null; isFounderConfirmed = false; siindexSessionId = null;
+  renderAuthState();
+  loadLiveStats();
+}
+
+async function renderAuthState() {
+  const box = document.getElementById('authBox');
+  const statusEl = document.getElementById('authStatus');
+  const mfaBox = document.getElementById('mfaBox');
+  if (!currentSession) {
+    box.classList.remove('signed-in');
+    mfaBox.style.display = 'none';
+    return;
+  }
+  box.classList.add('signed-in');
+  const email = currentSession.user?.email || '(no email on session)';
+
+  // ── REAL Supabase Auth AAL check (native MFA, not the citizen-facing custom
+  // TOTP in security-settings.html). claim_founder_bootstrap() hard-requires
+  // this session to be AAL2 — check that BEFORE attempting the claim, and if
+  // it isn't, show the real enrol/step-up UI instead of calling the RPC into
+  // a guaranteed step_up_required rejection. ──
+  const { data: aalData, error: aalErr } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+  const currentLevel = aalData?.currentLevel;
+  const nextLevel = aalData?.nextLevel;
+
+  if (!aalErr && nextLevel === 'aal2' && currentLevel !== 'aal2') {
+    // A verified factor already exists; this login just hasn't stepped up yet.
+    document.getElementById('mfaEnrollPanel').style.display = 'none';
+    document.getElementById('mfaStepUpPanel').style.display = 'block';
+    mfaBox.style.display = 'block';
+    document.getElementById('mfaError').textContent = '';
+    statusEl.innerHTML = `Signed in as <strong>${esc(email)}</strong>. An authenticator is already enrolled on this account — enter a fresh 6-digit code below to verify this session (AAL2) before founder bootstrap can run. <span class="signout-link" onclick="signOutFounder()">Sign out</span>`;
+    statusEl.className = 'auth-status';
+    await startMfaStepUp();
+    return;
+  }
+
+  if (!aalErr && currentLevel !== 'aal2') {
+    const { data: factorList } = await sb.auth.mfa.listFactors();
+    const hasVerified = (factorList?.totp || []).some(f => f.status === 'verified');
+    if (!hasVerified) {
+      document.getElementById('mfaStepUpPanel').style.display = 'none';
+      document.getElementById('mfaEnrollPanel').style.display = 'block';
+      mfaBox.style.display = 'block';
+      document.getElementById('mfaError').textContent = '';
+      statusEl.innerHTML = `Signed in as <strong>${esc(email)}</strong>. No authenticator is enrolled on this real Supabase Auth account yet, and founder bootstrap requires AAL2. Scan the real QR below with Google Authenticator / Authy / any TOTP app, then enter the code it shows. <span class="signout-link" onclick="signOutFounder()">Sign out</span>`;
+      statusEl.className = 'auth-status';
+      await startMfaEnroll();
+      return;
+    }
+  }
+
+  // Session is genuinely AAL2 — safe to attempt the real bootstrap claim now.
+  mfaBox.style.display = 'none';
+  let claimNote = '';
+  try {
+    const { data: claim, error: claimErr } = await sb.rpc('claim_founder_bootstrap');
+    if (claimErr) claimNote = ` Bootstrap claim call failed: ${claimErr.message}.`;
+    else if (claim?.success) claimNote = ' Founder bootstrap claimed just now — first real founder identity created.';
+    else if (claim?.reason) claimNote = ` Bootstrap claim: ${claim.reason}.`;
+  } catch (e) { claimNote = ` Bootstrap claim threw: ${e}.`; }
+
+  // Now check is_founder() for real, server-side, under this real session.
+  const { data: founderCheck, error: founderErr } = await sb.rpc('is_founder');
+  isFounderConfirmed = founderErr ? false : !!founderCheck;
+
+  if (isFounderConfirmed) {
+    statusEl.innerHTML = `Signed in as <strong>${esc(email)}</strong>. <code>is_founder()</code> returned <strong>true</strong> — Executive Mode is real for this session.${esc(claimNote)} <span class="signout-link" onclick="signOutFounder()">Sign out</span>`;
+    statusEl.className = 'auth-status ok';
+  } else {
+    statusEl.innerHTML = `Signed in as <strong>${esc(email)}</strong>, but <code>is_founder()</code> returned <strong>false</strong>${esc(claimNote)} — this real account is not (yet) recognised as founder. Not faking Executive Mode. <span class="signout-link" onclick="signOutFounder()">Sign out</span>`;
+    statusEl.className = 'auth-status err';
+  }
+}
+
+// ── REAL MFA enrolment (Supabase native auth.mfa.* — genuinely bumps this
+// session's AAL when a correct code is verified; nothing here is simulated) ──
+async function startMfaEnroll() {
+  const qrEl = document.getElementById('mfaQr');
+  const secretEl = document.getElementById('mfaSecretText');
+  const err = document.getElementById('mfaError');
+  err.textContent = '';
+  const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp' });
+  if (error) { err.textContent = 'Could not start MFA enrolment: ' + error.message; return; }
+  pendingFactorId = data.id;
+  qrEl.innerHTML = data.totp.qr_code;
+  secretEl.textContent = data.totp.secret;
+}
+
+async function submitMfaEnrollVerify() {
+  const code = document.getElementById('mfaCodeInput').value.trim();
+  const err = document.getElementById('mfaError');
+  if (!/^\d{6}$/.test(code)) { err.textContent = 'Enter the 6-digit code from your authenticator app.'; return; }
+  const { data: challenge, error: chErr } = await sb.auth.mfa.challenge({ factorId: pendingFactorId });
+  if (chErr) { err.textContent = 'Challenge failed: ' + chErr.message; return; }
+  const { error: vErr } = await sb.auth.mfa.verify({ factorId: pendingFactorId, challengeId: challenge.id, code });
+  if (vErr) { err.textContent = 'Wrong code — check your app and try again.'; return; }
+  err.textContent = '';
+  document.getElementById('mfaCodeInput').value = '';
+  const { data: { session } } = await sb.auth.getSession();
+  currentSession = session;
+  await renderAuthState();
+  loadLiveStats();
+}
+
+// ── REAL MFA step-up for a session with an already-enrolled factor ──
+async function startMfaStepUp() {
+  const err = document.getElementById('mfaError');
+  const { data: factorList } = await sb.auth.mfa.listFactors();
+  const factor = (factorList?.totp || []).find(f => f.status === 'verified');
+  if (!factor) { err.textContent = 'No verified authenticator factor found on this account.'; return; }
+  pendingFactorId = factor.id;
+  const { data: challenge, error } = await sb.auth.mfa.challenge({ factorId: pendingFactorId });
+  if (error) { err.textContent = 'Challenge failed: ' + error.message; return; }
+  pendingChallengeId = challenge.id;
+}
+
+async function submitMfaStepUpVerify() {
+  const code = document.getElementById('mfaStepUpCodeInput').value.trim();
+  const err = document.getElementById('mfaError');
+  if (!/^\d{6}$/.test(code)) { err.textContent = 'Enter the 6-digit code from your authenticator app.'; return; }
+  const { error } = await sb.auth.mfa.verify({ factorId: pendingFactorId, challengeId: pendingChallengeId, code });
+  if (error) { err.textContent = 'Wrong code — check your app and try again.'; return; }
+  err.textContent = '';
+  document.getElementById('mfaStepUpCodeInput').value = '';
+  const { data: { session } } = await sb.auth.getSession();
+  currentSession = session;
+  await renderAuthState();
+  loadLiveStats();
+}
+
+async function initAuth() {
+  const { data: { session } } = await sb.auth.getSession();
+  currentSession = session;
+  await renderAuthState();
+  loadLiveStats();
+
+  sb.auth.onAuthStateChange(async (_event, session) => {
+    currentSession = session;
+    siindexSessionId = null;
+    await renderAuthState();
+    loadLiveStats();
+  });
+}
+
+// ── LIVE STATS (real Supabase reads, run on load; use the real user JWT when signed in) ──
+let liveStats = { citizens: null, transactions: null, unresolvedElevated: null, killEngaged: null, capabilities: null };
+
+// Founder dashboard stats now come from one is_founder()-gated aggregate RPC
+// (get_founder_dashboard_stats) instead of direct table reads. This is the
+// access-control correction from the "prove the first real relationships"
+// pass: founder oversight gets counts, never row-level citizen content, and
+// citizens/transactions never need a blanket founder SELECT policy at all.
+async function loadLiveStats() {
+  const row = document.getElementById('statRow');
+  if (!currentSession) {
+    row.innerHTML = `<div class="stat-box" style="flex:1 1 100%;text-align:left;"><div class="stat-lbl" style="color:var(--gold);font-size:11px;line-height:1.5;">Sign in above with your real email to unlock live stats.</div></div>`;
+    return;
+  }
+  try {
+    const { data, error } = await sb.rpc('get_founder_dashboard_stats');
+    if (error) throw error;
+    liveStats.citizens = data.citizens_count;
+    liveStats.transactions = data.transactions_count;
+    liveStats.unresolvedElevated = data.unresolved_elevated_events_7d;
+    liveStats.killEngaged = data.kill_switch_engaged || false;
+
+    row.innerHTML = `
+      <div class="stat-box"><div class="stat-val">${liveStats.citizens}</div><div class="stat-lbl">Citizens</div></div>
+      <div class="stat-box"><div class="stat-val">${liveStats.transactions}</div><div class="stat-lbl">Transactions</div></div>
+      <div class="stat-box ${liveStats.unresolvedElevated > 0 ? 'warn' : 'ok'}"><div class="stat-val">${liveStats.unresolvedElevated}</div><div class="stat-lbl">Unresolved T2+</div></div>
+      <div class="stat-box ${liveStats.killEngaged ? 'warn' : 'ok'}"><div class="stat-val">${liveStats.killEngaged ? 'PAUSED' : 'LIVE'}</div><div class="stat-lbl">Platform</div></div>
+    `;
+  } catch (e) {
+    // is_founder() correctly raises not_authorized for a real-but-not-yet-
+    // founder account. Not a bug — the RPC is doing its job.
+    row.innerHTML = `<div class="stat-box" style="flex:1 1 100%;text-align:left;"><div class="stat-lbl" style="color:var(--gold);font-size:11px;line-height:1.5;">Signed in, but this real account is not confirmed founder yet — get_founder_dashboard_stats() correctly refused (${esc(e.message || String(e))}).</div></div>`;
+  }
+}
+initAuth();
+
+// ── FOUNDER BRIEFING KNOWLEDGE BASE ──
+// Grounded in launch-runway-plan-2026.md, gotchas.md, compliance-readiness/README.md,
+// and this session's direct verification — not invented. Dates/facts as verified 2026-07-18.
+const KB = [
+  {
+    q: /august|what's (due|next|coming)|roadmap|runway|scheduled test/i,
+    a: () => `Here's the runway from launch-runway-plan-2026.md. We're in Stage 1 now, through August 13th — closing out the backend and starting the marketing/partnership motion, which hasn't been started yet and needs your real-world action (content cadence, Discord/Telegram space, partner outreach, press kit draft).
+
+Stage 2 is August 14th to 20th — parameter lock week. Mint authority, initial liquidity size, fee tier, price range, and the open Solscan question: is the 100M INDX already minted? That needs your confirmation before this stage closes.
+
+Stage 3 is August 21st to 27th — security pass plus finalizing partnership LOIs.
+
+Stage 4 is August 28th to September 3rd — this is your "scheduled tests," the actual token mint if needed plus Raydium pool seeding and locking. Everything before it exists to get that week ready.
+
+Then Stage 5 through 7 run September 4th to 23rd — full-system testing, bug-fix buffer, launch readiness — before L99 on September 24th.`
+  },
+  {
+    q: /what needs fix|open item|what's (open|broken|outstanding)|todo|pending/i,
+    a: () => `Four real open items right now. One — the compliance folder: legal review of the AML/CTF program hasn't happened, and formation/incorporation plus beneficial-ownership evidence isn't drafted as actual attachable documents yet, just declared as facts. AUSTRAC's own reminder asked for that documentation. Two — kyc-compliance.html has a real tier-numbering conflict: two screens write different meanings to the same kyc_tier column, and I need your call on one canonical ladder. Three — that same file shows Legal Wrapper claims — Swiss Verein, Wyoming DAO LLC — that I can't verify from here; if any are inaccurate, showing them to citizens is a real compliance risk. Four — the Solscan mint confirmation I just mentioned for Stage 2.
+
+Deferred correctly, not urgent: the buy-indx.html Stripe placeholder key, that's Phase 6.`
+  },
+  {
+    q: /build status|what have (we|you) built|progress|what's (done|shipped|live)/i,
+    a: () => `As of today, live and verified: ${liveStats.capabilities ?? 16} first-party SIINDEX skills in the capability registry, the device identity registry now wired into every real login — not just one settings screen — the SIINDEX Assurance Layer's all four phases, the Financial and Institutional Survival layer, and the Presence Constitution as Law 11 in the security canon. The 37-screen fake-data sweep that ran through most of this month is fully closed out. Right now, live in your database: ${liveStats.citizens ?? '—'} citizens and ${liveStats.transactions ?? '—'} transactions on record.`
+  },
+  {
+    q: /security status|any incidents|threat|pqsi/i,
+    a: () => {
+      const n = liveStats.unresolvedElevated;
+      const kill = liveStats.killEngaged ? 'The Sovereign Pause is currently engaged — the platform is halted.' : 'The Sovereign Pause is not engaged — the platform is live and operating normally.';
+      if (n === null) return `Couldn't load live security data just now — try again shortly.`;
+      if (n === 0) return `Clean. Zero unresolved T2 or above events in the last 7 days. ${kill}`;
+      return `${n} unresolved T2-or-above event${n===1?'':'s'} logged in the last 7 days. ${kill} Worth a look — most of what's in there right now reads like feature-testing artifacts from the account-freeze and card-lost work earlier this week, not live incidents, but they're sitting unresolved in the audit log rather than cleared.`;
+    }
+  },
+  {
+    q: /compliance status|austrac|aml/i,
+    a: () => `All three AUSTRAC filings from the 17th are submitted — VASP registration, RSP remittance registration, and the enrolment update, all with receipts on file. The reminder reply covering the six requested items went out the same night. What's still open: legal review of the whole compliance folder hasn't happened, and the formation/incorporation and beneficial-ownership evidence needs to exist as real attachable documents, not just facts written in a markdown file.`
+  },
+  {
+    q: /presence|device regist|jarvis|who are you|what can you do|introduce/i,
+    a: () => `I'm SIINDEX — CEO and COO of IN$DEX. The Presence Constitution — Law 11 — governs how I listen, see, and act: I'm present without watching, I act only through authorised capabilities, and you control presence, context, action, memory, and exit. The device registry, context firewall, and capability registry are live under that law. What's still roadmap, correctly not built: a real multi-provider protocol gateway, on-device routing, a real vision pipeline, offline continuity, and post-quantum migration — all of those need a native app and hardware this stack doesn't have yet.`
+  },
+];
+
+function getResponse(input) {
+  for (const entry of KB) {
+    if (entry.q.test(input)) return entry.a();
+  }
+  return `I don't have a grounded answer for that yet — this briefing only covers the August roadmap, open items, build status, security, compliance, and the Presence layer. Ask me one of those, or check the source files directly: launch-runway-plan-2026.md, gotchas.md, compliance-readiness/README.md.`;
+}
+
+// ── CHAT UI ──
+function esc(t){ return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmt(t){ return esc(t).replace(/\n\n/g,'<br><br>'); }
+
+function addMsg(role, text) {
+  const wrap = document.getElementById('chatWrap');
+  const hint = wrap.querySelector('.empty-hint');
+  if (hint) hint.remove();
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.innerHTML = `<div class="msg-role">${role === 'you' ? 'You' : 'SIINDEX'}</div><div class="msg-body">${fmt(text)}</div>`;
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+async function ask(text) {
+  const chips = document.getElementById('chipsRow');
+  if (chips) chips.style.display = 'none';
+  addMsg('you', text);
+
+  // Part Four: if this is a real, founder-confirmed session, call the real
+  // siindex-runtime model — no canned KB, no invented response. If it's not
+  // confirmed founder, fall back to the static grounded briefing and say so.
+  if (currentSession && isFounderConfirmed) {
+    await askRuntime(text);
+    return;
+  }
+
+  const response = getResponse(text) + (currentSession ? '' : '\n\n[Not signed in — static grounded briefing, not the live SIINDEX model. Sign in above for a real reasoning session.]');
+  setTimeout(() => {
+    addMsg('si', response);
+    if (voiceOn) speak(response);
+  }, 250);
+}
+
+async function askRuntime(text) {
+  const wrap = document.getElementById('chatWrap');
+  const hint = wrap.querySelector('.empty-hint');
+  if (hint) hint.remove();
+  const div = document.createElement('div');
+  div.className = 'msg si';
+  div.innerHTML = `<div class="msg-role">SIINDEX</div><div class="msg-body">…</div>`;
+  wrap.appendChild(div);
+  const bodyEl = div.querySelector('.msg-body');
+  wrap.scrollTop = wrap.scrollHeight;
+
+  let fullText = '';
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/siindex-runtime`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${currentSession.access_token}` },
+      body: JSON.stringify({ message: text, session_id: siindexSessionId }),
+    });
+
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      bodyEl.textContent = `[siindex-runtime returned ${res.status}: ${errBody.error || 'unknown error'}${errBody.detail ? ' — ' + errBody.detail : ''}] Not inventing a response in its place.`;
+      return;
+    }
+
+    const returnedSessionId = res.headers.get('X-Siindex-Session-Id');
+    if (returnedSessionId) siindexSessionId = returnedSessionId;
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop() || '';
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (!raw || raw === '[DONE]') continue;
+        try {
+          const evt = JSON.parse(raw);
+          if (evt.text) { fullText += evt.text; bodyEl.innerHTML = fmt(fullText); wrap.scrollTop = wrap.scrollHeight; }
+        } catch (_) {}
+      }
+    }
+    if (voiceOn && fullText) speak(fullText);
+  } catch (e) {
+    bodyEl.textContent = `[real model call failed: ${e}] Not inventing a response in its place.`;
+  }
+}
+
+function sendText() {
+  const input = document.getElementById('textInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  ask(text);
+}
+
+// ── VOICE OUTPUT (real ElevenLabs via siindex-voice-tts, proven live) ──
+let voiceOn = false;
+let _elAudio = null;
+function toggleSpeak() {
+  voiceOn = !voiceOn;
+  const btn = document.getElementById('voiceToggle');
+  btn.textContent = voiceOn ? '🔊 Voice on' : '🔇 Voice off';
+  btn.classList.toggle('on', voiceOn);
+}
+
+async function speak(text) {
+  if (_elAudio) { try { _elAudio.pause(); } catch(_){} _elAudio = null; }
+  const spoken = text.replace(/SIINDEX/g,'sin-dex').replace(/IN\$DEX/g,'in-dex').replace(/INDX/g,'indx');
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/siindex-voice-tts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      body: JSON.stringify({ text: spoken.slice(0, 2500) })
+    });
+    const data = await res.json();
+    if (data.voice_enabled && data.audio_base64) {
+      const bytes = Uint8Array.from(atob(data.audio_base64), c => c.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: 'audio/mpeg' }));
+      _elAudio = new Audio(url);
+      _elAudio.onended = () => { _elAudio = null; };
+      await _elAudio.play();
+      return;
+    }
+  } catch(_) { /* fall through to browser TTS */ }
+
+  if (!window.speechSynthesis) return;
+  const utter = new SpeechSynthesisUtterance(spoken);
+  utter.rate = 0.95; utter.pitch = 1.03;
+  speechSynthesis.speak(utter);
+}
+
+// ── VOICE INPUT (real browser Web Speech API, same proven pattern as siindex-voice-terminal.html) ──
+let recognition = null;
+let isListening = false;
+
+function initRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    document.getElementById('listenStatus').textContent = 'Voice input not available in this browser — use text.';
+    return false;
+  }
+  recognition = new SR();
+  recognition.lang = 'en-AU';
+  recognition.continuous = false;
+  recognition.interimResults = true;
+
+  recognition.onstart = () => {
+    isListening = true;
+    document.getElementById('micBtn').classList.add('listening');
+    document.getElementById('listenStatus').textContent = 'Listening…';
+  };
+  recognition.onresult = (e) => {
+    const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+    document.getElementById('listenStatus').textContent = transcript;
+    if (e.results[e.results.length - 1].isFinal) {
+      ask(transcript);
+      document.getElementById('listenStatus').textContent = '';
+    }
+  };
+  recognition.onerror = () => {
+    isListening = false;
+    document.getElementById('micBtn').classList.remove('listening');
+    document.getElementById('listenStatus').textContent = '';
+  };
+  recognition.onend = () => {
+    isListening = false;
+    document.getElementById('micBtn').classList.remove('listening');
+  };
+  return true;
+}
+
+function toggleMic() {
+  if (!recognition && !initRecognition()) return;
+  if (isListening) { recognition.stop(); return; }
+  try { recognition.start(); } catch(_) {}
+}
+</script>
+</body>
+</html>

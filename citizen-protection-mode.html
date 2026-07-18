@@ -147,7 +147,7 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
   <div class="feature-item"><div class="feature-icon">🙈</div><div class="feature-name">No public sharing</div><div class="feature-desc">Nothing is published publicly without an explicit extra approval step.</div></div>
   <div class="feature-item"><div class="feature-icon">🚫</div><div class="feature-name">No risky assets</div><div class="feature-desc">High-risk asset interactions are blocked until Protection Mode is turned off.</div></div>
   <div class="feature-item"><div class="feature-icon">📢</div><div class="feature-name">Stronger scam warnings</div><div class="feature-desc">SIINDEX flags suspicious requests immediately with a loud warning.</div></div>
-  <div class="feature-item"><div class="feature-icon">👥</div><div class="feature-name">Guardian notification</div><div class="feature-desc">Your saved guardian contact is notified of any high-risk actions.</div></div>
+  <div class="feature-item"><div class="feature-icon">👥</div><div class="feature-name">Guardian on file</div><div class="feature-desc">Saved on this device so SIINDEX can reference them in conversation. Automatic guardian alerts are not wired up yet — coming soon.</div></div>
   <div class="feature-item"><div class="feature-icon">🎙</div><div class="feature-name">Voice-first always</div><div class="feature-desc">SIINDEX offers to read every screen aloud before you act.</div></div>
 </div>
 
@@ -181,6 +181,18 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
     <div class="scam-verdict" id="scamVerdict"></div>
     <div class="scam-detail" id="scamDetail"></div>
     <div class="scam-flags" id="scamFlags"></div>
+  </div>
+</div>
+
+<!-- PANIC COMMAND -->
+<div class="eyebrow">Emergency</div>
+<h2 class="h2" style="margin-bottom:16px;">Protect My Account Now</h2>
+<p class="lead">If you think your account is compromised, this freezes your account immediately and signs out every device — including this one. You'll need to go through account recovery to unfreeze it.</p>
+<div class="scam-card" style="border-color:rgba(255,77,109,0.25);">
+  <button class="btn" style="background:linear-gradient(135deg,var(--red),#a8324a);color:#fff;width:100%;justify-content:center;" onclick="runProtectMe()">🚨 Freeze My Account &amp; Sign Out Everywhere</button>
+  <div class="scam-result" id="protectResult">
+    <div class="scam-verdict" id="protectVerdict"></div>
+    <div class="scam-detail" id="protectDetail"></div>
   </div>
 </div>
 
@@ -231,9 +243,23 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
   </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" crossorigin="anonymous"></script>
 <script>
 // ── CONSTANTS ──────────────────────────────────────────────────────────────
 const INDX_PRICE_USD = 0.24;
+const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+
+async function callShieldRpc(rpcName, body) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + rpcName, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error((data && data.message) || 'The network rejected this request.');
+  return data;
+}
 
 // ── SPEED LEVEL DATA ──────────────────────────────────────────────────────
 const SPEED_DATA = [
@@ -242,20 +268,6 @@ const SPEED_DATA = [
   { label:'Simple', desc:'<strong>Simple mode.</strong> Complex crypto language replaced with plain words. Advanced features hidden. All actions explained step-by-step before executing.' },
   { label:'Extra Safe', desc:'<strong>Extra safe mode.</strong> All of Simple mode, plus: lower daily limit ($200), no public sharing without extra approval, risky assets blocked, stronger scam warnings.' },
   { label:'Guardian Mode', desc:'<strong>Guardian mode.</strong> Maximum protection. Your guardian contact is notified of every financial action. All actions require both your approval AND SIINDEX pre-flight. Ideal for elderly or very new citizens.' },
-];
-
-// ── SCAM PATTERNS ─────────────────────────────────────────────────────────
-const SCAM_PATTERNS = [
-  { pattern:/free\s+(indx|money|cash|crypto|bitcoin|tokens?)/i, flag:'Free money promise', weight:3 },
-  { pattern:/\b(double|triple|10x|100x|guaranteed)\b.*(return|profit|income|yield)/i, flag:'Guaranteed return claim', weight:4 },
-  { pattern:/urgent|act now|expires? (today|tonight|in \d+ hour)/i, flag:'Urgency pressure', weight:2 },
-  { pattern:/private\s+key|wallet\s+backup|backup\s+phrase/i, flag:'Credential request', weight:5 },
-  { pattern:/send\s+(me|us|them)\s+\d+\s*(indx|usdc|sol|eth|btc)/i, flag:'Unsolicited send request', weight:4 },
-  { pattern:/click\s+here|tap\s+this\s+link|follow\s+this\s+link/i, flag:'Link click pressure', weight:2 },
-  { pattern:/you\s+have\s+(won|been selected|been chosen)/i, flag:'Lottery/prize scam pattern', weight:3 },
-  { pattern:/verify\s+your\s+(account|wallet|identity)\s+immediately/i, flag:'Fake verification demand', weight:3 },
-  { pattern:/support@(?!imagenationdex)|admin@(?!imagenationdex)|security@(?!imagenationdex)/i, flag:'Fake official email', weight:3 },
-  { pattern:/t\.me\/|telegram\.me\//i, flag:'Telegram link (common scam vector)', weight:1 },
 ];
 
 // ── GM1: TOGGLE ────────────────────────────────────────────────────────────
@@ -296,17 +308,27 @@ function updateSpeed(val) {
   localStorage.setItem('indx_protection_speed', v);
 }
 
-// ── GM3: SCAM CHECK ───────────────────────────────────────────────────────
-function runScamCheck() {
+// ── GM3: SCAM CHECK (real backend — check_message_authenticity RPC) ───────
+let lastCheckReceiptCode = null;
+
+function guessInputType(text) {
+  const t = text.trim();
+  if (/^https?:\/\//i.test(t)) return 'url';
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t)) return 'email';
+  if (/^\+?[\d\s().-]{7,}$/.test(t)) return 'phone_number';
+  return 'chat_message';
+}
+
+const VERDICT_META = {
+  VERIFIED: { cls:'safe',    icon:'✅', label:'Verified' },
+  CAUTION:  { cls:'warning', icon:'⚠️', label:'Caution' },
+  STOP:     { cls:'danger',  icon:'🚨', label:'Stop — do not proceed' },
+  UNKNOWN:  { cls:'warning', icon:'❓', label:'Unknown — not verified' }
+};
+
+async function runScamCheck() {
   const text = document.getElementById('scamInput').value.trim();
   if (!text) { showToast('Paste a message or URL to check'); return; }
-
-  let score = 0;
-  const flagged = [];
-
-  SCAM_PATTERNS.forEach(({ pattern, flag, weight }) => {
-    if (pattern.test(text)) { score += weight; flagged.push(flag); }
-  });
 
   const result = document.getElementById('scamResult');
   const verdict = document.getElementById('scamVerdict');
@@ -314,23 +336,48 @@ function runScamCheck() {
   const flags = document.getElementById('scamFlags');
 
   result.className = 'scam-result show';
-  flags.innerHTML = flagged.map(f => `<span class="scam-flag">⚠️ ${f}</span>`).join('');
+  verdict.className = 'scam-verdict';
+  verdict.textContent = 'Checking…';
+  detail.textContent = 'SIINDEX is checking this against the verified sender registry and known scam indicators.';
+  flags.innerHTML = '';
 
-  if (score === 0) {
-    result.classList.add('safe');
-    verdict.className = 'scam-verdict safe';
-    verdict.textContent = '✅ No obvious scam patterns found';
-    detail.textContent = 'SIINDEX didn\'t detect common scam patterns in this message. Always trust your instincts — if something feels wrong, ask SIINDEX before acting.';
-  } else if (score <= 3) {
+  const citizenId = sessionStorage.getItem('citizen_id') || null;
+  const inputType = guessInputType(text);
+
+  try {
+    const data = await callShieldRpc('check_message_authenticity', {
+      p_citizen_id: citizenId, p_input_type: inputType, p_input_value: text, p_claimed_sender: null
+    });
+    const meta = VERDICT_META[data.classification] || VERDICT_META.UNKNOWN;
+    result.classList.add(meta.cls);
+    verdict.className = 'scam-verdict ' + meta.cls;
+    verdict.textContent = meta.icon + ' ' + meta.label;
+    detail.textContent = data.risk_explanation + ' ' + data.safest_next_action;
+    lastCheckReceiptCode = data.receipt_code;
+    const reportBtn = data.classification === 'STOP' || data.classification === 'CAUTION'
+      ? `<button class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick="reportScam('${inputType}')">🚩 Report this to SIINDEX</button>` : '';
+    flags.innerHTML = (data.receipt_code ? `<span class="scam-flag" style="background:rgba(0,212,255,0.1);color:var(--cyan);">Receipt ${data.receipt_code}</span>` : '') + reportBtn;
+  } catch (e) {
+    console.error('[citizen-protection-mode] shield check failed:', e);
     result.classList.add('warning');
     verdict.className = 'scam-verdict warning';
-    verdict.textContent = '⚠️ Some warning signs detected';
-    detail.textContent = 'This message has some patterns SIINDEX often sees in scam attempts. Be careful. Do not send money, share credentials, or click unfamiliar links until you\'ve verified the source.';
-  } else {
-    result.classList.add('danger');
-    verdict.className = 'scam-verdict danger';
-    verdict.textContent = '🚨 High scam risk — do not proceed';
-    detail.textContent = 'SIINDEX has detected multiple high-risk patterns. Do NOT send money, share any credentials, or click any links. If this arrived from someone claiming to be SIINDEX, IN$DEX, or a partner — it is not real. SIINDEX will never ask you for credentials or send unsolicited payment requests.';
+    verdict.textContent = '❓ Could not check this right now';
+    detail.textContent = 'SIINDEX could not reach the safety check service. Treat this as unverified — do not act on it until you can check again or verify independently.';
+  }
+}
+
+async function reportScam(inputType) {
+  const text = document.getElementById('scamInput').value.trim();
+  if (!text) return;
+  const citizenId = sessionStorage.getItem('citizen_id') || null;
+  try {
+    await callShieldRpc('report_scam_indicator', {
+      p_citizen_id: citizenId, p_indicator_type: inputType === 'phone_number' ? 'phone' : (inputType === 'url' || inputType === 'chat_message' ? 'domain' : inputType),
+      p_indicator_value: text, p_reason: 'Reported by citizen via Citizen Protection Mode scam check'
+    });
+    showToast('Thank you — submitted for review. It will not be listed until confirmed.');
+  } catch (e) {
+    showToast('Could not submit the report right now.');
   }
 }
 
@@ -339,6 +386,39 @@ function clearScam() {
   const result = document.getElementById('scamResult');
   result.className = 'scam-result';
   result.classList.remove('safe','warning','danger');
+}
+
+// ── PANIC COMMAND (real backend — protect_me RPC) ─────────────────────────
+async function runProtectMe() {
+  const citizenId = sessionStorage.getItem('citizen_id');
+  const resultBox = document.getElementById('protectResult');
+  const verdict = document.getElementById('protectVerdict');
+  const detail = document.getElementById('protectDetail');
+
+  if (!citizenId) {
+    showToast('We can\'t confirm your account from this device. Please log in first.');
+    return;
+  }
+  if (!confirm('This freezes your account and signs you out of every device right now, including this one. Continue?')) return;
+
+  resultBox.className = 'scam-result show';
+  verdict.className = 'scam-verdict';
+  verdict.textContent = 'Freezing your account…';
+  detail.textContent = '';
+
+  try {
+    const data = await callShieldRpc('protect_me', { p_citizen_id: citizenId });
+    resultBox.classList.add('danger');
+    verdict.className = 'scam-verdict danger';
+    verdict.textContent = '🛡️ Account frozen';
+    detail.textContent = `${data.devices_revoked} device session(s) signed out. Receipt ${data.receipt_code}. ${data.next_step}`;
+  } catch (e) {
+    console.error('[citizen-protection-mode] protect_me failed:', e);
+    resultBox.classList.add('warning');
+    verdict.className = 'scam-verdict warning';
+    verdict.textContent = '❓ Could not reach the network';
+    detail.textContent = 'Nothing was changed. Try again, or contact SIINDEX support directly if this is urgent.';
+  }
 }
 
 // ── GM4: GUARDIAN ─────────────────────────────────────────────────────────

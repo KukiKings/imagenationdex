@@ -1788,6 +1788,62 @@
     applyMode(!current);
   }
 
+  // ── EXPLICIT ACCOUNT-LINKING CEREMONY (Part Two) ──
+  // Shown only when a real Supabase Auth session exists but no citizens row
+  // is linked to it yet. The citizen must enter their own IN$DEX domain
+  // (shown to them at onboarding) — this is never inferred from phone,
+  // email, or name. find_unlinked_citizen_by_domain() and
+  // link_citizen_account() are both real, tested Postgres RPCs; neither can
+  // silently take over an already-claimed citizen (both re-verify server-side).
+  function renderLinkingCeremony(sb) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:999;background:#090A10;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#E8EAFF;';
+    overlay.innerHTML = `
+      <div style="max-width:340px;">
+        <div style="font-size:17px;font-weight:800;margin-bottom:10px;">Link this sign-in to your account</div>
+        <div style="font-size:13px;color:#A0A8C8;line-height:1.55;margin-bottom:18px;">
+          You're signed in for real, but this account isn't connected to an existing IN$DEX citizen yet.
+          Enter your IN$DEX domain (e.g. <em>mama-noe.IN$DEX</em>) — the one shown to you when you first joined —
+          to link it. This is a real, logged, one-time ceremony. I never guess this from your phone number, email, or name.
+        </div>
+        <input id="linkDomainInput" type="text" placeholder="yourname.IN$DEX"
+          style="width:100%;background:#1A1D2E;border:1px solid #22263A;border-radius:10px;padding:12px 14px;color:#E8EAFF;font-size:14px;outline:none;margin-bottom:10px;">
+        <button id="linkSubmitBtn" style="width:100%;background:#00D4FF;border:none;border-radius:10px;padding:12px;font-weight:800;color:#000;font-size:13.5px;cursor:pointer;">Link my account</button>
+        <div id="linkStatus" style="font-size:12px;color:#A0A8C8;margin-top:12px;min-height:16px;line-height:1.5;"></div>
+        <div onclick="INDXDB.getClient().auth.signOut().then(()=>location.href='login.html')" style="font-size:11px;color:#5A6080;text-decoration:underline;margin-top:16px;cursor:pointer;">Sign out</div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    document.getElementById('linkSubmitBtn').onclick = async () => {
+      const domain = document.getElementById('linkDomainInput').value.trim();
+      const statusEl = document.getElementById('linkStatus');
+      if (!domain) { statusEl.textContent = 'Enter your domain first.'; statusEl.style.color = '#FF4D6D'; return; }
+      statusEl.textContent = 'Checking…';
+      statusEl.style.color = '#A0A8C8';
+
+      const { data: lookup, error: lookupErr } = await sb.rpc('find_unlinked_citizen_by_domain', { p_domain: domain });
+      if (lookupErr) { statusEl.textContent = 'Lookup failed: ' + lookupErr.message; statusEl.style.color = '#FF4D6D'; return; }
+      if (!lookup?.found) {
+        const reasons = { no_matching_domain: "No citizen found with that domain — check spelling.", already_linked: 'That citizen is already linked to a different real account — this cannot be re-linked here.', no_authenticated_session: 'Session expired — sign in again.' };
+        statusEl.textContent = reasons[lookup?.reason] || ('Not found: ' + lookup?.reason);
+        statusEl.style.color = '#FF4D6D';
+        return;
+      }
+
+      statusEl.textContent = `Found ${lookup.citizen_name || 'citizen'} (${lookup.web3_domain}). Linking…`;
+      const { data: link, error: linkErr } = await sb.rpc('link_citizen_account', {
+        p_citizen_id: lookup.citizen_id,
+        p_evidence: { method: 'web3_domain_entry', domain_entered: domain },
+      });
+      if (linkErr) { statusEl.textContent = 'Link failed: ' + linkErr.message; statusEl.style.color = '#FF4D6D'; return; }
+      if (!link?.success) { statusEl.textContent = 'Link declined: ' + link?.reason; statusEl.style.color = '#FF4D6D'; return; }
+
+      statusEl.textContent = 'Linked. Reloading your real dashboard…';
+      statusEl.style.color = '#00E5A0';
+      setTimeout(() => location.reload(), 900);
+    };
+  }
+
   // ── SUPABASE AUTH + LIVE DATA (INDXDB shared client) ──
   window.addEventListener('DOMContentLoaded', async () => {
     // GOD MODE PATCH — use INDXDB singleton (supabase-js + indx-db.js loaded in <head>)
@@ -1800,11 +1856,33 @@
       // Load citizen data from Supabase
       const { data: citizen } = await sb
         .from('citizens')
-        .select('citizen_name, web3_domain, wisdom_score, indx_balance, genesis_citizen, kyc_tier')
+        .select('id, citizen_name, web3_domain, wisdom_score, indx_balance, genesis_citizen, kyc_tier')
         .eq('auth_user_id', session.user.id)
         .single();
 
       if (citizen) {
+        // Real-auth sessions never set sessionStorage.citizen_id before this fix —
+        // every downstream screen/poll that reads it (wisdom-score polling below,
+        // siindex-session-sovereignty.html's device registry) was silently a no-op
+        // for anyone who logged in via real Supabase Auth rather than the onboarding
+        // sessionStorage fallback. Set it here, once, for real.
+        if (citizen.id) sessionStorage.setItem('citizen_id', citizen.id);
+
+        // Real device registration — runs on every real login, not just for
+        // citizens who happen to open siindex-session-sovereignty.html. Same
+        // register_device RPC, same once-per-browser localStorage guard as
+        // that screen; this is what makes the Device Registry actually live
+        // for real citizen sessions instead of only reachable from one
+        // settings screen.
+        if (citizen.id && !localStorage.getItem('indx_this_device_id')) {
+          const ua = navigator.userAgent;
+          const label = /iPad|iPhone|iPod/.test(ua) ? 'iPhone/iPad' : /Android/.test(ua) ? 'Android device' : 'Browser';
+          sb.rpc('register_device', { p_citizen_id: citizen.id, p_device_label: label, p_user_agent: ua })
+            .then(({ data, error }) => {
+              if (!error && data && data.success) localStorage.setItem('indx_this_device_id', data.device_id);
+            });
+        }
+
         const name = citizen.citizen_name || 'Sovereign';
         const domain = citizen.web3_domain ? citizen.web3_domain.replace('.indx','') + '.IN$DEX' : 'sovereign.IN$DEX';
         const wisdom = citizen.wisdom_score || 0;
@@ -1836,11 +1914,12 @@
           balEl.textContent = balance.toLocaleString() + ' INDX';
         }
 
-        // Load recent transactions
+        // Load recent transactions (uses citizen.id already loaded above —
+        // was a redundant re-query of the same row before this fix)
         const { data: txs } = await sb
           .from('transactions')
           .select('amount_indx, direction, status, created_at, counterparty_address')
-          .eq('citizen_id', (await sb.from('citizens').select('id').eq('auth_user_id', session.user.id).single()).data?.id)
+          .eq('citizen_id', citizen.id)
           .order('created_at', { ascending: false })
           .limit(5);
 
@@ -1878,8 +1957,14 @@
           });
         }
       } else {
-        // Has session but no citizen row complete signup
-        window.location.href = 'login.html';
+        // Has a real auth session but no citizens row is linked to this
+        // auth_user_id yet. Previously this silently bounced to login.html —
+        // no path forward existed. Part Two of the account-linking directive:
+        // offer an EXPLICIT ceremony (citizen enters their own IN$DEX domain,
+        // shown to them at onboarding) rather than any implicit phone/email/
+        // name matching. Calls link_citizen_account() server-side, which logs
+        // an immutable security_events trace and only then grants access.
+        renderLinkingCeremony(sb);
       }
     } else {
       // No auth session check sessionStorage (set during onboarding)

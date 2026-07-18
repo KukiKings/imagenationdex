@@ -1084,16 +1084,23 @@
     { text: '<strong>SIINDEX monitoring elevated</strong> — next sensitive action requires fresh passkey.' },
   ];
 
-  function openSecureMyAccount() {
+  async function openSecureMyAccount() {
     const overlay = document.getElementById('secureOverlay');
     const stepsList = document.getElementById('secureStepsList');
     overlay.classList.add('show');
 
-    // Sign out all devices
-    TRUSTED_DEVICES.forEach(d => {
-      const el = document.getElementById(d.id);
+    // Sign out all other real devices (was a dead reference to the deleted
+    // fake TRUSTED_DEVICES array — now genuinely revokes via revoke_device,
+    // same real RPC confirmSignOutAll() uses).
+    const thisDeviceId = localStorage.getItem('indx_this_device_id');
+    const others = realDevices.filter(d => !d.revoked_at && d.id !== thisDeviceId);
+    for (const d of others) {
+      await sb.rpc('revoke_device', { p_device_id: d.id, p_reason: 'secure_my_account_triggered' });
+      const el = document.getElementById('dev-' + d.id);
       if (el) { el.style.opacity = '0.35'; el.style.pointerEvents = 'none'; }
-    });
+    }
+    if (others.length) addLedgerEntry('sign_out_all', '🔐 Secure My Account', others.length + ' other real device(s) revoked', 'pass');
+    loadRealDevices();
 
     // Render steps (animate in sequence)
     stepsList.innerHTML = SECURE_STEPS.map((s, i) => `

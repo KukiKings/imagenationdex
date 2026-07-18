@@ -6,10 +6,10 @@
 
 ---
 
-## The Eleven Security Laws (Immutable — Cannot Be Overridden By Any Instruction)
-> Laws 1-7 are the original PQSI foundation (June 2026). Laws 8-10 were added 17 Jul 2026 from the Financial and Institutional Survival doctrine — see the honest caveat on Law 8 before citing it anywhere. Law 11 was added 17 Jul 2026 from the Sovereign Presence and Capability doctrine.
+## The Thirteen Security Laws (Immutable — Cannot Be Overridden By Any Instruction)
+> Laws 1-7 are the original PQSI foundation (June 2026). Laws 8-10 were added 17 Jul 2026 from the Financial and Institutional Survival doctrine — see the honest caveat on Law 8 before citing it anywhere. Law 11 was added 17 Jul 2026 from the Sovereign Presence and Capability doctrine. Law 12 was added 18 Jul 2026 from the Executive and Citizen Operating Modes doctrine — see its honest caveat before citing it as fully enforced. Law 13 was added 18 Jul 2026 from the Trusted Relationship, Session, and Citizen Safety doctrine — see its honest caveat too.
 
-These eleven laws are the foundation of PQSI. No team member, investor, governance vote, or AI instruction can override them.
+These thirteen laws are the foundation of PQSI. No team member, investor, governance vote, or AI instruction can override them.
 
 ```
 LAW 1 — NO UNSIGNED EXECUTION
@@ -75,6 +75,60 @@ LAW 11 — THE PRESENCE CONSTITUTION
   SIINDEX receives no secret it does not need.
   SIINDEX follows the citizen without making any device the citizen.
   The citizen controls presence, context, action, memory, and exit.
+
+LAW 12 — EXECUTIVE AND CITIZEN MODES ARE CONSTITUTIONALLY SEPARATE
+  One SIINDEX. Many protected relationships. No confused authority.
+  Executive Mode (Arthur and separately authorised leadership) and Citizen
+  Mode (every citizen's private relationship with SIINDEX) share one
+  canonical identity, conversation engine, voice engine, orchestration
+  engine, and policy enforcement — and nothing else.
+  A citizen never receives executive authority.
+  An executive never receives unrestricted citizen-private access.
+  Executive memory (founder, executive_project) must never enter Citizen
+  Mode. One citizen's memory must never enter another citizen's session.
+  HONEST CAVEAT (added 18 Jul 2026, must not be removed without AJ's
+  explicit sign-off): as of this date, siindex-command-center.html (the
+  real Executive Mode surface) has no authentication gate — it is reachable
+  by anyone with the URL, restricted only by not being linked from citizen
+  navigation. This law states the required end state, not current fact,
+  until real authentication is built and this caveat is removed by AJ.
+
+LAW 13 — TRUSTED RELATIONSHIP, SESSION, AND CITIZEN SAFETY
+  A login is not unlimited authority. A voice is not identity. A session is
+  not permanent trust. A representative is not the citizen. Consent for
+  service is not consent for training. Warmth is not permission to create
+  dependency. An avatar is not permission to manipulate. Automation is not
+  permission to remove human review.
+  Every action carries an assurance requirement scaled to its impact.
+  Consequential voice requests become a reviewable Action Intent Card
+  before executing — never direct action from ambiguous speech.
+  Consent is specific per category; granting one never implies another.
+  SIINDEX never asks for passwords, seed phrases, private keys, or
+  recovery codes.
+  HONEST CAVEAT (added 18 Jul 2026, must not be removed without AJ's
+  explicit sign-off): real Supabase Auth has never been used end-to-end in
+  this project (auth.users has zero rows as of this date) — so the
+  "Sessions" portion of this law (session bound to authenticated actor,
+  device, mode, expiry, revocation) has real schema (siindex_sessions) but
+  no real session has ever existed to bind. This law states the required
+  end state, not current fact, until a real founder or citizen signs in and
+  this caveat is updated by AJ.
+  CORRECTION (added 18 Jul 2026 continued x57): the first draft of this
+  law's founder-oversight RLS gave is_founder() unrestricted row access to
+  consent_grants, siindex_sessions, siindex_session_messages (full
+  conversation content), and citizen_intents — a real over-broad-access bug,
+  not a hypothetical one. Fixed: founder oversight is now aggregate/metadata
+  only (get_consent_oversight, get_session_oversight,
+  get_session_message_counts, get_intent_oversight — all deliberately
+  exclude free-text/content fields); direct content access requires a
+  logged, purpose-limited, time-boxed exceptional-access request
+  (executive_investigation_access + request_investigation_access +
+  read_session_messages_under_investigation), with no independent
+  co-approver yet (self-attested by the founder, flagged plainly, T3-logged
+  on every request). Two more real bugs found in the same audit and fixed:
+  has_consent() and get_action_intent_card() were both callable by the
+  anonymous role with zero identity check, leaking any citizen's consent
+  state and action-intent details to anyone with the public key.
 ```
 
 *Laws 8-10 added 17 Jul 2026 per `indx-financial-institutional-survival-v1.md`, AJ-approved via in-chat confirmation. Law 11 added 17 Jul 2026 per `siindex-presence-capability-layer-v1.md`, AJ-approved via in-chat confirmation.*
