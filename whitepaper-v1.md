@@ -3,11 +3,13 @@
 
 Founder: Arthur John Henry (AJ) | Blockchain: Solana | Ticker: INDX | 2025
 
+> **Reading note:** the Executive Summary, Roadmap, and Token Economics below are the original 2025 vision document — origin story, mission, and long-term target. For where IN\$DEX actually stands today, how delivery actually works, and how partnerships actually function, see **"Current Stage, Delivery Model, and Partner Architecture"** (added 18 Jul 2026, after The Macro Moment section) and **Appendix C** for the specific claims that section supersedes.
+
 ---
 
 ## Executive Summary
 
-IN\$DEX is the world's first Quantum Physical Synthetic Intelligence (QPSI)-operated decentralised exchange — built to deliver financial sovereignty and creative ownership to anyone, anywhere, without a bank account, government ID, or crypto knowledge.
+IN\$DEX is the world's first Physical Quantum Synthetic Intelligence (PQSI)-operated decentralised exchange — built to deliver financial sovereignty and creative ownership to anyone, anywhere, without a bank account, government ID, or crypto knowledge.
 
 > "A girl selling coconuts on the roadside in the Cook Islands couldn't make change for a $50 note. A simple transaction, broken by cash. IN\$DEX is built to fix that." — AJ Henry, Founder
 
@@ -220,6 +222,118 @@ These five signals are not individual data points. They are a convergence:
 5. The people we serve are ready — they just need the tool (1.54B unbanked, 84% with phones)
 
 IN\$DEX was not lucky to be here at this moment. This moment was always coming. We just built early.
+
+---
+
+## Current Stage, Delivery Model, and Partner Architecture
+> Added 18 Jul 2026. This section is the canonical statement of where IN\$DEX actually stands today, how it will actually reach citizens, and how it works with regulated partners. Where anything above (Executive Summary, Roadmap, Token Economics) reads as a finished, unconditional product launch, this section governs — see Appendix C for the specific reconciled claims.
+
+IN\$DEX is building a voice-first sovereign service and trust layer for citizens who face barriers across finance, identity, commerce, education, connectivity, and digital ownership.
+
+SIINDEX is the Synthetic Executive Operating System of IN\$DEX. She helps citizens and authorised organisations understand objectives, prepare actions, coordinate approved workflows, explain risk, gather evidence, and record outcomes.
+
+SIINDEX does not replace licensed providers, regulators, lawyers, directors, cultural authorities, teachers, guardians, or the citizen. Arthur John Henry and any future appointed human directors and officers retain legal accountability.
+
+### Current stage
+
+IN\$DEX is in controlled prelaunch development. Some identity, consent, security, session, founder-authority, receipt, and workflow foundations are connected to real infrastructure. Other features remain prototypes, specifications, candidate integrations, or long-term civilisation architecture.
+
+Every material capability is assigned one evidence state:
+
+- Vision
+- Specified
+- Prototype
+- Sandbox connected
+- Backend connected
+- Authenticated
+- Tested
+- Pilot
+- Production verified
+- Provider dependent
+- Legally restricted
+- Retired
+
+A screen does not prove a service is operational. A repository commit does not prove deployment. A submitted regulatory application does not prove approval. A provider researched by IN\$DEX is not described as a partner until an authorised agreement exists.
+
+### Pilot-first delivery
+
+IN\$DEX will not activate every civilisation service at once. Delivery will proceed through controlled pilots. Each pilot defines:
+
+- Citizen group
+- Problem
+- Corridor
+- Authorised partners
+- Permitted services
+- Transaction or usage limits
+- Data boundaries
+- Consent
+- Risks
+- Human support
+- Success measures
+- Failure response
+- Exit process
+
+A pilot advances only when the citizen journey, provider route, security controls, compliance requirements, recovery process, and evidence receipts have passed review.
+
+### Progressive verification
+
+IN\$DEX does not promise universal anonymous financial access. Citizens may begin with low-risk, non-financial, educational, identity, marketplace-preparation, and opportunity services using minimal information. Higher-risk or regulated actions require stronger verification according to: action, amount, jurisdiction, provider, destination, legal obligation, fraud risk, and citizen circumstances.
+
+The purpose is to ask for no more information than the action requires while meeting applicable legal and safety obligations.
+
+### Portable identity
+
+The citizen's phone number, device, wallet, bank account, telecom provider, and IN\$DEX domain are replaceable attributes. None is the citizen's permanent Root Identity.
+
+IN\$DEX identity will use interoperable credentials, strong authentication, multiple recovery methods, selective disclosure, and citizen-controlled presentation. The Sovereign Life Domain provides a human-readable name and service profile. The underlying identity and credentials remain portable.
+
+### Regulated rails
+
+IN\$DEX owns the citizen experience, consent process, explanation layer, evidence system, and portable relationship history. Licensed providers supply regulated services such as: banking, remittance, custody, card issuing, fiat conversion, digital-asset conversion, telecommunications, identity verification, insurance, and lending.
+
+A provider's involvement is disclosed before the citizen approves an action. Provider charges, network charges, taxes, exchange costs, and IN\$DEX service fees are shown separately.
+
+### Economic sustainability
+
+IN\$DEX must sustain essential citizen services without depending on token-price appreciation or attention extraction. Potential revenue includes: institutional SIINDEX deployments, merchant operating tools, partner implementation, credential services, approved marketplace services, workflow and agent services, education deployments, cultural-rights administration, developer services, enterprise support, and corridor operations.
+
+For eligible IN\$DEX-native service revenue, the 98/2 Civilisation Covenant allocates 98% of defined distributable value to the citizen or service provider and 2% to the Civilisation Fund. External provider costs, taxes, network fees, reserves, refunds, and regulated charges remain separately disclosed.
+
+### Citizen protection
+
+Every consequential service must provide: clear terms, total costs, provider identity, risk explanation, consent, approval, receipt, support, complaint, dispute, appeal, correction, recovery, export, and exit.
+
+No model score, interface animation, token record, or automated agent removes these rights.
+
+### Governance
+
+Governance authority is separated by subject. Citizen proposals, cultural matters, technical changes, safety matters, regulated decisions, and statutory duties do not use one identical voting system.
+
+Cultural authority remains with authorised cultural representatives. Legal and regulated decisions remain with accountable humans and institutions. Citizen engagement, referrals, screen time, posting activity, or daily login behaviour do not create additional constitutional voting power.
+
+### Data protection
+
+IN\$DEX records consent, purpose, access, sharing, revocation requests, evidence, and provider responses. IN\$DEX may help citizens prepare privacy requests, complaints, claims, and dispute records. IN\$DEX does not promise automatic statutory compensation or automatic deletion by an external organisation.
+
+Sensitive personal information remains off public blockchains. Blockchain records contain only the minimum proof needed to verify an event without publishing the underlying private data.
+
+### Interoperability
+
+IN\$DEX will use open standards where practical for: identity, credentials, authentication, consent, receipts, data export, agent communication, payments, evidence, and media provenance.
+
+The citizen must be able to replace providers, devices, wallets, models, and service channels without losing their identity, credentials, receipts, history, or right to leave.
+
+### Partnership model
+
+IN\$DEX works with regulated and trusted organisations rather than pretending to replace them. Partners may include: banks, remittance providers, payment providers, telecommunications companies, universities, TAFEs, employers, NGOs, cultural organisations, governments, community groups, merchants, and technology providers.
+
+Every partnership begins with a defined pilot, evidence requirements, service boundaries, citizen protections, data rules, performance measures, and exit terms.
+
+### Proof before scale
+
+IN\$DEX will scale only after proving: one authenticated founder executive journey, one controlled citizen journey, one merchant opportunity journey, one protection and consent journey, one partner-supported pilot, one recovery journey, and one complete evidence and receipt chain.
+
+The civilisation remains the long-term product. Verified citizen usefulness is the path to it.
 
 ---
 
@@ -601,7 +715,49 @@ Fiat ramps alone do not solve the unbanked problem. The coconut girl in the Cook
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-18 (Session 121 continued x64 — Parts Thirteen/Fourteen/Fifteen of the security directive, plus a real founder-bootstrap blocker found and fixed: siindex-command-center.html had no path to AAL2 at all. See below.)
+> Last updated: 2026-07-19 (Session 121 continued x75 — root-caused + fixed the citizen-signup RLS blocker across 6 onboarding flows. See below.)
+
+### Session 121 continued x75 (2026-07-19) — Part Sixteen Stage C unblocked: found + fixed the real root cause of the citizen-signup RLS failure
+
+AJ asked for deep research rather than accepting Stage C's blocked status at face value. Caught, unprompted, that a "successful-looking" dashboard render was fake (verified via direct SQL: the citizens row was still empty) — `citizen-dashboard.html` was silently falling back to hardcoded `'Sovereign'`/`'sovereign.IN$DEX'` placeholder strings whenever the real profile fields were null, masking the actual failure; fixed to redirect to finish signup instead. Root-caused the underlying "new row violates row-level security policy" error by simulating the exact PostgREST-generated `INSERT ... ON CONFLICT DO UPDATE ... RETURNING id` statement server-side (not a simplified stand-in): a `BEFORE INSERT` trigger, `enforce_citizen_onboarding_defaults()`, was unconditionally nulling `auth_user_id` (plus zeroing genesis reward fields) on every insert into `citizens`, for every caller, which breaks Postgres's `RETURNING`-visibility requirement — not an RLS policy bug, not a client token bug (confirmed via API logs: every failing request was preceded by a valid, successful session check). This single trigger explained two previously-separate mysteries at once: `login.html`'s `saveName()` failure, and why `handle_new_auth_user()`'s own auto-provisioning insert had its explicit `auth_user_id`/reward values silently discarded.
+
+Fixed the trigger to only lock down fields for genuine client requests (`auth.role() IS NOT NULL`), preserving a citizen's correctly-self-matching `auth_user_id`. Caught and corrected a regression in my own first draft of this fix, which had scoped the lockdown to `authenticated` only — leaving the `anon` role completely unguarded against self-granting rewards; corrected before shipping. Added `claim_genesis_signup_bonus`/`_anon` and `claim_creator_signup_bonus` RPCs (grant rewards via `UPDATE`, which the trigger never touches) and a `create_onboarding_citizen` RPC for the five onboarding flows that never authenticate at all (join.html, quickstart-onboarding.html, onboarding-flow.html, grid-account-onboarding.html, creator-onboarding.html) — all five had the identical `.insert().select()` pattern, and since `anon` has no `auth.uid()`, they had a second, independent, always-fatal bug regardless of the trigger fix. Rewired all five to the new RPCs. Fixed `login.html`'s session-redirect trap (any session → dashboard, even with an incomplete profile) to resume the signup at the right step instead. Every fix verified via rolled-back SQL simulations of the client's exact statements (reproduced the failure, then confirmed the fix, confirmed idempotency, confirmed the anon-regression is blocked, confirmed trusted server contexts still pass values through) — nothing accepted on appearance alone. Price/currency/seed-phrase audit clean on all 7 edited files. Full detail: gotchas.md #101, memory.md Session 121 continued x75.
+
+### Session 121 continued x74 (2026-07-18) — Part Sixteen: Stage A confirmed live, Stage C blocked on Twilio
+
+Ran Part Sixteen's positive test sequence for real via a guided live walkthrough (AJ drove the browser, SIINDEX verified via screenshots + direct SQL, since browsers are read-only for computer-use). Stage A (founder identity) confirmed real and recorded to `positive_test_runs`. Stage C (real citizen phone/SMS signup) blocked: Twilio account is still in trial mode (rejects OTP sends to unverified numbers — contradicts the earlier Part Seven "confirmed live" claim, which only checked credentials). Attempted to upgrade the Twilio account; discovered Twilio's own login MFA is bound to a phone number AJ doesn't control, and self-service MFA reset is blocked for trial accounts specifically — a genuine catch-22. Left as an open decision for AJ: recover the existing Twilio account via their support path, or start a fresh Twilio account (low cost since the old one was never paid) and repoint Supabase's SMS provider config. Full detail in memory.md and gotchas.md #100.
+
+### Session 121 continued x73 (2026-07-18) — Built external deliverable: IN$DEX_Whitepaper_v2.0_Partner_Prelaunch_Edition.docx
+
+AJ supplied a complete, separately-authored "Whitepaper v2.0: Partner and Prelaunch Edition" (29 sections + Appendices A-E) and asked for it as a polished .docx, full document as-is — this is a standalone external deliverable, not an edit to this internal whitepaper-v1.md file. Converted via pandoc, then fixed a systemic bug where pandoc's docx table output left all 33 tables with empty width metadata (cells present in the XML but not rendering) using a custom python-docx post-processor that rebuilds `tblGrid`/`tblW`/`tcW` from the actual `<w:tc>` elements. Also fixed 12 callout boxes where `<br>` inside table cells wasn't producing a line break (rendered as "LabelBody" run together) by changing the source to `**Label:** Body`. Verified all 34 pages/33 tables render correctly, saved to `/Projects/ImageNation DEX/IN$DEX_Whitepaper_v2.0_Partner_Prelaunch_Edition.docx`, presented to AJ. Full method + gotchas logged to memory.md Session 121 continued x73.
+
+### Session 121 continued x72 (2026-07-18) — Whitepaper rewritten: Current Stage, Delivery Model, and Partner Architecture
+
+AJ supplied a full new canonical section covering current build stage (evidence-state taxonomy: Vision/Specified/Prototype/Sandbox connected/Backend connected/Authenticated/Tested/Pilot/Production verified/Provider dependent/Legally restricted/Retired), pilot-first delivery, progressive verification, portable identity, regulated rails, economic sustainability, citizen protection, governance separation, data protection, interoperability, partnership model, and proof-before-scale — and asked for the whitepaper to be rewritten with it. Read the whitepaper's full structure first: it has a clean seam at line ~148 between the original 2025 hype document (Executive Summary/Problem/Solution/Platform Overview/Technology/Token Economics/Roadmap/Team/Vision) and later honest additions (The Macro Moment, Section 8-10, Appendices A-D). The original document directly contradicts the new section in three places: the "$1 trillion target valuation by 2027" bullet, the Roadmap's "Launch Day — Everything Goes Live... no phases, no waiting" framing, and the "0 KYC required"/"no ID, no bank, no forms" universal-access framing — all superseded by pilot-first delivery and progressive verification. Rather than silently delete the original prose (it's the founder's origin story — coconut girl, Mama Noe — and the project's own doctrine treats failed/superseded iterations as history to retain, not erase), inserted the new section in full right after The Macro Moment and before Section 8, added a reading-note pointer at the very top of the document directing readers to the new section, and added three new rows to Appendix C's existing deviations table reconciling the specific contradicted claims. This follows the document's own established mechanism (Appendix C already exists for exactly this purpose) rather than inventing a new one.
+
+### Session 121 continued x71 (2026-07-18) — Loop Engineering & Evaluator Council Constitution researched + adopted, Laws 35-48 added to security-canon.md
+
+AJ supplied the full "SIINDEX Sovereign Loop Engineering, Continuous Verification, and Evaluator Council Constitution" (60 sections: Loop Contract, hard invariants vs. soft criteria, 6-layer evaluation stack, Judge Registry and calibration, reward-hacking/Goodhart defence, multi-agent coordination, 9-phase implementation sequence, and 14 constitutional laws numbered 73-86 in the source). Continuing the "deep research before adoption" discipline established with the Media doctrine, verified the specific claims this document attributes to named sources: Anthropic's actual published evaluation guidance confirmed near-verbatim ("a 0% pass rate across many trials usually signals a broken task, not an incapable agent"); Anthropic's 2026 long-running-agent engineering work (Claude Opus 4.6's Compaction API, context resets with structured handoff) confirmed real and current, not dated; the doc's "OpenAI 2026 tax-agent" reference confirmed as a real published case study with matching real production figures (25%→86% field-completion accuracy within six weeks, up to 97% draft accuracy, ~7,000 returns processed); and the LLM-judge bias literature (position, verbosity, self-preference, format, calibration-drift bias) confirmed as active, current 2026 research. Unlike the Media doctrine, no factual gaps were found — the one crucial addition was a concrete number: research quantifies same-family judge self-preference bias at roughly 10-25% uniform score inflation, which the doc stated only qualitatively. Also noted for the record: this doctrine's own Phase 0 gate (real founder authentication + bootstrap closed) is now half-satisfied following today's Task #184 confirmation, while the remaining Phase 0 items (controlled citizen authentication, cross-citizen isolation — Tasks #153/#154) remain open. Findings written to `loop-engineering-evaluator-reality-ledger.md`; full doctrine saved verbatim as `siindex-loop-engineering-evaluator-constitution.md`. Per the standing security-canon.md confirmation rule, asked AJ before touching canon; approved. security-canon.md is now "The Forty-Eight Security Laws" — Laws 35-48 condensed from Laws 73-86, with the self-preference bias figure folded into Law 39, each law carrying an honest caveat that no Loop Contract, Judge Registry, calibration dataset, or Loop Assurance Receipt infrastructure exists yet — every fix performed this session used informal verification (direct SQL checks, manual test transactions, independent GitHub/Vercel confirmation), not a governed loop. Canon adoption only, not a build authorization.
+
+### Session 121 continued x70 (2026-07-18) — Media/Design/Publishing Constitution researched + adopted, Laws 22-34 added to security-canon.md
+
+AJ supplied the full "SIINDEX Sovereign Media, Design, Communication, and Publishing Operating System" (56 sections: Media Mission Contract, Claim Ledger, Content Role Council, Platform Adapter Registry, render/publishing pipeline, Media Rights Marketplace, a 12-phase build sequence, and 12 constitutional laws numbered 61-72 in the source). Requested "deep research for crucial additions" rather than verbatim adoption, so real research was done first: C2PA Content Credentials confirmed accurate but with an undersold limitation (stripped by re-encoding/re-upload on most social platforms) and an operational risk the doc's own phase sequence misses (TikTok already auto-detects undisclosed AI-generated content via C2PA in 2026, meaning provenance should move earlier than Phase 10); WCAG 2.2's cited thresholds (4.5:1/3:1 contrast) confirmed accurate; Australia's real criminal deepfake law (Commonwealth + NSW/SA amendments, up to $20,000/4 years) found to be the concrete legal backing the doc's impersonation/likeness laws lacked; the True Tracks ICIP framework (Terri Janke, also WIPO's Pacific Traditional Knowledge Action Plan) identified as the specific standard that should replace the doc's generic "cultural rights path," directly relevant to the doc's own Cook Islands Māori example; ACCC's "reasonable grounds" evidentiary bar and the Spam Act 2003 consent/unsubscribe requirement found missing despite "newsletters" being an explicitly listed media type; AANA's Children's Advertising Code identified as the concrete standard behind the child-protection law. All findings written to `media-design-publishing-reality-ledger.md`, including the honest baseline that zero of the doctrine's connected systems (App Factory, Generative Interface OS, Product Truth Registry, Cultural Rights Review, Sovereign Avatar) exist as code today. Full doctrine saved verbatim as `siindex-media-design-publishing-constitution.md`. Per the standing security-canon.md confirmation rule, asked AJ before touching canon; approved. security-canon.md is now "The Thirty-Four Security Laws" — Laws 22-33 condensed from the doctrine's Laws 61-72, plus a new Law 34 (Likeness and Cultural Rights Require Evidentiary-Grade Consent) synthesized directly from the research, each with an honest caveat since no supporting infrastructure has been built. This is canon adoption only, not a build authorization — the doctrine's Phase 1-12 sequence has not been started.
+
+### Session 121 continued x69 (2026-07-18) — Task #187 done: Operating-System Re-Engineering Constitution adopted into canon
+
+AJ supplied the full "SIINDEX Sovereign Operating-System Re-Engineering and Model Portfolio Constitution" in chat — 20 sections covering Operating-System Audit, Challenge Council, the SPECIFY/BUILD/VERIFY/RELEASE loop, Model Portfolio Router, Model Passport, Secrets Broker, and a 10-phase implementation sequence, with 8 constitutional laws (numbered 53-60 in the source doc). Saved verbatim as `siindex-os-reengineering-constitution.md`. Per the standing rule that any change to `security-canon.md` needs one confirmation, asked AJ directly before touching canon; approved. Condensed the 8 laws into `security-canon.md` as Laws 14-21 (the document is now "The Twenty-One Security Laws"), matching the format and precedent of Laws 8-13, each sourced and dated. Added an honest caveat: as of this date no Model Registry, Model Passport, Secrets Broker, Mission Control interface, or automated cost governor exists in the codebase — SIINDEX operates on a single model with no substitution tracking or enforced spend limits — so Laws 14-21 state the required target state, not current fact. Task #187 marked complete. Phase 1 of the constitution's own sequence (build the Model Registry + Model Passports) is the logical next step, not yet started.
+
+### Session 121 continued x68 (2026-07-18) — Task #184 CONFIRMED DONE: founder bootstrap ceremony succeeded for real, first time ever
+
+After fixing five distinct production bugs this segment (CDN 503, kyc_tier type mismatch, MFA factor-name collision x3, QR rendering x2), AJ completed a real founder sign-in with genuine TOTP verification via Google Authenticator. `siindex-command-center.html`'s "Live Right Now" panel then rendered real data — `10 Citizens / 7 Transactions / 7 Unresolved T2+ / LIVE` — instead of the permanent placeholder it has shown every prior session. Rather than treat the UI change as proof, confirmed directly via SQL: `founder_authority` now holds one row (`auth_user_id a3146744-52a0-4bae-b2cc-d1cf6af041c5`, `email dadyboy73@gmail.com`, `granted_by: self_bootstrap`, `granted_at 2026-07-18 07:32:38 UTC`, `revoked_at: null`), and `security_events` logged a matching `founder_bootstrap_claimed` entry (tier T2, "Founder authority claimed via one-time bootstrap (AAL2-verified)") at the identical timestamp. Task #184 marked complete. `is_founder()` now returns true for AJ's session, so founder-only RLS views are live for the first time. The real `10 Citizens / 7 Transactions` stats mean tasks #153/#154 (real citizen positive-path tests) may be newly testable — to be verified directly, not assumed, before marking either complete.
+
+### Session 121 continued x67 (2026-07-18) — Systemic bug found: every citizen signup was silently broken (kyc_tier type mismatch)
+
+Testing AJ's real founder sign-in surfaced "Database error saving new user." Real auth log showed `invalid input syntax for type integer: "tier0"`. Root cause: `enforce_citizen_onboarding_defaults()` (a `BEFORE INSERT` trigger on `citizens`) assigned the text literal `'tier0'` into `kyc_tier`, an `integer` column — every other function in the codebase (`verify_payid_tier2`) already treats `kyc_tier` correctly as an integer. Since this trigger fires on every `citizens` insert, it silently broke every signup path in the app (magic-link, join.html, quickstart/business/instant onboarding) — very likely the actual reason `auth.users`/`citizens` have stayed at zero rows across many prior sessions that logged "categorically blocked" without finding this. Fixed: trigger now assigns integer `0`, preserving the original hardening intent (no self-declared KYC tier above 0 at insert). Verified with a real insert/delete test transaction. Directly unblocks task #153 (first real citizen positive-path test). Logged as gotcha #92.
+
+### Session 121 continued x65 (2026-07-18) — Deploy confirmed: commit 91d7455 live in production
+
+Root cause of AJ's 6 straight "pushed" claims not landing: a leftover `python3 -m http.server 8000` process left running in his Terminal window silently swallowed every subsequent keystroke (including repeated `git push` attempts) as inert unexecuted text — confirmed by direct screenshot, not assumption. Fixed by opening a fresh Terminal window rather than fighting the stuck one; AJ re-ran `git push origin main` there and it went through cleanly. Independently verified via two separate sources: GitHub `commits/main` now shows `91d7455` as tip, and Vercel shows deployment `dpl_F1qB8y4jYymecp3m8sCqh9wM8Cyi` (target `production`, state `READY`, commit sha `91d7455...`) already built and live. `siindex-command-center.html` — with the real Supabase MFA enrolment/step-up code from x64 — is now genuinely reachable at imagenationdex.com. Task #184 (founder bootstrap ceremony) has no remaining code/deploy blocker. Logged as gotcha #90.
 
 ### Session 121 continued x64 (2026-07-18) — Authorisation matrix, model canary, correlation ID + a real founder-bootstrap blocker fixed
 
@@ -1922,6 +2078,9 @@ All 100+ screens exist and are clean at $0.24 USD, no A$, no seed phrase. Key sc
 | "Micro INDX airdrop on signup" | **50 INDX genesis welcome bonus** | Canonical amount set in onboarding-flow.html INSERT and citizen-dashboard.html |
 | "3 steps to onboard" | **Phone + name + portal activation** | 3 steps confirmed: (1) phone/OTP, (2) name/domain, (3) portal activation |
 | "0 KYC required" | **Progressive KYC — Tier 0 = phone + name only (MVP)** | Tier 0 requires no documents, no liveness scan for MVP. Liveness is Tier 1 post-launch. Onboarding copy updated to reflect this accurately. |
+| "$1 trillion target valuation by 2027" | **No target valuation stated** | Superseded 18 Jul 2026 by "Current Stage, Delivery Model, and Partner Architecture" — economic sustainability is framed around service revenue and the 98/2 Covenant, not token-price appreciation or a valuation target. |
+| Roadmap: "Launch Day — Everything Goes Live... does not phase... One launch. No phases. No waiting." | **Pilot-first delivery** | Superseded 18 Jul 2026 by "Current Stage, Delivery Model, and Partner Architecture" — IN\$DEX scales through defined, reviewed pilots (citizen group, corridor, partners, limits, exit process), not a single all-at-once launch. |
+| Executive Summary / Solution: universal "no ID, no bank, no forms" framing | **Progressive verification** | Superseded 18 Jul 2026 — action, amount, jurisdiction, and legal obligation determine required verification; not every action is available with zero information. |
 
 ---
 

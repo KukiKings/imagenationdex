@@ -396,17 +396,24 @@ async function buildAccountScreen() {
   var discEl = document.getElementById('accountDisclaimer');
 
   try {
-    const { data, error } = await sb.from('citizens').insert({
-      citizen_name: fname,
-      phone_number: phone || null,
-      web3_domain: domain + '.IN$DEX',
-      indx_balance: 50,
-      genesis_citizen: true,
-      wisdom_score: 25,
-      kyc_tier: 0
-    }).select('id').single();
-
-    if (error) throw error;
+    // Routed through create_onboarding_citizen(), not a raw insert — this
+    // flow never authenticates, so it always runs as the 'anon' role, which
+    // has no auth.uid() and can never pass any SELECT policy on citizens. A
+    // raw insert().select() was guaranteed to throw "violates row-level
+    // security policy" on every signup. The RPC inserts server-side and
+    // returns the id directly. Reward fields granted after via
+    // claim_genesis_signup_bonus_anon() — found + fixed 19 Jul 2026.
+    const { data: created, error: rpcError } = await sb.rpc('create_onboarding_citizen', {
+      p_payload: {
+        citizen_name: fname,
+        phone_number: phone || null,
+        web3_domain: domain + '.IN$DEX'
+      }
+    });
+    if (rpcError) throw rpcError;
+    if (!created.success) throw { code: created.reason === 'duplicate' ? '23505' : 'unknown', message: created.reason, details: created.detail };
+    const data = { id: created.id };
+    await sb.rpc('claim_genesis_signup_bonus_anon', { p_citizen_id: data.id });
 
     sessionStorage.setItem('citizen_id', data.id);
     sessionStorage.setItem('citizen_name', fname);

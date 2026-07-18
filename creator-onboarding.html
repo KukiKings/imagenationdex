@@ -317,23 +317,34 @@ async function claimGenesis(){
   for (var attempt = 0; attempt < 4; attempt++) {
     domain = attempt === 0 ? baseSlug : baseSlug + Math.floor(Math.random() * 900 + 100);
     try {
-      const { data, error } = await sb.from('citizens').insert({
-        citizen_name: name,
-        web3_domain: domain + '.IN$DEX',
-        indx_balance: CREATOR_BONUS_INDX,
-        wisdom_score: CREATOR_BONUS_WISDOM,
-        kyc_tier: 0,
-        genesis_citizen: true,
-        account_type: 'creator'
-      }).select('id').single();
+      // Routed through create_onboarding_citizen(), not a raw insert — this
+      // flow never authenticates, so it always runs as the 'anon' role,
+      // which has no auth.uid() and can never pass any SELECT policy on
+      // citizens. A raw insert().select() was guaranteed to throw "violates
+      // row-level security policy" on every claim. The RPC inserts
+      // server-side and returns the id directly. The creator bonus
+      // (10 INDX / 20 wisdom) is granted after via claim_creator_signup_bonus(),
+      // since indx_balance/wisdom_score/genesis_citizen are never accepted
+      // from client input either way — found + fixed 19 Jul 2026.
+      const { data: created, error: rpcError } = await sb.rpc('create_onboarding_citizen', {
+        p_payload: {
+          citizen_name: name,
+          web3_domain: domain + '.IN$DEX',
+          account_type: 'creator'
+        }
+      });
+      const error = rpcError || (created && !created.success ? { code: created.reason === 'duplicate' ? '23505' : 'unknown', message: created.reason, details: created.detail } : null);
+      const data = created && created.success ? { id: created.id } : null;
 
       if (error) {
-        if (error.code === '23505' && (error.message || '').includes('web3_domain')) {
+        if (error.code === '23505' && ((error.message || '') + (error.details || '')).includes('web3_domain')) {
           lastError = error;
           continue; // try again with a new suffix
         }
         throw error;
       }
+
+      await sb.rpc('claim_creator_signup_bonus', { p_citizen_id: data.id });
 
       // Confirmed success — real row exists. Set canonical session keys.
       sessionStorage.setItem('citizen_id', data.id);

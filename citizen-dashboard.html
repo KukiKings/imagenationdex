@@ -1860,7 +1860,7 @@
         .eq('auth_user_id', session.user.id)
         .single();
 
-      if (citizen) {
+      if (citizen && citizen.citizen_name) {
         // Real-auth sessions never set sessionStorage.citizen_id before this fix —
         // every downstream screen/poll that reads it (wisdom-score polling below,
         // siindex-session-sovereignty.html's device registry) was silently a no-op
@@ -1956,6 +1956,18 @@
             window.location.href = 'login.html';
           });
         }
+      } else if (citizen) {
+        // Citizen row exists and IS linked to this auth session, but the
+        // profile was never finished (interrupted between OTP verify and
+        // saveName() — e.g. tab closed mid-signup). Previously this fell
+        // through to the "real" render path with citizen.citizen_name and
+        // citizen.web3_domain hardcoded to 'Sovereign' / 'sovereign.IN$DEX'
+        // fallback strings, showing a fully-populated-looking dashboard
+        // ("Hi, Sovereign! 50 tokens in your wallet") even though the real
+        // row was still empty — a fake-success bug found + fixed 19 Jul
+        // 2026 while investigating why signup looked done but wasn't. Send
+        // them back to finish the name step instead of faking completion.
+        window.location.href = 'login.html';
       } else {
         // Has a real auth session but no citizens row is linked to this
         // auth_user_id yet. Previously this silently bounced to login.html —

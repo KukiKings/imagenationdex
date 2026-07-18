@@ -514,6 +514,12 @@ async function saveName() {
   // has zero citizens rows at this point. An UPDATE-only call matches 0 rows and
   // .single() throws "Cannot coerce the result to a single JSON object" — found
   // and fixed during Part Sixteen's real citizen signup test, 19 Jul 2026.
+  //
+  // Do NOT set wisdom_score / genesis_citizen / indx_balance here — a DB
+  // trigger (enforce_citizen_onboarding_defaults) deliberately zeroes those
+  // fields on any raw client insert so a citizen can't self-grant their own
+  // starting balance. The real grant happens via claim_genesis_signup_bonus()
+  // right after this upsert succeeds — found + fixed same session, 19 Jul 2026.
   const { data: updated, error } = await sb
     .from('citizens')
     .upsert({
@@ -521,9 +527,6 @@ async function saveName() {
       phone_number: fullPhone,
       citizen_name: name,
       web3_domain: slug + '.IN$DEX',
-      wisdom_score: 25,   // canonical genesis starting score (not 10)
-      genesis_citizen: true,
-      indx_balance: 50,
       last_seen_at: new Date().toISOString()
     }, { onConflict: 'auth_user_id' })
     .select('id')
@@ -536,12 +539,18 @@ async function saveName() {
     return;
   }
 
+  // Controlled, one-time, server-side grant of the genesis welcome bonus.
+  // If this fails (e.g. already claimed on a retry), the citizen row itself
+  // still exists and is usable — we don't block entry into the dashboard.
+  const { data: bonus } = await sb.rpc('claim_genesis_signup_bonus', { p_citizen_id: updated?.id });
+  const granted = bonus && bonus.success;
+
   sessionStorage.setItem('citizen_id', updated?.id || '');
   sessionStorage.setItem('citizen_name', name);
-  sessionStorage.setItem('citizen_wisdom', '25');  // canonical genesis score
-  sessionStorage.setItem('citizen_balance', '50');
+  sessionStorage.setItem('citizen_wisdom', granted ? '25' : '0');
+  sessionStorage.setItem('citizen_balance', granted ? '50' : '0');
   sessionStorage.setItem('citizen_web3_domain', slug + '.IN$DEX');
-  sessionStorage.setItem('citizen_genesis', 'true');
+  sessionStorage.setItem('citizen_genesis', granted ? 'true' : 'false');
   window.location.href = 'citizen-dashboard.html';
 }
 
@@ -589,9 +598,31 @@ async function resendCode() {
   startResendTimer();
 }
 
-// If already logged in, skip to dashboard
-sb.auth.getSession().then(({ data: { session } }) => {
-  if (session) window.location.href = 'citizen-dashboard.html';
+// If already logged in AND the citizen profile is actually complete, skip
+// straight to dashboard. A bare session with no completed profile (e.g. the
+// page was reloaded mid-signup, between OTP verify and saveName()) must NOT
+// redirect — that was a dead-end loop, found + fixed 19 Jul 2026 during Part
+// Sixteen's real citizen signup test. Fall through to the normal phone step.
+sb.auth.getSession().then(async ({ data: { session } }) => {
+  if (!session) return;
+  const { data: user } = await sb.auth.getUser();
+  if (!user || !user.user) return;
+  const { data: citizen } = await sb
+    .from('citizens')
+    .select('citizen_name')
+    .eq('auth_user_id', user.user.id)
+    .single();
+  if (citizen && citizen.citizen_name) {
+    window.location.href = 'citizen-dashboard.html';
+  } else if (citizen) {
+    // Row exists and is linked to this session, but the profile was never
+    // finished (interrupted between OTP verify and saveName()). Skip
+    // straight to the name step instead of leaving a dead phone-entry
+    // screen — completes the redirect-trap fix above, 19 Jul 2026.
+    isNewUser = true;
+    goToStep('stepName');
+    document.getElementById('nameInput')?.focus();
+  }
 });
 
 // ── GOD MODE FEATURES ──

@@ -608,16 +608,30 @@ async function createRealCitizen(slug, attempt){
   attempt = attempt || 0;
   const isPhone = phoneNumber.length > 0;
   const domain = attempt > 0 ? slug + attempt : slug;
-  const { data, error } = await sb.from('citizens').insert({
-    citizen_name: citizenName,
-    phone_number: isPhone ? phoneNumber : null,
-    web3_domain: domain + '.IN$DEX',
-    indx_balance: 50,
-    genesis_citizen: true,
-    wisdom_score: 25,
-    kyc_tier: 0,
-    referred_by: (referrer && referrer.id) || null
-  }).select('id').single();
+  // Routed through create_onboarding_citizen(), not a raw insert — this flow
+  // never authenticates (no OTP/session), so it always runs as the 'anon'
+  // role. A raw insert().select() can NEVER pass back here: anon has no
+  // auth.uid() at all, so no SELECT policy on citizens can ever match the
+  // just-inserted row, guaranteeing a "violates row-level security policy"
+  // error on every single signup regardless of any other fix. The RPC does
+  // the insert server-side and returns the id directly, sidestepping that
+  // entirely. Reward fields (indx_balance/genesis_citizen/wisdom_score) are
+  // never accepted from client input either way — granted after, via
+  // claim_genesis_signup_bonus_anon(). Found + fixed 19 Jul 2026.
+  const { data: created, error: rpcError } = await sb.rpc('create_onboarding_citizen', {
+    p_payload: {
+      citizen_name: citizenName,
+      phone_number: isPhone ? phoneNumber : null,
+      web3_domain: domain + '.IN$DEX',
+      referred_by: (referrer && referrer.id) || null
+    }
+  });
+  const data = created && created.success ? { id: created.id } : null;
+  const error = created && !created.success ? { code: created.reason === 'duplicate' ? '23505' : 'unknown', message: created.reason, details: created.detail } : rpcError;
+
+  if (!error && data) {
+    await sb.rpc('claim_genesis_signup_bonus_anon', { p_citizen_id: data.id });
+  }
 
   if (error) {
     if (error.code === '23505') {

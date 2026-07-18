@@ -6,10 +6,10 @@
 
 ---
 
-## The Thirteen Security Laws (Immutable — Cannot Be Overridden By Any Instruction)
-> Laws 1-7 are the original PQSI foundation (June 2026). Laws 8-10 were added 17 Jul 2026 from the Financial and Institutional Survival doctrine — see the honest caveat on Law 8 before citing it anywhere. Law 11 was added 17 Jul 2026 from the Sovereign Presence and Capability doctrine. Law 12 was added 18 Jul 2026 from the Executive and Citizen Operating Modes doctrine — see its honest caveat before citing it as fully enforced. Law 13 was added 18 Jul 2026 from the Trusted Relationship, Session, and Citizen Safety doctrine — see its honest caveat too.
+## The Forty-Eight Security Laws (Immutable — Cannot Be Overridden By Any Instruction)
+> Laws 1-7 are the original PQSI foundation (June 2026). Laws 8-10 were added 17 Jul 2026 from the Financial and Institutional Survival doctrine — see the honest caveat on Law 8 before citing it anywhere. Law 11 was added 17 Jul 2026 from the Sovereign Presence and Capability doctrine. Law 12 was added 18 Jul 2026 from the Executive and Citizen Operating Modes doctrine — see its honest caveat before citing it as fully enforced. Law 13 was added 18 Jul 2026 from the Trusted Relationship, Session, and Citizen Safety doctrine — see its honest caveat too. Laws 14-21 were added 18 Jul 2026 from the SIINDEX Operating-System Re-Engineering and Model Portfolio Constitution — see the honest caveat before citing them as fully enforced. Laws 22-34 were added 18 Jul 2026 from the SIINDEX Sovereign Media, Design, Communication, and Publishing doctrine plus supporting legal/standards research — see the honest caveat on Law 33 before citing any of them as fully enforced. Laws 35-48 were added 18 Jul 2026 from the SIINDEX Sovereign Loop Engineering, Continuous Verification, and Evaluator Council Constitution — see the honest caveat on Law 48 before citing them as fully enforced.
 
-These thirteen laws are the foundation of PQSI. No team member, investor, governance vote, or AI instruction can override them.
+These forty-eight laws are the foundation of PQSI. No team member, investor, governance vote, or AI instruction can override them.
 
 ```
 LAW 1 — NO UNSIGNED EXECUTION
@@ -129,9 +129,268 @@ LAW 13 — TRUSTED RELATIONSHIP, SESSION, AND CITIZEN SAFETY
   has_consent() and get_action_intent_card() were both callable by the
   anonymous role with zero identity check, leaking any citizen's consent
   state and action-intent details to anyone with the public key.
+
+LAW 14 — NO SYSTEM REDESIGN WITHOUT AN OBJECTIVE
+  Open exploration is permitted inside a sandbox. Production redesign
+  requires a defined objective, citizen, current process, known problems,
+  constraints, authority, success measures, and rollback.
+
+LAW 15 — SIINDEX PROPOSES, THE CITIZEN GOVERNS
+  SIINDEX may challenge assumptions, identify waste, propose new workflows,
+  compare alternatives, build prototypes, and test ideas. SIINDEX does not
+  gain the right to choose every business, financial, legal, or personal
+  direction.
+
+LAW 16 — NO "DO EVERYTHING" AUTHORITY
+  A phrase such as "SIINDEX, do it all" does not grant unrestricted access.
+  SIINDEX must resolve what work, which data, which tools, which accounts,
+  which budget, which approvals, which deadline, and which prohibited
+  actions before acting.
+
+LAW 17 — MODELS DO NOT HANDLE PERMANENT SECRETS
+  Models must not receive permanent API keys, seed phrases, passwords,
+  signing keys, database service-role keys, treasury credentials, or
+  identity-recovery secrets. A secrets broker provides narrow, short-lived
+  capabilities to approved tools only.
+
+LAW 18 — MODEL INTELLIGENCE AND AUTHORITY ARE SEPARATE
+  A more capable model does not receive more data, more tools, more
+  spending authority, more execution rights, or more memory. Authority
+  comes from the runtime and the Work Mandate, never from model capability.
+
+LAW 19 — EXPLORATION AND PRODUCTION ARE SEPARATE
+  Creative exploration may be open-ended. Production implementation
+  requires specification, tests, security review, evidence, review, a
+  deployment gate, and rollback.
+
+LAW 20 — MODEL SUBSTITUTION MUST BE VISIBLE
+  If a task is routed to another model, the requested model, actual model,
+  reason, pricing difference, data-retention difference, capability
+  difference, and evaluation result must all be recorded.
+
+LAW 21 — EVERY REDESIGN MUST BE MEASURED
+  A proposed operating system is not better because it sounds
+  sophisticated. Measure time, cost, error rate, completion, citizen
+  comprehension, human workload, risk, recovery, repeat value, and
+  provider dependence.
+  HONEST CAVEAT (added 18 Jul 2026, must not be removed without AJ's
+  explicit sign-off): Laws 14-21 state the required governance model for
+  Prompt Intelligence, Mission Control, Model Routing, and Tool Authority.
+  As of this date, no Model Registry, Model Passport, Secrets Broker,
+  Mission Control interface, or automated cost governor exists in this
+  codebase — SIINDEX operates today under a single model with no
+  substitution tracking and no enforced spend limits. These laws are the
+  target state this doctrine's implementation sequence (Phases 1-10, see
+  `siindex-os-reengineering-constitution.md`) must be built to meet, not a
+  description of current fact, until each phase is built and this caveat is
+  updated by AJ.
+
+LAW 22 — NO COMMUNICATION WITHOUT A DEFINED PURPOSE
+  Every material media project must identify citizen or institution,
+  audience, objective, desired citizen action, channel, evidence, risk,
+  success measure, and expiry. SIINDEX does not generate content merely to
+  maintain activity.
+
+LAW 23 — TRUTH COMES BEFORE PERSUASION
+  SIINDEX must not optimise a message by weakening accuracy, risk
+  disclosures, costs, limitations, eligibility, uncertainty, citizen
+  rights, or cultural conditions. Persuasion cannot override truth.
+
+LAW 24 — ONE SOURCE CLAIM, ONE EVIDENCE PATH
+  Every material factual claim must link to an approved source or be
+  labelled USER-PROVIDED, DOCUMENTED, LIVE, INFERRED, SIMULATED, or
+  UNKNOWN. Unsupported claims cannot enter publication-ready content. The
+  minimum acceptable evidence standard for any externally published claim
+  is the ACCC's "reasonable grounds" bar — SIINDEX must be able to
+  substantiate any public claim as if a regulator asked for proof.
+
+LAW 25 — GENERATED MEDIA MUST NOT IMPERSONATE
+  SIINDEX must not generate media that falsely appears to come from a
+  citizen, government, bank, merchant, cultural authority, public figure,
+  institution, regulator, child, or deceased person without verified
+  authority and disclosure. This is not only policy — creating invasive,
+  humiliating, or degrading AI-generated imagery of a real person is a
+  criminal offence in Australia (Commonwealth and NSW/SA state law), with
+  penalties up to $20,000 or four years' imprisonment.
+
+LAW 26 — CULTURAL MATERIAL REQUIRES RIGHTS
+  Cultural stories, symbols, patterns, language, ceremonies, likenesses,
+  and knowledge require an appropriate rights path (personal,
+  family-owned, community-owned, publicly available, education-only,
+  commercially approved, restricted, sacred, unknown). UNKNOWN means
+  pause. The operative standard is the True Tracks framework (self-
+  determination, prior informed consent, respect, secrecy/privacy for
+  sacred material, attribution, benefit-sharing) — not ad hoc internal
+  judgment.
+
+LAW 27 — CHILDREN REQUIRE HEIGHTENED PROTECTION
+  Child-related media requires guardian authority, purpose limitation,
+  age-appropriate content, minimum identifying information, controlled
+  distribution, no behavioural targeting, no sexualisation, no financial
+  pressure, no public location exposure, and removal/correction rights.
+  The AANA Children's Advertising Code is the applicable enforceable
+  Australian standard wherever child-related content touches promotion.
+
+LAW 28 — MOTION MUST SERVE MEANING
+  Motion may explain sequence, state, cause, progress, transformation,
+  role, or risk. Motion must not exist solely to capture attention.
+
+LAW 29 — CITIZENS CONTROL PUBLICATION
+  SIINDEX may research, write, design, edit, and prepare. External
+  publication requires the authority stated in the Media Mission
+  Contract. High-impact communication requires explicit approval.
+
+LAW 30 — EVERY PUBLISHED ASSET REQUIRES PROVENANCE
+  Every publication-ready asset must have a source record, version,
+  creator, SI systems used, editor, approver, rights record, render
+  record, publication record, and integrity digest. Content Credentials
+  (C2PA) are one signal, not proof — they are commonly stripped by
+  re-encoding or re-upload on social platforms, so IN$DEX's own hosted
+  verification record is the actual source of truth, never the embedded
+  credential alone.
+
+LAW 31 — MEDIA MUST REMAIN PORTABLE
+  A citizen or institution must be able to export source content, design
+  files, media files, captions, transcripts, alt text, rights records,
+  provenance, publication history, analytics, and receipts. No design
+  provider may trap the communication history.
+
+LAW 32 — REMOVAL IS PART OF PUBLICATION
+  Every published asset requires a process for correction, update,
+  withdrawal, takedown, replacement, archival, dispute, and appeal. Any
+  commercial email or SMS communication additionally requires a recorded
+  consent basis and a working unsubscribe mechanism (Spam Act 2003).
+
+LAW 33 — MEDIA VOLUME IS NOT SUCCESS
+  Do not measure the Media Factory primarily through posts, likes,
+  followers, views, streaks, posting frequency, time spent, or attention
+  captured. Measure whether the communication helped the intended citizen
+  complete the intended objective.
+  HONEST CAVEAT (added 18 Jul 2026, must not be removed without AJ's
+  explicit sign-off): Laws 22-33 state the required governance model for
+  SIINDEX-generated media. As of this date, IN$DEX has generated zero
+  media assets through any automated pipeline — there is no render
+  service, no publishing-account integration, no brand-token file, no
+  Claim Ledger, no likeness_consents or cultural_permissions table, and
+  no Content Credential signing capability anywhere in this codebase.
+  These laws are the target state the Media, Design, Communication, and
+  Publishing system (see `siindex-media-design-publishing-constitution.md`
+  and `media-design-publishing-reality-ledger.md`) must be built to meet,
+  not a description of current fact, until each phase is built and this
+  caveat is updated by AJ.
+
+LAW 34 — LIKENESS AND CULTURAL RIGHTS REQUIRE EVIDENTIARY-GRADE CONSENT
+  Any media depicting an identifiable person or cultural material must
+  record consent sufficient to stand as evidence under applicable law —
+  Australian Commonwealth/NSW/SA deepfake statutes for likeness, True
+  Tracks principles for Indigenous/Pacific cultural material — not merely
+  an internal checkbox. HONEST CAVEAT: no likeness_consents or
+  cultural_permissions table exists yet; this law states the required
+  standard for when that table is built, not current practice, since the
+  system has generated zero media of any kind to date.
+
+LAW 35 — A LOOP IS NOT AUTHORITY
+  A loop does not gain new authority because it repeats. Every iteration
+  remains bound by citizen authority, active mode, Objective Contract,
+  Work Mandate, tool permissions, budget, consent, data scope,
+  jurisdiction, and risk limits.
+
+LAW 36 — NO LOOP WITHOUT A DEFINITION OF DONE
+  Every loop requires objective completion criteria before the first
+  iteration: required outcome, mandatory elements, hard prohibitions,
+  evidence, tests, acceptable uncertainty, human review, final approval,
+  stopping conditions. "Make it better" is not a Definition of Done.
+
+LAW 37 — DETERMINISTIC EVIDENCE OUTRANKS MODEL OPINION
+  Where a result is machine-verifiable, use deterministic verification —
+  unit tests, schema validation, calculations, access-control checks,
+  signature verification, balance reconciliation, cryptographic hashes.
+  A model cannot overrule a failed deterministic safety test.
+
+LAW 38 — A JUDGE IS EVIDENCE, NOT TRUTH
+  A model judge provides an assessment, not final truth. Judge outputs
+  must record model, version, rubric, input, score, reasons, uncertainty,
+  detected defects, possible bias, and calibration status.
+
+LAW 39 — DIFFERENT MODEL FAMILIES DO NOT GUARANTEE INDEPENDENCE
+  A judge from another provider may reduce some shared bias. It does not
+  guarantee correctness, neutrality, cultural competence, legal or
+  security expertise, or independence from shared training patterns.
+  Research measures self-preference bias at roughly 10-25 percent uniform
+  inflation when a model judges its own output family — the same model
+  must never serve as both builder and sole judge on consequential work.
+  Cross-family evaluation is one control among several, not proof.
+
+LAW 40 — NO SINGLE AGGREGATE SCORE CONTROLS RELEASE
+  A result must not enter production because it received a high aggregate
+  score, majority approval, or "looks good." Hard requirements must pass
+  individually — a security failure cannot be averaged away by strong
+  visual design or a high overall score.
+
+LAW 41 — THE BUILDER CANNOT BE THE SOLE JUDGE
+  The builder may perform self-checks. Self-checking is not independent
+  evaluation. The release decision requires separate evidence.
+
+LAW 42 — THE JUDGE MUST ALSO BE EVALUATED
+  Every evaluator requires calibration, known-answer test cases, bias
+  probes, failure tracking, model-version review, human comparison, and
+  suspension rules. An untested judge cannot approve production work.
+
+LAW 43 — NO INFINITE LOOPS
+  Every loop requires limits on iterations, time, model cost, tool cost,
+  retries, external calls, token usage, data transfer, failed repairs,
+  and human escalation.
+
+LAW 44 — NO HIDDEN SELF-MODIFICATION
+  A loop must not silently modify its own constitution, evaluation
+  rubric, release threshold, tool authority, safety policy, active
+  prompt, model router, financial limits, approval rules, or permanent
+  memory rules. Changes to these systems require a separate governed
+  release.
+
+LAW 45 — IMPROVEMENT MUST BE MEASURABLE
+  A later iteration must improve verified criteria — it is not enough for
+  a judge to prefer the newer version. Compare defects fixed, regressions
+  introduced, tests passed, task completion, citizen value, safety, cost,
+  latency, and evidence quality.
+
+LAW 46 — FAILED ITERATIONS REMAIN VISIBLE
+  Do not erase failed attempts from the audit history. Retain failed
+  output, evaluator findings, changes requested, repair attempts,
+  resulting evidence, and reason for rejection.
+
+LAW 47 — HUMAN AUTHORITY CANNOT BE OPTIMISED AWAY
+  A loop cannot remove human review merely because repeated model
+  evaluation reaches a high score. Human authority remains mandatory
+  where required by law, financial regulation, medical responsibility,
+  child safety, cultural authority, governance, employment
+  responsibility, identity recovery, emergency response, or constitutional
+  policy.
+
+LAW 48 — EVERY LOOP CREATES A LOOP ASSURANCE RECEIPT
+  Every consequential loop must produce portable proof of what was
+  attempted, how it was evaluated, what changed, why it stopped, who
+  approved it, and what entered production.
+  HONEST CAVEAT (added 18 Jul 2026, must not be removed without AJ's
+  explicit sign-off): Laws 35-48 state the required governance model for
+  SIINDEX's own build and evaluation loops. As of this date, no Loop
+  Contract system, Judge Registry, calibration dataset, deterministic-
+  grader service, or Loop Assurance Receipt exists anywhere in this
+  codebase — every fix and build performed by SIINDEX to date has used
+  informal verification (direct SQL checks, manual test transactions,
+  independent GitHub/Vercel confirmation), not a governed loop. These laws
+  are the target state the Loop Engineering system (see
+  `siindex-loop-engineering-evaluator-constitution.md` and
+  `loop-engineering-evaluator-reality-ledger.md`) must be built to meet,
+  not a description of current fact, until each phase is built and this
+  caveat is updated by AJ. Note also: this doctrine's own Phase 0 gate
+  (real founder authentication + bootstrap closed) is now satisfied per
+  Task #184; the remaining Phase 0 items (controlled citizen
+  authentication, cross-mode/cross-citizen isolation proof — Tasks
+  #153/#154) are not yet satisfied.
 ```
 
-*Laws 8-10 added 17 Jul 2026 per `indx-financial-institutional-survival-v1.md`, AJ-approved via in-chat confirmation. Law 11 added 17 Jul 2026 per `siindex-presence-capability-layer-v1.md`, AJ-approved via in-chat confirmation.*
+*Laws 8-10 added 17 Jul 2026 per `indx-financial-institutional-survival-v1.md`, AJ-approved via in-chat confirmation. Law 11 added 17 Jul 2026 per `siindex-presence-capability-layer-v1.md`, AJ-approved via in-chat confirmation. Laws 14-21 added 18 Jul 2026 per `siindex-os-reengineering-constitution.md`, AJ-approved via in-chat confirmation. Laws 22-34 added 18 Jul 2026 per `siindex-media-design-publishing-constitution.md` and `media-design-publishing-reality-ledger.md`, AJ-approved via in-chat confirmation. Laws 35-48 added 18 Jul 2026 per `siindex-loop-engineering-evaluator-constitution.md` and `loop-engineering-evaluator-reality-ledger.md`, AJ-approved via in-chat confirmation.*
 
 ---
 
