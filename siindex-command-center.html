@@ -302,12 +302,19 @@ async function startMfaEnroll() {
     const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: uniqueName });
     if (error) { err.textContent = 'Could not start MFA enrolment: ' + error.message; return; }
     pendingFactorId = data.id;
-    // Supabase returns qr_code as a data: URI (data:image/svg+xml;utf-8,<svg>...) meant
-    // to be used as an <img src>, not injected directly as innerHTML -- the previous
-    // code set innerHTML to the raw string, so the box just displayed literal text
-    // ("data:image/svg+xml;utf-8,...") instead of ever rendering a scannable image.
-    // Real bug, caught by inspecting the actual rendered page, not assumed.
-    qrEl.innerHTML = `<img src="${data.totp.qr_code}" alt="Scan with your authenticator app" width="180" height="180">`;
+    // Supabase's qr_code data: URI embeds raw, non-percent-encoded SVG XML -- it
+    // contains literal " characters (e.g. xmlns="..."). Building an <img src="...">
+    // as an HTML string (previous attempt) breaks the attribute open at the first
+    // embedded quote and the rest leaks out as visible text. Setting img.src as a DOM
+    // property instead of parsing it as HTML sidesteps the escaping entirely -- it's
+    // just a JS string assignment, never re-parsed as markup.
+    qrEl.innerHTML = '';
+    const qrImg = document.createElement('img');
+    qrImg.src = data.totp.qr_code;
+    qrImg.alt = 'Scan with your authenticator app';
+    qrImg.width = 180;
+    qrImg.height = 180;
+    qrEl.appendChild(qrImg);
     secretEl.textContent = data.totp.secret;
   } finally {
     mfaEnrollInFlight = false;
