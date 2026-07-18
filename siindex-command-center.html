@@ -168,6 +168,7 @@ let isFounderConfirmed = false;
 let siindexSessionId = null;
 let pendingFactorId = null;
 let pendingChallengeId = null;
+let mfaEnrollInFlight = false;
 
 async function sendMagicLink() {
   const email = document.getElementById('authEmail').value.trim();
@@ -266,27 +267,37 @@ async function renderAuthState() {
 // ── REAL MFA enrolment (Supabase native auth.mfa.* — genuinely bumps this
 // session's AAL when a correct code is verified; nothing here is simulated) ──
 async function startMfaEnroll() {
-  const qrEl = document.getElementById('mfaQr');
-  const secretEl = document.getElementById('mfaSecretText');
-  const err = document.getElementById('mfaError');
-  err.textContent = '';
+  // renderAuthState() can genuinely run twice in near-parallel on load (see initAuth():
+  // onAuthStateChange fires immediately with the current session in addition to the
+  // explicit getSession() check). Without this guard, both calls race past the
+  // listFactors()/unenroll() cleanup below before either finishes, and both then call
+  // enroll() — the second still collides with the first's brand-new factor. Hit this
+  // for real even after the first fix attempt; this reentrancy guard closes it properly.
+  if (mfaEnrollInFlight) return;
+  mfaEnrollInFlight = true;
+  try {
+    const qrEl = document.getElementById('mfaQr');
+    const secretEl = document.getElementById('mfaSecretText');
+    const err = document.getElementById('mfaError');
+    err.textContent = '';
 
-  // renderAuthState() re-runs on every auth state change / reload, which calls this
-  // function again. Supabase's real MFA API rejects a second enroll() while an
-  // unverified factor with the same friendly name already exists on the account —
-  // hit this for real (gotcha logged). Clean up any stale, never-verified factor
-  // first so re-renders don't collide with an abandoned earlier attempt.
-  const { data: existingFactors } = await sb.auth.mfa.listFactors();
-  const staleUnverified = (existingFactors?.totp || []).filter(f => f.status === 'unverified');
-  for (const f of staleUnverified) {
-    await sb.auth.mfa.unenroll({ factorId: f.id });
+    // Clean up any stale, never-verified factor first so re-renders don't collide
+    // with an abandoned earlier attempt (Supabase rejects a second enroll() while an
+    // unverified factor with the same friendly name already exists).
+    const { data: existingFactors } = await sb.auth.mfa.listFactors();
+    const staleUnverified = (existingFactors?.totp || []).filter(f => f.status === 'unverified');
+    for (const f of staleUnverified) {
+      await sb.auth.mfa.unenroll({ factorId: f.id });
+    }
+
+    const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp' });
+    if (error) { err.textContent = 'Could not start MFA enrolment: ' + error.message; return; }
+    pendingFactorId = data.id;
+    qrEl.innerHTML = data.totp.qr_code;
+    secretEl.textContent = data.totp.secret;
+  } finally {
+    mfaEnrollInFlight = false;
   }
-
-  const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp' });
-  if (error) { err.textContent = 'Could not start MFA enrolment: ' + error.message; return; }
-  pendingFactorId = data.id;
-  qrEl.innerHTML = data.totp.qr_code;
-  secretEl.textContent = data.totp.secret;
 }
 
 async function submitMfaEnrollVerify() {
@@ -337,7 +348,11 @@ async function initAuth() {
   await renderAuthState();
   loadLiveStats();
 
-  sb.auth.onAuthStateChange(async (_event, session) => {
+  sb.auth.onAuthStateChange(async (event, session) => {
+    // INITIAL_SESSION fires immediately with the session we already just handled two
+    // lines above via the explicit getSession() call — without this guard it doubles
+    // up renderAuthState() on every load and was the real cause of the MFA enrol race.
+    if (event === 'INITIAL_SESSION') return;
     currentSession = session;
     siindexSessionId = null;
     await renderAuthState();
