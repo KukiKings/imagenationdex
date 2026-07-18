@@ -270,6 +270,18 @@ async function startMfaEnroll() {
   const secretEl = document.getElementById('mfaSecretText');
   const err = document.getElementById('mfaError');
   err.textContent = '';
+
+  // renderAuthState() re-runs on every auth state change / reload, which calls this
+  // function again. Supabase's real MFA API rejects a second enroll() while an
+  // unverified factor with the same friendly name already exists on the account —
+  // hit this for real (gotcha logged). Clean up any stale, never-verified factor
+  // first so re-renders don't collide with an abandoned earlier attempt.
+  const { data: existingFactors } = await sb.auth.mfa.listFactors();
+  const staleUnverified = (existingFactors?.totp || []).filter(f => f.status === 'unverified');
+  for (const f of staleUnverified) {
+    await sb.auth.mfa.unenroll({ factorId: f.id });
+  }
+
   const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp' });
   if (error) { err.textContent = 'Could not start MFA enrolment: ' + error.message; return; }
   pendingFactorId = data.id;
