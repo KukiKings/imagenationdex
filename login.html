@@ -509,17 +509,23 @@ async function saveName() {
 
   const { data: { user } } = await sb.auth.getUser();
 
+  // Upsert, not update-only: a genuinely new citizen (real phone OTP, no anon
+  // row created by any onboarding flow, no phone match via get_citizen_by_phone)
+  // has zero citizens rows at this point. An UPDATE-only call matches 0 rows and
+  // .single() throws "Cannot coerce the result to a single JSON object" — found
+  // and fixed during Part Sixteen's real citizen signup test, 19 Jul 2026.
   const { data: updated, error } = await sb
     .from('citizens')
-    .update({
+    .upsert({
+      auth_user_id: user.id,
+      phone_number: fullPhone,
       citizen_name: name,
       web3_domain: slug + '.IN$DEX',
       wisdom_score: 25,   // canonical genesis starting score (not 10)
       genesis_citizen: true,
       indx_balance: 50,
       last_seen_at: new Date().toISOString()
-    })
-    .eq('auth_user_id', user.id)
+    }, { onConflict: 'auth_user_id' })
     .select('id')
     .single();
 
