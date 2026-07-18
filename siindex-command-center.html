@@ -281,16 +281,25 @@ async function startMfaEnroll() {
     const err = document.getElementById('mfaError');
     err.textContent = '';
 
-    // Clean up any stale, never-verified factor first so re-renders don't collide
-    // with an abandoned earlier attempt (Supabase rejects a second enroll() while an
-    // unverified factor with the same friendly name already exists).
+    // Best-effort cleanup of prior abandoned attempts (harmless if this misses one --
+    // the unique friendlyName below is what actually makes this collision-proof).
     const { data: existingFactors } = await sb.auth.mfa.listFactors();
     const staleUnverified = (existingFactors?.totp || []).filter(f => f.status === 'unverified');
     for (const f of staleUnverified) {
-      await sb.auth.mfa.unenroll({ factorId: f.id });
+      await sb.auth.mfa.unenroll({ factorId: f.id }).catch(() => {});
     }
 
-    const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp' });
+    // Real production incident (auth logs, 2026-07-18 07:04-07:05 UTC): ~15
+    // concurrent POST /factors calls landed within the same second, all colliding on
+    // Supabase's per-user uniqueness constraint on the (empty-string) friendly name --
+    // only 1 of ~15 succeeded, the rest returned 422 mfa_factor_name_conflict. Root
+    // cause: every enroll() call left the friendlyName as Supabase's default empty
+    // string, so ANY concurrent attempt (multiple tabs, rapid reloads, or the
+    // INITIAL_SESSION race fixed earlier) collides on that same empty name no matter
+    // how much client-side de-duping is added. Fix: give every attempt a name that's
+    // unique by construction, so concurrent enroll() calls can never collide at all.
+    const uniqueName = 'founder-totp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+    const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: uniqueName });
     if (error) { err.textContent = 'Could not start MFA enrolment: ' + error.message; return; }
     pendingFactorId = data.id;
     qrEl.innerHTML = data.totp.qr_code;
