@@ -302,7 +302,12 @@ async function startMfaEnroll() {
     const { data, error } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: uniqueName });
     if (error) { err.textContent = 'Could not start MFA enrolment: ' + error.message; return; }
     pendingFactorId = data.id;
-    qrEl.innerHTML = data.totp.qr_code;
+    // Supabase returns qr_code as a data: URI (data:image/svg+xml;utf-8,<svg>...) meant
+    // to be used as an <img src>, not injected directly as innerHTML -- the previous
+    // code set innerHTML to the raw string, so the box just displayed literal text
+    // ("data:image/svg+xml;utf-8,...") instead of ever rendering a scannable image.
+    // Real bug, caught by inspecting the actual rendered page, not assumed.
+    qrEl.innerHTML = `<img src="${data.totp.qr_code}" alt="Scan with your authenticator app" width="180" height="180">`;
     secretEl.textContent = data.totp.secret;
   } finally {
     mfaEnrollInFlight = false;
