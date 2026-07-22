@@ -1,5 +1,8 @@
 # AUSTRAC VASP Enrollment — ImageNation DEX
-**Deadline: 29 July 2026 — 17 days away**
+
+> **STATUS UPDATED 2026-07-22 — still live and active, not withdrawn.** The enrolment/registration described below was genuinely submitted 2026-07-17 (AAN 263945366, VASP registration 115011, RSP/remittance registration 115012), sole trader Arthur Henry, ABN 95 579 343 955, and is currently under AUSTRAC's own assessment (up to 90 days from submission) — not yet a final approval, but not withdrawn either. AJ also intends to establish IN$DEX as a Cook Islands entity (whitepaper Section 12). The sequencing decided 2026-07-22: **keep this AUSTRAC registration exactly as-is until the Cook Islands entity is actually registered and approved, then withdraw AUSTRAC at that point** — deliberately avoiding a gap where IN$DEX would hold no valid registration anywhere. Do not treat this as withdrawn or superseded; the ongoing obligations below (SMR/TTR/IFTI reporting, 14-day change-notification window, annual compliance report) still apply right now. See whitepaper Section 11.13 and Appendix B, Session 121 continued x78.
+
+**Deadline: 29 July 2026 — 17 days away** *(historical — this deadline applied to the original enrolment, already met/submitted 2026-07-17; not a currently live countdown)*
 **Portal: https://online.austrac.gov.au**
 
 ---

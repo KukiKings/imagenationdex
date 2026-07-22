@@ -5,7 +5,7 @@
 **Name:** Arthur John Henry (AJ)
 **Role:** Founder & CEO, IN$DEX / ImageNation Decentralised Exchange
 **Location:** Australia
-**Birthday:** 24 September — same as Grand Synchronicity Day
+**Birthday:** 24 September. Grand Synchronicity Day moved to 24 January 2027 (from 24 Sep 2026) — the 24th still carries AJ's personal significance, but the two dates no longer literally coincide. January was chosen deliberately: people are back from holidays and paying attention.
 
 ## What I'm Building
 
@@ -20,8 +20,8 @@ The ICP is Mama Noe — 80 years old, Mele Village Vanuatu, sells tuluk for $1.5
 
 ## Key Facts Claude Must Know Cold
 
-- **INDX price:** $0.24 USD (genesis price, locked to AJ birthday 24 Sep 2026)
-- **Grand Synchronicity:** 24 Sep 2026 — target $2.50/INDX
+- **INDX price:** $0.24 USD (genesis price — the "24" is AJ's personally meaningful number)
+- **Grand Synchronicity:** 24 January 2027 (moved from 24 Sep 2026 — AJ, 2026-07-19) — target $2.50/INDX
 - **Civilisation Law:** 2% fee on all transactions (immutable)
 - **PQSI:** Post-Quantum Sovereign Intelligence — citizen protection framework
 - **SIINDEX (PQSI):** The Sovereign Intelligence CEO + COO. Not AI — SI. Runs compliance, governance, liquidity 24/7. Always learning.

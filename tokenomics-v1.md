@@ -20,7 +20,7 @@ This tokenomics document is designed around one principle: **the citizen wins ev
 | Property | Value |
 |---|---|
 | Name | INDX |
-| Standard | SPL Token-2022 (Solana) |
+| Standard | SPL Token — original Token Program, `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA` (corrected 2026-07-22 — verified via mainnet; not Token-2022, see whitepaper Appendix A) |
 | Total Supply | 100,000,000 (100M) — fixed forever |
 | Launch Price | $0.24 USD — confirmed |
 | Fully Diluted Market Cap | $24M at $0.24 launch price |
@@ -37,7 +37,7 @@ This tokenomics document is designed around one principle: **the citizen wins ev
 | Allocation | Amount | % | Purpose | Lock |
 |---|---|---|---|---|
 | Genesis Citizens | 20,000,000 | 20% | Early adopter rewards — waitlist citizens | 90-day anti-flip on discounted tokens |
-| Liquidity Pool | 20,000,000 | 20% | Raydium CLMM INDX/SOL pool | 24 months via Streamflow |
+| Liquidity Pool | 20,000,000 | 20% | Raydium CLMM INDX/SOL pool | None — SIINDEX-managed, continuous (no fixed lock, no burn — decided 2026-07-22, see whitepaper Section 11.6) |
 | Operations Treasury | 15,000,000 | 15% | Marketing, development, daily operations | Accessible from day one |
 | Civilisation Fund Reserve | 15,000,000 | 15% | Buyback, yield payments, emergency reserve | Governed by Grid Account |
 | Community Rewards | 15,000,000 | 15% | Wisdom Score incentives, referral bonuses, staking rewards | Released per earn mechanics |
@@ -210,7 +210,7 @@ Wisdom Score is earned through genuine participation. It cannot be bought, trans
 ## Exchange Listing Strategy
 
 **Phase 1 — Launch Day:**
-Raydium CLMM pool. INDX/SOL pair. 0.25% fee tier. 20M INDX locked for 24 months via Streamflow. This is the only listing at launch. No exceptions.
+Raydium CLMM pool. INDX/SOL pair. 0.25% fee tier. 20M INDX under SIINDEX-managed continuous liquidity — no fixed-term lock, no burn (decided 2026-07-22, see whitepaper Section 11.6). This is the only listing at launch. No exceptions.
 
 **Phase 2 — Month 6:**
 MemeDAO governance vote on first CEX listing. Citizens decide — not the founder. Target: Pacific-first exchanges (MEXC, Gate.io, KuCoin) serving the markets where IN$DEX citizens actually live.
@@ -275,7 +275,7 @@ INDX is a **utility token.** It grants access to the IN$DEX platform — payment
 
 ## Roadmap
 
-### L99 — 24 September 2026 (Core Launch)
+### L99 — 24 January 2027 (Core Launch, moved from 24 September 2026 — AJ, 2026-07-19)
 Payments + P2P send, Sovereign Verification (phone + liveness), Basic staking (3 tiers), Token launch on Raydium, Wisdom Score system, Basic community feed, Proof of Engagement basics, 70+ app screens live
 
 ### Year 1 (Post-Launch)
@@ -290,7 +290,7 @@ Full Data Sovereignty Economy, Censorship resistance (IPFS content storage), All
 
 **Canonical price: $0.24 USD. This is locked.**
 
-$0.24 gives a $24M fully diluted market cap at launch. The number was chosen with intention: AJ's birthday is the 24th, L99 launches 24 September 2026. The price is a founding signature — the narrative is real, and AJ's tokenomics contact has confirmed it makes sense as an entry point.
+$0.24 gives a $24M fully diluted market cap at launch. The number was chosen with intention: AJ's birthday is the 24th, and L99 now launches 24 January 2027 (moved from 24 September 2026 — AJ, 2026-07-19; the two dates no longer coincide, but "24" carries over deliberately). The price is a founding signature — the narrative is real, and AJ's tokenomics contact has confirmed it makes sense as an entry point.
 
 **Why $0.24 works:**
 - $24M FDV is defensible at launch — not overpromising, not undervaluing the platform

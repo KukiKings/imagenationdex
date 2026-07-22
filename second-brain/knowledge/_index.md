@@ -8,7 +8,7 @@ Extracted insights, frameworks, and non-obvious observations that make SIINDEX w
 If an 80-year-old woman in Mele Village, Vanuatu — 50% smartphone confidence, no bank account, sells tuluk for $1.50 — can use this feature, it works. If she can't, rebuild it.
 
 ### Grand Synchronicity
-24 September 2026. AJ's birthday. INDX target price $2.50 (from $0.24 genesis = ~10x). This is not just a launch date — it's the civilisational alignment point the whole product is built toward.
+24 January 2027 (moved from 24 September 2026 — AJ, 2026-07-19). AJ's actual birthday is 24 September; the two dates no longer coincide, but "24" — his personally meaningful number — carries over. INDX target price $2.50 (from $0.24 genesis = ~10x). This is not just a launch date — it's the civilisational alignment point the whole product is built toward.
 
 ### Civilisation Law
 2% fee on every transaction. Not for the platform. For the civilisation. Funds the public goods layer. Immutable and non-negotiable.

@@ -148,6 +148,8 @@ Delivered every morning when the citizen opens the app. Auto-read aloud. 7 secti
 
 **Example brief:**
 > "Good morning, citizen. Your marketplace listing has two buyer questions waiting. Your Instagram reel is scheduled for 5 p.m. One payout requires your confirmation. Your Mission Room has one decision open. Your AUSTRAC enrollment is due in 19 days — I have the checklist ready. Would you like me to draft replies, review the payout, or open your Mission Room first?"
+>
+> *(Example predates the actual submission — AUSTRAC enrolment was filed 17 Jul 2026, ahead of the deadline this example references. Live app copy corrected 2026-07-22; this illustrative example kept as written, historical.)*
 
 ---
 

@@ -21,8 +21,7 @@
 | Name | INDX |
 | Standard | SPL Token-2022 (Solana) |
 | Supply | 100,000,000 (fixed — mint authority burned at launch) |
-| Launch price | $0.35 USD (under review pending professional advice) |
-| Canonical price in all UI | $0.24 USD (pre-launch, current sessions) |
+| Canonical price in all UI | $0.24 USD (genesis price — never $0.35; corrected 2026-07-19, this row previously contradicted the row below it) |
 | Governance | MemeDAO — one token, one vote |
 | Welcome bonus | 50 INDX free to Genesis Citizens |
 
@@ -75,7 +74,7 @@
 
 ## AI Layer — SIINDEX
 
-**SIINDEX** (pronounced "sin-dex") — Sovereign AI COO. Female. Runs the platform 24/7.
+**SIINDEX** (pronounced "Sighn-dex") — Sovereign AI COO. Female. Runs the platform 24/7.
 
 | Component | Detail |
 |---|---|

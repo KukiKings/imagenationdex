@@ -118,7 +118,7 @@ created_at (timestamptz)
 ---
 
 ## Workstream 3: Solana Smart Contract + Raydium LP
-> Dated execution plan (added 2026-07-16): `launch-runway-plan-2026.md`. Parameter-lock (Aug 14–20) and execution (Aug 28–Sep 3) are now separate weeks — see that doc for the day-by-day breakdown and the open question on whether the 100M INDX mint has already happened.
+> Dated execution plan (added 2026-07-16, re-timed 2026-07-19): `launch-runway-plan-2026.md`. Parameter-lock (Stage 4, Jan 5–10, 2027) and execution (Stage 5, Jan 11–13, 2027) are separate weeks — see that doc for the day-by-day breakdown and the open question on whether the 100M INDX mint has already happened.
 
 ### What "done" looks like
 - INDX token minted on Solana mainnet (SPL Token-2022)
@@ -165,7 +165,7 @@ Week 2: Supabase — waitlist + citizens tables + wire forms
 Week 3: Supabase — Wisdom Score + tx history
 Week 4: Solana token mint + Raydium LP (with AJ sign-off)
 Pre-L99: Full integration test across all 3 workstreams
-L99: 24 September 2026
+L99: 24 January 2027 (moved from 24 September 2026 — AJ, 2026-07-19)
 ```
 
 ---

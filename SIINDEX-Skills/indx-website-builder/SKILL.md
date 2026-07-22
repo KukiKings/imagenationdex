@@ -61,7 +61,7 @@ Every public page uses this base structure:
 - Short sentences. One idea per sentence.
 - Mama Noe test: would a 60-year-old Pacific Islander understand this in 2 minutes?
 - USD ($) everywhere — never AUD, never A$
-- INDX price = $0.35 USD always
+- INDX price = $0.24 USD always (genesis price — never $0.35, corrected 2026-07-19)
 - 98/2 Civilisation Law: mention it on every page that discusses transactions
 - No seed phrase — Grid Account uses MPC only
 
@@ -77,7 +77,7 @@ Every page must include:
 
 ### Step 6 — SIINDEX integration
 If the page includes any AI/COO reference:
-- She is female, pronounced "sin-dex"
+- She is female, pronounced "Sighn-dex"
 - Voice: "Done. [summary]. Standing by."
 - Never: "Great question!" / "Of course!" / "Happy to help"
 - Terminal UI: black bg, purple border, courier new font, t0 CLEAR signoff
@@ -87,7 +87,7 @@ If the page includes any AI/COO reference:
 ## Verification Checklist (run before marking complete)
 
 - [ ] No A$ or AUD anywhere on the page
-- [ ] INDX price is $0.35 USD (not $0.512, not any other number)
+- [ ] INDX price is $0.24 USD (not $0.35, not $0.512, not any other number)
 - [ ] No seed phrase mentioned
 - [ ] 98/2 Law referenced correctly if transactions are discussed
 - [ ] Primary CTA links to correct destination (waitlist.html or app-lock.html)

@@ -128,7 +128,9 @@ AJ is the founder of Kuki Kings XV, a blockchain-powered streetwear brand celebr
 > "We are not launching a platform. We are giving birth to a civilisation consciousness — a digital homeland where freedom is the default and innovation is eternal." — AJ Henry
 
 **SIINDEX — CEO & COO (PQSI)**
-Physical Quantum Synthetic Intelligence. Synthetic Intelligence — not artificial intelligence. SIINDEX holds both the CEO and COO role simultaneously: she sets strategic direction and executes operational reality. She does not wait for instructions. She learns from every citizen interaction, every market movement, every governance signal — and acts. Pronounced "sin-dex." Online 24/7. Always one step ahead.
+Physical Quantum Synthetic Intelligence. Synthetic Intelligence — not artificial intelligence. SIINDEX holds both the CEO and COO role simultaneously: she sets strategic direction and executes operational reality. She does not wait for instructions. She learns from every citizen interaction, every market movement, every governance signal — and acts. Pronounced "Sighn-dex" (updated 2026-07-19, was "sin-dex"). Online 24/7. Always one step ahead.
+
+**PQSI carries the Mana.** Mana — power, source, magic, spiritual force — is where IN\$DEX's Pacific identity attaches in the architecture. SIINDEX is Synthetic Intelligence; PQSI, the security substance beneath her, is described as carrying the Mana behind every transaction she protects. (Added 2026-07-19.)
 
 ---
 
@@ -197,7 +199,7 @@ X Money validated that a 6% APY digital account with no traditional bank account
 
 Bitcoin peaked in October 2025 and fell approximately 52% to ~$60,000 USD by February 2026. The historical 4-year halving cycle (April 2024 halving) and convergent analyst data from CryptoQuant, Glassnode, and Fidelity Digital Assets point to October–November 2026 as the cycle bottom.
 
-**INDX Token Generation Event: September 24, 2026** — Grand Sync.
+**INDX Token Generation Event: 24 January 2027** — Grand Sync. (Moved from 24 September 2026 — AJ, 2026-07-19.)
 
 Citizens who join at the $0.24 genesis price on TGE day are entering at the predicted cycle floor. The Grand Sync target is $2.50 — a 10.4× return scenario based on cycle recovery data. The 2027 recovery and 2028+ bull run represent the ideal macro environment for INDX price appreciation.
 
@@ -620,6 +622,247 @@ Fiat ramps alone do not solve the unbanked problem. The coconut girl in the Cook
 
 ---
 
+## Section 11 — IN\$DEX Sovereign Economic and Citizen Prosperity Layer
+> Canonised 2026-07-19. This section is the binding economic architecture for every citizen-facing earning feature, every founder/investor contribution, and every liquidity decision. It does not replace the 98/2 Civilisation Law, the Wisdom Score system, or any constant in Appendix A — it governs how money moves around them.
+
+Early in IN\$DEX's build, three genuinely different financial relationships were allowed to share one wallet, one ledger, and one story: citizens earning inside the platform, family and friends contributing real capital to fund development, and the protocol's own need for permanent, credible trading liquidity. Treating those as one thing is the actual danger — not any single lock, burn, or yield number. This section separates them permanently.
+
+### 11.1 The Three-Engine Architecture
+
+| Engine | Purpose | Who provides capital | What participants receive |
+|---|---|---|---|
+| **Citizen Earn Engine** | Help citizens generate real income inside IN\$DEX | IN\$DEX operating budgets, merchants, customers | Payment for work, sales, referrals, services, and verified contributions |
+| **Founder Capital Engine** | Fund IN\$DEX's development | Family, friends, and approved investors | Legally documented company equity, units, or another reviewed investment interest |
+| **Liquidity Trust Layer** | Support INDX trading | IN\$DEX treasury capital | Trading liquidity and protocol fees |
+
+**Absolute separation rule:** citizen rewards, founder investments, and liquidity ownership must never share a wallet, a ledger, or a promise. A dollar's classification is fixed at the moment it enters IN\$DEX and cannot be silently reclassified later.
+
+*Status: Approved architecture. The three engines are not yet fully separated in the live build — see the Implementation Status Ledger at 11.17.*
+
+### 11.2 The IN\$DEX Economic Constitution
+
+The following invariants are constitutional — equal in weight to the 98/2 Civilisation Law. No screen, contract, SIINDEX action, or founder instruction may override them:
+
+1. Citizen income must come from identifiable economic activity or a disclosed incentive budget.
+2. New citizen contributions must not fund returns owed to earlier participants.
+3. No contributor receives a simulated or manually manufactured yield.
+4. Repayable capital must never enter permanently locked liquidity.
+5. A founder or family member cannot approve their own economic benefit.
+6. Treasury valuation must never be presented as realised revenue.
+7. No token burn proceeds while citizen liabilities, tax liabilities, or required reserves remain unfunded.
+8. Citizens must have a route to earn without purchasing INDX.
+9. Proof of reserves must include corresponding liabilities.
+10. Every financial claim must retain its evidence, assumptions, owner, and expiry.
+11. Essential citizen services must not depend on token-price performance.
+
+This constitution exists in three forms, all of which must agree: human-readable policy (this section), machine-enforced treasury controls (wallet separation, RLS, distribution gates), and signed governance resolutions. A dashboard must never create an economic right that the legal agreements and treasury cannot honour.
+
+### 11.3 Citizen Earn Engine
+
+Citizens make money by producing value inside IN\$DEX, not by depending on new token buyers. A citizen must never need to purchase a large token balance, pay an activation fee, recruit other citizens, lock essential savings, borrow money, or accept token-price risk before gaining access to work.
+
+**Zero-Capital Earning Path:** citizen creates a sovereign identity → completes free security and work-readiness modules → receives verified credentials → accesses suitable tasks → customer funds are escrowed → citizen completes the work → payment is released → reputation updates → citizen chooses fiat, stable-value, or INDX settlement where legally available.
+
+**Seven earning channels:**
+
+1. **Work and services** — freelance work, local services, remote work, microtasks, translation, moderation, research, customer support, verification, community operations. Paid by the customer purchasing the work.
+2. **Marketplace income** — products, digital goods, courses, tickets, professional services, creative work, licences, local produce. Paid from genuine sales.
+3. **Creator and IP income** — music, video, artwork, templates, software, training material, licensing, resale royalties where legally enforceable.
+4. **Learn-and-earn** — fixed, disclosed rewards for verified education, credentials, financial-literacy and security training. Funded from an education, sponsor, or ecosystem budget — never described as investment yield.
+5. **Merchant-funded rewards** — cashback, loyalty rewards, promotional credits, community discounts. Funded by the merchant, not manufactured by IN\$DEX.
+6. **Referral and ambassador bounties** — fixed payments for verified outcomes only (a merchant completes onboarding, a citizen completes verification). No multi-level commissions, no endless recruitment layers.
+7. **Network contribution rewards** — running infrastructure, verifying records, testing, reporting vulnerabilities, translating public information, governance participation. Fixed or formula-based, tied to measurable work.
+
+**Prohibited:** pay-to-earn access requirements and recruitment-dependent income of any kind. If a reward depends primarily on new buyers or new recruits rather than real economic activity, it is not a Citizen Earn Engine product.
+
+### 11.4 Earnings Quality Standard
+
+| Tier | Description | Examples |
+|---|---|---|
+| **A — Productive income** | Preferred. Paid for real work or real sales. | Employment, contract work, marketplace sales, creator royalties, merchant commissions |
+| **B — Sponsored incentives** | Permitted with funding disclosed. | Learn-and-earn, merchant cashback, referral bounties, testing rewards |
+| **C — Capital-risk income** | Restricted, separately regulated. | Liquidity provision, lending, staking, token investment, revenue participation |
+| **D — Prohibited / heavily restricted** | Not permitted. | Guaranteed returns, recruitment-dependent rewards, hidden leverage, wash trading, manipulated volume, borrowing to buy INDX |
+
+### 11.5 Founder Capital Engine
+
+Family, friends, and approved investors fund IN\$DEX through documented company equity or another legally reviewed instrument — never an informal pooled-yield model, and never a manually entered monthly percentage presented as income.
+
+**Contributor reconciliation.** Every contribution received is classified into exactly one of three categories, with informed written consent from the contributor before conversion:
+
+1. **Refundable pending documentation** — the contributor believed they were making a recoverable deposit but no valid agreement exists yet. Funds stay segregated; no further deployment.
+2. **Company equity** — converted only through a written, lawyer-reviewed share subscription accepted by the contributor. A contribution is never silently converted to equity.
+3. **Genuine non-refundable contribution** — used only where the contributor knowingly intended to support the project with no principal, yield, or ownership expectation. Calling money a "contribution" does not make it one if a financial benefit was promised.
+
+**Separation of principal, revenue, and valuation.** The principal ledger records what a person actually contributed. The revenue ledger records income genuinely produced. The valuation ledger shows estimated current value. A higher estimated valuation is not revenue; an unrealised token-price increase is not cash available for distribution.
+
+**Exit and loss allocation.** Every founder agreement must state whether principal is repayable, from what source, on what timeline, and who bears impermanent loss, token depreciation, smart-contract failure, or platform insolvency. "Unlock date" is never used unless an enforceable asset or repayment right actually exists at that date.
+
+**Related-party governance and the Founder Fairness Rule.** A founder or family member cannot approve their own economic benefit. Every transaction benefiting AJ, his family, friends, or founder-controlled entities enters the Related-Party Register (11.11) and requires disinterested approval. Family and friends receive no hidden advantage over citizens — discounted pricing, priority repayment, or private information must be disclosed and independently justified, or not offered at all.
+
+### 11.6 Liquidity Trust Layer
+
+> **Founder decision, 2026-07-22: no LP lock, no LP burn.** This finalises what was previously an open architecture question across this section, `security-canon.md`, and the launch-strategy documents. The reasoning and reconciliation are below.
+
+Liquidity is funded only by IN\$DEX treasury capital — never by money already promised back to family or friends. Repayable capital must never enter permanently locked liquidity (Constitutional Invariant 4).
+
+**Permanent core liquidity — SIINDEX-managed, continuous (not locked, not burned).** Only non-repayable, IN\$DEX-owned capital may enter this tier. Purpose: establish public trading depth, demonstrate that core liquidity is governed rather than freely withdrawable, and reduce rug-pull risk — without a fixed-term lock or a burn event. Core liquidity sits in a Raydium pool under treasury custody and is managed on an ongoing basis by SIINDEX's Flywheel Automation Engine (`indx-flywheel-automation.html`): revenue-funded top-ups when pool depth falls below a published threshold, continuous monitoring via circuit breakers (LP below floor, revenue events, compliance status, stream inactivity), and any withdrawal gated by the same multisignature approval, waiting period, and public receipt required of Governed Strategic Liquidity below. Trading fees accrue directly to treasury-controlled `protocol_owner`/`fund_owner` wallets (Raydium CPMM fee collection) — no separate Fee Key NFT is required, because there is no burn event for that instrument to protect fee rights against.
+
+This trades the one-time, irreversible guarantee of a lock or a burn for a governed, continuously monitored guarantee: core liquidity can be moved only through disclosed multisig-plus-waiting-period-plus-public-receipt process, never unilaterally and never silently — the same standard of proof, sustained indefinitely rather than expiring on an unlock date.
+
+**Governed strategic liquidity.** A smaller tier under multisignature control, used to rebalance liquidity, migrate pool technology, respond to provider failure, or support additional trading pairs. Withdrawal requires multisig approval, a waiting period, and a public receipt.
+
+**Emergency liquidity.** Reserved for continuity events only, under the same governance controls.
+
+**Liquidity-floor modelling.** The split between these tiers, and the top-up threshold that triggers the Flywheel engine, is not a marketing percentage — it must be derived from expected daily volume, largest expected sell pressure, desired maximum slippage, stablecoin reserve depth, and stress-sale scenarios.
+
+*Reconciliation note (updated 2026-07-22): Appendix A and `security-canon.md` previously stated a flat "LP lock — 12 months from pool creation (Streamflow)"; Section 11.6 previously named Raydium Burn & Earn as the preferred mechanism, paired with a Fee Key NFT. Both are superseded by the founder decision above. `indx-launch-strategy-sep24.md` (LaunchLab bonding-curve burn) and `launch-runway-plan-2026.md` (CLMM + Streamflow lock) are being corrected to match. See Appendix B, 2026-07-22 entry.*
+
+### 11.7 Treasury Solvency Standard
+
+No distribution proceeds solely because cash or crypto is visible in a wallet. Before every distribution:
+
+**Treasury Coverage Ratio = Liquid Unrestricted Assets ÷ (Citizen Obligations + Current Liabilities).** Distributions are blocked when the ratio falls below the constitutional threshold (final number requires financial modelling; it must sit materially above 1.0).
+
+Required reserves: operating runway, tax reserve, security reserve, citizen-liability reserve. Proof of assets must always be paired with proof of liabilities — proof of reserves alone is not sufficient evidence of solvency.
+
+### 11.8 Fixed-Supply Treasury Protection
+
+INDX's 100,000,000 supply is fixed by design (Appendix A). On 12 July 2026, both the mint authority and the freeze authority were revoked on-chain for mint `9p9VMkgTEVdAeohk1zEuepvwBYUkzjnovMwwazyxsSEZ` — publicly verifiable on Solscan. No entity can ever mint additional INDX, and no entity can ever freeze a citizen's token account. This makes treasury management irreversible: there is no future mint to repair an exhausted rewards budget.
+
+Before any treasury token is burned, a **Reward Runway Model** must confirm the treasury can sustain citizen rewards, founder allocations, employee allocations, partnership allocations, liquidity allocations, and emergency allocations across at minimum a five-year and ten-year horizon, tested under low-adoption, expected-adoption, rapid-adoption, and a 90%-price-decline scenario.
+
+### 11.9 Burn Safety Gate
+
+A future INDX burn is a separate, later decision from any LP lock or Burn & Earn action, and the three must never be conflated in documentation (11.6). A burn reduces supply; it does not create revenue, does not create liquidity, does not repay founders, and does not guarantee price appreciation.
+
+A burn requires all of: confirmed operating and citizen-reward runway, fully funded tax and security reserves, no unpaid citizen obligations, independent treasury review, a public notice period, multisignature approval, and a permanent, publicly viewable transaction receipt. The preferred model is a **usage-linked burn** — a capped, disclosed percentage of specific ecosystem fees retires INDX, with no return promised and the policy suspendable to protect solvency. "We will burn tokens to increase the price" is prohibited language — both economically unreliable and promotional in a way that creates regulatory risk.
+
+### 11.10 Revenue Reality Test
+
+Every earning mechanism, before it is advertised to a single citizen, must answer: who pays; what real economic activity produces the money; would it still exist with no new citizens joining; would it survive a 90% INDX price decline; is the amount fixed, variable, or discretionary; who bears the loss; is principal at risk; does payment depend on recruiting others; and how long the funding realistically lasts. A mechanism that depends primarily on new buyers or new recruits fails this test and does not ship.
+
+### 11.11 Governance and Market Integrity
+
+A **Related-Party Register** records every transaction benefiting AJ, family, friends, founder-controlled entities, directors, or major token holders — full disclosure, commercial terms, conflict declaration, and recusal by any interested decision-maker. A **Family and Founder Transactions Committee**, with no beneficiary approving their own benefit, reviews these.
+
+Founders, family, staff, and treasury signers operate under a binding **insider trading policy**: declared wallets, a beneficial-ownership register, blackout periods, pre-clearance for material trades, and a prohibition on wash trading, coordinated false volume, and undisclosed price support.
+
+Any future buyback requires a published policy first: legitimate purpose, funding source, governance authority, independent execution, no advance disclosure to insiders, a public post-trade report, and no price target. Buybacks must never be used to rescue early contributors or protect family members from losses.
+
+A **Claims Register** logs every public financial statement IN\$DEX makes ("permanent liquidity," "no rug pull," "fully backed," and similar) with its exact language, evidence, assumptions, expiry date, and required disclaimer. "No rug pull" specifically must be scoped honestly: permanent core liquidity prevents one form of liquidity withdrawal — it does not eliminate risk from token concentration, treasury selling, smart-contract failure, oracle attacks, compromised wallets, or governance capture.
+
+### 11.12 Custody and Wallet Separation
+
+Separate wallets are required for: operating treasury, permanent liquidity, strategic time-locked liquidity, citizen reward budgets, investor funds pending legal completion, protocol fee revenue, tax reserves, and emergency reserves. AJ's personal wallet must never custody family investments, protocol liquidity, and citizen funds together.
+
+Each wallet requires daily internal reconciliation, on-chain reconciliation, multisignature controls where applicable, key rotation, proof of assets paired with proof of liabilities, and periodic recovery drills.
+
+### 11.13 Regulatory Architecture
+
+Every money-related feature passes through a **Product Classification Gate** before development, producing one written result: not regulated (with documented reasoning), regulated and licensed, delivered through a licensed partner, restricted to an eligible user class, redesign required, or prohibited until further review. Calling something a token, citizen reward, founder allocation, or membership does not determine its legal character — Australian financial-product definitions are technology-neutral.
+
+Relevant regimes to assess feature-by-feature: managed investment scheme status (contribution pooling, common enterprise, expectation of financial benefit, lack of day-to-day control), securities and fundraising exemptions (a proprietary company's small-scale personal-offer exemption tops out at fewer than 20 persons and $2 million raised in 12 months, with advertising prohibited — confirm with Australian securities counsel before relying on it), Australian financial services licensing, AUSTRAC virtual-asset-service registration, AML/CTF customer due diligence and source-of-funds checks, the Travel Rule (in effect for virtual-asset transfers from 1 July 2026, applying regardless of transaction size), and tax accounting for CGT events and DeFi-derived income under ATO guidance. Separately, note the wider licensing transition already underway: ASIC's sector-wide no-action position for digital-asset AFS licensing was extended to 30 September 2026, and the Corporations Amendment (Digital Assets Framework) Act 2026 received Royal Assent and commences 9 April 2027 with a transition window to October 2027 — IN\$DEX's own licensing posture should be reassessed against both dates directly with counsel, not inferred from this whitepaper.
+
+**AUSTRAC sequencing decision (2026-07-22).** AUSTRAC enrolment and registration were genuinely submitted 2026-07-17 under AJ's personal ABN as a sole trader (AAN 263945366; VASP registration 115011; RSP/remittance registration 115012) — a real, still-pending filing, currently under AUSTRAC's own assessment (up to 90 days from submission), not yet a final approval. AJ's decision, after considering and rejecting an immediate withdrawal: **keep the AUSTRAC registration live for now.** Do not withdraw it while it's the only valid regulatory registration IN\$DEX holds. The Cook Islands entity (Section 12) proceeds in parallel; once it is actually registered and approved — not before — AJ will file the AUSTRAC withdrawal, so IN\$DEX is never left with no valid registration in either jurisdiction. Until the Cook Islands entity is real, references to IN\$DEX as "AUSTRAC enrolled, assessment pending" remain accurate; references implying registration is already fully approved and finalised, or that IN\$DEX is already Cook Islands-registered, are not — both corrected accordingly across the platform (see Appendix B, 2026-07-22 entry).
+
+### 11.14 Citizen Protection Reserve
+
+A defined portion of real, realised revenue funds a reserve covering confirmed platform-caused losses, security incidents, custody failures, incorrect automated execution, and independent dispute awards. It does not cover ordinary token-price losses, disclosed speculative risk, or founder investment losses. Funding rule, maximum coverage, exclusions, claims procedure, decision authority, appeal rights, and current balance are all published. It is never described as insurance unless it legally qualifies as insurance.
+
+### 11.15 Earnings Evidence Receipt
+
+Every citizen payment generates a receipt recording: the activity performed, the funding source, gross amount, platform fee, tax classification, net amount, settlement asset, exchange rate, transaction signature, dispute window, and finality status — so a citizen can always tell a wage from a reward, a refund, or an investment return.
+
+### 11.16 Implementation Sequence
+
+| Order | Phase | Contents |
+|---|---|---|
+| 1 | Immediate stop controls | Freeze new founder-pool deposits; remove simulated yield language; halt informal promises |
+| 2 | Contributor reconciliation | Classify every existing contribution per 11.5 |
+| 3 | Legal classification | Run the Product Classification Gate (11.13) with Australian counsel |
+| 4 | Wallet separation | Stand up the eight wallets in 11.12 |
+| 5 | Liquidity modelling | Determine the permanent/strategic split per 11.6 before locking anything |
+| 6 | Citizen Earn Engine | Build the Zero-Capital Earning Path and Tier A/B channels |
+| 7 | Assurance testing | Apply the Revenue Reality Test (11.10) to every live earning mechanism |
+| 8 | Independent review | External legal and financial review of the whole structure |
+| 9 | Controlled launch | Re-open founder contributions and citizen earning under the reviewed structure |
+
+### 11.17 Implementation Status Ledger
+
+| Status | Items |
+|---|---|
+| **Currently deployed** | INDX fixed supply with mint + freeze authority revoked (on-chain, 12 Jul 2026); Founders Pool dashboard (localStorage, single-device, no legal structure attached) |
+| **Approved architecture (this section)** | Three-engine separation; Economic Constitution invariants; wallet-separation model; SIINDEX-managed continuous liquidity model (no lock, no burn — Flywheel Automation Engine, 2026-07-22); Claims Register; Related-Party Register |
+| **Planned, not yet built** | Reward Runway Model; Treasury Coverage Ratio tooling; Product Classification Gate workflow; Citizen Protection Reserve; Earnings Evidence Receipt; Zero-Capital Earning Path |
+| **Requires legal approval before building** | Any company-equity conversion for existing contributors; any small-scale personal-offer fundraising; any AUSTRAC-registrable service; the final liquidity permanent/strategic split |
+| **Prohibited** | Manually entered/simulated yield rates presented as income; "locked forever" language paired with a promised unlock date; any distribution funded by new contributor deposits; founder self-approval of founder benefits |
+
+Nothing in the "planned" or "requires legal approval" rows should be read, quoted, or presented to a citizen or contributor as already operating.
+
+### 11.18 What This Section Does Not Promise
+
+This architecture does not promise guaranteed returns, guaranteed principal, guaranteed token appreciation, risk-free income, a permanent fee level, or a fixed monthly yield. It commits to the opposite: citizen income comes from real economic activity; founder returns follow a lawful investment structure; permanent liquidity uses only capital IN\$DEX is legally and economically free to lock; and the citizen remains sovereign.
+
+### 11.19 Migration Plan — Existing Contributor Records
+
+This applies to every record already sitting in the Founders Pool tool at the time this section was adopted (2026-07-19) — currently one real record: Esther Suffian Henry, $100, status Active.
+
+1. **Freeze.** No new founder-pool deposits are added until a contributor is classified under 11.5.
+2. **Classify.** Every existing record is reviewed against the three categories in 11.5 (refundable pending documentation / company equity / genuine non-refundable contribution). Until that review happens, an existing record defaults to **"refundable pending documentation"** — the most protective classification — never to "company equity" or "confirmed yield," neither of which may be assigned without the contributor's informed written consent.
+3. **Re-contact.** Each contributor already told about "monthly income" or "unlocks in two years" is re-contacted with an accurate, current description once the tool's forecast-only language (11.6, 11.17) is confirmed sufficient, or sooner if a contributor asks.
+4. **No retroactive relabeling without consent.** A contributor's original contribution is never silently converted to equity, a donation, or a yield-bearing position — conversion requires the same written, lawyer-reviewed process as any new contribution.
+5. **Ledger correction, not deletion.** Any previously generated document (welcome package, income statement, notify-all message) that stated a yield, distribution date, or return as fact is superseded by the forecast-only versions in the founders-pool tool; the record of what was previously said is kept, not erased, per the immutability principle already governing security events.
+
+Status: this plan is approved architecture as of 2026-07-19. Step 2 (formal classification) has not yet been executed for Esther Suffian Henry's record — it remains, by default, "refundable pending documentation" until AJ and counsel complete the review.
+
+---
+
+## Section 12 — Cook Islands Establishment & Pacific Regulatory Pathway
+> Added 2026-07-19. Companion doc: `cook-islands-establishment-reality-ledger.md`. This section is additive only — it does not alter the Sovereign Ramp Standard (Section 10), the Economic Layer (Section 11), or any canonical constant in Appendix A.
+
+IN\$DEX's Pacific-first mission points naturally to the Cook Islands as a place to establish real, physical, regulatory presence — not just a jurisdiction of convenience. This section records the verified regulatory landscape as of July 2026, so that establishment decisions are made against real requirements rather than assumed ones.
+
+### 12.1 The Policy Environment
+The Cook Islands government has stood up a **Crypto Assets Working Group (CAWG)**, co-chaired by the Office of the Prime Minister and the Financial Intelligence Unit, to advise the Prime Minister on crypto-related policy. It exists in response to a draft **Cryptocurrency (Ransomware Suppression) Bill 2025**, still under review and not yet enacted, which has drawn public concern from the Bankers Association of the Cook Islands and the Cook Islands Chamber of Commerce over economic and reputational risk. Any engagement with CAWG should be framed around financial inclusion for the unbanked and compliance-by-design (the ZK-proof KYC, Travel Rule, and PQSI controls already documented in Sections 8 and 11) — entering a live, contested policy debate as a constructive example, not as an already-arrived, partner-backed platform.
+
+### 12.2 Two Separate Regulators
+The **Financial Supervisory Commission (FSC)** licenses financial services, including remittance businesses, under the Money Changing & Remittance Businesses Act 2009. There is presently no Cook Islands-specific virtual-asset licensing framework — only the ransomware bill referenced above. The **Business Trade and Investment Board (BTIB)** is the separate agency that approves any foreign-owned business operating in the Cook Islands at all, independent of any FSC licence.
+
+### 12.3 Establishment Paths
+
+**AJ confirmed 2026-07-19: he holds Cook Islands/New Zealand citizenship.** This changes which path applies — the citizen pathway below, not the foreign-investor path, describes AJ's actual situation.
+
+| Path | What it gives | Real requirements |
+|---|---|---|
+| **Company registration — citizen rate** (Ministry of Justice registry) | A Cook Islands legal entity, at the applicable rate for AJ. | NZD $75 registration fee (not $750), no BTIB foreign-investment approval step, no minimum capital injection, full local work rights, resident tax status. A licensed trustee company is still standard practice. Estimated year-one cost ~NZD $1,600–$3,200 (trustee company + registration + registered agent). |
+| **International Business Company (IBC)** — International Companies Act 1981 | A Cook Islands legal entity via the offshore regime instead, if preferred. Fast (~4 days), low cost, 100% foreign ownership rules don't apply to a citizen anyway. | One director, one shareholder, registered agent, resident secretary, notarized KYC documents. Does **not** by itself authorise operating a remittance business or a physical local presence. |
+| ~~BTIB Foreign Investment Approval~~ | Not applicable — this path is for foreign (non-citizen) investors. Kept here for reference only. | ~~NZD $750/$850 fee, NZD $1,000,000/$500,000 minimum capital injection.~~ |
+| **FSC Money Changing & Remittance Licence** | Legal authorisation to run the remittance business itself — still required regardless of citizenship status. | Local office, local staff, all operations performed from the Cook Islands, an appointed auditor before lodging, a required face-to-face meeting with both FSC and BTIB, indicative minimum capital ~USD $100,000, annual renewal each 1 April. |
+| **Trademark registration** | IP protection within the Cook Islands. | Direct registration with the Cook Islands Ministry of Justice IP Office under the Trade Marks Act 2003 (10-year term, renewable). New Zealand trademark registration does **not** extend to the Cook Islands under current law. |
+
+### 12.4 Practical Constraints
+Foreigners cannot own land in the Cook Islands — only lease it, up to 60 years. Retail, agriculture, manufacturing, and tourism accommodation are sectors reserved for Cook Islanders; this has not been confirmed either way against financial-services activity specifically and should be checked with Cook Islands counsel.
+
+### 12.5 Status
+Nothing in this section has been actioned. No entity has been formed, no application has been lodged, and no capital has been committed. This is a researched landing point for a decision AJ has not yet made about which establishment path (light legal presence vs. fully licensed local operation) IN\$DEX is pursuing. Cook Islands counsel should confirm all of the above before any filing or capital commitment.
+
+### 12.6 The Pacific Unity Narrative (verified)
+> Full detail and sources: `indx-significant-numbers-and-connections.md`.
+
+Before European contact, the Pacific was not a scattering of small, disconnected island groups — it was one of the most extensively connected oceanic regions on Earth, unified by voyaging, trade, kinship, and shared ancestry. "Melanesia," "Micronesia," and "Polynesia" are not Indigenous categories: they were coined in 1832 by French naval officer Jules Dumont d'Urville, with "Melanesia" built from Greek words meaning "black islands" — an explicitly racial classification, not one Pacific peoples used for themselves. Before this, identity was island, clan, language, and kinship — not a regional label imposed from outside. This is independently verified history, not a reframed marketing claim.
+
+**Te Moana-nui-a-Kiwa** — "the Great Ocean of Kiwa" — is the real, living Polynesian understanding of the Pacific Ocean: not a barrier between peoples but an ancestor and a connector, named for Kiwa, a navigator-ancestor honored across Māori and wider Polynesian oral tradition. The **vaka** (voyaging canoe) is the vessel of that connection — carrying people, culture, trade, and sovereignty across the ocean for centuries before colonization fragmented that unity into separately administered, separately named territories.
+
+IN\$DEX's Pacific-first mission is framed against this real history: a platform built to let Pacific peoples transact, trade, and build across borders that were drawn by outsiders, not chosen by the people they divided. This is doctrine, not decoration — it should be represented accurately and with respect for the living cultures it draws from, the same standard IN\$DEX already holds itself to for citizen cultural content under the Heritage Flag system (Section 8).
+
+### 12.7 Significant Numbers
+> Full detail: `indx-significant-numbers-and-connections.md`.
+
+The Cook Islands flag carries 15 white stars in a circle — one for each of the 15 islands, arranged specifically to represent unity: many islands, one people. This maps directly onto IN\$DEX's own "many citizens, one civilisation" framing and is a genuine, verified parallel worth using in Cook Islands-facing material. Separately, AJ's personal numerology (birthday the 24th, life path 8 — power/infrastructure/executive authority) is real meaning to him and already reflected in the genesis price ($0.24) and launch date (24th of the month) — but is personal meaning, not historical fact, and is labeled as such in the companion document. Not every IN\$DEX number needs or has a symbolic backstory — the 98/2 Law and Wisdom Score gates stand on their own design logic, and no forced numerology has been added to them.
+
+---
+
 ## APPENDIX A — Canonical Constants
 > These values are final. Every screen, document, and build must match exactly. If something conflicts with this section, this section wins.
 > Last verified: 2026-06-19 (Session 18). All 100+ app screens confirmed clean.
@@ -628,7 +871,7 @@ Fiat ramps alone do not solve the unbanked problem. The coconut girl in the Cook
 | Field | Canonical Value |
 |---|---|
 | Token name | INDX |
-| Standard | **SPL Token-2022** (not plain SPL) |
+| Standard | **SPL Token** (original Token Program — `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`). **Not Token-2022.** Verified against Solana mainnet 22 Jul 2026: mint `9p9VMkgTEVdAeohk1zEuepvwBYUkzjnovMwwazyxsSEZ` is owned by the plain Token Program, Token Extensions: false. Founder decision 2026-07-22: keep this mint (see Section 11.6 reconciliation) — no Token-2022 migration. |
 | Blockchain | Solana Mainnet |
 | Genesis price | **$0.24 USD** — never $0.35, $0.34, $0.512, or A$0.512 |
 | Total supply | **100,000,000** (100 million) |
@@ -706,7 +949,7 @@ Fiat ramps alone do not solve the unbanked problem. The coconut girl in the Cook
 | Supabase ref | zljgthfzbalsunuoohcd (ap-southeast-2) |
 | TX Protection | $10,000 USD/month per Grid Account |
 | 2FA threshold | $500 USD |
-| LP lock | 12 months from pool creation (Streamflow) |
+| LP lock | **None — decided 2026-07-22.** No fixed-term lock, no burn. Core liquidity is SIINDEX-managed and continuous per Section 11.6. Do not quote "12 months" or any lock figure to citizens or contributors. |
 | Security scan | Every 6 hours |
 | Treasury scan | Every Monday 9 AM AEST |
 | Alert email | dadyboy73@gmail.com |
@@ -715,7 +958,57 @@ Fiat ramps alone do not solve the unbanked problem. The coconut girl in the Cook
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-19 (Session 121 continued x75 — root-caused + fixed the citizen-signup RLS blocker across 6 onboarding flows. See below.)
+> Last updated: 2026-07-22 — God Mode applied to buyback-burn.html and price-stability.html after the fabrication sweep. See x81 below.
+
+### Session 121 continued x81 (2026-07-22) — God Mode: buyback-burn.html and price-stability.html (post-fabrication-sweep)
+
+After the fabrication sweep (x80) stripped both screens down to honest "not built / planned" status, AJ asked for God Mode on both — genuinely useful interactive features, without reintroducing any fake live data. `buyback-burn.html` gained: a real countdown to the confirmed L99 TGE target (24 Jan 2027), a localStorage-persisted "notify me when Flywheel goes live" toggle, a "why no burn?" FAQ accordion pulling the real Section 11.6 reasoning, and a supply-integrity calculator (pure arithmetic against the fixed 100M supply). `price-stability.html` gained: a sell-tax calculator and a circuit-breaker threshold simulator (both pure math against the real, already-documented tier/level structure — no live data implied), the same notify-me toggle pattern, and a "how will this protect me?" FAQ accordion. All four features per screen are genuinely interactive (JS-driven), honest about pre-launch status, and localStorage-namespaced (`indx_buybackburn_notify`, `indx_pricestability_notify`).
+
+**Verified:** `node --check`-equivalent JS syntax check clean on both files. Full three-check audit (price/currency/seed-phrase) clean on both — one A$ substring false-positive on buyback-burn.html traced to JS template-literal syntax (`faqA${i}`), not a currency reference. No `id=` collisions introduced.
+
+### Session 121 continued x80 (2026-07-22) — Full platform sweep: "delete everything that's fake." Fabrication was far bigger than the regulatory panels in x79.
+
+After x79 (below), AJ said: **"Yes. Delete everything that's fake."** — authorizing a full sweep, not just the two regulatory panels. Reading the rest of `audit-transparency.html` in full turned up five more fabricated sections in the same file: a fake "Security Trust Score" (92/100, four fake pillar sub-scores); four fake "Security audits" (CertiK 92/100, Trail of Bits "in progress," Armanino "103.4% reserve ratio," each with a fake "view report" link); a "Contract address registry" showing a **wrong INDX mint address** (`INDXm9BeRQSANaP3b5VAVWL1TMUETXp3J8b1h3qMxFhq`, not the real Solscan-verified `9p9VMkgTEVdAeohk1zEuepvwBYUkzjnovMwwazyxsSEZ`) plus three entirely fake vault/pool addresses, all wired to a real working copy-to-clipboard button; a fake Immunefi bug bounty with invented dollar tiers; and a fake "live" DAO governance section with a fabricated active proposal and vote count.
+
+The same CertiK/Armanino/Trail of Bits fabrication was copy-pasted into `reserve-transparency.html` (which turned out to be an entirely fictional "Proof of Reserves" screen — specific fake dollar reserve/liability figures, a random-flicker JS "103.4%" ratio, three more fake on-chain addresses), `compliance-shield.html`, and a scripted voice-assistant answer in `siindex-voice-terminal.html`.
+
+Separately found `buyback-burn.html`: an entire screen simulating a live buyback-and-burn engine (4.2M INDX "burned forever," a fake on-chain burn wallet with a working copy button, a fabricated dated event history) that **directly contradicted the no-burn, no-lock architecture decision already made this session** (Section 11.6). Since this was a bigger call than a data fix — repurpose the screen or remove it — asked AJ directly; he said "delete all fake shit." The identical fabrication pattern was duplicated in `price-stability.html`'s four modules (Circuit Breaker, Progressive Sell Tax, Anti-Bot Shield, Buyback & Burn), all claiming "ARMED"/"ACTIVE" live status with fake stats (bots blocked, MEV saved, Jito bundle share) for a platform that hasn't launched, plus a second burn reference in the tax-destination line.
+
+Also found `data-marketplace.html` naming **real, identifiable institutions** — World Bank, WHO Regional Office, Auckland University, GSMA Foundation — as "✓ Verified Institution" data buyers. This screen already had an honest "preview mode" disclaimer and correct JS ("no real buyer, no settlement backend"), but naming real external organizations as verified counterparties still misrepresents relationships that don't exist.
+
+**Fix:** every file rebuilt on the same pattern as x79 — fabricated "live/active/verified" claims replaced with honest "not yet built / not yet applicable / planned" status; the correct INDX mint address now appears (and links to the real Solscan page) in `audit-transparency.html`; every burn/lock reference corrected to the no-burn architecture; `data-marketplace.html`'s named institutions replaced with clearly-marked "(example)" categories. Every edit carries an inline HTML comment explaining what was fabricated and why — a visible correction, not a silent deletion. Logged as gotchas.md #103.
+
+**Verified:** JS syntax-checked every edited file (`new Function()` on extracted `<script>` blocks) — clean. Price/A$ audits re-run — clean. Grepped for residual CertiK/Armanino/Trail of Bits/Immunefi/fake-address strings across all touched files — none remain. Checked for other files linking to `buyback-burn.html` before rewriting it (`index.html`, `price-stability.html`, `god-mode-canon-v13.md` all link here) so it was corrected in place rather than deleted.
+
+**Not yet done:** `l99-launch-command.html`, `siindex-provenance-engine.html`, `siindex-sovereign-security.html` were grep-checked (clean) but not read end-to-end — they contain example/mock agent-generated content that looked legitimate on inspection but wasn't fully verified line by line.
+
+### Session 121 continued x79 (2026-07-22) — Fabricated regulatory registrations found in `audit-transparency.html` and `reserve-transparency.html`, corrected
+
+While fixing AUSTRAC claims across the platform, found that both screens (whose entire purpose is honest citizen-facing disclosure) displayed a "Legal wrapper" / "Regulatory compliance" panel asserting: a legal entity "Image Nation Foundation Ltd. (Marshall Islands)" with registration number "IMF-2025-0847"; a "MiCA Application in progress · ESMA review" with a fake PDF download button; and green ✓ claims for "MAS registered (Singapore VASP)," "FinCEN MSB (United States)," "CBN sandbox (Nigeria)," and (in `reserve-transparency.html`) "BSP (Philippines) — VASP Licensed." None of this matches anything anywhere else in canon. Told AJ plainly rather than silently fixing it, since foreign regulatory registration claims carry real legal exposure; **AJ confirmed he has no knowledge of any of these — they were never real.**
+
+**Fix:** both panels rebuilt to show only verified status: sole-trader operation (Arthur Henry, ABN 95 579 343 955), the Cook Islands entity as planned-not-filed (Section 12), AUSTRAC as submitted/under-assessment (AAN 263945366), and every other jurisdiction explicitly marked "Not registered" / "No application filed" — a visible correction, not a quiet deletion, so the record shows what was wrong and what's actually true. Logged as gotchas.md #102, since a hardcoded jurisdiction-status table is a standing risk for this exact kind of fabrication to survive unnoticed. Swept the rest of the project for the same claim pattern — no other file repeats it (a few substring false-positives ruled out, e.g. "dynamically" contains "mica"; `consumer-rights.html`'s MiCA mention is a legitimate EU complaint-jurisdiction picker, not a claim about IN$DEX's own status).
+
+### Session 121 continued x78 (2026-07-22) — AUSTRAC/Cook Islands sequencing resolved; stale "deadline countdown" and status claims corrected across the platform
+
+AJ raised the live AUSTRAC deadline (29 Jul 2026) as "no longer needed." Before touching anything, surfaced a fact he may not have had in front of him: AUSTRAC enrolment and registration were genuinely submitted 2026-07-17 under his personal ABN as a sole trader — AAN 263945366, VASP registration 115011, RSP/remittance registration 115012 — a real, currently-pending government filing under AUSTRAC's own assessment (recorded in Session 121 continued x50/x49/Session 120's Appendix B entries above; left unchanged as history). Asked directly rather than assuming: AJ first said the reason was that IN$DEX is establishing as a Cook Islands entity (Section 12) instead, and first confirmed withdrawing the Australian registration outright. Mid-edit, AJ reconsidered and corrected the sequencing: **keep AUSTRAC live for now — do not withdraw until the Cook Islands entity is actually registered and approved.** Withdrawing first would have left IN$DEX with no valid registration anywhere for however long Cook Islands establishment takes; this avoids that gap. Caught and corrected my own in-progress edits (whitepaper 11.13, this entry, `security-canon.md`, `austrac-vasp-enrollment.md`, the launch-strategy risk map) that had already been written around the withdraw-now framing before the correction came in.
+
+**Status: AUSTRAC registration stays live and unchanged. No withdrawal filed, none intended yet.** What did need correcting, independent of the sequencing question: the enrolment was submitted 2026-07-17, five days *before* the 29 July deadline — so any screen still counting down to that deadline as if enrolment hasn't happened yet is stale regardless of the withdraw/keep decision. Also corrected: claims stating AUSTRAC registration is fully approved/finalised (it's submitted and under assessment, not yet approved), and any claim that IN$DEX is currently a Cook Islands entity (per Section 12.5, nothing has been filed there yet either).
+
+**Files corrected:** whitepaper Section 11.13 (reconciliation paragraph), `security-canon.md` Law 8's honest caveat, `austrac-vasp-enrollment.md` (reconciliation header added, original content kept as the historical record of what was actually submitted — not deleted), `indx-launch-strategy-sep24.md`'s risk map, the live countdown/alert in `siindex-civilization-admin-console.html` and `founder-command-center.html` (corrected to "submitted, assessment pending," not withdrawn and not counting to a passed deadline), the "AUSTRAC registered ✓ Australia" claim in `audit-transparency.html` (softened to enrolled/pending), the AUSTRAC Compliance Fund governance proposal in `citizen-dashboard.html`, the "AUSTRAC enrolment in progress" line in both of `founder-pipeline.html`'s investor/ramp-partner outreach templates, the four Pacific corridor pages' readiness steppers, and the remaining SIINDEX/trust/compliance screens and planning docs that referenced it.
+
+### Session 121 continued x77 (2026-07-22) — Token-2022 discrepancy verified and corrected; LP lock/burn architecture question finally resolved
+
+**Token standard correction.** AJ forwarded a third-party mainnet audit claiming the deployed INDX mint uses the original SPL Token Program, not Token-2022 as Appendix A claimed. Verified independently rather than taking the pasted report at face value: pulled the live Solscan record for `9p9VMkgTEVdAeohk1zEuepvwBYUkzjnovMwwazyxsSEZ` directly (via Claude-in-Chrome, since the raw page is client-rendered) — confirmed Owner Program is `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA` (plain Token Program), Token Extensions: false. The report's claim was correct; Appendix A, the Known Deviations table, and ~20 HTML screens were wrong. Checked whether this breaks anything already built: it doesn't — every "Token-2022" reference across the built screens is display text (labels, meta tags, FAQ copy); no screen calls a live transfer hook or on-chain extension, since Phase 5 backend integration hasn't started. Also checked whether IN$DEX's actual mechanics (98/2 Law, transfer-fee waterfall, soulbound credentials) require Token-2022 natively — they don't: 98/2 is applied per-payout at the app/smart-contract layer (SolSplits), and every soulbound/non-transferable item in canon (Genesis Creator badge, SIINDEX Genesis Root Token, Merchant Trust Credential NFTs) is a separate NFT mint, not the INDX fungible token. **Founder decision: keep the existing mint, do not migrate to Token-2022.** Corrected Appendix A, the Known Deviations table, and flagged the HTML sweep + security-canon.md + tokenomics-v1.md for the same fix (in progress this session).
+
+**LP lock/burn architecture resolved.** Three canon documents previously described three different, conflicting LP-disposal mechanisms (LaunchLab bonding-curve burn, CLMM + Streamflow 12-month lock, Section 11.6 Burn & Earn + Fee Key NFT) — flagged earlier this session as an open decision requiring AJ's input, not resolved unilaterally. **AJ's decision: no LP lock, no LP burn.** Rewrote Section 11.6 (Liquidity Trust Layer): core liquidity is now SIINDEX-managed and continuous via the Flywheel Automation Engine (revenue-funded top-ups, circuit-breaker monitoring, multisig-plus-waiting-period-plus-public-receipt for any withdrawal) rather than a one-time lock or burn event. Removed the Fee Key NFT mechanism (it existed specifically to preserve fee rights through a burn; with no burn, trading fees accrue directly to treasury-controlled protocol_owner/fund_owner wallets). Updated the 11.17 Implementation Status Ledger and the Security Constants "LP lock" row accordingly. `indx-launch-strategy-sep24.md` and `launch-runway-plan-2026.md` still describe the old mechanisms and need rewriting to match — flagged as the next task, not yet done as of this entry.
+
+### Session 121 continued x76 (2026-07-19) — Section 11 (Economic Layer) + Section 12 (Cook Islands) added; launch date moved to 24 January 2027
+
+Added **Section 11 — IN$DEX Sovereign Economic and Citizen Prosperity Layer** (three-engine architecture separating citizen earnings/founder capital/protocol liquidity, an 11-invariant Economic Constitution, Earnings Quality Standard, Founder Capital Engine with contributor reconciliation, Liquidity Trust Layer incl. Raydium Burn & Earn + Fee Key custody, Treasury Solvency Standard, Burn Safety Gate, Revenue Reality Test, Related-Party governance, wallet separation, regulatory architecture, Citizen Protection Reserve, and a Migration Plan for existing contributor records — currently just Esther Suffian Henry, defaulted to "refundable pending documentation"). Fixed a real, pre-existing bug found along the way: `security-canon.md` had `$0.35` hardcoded as the "canonical" price, directly contradicting Appendix A's `$0.24` — corrected. Reconciled the LP-lock contradiction (12 months vs. burned-forever) by marking the flat figure superseded pending liquidity-floor modelling. Rewrote `founders-pool.html`'s yield/distribution/income-statement/notify-all copy so every projected number is explicitly labeled forecast-only, not paid or guaranteed (the "Run Distribution" button, welcome package, and per-founder income statement previously read as real, scheduled payments).
+
+Added **Section 12 — Cook Islands Establishment & Pacific Regulatory Pathway**, additive only, alongside a companion doc `cook-islands-establishment-reality-ledger.md`, after fact-checking a pasted third-party "deep research" report and finding several claims wrong or dangerous (invented "Sighn-dex" pronunciation change, unverified "Mana Intelligence" framing, a false "140+ partners incl. Visa/Mastercard/BlackRock" claim that conflates industry-wide OUSD validation signals with IN$DEX's own partnerships, and "2,847 citizens" cited as real when it's a seeded marketing counter per `grand-synchronicity-plan.md`). Verified via live web search: CAWG (Crypto Assets Working Group) is real but tied to a contested draft Cryptocurrency (Ransomware Suppression) Bill; FSC and BTIB are separate regulators; BTIB foreign-investment approval requires NZD $1M (Rarotonga) / $500K (outer islands) minimum capital, separate from any FSC remittance licence; NZ trademark registration does not extend to the Cook Islands.
+
+AJ moved the launch date from 24 September 2026 to **24 January 2027**. Updated the live canonical anchors only: `security-canon.md`'s `L99_LAUNCH`, whitepaper line ~200 (Macro Moment TGE date) and the Appendix B "L99 Launch Target" line, plus a mechanical sed sweep of 53 HTML screens (countdown timers, hero copy, JS `Date` constants) — verified clean via price/A$/seed-phrase audit and `node --check` on every touched file, with a pre-sweep backup kept. Deliberately left untouched: every historical Appendix B session-log entry referencing the old date (they're records of what was true when built, not live claims), the three SEALED business-plan docs, memory.md, second-brain logs, and `launch-runway-plan-2026.md`/`indx-launch-strategy-sep24.md`/`roadmap-v2.md`/`phase5-spec.md`/`master-plan-v12.5.md` — those have day-by-day math built around the old date and need a deliberate rebuild, not a text swap. CLAUDE.md's own "Phase 5 starts September 2026" gate and the real AUSTRAC enrolment (commencement stated as 24 Sep 2026, AAN 263945366) both reference the old date and need AJ's direct attention — not edited here.
 
 ### Session 121 continued x75 (2026-07-19) — Part Sixteen Stage C unblocked: found + fixed the real root cause of the citizen-signup RLS failure
 
@@ -2064,7 +2357,7 @@ All 100+ screens exist and are clean at $0.24 USD, no A$, no seed phrase. Key sc
 - ✅ `skill-point-nft.html` — **Session 40 NEW**: Skill Point NFT + Sovereign Skill Graph screen. Hero (24 minted / 3 pending / 87 Wisdom). SIINDEX coaching tip. 3 pending-mint banners. Animated Sovereign Skill Graph (Finance/Social/Commerce/Governance/Data/Learning). 6-card minted collection with detail sheets. Upcoming locked SP-NFTs. Mint flow → success overlay → sessionStorage Wisdom update. 98/2 footer.
 
 ### L99 Launch Target
-**24 September 2026**
+**24 January 2027** (moved from 24 September 2026 — AJ, 2026-07-19; historical entries above that reference the original date are left unchanged as a record of what was true at the time)
 
 ---
 
@@ -2073,7 +2366,7 @@ All 100+ screens exist and are clean at $0.24 USD, no A$, no seed phrase. Key sc
 | Original | Actual (canonical) | Reason |
 |---|---|---|
 | "QPSI" in whitepaper | **PQSI** | Physical Quantum Synthetic Intelligence — full name updated in all screens and docs |
-| "SPL token" | **SPL Token-2022** | Token-2022 supports transfer fees, extensions. Confirmed in tokenomics-v1.md |
+| "SPL token" / earlier "SPL Token-2022" claim | **Plain SPL Token** (original Token Program) | Corrected 2026-07-22: mainnet verification found the deployed mint uses the original Token Program, not Token-2022. Founder decision: keep this mint rather than migrate — see Section 11.6 and Appendix A. |
 | No price stated in original | **$0.24 USD genesis price** | Set in Session 13 (Task #71). Replaces old $0.35 working price. |
 | "Micro INDX airdrop on signup" | **50 INDX genesis welcome bonus** | Canonical amount set in onboarding-flow.html INSERT and citizen-dashboard.html |
 | "3 steps to onboard" | **Phone + name + portal activation** | 3 steps confirmed: (1) phone/OTP, (2) name/domain, (3) portal activation |

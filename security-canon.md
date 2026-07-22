@@ -45,14 +45,24 @@ LAW 8 — CITIZEN ASSETS ARE CONSTITUTIONALLY SEPARATE
   Citizen assets are never assets of IN$DEX, SIINDEX, the founder, an investor,
   a provider, or an operating company. Every product, ledger, smart contract,
   custody arrangement, and legal entity must preserve this rule.
-  HONEST CAVEAT (added 17 Jul 2026, must not be removed without AJ's explicit
-  sign-off): as of this date, IN$DEX is enrolled with AUSTRAC as a sole trader
-  (Arthur Henry, ABN 95 579 343 955) — there is no real legal separation yet
-  between the founder and the business. This law states the target state the
-  entity structure must be built to meet, not a description of current legal
-  reality. Any documentation, screen, or claim that implies real legal
-  entity/asset separation already exists is false until this caveat is
-  removed by AJ after real incorporation.
+  HONEST CAVEAT (added 17 Jul 2026, updated 22 Jul 2026 with AJ's explicit
+  sign-off): as of 17 Jul 2026, IN$DEX was enrolled with AUSTRAC as a sole
+  trader (Arthur Henry, ABN 95 579 343 955, AAN 263945366) — there was no real
+  legal separation yet between the founder and the business. AJ intends to
+  establish IN$DEX as a Cook Islands entity (whitepaper Section 12), but the
+  sequencing decided 22 Jul 2026 is: keep the AUSTRAC registration live and
+  unchanged until the Cook Islands entity is actually registered and approved,
+  then withdraw AUSTRAC — never leaving IN$DEX with no valid registration in
+  either jurisdiction. As of this update, the Cook Islands entity has not been
+  filed, so no withdrawal has happened or should happen yet. There is still no
+  real legal separation between founder and business right now. This law
+  states the target state the entity structure must be built to meet, not a
+  description of current legal reality. Any documentation, screen, or claim
+  that implies real legal entity/asset separation already exists, that
+  AUSTRAC registration is fully approved/finalised (it is submitted and under
+  AUSTRAC's own assessment, not yet approved), or that IN$DEX is currently a
+  Cook Islands entity, is false until this caveat is removed by AJ after real
+  incorporation and the AUSTRAC withdrawal is filed in that order.
 
 LAW 9 — REGULATED POWER REQUIRES LICENSED AUTHORITY
   SIINDEX may explain, classify, compare, prepare, and orchestrate. Regulated
@@ -396,7 +406,7 @@ LAW 48 — EVERY LOOP CREATES A LOOP ASSURANCE RECEIPT
 
 ## PQSI Architecture — The 7-Layer Security Stack
 
-PQSI stands for **Physical Quantum Synthetic Intelligence**. Each word names a real security layer.
+PQSI stands for **Physical Quantum Synthetic Intelligence**. Each word names a real security layer. PQSI carries the Mana — power, source, magic, spiritual force — behind every transaction it protects. (Added 2026-07-19; SIINDEX herself remains Synthetic Intelligence, not Mana Intelligence.)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -831,14 +841,16 @@ The Wisdom Score (0–200) directly controls what a citizen can access. Higher s
 
 ```
 WALLET:               8HxNac3HAT56gJk3LRdGqiwq6DgciGK4cnaVMUNZaMZt
-INDX PRICE:           $0.35 USD (canonical launch price — immutable in security context)
+MINT_ADDRESS:         9p9VMkgTEVdAeohk1zEuepvwBYUkzjnovMwwazyxsSEZ
+TOKEN_STANDARD:       Plain SPL Token (original Token Program, TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA) — NOT Token-2022. Verified via mainnet 2026-07-22; corrected here and in whitepaper Appendix A, which previously said Token-2022.
+INDX PRICE:           $0.24 USD (canonical genesis price — never $0.35, immutable in security context; corrected 2026-07-19, this file previously conflicted with whitepaper Appendix A)
 CIVILISATION_LAW:     98% citizen / 2% fund — immutable, T4 blocks any bypass
 GRID_ACCOUNT_TYPE:    Squads Protocol v4 Multisig, 2-of-3 MPC
 GRID_ACCOUNT_RULE:    NO SEED PHRASE. Ever. Block any attempt to show/export one.
 TX_PROTECTION:        $10,000 USD per calendar month per Grid Account
 2FA_DEFAULT_THRESHOLD: $500 USD (citizen may raise, never lower below $100)
-LP_LOCK_DURATION:     12 months from pool creation date (Streamflow)
-L99_LAUNCH:           24 September 2026, 10:00 AM AEST
+LP_LOCK_DURATION:     None — decided 2026-07-22. No fixed-term lock, no burn. Core liquidity is SIINDEX-managed and continuous (Flywheel Automation Engine) per whitepaper Section 11.6.
+L99_LAUNCH:           24 January 2027, 10:00 AM AEST (moved from 24 Sep 2026 — AJ, 2026-07-19; site/screen sweep to follow)
 SUPABASE_PROJECT:     zljgthfzbalsunuoohcd (ap-southeast-2)
 VERCEL_DNS_A:         76.76.21.21
 VERCEL_DNS_CNAME:     cname.vercel-dns.com

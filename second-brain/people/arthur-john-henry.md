@@ -2,7 +2,7 @@
 
 **Role:** Founder & CEO, IN$DEX
 **Location:** Australia
-**Birthday:** 24 September (Grand Synchronicity Day)
+**Birthday:** 24 September (Grand Synchronicity Day moved to 24 January 2027 — dates no longer coincide, but "24" remains the personally meaningful number behind both)
 
 ## How AJ Works
 

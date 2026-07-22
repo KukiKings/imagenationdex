@@ -504,14 +504,14 @@ const WATCH_ITEMS = [
   { icon:'💧', metric:'LP Pool Funding', getValue:()=>{ const f=JSON.parse(localStorage.getItem('indx_founders_pool_members')||'[]'); const t=f.reduce((s,x)=>s+(x.amount||0),0); return fmt(t)+' / $100K'; }, getStatus:()=>{ const f=JSON.parse(localStorage.getItem('indx_founders_pool_members')||'[]'); const t=f.reduce((s,x)=>s+(x.amount||0),0); const p=t/100000; return p>=1?{text:'TARGET MET',color:'var(--green)'}:p>=.5?{text:'ON TRACK',color:'var(--gold)'}:{text:'NEEDS ATTENTION',color:'var(--red)'}; } },
   { icon:'📡', metric:'Revenue Events (logged)', getValue:()=>{ const e=JSON.parse(localStorage.getItem('indx_flywheel_events')||'[]'); return e.length+' events'; }, getStatus:()=>{ const n=JSON.parse(localStorage.getItem('indx_flywheel_events')||'[]').length; return n>0?{text:'ACTIVE',color:'var(--green)'}:{text:'NO EVENTS YET',color:'var(--muted)'}; } },
   { icon:'⚙️', metric:'Rules Armed', getValue:()=>{ const r=JSON.parse(localStorage.getItem('indx_flywheel_rules')||'[]'); return r.filter(x=>x.status==='armed').length+' of '+r.length; }, getStatus:()=>{ const r=JSON.parse(localStorage.getItem('indx_flywheel_rules')||'[]'); return r.length>0?{text:'MONITORING',color:'var(--green)'}:{text:'NO RULES SET',color:'var(--gold)'}; } },
-  { icon:'🏛️', metric:'AUSTRAC Compliance', getValue:()=>'Deadline: 29 Jul 2026', getStatus:()=>({text:'ACTION REQUIRED',color:'var(--red)'}) },
+  { icon:'🏛️', metric:'AUSTRAC Compliance', getValue:()=>'Submitted 17 Jul 2026 · AAN 263945366', getStatus:()=>({text:'UNDER ASSESSMENT',color:'var(--gold)'}) },
   { icon:'💰', metric:'Treasury (Vault of Virja)', getValue:()=>{ const e=JSON.parse(localStorage.getItem('indx_flywheel_events')||'[]'); const t=e.reduce((s,x)=>s+(x.splits?.vault||0),0); return fmt(t)+' accumulated'; }, getStatus:()=>({text:'ACCUMULATING',color:'var(--cyan)'}) },
   { icon:'🔗', metric:'Onchain Infra', getValue:()=>'5 components planned', getStatus:()=>({text:'IN BUILD',color:'var(--gold)'}) },
 ];
 
 const CIRCUIT_BREAKERS = [
   { condition:'LP pool balance drops below $10,000', status:'safe', statusText:'SAFE' },
-  { condition:'AUSTRAC compliance status is unconfirmed after 29 Jul 2026', status:'trip', statusText:'TRIGGERED' },
+  { condition:'AUSTRAC registration lapses without Cook Islands entity approved', status:'safe', statusText:'SAFE' },
   { condition:'Two or more revenue streams show no activity for 30+ days', status:'safe', statusText:'SAFE' },
   { condition:'Treasury routing memo unexecuted for 7+ days', status:'warn', statusText:'WATCH' },
   { condition:'Agent license deployment without signed legal review', status:'safe', statusText:'SAFE' },
@@ -567,13 +567,13 @@ const INFRA_PIECES = [
   {
     id:'raydium-cpmm', name:'Raydium CPMM Pool', stage:'deploy',
     tool:'Raydium — raydium.io',
-    desc:'INDX/USDC liquidity pool on Raydium CPMM. Genesis price $0.24. LP tokens burned at launch. protocol_owner and fund_owner addresses collect accumulated pool fees for protocol treasury.',
+    desc:'INDX/USDC liquidity pool on Raydium CPMM. Genesis price $0.24. Core liquidity is SIINDEX-managed and continuous — no LP burn, no fixed-term lock (decided 2026-07-22, see whitepaper Section 11.6). protocol_owner and fund_owner addresses collect accumulated pool fees for protocol treasury.',
     checks:[
       {done:true, text:'Pool type selected: CPMM (Constant Product)'},
       {done:true, text:'Token pair defined: INDX / USDC'},
       {done:true, text:'Genesis price set: $0.24 per INDX'},
       {done:false, text:'pool_owner wallet address configured'},
-      {done:false, text:'LP token burn transaction prepared'},
+      {done:false, text:'LP custody multisig + withdrawal waiting-period process configured (no burn)'},
       {done:false, text:'Pool creation fee (~0.15 SOL) funded'},
     ]
   },
@@ -590,15 +590,14 @@ const INFRA_PIECES = [
     ]
   },
   {
-    id:'token2022', name:'Token-2022 Transfer Hook', stage:'build',
-    tool:'Solana Token Extensions Program',
-    desc:'Token-2022 transfer hook automatically routes a percentage of every INDX token transfer through a custom program. Enables on-the-fly fee capture and covenant routing without manual intervention. Supports soulbound (non-transferable) NFTs for Merchant Trust Credentials.',
+    id:'soulbound-credentials', name:'Soulbound Credential NFTs', stage:'build',
+    tool:'Metaplex / Solana compressed NFTs — separate mint from INDX',
+    desc:'Corrected 2026-07-22: INDX is a plain SPL Token (original Token Program, not Token-2022 — verified via mainnet) and stays that way. Fee routing and covenant splits run through SolSplits above, not a transfer hook. Merchant Trust Credentials and similar non-transferable badges are issued as their own separate soulbound NFT mints (per whitepaper Section 8), independent of the INDX fungible token.',
     checks:[
-      {done:false, text:'Token-2022 program selected over legacy SPL Token'},
-      {done:false, text:'Transfer hook program written and audited'},
-      {done:false, text:'Transfer fee rate set per covenant'},
-      {done:false, text:'Soulbound flag configured for Merchant Trust NFTs'},
-      {done:false, text:'Hook tested on devnet'},
+      {done:false, text:'Soulbound NFT mint standard selected (cNFT / Metaplex, separate from INDX)'},
+      {done:false, text:'Merchant Trust Credential schema defined'},
+      {done:false, text:'Non-transferable enforcement tested on devnet'},
+      {done:false, text:'Issuance tied to Merchant Trust verification flow'},
     ]
   },
   {
