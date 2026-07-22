@@ -958,7 +958,17 @@ The Cook Islands flag carries 15 white stars in a circle — one for each of the
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-22 — God Mode applied to buyback-burn.html and price-stability.html after the fabrication sweep. See x81 below.
+> Last updated: 2026-07-22 — the live public homepage (home-v2.html) had the same fabrication pattern; fixed and pushed. See x82 below.
+
+### Session 121 continued x82 (2026-07-22) — Live homepage (home-v2.html) had fabrications the earlier sweeps missed, because index.html isn't the homepage
+
+After pushing the fabrication-sweep commit, checked the actual deployed root URL (`imagenation-dex.vercel.app`, via `.vercel/project.json` → Vercel project domains) rather than assuming it was fixed. It wasn't — `index.html` (already swept) is a screen directory, not the site root; `home-v2.html` is what's actually served at `/`, and it hadn't been touched by either the launch-date sweep or the fabrication sweep. Found: a stale "LAUNCHING 24 SEPTEMBER 2026" hero badge sitting directly above a countdown bar that already correctly said Jan 2027; a "live civilization feed" fabricating named citizens transacting/staking/voting (e.g. "14,203 citizens active now · staking $2.1M INDX") right next to a genuinely real, live-queried waitlist counter; an institution ticker implying IN$DEX partners with Visa/Mastercard/Stripe/BlackRock/Coinbase/Google/IBM (the underlying OUSD stablecoin event is real, verified via web search, but the framing implied a false IN$DEX affiliation); a "Reserve Transparency" card repeating "all reserves visible on-chain," contradicting reserve-transparency.html; a quote attributed to Larry Fink (BlackRock CEO, Milken Institute 2026) whose exact wording/context couldn't be verified; and a "Structured as a Swiss Verein with a Wyoming DAO LLC" legal claim contradicting the sole-trader status established earlier this session.
+
+**Fix:** date corrected; fake activity ticker replaced with an honest one wired to the real `get_waitlist_count()` RPC already used elsewhere on the page; institution ticker reframed with an explicit non-affiliation disclaimer (kept the real OUSD fact); Reserve Transparency card corrected to match reserve-transparency.html. The Fink quote and legal-structure claim were flagged to AJ directly rather than fixed unilaterally, since one needed quote verification and the other was a legal/structural fact, not a copy decision — AJ confirmed: remove the quote entirely, and sole trader is the correct legal status. Both fixed accordingly.
+
+**Verified:** web search confirmed the OUSD/Solana event is real (multiple independent sources) before deciding how to handle it — not deleted, reframed. `node --check`-equivalent JS syntax check clean. Full three-check audit clean. Two separate commits, both pushed by AJ (sandbox network restrictions block git push from this environment).
+
+**Affects:** biggest process gap of the whole sweep — fixing individual screens doesn't confirm the live site reflects it. Always verify via the real production domain before declaring a "platform-wide" sweep complete; `index.html` ≠ homepage in this project specifically. Logged as gotchas.md #104.
 
 ### Session 121 continued x81 (2026-07-22) — God Mode: buyback-burn.html and price-stability.html (post-fabrication-sweep)
 
