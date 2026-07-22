@@ -1780,6 +1780,8 @@ function toggleVoice(){
   const btn=document.getElementById('gm-voice-btn');
   if(btn){btn.textContent=voiceEnabled?'🔈':'🔇';btn.classList.toggle('active',voiceEnabled);}
   if(!voiceEnabled) stopSpeaking();
+  const v=document.getElementById('siVideo');
+  if(v) v.muted=!voiceEnabled;
 }
 (function initVoiceBtn(){
   if(window.speechSynthesis){
@@ -1891,6 +1893,11 @@ function toggleAmbient(){
 })();
 
 // ── QUOTE (DOM-only, no canvas dependency) ──
+// NOTE: does NOT call speakQuote() here on purpose — the video clip has her
+// own real recorded voice on its audio track (see unmuteVideoVoice below).
+// Firing ElevenLabs/browser-TTS at the same time would overlap and clash
+// with that real audio. speakQuote() is still used for the chat/conversation
+// engine, which answers dynamic questions the pre-recorded clip can't cover.
 function showQuote(){
   const el=document.getElementById('qt');
   const quotes=ALL_QUOTES[curMode]||QUOTES_EXEC;
@@ -1899,9 +1906,15 @@ function showQuote(){
   setTimeout(()=>{
     el.textContent=quotes[qIdx%quotes.length]; qIdx++;
     el.classList.add('show');
-    speakQuote(el.textContent);
     quoteTimer=setTimeout(()=>el.classList.remove('show'),5200);
   },320);
+}
+
+// ── VIDEO'S OWN VOICE — unmute on first user gesture (browser autoplay
+// policy requires muted autoplay; real audio only starts after a tap) ──
+function unmuteVideoVoice(){
+  const v=document.getElementById('siVideo');
+  if(v) v.muted=!voiceEnabled;
 }
 
 // ── GLITCH (retargeted to the real video element) ──
@@ -1916,6 +1929,7 @@ function glitch(){
 
 // ── TAP TO INVOKE (retargeted to the real video element) ──
 document.getElementById('siVideo').addEventListener('click',()=>{
+  unmuteVideoVoice();
   invocations++;
   localStorage.setItem('indx_avatar_invocations',invocations);
   updateInvokeDisplay();
