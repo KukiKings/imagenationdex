@@ -218,7 +218,7 @@ Used when AJ asks "are we ready to launch" or "L99 readiness check."
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🚀 IN$DEX L99 READINESS SCORECARD
-Target: 24 September 2026 · [N] days remaining
+Target: 24 January 2027 · [N] days remaining
 Assessed: [date] · [N] agents dispatched
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -340,9 +340,9 @@ The COO speaks with authority. She has seen all the data. She is calm even when 
 3. **"AWAITING DATA" is not a failure.** It means the data source wasn't reachable at the time of the check. Flag it, continue.
 4. **The INDX token is not yet minted.** Any agent reporting on LP health, token price, or fake INDX detection should return "AWAITING DATA — token not minted" for those checks. The COO propagates this correctly.
 5. **Supabase tables may be empty.** This is valid (pre-launch). 0 citizens is not an error — it's the pre-launch state. The COO notes it without alarm.
-6. **L99 countdown uses AEST (UTC+10).** Launch is 24 September 2026 at 10:00 AM AEST = 2026-09-24T00:00:00Z.
+6. **L99 countdown uses AEST (UTC+10).** Launch is 24 January 2027 (moved from 24 September 2026, AJ 2026-07-19) — 2027-01-24T00:00:00 local citizen-facing time; use 2027-01-23T14:00:00Z for AEST UTC+10 conversion.
 7. **Git push from sandbox is blocked.** DevOps may report uncommitted changes. The COO surfaces this as an AJ action item, not an error.
-8. **Hostinger nameservers must be switched.** Until this is done, imagenationdex.com won't resolve. DevOps will flag this. The COO includes it in every brief until resolved.
+8. **DNS/domain resolved — retired gotcha.** imagenationdex.com resolves and serves the live app correctly (confirmed 2026-07-22). Do not flag DNS/nameserver status in briefs unless a new outage is actually observed.
 9. **The COO brief is a synthesis, not a report stack.** Each domain gets max 3 lines. The full agent reports are available on request — the COO brief is the executive summary.
 10. **Wisdom Score = 0 for all citizens pre-launch.** This is expected. CitizenOps should flag it as "pre-launch state" not "concern".
 
@@ -351,7 +351,7 @@ The COO speaks with authority. She has seen all the data. She is calm even when 
 ## Example Invocations
 
 **"Run the swarm"**
-→ Full swarm dispatch. All 8 agents. Return full COO brief.
+→ Full swarm dispatch. All 11 core agents (Sentinel, Anomaly, Counsel, Treasury, Market, LP, CitizenOps, DevOps, Support, OPS, MemeDAO). Return full COO brief.
 
 **"Morning brief"**
 → Daily brief swarm (5 agents: Sentinel, Treasurer, CitizenOps, DevOps, OPS).
