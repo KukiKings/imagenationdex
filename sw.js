@@ -1,7 +1,7 @@
 /* IN$DEX Service Worker — Golden Path offline shell
    Canon: offline is read + draft only. No sensitive execution offline.
    Update strategy: bump VERSION → old caches deleted on activate. */
-const VERSION = 'indx-v2';
+const VERSION = 'indx-v3'; // v3: root now maps to home-v2.html (real homepage), not index.html (dev navigator) — see gotchas.md 2026-07-22
 const SHELL = 'indx-shell-' + VERSION;
 const PAGES = 'indx-pages-' + VERSION;
 
@@ -14,7 +14,7 @@ const PRECACHE = [
   '/send.html',
   '/withdraw-fiat.html',
   '/help.html',
-  '/index.html',
+  '/home-v2.html',
   '/offline-fallback.html',
   '/manifest.json',
   '/indx-pwa.js',
@@ -50,7 +50,7 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // Supabase/CDN: network only
 
-  const path = url.pathname === '/' ? '/index.html' : url.pathname;
+  const path = url.pathname === '/' ? '/home-v2.html' : url.pathname;
 
   if (PRECACHE.includes(path)) {
     e.respondWith(
