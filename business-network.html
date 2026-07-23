@@ -360,13 +360,72 @@
     border-radius: 12px; padding: 12px 18px; font-size: 13px; font-weight: 600;
     color: var(--text); z-index: 9999; display: none; white-space: nowrap;
   }
+
+  /* ── GOD MODE: SEARCH ── */
+  .search-wrap { padding: 0 20px; margin-bottom: 14px; position: relative; }
+  .search-input {
+    width: 100%; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 11px 36px 11px 14px; font-size: 13px; color: var(--text);
+    outline: none; font-family: inherit;
+  }
+  .search-input:focus { border-color: rgba(0,212,255,0.4); }
+  .search-input::placeholder { color: var(--text-muted); }
+  .search-clear-btn {
+    position: absolute; right: 30px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: var(--text-muted);
+    font-size: 15px; cursor: pointer; padding: 4px; display: none;
+  }
+  .search-clear-btn.show { display: block; }
+  .search-empty {
+    padding: 30px 20px; text-align: center; color: var(--text-dim); font-size: 13px;
+  }
+
+  /* ── GOD MODE: SORT ── */
+  .sort-select {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 4px 8px; font-size: 11px; font-weight: 600;
+    color: var(--cyan); cursor: pointer; font-family: inherit;
+  }
+
+  /* ── GOD MODE: PIN ── */
+  .pin-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 16px; padding: 2px 4px; flex-shrink: 0;
+    line-height: 1; color: var(--text-muted);
+  }
+  .pin-btn.pinned { color: var(--gold); }
+  .pinned-section { margin-bottom: 20px; }
+  .pinned-header {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 10px;
+    font-size: 12px; font-weight: 700; color: var(--gold);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+
+  /* ── GOD MODE: ACCESSIBILITY ── */
+  .chip:focus-visible,
+  .contact-card:focus-visible,
+  .pipe-box:focus-visible,
+  .pin-btn:focus-visible,
+  .action-tile:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: 2px;
+  }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
 </style>
 </head>
 <body>
 
 <!-- TOPBAR -->
 <div class="topbar">
-  <button class="back-btn" onclick="history.back()">‹</button>
+  <button class="back-btn" onclick="history.back()" aria-label="Go back">‹</button>
   <div class="topbar-title">Business Network</div>
   <button class="add-btn" onclick="openAddSheet()">+ Add</button>
 </div>
@@ -385,7 +444,7 @@
   <div class="si-avatar">⬡</div>
   <div>
     <div class="si-name">SIINDEX</div>
-    <div class="si-text">3 contacts in "In Talks" — I'll remind you to follow up if 7 days pass with no action. Tap any contact to log a note or advance the pipeline.</div>
+    <div class="si-text" id="siindexTipText">Tap any contact to log a note or advance the pipeline.</div>
   </div>
 </div>
 
@@ -393,17 +452,35 @@
 <div class="section">
   <div class="sec-header">
     <div class="sec-title">All Connections</div>
-    <div class="sec-link" onclick="showToast('📤 Export CSV coming soon')">Export</div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <select class="sort-select" id="sortSelect" onchange="setSortMode(this.value)" aria-label="Sort connections">
+        <option value="default">Default order</option>
+        <option value="name">Name A–Z</option>
+        <option value="newest">Newest added</option>
+        <option value="oldest">Oldest added</option>
+      </select>
+      <div class="sec-link" onclick="showToast('📤 Export CSV coming soon')" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showToast('📤 Export CSV coming soon');}">Export</div>
+    </div>
   </div>
 </div>
-<div class="chip-row">
-  <div class="chip active" onclick="filterContacts(this,'all')">All</div>
-  <div class="chip" onclick="filterContacts(this,'protocol')">⬡ Protocols</div>
-  <div class="chip" onclick="filterContacts(this,'partner')">Partners</div>
-  <div class="chip" onclick="filterContacts(this,'investor')">Investors</div>
-  <div class="chip" onclick="filterContacts(this,'influencer')">Influencers</div>
-  <div class="chip" onclick="filterContacts(this,'creator')">Creators</div>
+
+<!-- SEARCH -->
+<div class="search-wrap">
+  <input class="search-input" id="searchInput" type="search" placeholder="Search by name, handle, or note…" oninput="handleSearch(this.value)" aria-label="Search connections">
+  <button class="search-clear-btn" id="searchClearBtn" onclick="clearSearch()" aria-label="Clear search">✕</button>
 </div>
+
+<div class="chip-row" role="tablist" aria-label="Filter connections by type">
+  <div class="chip active" tabindex="0" role="tab" aria-selected="true" onclick="filterContacts(this,'all')" onkeydown="chipKeydown(event,this)">All</div>
+  <div class="chip" tabindex="0" role="tab" aria-selected="false" onclick="filterContacts(this,'protocol')" onkeydown="chipKeydown(event,this)">⬡ Protocols</div>
+  <div class="chip" tabindex="0" role="tab" aria-selected="false" onclick="filterContacts(this,'partner')" onkeydown="chipKeydown(event,this)">Partners</div>
+  <div class="chip" tabindex="0" role="tab" aria-selected="false" onclick="filterContacts(this,'investor')" onkeydown="chipKeydown(event,this)">Investors</div>
+  <div class="chip" tabindex="0" role="tab" aria-selected="false" onclick="filterContacts(this,'influencer')" onkeydown="chipKeydown(event,this)">Influencers</div>
+  <div class="chip" tabindex="0" role="tab" aria-selected="false" onclick="filterContacts(this,'creator')" onkeydown="chipKeydown(event,this)">Creators</div>
+</div>
+
+<!-- PINNED -->
+<div class="pinned-section" id="pinnedSection" style="display:none; padding:0 20px;"></div>
 
 <!-- PIPELINE VIEW -->
 <div class="pipeline-view" id="pipelineView"></div>
@@ -503,7 +580,7 @@
 </div>
 
 <!-- TOAST -->
-<div id="bnToast"></div>
+<div id="bnToast" role="status" aria-live="polite"></div>
 
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav">
@@ -567,20 +644,97 @@ let selectedTag = 'partner';
 let selectedStage = 'prospect';
 let activeContact = null;
 let currentFilter = 'all';
+let searchQuery = '';
+let sortMode = 'default';
+let pinnedIds = JSON.parse(localStorage.getItem('bn_pinned') || '[]');
 
 function saveContacts() {
   localStorage.setItem('bn_contacts', JSON.stringify(contacts));
+}
+
+function savePinned() {
+  localStorage.setItem('bn_pinned', JSON.stringify(pinnedIds));
+}
+
+function isPinned(id) {
+  return pinnedIds.includes(id);
+}
+
+function togglePin(id) {
+  if (isPinned(id)) {
+    pinnedIds = pinnedIds.filter(x => x !== id);
+  } else {
+    pinnedIds.push(id);
+  }
+  savePinned();
+  renderPipeline();
+  const c = contacts.find(x => x.id === id);
+  if (c) showToast(isPinned(id) ? '📌 Pinned ' + c.name : '📍 Unpinned ' + c.name);
+}
+
+function matchesSearch(c, q) {
+  if (!q) return true;
+  const hay = (c.name + ' ' + c.handle + ' ' + c.note).toLowerCase();
+  return hay.includes(q.toLowerCase());
+}
+
+function applySort(list) {
+  const sorted = list.slice();
+  if (sortMode === 'name') {
+    sorted.sort((a, b) => a.name.localeCompare(b.name));
+  } else if (sortMode === 'newest') {
+    sorted.sort((a, b) => (b.id > a.id ? 1 : -1));
+  } else if (sortMode === 'oldest') {
+    sorted.sort((a, b) => (a.id > b.id ? 1 : -1));
+  }
+  return sorted;
+}
+
+function setSortMode(val) {
+  sortMode = val;
+  renderPipeline();
+}
+
+function handleSearch(val) {
+  searchQuery = val;
+  document.getElementById('searchClearBtn').classList.toggle('show', !!val);
+  renderPipeline();
+}
+
+function clearSearch() {
+  searchQuery = '';
+  document.getElementById('searchInput').value = '';
+  document.getElementById('searchClearBtn').classList.remove('show');
+  renderPipeline();
+}
+
+function chipKeydown(e, el) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    el.click();
+  }
 }
 
 function getInitials(name) {
   return name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
 }
 
+function renderSiindexTip() {
+  const el = document.getElementById('siindexTipText');
+  if (!el) return;
+  const talksCount = contacts.filter(c => c.stage === 'talks').length;
+  if (talksCount > 0) {
+    el.textContent = `${talksCount} contact${talksCount === 1 ? '' : 's'} in "In Talks" — worth a follow-up. (Automatic reminders aren't live yet — I can't nudge you after 7 days on my own.) Tap any contact to log a note or advance the pipeline.`;
+  } else {
+    el.textContent = 'Tap any contact to log a note or advance the pipeline.';
+  }
+}
+
 function renderPipelineSummary() {
   const summary = document.getElementById('pipelineSummary');
   summary.innerHTML = STAGES.map(s => {
     const count = contacts.filter(c => c.stage === s.key).length;
-    return `<div class="pipe-box" onclick="scrollToStage('${s.key}')">
+    return `<div class="pipe-box" tabindex="0" role="button" aria-label="Jump to ${s.label} stage" onclick="scrollToStage('${s.key}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();scrollToStage('${s.key}');}">
       <div class="pipe-dot" style="background:${s.dot};"></div>
       <div class="pipe-count" style="color:${s.color};">${count}</div>
       <div class="pipe-label">${s.label}</div>
@@ -588,14 +742,32 @@ function renderPipelineSummary() {
   }).join('');
 }
 
+function renderPinnedSection() {
+  const section = document.getElementById('pinnedSection');
+  const pinned = contacts.filter(c => isPinned(c.id) && matchesSearch(c, searchQuery) && (currentFilter === 'all' || c.type === currentFilter));
+  if (pinned.length === 0) { section.style.display = 'none'; section.innerHTML = ''; return; }
+  section.style.display = 'block';
+  section.innerHTML = `<div class="pinned-header">📌 Pinned</div>${applySort(pinned).map(c => contactCard(c)).join('')}`;
+}
+
 function renderPipeline() {
-  const filtered = currentFilter === 'all'
+  let filtered = currentFilter === 'all'
     ? contacts
     : contacts.filter(c => c.type === currentFilter);
 
+  filtered = filtered.filter(c => matchesSearch(c, searchQuery));
+
+  renderPinnedSection();
+
   const view = document.getElementById('pipelineView');
+
+  if (filtered.length === 0) {
+    view.innerHTML = `<div class="search-empty">No connections match "${searchQuery}".</div>`;
+    return;
+  }
+
   view.innerHTML = STAGES.map(s => {
-    const stageContacts = filtered.filter(c => c.stage === s.key);
+    const stageContacts = applySort(filtered.filter(c => c.stage === s.key));
     if (stageContacts.length === 0) return '';
     return `<div class="pipeline-stage" id="stage-${s.key}">
       <div class="stage-header">
@@ -610,14 +782,15 @@ function renderPipeline() {
 
 function contactCard(c) {
   const bg = INITIALS_BG[c.type] || INITIALS_BG.partner;
-  const stage = STAGES.find(s => s.key === c.stage);
-  return `<div class="contact-card" onclick="openDetail(${c.id})">
+  const pinned = isPinned(c.id);
+  return `<div class="contact-card" tabindex="0" role="button" aria-label="View ${c.name}" onclick="openDetail(${c.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDetail(${c.id});}">
     <div class="contact-top">
       <div class="contact-avatar" style="background:${bg};">${getInitials(c.name)}</div>
       <div class="contact-info">
         <div class="contact-name">${c.name}</div>
         <div class="contact-handle">${c.handle}</div>
       </div>
+      <button class="pin-btn ${pinned ? 'pinned' : ''}" aria-label="${pinned ? 'Unpin' : 'Pin'} ${c.name}" onclick="event.stopPropagation();togglePin(${c.id})">${pinned ? '★' : '☆'}</button>
       <div class="contact-tags">
         <span class="tag ${c.type}">${c.type}</span>
         <span class="tag ${c.platform}">${c.platform === 'indx' ? 'IN$DEX' : c.platform}</span>
@@ -685,6 +858,7 @@ function addContact() {
   document.getElementById('newNote').value = '';
   renderPipelineSummary();
   renderPipeline();
+  renderSiindexTip();
   showToast('✅ ' + name + ' added to network');
 }
 
@@ -723,6 +897,7 @@ function advanceStage() {
   saveContacts();
   renderPipelineSummary();
   renderPipeline();
+  renderSiindexTip();
   openDetail(activeContact.id);
   showToast('⬆️ Moved to ' + STAGES[idx+1].label);
 }
@@ -735,9 +910,17 @@ function showToast(msg) {
   window._bnToastTimer = setTimeout(() => { t.style.display = 'none'; }, 3000);
 }
 
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    if (document.getElementById('detailOverlay').classList.contains('active')) closeDetail();
+    if (document.getElementById('addSheetOverlay').classList.contains('active')) closeAddSheet();
+  }
+});
+
 // Init
 renderPipelineSummary();
 renderPipeline();
+renderSiindexTip();
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

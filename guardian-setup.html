@@ -69,6 +69,21 @@
   .save-btn.ready { opacity:1; }
   .skip-btn { width:100%; padding:13px; background:transparent; border:1px solid var(--surface3); border-radius:14px; color:var(--text2); font-size:15px; cursor:pointer; }
 
+  /* GOD MODE — duplicate guard, draft persistence, exit-guard sheet, saved-time density */
+  .dup-warning { font-size:11px; color:var(--red); margin-top:6px; display:none; }
+  .dup-warning.show { display:block; }
+  .guardian-card.duplicate { border-color:rgba(255,77,109,0.4); }
+  .saved-time { font-size:11px; color:var(--text-muted); margin-left:6px; }
+
+  .sheet-overlay { position:fixed; inset:0; background:rgba(9,10,16,0.85); z-index:300; display:flex; align-items:flex-end; opacity:0; pointer-events:none; transition:opacity 0.25s; }
+  .sheet-overlay.show { opacity:1; pointer-events:all; }
+  .bottom-sheet { background:var(--surface); border-radius:20px 20px 0 0; padding:22px; width:100%; max-width:430px; margin:0 auto; }
+  .sheet-title { font-size:16px; font-weight:800; margin-bottom:8px; }
+  .sheet-text { font-size:13px; color:var(--text2); line-height:1.5; margin-bottom:18px; }
+  .sheet-btn-primary { width:100%; padding:14px; background:linear-gradient(135deg,var(--blue),var(--purple)); border:none; border-radius:14px; color:#fff; font-size:15px; font-weight:700; cursor:pointer; margin-bottom:10px; }
+  .sheet-btn-secondary { width:100%; padding:13px; background:transparent; border:1px solid var(--surface3); border-radius:14px; color:var(--text2); font-size:14px; cursor:pointer; }
+  .sheet-btn-primary:focus-visible, .sheet-btn-secondary:focus-visible { outline:2px solid var(--cyan); outline-offset:2px; }
+
   .toast { position:fixed; bottom:120px; left:50%; transform:translateX(-50%) translateY(60px); background:var(--surface2); color:var(--text); padding:12px 20px; border-radius:12px; font-size:13px; font-weight:500; transition:transform 0.3s; z-index:200; white-space:nowrap; border:1px solid rgba(0,229,160,0.3); }
   .toast.show { transform:translateX(-50%) translateY(0); }
 </style>
@@ -76,7 +91,7 @@
 <body>
 
 <div class="topbar">
-  <button class="back-btn" onclick="history.back()">←</button>
+  <button class="back-btn" onclick="handleBack()">←</button>
   <span class="topbar-title">Guardian Setup</span>
 </div>
 
@@ -122,39 +137,45 @@
   <div class="guardian-card" id="g1-card">
     <div class="guardian-num">Guardian 1</div>
     <div class="guardian-input-row">
-      <input class="guardian-input" id="g1-input" type="text" placeholder="IN$DEX handle or phone number" oninput="updateProgress()">
+      <input class="guardian-input" id="g1-input" type="text" placeholder="IN$DEX handle or phone number" oninput="updateProgress(); saveDraft(1, this.value); checkDuplicates()">
       <button class="invite-btn" onclick="sendInvite(1)">Invite</button>
     </div>
     <div class="guardian-hint">Saved to your profile for real. No automatic notification is sent yet let them know yourself for now.</div>
+    <div class="dup-warning" id="g1-dup">Already saved as another guardian below — use a different contact.</div>
     <div class="guardian-status" id="g1-status" style="display:none">
       <div class="status-dot pending"></div>
       <span class="status-text">Saved</span>
+      <span class="saved-time" id="g1-saved-time"></span>
     </div>
   </div>
 
   <div class="guardian-card" id="g2-card">
     <div class="guardian-num">Guardian 2</div>
     <div class="guardian-input-row">
-      <input class="guardian-input" id="g2-input" type="text" placeholder="IN$DEX handle or phone number" oninput="updateProgress()">
+      <input class="guardian-input" id="g2-input" type="text" placeholder="IN$DEX handle or phone number" oninput="updateProgress(); saveDraft(2, this.value); checkDuplicates()">
       <button class="invite-btn" onclick="sendInvite(2)">Invite</button>
     </div>
     <div class="guardian-hint">Choose someone in a different location from Guardian 1.</div>
+    <div class="dup-warning" id="g2-dup">Already saved as another guardian below — use a different contact.</div>
     <div class="guardian-status" id="g2-status" style="display:none">
       <div class="status-dot pending"></div>
       <span class="status-text">Saved</span>
+      <span class="saved-time" id="g2-saved-time"></span>
     </div>
   </div>
 
   <div class="guardian-card" id="g3-card">
     <div class="guardian-num">Guardian 3</div>
     <div class="guardian-input-row">
-      <input class="guardian-input" id="g3-input" type="text" placeholder="IN$DEX handle or phone number" oninput="updateProgress()">
+      <input class="guardian-input" id="g3-input" type="text" placeholder="IN$DEX handle or phone number" oninput="updateProgress(); saveDraft(3, this.value); checkDuplicates()">
       <button class="invite-btn" onclick="sendInvite(3)">Invite</button>
     </div>
     <div class="guardian-hint">Your most trusted backup. Could be a family member.</div>
+    <div class="dup-warning" id="g3-dup">Already saved as another guardian below — use a different contact.</div>
     <div class="guardian-status" id="g3-status" style="display:none">
       <div class="status-dot pending"></div>
       <span class="status-text">Saved</span>
+      <span class="saved-time" id="g3-saved-time"></span>
     </div>
   </div>
 
@@ -178,20 +199,47 @@
 
 <div class="toast" id="toast"></div>
 
+<div class="sheet-overlay" id="exitGuardOverlay" onclick="closeExitGuard(event)">
+  <div class="bottom-sheet" id="exitGuardSheet" role="dialog" aria-modal="true" aria-labelledby="exitGuardTitle">
+    <div class="sheet-title" id="exitGuardTitle">You typed a guardian but haven't saved it</div>
+    <div class="sheet-text">Tap Invite on that guardian first, or it won't be saved to your profile.</div>
+    <button class="sheet-btn-primary" onclick="goBackToSave()">Go back and save it</button>
+    <button class="sheet-btn-secondary" onclick="leaveWithoutSaving()">Leave without saving</button>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
-  const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const citizenId = sessionStorage.getItem('citizen_id');
   let invitedCount = 0;
+
+  // ── REAL AUTH FIX (God Mode) ──────────────────────────────────────────
+  // get_guardians/add_guardian are granted EXECUTE to `authenticated` only (verified
+  // via information_schema.role_routine_grants — anon has no grant on either), but this
+  // screen was sending the anon key as the Bearer token for both calls. Every real
+  // citizen's guardian save/load has been silently 403'ing. Fixed the same way as
+  // staking.html/card-freeze.html: use the real Supabase Auth access_token when a
+  // genuine session exists, anon key otherwise.
+  let _realAccessToken = null;
+  async function initRealSession() {
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+    } catch (e) { /* stay on anon key */ }
+  }
+  function rpcHeaders() {
+    return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' };
+  }
 
   // Load any guardians already saved for real, so this screen reflects actual state on revisit
   async function loadExistingGuardians() {
     if (!citizenId) return;
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_guardians', {
-        method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId })
+        method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizenId })
       });
       const list = await res.json();
       (list || []).forEach((g, i) => {
@@ -206,7 +254,6 @@
       updateProgress();
     } catch (e) { /* screen still works empty if this fails */ }
   }
-  loadExistingGuardians();
 
   async function sendInvite(num) {
     const input = document.getElementById('g' + num + '-input');
@@ -219,9 +266,18 @@
       showToast('Sign in to save a guardian.');
       return;
     }
+    // GOD MODE PATCH — duplicate guard: block saving a contact already used for another slot
+    for (let i = 1; i <= 3; i++) {
+      if (i === num) continue;
+      const other = document.getElementById('g' + i + '-input').value.trim();
+      if (other && other.toLowerCase() === value.toLowerCase()) {
+        showToast(`That contact is already Guardian ${i} — use someone different.`);
+        return;
+      }
+    }
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/add_guardian', {
-        method: 'POST', headers: SB_HEADERS,
+        method: 'POST', headers: rpcHeaders(),
         body: JSON.stringify({ p_citizen_id: citizenId, p_identifier: value })
       });
       const data = await res.json();
@@ -231,7 +287,10 @@
       const label = document.querySelector('#g' + num + '-status .status-text');
       if (label) label.textContent = data.resolved ? 'Saved · found on IN$DEX' : 'Saved · not on IN$DEX yet';
       showToast(data.resolved ? `Saved. ${value} is already an IN$DEX citizen.` : `Saved. Let ${value} know yourself no automatic notification yet.`);
+      clearDraft(num); // GOD MODE PATCH — this slot is now really saved, not just a draft
+      recordSavedTime(num); // GOD MODE PATCH — local "saved X ago" timestamp
       updateProgress();
+      checkDuplicates();
     } catch (e) {
       showToast('Could not save — try again.');
     }
@@ -271,6 +330,11 @@
   }
 
   function skipSetup() {
+    // GOD MODE PATCH — warn before leaving if a guardian was typed but never saved
+    if (hasUnsavedDraft()) { _leaveIntent = 'skip'; openExitGuard(); return; }
+    doSkip();
+  }
+  function doSkip() {
     showToast('You can set up guardians anytime from Account Settings.');
     setTimeout(() => { window.location.href = 'citizen-dashboard.html'; }, 1800);
   }
@@ -281,6 +345,138 @@
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 3000);
   }
+
+  // ── GOD MODE — duplicate guardian guard (live, as-you-type) ────────────
+  function checkDuplicates() {
+    let anyDup = false;
+    for (let i = 1; i <= 3; i++) {
+      const v = document.getElementById('g' + i + '-input').value.trim().toLowerCase();
+      const dupEl = document.getElementById('g' + i + '-dup');
+      const cardEl = document.getElementById('g' + i + '-card');
+      let isDup = false;
+      if (v) {
+        for (let j = 1; j <= 3; j++) {
+          if (j === i) continue;
+          const other = document.getElementById('g' + j + '-input').value.trim().toLowerCase();
+          if (other && other === v) { isDup = true; break; }
+        }
+      }
+      if (dupEl) dupEl.classList.toggle('show', isDup);
+      if (cardEl) cardEl.classList.toggle('duplicate', isDup);
+      if (isDup) anyDup = true;
+    }
+    return anyDup;
+  }
+
+  // ── GOD MODE — local draft autosave (typed-but-not-yet-Invited text only) ──
+  const DRAFT_KEY = 'indx_guardian_draft';
+  function getDraft() {
+    try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}'); } catch (e) { return {}; }
+  }
+  function saveDraft(num, value) {
+    const d = getDraft();
+    if (value && value.trim()) d['g' + num] = value; else delete d['g' + num];
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+  }
+  function clearDraft(num) {
+    const d = getDraft();
+    delete d['g' + num];
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
+  }
+  function hasUnsavedDraft() {
+    const d = getDraft();
+    return Object.keys(d).some(function (k) { return d[k] && d[k].trim(); });
+  }
+  function restoreDrafts() {
+    const d = getDraft();
+    for (let i = 1; i <= 3; i++) {
+      const input = document.getElementById('g' + i + '-input');
+      if (input && !input.value.trim() && d['g' + i]) input.value = d['g' + i];
+    }
+    updateProgress();
+    checkDuplicates();
+  }
+
+  // ── GOD MODE — "saved X ago" local timestamps (recorded on this device only) ──
+  const SAVED_TIME_KEY = 'indx_guardian_saved_at';
+  function getSavedTimes() {
+    try { return JSON.parse(localStorage.getItem(SAVED_TIME_KEY) || '{}'); } catch (e) { return {}; }
+  }
+  function recordSavedTime(num) {
+    const t = getSavedTimes();
+    t['g' + num] = Date.now();
+    localStorage.setItem(SAVED_TIME_KEY, JSON.stringify(t));
+    renderSavedTime(num);
+  }
+  function relativeTime(ms) {
+    const diff = Date.now() - ms;
+    const min = Math.floor(diff / 60000);
+    if (min < 1) return 'just now';
+    if (min < 60) return min + ' min ago';
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return hr + 'h ago';
+    return Math.floor(hr / 24) + 'd ago';
+  }
+  function renderSavedTime(num) {
+    const el = document.getElementById('g' + num + '-saved-time');
+    if (!el) return;
+    const t = getSavedTimes();
+    el.textContent = t['g' + num] ? ('· saved ' + relativeTime(t['g' + num])) : '';
+  }
+  function renderAllSavedTimes() {
+    for (let i = 1; i <= 3; i++) renderSavedTime(i);
+  }
+
+  // ── GOD MODE — accessible unsaved-changes exit guard (Escape + focus trap) ──
+  let _leaveIntent = null;
+  function handleBack() {
+    if (hasUnsavedDraft()) { _leaveIntent = 'back'; openExitGuard(); return; }
+    history.back();
+  }
+  function openExitGuard() {
+    document.getElementById('exitGuardOverlay').classList.add('show');
+    trapFocus(document.getElementById('exitGuardSheet'));
+  }
+  function closeExitGuard(e) {
+    if (e && e.target && e.target.id !== 'exitGuardOverlay') return;
+    document.getElementById('exitGuardOverlay').classList.remove('show');
+  }
+  function goBackToSave() {
+    document.getElementById('exitGuardOverlay').classList.remove('show');
+  }
+  function leaveWithoutSaving() {
+    document.getElementById('exitGuardOverlay').classList.remove('show');
+    if (_leaveIntent === 'skip') doSkip(); else history.back();
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    const ov = document.getElementById('exitGuardOverlay');
+    if (ov && ov.classList.contains('show')) closeExitGuard();
+  });
+  function trapFocus(containerEl) {
+    if (!containerEl) return;
+    const focusables = containerEl.querySelectorAll('button, [href], input, [tabindex]:not([tabindex="-1"])');
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    setTimeout(function () { first.focus(); }, 50);
+    if (containerEl._trapHandler) containerEl.removeEventListener('keydown', containerEl._trapHandler);
+    const handler = function (e) {
+      if (e.key !== 'Tab') return;
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    containerEl.addEventListener('keydown', handler);
+    containerEl._trapHandler = handler;
+  }
+
+  document.addEventListener('DOMContentLoaded', async function () {
+    await initRealSession();
+    await loadExistingGuardians();
+    restoreDrafts();
+    renderAllSavedTimes();
+    setInterval(renderAllSavedTimes, 60000);
+  });
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

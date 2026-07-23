@@ -54,6 +54,29 @@
     .st-auto{background:rgba(0,229,160,0.1);color:var(--green);}
     .st-filed{background:rgba(0,212,255,0.08);color:var(--cyan);}
     #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+
+    /* GOD MODE: limit calculator */
+    .calc-card{background:var(--surface);border:1px solid rgba(0,212,255,0.15);border-radius:14px;padding:16px;margin-bottom:16px;}
+    .calc-title{font-size:13px;font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+    .calc-row{display:flex;gap:8px;margin-bottom:10px;}
+    .calc-input,.calc-select{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-size:14px;font-weight:600;}
+    .calc-input:focus,.calc-select:focus,.calc-btn:focus-visible,.corridor-toggle:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+    .calc-btn{width:100%;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff;font-size:13px;font-weight:800;cursor:pointer;}
+    .calc-btn:active{transform:scale(0.98);}
+    .calc-result{margin-top:12px;border-radius:12px;padding:12px 14px;font-size:12px;line-height:1.6;display:none;}
+    .calc-result.show{display:block;}
+    .calc-result.ok{background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.2);color:var(--text);}
+    .calc-result.warn{background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.2);color:var(--text);}
+    .calc-result.blocked{background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.2);color:var(--text);}
+    .calc-result strong{display:block;font-size:13px;margin-bottom:3px;}
+
+    /* GOD MODE: live reset countdown */
+    .reset-live{font-variant-numeric:tabular-nums;}
+
+    /* GOD MODE: corridor last-used toggle */
+    .corridor-toggle{font-size:10px;font-weight:700;color:var(--cyan);background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.25);border-radius:20px;padding:3px 9px;cursor:pointer;margin-left:6px;flex-shrink:0;}
+    .corridor-card.last-used{border-color:rgba(255,184,0,0.3);}
+    .last-used-badge{font-size:9px;font-weight:800;color:var(--gold);background:rgba(255,184,0,0.1);border-radius:20px;padding:2px 7px;margin-left:6px;flex-shrink:0;}
   </style>
 </head>
 <body>
@@ -96,19 +119,36 @@
         </div>
         <div class="gl-item">
           <div class="gl-lbl">Resets in</div>
-          <div class="gl-val">18d 7h</div>
+          <div class="gl-val reset-live" id="resetCountdown" aria-live="polite">18d 7h</div>
           <div class="gl-sub">Monthly · 1 Jul 2026</div>
         </div>
+      </div>
+
+      <!-- GOD MODE: LIMIT CALCULATOR -->
+      <div class="calc-card">
+        <div class="calc-title">🧮 Can I send this?</div>
+        <div class="calc-row">
+          <select class="calc-select" id="calcCorridor" aria-label="Choose corridor">
+            <option value="ph">🇦🇺→🇵🇭 Philippines</option>
+            <option value="ng">🇦🇺→🇳🇬 Nigeria</option>
+          </select>
+        </div>
+        <div class="calc-row">
+          <input class="calc-input" id="calcAmount" type="number" inputmode="decimal" min="0" step="1" placeholder="Amount in USD" aria-label="Amount in USD" onkeydown="if(event.key==='Enter'){checkCorridorLimit();}">
+        </div>
+        <button class="calc-btn" onclick="checkCorridorLimit()">Check limit</button>
+        <div class="calc-result" id="calcResult" role="status" aria-live="polite"></div>
       </div>
 
       <!-- CORRIDORS -->
       <div class="section-title">Active corridors</div>
 
       <!-- AU → PH -->
-      <div class="corridor-card">
+      <div class="corridor-card" id="corridor-ph">
         <div class="cc-header">
           <div class="cc-flags">🇦🇺 → 🇵🇭</div>
           <div class="cc-name">Australia → Philippines</div>
+          <button class="corridor-toggle" id="lastUsedBtn-ph" onclick="setLastUsedCorridor('ph')">Use most</button>
           <div class="cc-reset">Resets 1 Jul</div>
         </div>
         <div class="cc-bar-row">
@@ -129,10 +169,11 @@
       </div>
 
       <!-- AU → NG -->
-      <div class="corridor-card">
+      <div class="corridor-card" id="corridor-ng">
         <div class="cc-header">
           <div class="cc-flags">🇦🇺 → 🇳🇬</div>
           <div class="cc-name">Australia → Nigeria</div>
+          <button class="corridor-toggle" id="lastUsedBtn-ng" onclick="setLastUsedCorridor('ng')">Use most</button>
           <div class="cc-reset">Resets 1 Jul</div>
         </div>
         <div class="cc-bar-row">
@@ -194,6 +235,99 @@
 <div id="toast"></div>
 <script>
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2800);}
+
+// GOD MODE: corridor data for the limit calculator (mirrors cards above)
+const CORRIDOR_DATA={
+  ph:{name:'Australia → Philippines',dailyLimit:2000,dailyUsed:347,monthlyLimit:5000,monthlyUsed:1840,ttr:1000,regulator:'BSP'},
+  ng:{name:'Australia → Nigeria',dailyLimit:500,dailyUsed:0,monthlyLimit:2000,monthlyUsed:0,ttr:500,regulator:'CBN'}
+};
+
+// GOD MODE: feature 1 — interactive limit calculator
+function checkCorridorLimit(){
+  const corridorKey=document.getElementById('calcCorridor').value;
+  const amountRaw=document.getElementById('calcAmount').value;
+  const amount=parseFloat(amountRaw);
+  const result=document.getElementById('calcResult');
+  const c=CORRIDOR_DATA[corridorKey];
+  if(!amountRaw||isNaN(amount)||amount<=0){
+    result.className='calc-result show warn';
+    result.innerHTML='<strong>Enter an amount</strong>Type a USD amount to check it against your '+c.name+' limits.';
+    return;
+  }
+  const dailyRemaining=Math.max(0,c.dailyLimit-c.dailyUsed);
+  const monthlyRemaining=Math.max(0,c.monthlyLimit-c.monthlyUsed);
+  const overDaily=amount>dailyRemaining;
+  const overMonthly=amount>monthlyRemaining;
+  const overTtr=amount>c.ttr;
+  let cls='ok',lines=[];
+  if(overDaily||overMonthly){
+    cls='blocked';
+    lines.push('<strong>Blocked — over limit</strong>');
+    if(overDaily) lines.push('Exceeds daily headroom of $'+dailyRemaining.toLocaleString()+' on this corridor.');
+    if(overMonthly) lines.push('Exceeds monthly headroom of $'+monthlyRemaining.toLocaleString()+' on this corridor.');
+  }else{
+    lines.push('<strong>Clear to send</strong>');
+    lines.push('Daily headroom left after this send: $'+(dailyRemaining-amount).toLocaleString()+'.');
+    lines.push('Monthly headroom left after this send: $'+(monthlyRemaining-amount).toLocaleString()+'.');
+  }
+  if(overTtr){
+    cls=(cls==='blocked')?'blocked':'warn';
+    lines.push('FATF Travel Rule applies — ZK-proof shared automatically ('+c.regulator+' threshold $'+c.ttr.toLocaleString()+').');
+  }
+  result.className='calc-result show '+cls;
+  result.innerHTML=lines.join('<br>');
+}
+
+// GOD MODE: feature 2 — live countdown to next monthly reset
+function updateResetCountdown(){
+  const el=document.getElementById('resetCountdown');
+  if(!el) return;
+  const now=new Date();
+  const next=new Date(now.getFullYear(),now.getMonth()+1,1,0,0,0);
+  let diffMs=next-now;
+  if(diffMs<0) diffMs=0;
+  const days=Math.floor(diffMs/86400000);
+  const hours=Math.floor((diffMs%86400000)/3600000);
+  el.textContent=days+'d '+hours+'h';
+}
+
+// GOD MODE: feature 3 — remember + surface last-used corridor
+function setLastUsedCorridor(key){
+  localStorage.setItem('indx_corridorlimits_lastused',key);
+  applyLastUsedCorridor();
+  const name=CORRIDOR_DATA[key]?CORRIDOR_DATA[key].name:key;
+  showToast('Pinned '+name+' as your most-used corridor');
+}
+function applyLastUsedCorridor(){
+  const saved=localStorage.getItem('indx_corridorlimits_lastused')||'';
+  ['ph','ng'].forEach(function(key){
+    const card=document.getElementById('corridor-'+key);
+    const btn=document.getElementById('lastUsedBtn-'+key);
+    if(!card||!btn) return;
+    const existingBadge=card.querySelector('.last-used-badge');
+    if(key===saved){
+      card.classList.add('last-used');
+      btn.textContent='Pinned ✓';
+      if(!existingBadge){
+        const badge=document.createElement('span');
+        badge.className='last-used-badge';
+        badge.textContent='MOST USED';
+        btn.insertAdjacentElement('afterend',badge);
+      }
+      if(document.getElementById('calcCorridor')) document.getElementById('calcCorridor').value=key;
+    }else{
+      card.classList.remove('last-used');
+      btn.textContent='Use most';
+      if(existingBadge) existingBadge.remove();
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+  updateResetCountdown();
+  setInterval(updateResetCountdown,60000);
+  applyLastUsedCorridor();
+});
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

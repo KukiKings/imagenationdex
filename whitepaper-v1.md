@@ -958,7 +958,15 @@ The Cook Islands flag carries 15 white stars in a circle — one for each of the
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-23 — card-freeze.html: 3rd occurrence of the anon-key auth bug found + fixed, plus God Mode. See x85 below.
+> Last updated: 2026-07-23 — 10-screen God Mode sweep via parallel subagents; 2 more anon-key auth bugs found (now 4/4 real-backend screens hit), 1 more fabrication found. See x86 below.
+
+### Session 121 continued x86 (2026-07-23) — 10-screen God Mode sweep (parallel subagents): 2 more anon-key bugs, 1 more fabrication
+
+Ran God Mode on 10 screens in parallel (emergency-freeze, guardian-setup, audit-transparency, fee-schedule, corridor-limits, domain, consumer-rights, help, business-network, compliance-shield) via subagents, each independently checking history and the anon-key auth bug before building. `emergency-freeze.html` and `guardian-setup.html` both had the same anon-key-as-Bearer bug already found in staking.html and card-freeze.html — `set_account_freeze` and `get_guardians`/`add_guardian` all correctly reject anon, so freeze/unfreeze/report-stolen and guardian save/load were silently failing for every real citizen. Both fixed with the standard real-session-token pattern. `business-network.html` (pure localStorage CRM, no backend at all) had an unrelated small fabrication — a hardcoded, stale "3 contacts in talks" count and a promised automatic reminder with no real timer behind it — corrected to a live-computed count and honest phrasing. The other 7 screens confirmed genuinely backend-free (or, for domain.html, confirmed its one RPC is a legitimately public anon-grantable lookup) and received real, honest interactive features only. All 10 re-verified independently (syntax, DOMContentLoaded count, full audit) after the fact — clean.
+
+**This is now 4 of 4 real-backend screens checked this session with the identical silent-403 bug** (staking, card-freeze, emergency-freeze, guardian-setup). A full-codebase check of every screen using the anon-key-only RPC header pattern is the clear next priority.
+
+### Session 121 continued x85 (2026-07-23) — card-freeze.html: anon-key auth bug (3rd occurrence) + God Mode
 
 ### Session 121 continued x85 (2026-07-23) — card-freeze.html: anon-key auth bug (3rd occurrence) + God Mode
 

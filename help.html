@@ -92,6 +92,32 @@
   .nr-title{font-size:14px;font-weight:600;margin-bottom:4px;}
   .nr-sub{font-size:12px;color:var(--text-muted);}
 
+  /* GOD MODE: RECENTLY VIEWED */
+  .recent-strip{padding:14px 20px 4px;}
+  .recent-strip-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;}
+  .recent-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;}
+  .recent-chips::-webkit-scrollbar{display:none;}
+  .recent-chip{flex-shrink:0;padding:8px 14px;background:var(--surface);border:1px solid var(--border);border-radius:20px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;white-space:nowrap;transition:border-color 0.2s;}
+  .recent-chip:active{border-color:var(--cyan);}
+  .recent-chip:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+
+  /* GOD MODE: FAQ FEEDBACK */
+  .faq-feedback{display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(42,45,56,0.5);}
+  .fb-label{font-size:11px;color:var(--text-dim);}
+  .fb-btn{width:30px;height:30px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+  .fb-btn:active{transform:scale(0.92);}
+  .fb-btn.voted-up{background:rgba(0,229,160,0.12);border-color:var(--green);}
+  .fb-btn.voted-down{background:rgba(255,77,109,0.12);border-color:var(--red);}
+  .fb-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+  .fb-thanks{font-size:11px;color:var(--green);font-weight:600;}
+  .faq-helpful-badge{display:inline-block;font-size:9px;font-weight:700;color:var(--gold);background:rgba(255,184,0,0.1);border:1px solid rgba(255,184,0,0.2);border-radius:4px;padding:2px 6px;margin-left:6px;text-transform:uppercase;letter-spacing:0.03em;vertical-align:middle;}
+
+  /* GOD MODE: SEARCH HIGHLIGHT */
+  mark.hl-match{background:rgba(0,212,255,0.25);color:var(--cyan);border-radius:3px;padding:0 2px;}
+
+  /* GOD MODE: ACCESSIBILITY */
+  .faq-q:focus-visible, .gloss-link:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;border-radius:6px;}
+
   /* NAV */
   .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;height:var(--nav-h);background:rgba(9,10,16,0.97);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;padding:0 8px 10px;z-index:100;}
   .nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:8px 12px;border-radius:12px;flex:1;}
@@ -123,6 +149,12 @@
   </div>
 
   <div class="scroll-body" id="scrollBody">
+
+    <!-- GOD MODE: RECENTLY VIEWED -->
+    <div class="recent-strip" id="recentStrip" style="display:none;">
+      <div class="recent-strip-title">Recently viewed</div>
+      <div class="recent-chips" id="recentChips"></div>
+    </div>
 
     <!-- FIRST TRADE WIZARD -->
     <div class="wizard" id="wizardSection">
@@ -424,8 +456,21 @@
     const chevron = el.querySelector('.faq-chevron');
     const answer = el.nextElementSibling;
     const isOpen = answer.classList.contains('open');
-    document.querySelectorAll('.faq-a.open').forEach(a => { a.classList.remove('open'); a.previousElementSibling.querySelector('.faq-chevron').classList.remove('open'); });
-    if (!isOpen) { answer.classList.add('open'); chevron.classList.add('open'); }
+    document.querySelectorAll('.faq-a.open').forEach(a => {
+      a.classList.remove('open');
+      a.previousElementSibling.querySelector('.faq-chevron').classList.remove('open');
+      // GOD MODE PATCH: keep aria-expanded in sync when closing
+      a.previousElementSibling.setAttribute('aria-expanded', 'false');
+    });
+    if (!isOpen) {
+      answer.classList.add('open'); chevron.classList.add('open');
+      // GOD MODE PATCH: aria state + recently-viewed tracking on open
+      el.setAttribute('aria-expanded', 'true');
+      const trailing = el.lastElementChild;
+      let label = '';
+      el.childNodes.forEach(n => { if (n !== trailing) label += n.textContent; });
+      trackRecentlyViewed(label.trim(), 'faq');
+    }
   }
 
   function filterHelp() {
@@ -439,6 +484,8 @@
       document.getElementById('tabBar').style.display = 'flex';
       document.getElementById('panel-glossary').style.display = currentTab==='glossary'?'block':'none';
       document.getElementById('panel-faq').style.display = currentTab==='faq'?'block':'none';
+      // GOD MODE PATCH: clear any search highlighting
+      document.querySelectorAll('.faq-q, .gloss-term').forEach(el => refreshHighlight(el, ''));
       return;
     }
 
@@ -469,7 +516,201 @@
     });
 
     document.getElementById('noResults').style.display = hasResults ? 'none' : 'block';
+
+    // GOD MODE PATCH: highlight the matched substring in visible terms/questions
+    document.querySelectorAll('.gloss-term').forEach(el => refreshHighlight(el, q));
+    document.querySelectorAll('.faq-q').forEach(el => refreshHighlight(el, q));
   }
+
+  // ── GOD MODE: search-term highlighting helper ──
+  // Operates only on the leading text of an element, preserving its trailing
+  // badge/chevron <span> (faq-chevron or gloss-tag) which must never be wiped.
+  function refreshHighlight(el, query) {
+    const trailing = el.lastElementChild;
+    if (!trailing) return;
+    if (el.dataset.origText === undefined) {
+      let leading = '';
+      el.childNodes.forEach(n => { if (n !== trailing) leading += n.textContent; });
+      el.dataset.origText = leading;
+    }
+    const orig = el.dataset.origText;
+    Array.from(el.childNodes).forEach(n => { if (n !== trailing) el.removeChild(n); });
+    const q = (query || '').toLowerCase();
+    const idx = q ? orig.toLowerCase().indexOf(q) : -1;
+    if (idx === -1) {
+      el.insertBefore(document.createTextNode(orig), trailing);
+      return;
+    }
+    const before = orig.slice(0, idx);
+    const matchText = orig.slice(idx, idx + q.length);
+    const after = orig.slice(idx + q.length);
+    el.insertBefore(document.createTextNode(before), trailing);
+    const mark = document.createElement('mark');
+    mark.className = 'hl-match';
+    mark.textContent = matchText;
+    el.insertBefore(mark, trailing);
+    el.insertBefore(document.createTextNode(after), trailing);
+  }
+
+  // ── GOD MODE: recently viewed (localStorage: indx_help_recent) ──
+  function trackRecentlyViewed(label, kind) {
+    if (!label) return;
+    let recent = [];
+    try { recent = JSON.parse(localStorage.getItem('indx_help_recent') || '[]'); } catch (e) { recent = []; }
+    recent = recent.filter(r => r.label !== label);
+    recent.unshift({ label: label, kind: kind });
+    recent = recent.slice(0, 6);
+    localStorage.setItem('indx_help_recent', JSON.stringify(recent));
+    renderRecentStrip();
+  }
+
+  function renderRecentStrip() {
+    let recent = [];
+    try { recent = JSON.parse(localStorage.getItem('indx_help_recent') || '[]'); } catch (e) { recent = []; }
+    const strip = document.getElementById('recentStrip');
+    const chips = document.getElementById('recentChips');
+    if (!strip || !chips) return;
+    if (!recent.length) { strip.style.display = 'none'; return; }
+    chips.innerHTML = recent.map((r, i) =>
+      '<div class="recent-chip" tabindex="0" role="button" onclick="reopenRecent(' + i + ')" ' +
+      'onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();reopenRecent(' + i + ');}">' +
+      (r.kind === 'faq' ? '❓ ' : '📖 ') + r.label + '</div>'
+    ).join('');
+    strip.style.display = 'block';
+  }
+
+  function reopenRecent(idx) {
+    let recent = [];
+    try { recent = JSON.parse(localStorage.getItem('indx_help_recent') || '[]'); } catch (e) { recent = []; }
+    const entry = recent[idx];
+    if (!entry) return;
+    if (entry.kind === 'faq') {
+      switchTab('faq');
+      const match = Array.from(document.querySelectorAll('.faq-q')).find(el => {
+        const trailing = el.lastElementChild;
+        let text = '';
+        el.childNodes.forEach(n => { if (n !== trailing) text += n.textContent; });
+        return text.trim() === entry.label;
+      });
+      if (match) {
+        match.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (!match.nextElementSibling.classList.contains('open')) toggleFAQ(match);
+      }
+    } else {
+      switchTab('glossary');
+      const match = Array.from(document.querySelectorAll('.gloss-term')).find(el => {
+        const trailing = el.lastElementChild;
+        let text = '';
+        el.childNodes.forEach(n => { if (n !== trailing) text += n.textContent; });
+        return text.trim() === entry.label;
+      });
+      if (match) match.closest('.gloss-item').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  // ── GOD MODE: FAQ helpfulness feedback (localStorage: indx_help_votes) ──
+  function getFAQVotes() {
+    try { return JSON.parse(localStorage.getItem('indx_help_votes') || '{}'); } catch (e) { return {}; }
+  }
+
+  function injectFAQFeedback() {
+    document.querySelectorAll('.faq-item').forEach((item, idx) => {
+      const answer = item.querySelector('.faq-a');
+      if (!answer || answer.querySelector('.faq-feedback')) return;
+      const fbId = 'faq-fb-' + idx;
+      const row = document.createElement('div');
+      row.className = 'faq-feedback';
+      row.dataset.faqId = fbId;
+      row.innerHTML =
+        '<span class="fb-label">Helpful?</span>' +
+        '<button type="button" class="fb-btn" data-dir="up" aria-label="Yes, this was helpful" onclick="voteFAQ(this,\'' + fbId + '\',\'up\')">👍</button>' +
+        '<button type="button" class="fb-btn" data-dir="down" aria-label="No, not helpful" onclick="voteFAQ(this,\'' + fbId + '\',\'down\')">👎</button>' +
+        '<span class="fb-thanks" style="display:none;">Thanks for the feedback!</span>';
+      answer.appendChild(row);
+      const votes = getFAQVotes();
+      const mine = votes[fbId] && votes[fbId].mine;
+      if (mine) row.querySelector('[data-dir="' + mine + '"]').classList.add(mine === 'up' ? 'voted-up' : 'voted-down');
+    });
+  }
+
+  function voteFAQ(btn, fbId, dir) {
+    const votes = getFAQVotes();
+    const entry = votes[fbId] || { up: 0, down: 0, mine: null };
+    if (entry.mine === dir) return; // already recorded this vote, no-op
+    if (entry.mine === 'up') entry.up = Math.max(0, entry.up - 1);
+    if (entry.mine === 'down') entry.down = Math.max(0, entry.down - 1);
+    entry[dir] = (entry[dir] || 0) + 1;
+    entry.mine = dir;
+    votes[fbId] = entry;
+    localStorage.setItem('indx_help_votes', JSON.stringify(votes));
+
+    const row = btn.closest('.faq-feedback');
+    row.querySelectorAll('.fb-btn').forEach(b => b.classList.remove('voted-up', 'voted-down'));
+    btn.classList.add(dir === 'up' ? 'voted-up' : 'voted-down');
+    const thanks = row.querySelector('.fb-thanks');
+    thanks.style.display = 'inline';
+    setTimeout(() => { thanks.style.display = 'none'; }, 2200);
+    computeHelpfulBadges();
+  }
+
+  function computeHelpfulBadges() {
+    const votes = getFAQVotes();
+    document.querySelectorAll('.faq-helpful-badge').forEach(b => b.remove());
+    let bestId = null, bestScore = 0;
+    Object.keys(votes).forEach(id => {
+      const v = votes[id];
+      const score = (v.up || 0) - (v.down || 0);
+      if (score > bestScore) { bestScore = score; bestId = id; }
+    });
+    if (bestId) {
+      const row = document.querySelector('.faq-feedback[data-faq-id="' + bestId + '"]');
+      const q = row && row.closest('.faq-item').querySelector('.faq-q');
+      if (q && !q.querySelector('.faq-helpful-badge')) {
+        const badge = document.createElement('span');
+        badge.className = 'faq-helpful-badge';
+        badge.textContent = 'Most helpful';
+        q.insertBefore(badge, q.querySelector('.faq-chevron'));
+      }
+    }
+  }
+
+  // ── GOD MODE: keyboard accessibility for FAQ accordion + glossary links ──
+  function enhanceFAQAccessibility() {
+    document.querySelectorAll('.faq-q').forEach(q => {
+      q.setAttribute('tabindex', '0');
+      q.setAttribute('role', 'button');
+      q.setAttribute('aria-expanded', 'false');
+      q.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleFAQ(q); }
+      });
+    });
+    document.querySelectorAll('.gloss-link').forEach(link => {
+      link.setAttribute('tabindex', '0');
+      link.setAttribute('role', 'link');
+      link.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); link.click(); }
+      });
+    });
+  }
+
+  // GOD MODE: track glossary deep-link clicks into "recently viewed"
+  document.addEventListener('click', function (e) {
+    const link = e.target.closest('.gloss-link');
+    if (!link) return;
+    const term = link.closest('.gloss-item') && link.closest('.gloss-item').querySelector('.gloss-term');
+    if (!term) return;
+    const trailing = term.lastElementChild;
+    let label = '';
+    term.childNodes.forEach(n => { if (n !== trailing) label += n.textContent; });
+    trackRecentlyViewed(label.trim(), 'glossary');
+  });
+
+  document.addEventListener('DOMContentLoaded', function () {
+    enhanceFAQAccessibility();
+    injectFAQFeedback();
+    computeHelpfulBadges();
+    renderRecentStrip();
+  });
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

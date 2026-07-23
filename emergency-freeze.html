@@ -96,6 +96,33 @@
     @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
 
     #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+
+    /* ══ GOD MODE — emergency-freeze.html ══ */
+
+    /* Feature 1: verify account status on demand */
+    .verify-btn{width:100%;margin-top:2px;padding:12px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--cyan);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;}
+    .verify-btn:active{transform:scale(0.97);background:rgba(0,212,255,0.08);}
+
+    /* Feature 2: confirm-before-report-stolen warning box (reuses .modal-overlay/.modal-card) */
+    .confirm-warn-box{background:rgba(255,77,109,0.06);border:1px solid rgba(255,77,109,0.2);border-radius:12px;padding:14px;margin-bottom:20px;}
+    .confirm-warn-title{font-size:13px;font-weight:700;margin-bottom:6px;}
+    .confirm-warn-list{font-size:12px;color:var(--text-muted);line-height:1.8;}
+
+    /* Feature 3: live security event log */
+    .sec-log{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px;}
+    .sl-header{padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:800;color:var(--text-muted);}
+    .sl-item{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--border);}
+    .sl-item:last-child{border-bottom:none;}
+    .sl-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+    .sl-dot.green{background:var(--green);}
+    .sl-dot.gold{background:var(--gold);}
+    .sl-dot.red{background:var(--red);}
+    .sl-body{flex:1;}
+    .sl-event{font-size:12px;font-weight:700;}
+    .sl-time{font-size:10px;color:var(--text-muted);margin-top:1px;}
+
+    /* Feature 4: keyboard focus visibility for overlays */
+    .btn-primary:focus-visible, .btn-danger:focus-visible, .btn-ghost:focus-visible, .verify-btn:focus-visible, .reason-option:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
   </style>
 </head>
 <body>
@@ -190,6 +217,15 @@
         <div class="fs-row"><div class="fs-lbl">Your balance</div><div class="fs-val" style="color:var(--cyan);" id="balanceRow">— INDX</div></div>
       </div>
 
+      <button class="verify-btn" onclick="verifyAccountStatus()">🔍 Verify freeze status right now</button>
+
+      <div class="sec-log" style="margin-top:20px;">
+        <div class="sl-header">🕓 Recent security events</div>
+        <div id="secLogList">
+          <div class="sl-item"><div class="sl-body"><div class="sl-event" style="color:var(--text-muted);">Loading…</div></div></div>
+        </div>
+      </div>
+
       <div class="unfreeze-steps">
         <div class="us-title">Unfreezing from this device:</div>
         <div class="us-step"><div class="us-num">1</div><div class="us-text">You're already signed in here, so tapping Unfreeze below lifts the block immediately — enforced server-side on every transfer, withdrawal and purchase.</div></div>
@@ -197,7 +233,7 @@
       </div>
 
       <button class="btn-primary" onclick="startUnfreeze()">🔓 Unfreeze my account (this device)</button>
-      <button class="btn-danger" onclick="reportStolen()">🚨 Report device stolen + contact support</button>
+      <button class="btn-danger" onclick="showConfirmStolen()">🚨 Report device stolen + contact support</button>
       <button class="btn-ghost" onclick="window.location.href='account-recovery.html'">🔑 Lost this device? Recover your account</button>
     </div>
 
@@ -219,6 +255,25 @@
   </div>
 </div>
 
+<!-- CONFIRM STOLEN MODAL (God Mode Feature 2) -->
+<div class="modal-overlay" id="confirmStolenModal">
+  <div class="modal-card">
+    <div class="mc-title" style="color:var(--red);">🚨 Report device stolen?</div>
+    <div class="mc-sub">This logs a T3 security event and keeps your account frozen until you recover it from a trusted device. Only confirm if you're sure.</div>
+    <div class="confirm-warn-box">
+      <div class="confirm-warn-title">What happens immediately:</div>
+      <div class="confirm-warn-list">
+        🧊 Account stays frozen — no real transfers, withdrawals or purchases<br>
+        🛡️ SIINDEX security log records a T3 stolen-device report<br>
+        📧 A security alert is sent for review<br>
+        🔑 Recover your account only from a trusted device via Account Recovery
+      </div>
+    </div>
+    <button class="btn-danger" onclick="confirmReportStolen()">Confirm — report stolen now</button>
+    <button class="btn-ghost" onclick="closeConfirmStolen()">Cancel</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
@@ -226,7 +281,29 @@
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
   const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const citizenId = sessionStorage.getItem('citizen_id');
+
+  // ── REAL AUTH FIX (God Mode) ──────────────────────────────────────────
+  // Found 2026-07-23, same bug class already fixed in card-freeze.html and staking.html:
+  // this screen's set_account_freeze calls sent the anon key as their own Bearer token,
+  // but that function correctly has EXECUTE revoked from anon (verified via
+  // information_schema.role_routine_grants) — meaning every real citizen's freeze,
+  // unfreeze, and report-stolen attempt has been silently 403'ing. On an emergency-freeze
+  // screen this is the exact false-sense-of-protection failure mode already flagged in
+  // gotchas.md: a citizen who thinks they've frozen their account has not actually done so.
+  // Fixed the same way as card-freeze.html — use the real Supabase Auth access_token when
+  // a genuine session exists, anon key otherwise (no regression for today's common case).
+  let _realAccessToken = null;
+  async function initRealSession() {
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+    } catch (e) { /* stay on anon key */ }
+  }
+  function rpcHeaders() {
+    return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' };
+  }
 
   let holdTimer = null;
   let holdInterval = null;
@@ -236,7 +313,7 @@
   async function loadFreezeState() {
     if (!citizenId) { document.getElementById('activeState').style.display = 'block'; return; }
     try {
-      const res = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + encodeURIComponent(citizenId) + '&select=account_frozen,account_frozen_at,indx_balance', { headers: SB_HEADERS });
+      const res = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + encodeURIComponent(citizenId) + '&select=account_frozen,account_frozen_at,indx_balance', { headers: rpcHeaders() });
       const rows = await res.json();
       const row = rows && rows[0];
       const bal = document.getElementById('balanceRow');
@@ -252,7 +329,12 @@
       }
     } catch (e) { document.getElementById('activeState').style.display = 'block'; }
   }
-  loadFreezeState();
+
+  document.addEventListener('DOMContentLoaded', async function() {
+    await initRealSession(); // GOD MODE PATCH — resolve real access token before any RPC call
+    loadFreezeState();
+    loadSecurityLog(); // GOD MODE PATCH — Feature 3: live security event log
+  });
 
   function startHold() {
     let elapsed = 0;
@@ -283,7 +365,7 @@
     if (!citizenId) { showToast('Sign in to freeze your account'); return; }
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/set_account_freeze', {
-        method: 'POST', headers: SB_HEADERS,
+        method: 'POST', headers: rpcHeaders(),
         body: JSON.stringify({ p_citizen_id: citizenId, p_frozen: true, p_reason: 'citizen_emergency_freeze' })
       });
       const data = await res.json();
@@ -293,6 +375,7 @@
       document.getElementById('activeState').style.display = 'none';
       document.getElementById('frozenState').style.display = 'block';
       startFrozenTimer();
+      loadSecurityLog(); // GOD MODE PATCH — keep the log fresh after a real freeze
       showToast('🧊 Account frozen — real transfers, withdrawals and purchases are now blocked.');
     } catch (e) { showToast('Could not freeze account — connection error'); }
   }
@@ -311,7 +394,7 @@
     if (!citizenId) { showToast('Sign in to unfreeze your account'); return; }
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/set_account_freeze', {
-        method: 'POST', headers: SB_HEADERS,
+        method: 'POST', headers: rpcHeaders(),
         body: JSON.stringify({ p_citizen_id: citizenId, p_frozen: false })
       });
       const data = await res.json();
@@ -319,6 +402,7 @@
       clearInterval(frozenTimerInterval);
       document.getElementById('frozenState').style.display = 'none';
       document.getElementById('activeState').style.display = 'block';
+      loadSecurityLog(); // GOD MODE PATCH — keep the log fresh after a real unfreeze
       showToast('✅ Account unfrozen — real transfers, withdrawals and purchases are allowed again.');
     } catch (e) { showToast('Could not unfreeze — connection error'); }
   }
@@ -330,20 +414,36 @@
     if (!citizenId) return false;
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/set_account_freeze', {
-        method: 'POST', headers: SB_HEADERS,
+        method: 'POST', headers: rpcHeaders(),
         body: JSON.stringify({ p_citizen_id: citizenId, p_frozen: true, p_reason: 'citizen_report: ' + reasonText })
       });
       return res.ok;
     } catch (e) { return false; }
   }
 
-  async function reportStolen() {
+  // ── CONFIRM-BEFORE-REPORT-STOLEN (God Mode Feature 2) ──
+  // "Report device stolen" used to fire logCitizenReport() on a single tap with no
+  // way back. This is a T3 event on a HVZ (Human Validation Zone)-adjacent action, so
+  // it now requires an explicit second confirmation tap before it executes for real.
+  function showConfirmStolen() {
+    document.getElementById('confirmStolenModal').classList.add('show');
+    trapFocus(document.querySelector('#confirmStolenModal .modal-card'));
+  }
+
+  function closeConfirmStolen() {
+    document.getElementById('confirmStolenModal').classList.remove('show');
+  }
+
+  async function confirmReportStolen() {
+    closeConfirmStolen();
     const ok = await logCitizenReport('device_stolen');
+    if (ok) loadSecurityLog();
     showToast(ok ? '🚨 Reported and account frozen — logged to your security record.' : 'Could not log report — try again');
   }
 
   function showReportModal() {
     document.getElementById('reportModal').classList.add('show');
+    trapFocus(document.querySelector('#reportModal .modal-card'));
   }
 
   let _selectedReason = 'unspecified';
@@ -356,7 +456,85 @@
   async function submitReport() {
     document.getElementById('reportModal').classList.remove('show');
     const ok = await logCitizenReport(_selectedReason);
+    if (ok) loadSecurityLog();
     showToast(ok ? '✓ Reported and logged to your security record.' : 'Could not submit report — try again');
+  }
+
+  // ── VERIFY ACCOUNT STATUS (God Mode Feature 1) ──
+  // Re-fetches the citizen's real DB row on demand rather than trusting whatever
+  // this screen last rendered — grounds the claim in a fresh server read.
+  async function verifyAccountStatus() {
+    if (!citizenId) { showToast('Sign in to verify your account status'); return; }
+    showToast('Checking your real account state…');
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + encodeURIComponent(citizenId) + '&select=account_frozen,account_frozen_at', { headers: rpcHeaders() });
+      const rows = await res.json();
+      const row = rows && rows[0];
+      if (!row) { showToast('Could not verify — try again'); return; }
+      if (row.account_frozen) {
+        showToast('✅ Verified: account_frozen = true on your real account — any transfer, withdrawal or purchase attempt is rejected server-side right now.');
+      } else {
+        showToast('⚠️ Verified: your account shows active on the server — it is not frozen. Tap freeze again if that seems wrong.');
+      }
+    } catch (e) { showToast('Could not verify — connection error'); }
+  }
+
+  // ── LIVE SECURITY EVENT LOG (God Mode Feature 3) ──
+  // Real entries from security_events (zone: account_freeze) for this citizen —
+  // not a fabricated or hardcoded log.
+  function renderSecLogRow(r) {
+    const dotClass = r.tier === 'T3' || r.tier === 'T4' ? 'red' : (r.tier === 'T2' ? 'gold' : 'green');
+    const d = new Date(r.created_at);
+    return '<div class="sl-item"><div class="sl-dot ' + dotClass + '"></div><div class="sl-body">' +
+      '<div class="sl-event">' + r.description + '</div>' +
+      '<div class="sl-time">' + d.toLocaleString('en-AU', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) + ' · ' + r.tier + '</div>' +
+    '</div></div>';
+  }
+
+  async function loadSecurityLog() {
+    const el = document.getElementById('secLogList');
+    if (!el) return;
+    if (!citizenId) { el.innerHTML = '<div class="sl-item"><div class="sl-body"><div class="sl-event" style="color:var(--text-muted);">Sign in to see your security log.</div></div></div>'; return; }
+    try {
+      const url = SUPABASE_URL + '/rest/v1/security_events?zone=eq.account_freeze&detail->>citizen_id=eq.' + encodeURIComponent(citizenId) + '&order=created_at.desc&limit=8&select=tier,description,created_at';
+      const res = await fetch(url, { headers: rpcHeaders() });
+      const rows = await res.json();
+      if (!Array.isArray(rows) || !rows.length) {
+        el.innerHTML = '<div class="sl-item"><div class="sl-body"><div class="sl-event" style="color:var(--text-muted);">No security events yet.</div></div></div>';
+        return;
+      }
+      el.innerHTML = rows.map(renderSecLogRow).join('');
+    } catch (e) {
+      el.innerHTML = '<div class="sl-item"><div class="sl-body"><div class="sl-event" style="color:var(--text-muted);">Could not load security log.</div></div></div>';
+    }
+  }
+
+  // ── KEYBOARD ACCESSIBILITY (God Mode Feature 4) ──
+  // Escape-to-close + Tab focus-trap for both the report modal and the new
+  // confirm-stolen sheet — neither had any keyboard handling before this.
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Escape') return;
+    const rm = document.getElementById('reportModal');
+    const cs = document.getElementById('confirmStolenModal');
+    if (rm && rm.classList.contains('show')) rm.classList.remove('show');
+    if (cs && cs.classList.contains('show')) closeConfirmStolen();
+  });
+
+  function trapFocus(containerEl) {
+    if (!containerEl) return;
+    const focusables = containerEl.querySelectorAll('button, [href], input, [tabindex]:not([tabindex="-1"])');
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    setTimeout(function() { first.focus(); }, 50);
+    if (containerEl._trapHandler) containerEl.removeEventListener('keydown', containerEl._trapHandler);
+    const handler = function(e) {
+      if (e.key !== 'Tab') return;
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    containerEl.addEventListener('keydown', handler);
+    containerEl._trapHandler = handler;
   }
 
   function showToast(msg) {

@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>IN$DEX — Sovereign Domain</title>
 <meta name="description" content="A citizen's sovereign IN$DEX domain — verified presence inside the civilisation.">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous"></script>
 <style>
 :root {
   --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
@@ -87,6 +88,36 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
 
 .toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--surface2);border:1px solid rgba(0,229,160,0.3);color:var(--text);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:500;transition:transform 0.3s;z-index:300;white-space:nowrap;}
 .toast.show{transform:translateX(-50%) translateY(0);}
+
+/* GOD MODE — Recent lookups (this device only, public data only) */
+.recent-section{margin:16px 20px 0;}
+.recent-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;padding-left:2px;}
+.recent-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;}
+.recent-row::-webkit-scrollbar{display:none;}
+.recent-chip{flex-shrink:0;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--surface3);border-radius:14px;padding:8px 14px 8px 8px;cursor:pointer;transition:border-color 0.15s;}
+.recent-chip:active{border-color:rgba(0,212,255,0.35);}
+.recent-chip-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--purple));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;}
+.recent-chip-name{font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;}
+
+/* GOD MODE — QR share sheet */
+.qr-btn{width:100%;padding:16px;border-radius:14px;font-size:14px;font-weight:700;background:var(--surface2);border:1px solid var(--surface3);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;}
+.sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.7);backdrop-filter:blur(2px);z-index:400;display:none;}
+.sheet-overlay.show{display:block;}
+.bottom-sheet{position:fixed;left:0;right:0;bottom:0;max-width:430px;margin:0 auto;background:var(--surface2);border:1px solid var(--surface3);border-radius:24px 24px 0 0;padding:24px 24px 32px;z-index:401;transform:translateY(100%);transition:transform 0.25s ease;}
+.bottom-sheet.show{transform:translateY(0);}
+.sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--surface3);margin:0 auto 18px;}
+.sheet-title{font-size:16px;font-weight:800;text-align:center;margin-bottom:16px;}
+.qr-canvas-wrap{display:flex;justify-content:center;align-items:center;min-height:200px;padding:16px;background:#fff;border-radius:16px;margin-bottom:14px;}
+.qr-caption{font-size:12px;color:var(--text2);text-align:center;line-height:1.5;margin-bottom:16px;}
+.sheet-close-btn{width:100%;padding:14px;border-radius:14px;font-size:14px;font-weight:700;background:var(--surface3);border:none;color:var(--text);cursor:pointer;}
+
+/* GOD MODE — slow-lookup notice + retry */
+.loading-slow-note{font-size:12px;color:var(--muted);margin-top:10px;display:none;}
+.retry-btn{margin-top:14px;padding:12px 24px;border-radius:12px;background:var(--surface2);border:1px solid var(--surface3);color:var(--cyan);font-size:13px;font-weight:700;cursor:pointer;display:none;}
+
+/* GOD MODE — accessibility */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+.recent-chip:focus-visible,.qr-btn:focus-visible,.retry-btn:focus-visible,.btn-share:focus-visible,.btn-pay:focus-visible,.sheet-close-btn:focus-visible,.nf-cta:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
 </style>
 </head>
 <body>
@@ -100,25 +131,33 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
 
   <div class="scroll-body">
 
+    <!-- GOD MODE: Recent lookups — this device only, public data only -->
+    <div class="recent-section" id="recentSection" style="display:none;">
+      <div class="recent-label">Recently viewed on this device</div>
+      <div class="recent-row" id="recentRow" role="list" aria-label="Recently viewed domains"></div>
+    </div>
+
     <!-- LOADING -->
-    <div class="loading-state" id="loadingState">
+    <div class="loading-state" id="loadingState" aria-live="polite">
       <div class="loading-spin"></div>
       <div class="loading-text">Looking up this domain…</div>
+      <div class="loading-slow-note" id="loadingSlowNote">Taking longer than usual — check your connection.</div>
     </div>
 
     <!-- NOT FOUND -->
-    <div class="notfound-state" id="notfoundState">
-      <div class="nf-icon">🌐</div>
+    <div class="notfound-state" id="notfoundState" aria-live="polite">
+      <div class="nf-icon" aria-hidden="true">🌐</div>
       <div class="nf-title" id="nfTitle">This domain hasn't been claimed</div>
       <div class="nf-sub" id="nfSub">Nobody has claimed this yourname.IN$DEX address yet. Domains are free, forever — claim yours in under a minute.</div>
       <button class="nf-cta" onclick="window.location.href='quickstart-onboarding.html'">Claim your free domain →</button>
+      <button class="retry-btn" id="nfRetryBtn" onclick="retryLookup()">Try again</button>
     </div>
 
     <!-- DOMAIN VIEW (Public View — see sovereign-domain-phase1-spec.md) -->
     <div class="domain-view" id="domainView">
 
       <div class="domain-hero">
-        <div class="domain-avatar" id="domAvatar">?</div>
+        <div class="domain-avatar" id="domAvatar" aria-hidden="true">?</div>
         <div class="domain-name" id="domName">—</div>
         <div class="domain-slug" id="domSlug">—</div>
         <div class="domain-member-since" id="domMemberSince"></div>
@@ -140,6 +179,7 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
       <div class="action-section">
         <button class="btn-pay" id="payBtn">Pay this citizen →</button>
         <button class="btn-share" onclick="shareDomain()">Share this domain</button>
+        <button class="qr-btn" id="qrBtn" onclick="openQrSheet()" aria-haspopup="dialog">▦ Show QR code</button>
       </div>
 
       <div class="siindex-bar">
@@ -154,7 +194,17 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- GOD MODE: QR share sheet — encodes only the public profile link, no private data -->
+<div class="sheet-overlay" id="qrOverlay" onclick="closeQrSheet()"></div>
+<div class="bottom-sheet" id="qrSheet" role="dialog" aria-modal="true" aria-labelledby="qrSheetTitle">
+  <div class="sheet-handle" aria-hidden="true"></div>
+  <div class="sheet-title" id="qrSheetTitle">Scan to view this domain</div>
+  <div class="qr-canvas-wrap" id="qrCanvasWrap"></div>
+  <div class="qr-caption" id="qrCaption">Anyone can scan this to open <strong id="qrSlugLabel">—</strong> — no private data is shared.</div>
+  <button class="sheet-close-btn" onclick="closeQrSheet()">Close</button>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 const SUPA_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
@@ -162,9 +212,13 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 
 let CURRENT_SLUG = '';
 
-(async function init() {
+// GOD MODE PATCH: the former anonymous init IIFE is now a named, re-callable
+// function so the retry button can re-run the exact same lookup.
+async function runLookup() {
   const params = new URLSearchParams(window.location.search);
   const slugParam = (params.get('slug') || params.get('u') || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+
+  renderRecentLookups(); // GOD MODE: show this-device history immediately, before the lookup resolves
 
   if (!slugParam) {
     showNotFound('No domain specified', 'Add a name to the URL, like domain.html?slug=arthur.');
@@ -172,6 +226,14 @@ let CURRENT_SLUG = '';
   }
 
   CURRENT_SLUG = slugParam;
+
+  // GOD MODE: real-time feedback — abort a hung request and surface a "slow" note
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  const slowNoteId = setTimeout(() => {
+    const note = document.getElementById('loadingSlowNote');
+    if (note) note.style.display = 'block';
+  }, 4000);
 
   try {
     const res = await fetch(`${SUPA_URL}/rest/v1/rpc/get_public_domain_view`, {
@@ -181,7 +243,8 @@ let CURRENT_SLUG = '';
         Authorization: 'Bearer ' + SUPA_KEY,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ p_slug: slugParam })
+      body: JSON.stringify({ p_slug: slugParam }),
+      signal: controller.signal
     });
 
     if (!res.ok) throw new Error('Network response was not ok');
@@ -196,9 +259,29 @@ let CURRENT_SLUG = '';
 
   } catch (e) {
     console.error('[domain.html] lookup failed:', e);
-    showNotFound('Could not load this domain', 'Check your connection and try again — this is a network issue, not a claim that this domain doesn\'t exist.');
+    // GOD MODE: distinguish a retryable network/timeout failure from a genuine not-found
+    const isNetworkIssue = e.name === 'AbortError' || e instanceof TypeError || e.message === 'Network response was not ok';
+    showNotFound(
+      isNetworkIssue ? 'Could not load this domain' : undefined,
+      isNetworkIssue ? 'Check your connection and try again — this is a network issue, not a claim that this domain doesn\'t exist.' : undefined,
+      isNetworkIssue
+    );
+  } finally {
+    clearTimeout(timeoutId);
+    clearTimeout(slowNoteId);
   }
-})();
+}
+
+runLookup();
+
+// GOD MODE: retry button re-runs the exact same lookup after a network/timeout failure
+function retryLookup() {
+  document.getElementById('nfRetryBtn').style.display = 'none';
+  document.getElementById('notfoundState').style.display = 'none';
+  document.getElementById('loadingState').style.display = 'flex';
+  document.getElementById('loadingSlowNote').style.display = 'none';
+  runLookup();
+}
 
 function renderDomain(d) {
   document.getElementById('loadingState').style.display = 'none';
@@ -244,14 +327,83 @@ function renderDomain(d) {
   document.getElementById('payBtn').onclick = () => {
     window.location.href = 'pay.html?to=' + encodeURIComponent(CURRENT_SLUG);
   };
+
+  // GOD MODE PATCH: remember this lookup on this device only (slug + display name, no balance/private data)
+  saveRecentLookup(CURRENT_SLUG, name, initials);
 }
 
-function showNotFound(title, sub) {
+function showNotFound(title, sub, showRetry) {
   document.getElementById('loadingState').style.display = 'none';
   document.getElementById('domainView').style.display = 'none';
   document.getElementById('notfoundState').style.display = 'flex';
   if (title) document.getElementById('nfTitle').textContent = title;
   if (sub) document.getElementById('nfSub').textContent = sub;
+  // GOD MODE PATCH: only show "Try again" for retryable network/timeout failures, not genuine not-found
+  const retryBtn = document.getElementById('nfRetryBtn');
+  if (retryBtn) retryBtn.style.display = showRetry ? 'inline-block' : 'none';
+}
+
+// ── GOD MODE: Recent lookups — this device only, public data only (no balance, ever) ──
+const RECENT_LOOKUPS_KEY = 'indx_domain_recent';
+
+function loadRecentLookups() {
+  try { return JSON.parse(localStorage.getItem(RECENT_LOOKUPS_KEY) || '[]'); }
+  catch (e) { return []; }
+}
+
+function saveRecentLookup(slug, name, initials) {
+  let list = loadRecentLookups().filter(r => r.slug !== slug);
+  list.unshift({ slug, name, initials, ts: Date.now() });
+  list = list.slice(0, 8);
+  try { localStorage.setItem(RECENT_LOOKUPS_KEY, JSON.stringify(list)); } catch (e) { /* storage unavailable — skip silently */ }
+  renderRecentLookups();
+}
+
+function renderRecentLookups() {
+  const list = loadRecentLookups().filter(r => r.slug !== CURRENT_SLUG);
+  const section = document.getElementById('recentSection');
+  const row = document.getElementById('recentRow');
+  if (!list.length) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  row.innerHTML = list.map(r => `
+    <div class="recent-chip" role="listitem" tabindex="0"
+         onclick="goToRecent('${encodeURIComponent(r.slug)}')"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goToRecent('${encodeURIComponent(r.slug)}')}">
+      <div class="recent-chip-avatar" aria-hidden="true">${escapeHtml(r.initials || '?')}</div>
+      <div class="recent-chip-name">${escapeHtml(r.name || r.slug)}</div>
+    </div>
+  `).join('');
+}
+
+function goToRecent(slugEncoded) {
+  window.location.href = 'domain.html?slug=' + slugEncoded;
+}
+
+// ── GOD MODE: QR share sheet — encodes only the public profile link, no private data ──
+let qrBuilt = false;
+function openQrSheet() {
+  document.getElementById('qrSlugLabel').textContent = CURRENT_SLUG + '.IN$DEX';
+  if (!qrBuilt) {
+    const url = window.location.origin + '/d/' + CURRENT_SLUG;
+    const wrap = document.getElementById('qrCanvasWrap');
+    wrap.innerHTML = '';
+    new QRCode(wrap, {
+      text: url,
+      width: 200,
+      height: 200,
+      colorDark: '#090A10',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+    qrBuilt = true;
+  }
+  document.getElementById('qrOverlay').classList.add('show');
+  document.getElementById('qrSheet').classList.add('show');
+}
+
+function closeQrSheet() {
+  document.getElementById('qrOverlay').classList.remove('show');
+  document.getElementById('qrSheet').classList.remove('show');
 }
 
 function escapeHtml(s) {

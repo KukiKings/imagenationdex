@@ -86,10 +86,44 @@
 
     /* LEGAL WRAPPER */
     .legal-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;}
-    .lc-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);align-items:flex-start;}
+    .lc-row{display:flex;flex-wrap:wrap;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);align-items:flex-start;}
+    .lc-row .gm-review{flex:0 0 100%;border-top:none;margin-top:6px;padding-top:0;}
     .lc-row:last-child{border-bottom:none;}
     .lc-lbl{font-size:12px;color:var(--text-muted);}
     .lc-val{font-size:12px;font-weight:700;text-align:right;max-width:60%;}
+
+    /* GOD MODE — search/filter, completeness meter, address check, review log */
+    .gm-search-wrap{position:sticky;top:0;z-index:15;background:var(--black);padding:10px 16px 8px;border-bottom:1px solid var(--border);}
+    .gm-search{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-size:13px;margin-bottom:8px;}
+    .gm-search::placeholder{color:var(--text-dim);}
+    .gm-filters{display:flex;gap:6px;flex-wrap:wrap;}
+    .gm-chip{font-size:10px;font-weight:700;padding:5px 10px;border-radius:20px;background:rgba(255,255,255,0.04);color:var(--text-muted);border:1px solid var(--border);cursor:pointer;}
+    .gm-chip.active{background:rgba(0,212,255,0.12);color:var(--cyan);border-color:rgba(0,212,255,0.3);}
+    .gm-no-results{display:none;text-align:center;padding:24px 10px;color:var(--text-muted);font-size:12px;}
+    .gm-no-results.show{display:block;}
+    .disclosure-item.gm-hidden{display:none !important;}
+
+    .gm-meter-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:16px;}
+    .gm-meter-title{font-size:12px;font-weight:800;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;}
+    .gm-meter-bar{height:8px;border-radius:6px;background:rgba(255,255,255,0.06);overflow:hidden;margin-bottom:8px;}
+    .gm-meter-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));border-radius:6px;width:0%;transition:width 0.6s ease;}
+    .gm-meter-sub{font-size:11px;color:var(--text-muted);line-height:1.5;}
+    .gm-meter-legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;}
+    .gm-legend-item{font-size:10px;color:var(--text-muted);display:flex;align-items:center;gap:4px;}
+    .gm-legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+
+    .gm-addr-check{font-size:10px;font-weight:700;margin-top:4px;display:flex;align-items:center;gap:5px;}
+    .gm-addr-check.valid{color:var(--green);}
+    .gm-addr-check.invalid{color:var(--red);}
+    .gm-addr-note{font-size:9px;color:var(--text-dim);margin-top:2px;line-height:1.4;}
+
+    .gm-review{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);}
+    .gm-review-label{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-muted);cursor:pointer;}
+    .gm-review-label input[type="checkbox"]{width:16px;height:16px;accent-color:var(--cyan);cursor:pointer;}
+    .gm-review-time{font-size:10px;color:var(--green);font-weight:700;white-space:nowrap;}
+    .gm-review-note{font-size:9px;color:var(--text-dim);margin-top:3px;}
+
+    button:focus-visible, input:focus-visible, .gm-chip:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
 
     #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
   </style>
@@ -101,6 +135,16 @@
     <div class="tb-title">🔍 Audit Transparency</div>
   </div>
   <div class="scroll-body">
+    <div class="gm-search-wrap">
+      <input type="text" class="gm-search" id="gmSearch" placeholder="Search disclosures (e.g. audit, DAO, legal)…" aria-label="Search disclosure items" oninput="gmApplyFilters()">
+      <div class="gm-filters" role="group" aria-label="Filter by status">
+        <button class="gm-chip active" id="gmChipAll" onclick="gmSetStatus('all')">All (17)</button>
+        <button class="gm-chip" id="gmChipLive" onclick="gmSetStatus('live')">Live</button>
+        <button class="gm-chip" id="gmChipPending" onclick="gmSetStatus('pending')">Pending</button>
+        <button class="gm-chip" id="gmChipPlanned" onclick="gmSetStatus('planned')">Planned</button>
+        <button class="gm-chip" id="gmChipNotStarted" onclick="gmSetStatus('not-started')">Not started</button>
+      </div>
+    </div>
     <div class="section">
 
       <!-- TRUST SCORE -->
@@ -124,10 +168,23 @@
         </div>
       </div>
 
+      <!-- GOD MODE: LIVE DISCLOSURE COMPLETENESS METER — computed at runtime from the real status of every item below, not a fixed/invented number -->
+      <div class="gm-meter-card">
+        <div class="gm-meter-title">Live disclosure completeness</div>
+        <div class="gm-meter-bar"><div class="gm-meter-fill" id="gmMeterFill"></div></div>
+        <div class="gm-meter-sub" id="gmMeterSub">Calculating…</div>
+        <div class="gm-meter-legend">
+          <span class="gm-legend-item"><span class="gm-legend-dot" style="background:var(--green);"></span>Live</span>
+          <span class="gm-legend-item"><span class="gm-legend-dot" style="background:var(--gold);"></span>Pending</span>
+          <span class="gm-legend-item"><span class="gm-legend-dot" style="background:var(--cyan);"></span>Planned</span>
+          <span class="gm-legend-item"><span class="gm-legend-dot" style="background:rgba(255,255,255,0.2);"></span>Not started</span>
+        </div>
+      </div>
+
       <!-- SECURITY AUDITS -->
       <div class="section-title">Security audits</div>
       <div class="audit-card">
-        <div class="audit-item">
+        <div class="audit-item disclosure-item" data-status="not-started" data-id="audit1">
           <div class="ai-badge" style="background:rgba(255,255,255,0.05);">🛡️</div>
           <div class="ai-body">
             <div class="ai-name">Third-Party Smart Contract Audit</div>
@@ -135,9 +192,13 @@
             <div class="ai-meta">
               <span class="meta-chip" style="background:rgba(255,255,255,0.06);color:var(--text-muted);">Not started</span>
             </div>
+            <div class="gm-review" data-review-track="audit1">
+              <label class="gm-review-label"><input type="checkbox" id="rvCheck_audit1" onchange="gmToggleReview('audit1')"> Mark as personally reviewed</label>
+              <span class="gm-review-time" id="rvTime_audit1"></span>
+            </div>
           </div>
         </div>
-        <div class="audit-item">
+        <div class="audit-item disclosure-item" data-status="not-started" data-id="audit2">
           <div class="ai-badge" style="background:rgba(255,255,255,0.05);">📊</div>
           <div class="ai-body">
             <div class="ai-name">Independent Proof of Reserves</div>
@@ -145,15 +206,23 @@
             <div class="ai-meta">
               <span class="meta-chip" style="background:rgba(255,255,255,0.06);color:var(--text-muted);">Not started</span>
             </div>
+            <div class="gm-review" data-review-track="audit2">
+              <label class="gm-review-label"><input type="checkbox" id="rvCheck_audit2" onchange="gmToggleReview('audit2')"> Mark as personally reviewed</label>
+              <span class="gm-review-time" id="rvTime_audit2"></span>
+            </div>
           </div>
         </div>
-        <div class="audit-item">
+        <div class="audit-item disclosure-item" data-status="planned" data-id="audit3">
           <div class="ai-badge" style="background:rgba(255,184,0,0.1);">🤖</div>
           <div class="ai-body">
             <div class="ai-name">SIINDEX Self-Monitoring</div>
             <div class="ai-detail">Planned continuous checks on treasury/liquidity/multisig health once those systems are actually deployed. Not yet live — the systems it would monitor don't exist yet.</div>
             <div class="ai-meta">
               <span class="meta-chip" style="background:rgba(255,255,255,0.06);color:var(--text-muted);">Planned</span>
+            </div>
+            <div class="gm-review" data-review-track="audit3">
+              <label class="gm-review-label"><input type="checkbox" id="rvCheck_audit3" onchange="gmToggleReview('audit3')"> Mark as personally reviewed</label>
+              <span class="gm-review-time" id="rvTime_audit3"></span>
             </div>
           </div>
         </div>
@@ -162,43 +231,61 @@
       <!-- CONTRACT REGISTRY -->
       <div class="section-title">Contract address registry</div>
       <div class="contract-card">
-        <div class="contract-item">
+        <div class="contract-item disclosure-item" data-status="live" data-id="contract1">
           <div class="ci-header">
             <div class="ci-name">INDX Token (SPL Token)</div>
             <div class="ci-chain">Solana</div>
           </div>
-          <div class="ci-addr">9p9VMkgTEVdAeohk1zEuepvwBYUkzjnovMwwazyxsSEZ</div>
+          <div class="ci-addr" id="gmIndxAddr">9p9VMkgTEVdAeohk1zEuepvwBYUkzjnovMwwazyxsSEZ</div>
+          <div class="gm-addr-check" id="gmAddrCheck">Checking format…</div>
+          <div class="gm-addr-note">Format check only — confirms the string is well-formed base58. It is not a substitute for tapping "Verify on Solscan" below.</div>
           <div class="ci-actions">
             <button class="ci-btn ci-copy" onclick="copyAddr('9p9VMkgTEVdAeohk1zEuepvwBYUkzjnovMwwazyxsSEZ')">Copy</button>
             <button class="ci-btn ci-verify" onclick="window.open('https://solscan.io/token/9p9VMkgTEVdAeohk1zEuepvwBYUkzjnovMwwazyxsSEZ','_blank')">Verify on Solscan</button>
           </div>
+          <div class="gm-review" data-review-track="contract1">
+            <label class="gm-review-label"><input type="checkbox" id="rvCheck_contract1" onchange="gmToggleReview('contract1')"> Mark as personally reviewed</label>
+            <span class="gm-review-time" id="rvTime_contract1"></span>
+          </div>
         </div>
-        <div class="contract-item">
+        <div class="contract-item disclosure-item" data-status="not-started" data-id="contract2">
           <div class="ci-header">
             <div class="ci-name">DEX Liquidity Pool</div>
             <div class="ci-chain">Solana</div>
           </div>
           <div class="ci-addr" style="color:var(--text-muted);font-family:inherit;">Not yet deployed</div>
+          <div class="gm-review" data-review-track="contract2">
+            <label class="gm-review-label"><input type="checkbox" id="rvCheck_contract2" onchange="gmToggleReview('contract2')"> Mark as personally reviewed</label>
+            <span class="gm-review-time" id="rvTime_contract2"></span>
+          </div>
         </div>
-        <div class="contract-item">
+        <div class="contract-item disclosure-item" data-status="not-started" data-id="contract3">
           <div class="ci-header">
             <div class="ci-name">Civilisation Fund Vault</div>
             <div class="ci-chain">Solana</div>
           </div>
           <div class="ci-addr" style="color:var(--text-muted);font-family:inherit;">Not yet deployed</div>
+          <div class="gm-review" data-review-track="contract3">
+            <label class="gm-review-label"><input type="checkbox" id="rvCheck_contract3" onchange="gmToggleReview('contract3')"> Mark as personally reviewed</label>
+            <span class="gm-review-time" id="rvTime_contract3"></span>
+          </div>
         </div>
-        <div class="contract-item">
+        <div class="contract-item disclosure-item" data-status="not-started" data-id="contract4">
           <div class="ci-header">
             <div class="ci-name">Grid Account Multisig (Squads v4)</div>
             <div class="ci-chain">Solana</div>
           </div>
           <div class="ci-addr" style="color:var(--text-muted);font-family:inherit;">Not yet deployed</div>
+          <div class="gm-review" data-review-track="contract4">
+            <label class="gm-review-label"><input type="checkbox" id="rvCheck_contract4" onchange="gmToggleReview('contract4')"> Mark as personally reviewed</label>
+            <span class="gm-review-time" id="rvTime_contract4"></span>
+          </div>
         </div>
       </div>
 
       <!-- BUG BOUNTY -->
       <div class="section-title">Bug bounty program</div>
-      <div class="bounty-card">
+      <div class="bounty-card disclosure-item" data-status="planned" data-id="bounty1">
         <div class="bc-header">
           <div style="font-size:28px;">🐛</div>
           <div>
@@ -206,24 +293,36 @@
             <div class="bc-sub">Planned — not yet live. No bounty platform has been engaged yet.</div>
           </div>
         </div>
+        <div class="gm-review" data-review-track="bounty1">
+          <label class="gm-review-label"><input type="checkbox" id="rvCheck_bounty1" onchange="gmToggleReview('bounty1')"> Mark as personally reviewed</label>
+          <span class="gm-review-time" id="rvTime_bounty1"></span>
+        </div>
       </div>
 
       <!-- DAO GOVERNANCE -->
       <div class="section-title">DAO governance protocol changes</div>
       <div class="dao-card">
-        <div class="dao-item">
+        <div class="dao-item disclosure-item" data-status="not-started" data-id="dao1">
           <div class="dao-ico">📜</div>
           <div class="dao-body">
             <div class="dao-name">Protocol Upgrade Proposals</div>
             <div class="dao-detail">Planned architecture: changes to smart contract logic would require a Citizen Assembly vote. MemeDAO governance is not yet deployed.</div>
+            <div class="gm-review" data-review-track="dao1">
+              <label class="gm-review-label"><input type="checkbox" id="rvCheck_dao1" onchange="gmToggleReview('dao1')"> Mark as personally reviewed</label>
+              <span class="gm-review-time" id="rvTime_dao1"></span>
+            </div>
           </div>
           <span class="dao-status" style="background:rgba(255,255,255,0.06);color:var(--text-muted);">Not yet deployed</span>
         </div>
-        <div class="dao-item">
+        <div class="dao-item disclosure-item" data-status="live" data-id="dao2">
           <div class="dao-ico">🔒</div>
           <div class="dao-body">
             <div class="dao-name">98/2 Civilisation Law</div>
             <div class="dao-detail">The 98/2 split cannot be changed by any vote — this is a whitepaper constitutional invariant (Section 11.2), enforced wherever payouts are calculated.</div>
+            <div class="gm-review" data-review-track="dao2">
+              <label class="gm-review-label"><input type="checkbox" id="rvCheck_dao2" onchange="gmToggleReview('dao2')"> Mark as personally reviewed</label>
+              <span class="gm-review-time" id="rvTime_dao2"></span>
+            </div>
           </div>
           <span class="dao-status chip-green">Doctrine — immutable by design</span>
         </div>
@@ -233,24 +332,135 @@
       <!-- Corrected 2026-07-22: this panel previously showed fabricated entries (a "Marshall Islands Foundation Ltd" legal entity, a fake registration number, a nonexistent MiCA/ESMA application with a fake PDF download, and false ✓ registrations for MAS Singapore, FinCEN US, and CBN Nigeria) — AJ confirmed none of these are real. Replaced with actual, verified status only. -->
       <div class="section-title">Legal wrapper & regulatory status</div>
       <div class="legal-card">
-        <div class="lc-row"><div class="lc-lbl">Legal entity</div><div class="lc-val" style="color:var(--gold);">Not yet incorporated — operating as Arthur Henry, sole trader (ABN 95 579 343 955)</div></div>
-        <div class="lc-row"><div class="lc-lbl">Cook Islands entity</div><div class="lc-val" style="color:var(--gold);">Planned (whitepaper Section 12) — not yet filed</div></div>
-        <div class="lc-row"><div class="lc-lbl">AUSTRAC enrolment</div><div class="lc-val" style="color:var(--gold);">Submitted · assessment pending (AAN 263945366)</div></div>
-        <div class="lc-row"><div class="lc-lbl">MAS (Singapore)</div><div class="lc-val" style="color:var(--text-muted);">Not registered</div></div>
-        <div class="lc-row"><div class="lc-lbl">FinCEN MSB (United States)</div><div class="lc-val" style="color:var(--text-muted);">Not registered</div></div>
-        <div class="lc-row"><div class="lc-lbl">MiCA (EU)</div><div class="lc-val" style="color:var(--text-muted);">No application filed</div></div>
-        <div class="lc-row"><div class="lc-lbl">CBN (Nigeria)</div><div class="lc-val" style="color:var(--text-muted);">Not registered</div></div>
+        <div class="lc-row disclosure-item" data-status="live" data-id="legal1"><div class="lc-lbl">Legal entity</div><div class="lc-val" style="color:var(--gold);">Not yet incorporated — operating as Arthur Henry, sole trader (ABN 95 579 343 955)</div>
+          <div class="gm-review" data-review-track="legal1"><label class="gm-review-label"><input type="checkbox" id="rvCheck_legal1" onchange="gmToggleReview('legal1')"> Mark as personally reviewed</label><span class="gm-review-time" id="rvTime_legal1"></span></div>
+        </div>
+        <div class="lc-row disclosure-item" data-status="planned" data-id="legal2"><div class="lc-lbl">Cook Islands entity</div><div class="lc-val" style="color:var(--gold);">Planned (whitepaper Section 12) — not yet filed</div>
+          <div class="gm-review" data-review-track="legal2"><label class="gm-review-label"><input type="checkbox" id="rvCheck_legal2" onchange="gmToggleReview('legal2')"> Mark as personally reviewed</label><span class="gm-review-time" id="rvTime_legal2"></span></div>
+        </div>
+        <div class="lc-row disclosure-item" data-status="pending" data-id="legal3"><div class="lc-lbl">AUSTRAC enrolment</div><div class="lc-val" style="color:var(--gold);">Submitted · assessment pending (AAN 263945366)</div>
+          <div class="gm-review" data-review-track="legal3"><label class="gm-review-label"><input type="checkbox" id="rvCheck_legal3" onchange="gmToggleReview('legal3')"> Mark as personally reviewed</label><span class="gm-review-time" id="rvTime_legal3"></span></div>
+        </div>
+        <div class="lc-row disclosure-item" data-status="not-started" data-id="legal4"><div class="lc-lbl">MAS (Singapore)</div><div class="lc-val" style="color:var(--text-muted);">Not registered</div>
+          <div class="gm-review" data-review-track="legal4"><label class="gm-review-label"><input type="checkbox" id="rvCheck_legal4" onchange="gmToggleReview('legal4')"> Mark as personally reviewed</label><span class="gm-review-time" id="rvTime_legal4"></span></div>
+        </div>
+        <div class="lc-row disclosure-item" data-status="not-started" data-id="legal5"><div class="lc-lbl">FinCEN MSB (United States)</div><div class="lc-val" style="color:var(--text-muted);">Not registered</div>
+          <div class="gm-review" data-review-track="legal5"><label class="gm-review-label"><input type="checkbox" id="rvCheck_legal5" onchange="gmToggleReview('legal5')"> Mark as personally reviewed</label><span class="gm-review-time" id="rvTime_legal5"></span></div>
+        </div>
+        <div class="lc-row disclosure-item" data-status="not-started" data-id="legal6"><div class="lc-lbl">MiCA (EU)</div><div class="lc-val" style="color:var(--text-muted);">No application filed</div>
+          <div class="gm-review" data-review-track="legal6"><label class="gm-review-label"><input type="checkbox" id="rvCheck_legal6" onchange="gmToggleReview('legal6')"> Mark as personally reviewed</label><span class="gm-review-time" id="rvTime_legal6"></span></div>
+        </div>
+        <div class="lc-row disclosure-item" data-status="not-started" data-id="legal7"><div class="lc-lbl">CBN (Nigeria)</div><div class="lc-val" style="color:var(--text-muted);">Not registered</div>
+          <div class="gm-review" data-review-track="legal7"><label class="gm-review-label"><input type="checkbox" id="rvCheck_legal7" onchange="gmToggleReview('legal7')"> Mark as personally reviewed</label><span class="gm-review-time" id="rvTime_legal7"></span></div>
+        </div>
       </div>
+
+      <div class="gm-no-results" id="gmNoResults">No disclosures match your search or filter. Try clearing the search box above.</div>
 
     </div>
   </div>
 </div>
-<div id="toast"></div>
+<div id="toast" aria-live="polite" role="status"></div>
 <script>
 function copyAddr(a){
-  navigator.clipboard.writeText(a).then(()=>showToast('Address copied ✓')).catch(()=>showToast('Address: '+a.slice(0,12)+'…'));
+  navigator.clipboard.writeText(a).then(()=>showToast('Address copied ✓ — paste it into Solscan to compare')).catch(()=>showToast('Address: '+a.slice(0,12)+'…'));
 }
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2800);}
+
+/* ── GOD MODE: search + status filter ── */
+let gmActiveStatus='all';
+function gmSetStatus(status){
+  gmActiveStatus=status;
+  ['gmChipAll','gmChipLive','gmChipPending','gmChipPlanned','gmChipNotStarted'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  const map={all:'gmChipAll',live:'gmChipLive',pending:'gmChipPending',planned:'gmChipPlanned','not-started':'gmChipNotStarted'};
+  document.getElementById(map[status]).classList.add('active');
+  gmApplyFilters();
+}
+function gmApplyFilters(){
+  const q=(document.getElementById('gmSearch').value||'').trim().toLowerCase();
+  const items=document.querySelectorAll('.disclosure-item');
+  let visible=0;
+  items.forEach(el=>{
+    const status=el.getAttribute('data-status')||'';
+    const text=el.textContent.toLowerCase();
+    const statusMatch=(gmActiveStatus==='all'||status===gmActiveStatus);
+    const textMatch=(q===''||text.includes(q));
+    if(statusMatch&&textMatch){el.classList.remove('gm-hidden');visible++;}
+    else{el.classList.add('gm-hidden');}
+  });
+  document.getElementById('gmNoResults').classList.toggle('show',visible===0);
+}
+
+/* ── GOD MODE: live disclosure completeness meter (computed from real DOM status, not invented) ── */
+function gmComputeMeter(){
+  const items=document.querySelectorAll('.disclosure-item');
+  const total=items.length;
+  let live=0,pending=0,planned=0,notStarted=0;
+  items.forEach(el=>{
+    const s=el.getAttribute('data-status');
+    if(s==='live')live++;
+    else if(s==='pending')pending++;
+    else if(s==='planned')planned++;
+    else notStarted++;
+  });
+  const pct=total?Math.round((live/total)*100):0;
+  const fill=document.getElementById('gmMeterFill');
+  if(fill)fill.style.width=pct+'%';
+  const sub=document.getElementById('gmMeterSub');
+  if(sub)sub.textContent=live+' of '+total+' disclosures are live and independently verifiable today ('+pct+'%). '+pending+' pending, '+planned+' planned, '+notStarted+' not started — counted directly from the status shown on this page.';
+  const allChip=document.getElementById('gmChipAll');
+  if(allChip)allChip.textContent='All ('+total+')';
+}
+
+/* ── GOD MODE: Solana address format check (format only — not an on-chain verification) ── */
+function gmCheckAddressFormat(addr){
+  const base58=/^[1-9A-HJ-NP-Za-km-z]+$/;
+  const el=document.getElementById('gmAddrCheck');
+  if(!el)return;
+  if(addr.length>=32&&addr.length<=44&&base58.test(addr)){
+    el.textContent='✓ Valid base58 format, '+addr.length+' characters';
+    el.classList.add('valid');
+  } else {
+    el.textContent='⚠ Unexpected format — '+addr.length+' characters';
+    el.classList.add('invalid');
+  }
+}
+
+/* ── GOD MODE: personal verification log (localStorage only — citizen's private notes, not an official audit) ── */
+function gmReviewKey(id){return 'indx_audittransparency_review_'+id;}
+function gmToggleReview(id){
+  const box=document.getElementById('rvCheck_'+id);
+  const timeEl=document.getElementById('rvTime_'+id);
+  if(box.checked){
+    const now=new Date();
+    const stamp=now.toLocaleDateString()+' '+now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    localStorage.setItem(gmReviewKey(id), stamp);
+    if(timeEl)timeEl.textContent='Reviewed '+stamp;
+    showToast('Saved to your personal review log');
+  } else {
+    localStorage.removeItem(gmReviewKey(id));
+    if(timeEl)timeEl.textContent='';
+    showToast('Removed from your review log');
+  }
+}
+function gmLoadReviewStates(){
+  document.querySelectorAll('[data-review-track]').forEach(track=>{
+    const id=track.getAttribute('data-review-track');
+    const stamp=localStorage.getItem(gmReviewKey(id));
+    if(stamp){
+      const box=document.getElementById('rvCheck_'+id);
+      const timeEl=document.getElementById('rvTime_'+id);
+      if(box)box.checked=true;
+      if(timeEl)timeEl.textContent='Reviewed '+stamp;
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  gmComputeMeter();
+  gmCheckAddressFormat('9p9VMkgTEVdAeohk1zEuepvwBYUkzjnovMwwazyxsSEZ');
+  gmLoadReviewStates();
+});
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

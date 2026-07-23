@@ -89,6 +89,23 @@
     .ftr-max{font-size:11px;color:var(--text-muted);text-align:right;}
 
     #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+
+    /* GOD MODE: copy regulator button */
+    .copy-reg-btn{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;padding:9px 12px;border-radius:10px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);color:var(--cyan);font-size:12px;font-weight:700;cursor:pointer;}
+    .copy-reg-btn:active{background:rgba(0,212,255,0.16);}
+    .copy-reg-btn.copied{background:rgba(0,229,160,0.1);border-color:rgba(0,229,160,0.3);color:var(--green);}
+
+    /* GOD MODE: rights search */
+    .rights-search-wrap{position:relative;margin-bottom:12px;}
+    .rights-search{width:100%;padding:11px 14px 11px 38px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;font-family:inherit;}
+    .rights-search:focus{outline:none;border-color:rgba(0,212,255,0.4);}
+    .rights-search-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:14px;opacity:0.5;pointer-events:none;}
+    .rights-search-empty{text-align:center;padding:20px 12px;color:var(--text-muted);font-size:12px;display:none;}
+    .right-item.rs-hidden{display:none;}
+
+    /* GOD MODE: jurisdiction pill focus + remembered badge */
+    .jur-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+    .jur-remembered-badge{font-size:10px;color:var(--text-dim);text-align:center;margin:-8px 0 14px;}
   </style>
 </head>
 <body>
@@ -108,14 +125,22 @@
       </div>
 
       <!-- JURISDICTION -->
-      <div class="jur-row">
-        <div class="jur-btn active" onclick="selJur(this,'AU')">🇦🇺 Australia</div>
-        <div class="jur-btn" onclick="selJur(this,'PH')">🇵🇭 Philippines</div>
-        <div class="jur-btn" onclick="selJur(this,'NG')">🇳🇬 Nigeria</div>
-        <div class="jur-btn" onclick="selJur(this,'ID')">🇮🇩 Indonesia</div>
-        <div class="jur-btn" onclick="selJur(this,'UK')">🇬🇧 UK</div>
-        <div class="jur-btn" onclick="selJur(this,'EU')">🇪🇺 EU</div>
+      <div class="jur-row" id="jurRow" role="tablist" aria-label="Select your jurisdiction">
+        <div class="jur-btn active" tabindex="0" role="tab" aria-selected="true" onclick="selJur(this,'AU')" onkeydown="jurKeyNav(event,this)">🇦🇺 Australia</div>
+        <div class="jur-btn" tabindex="0" role="tab" aria-selected="false" onclick="selJur(this,'PH')" onkeydown="jurKeyNav(event,this)">🇵🇭 Philippines</div>
+        <div class="jur-btn" tabindex="0" role="tab" aria-selected="false" onclick="selJur(this,'NG')" onkeydown="jurKeyNav(event,this)">🇳🇬 Nigeria</div>
+        <div class="jur-btn" tabindex="0" role="tab" aria-selected="false" onclick="selJur(this,'ID')" onkeydown="jurKeyNav(event,this)">🇮🇩 Indonesia</div>
+        <div class="jur-btn" tabindex="0" role="tab" aria-selected="false" onclick="selJur(this,'UK')" onkeydown="jurKeyNav(event,this)">🇬🇧 UK</div>
+        <div class="jur-btn" tabindex="0" role="tab" aria-selected="false" onclick="selJur(this,'EU')" onkeydown="jurKeyNav(event,this)">🇪🇺 EU</div>
       </div>
+      <div class="jur-remembered-badge" id="jurRememberedBadge"></div>
+
+      <!-- GOD MODE: RIGHTS SEARCH -->
+      <div class="rights-search-wrap">
+        <span class="rights-search-ico">🔍</span>
+        <input type="text" class="rights-search" id="rightsSearch" placeholder="Search your rights (e.g. refund, dispute, data)…" oninput="filterRights(this.value)" aria-label="Search your rights">
+      </div>
+      <div class="rights-search-empty" id="rightsSearchEmpty">No rights match that search. Try "dispute", "data", "fees" or "review".</div>
 
       <!-- CORE RIGHTS -->
       <div class="section-title">Your core rights</div>
@@ -237,6 +262,7 @@
           <div class="comp-body">
             <div class="comp-title" id="comp3Title">Australian Financial Complaints Authority (AFCA)</div>
             <div class="comp-detail" id="comp3Detail">Free independent dispute resolution. AFCA can award remedies up to $1M. afca.org.au or 1800 931 678.</div>
+            <button class="copy-reg-btn" id="copyRegBtn" onclick="copyRegulatorInfo()">📋 Copy regulator contact info</button>
           </div>
         </div>
       </div>
@@ -324,13 +350,21 @@ const jurData = {
   UK:{name:'FCA requirement (UK)',comp3:'Financial Ombudsman Service (FOS)',comp3d:'Free independent service. financial-ombudsman.org.uk or 0800 023 4567. Can award up to £375,000.'},
   EU:{name:'MiCA / ESMA requirement (EU)',comp3:'National Competent Authority (NCA) in your country',comp3d:'All EU member states have a designated NCA for crypto-asset regulation under MiCA Article 112. No cost to file.'},
 };
+let currentJurCode='AU';
+// GOD MODE PATCH: persist selection + update aria-selected + skip re-render if code unknown
 function selJur(el,code){
-  document.querySelectorAll('.jur-btn').forEach(b=>b.classList.remove('active'));
-  el.classList.add('active');
   const d=jurData[code];
+  if(!d)return;
+  document.querySelectorAll('.jur-btn').forEach(b=>{b.classList.remove('active');b.setAttribute('aria-selected','false');});
+  el.classList.add('active');
+  el.setAttribute('aria-selected','true');
+  currentJurCode=code;
   document.getElementById('jurName').textContent=d.name;
   document.getElementById('comp3Title').textContent=d.comp3;
   document.getElementById('comp3Detail').textContent=d.comp3d;
+  const copyBtn=document.getElementById('copyRegBtn');
+  if(copyBtn){copyBtn.classList.remove('copied');copyBtn.textContent='📋 Copy regulator contact info';}
+  try{localStorage.setItem('indx_rights_last_jurisdiction',code);}catch(e){}
 }
 function toggleVel(btn){
   const thumb=btn.querySelector('.vel-thumb');
@@ -339,6 +373,70 @@ function toggleVel(btn){
   showToast(on?'Alert enabled':'Alert disabled');
 }
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}
+
+// GOD MODE: keyboard navigation for jurisdiction pill row
+function jurKeyNav(e,el){
+  const btns=Array.from(document.querySelectorAll('#jurRow .jur-btn'));
+  const idx=btns.indexOf(el);
+  if(e.key==='ArrowRight'||e.key==='ArrowDown'){
+    e.preventDefault();
+    const next=btns[(idx+1)%btns.length];
+    next.focus();
+  }else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){
+    e.preventDefault();
+    const prev=btns[(idx-1+btns.length)%btns.length];
+    prev.focus();
+  }else if(e.key==='Enter'||e.key===' '){
+    e.preventDefault();
+    el.click();
+  }
+}
+
+// GOD MODE: copy regulator contact info to clipboard
+function copyRegulatorInfo(){
+  const d=jurData[currentJurCode];
+  if(!d)return;
+  const text=`${d.comp3}\n${d.comp3d}`;
+  const btn=document.getElementById('copyRegBtn');
+  const done=()=>{
+    if(btn){btn.classList.add('copied');btn.textContent='✓ Copied to clipboard';setTimeout(()=>{btn.classList.remove('copied');btn.textContent='📋 Copy regulator contact info';},2500);}
+    showToast('Regulator contact copied');
+  };
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(()=>{showToast('Could not copy — long-press to select text instead');});
+  }else{
+    showToast('Could not copy — long-press to select text instead');
+  }
+}
+
+// GOD MODE: live search/filter across core rights cards
+function filterRights(query){
+  const q=query.trim().toLowerCase();
+  const items=document.querySelectorAll('.rights-card .right-item');
+  let visibleCount=0;
+  items.forEach(item=>{
+    const text=item.textContent.toLowerCase();
+    const match=q===''||text.includes(q);
+    item.classList.toggle('rs-hidden',!match);
+    if(match)visibleCount++;
+  });
+  const emptyEl=document.getElementById('rightsSearchEmpty');
+  if(emptyEl)emptyEl.style.display=(q!==''&&visibleCount===0)?'block':'none';
+}
+
+// GOD MODE: restore last-used jurisdiction on load (localStorage.getItem returns null on first run)
+document.addEventListener('DOMContentLoaded',function(){
+  let lastCode=null;
+  try{lastCode=localStorage.getItem('indx_rights_last_jurisdiction');}catch(e){}
+  if(lastCode&&jurData[lastCode]&&lastCode!=='AU'){
+    const targetBtn=Array.from(document.querySelectorAll('#jurRow .jur-btn')).find(b=>b.getAttribute('onclick')&&b.getAttribute('onclick').includes(`'${lastCode}'`));
+    if(targetBtn){
+      selJur(targetBtn,lastCode);
+      const badge=document.getElementById('jurRememberedBadge');
+      if(badge)badge.textContent=`Showing ${jurData[lastCode].name.replace(/\s*\([A-Z]{2,3}\)$/,'')} — your last selection`;
+    }
+  }
+});
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>
