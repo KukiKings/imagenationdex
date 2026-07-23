@@ -215,6 +215,7 @@
         <div class="fx-row"><div class="fx-lbl">IN$DEX fee</div><div style="color:var(--gold);">0.8%</div></div>
         <div class="fx-row"><div class="fx-lbl">Transfer time</div><div style="color:var(--green);">~ 45 seconds</div></div>
         <div class="fx-row"><div class="fx-lbl">Recipient gets</div><div id="theyGet" style="font-weight:800;font-size:15px;"></div></div>
+        <div style="font-size:11px;color:var(--text-muted);line-height:1.5;padding-top:4px;">Credited instantly as INDX to their Grid Account. Bank cash-out isn't live yet.</div>
       </div>
 
       <!-- COMPARE -->
@@ -224,11 +225,6 @@
           <div class="cs-provider" style="color:var(--green);">IN$DEX</div>
           <div class="cs-bar"><div class="cs-fill" style="width:97%;background:var(--green);"></div></div>
           <div class="cs-rate" style="color:var(--green);" id="indxComp">NZD 164</div>
-        </div>
-        <div class="cs-row">
-          <div class="cs-provider">Wise</div>
-          <div class="cs-bar"><div class="cs-fill" style="width:88%;background:var(--cyan);"></div></div>
-          <div class="cs-rate" id="wiseComp">NZD 145</div>
         </div>
         <div class="cs-row">
           <div class="cs-provider">Western Union</div>
@@ -245,32 +241,13 @@
       <!-- RECIPIENTS -->
       <div class="recipient-card">
         <div class="rc-title">Send to</div>
-        <div class="recipient-item selected" onclick="selectRec(this)">
-          <div class="ri-avatar" style="background:rgba(0,212,255,0.15);">👩</div>
-          <div><div class="ri-name">Maria Santos</div><div class="ri-detail">BDO Bank · Manila · Acc ending 4821</div></div>
-          <div class="ri-check">✓</div>
-        </div>
-        <div class="recipient-item" onclick="selectRec(this)" style="margin-top:6px;">
-          <div class="ri-avatar" style="background:rgba(139,63,232,0.15);">👨</div>
-          <div><div class="ri-name">Carlos Reyes</div><div class="ri-detail">GCash · +63 917 *** 4420</div></div>
-          <div class="ri-check">✓</div>
-        </div>
-        <div class="recipient-item" onclick="selectRec(this)" style="margin-top:6px;">
-          <div class="ri-avatar" style="background:rgba(0,229,160,0.12);">👩🏽</div>
-          <div>
-            <div class="ri-name">Sione Taufa <span class="ri-badge mobile">📱 Mobile Wallet</span></div>
-            <div class="ri-detail">M-PAiSA · Vodafone Fiji · +679 9XX XXXX</div>
-          </div>
-          <div class="ri-check">✓</div>
-        </div>
-        <div class="recipient-item" onclick="selectRec(this)" style="margin-top:6px;">
-          <div class="ri-avatar" style="background:rgba(43,53,216,0.18);">👨🏽</div>
-          <div>
-            <div class="ri-name">Ana Faleolo <span class="ri-badge mobile">📱 Mobile Wallet</span></div>
-            <div class="ri-detail">MyCash · Digicel Samoa · +685 7XX XXXX</div>
-          </div>
-          <div class="ri-check">✓</div>
-        </div>
+        <!-- HONESTY FIX — this used to hardcode 4 fictional people with fabricated bank/wallet
+             account details (real institution names + fake account numbers), shown to every
+             visitor as if they were that citizen's real saved payees. There is no such backend
+             record. Recipients are now rendered only from what this citizen has actually saved
+             (savedRecipients in localStorage, populated for real via the Sovereign Link flow). -->
+        <div id="recipientList"></div>
+        <div id="recipientEmpty" style="display:none;font-size:12px;color:var(--text-muted);padding:10px 8px;line-height:1.6;">No saved recipients yet. Send a Sovereign Link below to add your first one.</div>
         <div style="display:flex;align-items:center;gap:8px;padding:10px 8px;cursor:pointer;color:var(--cyan);font-size:13px;font-weight:700;" onclick="openInviteSheet()">
           ＋ Add new recipient
         </div>
@@ -324,7 +301,7 @@
       <div class="status-trail">
         <div class="status-step done"><div class="ss-dot"></div><div class="ss-label">Sent</div><div class="ss-time">Now</div></div>
         <div class="status-step done"><div class="ss-dot"></div><div class="ss-label">Processing</div><div class="ss-time">1 sec</div></div>
-        <div class="status-step done"><div class="ss-dot"></div><div class="ss-label">Settled instantly</div><div class="ss-time">45 sec</div></div>
+        <div class="status-step done"><div class="ss-dot"></div><div class="ss-label">INDX credited to their Grid Account</div><div class="ss-time">Instant</div></div>
         <div class="status-step" id="stNotify"><div class="ss-dot"></div><div class="ss-label" id="notifyLabel">Recipient can view it now</div><div class="ss-time">Available</div></div>
       </div>
     </div>
@@ -473,13 +450,16 @@ function updateFX(){
   document.getElementById('fxRate').textContent=`1 USD = ${curr.rate.toLocaleString()} ${curr.curr}`;
   document.getElementById('theyGet').textContent=amt>0?`${recv.toLocaleString('en-AU',{maximumFractionDigits:0})} ${curr.curr}`:'';
   // Compare strip — all dynamic
+  // NOTE: a "Wise" comparison row was removed here — it hardcoded a ~12% implied fee
+  // (0.88 factor) attributed to a real, named competitor with no cited source. Wise's
+  // actual published fees run roughly 0.3%-1.2% for AUD/NZD-class corridors, so the old
+  // figure was a fabricated, materially wrong claim about a real company. The Western
+  // Union figures below are attributed to World Bank RPW Q3 2025 (see .wb-attr note).
   const indxPer100=(100*curr.rate*0.992);
-  const wisePer100=(100*curr.rate*0.88);
   const wuPct=wuFee[activeKey]||0.060;
   const wuPer100=(100*curr.rate*(1-wuPct));
   const bankPer100=(100*curr.rate*0.955);
   document.getElementById('indxComp').textContent=`${curr.curr} ${indxPer100.toLocaleString('en-AU',{maximumFractionDigits:0})}`;
-  document.getElementById('wiseComp').textContent=`${curr.curr} ${wisePer100.toLocaleString('en-AU',{maximumFractionDigits:0})}`;
   document.getElementById('wuComp').textContent=`${curr.curr} ${wuPer100.toLocaleString('en-AU',{maximumFractionDigits:0})}`;
   document.getElementById('bankComp').textContent=`${curr.curr} ${bankPer100.toLocaleString('en-AU',{maximumFractionDigits:0})}`;
   // WU bar width — proportional to how much less they get vs INDX
@@ -494,12 +474,43 @@ function selectRec(el){
   document.querySelectorAll('.recipient-item').forEach(r=>r.classList.remove('selected'));
   el.classList.add('selected');
 }
+
+// HONESTY FIX — recipients are rendered only from what this citizen has actually saved
+// (localStorage 'savedRecipients', written for real by saveRecipient() after a real send).
+// No fabricated names/bank details are shown to a fresh account.
+function escapeHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function renderRecipients(){
+  const list = document.getElementById('recipientList');
+  const empty = document.getElementById('recipientEmpty');
+  let saved = [];
+  try { saved = JSON.parse(localStorage.getItem('savedRecipients') || '[]'); } catch(e){}
+  if (!list || !empty) return;
+  if (!saved.length) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  const bgs = ['rgba(0,212,255,0.15)','rgba(139,63,232,0.15)','rgba(0,229,160,0.12)','rgba(43,53,216,0.18)'];
+  list.innerHTML = saved.map(function(r, i){
+    return '<div class="recipient-item'+(i===0?' selected':'')+'" onclick="selectRec(this)" style="margin-top:'+(i===0?'0':'6px')+';">' +
+      '<div class="ri-avatar" style="background:'+bgs[i%bgs.length]+';">👤</div>' +
+      '<div><div class="ri-name">'+escapeHtml(r.name)+'</div><div class="ri-detail">'+escapeHtml(r.detail||'IN$DEX citizen')+'</div></div>' +
+      '<div class="ri-check">✓</div></div>';
+  }).join('');
+}
+
 async function doSend(){
   const amt = parseFloat(document.getElementById('sendAmt').value)||0;
   if(amt<=0){showToast('Enter an amount to send');return;}
   const selected = document.querySelector('.recipient-item.selected');
-  const recName = selected ? selected.querySelector('.ri-name').textContent : 'recipient';
-  const recDetail = selected ? selected.querySelector('.ri-detail').textContent : '';
+  if(!selected){ showToast('Add a saved recipient, or send a Sovereign Link to someone new'); return; }
+  const recName = selected.querySelector('.ri-name').textContent;
+  const recDetail = selected.querySelector('.ri-detail').textContent;
   const indxAmt = amt / INDX_PRICE;
   const btn = document.getElementById('sendBtn');
   btn.disabled=true; btn.textContent='Sending…';
@@ -592,6 +603,7 @@ function saveRecipient(){
   const exists = saved.find(r => r.name === _lastRecipient.name);
   if(!exists) saved.push(_lastRecipient);
   localStorage.setItem('savedRecipients', JSON.stringify(saved));
+  renderRecipients();
   document.getElementById('saveRecipientCard').style.display = 'none';
   showToast('✓ Saved — 1-tap sending next time');
 }
@@ -796,6 +808,7 @@ function clearPresets() {
 }
 
 loadSavingsCounter();
+renderRecipients();
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

@@ -958,7 +958,29 @@ The Cook Islands flag carries 15 white stars in a circle — one for each of the
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-23 — onboarding-flow.html audited: fulfill_instant_invite/complete_referral confirmed gated + silently failing (real-money issue, needs AJ's call), fake "citizens joined" counter found. Only 8 lower-priority honest-preview screens remain on the anon-key list — full sweep otherwise complete. See x89 below.
+> Last updated: 2026-07-23 — Kind-2 fabrication sweep: 26 screens audited for fake content (distinct from the anon-key bug), 22 had real fabrications fixed or deleted. ~230 of 260 screens still haven't had this kind of full-content read. See x90 below.
+
+### Session 121 continued x90 (2026-07-23) — Kind-2 fabrication sweep: 26 screens audited, 22 fixed (AJ: "fix all the fakes... if we don't need any, just delete it")
+
+AJ asked why more fake screens kept turning up after the anon-key sweep was declared complete. Answer: there are two distinct bug classes. Kind 1 (anon-key bug) is a real RPC called with the wrong auth header — silent 403, detectable by grepping for the header pattern. Kind 2 is invented data displayed as real with no RPC involved at all — fake counters, fake named partners, fake "ACTIVE" badges, fake audit scores — undetectable by that grep, only by reading the actual page content. The anon-key sweep (now fully done) only ever covered Kind 1. This entry is the first systematic pass at Kind 2.
+
+Ran a detection grep across all 260 screens for common fabrication signatures, surfaced 26 candidates not yet fully read this session, dispatched 8 parallel subagents with AJ's explicit directive: wire in real data if a source exists, delete the fake element if it's not essential, only reword-to-honest if deleting leaves a confusing gap or the element is structural.
+
+**Fixed, real-money/purchase screens:** buy-indx.html (deleted fake scarcity counter, fake buyer ticker, fake network-health badge, fake 5-check security-scan modal — `credit_stripe_purchase` still has no anon grant, real purchases not wired yet), card-top-up.html (deleted fake "PQSI pre-flight cleared" claim), card-atm-withdrawal.html (removed fake fee/free ATM badges), my-card.html + payment-methods.html (removed fake Binance/Coinbase card partnership claims, a fake named Cash Agent Network with real store addresses and fake hours, 5 stale/wrong hardcoded crypto conversion rates). deposit.html confirmed already clean.
+
+**Fixed, money-movement:** fiat-onramp.html (fixed a fake "redirecting to payment…" toast implying live execution when nothing happens), remittance.html (deleted fake hardcoded recipients with fake bank account numbers, a fabricated Wise competitor-fee figure, corrected overclaimed settlement language).
+
+**Fixed, all 4 corridor pages (Fiji/RMI/Samoa/Vanuatu):** the launch-tracker stepper falsely marked "KYC partner onboarded" and "liquidity pool funded and tested on mainnet" as done — downgraded to honest pending on all 4; RMI/Vanuatu also named specific real banks as implied partners with no basis, genericized. Follow-ups flagged: Samoa/Vanuatu calculators still use AUD (contradicts USD-only canon), a "Cook Islands entity" reference needs confirming against Appendix A, waitlist buttons could wire into the real (empty) `public.waitlist` table.
+
+**Fixed, Agent Wallet:** agent-wallet.html (removed fake ACTIVE badge, fake stats, fake policy-block feed), agent-wallet-cli.html (worst offender — an autoplaying fake-trade terminal; added a PREVIEW badge, relabeled every simulated action, deleted a dead fake incident array, honest zero/empty states on all interactive commands).
+
+**Fixed, liquidity/defence:** price-stability.html (completed the Flywheel-LP architecture correction that gotcha #103's fix missed — it still said "Buyback & Burn"), lp-manager.html (most severe of this sub-batch — deleted perpetually-incrementing fake fee/yield tickers, a fake treasury chart, a fake auto-generating activity feed, fake pool stats; nothing here was real per Supabase, both backing tables are empty), liquidity-pool-setup.html (small fixes), indx-liquidity-strategy.html (stale date fix only). Follow-up flagged: cross-file protocol inconsistency (Raydium CLMM vs. Meteora DLMM) needs a decision.
+
+**Fixed, misc/trust:** pag.html (deleted multiple fake "ambient" live events and a fake price ticker), siindex-brief.html (deleted a section built on an unverifiable Larry Fink quote and unconfirmed institution claims — its broader fabricated business metrics are flagged as internal-only, not yet in scope), opportunity-feed.html (renamed a fake parallel "Trust Score" to the real Wisdom Score, deleted a fake prosperity ticker), compliance-shield.html (deleted a fake 92/100 score and fake scan-time ticker), data-sovereign-nft.html (removed a fake named institution shown as a paying license holder), siindex-sovereign-security.html (first full read — added preview/demo framing rather than deleting, since it's a legitimate internal design artifact). transaction-confirm.html and indx-website-strategy.html confirmed already clean.
+
+Verified across all 26: node --check clean, DOMContentLoaded count 0 or 1, price/A$/seed-phrase audits clean.
+
+**Scope reality check for future sessions:** ~230 of 260 screens have not had a Kind-2 full-content read. This pass prioritized citizen-facing, money, and trust/compliance screens. It is not yet accurate to say the platform has zero fabricated content anywhere — only that the highest-risk categories checked so far are now clean.
 
 ### Session 121 continued x89 (2026-07-23) — onboarding-flow.html: real-money fulfill_instant_invite confirmed gated, fake citizen counter found
 
