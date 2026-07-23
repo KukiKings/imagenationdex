@@ -958,7 +958,15 @@ The Cook Islands flag carries 15 white stars in a circle — one for each of the
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-23 — notifications-setup.html got its first God Mode pass (real Notification API, test alert, persistence, quiet-hours preview). See x84 below.
+> Last updated: 2026-07-23 — card-freeze.html: 3rd occurrence of the anon-key auth bug found + fixed, plus God Mode. See x85 below.
+
+### Session 121 continued x85 (2026-07-23) — card-freeze.html: anon-key auth bug (3rd occurrence) + God Mode
+
+Same bug class as staking.html, found a third time: `set_card_freeze`/`report_card_lost` sent the anon key as their Bearer token, but both functions correctly have `EXECUTE` revoked from anon — every real citizen's freeze/unfreeze/report-lost attempt has been silently 403'ing. On a card-security screen this is exactly the false-sense-of-protection failure this file was already rewritten once to eliminate. Fixed with the same real-session-aware header pattern used on staking.html and savings-goals.html; also had to add the missing `supabase.createClient()` call (the SDK script tag was loaded but never instantiated). Flagged in gotchas.md that every other `SB_HEADERS`/anon-key RPC screen should be checked for this same pattern before being trusted.
+
+God Mode (4 features): live freeze-duration counter against the real `card_frozen_at` timestamp; "Verify protection right now" button that re-fetches the real DB row on demand instead of trusting the last-rendered UI state; security log pagination over the real `security_events` rows (previously hard-capped at 10); Escape-to-close + Tab focus-trap on the lost/stolen report sheet.
+
+**Verified:** JS syntax clean, single `DOMContentLoaded`, no leftover `SB_HEADERS` references, full three-check audit clean, no id collisions.
 
 ### Session 121 continued x84 (2026-07-23) — notifications-setup.html: first God Mode pass + real fake-execution fix
 

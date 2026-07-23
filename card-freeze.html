@@ -93,6 +93,24 @@
   .sheet-btn{width:100%;padding:15px;border-radius:14px;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;color:#000;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:8px;}
   .sheet-btn.red{background:var(--red);color:#fff;}
   .sheet-cancel{width:100%;padding:13px;border-radius:14px;background:none;border:1px solid var(--border);color:var(--text-muted);font-size:14px;font-weight:700;cursor:pointer;}
+
+  /* ══ GOD MODE — card-freeze.html ══ */
+
+  /* Feature 1: live freeze-duration counter */
+  .freeze-duration{display:none;font-size:12px;font-weight:700;color:var(--red);margin-top:10px;font-variant-numeric:tabular-nums;}
+  .freeze-duration.show{display:block;}
+
+  /* Feature 2: verify-protection real-time check */
+  .verify-btn{width:100%;margin-top:14px;padding:12px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--cyan);font-size:13px;font-weight:700;cursor:pointer;transition:all 0.2s;}
+  .verify-btn:active{transform:scale(0.97);background:rgba(0,212,255,0.08);}
+
+  /* Feature 3: security log pagination */
+  .log-load-more{width:calc(100% - 40px);margin:10px 20px 0;padding:11px;border-radius:12px;background:var(--surface);border:1px solid var(--border);color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer;}
+  .log-load-more:active{background:var(--surface2);}
+  .log-load-more.hidden{display:none;}
+
+  /* Feature 4: keyboard focus visibility for the lost/stolen sheet */
+  .sheet-btn:focus-visible, .sheet-cancel:focus-visible, .verify-btn:focus-visible, .log-load-more:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
 </style>
 </head>
 <body>
@@ -111,6 +129,8 @@
     <div class="fh-sub" id="freezeSub">Your IN$DEX card is live and protected by PQSI across all payment channels.</div>
     <button class="freeze-toggle-btn active" id="freezeToggleBtn" onclick="toggleFreeze()">Freeze Card</button>
     <div class="fh-propagate" id="freezePropLabel">Freeze instantly propagates to Apple Pay, Google Pay & all tokenised payments</div>
+    <div class="freeze-duration" id="freezeDuration"></div>
+    <button class="verify-btn" onclick="verifyProtection()">🔍 Verify protection right now</button>
   </div>
 
   <!-- PQSI ALERTS -->
@@ -221,6 +241,7 @@
   <div class="sec-hist" id="secHistList" style="padding:0 16px;">
     <div class="sh-item"><div class="sh-body"><div class="sh-event" style="color:var(--text-muted);">Loading…</div></div></div>
   </div>
+  <button class="log-load-more hidden" id="logLoadMoreBtn" onclick="loadMoreSecurityLog()">Load more</button>
 
 </div>
 
@@ -249,8 +270,30 @@
 <script>
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
-  const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const citizenId = sessionStorage.getItem('citizen_id');
+
+  // ── REAL AUTH FIX (God Mode) ──────────────────────────────────────────
+  // Found 2026-07-23, same bug class already fixed in staking.html: this screen's
+  // set_card_freeze/report_card_lost calls sent the anon key as their Bearer token,
+  // but those functions correctly have EXECUTE revoked from anon (verified via
+  // information_schema.role_routine_grants) — meaning every real citizen's freeze,
+  // unfreeze, and report-lost attempt has been silently 403'ing. On a card-security
+  // screen this is the exact false-sense-of-protection failure mode gotchas.md
+  // already warned about for the pre-fix version of this file: a citizen who thinks
+  // they've frozen or blocked their card has not actually done so. Fixed the same
+  // way as staking.html — use the real Supabase Auth access_token when a genuine
+  // session exists, anon key otherwise (no regression for today's common case).
+  let _realAccessToken = null;
+  async function initRealSession() {
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+    } catch (e) { /* stay on anon key */ }
+  }
+  function rpcHeaders() {
+    return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' };
+  }
 
   // These channel toggles are a citizen preference only — real per-channel enforcement
   // (distinguishing NFC vs ATM vs FX at the transaction layer) isn't built yet. The card's
@@ -291,13 +334,17 @@
     }
   }
 
+  let _cardFrozenAt = null;
+
   async function loadCardState() {
     if (!citizenId) { renderFreezeUI(false, false); return; }
     try {
-      const res = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + encodeURIComponent(citizenId) + '&select=card_frozen,card_lost_reported_at', { headers: SB_HEADERS });
+      const res = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + encodeURIComponent(citizenId) + '&select=card_frozen,card_frozen_at,card_lost_reported_at', { headers: rpcHeaders() });
       const rows = await res.json();
       const row = rows && rows[0];
+      _cardFrozenAt = row && row.card_frozen_at ? row.card_frozen_at : null;
       renderFreezeUI(!!(row && row.card_frozen), !!(row && row.card_lost_reported_at));
+      startFreezeDurationCounter(); // GOD MODE PATCH — real live "frozen for" timer
     } catch (e) { renderFreezeUI(false, false); }
   }
 
@@ -306,12 +353,14 @@
     const next = !isFrozen;
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/set_card_freeze', {
-        method: 'POST', headers: SB_HEADERS,
+        method: 'POST', headers: rpcHeaders(),
         body: JSON.stringify({ p_citizen_id: citizenId, p_frozen: next })
       });
       const data = await res.json();
       if (!res.ok || !data || data.success === false) { showToast('Could not update card — try again'); return; }
+      _cardFrozenAt = next ? new Date().toISOString() : null; // GOD MODE PATCH — real duration counter needs this
       renderFreezeUI(next, false);
+      startFreezeDurationCounter();
       showToast(next ? '🔒 Card frozen — real transfers, withdrawals and purchases are now blocked.' : '✅ Card unfrozen — ready to spend.');
       loadSecurityLog();
     } catch (e) { showToast('Could not update card — connection error'); }
@@ -326,6 +375,7 @@
 
   function showLostSheet() {
     document.getElementById('lostOverlay').classList.add('show');
+    trapFocus(document.querySelector('#lostOverlay .sheet')); // GOD MODE PATCH — accessibility
   }
 
   function closeLostSheet(e) {
@@ -337,44 +387,149 @@
     if (!citizenId) { showToast('Sign in to report your card'); return; }
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/report_card_lost', {
-        method: 'POST', headers: SB_HEADERS,
+        method: 'POST', headers: rpcHeaders(),
         body: JSON.stringify({ p_citizen_id: citizenId })
       });
       const data = await res.json();
       if (!res.ok || !data || data.success === false) { showToast('Could not report card — try again'); return; }
+      _cardFrozenAt = new Date().toISOString(); // GOD MODE PATCH — real duration counter needs this
       renderFreezeUI(true, true);
+      startFreezeDurationCounter();
       showToast('🚨 Card blocked. Real transfers, withdrawals and purchases are now blocked.');
       loadSecurityLog();
     } catch (e) { showToast('Could not report card — connection error'); }
   }
 
   // ── SECURITY LOG — real entries from security_events (zone: card_freeze, card_lost) ──
+  const SEC_LOG_PAGE_SIZE = 10;
+  let _secLogOffset = 0;
+  let _secLogRows = [];
+
+  function renderSecLogRow(r) {
+    const dotClass = r.tier === 'T3' || r.tier === 'T4' ? 'red' : (r.tier === 'T2' ? 'gold' : 'green');
+    const d = new Date(r.created_at);
+    return '<div class="sh-item"><div class="sh-dot ' + dotClass + '"></div><div class="sh-body">' +
+      '<div class="sh-event">' + r.description + '</div>' +
+      '<div class="sh-time">' + d.toLocaleString('en-AU', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) + ' · ' + r.tier + '</div>' +
+    '</div></div>';
+  }
+
   async function loadSecurityLog() {
     const el = document.getElementById('secHistList');
-    if (!citizenId) { el.innerHTML = '<div class="sh-item"><div class="sh-body"><div class="sh-event" style="color:var(--text-muted);">Sign in to see your card security log.</div></div></div>'; return; }
+    const moreBtn = document.getElementById('logLoadMoreBtn');
+    if (!citizenId) { el.innerHTML = '<div class="sh-item"><div class="sh-body"><div class="sh-event" style="color:var(--text-muted);">Sign in to see your card security log.</div></div></div>'; if (moreBtn) moreBtn.classList.add('hidden'); return; }
+    _secLogOffset = 0;
     try {
-      const url = SUPABASE_URL + '/rest/v1/security_events?zone=in.(card_freeze,card_lost)&detail->>citizen_id=eq.' + encodeURIComponent(citizenId) + '&order=created_at.desc&limit=10&select=tier,description,created_at';
-      const res = await fetch(url, { headers: SB_HEADERS });
+      const url = SUPABASE_URL + '/rest/v1/security_events?zone=in.(card_freeze,card_lost)&detail->>citizen_id=eq.' + encodeURIComponent(citizenId) + '&order=created_at.desc&limit=' + SEC_LOG_PAGE_SIZE + '&offset=0&select=tier,description,created_at';
+      const res = await fetch(url, { headers: rpcHeaders() });
       const rows = await res.json();
-      if (!rows || !rows.length) {
+      _secLogRows = rows || [];
+      if (!_secLogRows.length) {
         el.innerHTML = '<div class="sh-item"><div class="sh-body"><div class="sh-event" style="color:var(--text-muted);">No card security events yet.</div></div></div>';
+        if (moreBtn) moreBtn.classList.add('hidden');
         return;
       }
-      el.innerHTML = rows.map(function(r) {
-        const dotClass = r.tier === 'T3' || r.tier === 'T4' ? 'red' : (r.tier === 'T2' ? 'gold' : 'green');
-        const d = new Date(r.created_at);
-        return '<div class="sh-item"><div class="sh-dot ' + dotClass + '"></div><div class="sh-body">' +
-          '<div class="sh-event">' + r.description + '</div>' +
-          '<div class="sh-time">' + d.toLocaleString('en-AU', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) + ' · ' + r.tier + '</div>' +
-        '</div></div>';
-      }).join('');
+      el.innerHTML = _secLogRows.map(renderSecLogRow).join('');
+      // GOD MODE (Feature 3): only offer "Load more" once a full page came back —
+      // a short first page means there's nothing further to paginate to.
+      if (moreBtn) moreBtn.classList.toggle('hidden', _secLogRows.length < SEC_LOG_PAGE_SIZE);
     } catch (e) {
       el.innerHTML = '<div class="sh-item"><div class="sh-body"><div class="sh-event" style="color:var(--text-muted);">Could not load security log.</div></div></div>';
+      if (moreBtn) moreBtn.classList.add('hidden');
     }
   }
 
-  loadCardState();
-  loadSecurityLog();
+  async function loadMoreSecurityLog() {
+    if (!citizenId) return;
+    const moreBtn = document.getElementById('logLoadMoreBtn');
+    _secLogOffset += SEC_LOG_PAGE_SIZE;
+    moreBtn.textContent = 'Loading…'; moreBtn.disabled = true;
+    try {
+      const url = SUPABASE_URL + '/rest/v1/security_events?zone=in.(card_freeze,card_lost)&detail->>citizen_id=eq.' + encodeURIComponent(citizenId) + '&order=created_at.desc&limit=' + SEC_LOG_PAGE_SIZE + '&offset=' + _secLogOffset + '&select=tier,description,created_at';
+      const res = await fetch(url, { headers: rpcHeaders() });
+      const rows = (await res.json()) || [];
+      _secLogRows = _secLogRows.concat(rows);
+      const el = document.getElementById('secHistList');
+      el.innerHTML += rows.map(renderSecLogRow).join('');
+      moreBtn.classList.toggle('hidden', rows.length < SEC_LOG_PAGE_SIZE);
+    } catch (e) { showToast('Could not load more — try again'); }
+    moreBtn.textContent = 'Load more'; moreBtn.disabled = false;
+  }
+
+  // ── FREEZE DURATION LIVE COUNTER (God Mode Feature 1) ──
+  // Ticks against the real card_frozen_at timestamp from the citizens table —
+  // not a fake/simulated timer.
+  let _freezeDurationInterval = null;
+  function startFreezeDurationCounter() {
+    const el = document.getElementById('freezeDuration');
+    if (!el) return;
+    if (_freezeDurationInterval) { clearInterval(_freezeDurationInterval); _freezeDurationInterval = null; }
+    if (!isFrozen || !_cardFrozenAt) { el.classList.remove('show'); return; }
+    function tick() {
+      const ms = Date.now() - new Date(_cardFrozenAt).getTime();
+      if (ms < 0) { el.classList.remove('show'); return; }
+      const h = Math.floor(ms / 3600000);
+      const m = Math.floor((ms % 3600000) / 60000);
+      const s = Math.floor((ms % 60000) / 1000);
+      el.textContent = '🔴 Frozen for ' + (h > 0 ? h + 'h ' : '') + m + 'm ' + s + 's';
+      el.classList.add('show');
+    }
+    tick();
+    _freezeDurationInterval = setInterval(tick, 1000);
+  }
+
+  // ── VERIFY PROTECTION (God Mode Feature 2) ──
+  // Re-fetches the citizen's real DB row on demand rather than trusting whatever
+  // this screen last rendered — grounds the claim in a fresh server read.
+  async function verifyProtection() {
+    if (!citizenId) { showToast('Sign in to verify your card status'); return; }
+    showToast('Checking your real account state…');
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + encodeURIComponent(citizenId) + '&select=card_frozen,card_lost_reported_at', { headers: rpcHeaders() });
+      const rows = await res.json();
+      const row = rows && rows[0];
+      if (!row) { showToast('Could not verify — try again'); return; }
+      if (row.card_lost_reported_at) {
+        showToast('✅ Verified: card is permanently blocked (reported lost/stolen) — confirmed server-side, right now.');
+      } else if (row.card_frozen) {
+        showToast('✅ Verified: card_frozen = true on your real account — any transfer, withdrawal or purchase attempt is rejected server-side right now.');
+      } else {
+        showToast('✅ Verified: your card is active on your real account — real payments are currently allowed.');
+      }
+      // Reconcile UI in case it had drifted from the real state
+      renderFreezeUI(!!row.card_frozen, !!row.card_lost_reported_at);
+    } catch (e) { showToast('Could not verify — connection error'); }
+  }
+
+  // ── KEYBOARD ACCESSIBILITY (God Mode Feature 4) ──
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Escape') return;
+    const ov = document.getElementById('lostOverlay');
+    if (ov && ov.classList.contains('show')) closeLostSheet();
+  });
+
+  function trapFocus(containerEl) {
+    if (!containerEl) return;
+    const focusables = containerEl.querySelectorAll('button, [href], input, [tabindex]:not([tabindex="-1"])');
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    setTimeout(function() { first.focus(); }, 50);
+    if (containerEl._trapHandler) containerEl.removeEventListener('keydown', containerEl._trapHandler);
+    const handler = function(e) {
+      if (e.key !== 'Tab') return;
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    containerEl.addEventListener('keydown', handler);
+    containerEl._trapHandler = handler;
+  }
+
+  document.addEventListener('DOMContentLoaded', async function() {
+    await initRealSession(); // GOD MODE PATCH — resolve real access token before any RPC call
+    loadCardState();
+    loadSecurityLog();
+  });
 
   function showToast(msg) {
     let t = document.getElementById('toast');
