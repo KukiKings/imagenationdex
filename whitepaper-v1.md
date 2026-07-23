@@ -958,7 +958,17 @@ The Cook Islands flag carries 15 white stars in a circle — one for each of the
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-23 — savings-goals.html got a real backend; staking.html got a real-auth fix plus God Mode Round 3. See x83 below.
+> Last updated: 2026-07-23 — notifications-setup.html got its first God Mode pass (real Notification API, test alert, persistence, quiet-hours preview). See x84 below.
+
+### Session 121 continued x84 (2026-07-23) — notifications-setup.html: first God Mode pass + real fake-execution fix
+
+Asked to pick the "next" screen for God Mode after staking.html. Two wrong guesses first (citizen-dashboard.html and portfolio.html both already heavily God Mode'd — see gotchas.md for the full miss and the fix: rank every candidate by `grep -ci "god mode"` instead of trusting a single phrase pattern). That scan showed only `help.html` and `notifications-setup.html` at zero. Picked `notifications-setup.html` (real preferences screen, better fit than a static FAQ page).
+
+Found and fixed a real fake-execution bug along the way: `enableNotifications()` always faked a 900ms "Enabling…" delay and then unconditionally showed the success overlay, regardless of what the browser/OS actually did — a citizen who tapped Deny would still be told notifications were on. Now calls the real `Notification.requestPermission()` API and reflects the actual outcome (granted/denied/unsupported) honestly.
+
+4 God Mode features: (1) the permission fix above, (2) Send Test Alert — real system `Notification` when permitted, honest in-app preview otherwise, built from the citizen's actually-enabled channels, (3) full `localStorage` persistence for every toggle/frequency/quiet-hours choice (previously in-memory only — reopening from Profile → Settings always reset to factory defaults), (4) live quiet-hours duration preview with an "Always allow important alerts" override surfaced when Payments/Security are on during quiet hours.
+
+**Verified:** JS syntax clean, single `DOMContentLoaded` listener, full three-check audit clean, no id collisions.
 
 ### Session 121 continued x83 (2026-07-23) — savings-goals.html real backend; staking.html real-auth fix + God Mode Round 3
 

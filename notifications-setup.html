@@ -209,6 +209,43 @@
   }
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
+  /* ══════════════════════════════════════
+     GOD MODE — notifications-setup.html
+  ══════════════════════════════════════ */
+
+  /* Feature 1+2: Test alert button + permission status note */
+  .test-alert-row{padding:0 20px;margin-top:14px;}
+  .test-alert-btn{
+    width:100%;background:var(--surface);border:1.5px solid var(--border);color:var(--cyan);
+    font-size:13px;font-weight:700;border-radius:12px;padding:12px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;
+  }
+  .test-alert-btn:active{transform:scale(0.97);background:#071825;}
+  .perm-status-note{
+    padding:0 20px;margin-top:8px;font-size:11px;color:var(--muted);text-align:center;line-height:1.5;
+  }
+  .perm-status-note.denied{color:var(--red);}
+  .perm-status-note.granted{color:var(--green);}
+
+  /* Feature 3: persistence is state-only, no new visual element required */
+
+  /* Feature 4: quiet hours live preview + important-alert override */
+  .qh-preview{
+    font-size:12px;color:var(--cyan);font-weight:600;margin-top:12px;padding-top:12px;
+    border-top:1px solid var(--border);display:none;
+  }
+  .qh-preview.visible{display:block;}
+  .qh-override-row{
+    display:flex;align-items:center;justify-content:space-between;margin-top:10px;
+    padding-top:10px;border-top:1px solid var(--border);display:none;
+  }
+  .qh-override-row.visible{display:flex;}
+  .qh-override-label{font-size:12px;color:var(--text);}
+  .qh-override-sub{font-size:11px;color:var(--muted);margin-top:1px;max-width:220px;}
+  .toggle.small{width:40px;height:24px;}
+  .toggle.small .toggle-knob{width:18px;height:18px;}
+  .toggle.small.on .toggle-knob{left:19px;}
+
   /* ── BOTTOM NAV ── */
   .bottom-nav{display:flex;align-items:center;justify-content:space-around;
     padding:10px 8px calc(10px + env(safe-area-inset-bottom));
@@ -365,6 +402,12 @@
 
   </div>
 
+  <!-- Test Alert (God Mode) -->
+  <div class="test-alert-row">
+    <button class="test-alert-btn" onclick="sendTestAlert()">🔔 Send test alert</button>
+  </div>
+  <div class="perm-status-note" id="permStatusNote"></div>
+
   <!-- Frequency -->
   <div class="freq-section">
     <div class="section-label" style="padding:0;margin-bottom:10px;">Notification frequency</div>
@@ -387,9 +430,19 @@
       </button>
     </div>
     <div class="qh-times" id="quietTimes">
-      <input class="qh-time-input" id="quietFrom" type="time" value="22:00">
+      <input class="qh-time-input" id="quietFrom" type="time" value="22:00" oninput="updateQuietPreview()">
       <div class="qh-sep">to</div>
-      <input class="qh-time-input" id="quietTo" type="time" value="07:00">
+      <input class="qh-time-input" id="quietTo" type="time" value="07:00" oninput="updateQuietPreview()">
+    </div>
+    <div class="qh-preview" id="quietPreview"></div>
+    <div class="qh-override-row" id="quietOverrideRow">
+      <div>
+        <div class="qh-override-label">Always allow important alerts</div>
+        <div class="qh-override-sub">Payments &amp; Security still ring during quiet hours</div>
+      </div>
+      <button class="toggle small on" id="quietOverrideToggle" onclick="toggleQuietOverride()">
+        <div class="toggle-knob"></div>
+      </button>
     </div>
   </div>
 
@@ -438,6 +491,8 @@
   };
   let masterOn = true;
   let quietOn = false;
+  let allowImportantDuringQuiet = true;
+  const NOTIF_KEY = 'indx_notif_prefs';
 
   const CHANNEL_META = {
     payments:    { icon: '💸', label: 'Payments' },
@@ -459,6 +514,7 @@
       : 'All notifications paused';
     document.getElementById('channelsContainer').style.opacity = masterOn ? '1' : '0.4';
     document.getElementById('channelsContainer').style.pointerEvents = masterOn ? '' : 'none';
+    saveNotifPrefs(); // GOD MODE PATCH — persist across visits
   }
 
   // ── CHANNEL ──
@@ -469,12 +525,15 @@
     const card = document.getElementById('ch-' + id);
     card.classList.toggle('on', on);
     showToast((on ? '✓ ' : '✗ ') + CHANNEL_META[id].label + (on ? ' on' : ' off'));
+    saveNotifPrefs(); // GOD MODE PATCH — persist across visits
+    updateQuietPreview(); // GOD MODE PATCH — payments/security toggle changes the conflict note
   }
 
   // ── FREQUENCY ──
   function setFreq(freq, btn) {
     document.querySelectorAll('.freq-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
+    saveNotifPrefs(); // GOD MODE PATCH — persist across visits
   }
 
   // ── QUIET HOURS ──
@@ -486,19 +545,167 @@
     document.getElementById('quietSub').textContent = quietOn
       ? 'No notifications during these hours'
       : 'Mute notifications while you sleep';
+    saveNotifPrefs(); // GOD MODE PATCH — persist across visits
+    updateQuietPreview();
   }
 
-  // ── ENABLE ──
+  // ── QUIET HOURS OVERRIDE (God Mode) ──
+  function toggleQuietOverride() {
+    allowImportantDuringQuiet = !allowImportantDuringQuiet;
+    document.getElementById('quietOverrideToggle').classList.toggle('on', allowImportantDuringQuiet);
+    saveNotifPrefs();
+    updateQuietPreview();
+  }
+
+  // ── QUIET HOURS LIVE PREVIEW (God Mode) ──
+  // Computes real muted-hours duration and warns if an IMPORTANT channel
+  // (Payments/Security) would go silent during that window.
+  function updateQuietPreview() {
+    const preview = document.getElementById('quietPreview');
+    const overrideRow = document.getElementById('quietOverrideRow');
+    if (!preview || !overrideRow) return;
+    if (!quietOn) { preview.classList.remove('visible'); overrideRow.classList.remove('visible'); return; }
+
+    const fromVal = document.getElementById('quietFrom').value || '22:00';
+    const toVal = document.getElementById('quietTo').value || '07:00';
+    const [fh, fm] = fromVal.split(':').map(Number);
+    const [th, tm] = toVal.split(':').map(Number);
+    let mins = (th * 60 + tm) - (fh * 60 + fm);
+    if (mins <= 0) mins += 24 * 60;
+    const hrs = Math.floor(mins / 60);
+    const remMins = mins % 60;
+    const durationTxt = hrs + 'h' + (remMins ? ' ' + remMins + 'm' : '');
+
+    const importantOn = channelState.payments || channelState.security;
+    let txt = '🌙 Quiet from ' + fromVal + ' to ' + toVal + ' (' + durationTxt + ' muted)';
+    preview.textContent = txt;
+    preview.classList.add('visible');
+
+    overrideRow.classList.toggle('visible', importantOn);
+    if (importantOn) {
+      document.getElementById('quietOverrideToggle').classList.toggle('on', allowImportantDuringQuiet);
+    }
+  }
+
+  // ── ENABLE (God Mode fix) ──
+  // Previously this always faked a 900ms "Enabling…" delay then unconditionally
+  // showed the success overlay, regardless of what the browser/OS actually did —
+  // a real citizen who tapped Deny would still be told notifications were on.
+  // Now it calls the real Notification API when available and reflects the
+  // actual outcome (granted / denied / unsupported) honestly.
   function enableNotifications() {
-    // Simulate OS permission request
-    document.getElementById('enableBtn').textContent = 'Enabling…';
-    document.getElementById('enableBtn').disabled = true;
+    const btn = document.getElementById('enableBtn');
+    btn.textContent = 'Enabling…';
+    btn.disabled = true;
 
-    setTimeout(() => {
-      buildSuccessChips();
-      document.getElementById('successOverlay').classList.add('active');
-    }, 900);
+    if (!('Notification' in window)) {
+      // No browser Notification API in this context (e.g. some in-app webviews).
+      // Proceed to the in-app success state — channel preferences are still real
+      // and saved — but don't claim OS-level push permission was granted.
+      setTimeout(() => {
+        showPermStatus('Push permission isn\'t available in this browser context — your channel preferences are saved and will apply once notifications are supported here.', 'denied');
+        buildSuccessChips();
+        document.getElementById('successOverlay').classList.add('active');
+        btn.textContent = 'Enable Notifications →';
+        btn.disabled = false;
+      }, 500);
+      return;
+    }
+
+    Notification.requestPermission().then(function(perm) {
+      btn.textContent = 'Enable Notifications →';
+      btn.disabled = false;
+      if (perm === 'granted') {
+        showPermStatus('✓ Device notifications enabled', 'granted');
+        buildSuccessChips();
+        document.getElementById('successOverlay').classList.add('active');
+      } else if (perm === 'denied') {
+        showPermStatus('Notifications blocked at the device level. Enable them in your phone\'s Settings → Notifications → IN$DEX to receive alerts.', 'denied');
+      } else {
+        showPermStatus('No response yet — tap Enable again when you\'re ready.', '');
+      }
+    }).catch(function() {
+      btn.textContent = 'Enable Notifications →';
+      btn.disabled = false;
+      showPermStatus('Could not request notification permission — try again.', 'denied');
+    });
   }
+
+  function showPermStatus(msg, cls) {
+    const el = document.getElementById('permStatusNote');
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'perm-status-note' + (cls ? ' ' + cls : '');
+  }
+
+  // ── SEND TEST ALERT (God Mode) ──
+  // Fires a real system notification when permission is already granted; falls
+  // back to an honest in-app toast preview otherwise, listing real enabled channels.
+  function sendTestAlert() {
+    const activeChannels = Object.entries(channelState).filter(([, v]) => v).map(([id]) => CHANNEL_META[id].label);
+    const sample = activeChannels.length ? activeChannels[0] : 'General';
+    const body = activeChannels.length
+      ? 'Sample alert for: ' + activeChannels.join(', ')
+      : 'No channels are on yet — this is a preview only.';
+
+    if ('Notification' in window && Notification.permission === 'granted') {
+      try {
+        new Notification('IN$DEX · ' + sample + ' (test)', { body: body, icon: 'assets/favicon.png' });
+        showToast('🔔 Test alert sent to your device');
+        return;
+      } catch (e) { /* fall through to in-app preview */ }
+    }
+    showToast('🔔 Preview: ' + sample + (activeChannels.length > 1 ? ' +' + (activeChannels.length - 1) + ' more' : ''));
+  }
+
+  // ── PERSISTENCE (God Mode) ──
+  // Every toggle/frequency/quiet-hours choice on this screen was previously
+  // in-memory only — reopening it from Profile → Settings always showed the
+  // factory-default state, silently discarding whatever a citizen had set.
+  function saveNotifPrefs() {
+    try {
+      localStorage.setItem(NOTIF_KEY, JSON.stringify({
+        channelState, masterOn, quietOn, allowImportantDuringQuiet,
+        freq: document.querySelector('.freq-btn.active')?.id || 'freq-instant',
+        quietFrom: document.getElementById('quietFrom')?.value || '22:00',
+        quietTo: document.getElementById('quietTo')?.value || '07:00'
+      }));
+    } catch (e) { /* localStorage unavailable — non-critical */ }
+  }
+
+  function restoreNotifPrefs() {
+    let saved;
+    try { saved = JSON.parse(localStorage.getItem(NOTIF_KEY) || 'null'); } catch (e) { saved = null; }
+    if (!saved) return;
+
+    Object.keys(channelState).forEach(function(id) {
+      if (typeof saved.channelState?.[id] === 'boolean') {
+        channelState[id] = saved.channelState[id];
+        const toggleEl = document.querySelector('#ch-' + id + ' .toggle');
+        const card = document.getElementById('ch-' + id);
+        if (toggleEl) toggleEl.classList.toggle('on', channelState[id]);
+        if (card) card.classList.toggle('on', channelState[id]);
+      }
+    });
+
+    if (typeof saved.masterOn === 'boolean' && saved.masterOn !== masterOn) toggleMaster();
+    if (typeof saved.allowImportantDuringQuiet === 'boolean') allowImportantDuringQuiet = saved.allowImportantDuringQuiet;
+
+    if (saved.freq) {
+      const btn = document.getElementById(saved.freq);
+      if (btn) { document.querySelectorAll('.freq-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+    }
+
+    if (saved.quietFrom) document.getElementById('quietFrom').value = saved.quietFrom;
+    if (saved.quietTo) document.getElementById('quietTo').value = saved.quietTo;
+    if (saved.quietOn && !quietOn) toggleQuiet();
+    updateQuietPreview();
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    restoreNotifPrefs();
+    updateQuietPreview();
+  });
 
   function buildSuccessChips() {
     const container = document.getElementById('successChips');
