@@ -1213,6 +1213,21 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  let _realAccessToken = null;
+  async function initRealSession() {
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+    } catch (e) { /* stay on anon key */ }
+  }
+  function rpcHeaders() {
+    return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' };
+  }
+  // Fire immediately (not gated on DOMContentLoaded — this flow has no single init
+  // point). Resolves well before the face-scan/portal-activation step where the
+  // gated RPCs below actually fire, in the rare case a session already exists.
+  initRealSession();
+
   let selectedGoal = null;
 
   // ── GOAL SELECTION ──
@@ -1407,11 +1422,7 @@
               try {
                 await fetch('https://zljgthfzbalsunuoohcd.supabase.co/rest/v1/rpc/complete_referral', {
                   method: 'POST',
-                  headers: {
-                    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA',
-                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA',
-                    'Content-Type': 'application/json'
-                  },
+                  headers: rpcHeaders(),
                   body: JSON.stringify({ p_referral_code: urlRef, p_referred_citizen_id: data.id })
                 });
               } catch(e) { /* non-critical — attribution is best-effort */ }
@@ -1426,11 +1437,7 @@
               try {
                 const fRes = await fetch('https://zljgthfzbalsunuoohcd.supabase.co/rest/v1/rpc/fulfill_instant_invite', {
                   method: 'POST',
-                  headers: {
-                    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA',
-                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA',
-                    'Content-Type': 'application/json'
-                  },
+                  headers: rpcHeaders(),
                   body: JSON.stringify({ p_invite_code: urlInstant, p_new_citizen_id: data.id })
                 });
                 const fBody = await fRes.json();

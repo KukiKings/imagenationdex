@@ -958,7 +958,19 @@ The Cook Islands flag carries 15 white stars in a circle — one for each of the
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-23 — 17-screen "bucket 1" sweep complete: 14 more anon-key bugs fixed, 3 confirmed clean, 1 deeper issue flagged (citizen-protection-mode.html). Only 8 lower-priority honest-preview screens + 1 newly-surfaced follow-up (onboarding-flow.html) remain on the anon-key list. See x88 below.
+> Last updated: 2026-07-23 — onboarding-flow.html audited: fulfill_instant_invite/complete_referral confirmed gated + silently failing (real-money issue, needs AJ's call), fake "citizens joined" counter found. Only 8 lower-priority honest-preview screens remain on the anon-key list — full sweep otherwise complete. See x89 below.
+
+### Session 121 continued x89 (2026-07-23) — onboarding-flow.html: real-money fulfill_instant_invite confirmed gated, fake citizen counter found
+
+Followed up on x88's flagged lead (sms-claim.html's `fulfill_instant_invite` follow-up). Confirmed via `information_schema.role_routine_grants` that both `fulfill_instant_invite` (the RPC that actually moves INDX from an instant-invite sender to a new citizen) and `complete_referral` lack anon EXECUTE, while `create_onboarding_citizen`/`claim_genesis_signup_bonus_anon` correctly have it. Applied the standard header fix to both.
+
+**Flagging for AJ, not silently resolved:** onboarding-flow.html never establishes a real Supabase Auth session anywhere (it's the pre-auth signup screen by design), so the header fix is correct plumbing but currently inert — these two RPCs will keep failing until anon is explicitly granted EXECUTE on them (matching the pattern of the other two onboarding RPCs) or the architecture changes. Practical effect: every citizen who has signed up via an instant-invite link most likely never actually received the sender's pledged INDX, despite the code's own comment claiming the transfer happens atomically. This is a security-posture decision (granting EXECUTE on a money-moving function to anon), not a header fix — needs AJ's call.
+
+**Separate fabrication found:** the "12,847 citizens joined" counter on screen 1 is fully simulated — drifts up via `setTimeout` + localStorage, zero connection to any real data. No "total citizens" RPC exists in the schema to wire it to (only `get_waitlist_count()`, a different metric). Flagged rather than silently fixed — swapping the label, removing the counter, or building a real RPC are each AJ's call.
+
+Verified: node --check clean, no DOMContentLoaded listener (none existed before, none added), price/A$/seed-phrase audits clean.
+
+This closes out the full anon-key-bug list except the 8 explicitly-deprioritized honest-preview screens (dca, dex-swap, gift-indx, instant-onboard, limit-orders, liquidity-pools, microloan, trust-before-transaction), none of which claim real execution either way.
 
 ### Session 121 continued x88 (2026-07-23) — 17-screen "bucket 1" sweep: 14 more anon-key bugs fixed, 3 confirmed clean, 1 deeper issue flagged
 
