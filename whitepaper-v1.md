@@ -958,7 +958,17 @@ The Cook Islands flag carries 15 white stars in a circle — one for each of the
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-22 — the live public homepage (home-v2.html) had the same fabrication pattern; fixed and pushed. See x82 below.
+> Last updated: 2026-07-23 — savings-goals.html got a real backend; staking.html got a real-auth fix plus God Mode Round 3. See x83 below.
+
+### Session 121 continued x83 (2026-07-23) — savings-goals.html real backend; staking.html real-auth fix + God Mode Round 3
+
+Built `savings_goals` Supabase table + RLS (SELECT-own, RPC-write-only) + `get_my_savings_goals`/`create_savings_goal`/`contribute_to_savings_goal` RPCs — `savings-goals.html` was previously 100% localStorage with 2 hardcoded fake goals and a "Create Goal" button that discarded its own form input. Rewired the screen to the real backend when a genuine Supabase Auth session exists, honest local-demo fallback otherwise. Anon has zero grants on the table or any of the 3 functions, verified live (unauthenticated call correctly rejected, zero rows created).
+
+While wiring that, found `staking.html`'s `stake_indx` call (and every other RPC call on that screen) sends the anon key as its Bearer token — but those functions have `EXECUTE` correctly revoked from `anon`, so every real citizen's stake/claim/unstake/wisdom-award attempt has been silently 403'ing since the backend was built, masked as generic "Connection error." Fixed by resolving the citizen's real Supabase Auth access token when one exists (same pattern used for the new savings RPCs) and falling back to the anon key otherwise — no regression for today's common case, real fix once real citizen sessions exist.
+
+Also ran God Mode Round 3 on `staking.html` (Rounds 1–2 already present): live next-unlock countdown ticking against the real soonest position `unlocks_at`; one-tap Restake on matured/flexible positions (real `unstake_position` → `stake_indx` sequence, payout provably safe in balance if the second leg fails); reward history CSV export from the real reward-history rows already on the Rewards tab; Escape-to-close + Tab focus-trapping on the stake-confirm and early-unstake sheets.
+
+**Verified:** both files — `node --check` JS syntax clean, single `DOMContentLoaded` listener each (no duplicates), full three-check price/A$/seed-phrase audit clean, no id collisions. `savings_goals` RLS/grants verified via `information_schema` plus a live negative SQL test (unauthenticated create attempt rejected, zero rows). `staking.html`'s anon-vs-authenticated grants verified via `information_schema.role_routine_grants` before writing the fix, not assumed.
 
 ### Session 121 continued x82 (2026-07-22) — Live homepage (home-v2.html) had fabrications the earlier sweeps missed, because index.html isn't the homepage
 

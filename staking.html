@@ -229,6 +229,29 @@
   .streak-share-btn{padding:8px 14px;border-radius:9px;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.25);color:var(--cyan);font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;}
   .streak-share-btn:active{background:rgba(0,212,255,0.2);}
 
+  /* ═══════════════════════════════════════
+     GOD MODE ROUND 3 — staking.html
+  ═══════════════════════════════════════ */
+
+  /* Feature 1: Live next-unlock countdown strip */
+  .next-unlock-strip{display:flex;align-items:center;gap:10px;padding:11px 16px;background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.2);border-radius:12px;margin-bottom:10px;}
+  .nu-ico{font-size:18px;flex-shrink:0;}
+  .nu-label{font-size:11px;color:var(--text-muted);}
+  .nu-sub{font-size:13px;font-weight:700;margin-top:1px;font-variant-numeric:tabular-nums;}
+
+  /* Feature 2: One-tap restake button (extends si-actions to 3 buttons) */
+  .si-actions{flex-wrap:wrap;}
+  .si-btn.restake{background:rgba(0,212,255,0.08);border-color:rgba(0,212,255,0.28);color:var(--cyan);}
+
+  /* Feature 3: Reward history CSV export */
+  .rewards-history-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border);}
+  .rh-title{font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;}
+  .export-btn{padding:6px 12px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--cyan);font-size:11px;font-weight:700;cursor:pointer;}
+  .export-btn:active{background:var(--cyan-bg);}
+
+  /* Feature 4: Keyboard focus visibility for trapped sheets/overlays */
+  .confirm-btn:focus-visible, .cancel-btn:focus-visible, .eu-btn-confirm:focus-visible, .eu-btn-keep:focus-visible, .si-btn:focus-visible, .export-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+
   /* CONFIRM OVERLAY */
   .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s;}
   .overlay.show{opacity:1;pointer-events:all;}
@@ -515,6 +538,15 @@
         <button class="streak-share-btn" onclick="shareStakingPosition()">⬆ Share</button>
       </div>
 
+      <!-- NEXT UNLOCK COUNTDOWN (God Mode R3) -->
+      <div class="next-unlock-strip" id="nextUnlockStrip" style="display:none;">
+        <span class="nu-ico">⏳</span>
+        <div style="flex:1;">
+          <div class="nu-label">Next unlock</div>
+          <div class="nu-sub"><span id="nuAmount">0 INDX</span> in <span id="nuCountdown" style="color:var(--cyan);">--</span></div>
+        </div>
+      </div>
+
       <div id="stakesContainer"></div>
 
       <div class="empty-state" id="stakesEmptyState" style="display:none;">
@@ -540,7 +572,10 @@
         <div style="font-size:13px;color:var(--text-muted);">≈ $2.27 earned from staking</div>
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
-        <div style="padding:14px 16px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;">Reward History</div>
+        <div class="rewards-history-head">
+          <div class="rh-title">Reward History</div>
+          <button class="export-btn" onclick="exportRewardHistory()">⬇ Export CSV</button>
+        </div>
         <div id="rewardHistory"></div>
       </div>
     </div>
@@ -602,7 +637,29 @@
   const citizenId = sessionStorage.getItem('citizen_id');
   let stakingPositions = [];
   let availBal = 0;
-  const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+
+  // ── REAL AUTH FIX (God Mode R3) ──────────────────────────────────────
+  // Found 2026-07-23: every RPC call in this file (stake_indx, get_staking_positions,
+  // claim_staking_rewards, unstake_position, award_wisdom) sent the anon key as the
+  // Bearer token. Those functions correctly have EXECUTE revoked from anon (per
+  // gotcha #84's remediation), so every single one of those calls has been getting a
+  // silent 42501 permission-denied from PostgREST — swallowed by generic catch blocks
+  // and shown as vague "Connection error" / empty state, never actually reaching the
+  // function body. Real fix: use the citizen's real Supabase Auth access_token (which
+  // resolves auth.uid() correctly) when a genuine session exists, so authenticated
+  // grants + RLS actually apply. Falls back to the anon key otherwise — identical to
+  // prior behavior, so nothing regresses for the common case where no real session
+  // exists yet (sessionStorage-only citizen identity, same root blocker as elsewhere).
+  let _realAccessToken = null;
+  async function initRealSession() {
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+    } catch (e) { /* stay on anon key */ }
+  }
+  function rpcHeaders() {
+    return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' };
+  }
 
   function formatK(n) {
     n = Number(n) || 0;
@@ -676,6 +733,7 @@
     document.getElementById('cfApy').textContent = selectedLock.apy + '%';
     document.getElementById('cfReturn').textContent = '+' + total.toFixed(2) + ' INDX';
     document.getElementById('confirmOverlay').classList.add('show');
+    trapFocus(document.getElementById('confirmCard')); // GOD MODE PATCH R3 — accessibility
   }
 
   async function executeStake() {
@@ -706,7 +764,7 @@
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/stake_indx', {
         method: 'POST',
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        headers: rpcHeaders(),
         body: JSON.stringify({
           p_citizen_id: citizenId,
           p_amount_indx: amt,
@@ -749,7 +807,7 @@
     try {
       const wRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/award_wisdom', {
         method: 'POST',
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        headers: rpcHeaders(),
         body: JSON.stringify({ p_citizen_id: citizenId, p_points: 8, p_reason: 'staking' })
       });
       const newWisdom = await wRes.json();
@@ -774,7 +832,7 @@
     let bal = parseFloat(sessionStorage.getItem('citizen_balance'));
     if (isNaN(bal)) {
       try {
-        const res = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + encodeURIComponent(citizenId) + '&select=indx_balance', { headers: SB_HEADERS });
+        const res = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + encodeURIComponent(citizenId) + '&select=indx_balance', { headers: rpcHeaders() });
         const rows = await res.json();
         bal = rows?.[0]?.indx_balance != null ? Number(rows[0].indx_balance) : 0;
         sessionStorage.setItem('citizen_balance', String(bal));
@@ -789,7 +847,7 @@
   async function loadStakingData() {
     // Platform-wide stats — public, no auth required
     try {
-      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_staking_stats', { method: 'POST', headers: SB_HEADERS, body: '{}' });
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_staking_stats', { method: 'POST', headers: rpcHeaders(), body: '{}' });
       const stats = await res.json();
       if (stats) {
         const s1 = document.getElementById('heroStaked'); if (s1) s1.textContent = formatK(stats.total_staked);
@@ -801,7 +859,7 @@
     if (!citizenId) { stakingPositions = []; renderMyStakes(); return; }
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_staking_positions', {
-        method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId })
+        method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizenId })
       });
       stakingPositions = (await res.json()) || [];
     } catch (e) { stakingPositions = []; }
@@ -824,6 +882,7 @@
     if (!stakingPositions.length) {
       container.innerHTML = '';
       if (emptyState) emptyState.style.display = 'block';
+      startNextUnlockCountdown(); // GOD MODE PATCH R3 — hides the strip when there's nothing to count down to
       return;
     }
     if (emptyState) emptyState.style.display = 'none';
@@ -848,6 +907,11 @@
       const unstakeBtn = isLocked
         ? '<div class="si-btn" onclick="handleUnstakeClick(\'' + p.id + '\')">Early Unstake</div>'
         : '<div class="si-btn" onclick="handleUnstakeClick(\'' + p.id + '\')">Unstake</div>';
+      // Restake (God Mode R3): only offered on matured/flexible positions — one tap
+      // closes the position and re-opens it under the same real terms.
+      const restakeBtn = !isLocked
+        ? '<div class="si-btn restake" onclick="restakePosition(\'' + p.id + '\')">🔄 Restake</div>'
+        : '';
       return '' +
         '<div class="stake-item">' +
           '<div class="si-top"><div><span class="si-amount">' + Number(p.amount_indx).toLocaleString() + '</span><span class="si-ticker">INDX</span></div>' + statusBadge + '</div>' +
@@ -856,17 +920,18 @@
           '<div class="unlock-date">' + unlockDateTxt + '</div>' +
           '<div class="si-rewards"><div><div class="si-rewards-label">Earned so far</div><div class="si-rewards-val">+' + accrued.toFixed(4) + ' INDX</div></div>' +
           '<div style="text-align:right"><div class="si-rewards-label">Claimed to date</div><div class="si-rewards-val">+' + Number(p.rewards_claimed || 0).toFixed(2) + ' INDX</div></div></div>' +
-          '<div class="si-actions">' + actionBtn + unstakeBtn + '</div>' +
+          '<div class="si-actions">' + actionBtn + unstakeBtn + restakeBtn + '</div>' +
         '</div>';
     }).join('');
     if (typeof injectLiveTickers === 'function') injectLiveTickers();
+    startNextUnlockCountdown(); // GOD MODE PATCH R3 — live countdown to nearest real unlock
   }
 
   async function claimRewards(positionId) {
     if (!citizenId) { showToast('Sign in to claim rewards'); return; }
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/claim_staking_rewards', {
-        method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId, p_position_id: positionId })
+        method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizenId, p_position_id: positionId })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -889,7 +954,7 @@
     for (const p of claimable) {
       try {
         const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/claim_staking_rewards', {
-          method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId, p_position_id: p.id })
+          method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizenId, p_position_id: p.id })
         });
         const data = await res.json();
         if (res.ok && data?.claimed_indx) total += Number(data.claimed_indx);
@@ -938,6 +1003,7 @@
 
     const ov = document.getElementById('euOverlay');
     if (ov) ov.classList.add('show');
+    trapFocus(document.querySelector('#euOverlay .eu-sheet')); // GOD MODE PATCH R3 — accessibility
   }
 
   async function confirmUnstakeAction() {
@@ -946,7 +1012,7 @@
     if (!citizenId || !positionId) return;
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/unstake_position', {
-        method: 'POST', headers: SB_HEADERS,
+        method: 'POST', headers: rpcHeaders(),
         body: JSON.stringify({ p_citizen_id: citizenId, p_position_id: positionId, p_accept_early_penalty: !!isEarly })
       });
       const data = await res.json();
@@ -1014,7 +1080,8 @@
   }
 
   // Initialise real data on load
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', async function() {
+    await initRealSession(); // GOD MODE PATCH R3 — resolve real access token before any RPC call
     refreshBalance();
     loadStakingData();
     initStakingStreak(); // GOD MODE PATCH R2 — cosmetic streak tracker, not a financial claim
@@ -1063,7 +1130,7 @@
       const url = SUPABASE_URL + '/rest/v1/transactions?citizen_id=eq.' + encodeURIComponent(citizenId)
         + '&memo=in.(Staking reward claim,Unstake at maturity,"Early unstake, 2% penalty applied")'
         + '&order=created_at.desc&limit=10&select=amount_indx,memo,created_at';
-      const res = await fetch(url, { headers: SB_HEADERS });
+      const res = await fetch(url, { headers: rpcHeaders() });
       const rows = (await res.json()) || [];
       _rewardHistoryItems = rows;
       if (!rows.length) {
@@ -1274,6 +1341,135 @@
       var count = parseInt(localStorage.getItem('indx_stake_shares') || '0') + 1;
       localStorage.setItem('indx_stake_shares', String(count));
     } catch(e) {}
+  }
+
+  /* ═══════════════════════════════════════════════════════
+     GOD MODE ROUND 3 JS — staking.html
+  ═══════════════════════════════════════════════════════ */
+
+  // Feature 1: Live next-unlock countdown — ticks every second against the
+  // real soonest unlocks_at among stakingPositions, not a static day count.
+  let _nextUnlockInterval = null;
+  function computeNextUnlock() {
+    const now = Date.now();
+    let best = null;
+    stakingPositions.forEach(function(p) {
+      if (p.lock_period === 'flex' || !p.unlocks_at) return;
+      const t = new Date(p.unlocks_at).getTime();
+      if (t > now && (!best || t < best.t)) best = { t: t, amount: Number(p.amount_indx) };
+    });
+    return best;
+  }
+  function startNextUnlockCountdown() {
+    const strip = document.getElementById('nextUnlockStrip');
+    if (!strip) return;
+    if (_nextUnlockInterval) { clearInterval(_nextUnlockInterval); _nextUnlockInterval = null; }
+    function tick() {
+      const next = computeNextUnlock();
+      if (!next) { strip.style.display = 'none'; return; }
+      const ms = next.t - Date.now();
+      if (ms <= 0) { strip.style.display = 'none'; return; }
+      strip.style.display = 'flex';
+      const d = Math.floor(ms / 86400000);
+      const h = Math.floor((ms % 86400000) / 3600000);
+      const m = Math.floor((ms % 3600000) / 60000);
+      const s = Math.floor((ms % 60000) / 1000);
+      const cd = document.getElementById('nuCountdown');
+      if (cd) cd.textContent = (d > 0 ? d + 'd ' : '') + String(h).padStart(2, '0') + 'h ' + String(m).padStart(2, '0') + 'm ' + String(s).padStart(2, '0') + 's';
+      const am = document.getElementById('nuAmount');
+      if (am) am.textContent = next.amount.toLocaleString() + ' INDX';
+    }
+    tick();
+    _nextUnlockInterval = setInterval(tick, 1000);
+  }
+
+  // Feature 2: One-tap restake — closes a matured/flexible position for real via
+  // unstake_position, then immediately re-opens it under the same real lock terms
+  // via stake_indx. If the restake leg fails after the unstake succeeds, the payout
+  // is already safely back in the citizen's real balance — never silently lost.
+  async function restakePosition(positionId) {
+    if (!citizenId) { showToast('Sign in to restake'); return; }
+    const p = stakingPositions.find(function(x) { return x.id === positionId; });
+    if (!p) return;
+    const unlocks = p.unlocks_at ? new Date(p.unlocks_at).getTime() : null;
+    const isLocked = p.lock_period !== 'flex' && unlocks && unlocks > Date.now();
+    if (isLocked) { showToast('Still locked — restake unlocks with this position'); return; }
+    showToast('Restaking…');
+    try {
+      const unstakeRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/unstake_position', {
+        method: 'POST', headers: rpcHeaders(),
+        body: JSON.stringify({ p_citizen_id: citizenId, p_position_id: positionId, p_accept_early_penalty: false })
+      });
+      const unstakeData = await unstakeRes.json();
+      if (!unstakeRes.ok || !unstakeData || !unstakeData.payout_indx) {
+        showToast('Restake failed — could not close the position'); return;
+      }
+      const payout = Number(unstakeData.payout_indx);
+      const range = APY_RANGES[p.lock_period] || APY_RANGES['30'];
+      const stakeRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/stake_indx', {
+        method: 'POST', headers: rpcHeaders(),
+        body: JSON.stringify({ p_citizen_id: citizenId, p_amount_indx: payout, p_lock_period: p.lock_period, p_apy_low: range.low, p_apy_high: range.high, p_auto_compound: true })
+      });
+      const stakeData = await stakeRes.json();
+      if (!stakeRes.ok || !stakeData || !stakeData.success) {
+        showToast(payout.toFixed(2) + ' INDX closed but restake failed — it is back in your balance');
+        await refreshBalance(); await loadStakingData();
+        return;
+      }
+      sessionStorage.setItem('citizen_balance', String(stakeData.new_balance));
+      showToast('🔄 Restaked ' + payout.toFixed(2) + ' INDX — same ' + (p.lock_period === 'flex' ? 'flexible' : p.lock_period + '-day') + ' terms');
+      await refreshBalance(); await loadStakingData();
+    } catch (e) { showToast('Restake failed — connection error'); }
+  }
+
+  // Feature 3: Reward history CSV export — built from the same real
+  // _rewardHistoryItems rows already rendered in the Rewards tab.
+  function exportRewardHistory() {
+    if (!_rewardHistoryItems || !_rewardHistoryItems.length) { showToast('No reward history to export yet'); return; }
+    const header = 'Date,Type,Amount INDX,Amount USD\n';
+    const rows = _rewardHistoryItems.map(function(r) {
+      const amt = Number(r.amount_indx || 0);
+      const d = new Date(r.created_at).toISOString().slice(0, 10);
+      const memo = '"' + String(r.memo || '').replace(/"/g, '""') + '"';
+      return [d, memo, amt.toFixed(4), (amt * 0.24).toFixed(4)].join(',');
+    }).join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'indx-staking-rewards-' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('⬇ Reward history exported');
+  }
+
+  // Feature 4: Keyboard accessibility — Escape closes whichever sheet/overlay is
+  // open, and Tab is trapped inside it so focus can't silently leave to page content.
+  function handleGlobalEscape(e) {
+    if (e.key !== 'Escape') return;
+    const confirmOv = document.getElementById('confirmOverlay');
+    if (confirmOv && confirmOv.classList.contains('show')) { confirmOv.classList.remove('show'); return; }
+    const euOv = document.getElementById('euOverlay');
+    if (euOv && euOv.classList.contains('show')) { closeEarlyUnstakeSheet(); return; }
+    const tipOv = document.getElementById('tipOverlay');
+    if (tipOv && tipOv.style.display === 'flex') { hideTip(); return; }
+  }
+  document.addEventListener('keydown', handleGlobalEscape);
+
+  function trapFocus(containerEl) {
+    if (!containerEl) return;
+    const focusables = containerEl.querySelectorAll('button, [href], input, [tabindex]:not([tabindex="-1"])');
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    setTimeout(function() { first.focus(); }, 50);
+    if (containerEl._trapHandler) containerEl.removeEventListener('keydown', containerEl._trapHandler);
+    const handler = function(e) {
+      if (e.key !== 'Tab') return;
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    containerEl.addEventListener('keydown', handler);
+    containerEl._trapHandler = handler;
   }
 
   /* ═══════════════════════════════════════════════════════
