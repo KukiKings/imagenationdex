@@ -334,10 +334,17 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
   const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let _realAccessToken = null;
+  async function initRealSession() {
+    try { const { data } = await sb.auth.getSession(); if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token; } catch (e) {}
+  }
+  function rpcHeaders() { return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' }; }
   const citizenId = sessionStorage.getItem('citizen_id');
   const INDX_PRICE_USD = 0.24;
   const BPAY_FEE = 2.00; // avg BPay fee per bill — used only for the "fees saved" comparison, not a real charge
@@ -540,7 +547,7 @@
 
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/pay_bill', {
-        method: 'POST', headers: SB_HEADERS,
+        method: 'POST', headers: rpcHeaders(),
         body: JSON.stringify({
           p_citizen_id: citizenId,
           p_biller_name: name,
@@ -580,7 +587,7 @@
     if (!citizenId) return [];
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_bill_pay_history', {
-        method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId, p_limit: 20 })
+        method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizenId, p_limit: 20 })
       });
       return await res.json();
     } catch (e) { return []; }
@@ -640,7 +647,7 @@
     if (!citizenId) return [];
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_bill_pay_schedules', {
-        method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId })
+        method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizenId })
       });
       return await res.json();
     } catch (e) { return []; }
@@ -682,7 +689,7 @@
   async function cancelSched(scheduleId) {
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/cancel_bill_pay_schedule', {
-        method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId, p_schedule_id: scheduleId })
+        method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizenId, p_schedule_id: scheduleId })
       });
       if (!res.ok) { showToast('Could not cancel — try again'); return; }
       showToast('🗑 Recurring payment cancelled');
@@ -691,10 +698,13 @@
   }
 
   // Init on load
-  syncBalance();
-  renderRecentPayments();
-  updateSpendCard();
-  loadLastBiller();
+  document.addEventListener('DOMContentLoaded', async () => {
+    await initRealSession();
+    syncBalance();
+    renderRecentPayments();
+    updateSpendCard();
+    loadLastBiller();
+  });
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

@@ -382,10 +382,11 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
-  const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const citizenId = sessionStorage.getItem('citizen_id');
   const INDX_PRICE_USD = 0.24;
   let withdrawAmt = 50;
@@ -397,9 +398,15 @@
   // hardcoded $420/$80/$48 and sessionStorage-guessed balance.
   let usage = { daily_limit_usd: 500, used_today_usd: 0, remaining_today_usd: 500, card_balance_usd: 0 };
 
+  let _realAccessToken = null;
+  async function initRealSession() {
+    try { const { data } = await sb.auth.getSession(); if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token; } catch (e) {}
+  }
+  function rpcHeaders() { return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' }; }
+
   async function rpc(name, body) {
     const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + name, {
-      method: 'POST', headers: SB_HEADERS, body: JSON.stringify(body)
+      method: 'POST', headers: rpcHeaders(), body: JSON.stringify(body)
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.message || 'Request failed');
@@ -407,6 +414,7 @@
   }
 
   async function init() {
+    await initRealSession();
     const domain = sessionStorage.getItem('citizen_web3_domain') || 'arthur.IN$DEX';
     document.getElementById('qrDomain').textContent = domain + ' · INDX';
 

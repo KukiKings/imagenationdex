@@ -243,17 +243,24 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
   </div>
 </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
 // ── CONSTANTS ──────────────────────────────────────────────────────────────
 const INDX_PRICE_USD = 0.24;
 const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let _realAccessToken = null;
+async function initRealSession() {
+  try { const { data } = await sb.auth.getSession(); if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token; } catch (e) {}
+}
+function rpcHeaders() { return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' }; }
 
 async function callShieldRpc(rpcName, body) {
   const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + rpcName, {
     method: 'POST',
-    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+    headers: rpcHeaders(),
     body: JSON.stringify(body)
   });
   const data = await res.json().catch(() => null);
@@ -458,7 +465,9 @@ function showToast(msg, ms) {
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await initRealSession();
+
   // Restore protection mode
   const pm = localStorage.getItem('indx_protection_mode') === '1';
   document.getElementById('protectToggle').checked = pm;

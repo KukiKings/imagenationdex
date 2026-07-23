@@ -478,6 +478,23 @@ const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// ── REAL SESSION JWT (gated-RPC fix) ──────────────────────────────
+// complete_referral and create_listing have EXECUTE revoked from anon
+// (authenticated-only) — calling them with the raw anon bearer 403s
+// silently. Prefer a real session access_token when one exists; falls
+// back to the anon key otherwise so nothing here regresses if no
+// session is present. Found + fixed 2026-07-23.
+let _realAccessToken = null;
+async function initRealSession() {
+  try {
+    const { data } = await sb.auth.getSession();
+    if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+  } catch (e) { /* stay on anon key */ }
+}
+function rpcHeaders() {
+  return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' };
+}
+
 let selectedRole = null;
 let phoneNumber  = '';
 let citizenName  = '';
@@ -672,7 +689,7 @@ async function createRealCitizen(slug, attempt){
     try {
       await fetch(SUPABASE_URL + '/rest/v1/rpc/complete_referral', {
         method: 'POST',
-        headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        headers: rpcHeaders(),
         body: JSON.stringify({ p_referral_code: referrer.id, p_referred_citizen_id: data.id })
       });
     } catch(e) { /* non-critical — attribution is best-effort */ }
@@ -803,7 +820,7 @@ async function createListing(){
   try {
     const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/create_listing', {
       method: 'POST',
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      headers: rpcHeaders(),
       body: JSON.stringify({ p_seller_id: sellerId, p_title: name, p_description: null, p_price_indx: parseFloat(price) })
     });
     const data = await res.json();
@@ -829,7 +846,8 @@ function showToast(m){
 }
 
 // ── INITIAL LOAD ─────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded',()=>{
+document.addEventListener('DOMContentLoaded',async ()=>{
+  await initRealSession();
   // OTP box keyboard nav
   [1,2,3,4,5,6].forEach(i=>{
     const box = document.getElementById('o'+i);

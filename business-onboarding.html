@@ -371,6 +371,7 @@ html,body{min-height:100%;background:var(--black);color:var(--text);font-family:
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
 // ── Constants ────────────────────────────────────────────────────
 const INDX_PRICE = 0.24;
@@ -380,10 +381,20 @@ const TRADITIONAL_RATE = 0.032; // 3.2% average all-in
 // ── REAL SUPABASE WIRING (2026-07-15 fix — was localStorage-only before) ──
 const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ── Real session token — anon-key-only RPC calls fail silently because
+// the RPCs correctly have EXECUTE revoked from anon (gotcha #64/#71 class) ──
+let _realAccessToken = null;
+async function initRealSession() {
+  try { const { data } = await sb.auth.getSession(); if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token; } catch (e) {}
+}
+function rpcHeaders() { return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' }; }
+
 async function bizRpc(name, body) {
   const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + name, {
     method: 'POST',
-    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+    headers: rpcHeaders(),
     body: JSON.stringify(body)
   });
   const json = await res.json();
@@ -598,6 +609,11 @@ function recalcSavings(revenue) {
 }
 // init calculator on load
 recalcSavings(bLoad('revenue', 5000));
+
+// GOD MODE PATCH — resolve real access token before any RPC call
+document.addEventListener('DOMContentLoaded', async function() {
+  await initRealSession();
+});
 
 // ── Business details save + validation — now a real Supabase write ──
 async function saveDetails() {

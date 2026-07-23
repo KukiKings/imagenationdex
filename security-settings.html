@@ -334,6 +334,17 @@
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
   const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let _realAccessToken = null;
+  async function initRealSession() {
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+    } catch (e) { /* stay on anon key */ }
+  }
+  function rpcHeaders() {
+    return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' };
+  }
   const citizenId = sessionStorage.getItem('citizen_id');
 
   // REAL per-citizen security state, loaded from Supabase (get_security_settings) — replaces the old localStorage-only theater
@@ -343,7 +354,7 @@
     if (!citizenId) return; // guest/demo session — nothing real to load
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_security_settings', {
-        method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId })
+        method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizenId })
       });
       const data = await res.json();
       if (data) {
@@ -432,7 +443,7 @@
   async function updateSecPref(key, value) {
     if (!citizenId) return { success: false, error: 'NO_SESSION' };
     const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/update_security_pref', {
-      method: 'POST', headers: SB_HEADERS,
+      method: 'POST', headers: rpcHeaders(),
       body: JSON.stringify({ p_citizen_id: citizenId, p_key: key, p_value: value })
     });
     return res.json();
@@ -459,6 +470,7 @@
 
   // Load real state, then render — replaces the old localStorage-restore-on-load pattern
   window.addEventListener('load', async () => {
+    await initRealSession();
     await loadSecState();
     const bioT = document.getElementById('bioToggle');
     bioT.classList.toggle('on', secState.biometric);
@@ -514,7 +526,7 @@
     showToast('Generating your real 2FA secret…');
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/setup_totp', {
-        method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId })
+        method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizenId })
       });
       const data = await res.json();
       if (!data || !data.success) { showToast('Could not start 2FA setup — try again'); return; }
@@ -543,7 +555,7 @@
     errEl.textContent = '';
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/verify_totp_setup', {
-        method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId, p_code: code })
+        method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizenId, p_code: code })
       });
       const data = await res.json();
       if (!data || !data.success) {
@@ -565,7 +577,7 @@
   async function disable2FA() {
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/disable_totp', {
-        method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId })
+        method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizenId })
       });
       const data = await res.json();
       if (!data || !data.success) { showToast('Could not disable 2FA — try again'); return; }
@@ -588,7 +600,7 @@
     if (!citizenId) { list.innerHTML = 'Sign in to see your activity.'; return; }
     list.textContent = 'Loading…';
     try {
-      const res = await fetch(SUPABASE_URL + '/rest/v1/security_events?detail->>citizen_id=eq.' + citizenId + '&order=created_at.desc&limit=15', { headers: SB_HEADERS });
+      const res = await fetch(SUPABASE_URL + '/rest/v1/security_events?detail->>citizen_id=eq.' + citizenId + '&order=created_at.desc&limit=15', { headers: rpcHeaders() });
       const rows = await res.json();
       if (!Array.isArray(rows) || rows.length === 0) { list.innerHTML = 'No recorded activity yet.'; return; }
       list.innerHTML = rows.map(r => {

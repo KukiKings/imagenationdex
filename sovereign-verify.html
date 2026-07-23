@@ -448,12 +448,24 @@
   const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const citizenId = sessionStorage.getItem('citizen_id');
 
+  // ── Real-session-JWT fix (gotchas: anon key 403s silently on RLS/EXECUTE-gated calls) ──
+  let _realAccessToken = null;
+  async function initRealSession() {
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+    } catch (e) { /* stay on anon key */ }
+  }
+  function rpcHeaders() {
+    return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' };
+  }
+
   // Load the citizen's REAL kyc_tier on page load — previously this screen always showed
   // "Unlock Now" for Tier 2 regardless of whether the citizen had already verified.
   async function loadRealTierState() {
     if (!citizenId) return;
     try {
-      const res = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + citizenId + '&select=kyc_tier', { headers: SB_HEADERS });
+      const res = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + citizenId + '&select=kyc_tier', { headers: rpcHeaders() });
       const rows = await res.json();
       const tier = (rows[0] && rows[0].kyc_tier) || 0;
       if (tier >= 1) {
@@ -466,7 +478,10 @@
       }
     } catch (e) { /* falls back to showing the verify form */ }
   }
-  loadRealTierState();
+  document.addEventListener('DOMContentLoaded', async () => {
+    await initRealSession();
+    loadRealTierState();
+  });
 
   function toggleTier(id) {
     const body = document.getElementById(id + 'body');
@@ -535,7 +550,7 @@
         return;
       }
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/verify_payid_tier2', {
-        method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId, p_payid: payid })
+        method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizenId, p_payid: payid })
       });
       const data = await res.json();
       if (!data || !data.success) {

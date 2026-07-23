@@ -316,6 +316,18 @@
   const SUPABASE_URL      = 'https://zljgthfzbalsunuoohcd.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let _realAccessToken = null;
+  async function initRealSession() {
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+    } catch (e) { /* stay on anon key */ }
+  }
+  function rpcHeaders() {
+    return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' };
+  }
+
   const citizenId      = sessionStorage.getItem('citizen_id');
   const citizenWisdom  = parseInt(sessionStorage.getItem('citizen_wisdom') || '0', 10);
   const WISDOM_GATE    = 50;
@@ -525,7 +537,7 @@
     try {
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/submit_pillar_amendment_proposal', {
         method: 'POST',
-        headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        headers: rpcHeaders(),
         body: JSON.stringify({ p_citizen_id: citizenId, p_pillar: pillar, p_title: title, p_rationale: rationale, p_new_text: newText })
       });
       const data = await res.json();
@@ -617,7 +629,8 @@
   }
 
   // Init UI
-  window.addEventListener('load', () => {
+  window.addEventListener('load', async () => {
+    await initRealSession();
     renderVotingPower();
     renderVoteHistory();
     loadActiveProposals();

@@ -958,7 +958,21 @@ The Cook Islands flag carries 15 white stars in a circle — one for each of the
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-23 — full-codebase anon-key audit: 31 screens found with the bug, 4 more real-money screens fixed (card-cashback, withdraw, dispute, kyc-compliance), 2 confirmed clean, 25 remain. See x87 below.
+> Last updated: 2026-07-23 — 17-screen "bucket 1" sweep complete: 14 more anon-key bugs fixed, 3 confirmed clean, 1 deeper issue flagged (citizen-protection-mode.html). Only 8 lower-priority honest-preview screens + 1 newly-surfaced follow-up (onboarding-flow.html) remain on the anon-key list. See x88 below.
+
+### Session 121 continued x88 (2026-07-23) — 17-screen "bucket 1" sweep: 14 more anon-key bugs fixed, 3 confirmed clean, 1 deeper issue flagged
+
+Continuing directly from x87 per AJ's "god mode, proceed." Dispatched 17 parallel subagents against the full remaining real-backend list, each checking `information_schema.role_routine_grants` per RPC before touching anything, so legitimately-public RPCs were correctly left alone. All 17 files independently re-verified afterward (node --check, DOMContentLoaded/load-listener count, price/A$/seed-phrase audits) — all clean.
+
+**Fixed (anon-key bug):** account-recovery.html (freeze-status + set_account_freeze/set_card_freeze), bill-pay.html (pay_bill + 3 more; had zero Supabase client before), business-onboarding.html (update_business_profile), card-atm-withdrawal.html (5 ATM RPCs), citizen-protection-mode.html (protect_me panic-button RPC), governance.html (cast_governance_vote, award_wisdom; had zero Supabase client before), insurance-fund.html (get_my_stakes, stake_to_pool — the real-money staking action, unstake_from_pool, plus a citizens-table read), join.html (complete_referral, create_listing), security-settings.html (all 5 security RPCs including TOTP setup/verify/disable), sovereign-verify.html (verify_payid_tier2 Tier 2 upgrade + citizens.kyc_tier lookup), zero-balance-mode.html (5 RPCs including 2 protective freeze actions), pillar-amendment.html (submit_pillar_amendment_proposal).
+
+**Confirmed clean, no bug:** indx-trust-dashboard.html (get_consent_receipt_count legitimately public), siindex-command-center.html (uses sb.rpc() throughout, carries real session automatically), siindex-console.html (already fixed in an earlier pass this session), sms-claim.html (get_instant_invite_status legitimately public pre-auth).
+
+**Non-header issue fixed:** merchant-card-topup.html — no auth bug, but corrected copy that said "instantly deposited"/"→ Instant" while the same screen elsewhere honestly discloses funds are "not yet credited."
+
+**Deeper issues flagged for AJ, not silently fixed:** (1) citizen-protection-mode.html's Protection Mode toggle and Speed/Complexity slider are pure localStorage with zero backend enforcement, yet claim real safeguards are "active" — needs a product decision (build real enforcement vs. rewrite copy). (2) security-settings.html's "Recent Activity" panel reads security_events via PostgREST, but its only RLS policy gates on is_founder() with no citizen clause — citizens will still see "No recorded activity yet" even after this fix; needs a citizen-scoped RLS policy or RPC. (3) join.html's OTP step never actually establishes a real Supabase Auth session, so its header fix is correct but inert until phone auth is wired in; its duplicate-phone-number lookup is also RLS-blocked for anon. (4) sms-claim.html's actual claim-fulfillment RPC, fulfill_instant_invite, lives in onboarding-flow.html — flagged as the next file to audit for this bug class.
+
+This closes out the "bucket 1" real-backend list from x87 in full. Remaining anon-key-pattern screens are the explicitly deprioritized honest-preview screens (dca, dex-swap, gift-indx, instant-onboard, limit-orders, liquidity-pools, microloan, trust-before-transaction) plus the newly-surfaced onboarding-flow.html.
 
 ### Session 121 continued x87 (2026-07-23) — Full-codebase anon-key audit: 31 screens found, 4 more real-money screens fixed
 

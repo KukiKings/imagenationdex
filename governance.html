@@ -184,6 +184,7 @@
   .countdown-badge{font-size:10px;font-weight:700;color:var(--gold);background:var(--gold-bg);
     border:1px solid rgba(255,184,0,0.25);border-radius:6px;padding:2px 7px;margin-left:6px;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -429,6 +430,7 @@
 <script>
 const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const WISDOM_SCORE = parseInt(sessionStorage.getItem('citizen_wisdom') || '0');
 const CITIZEN_ID   = sessionStorage.getItem('citizen_id') || '';
@@ -437,6 +439,18 @@ const canVote = WISDOM_SCORE >= VOTE_THRESHOLD;
 const ptsNeeded = Math.max(0, VOTE_THRESHOLD - WISDOM_SCORE);
 
 const myVotes = {}; // { proposal_id: 'for'|'against' }
+
+// ── REAL SESSION JWT (RPC auth fix) ──
+let _realAccessToken = null;
+async function initRealSession() {
+  try {
+    const { data } = await sb.auth.getSession();
+    if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+  } catch (e) { /* stay on anon key */ }
+}
+function rpcHeaders() {
+  return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' };
+}
 
 // ── SUPABASE HELPER ──
 async function sbFetch(path, opts = {}) {
@@ -600,11 +614,7 @@ async function castVote(proposalId, choice) {
   try {
     const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/cast_governance_vote', {
       method: 'POST',
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-        'Content-Type': 'application/json'
-      },
+      headers: rpcHeaders(),
       body: JSON.stringify({
         p_proposal_id: proposalId,
         p_citizen_id:  CITIZEN_ID,
@@ -632,6 +642,7 @@ async function castVote(proposalId, choice) {
     try {
       const newWisdom = await sbFetch('/rest/v1/rpc/award_wisdom', {
         method: 'POST',
+        headers: rpcHeaders(),
         body: JSON.stringify({ p_citizen_id: CITIZEN_ID, p_points: 5, p_reason: 'governance_vote' })
       });
       if (newWisdom) sessionStorage.setItem('citizen_wisdom', String(newWisdom));
@@ -866,6 +877,7 @@ window.loadProposals = async function() {
 
 // ── INIT ──
 window.addEventListener('DOMContentLoaded', async () => {
+  await initRealSession();
   // Wisdom gate
   document.getElementById('wisdomBadge').textContent = 'Wisdom ' + WISDOM_SCORE;
   document.getElementById('gateScore').textContent   = 'Your score: ' + WISDOM_SCORE;
