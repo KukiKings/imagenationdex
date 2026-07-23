@@ -958,7 +958,23 @@ The Cook Islands flag carries 15 white stars in a circle — one for each of the
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-23 — 3 fabrication-sweep follow-ups: declined the credit_stripe_purchase anon-grant request (would let anyone mint free INDX — real vulnerability, needs a proper Stripe webhook instead), fixed AUD→USD in 2 corridor calculators, fixed a Raydium/Meteora architecture mismatch across 3 liquidity screens. TGE launch-liquidity mechanism surfaced as a genuinely open decision needing AJ's call. See x91 below.
+> Last updated: 2026-07-24 — elizaOS Agentic Runtime Research: fact-checked an AI-generated proposal recommending elizaOS as SIINDEX's agentic runtime substrate (plus PlayHyperia/hyperforge, Oneirocom/Magick). Confirmed elizaOS/eliza's core technical claims as real; corrected an inflated GitHub star count (18.8k claimed vs. 7,878 actual, unrelated to the ai16z rebrand); flagged Magick's dual LICENSE/EULA and elizaOS's memory-system implementation details as unverified. Research/proposal only — no code or screens built. See x92 below.
+
+### Session 121 continued x92 (2026-07-24) — elizaOS Agentic Runtime Research
+
+AJ pasted an AI-generated proposal recommending elizaOS as SIINDEX's agentic runtime substrate, plus related projects PlayHyperia/hyperforge and Oneirocom/Magick. New file created: `elizaos-agentic-runtime-research.md`, fact-checking the technical claims against primary sources before any of it becomes a roadmap commitment.
+
+**Confirmed real/accurate:** elizaOS/eliza (MIT, TypeScript multi-agent framework, Solana plugin ecosystem, Worlds/Rooms multi-agent architecture, character-file system, creator Shaw/lalalune cross-confirmed via Magick's contributor list, ai16z→elizaOS rebrand history confirmed as the same repo carried forward, not a fork/reset). PlayHyperia/hyperforge (~89 stars, MIT, built on ElizaOS). Oneirocom/Magick (843 stars, visual AIDE, shared lineage with elizaOS via contributor lalalune).
+
+**Corrected:** the pasted doc claimed elizaOS has ~18.8k GitHub stars; actual current count is 7,878 — not explained by the ai16z rebrand (same repo, continuous star history, not a fork/reset). Flagged so this doesn't get repeated externally.
+
+**Flagged as unresolved, not urgent:** Magick ships both a `LICENSE` and a separate `EULA.txt` — licensing terms for parts of that project need a five-minute check before any use beyond reference.
+
+**Flagged as plausible-but-unverified:** elizaOS's persistent-memory/RAG implementation details are directionally standard for this class of framework but not independently confirmed against elizaOS source/docs at the implementation level.
+
+Reaffirmed the pasted doc's own "reality check": elizaOS would provide personality/memory/action-taking runtime only — **not** the $10k Transaction Protection, immutable 98/2 enforcement, or PQSI quantum-grade security claims, which remain custom IN$DEX infrastructure regardless of runtime choice.
+
+Proposal/research only — no code written, no screens built, nothing scheduled. Any future production path requires Human Validation Zone review per security-canon.md before touching any real Grid Account. Git commit: bc0eecd.
 
 ### Session 121 continued x91 (2026-07-23) — 3 fabrication-sweep follow-ups: 1 declined, 2 fixed
 
