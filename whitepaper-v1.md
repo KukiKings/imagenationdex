@@ -958,7 +958,21 @@ The Cook Islands flag carries 15 white stars in a circle — one for each of the
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-23 — Kind-2 fabrication sweep: 26 screens audited for fake content (distinct from the anon-key bug), 22 had real fabrications fixed or deleted. ~230 of 260 screens still haven't had this kind of full-content read. See x90 below.
+> Last updated: 2026-07-23 — 3 fabrication-sweep follow-ups: declined the credit_stripe_purchase anon-grant request (would let anyone mint free INDX — real vulnerability, needs a proper Stripe webhook instead), fixed AUD→USD in 2 corridor calculators, fixed a Raydium/Meteora architecture mismatch across 3 liquidity screens. TGE launch-liquidity mechanism surfaced as a genuinely open decision needing AJ's call. See x91 below.
+
+### Session 121 continued x91 (2026-07-23) — 3 fabrication-sweep follow-ups: 1 declined, 2 fixed
+
+AJ asked to fix all three items flagged at the end of x90. One could not be done as asked.
+
+**Declined: granting `anon` EXECUTE on `credit_stripe_purchase`.** Read the actual function definition first rather than just running the grant. It's `SECURITY DEFINER`, takes citizen_id/amount/payment-intent-id as raw parameters with zero payment verification — its own source comment says it's meant to be called from a trusted server context (a Stripe webhook using `service_role`), not the client. Its only defense against abuse is idempotency on the payment-intent ID, not real payment confirmation. Granting anon EXECUTE would let anyone call it directly from a browser console and credit themselves unlimited INDX with a fake payment ID — a real, exploitable vulnerability, not the same "just needs the real session JWT" pattern as every other anon-key fix this session. The actual fix is a real Stripe webhook / Edge Function verifying payments server-side, which needs AJ's live Stripe keys and is out of scope for an in-session code change. buy-indx.html's Stripe key remains a placeholder — correctly so, until that's built.
+
+**Fixed: AUD→USD in indx-corridor-samoa.html and indx-corridor-vanuatu.html.** Converted (not just relabeled) every dollar figure in both corridor calculators and diaspora stats using a real current AUD/USD rate (~0.70, Jul 2026) — send amounts, bank fees, annual flow, average transfer, savings potential. Both files now note these are point-in-time illustrative conversions, not a live FX feed.
+
+**Fixed: Raydium/Meteora architecture mismatch across liquidity-pool-setup.html, lp-manager.html, indx-liquidity-strategy.html.** Checked whitepaper Section 11.6 directly: canon is a Raydium CPMM pool (founder decision, 2026-07-22), no Meteora involvement. liquidity-pool-setup.html needed one word fixed (CLMM→CPMM). lp-manager.html and indx-liquidity-strategy.html had deeper Meteora-as-strategy content (DLMM pool cards, a Bid+Ask grid-bot feature with no Raydium equivalent, Alpha Vault CTAs/links) built before the Raydium decision and never updated — corrected to Raydium where a real equivalent exists, removed rather than faked where it doesn't (Meteora's Bid+Ask shape and Alpha Vault product have no Raydium equivalent, so those sections were removed/reframed instead of describing a fake Raydium feature).
+
+**Open item surfaced, needs AJ's decision:** fixing the Alpha Vault section exposed that the TGE (token generation event) launch-liquidity bootstrapping mechanism is now genuinely undecided — Section 11.6 only ever covered ongoing core liquidity, and the old plan (Meteora Alpha Vault + Raydium LaunchLab, from indx-launch-strategy-sep24.md) is confirmed superseded with no stated replacement. indx-liquidity-strategy.html now flags this explicitly as "Not Yet Decided" rather than guessing.
+
+Verified all edited files: node --check clean, DOMContentLoaded count 0-1, no remaining Meteora reference implies IN$DEX runs on Meteora, price/A$/seed-phrase audits clean.
 
 ### Session 121 continued x90 (2026-07-23) — Kind-2 fabrication sweep: 26 screens audited, 22 fixed (AJ: "fix all the fakes... if we don't need any, just delete it")
 
