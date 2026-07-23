@@ -958,7 +958,17 @@ The Cook Islands flag carries 15 white stars in a circle — one for each of the
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-23 — 10-screen God Mode sweep via parallel subagents; 2 more anon-key auth bugs found (now 4/4 real-backend screens hit), 1 more fabrication found. See x86 below.
+> Last updated: 2026-07-23 — full-codebase anon-key audit: 31 screens found with the bug, 4 more real-money screens fixed (card-cashback, withdraw, dispute, kyc-compliance), 2 confirmed clean, 25 remain. See x87 below.
+
+### Session 121 continued x87 (2026-07-23) — Full-codebase anon-key audit: 31 screens found, 4 more real-money screens fixed
+
+AJ, frustrated after the God Mode sweep kept turning up the same bug: "I'm sick of all these fake screens, let's get them live... our app should be live not fake." Ran a full grep across all 260 screens for the anon-key-as-Bearer pattern without the fix marker — **31 screens still had it.** Fixed the 6 highest real-money-stakes ones first: `card-cashback.html` (2 separate call sites — an RPC pair and a direct `citizens` table read, both fixed), `withdraw.html`, `dispute.html`, `kyc-compliance.html` all had the bug and are now fixed; `card-top-up.html` and `deposit.html` confirmed clean (no RPC calls, correctly refuse to credit a balance without a real payment processor behind them).
+
+**Notable correction:** `dispute.html` turned out to have a real backend (`disputes`/`dispute_events` tables, 4 working RPCs) built at some point after the 07-16 "fully fake" sweep entry — that entry is now stale and should not be cited as current state.
+
+**25 screens still have the unfixed pattern**, listed in gotchas.md, prioritized by whether they have a real backend behind them (fix next) vs. are already-honest disclosed previews (lower priority, since the bug doesn't create false confidence there either way).
+
+### Session 121 continued x86 (2026-07-23) — 10-screen God Mode sweep via parallel subagents; 2 more anon-key auth bugs found (now 4/4 real-backend screens hit), 1 more fabrication found
 
 ### Session 121 continued x86 (2026-07-23) — 10-screen God Mode sweep (parallel subagents): 2 more anon-key bugs, 1 more fabrication
 

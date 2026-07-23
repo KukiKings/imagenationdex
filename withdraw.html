@@ -859,18 +859,39 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script src="assets/indx-shield.js"></script>
 <script>
   let currentTab = 'bank';
   const INDX_PRICE_USD = 0.24; // USD per INDX
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
-  const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const citizenId = sessionStorage.getItem('citizen_id');
+
+  // ── REAL AUTH FIX (God Mode) ──────────────────────────────────────────
+  // Found 2026-07-23, same bug class already fixed in staking.html/card-freeze.html/
+  // emergency-freeze.html/guardian-setup.html: this screen's withdraw_indx and
+  // get_withdrawal_history RPC calls sent the anon key as their Bearer token, but
+  // those functions correctly have EXECUTE revoked from anon (verified via
+  // information_schema.role_routine_grants — empty result for both routine names)
+  // — meaning every real citizen's withdrawal has been silently 403'ing while the
+  // UI acted like it succeeded. Fixed the same way as the other screens: use the
+  // real Supabase Auth access_token when a genuine session exists, anon key otherwise.
+  let _realAccessToken = null;
+  async function initRealSession() {
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+    } catch (e) { /* stay on anon key */ }
+  }
+  function rpcHeaders() {
+    return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' };
+  }
 
   async function rpc(name, body) {
     const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + name, {
-      method: 'POST', headers: SB_HEADERS, body: JSON.stringify(body)
+      method: 'POST', headers: rpcHeaders(), body: JSON.stringify(body)
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.message || 'Request failed');
@@ -884,7 +905,7 @@
     const audEl = document.getElementById('balanceAud');
     if (!citizenId) { if (balEl) balEl.textContent = '— INDX'; return; }
     try {
-      const res = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + citizenId + '&select=indx_balance', { headers: SB_HEADERS });
+      const res = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + citizenId + '&select=indx_balance', { headers: rpcHeaders() });
       const rows = await res.json();
       citizenBalance = rows && rows[0] ? parseFloat(rows[0].indx_balance) : 0;
     } catch (e) { citizenBalance = 0; }
@@ -894,7 +915,6 @@
       c.setAttribute('onclick', `setAmount(currentTab, ${citizenBalance})`);
     });
   }
-  applyBalance();
 
   // ---- TAB SWITCHING ----
   function switchTab(tab) {
@@ -1154,7 +1174,6 @@
       list.appendChild(el);
     });
   }
-  loadAddrBook();
 
   function useAddrBookItem(addr) {
     document.getElementById('walletAddr').value = addr;
@@ -1329,7 +1348,13 @@
     await _origExecWd();
     renderWdHist();
   };
-  renderWdHist();
+
+  document.addEventListener('DOMContentLoaded', async function() {
+    await initRealSession(); // GOD MODE PATCH — resolve real access token before any RPC call
+    applyBalance();
+    loadAddrBook();
+    renderWdHist();
+  });
 
   // Patch switchTab to show/hide swipe vs button
   const _origSwitchTab = switchTab;

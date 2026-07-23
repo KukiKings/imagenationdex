@@ -91,6 +91,7 @@
   .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1E2130;border:1px solid var(--border);border-radius:12px;padding:11px 20px;font-size:13px;font-weight:600;white-space:nowrap;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;}
   .toast.show{opacity:1;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 </head>
 <body>
 <div class="shell">
@@ -318,8 +319,23 @@
 <script>
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
-  const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const citizenId = sessionStorage.getItem('citizen_id');
+
+  // Real-session auth: RPCs get_tax_summary/get_tax_transactions only have EXECUTE
+  // granted to 'authenticated', not 'anon' — sending the anon key alone as the
+  // Bearer token silently fails (RLS/grant denial), same bug class fixed in
+  // staking.html/card-freeze.html/emergency-freeze.html/guardian-setup.html.
+  let _realAccessToken = null;
+  async function initRealSession() {
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+    } catch (e) { /* stay on anon key */ }
+  }
+  function rpcHeaders() {
+    return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' };
+  }
 
   let currentTaxYear = new Date().getFullYear();
   let currentTaxTransactions = [];
@@ -343,10 +359,10 @@
     try {
       const [summaryRes, txRes] = await Promise.all([
         fetch(SUPABASE_URL + '/rest/v1/rpc/get_tax_summary', {
-          method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId, p_year: year })
+          method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizenId, p_year: year })
         }),
         fetch(SUPABASE_URL + '/rest/v1/rpc/get_tax_transactions', {
-          method: 'POST', headers: SB_HEADERS, body: JSON.stringify({ p_citizen_id: citizenId, p_year: year })
+          method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizenId, p_year: year })
         })
       ]);
       const summary = await summaryRes.json();
@@ -405,7 +421,8 @@
     setTimeout(() => t.classList.remove('show'), 2400);
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
+    await initRealSession();
     if (document.getElementById('panel-tax').style.display !== 'none') loadTaxData(currentTaxYear);
   });
 </script>
