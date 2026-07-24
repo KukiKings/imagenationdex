@@ -13,11 +13,11 @@
   'use strict';
 
   // ── INDX SPL Token config ──────────────────────────────────────
-  // Placeholder mint — replace with live mint address at TGE (2026-09-24)
+  // Placeholder mint — replace with live mint address at TGE (2027-01-24)
   const INDX_MINT_ADDRESS  = 'INDXmintAddressPlaceholderReplaceAtTGE';
   const SOLANA_RPC_DEVNET  = 'https://api.devnet.solana.com';
   const SOLANA_RPC_MAINNET = 'https://api.mainnet-beta.solana.com';
-  const TGE_DATE           = new Date('2026-09-24T00:00:00+11:00');
+  const TGE_DATE           = new Date('2027-01-24T00:00:00+11:00');
   const IS_POST_TGE        = Date.now() >= TGE_DATE.getTime();
   const RPC_ENDPOINT       = IS_POST_TGE ? SOLANA_RPC_MAINNET : SOLANA_RPC_DEVNET;
 

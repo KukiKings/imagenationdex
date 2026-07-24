@@ -9,7 +9,7 @@
 **IN$DEX (Image Nation Decentralised Exchange)** — the world's first sovereign DeFi platform for the unbanked. Built on Solana. Governed by MemeDAO. Operated by SIINDEX AI.
 
 **Founder:** Arthur John Henry (AJ) — Melbourne, Australia  
-**Launch:** 24 September 2026 (L99)  
+**Launch:** 24 January 2027 (L99, moved from 24 September 2026 — AJ, 2026-07-19)  
 **Target market:** 1.4 billion unbanked people, starting in the Pacific Islands
 
 ---

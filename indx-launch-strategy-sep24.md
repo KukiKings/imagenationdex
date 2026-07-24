@@ -337,7 +337,7 @@ Following SIINDEX voice and claim safety rules:
 
 ## Next Build
 
-`indx-grand-synchronicity-countdown.html` — real-time countdown screen. **Needs its own date-and-copy update** — it currently counts to 24 September 2026 and includes "AJ's birthday" framing; not yet fixed as part of this rebuild, flagged as the next concrete step.
+`indx-grand-synchronicity-countdown.html` — real-time countdown screen. Fixed 2026-07-24: countdown target corrected to 24 January 2027 (was already partly done — the JS constant was right, but the milestone list still had 4 Sept-2026-dated entries built around the superseded Meteora Alpha Vault plan, and the Alpha Vault UI card was presenting that superseded plan as decided fact). Removed the stale milestones, reframed the vault card as "TGE Launch Mechanism — Under Review" per the whitepaper's TGE reconciliation note, and fixed a dangling function reference the cleanup exposed (`renderVault()` targeted now-removed DOM elements).
 
 ---
 

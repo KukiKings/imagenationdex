@@ -87,7 +87,7 @@ siindex-agent/
 | "morning briefing" | INDX price, balance, WS, countdown |
 | "my balance" | Shows wallet balance in INDX + USD |
 | "my wisdom score" | WS, rank, next milestone |
-| "grand synchronicity countdown" | Days until Sep 24 2026 |
+| "grand synchronicity countdown" | Days until 24 Jan 2027 |
 | "search for [topic]" | Web search via DuckDuckGo |
 | "open my wallet" | Opens citizen-dashboard.html |
 | "open the swap" | Opens dex-swap.html |

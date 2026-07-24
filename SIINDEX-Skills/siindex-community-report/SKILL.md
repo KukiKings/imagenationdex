@@ -205,7 +205,7 @@ PLATFORM MILESTONES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 DAYS TO L99
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Launch target: 24 September 2026
+  Launch target: 24 January 2027
   Days remaining: [N]
   Build status: [summary from Appendix B]
 
@@ -359,4 +359,4 @@ If you're not on the list yet: imagenationdex.com
 7. **DAY TO L99 can go negative** — if the date passes L99, report "L99 PASSED — [N] days since launch" and switch to post-launch tracking mode. Do not crash or show negative days.
 8. **Currency** — ALL values in USD ($) at $0.24 per INDX. Never AUD, never A$. Staking APY is in %, not a dollar amount.
 9. **"Social post" requests** — treat these as a Human Validation Zone (AJ reviews before posting). SIINDEX drafts. AJ signs off. SIINDEX never posts autonomously.
-10. **Platform is pre-launch** — until 24 September 2026, the `transactions` and `staking_positions` tables should be empty or contain test data only. The report should always acknowledge which phase the platform is in: "PRE-LAUNCH" or "LIVE".
+10. **Platform is pre-launch** — until 24 January 2027, the `transactions` and `staking_positions` tables should be empty or contain test data only. The report should always acknowledge which phase the platform is in: "PRE-LAUNCH" or "LIVE".

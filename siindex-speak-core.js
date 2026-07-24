@@ -9,7 +9,7 @@
 
   // ── CONSTANTS ──────────────────────────────────────────
   const INDX_PRICE_USD = 0.24;
-  const TGE_DATE       = new Date('2026-09-24T00:00:00+11:00');
+  const TGE_DATE       = new Date('2027-01-24T00:00:00+11:00');
   const AUSTRAC_DL     = new Date('2026-07-29T23:59:59+10:00');
   const HIST_KEY       = 'indx_siindex_convo';
   const MAX_HIST       = 30;
@@ -29,10 +29,10 @@
     ],
     price: [
       `INDX genesis price: $${INDX_PRICE_USD.toFixed(2)} USD. Set for the founding Raydium CPMM pool. TGE is ${Math.ceil((TGE_DATE - Date.now()) / 86400000)} days away. Founding citizens hold at this price.`,
-      `$${INDX_PRICE_USD.toFixed(2)} per INDX — that's the genesis entry. The civilization is being built at this price. TGE on 24 September 2026 opens the public market.`,
+      `$${INDX_PRICE_USD.toFixed(2)} per INDX — that's the genesis entry. The civilization is being built at this price. TGE on 24 January 2027 opens the public market.`,
     ],
     tge: [
-      `Token Generation Event: 24 September 2026 AEST — ${Math.ceil((TGE_DATE - Date.now()) / 86400000)} days from now. Raydium CPMM pool opens. Founding citizens move first. Are you in?`,
+      `Token Generation Event: 24 January 2027 AEST — ${Math.ceil((TGE_DATE - Date.now()) / 86400000)} days from now. Raydium CPMM pool opens. Founding citizens move first. Are you in?`,
       `TGE is ${Math.ceil((TGE_DATE - Date.now()) / 86400000)} days away. When the pool opens, genesis price becomes history. The civilization's economics go live.`,
     ],
     staking: [
@@ -135,7 +135,7 @@
     if (/\bprice\b|how much|worth|value|indx cost|token price|genesis price/.test(q)) return pick(R.price);
 
     // TGE
-    if (/\btge\b|launch date|token gen|when.*launch|when.*token|september 24|24 sep/.test(q)) return pick(R.tge);
+    if (/\btge\b|launch date|token gen|when.*launch|when.*token|january 24|24 jan/.test(q)) return pick(R.tge);
 
     // Staking / yield
     if (/stak|lock.*indx|yield|apy|earn.*indx|how.*earn/.test(q)) return pick(R.staking);

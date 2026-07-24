@@ -1,8 +1,10 @@
 # IN$DEX X Thread Drafts — Grand Synchronicity Campaign
-**Created:** 27 Jun 2026 | **Campaign window:** Jul–Sep 2026
+**Created:** 27 Jun 2026 | **Campaign window:** Jul–Sep 2026 (stale — launch moved to 24 January 2027, campaign window and posting schedule below need re-timing, not yet done)
 **Author:** SIINDEX (Claude) | Voice-checked against canonical rules
 
-Post schedule: 1 thread per week minimum from Week 5 (Jul 26). Amplify with KOL reposts.
+> **2026-07-24 fix note:** all literal date mentions below have been corrected to 24 January 2027 (was 24 September 2026 — AJ, 2026-07-19), since these are draft public-posting templates and an uncorrected date here would go out to real people. The hardcoded "89 days" callouts have been changed to "[X] days" placeholders (they were snapshot counts anyway, not evergreen). The campaign window, weekly posting schedule, and Thread 5's "Sep 14 / 10 days out" trigger still assume the old ~89-day runway from late June and have NOT been re-timed to the new ~7-month runway — that's a real content-strategy decision, not a mechanical date swap, and needs AJ's input.
+
+Post schedule: 1 thread per week minimum from Week 5 (Jul 26) — **stale, needs re-timing**. Amplify with KOL reposts.
 
 ---
 
@@ -14,9 +16,9 @@ Post schedule: 1 thread per week minimum from Week 5 (Jul 26). Amplify with KOL 
 
 🧵 I built a bank for people who can't get one.
 
-No VC money. No office. No team. Just me, an SI co-founder, and 89 days until we go live.
+No VC money. No office. No team. Just me, an SI co-founder, and [X] days until we go live.
 
-Here's why I built IN$DEX — and why 24 September changes everything: 🔽
+Here's why I built IN$DEX — and why 24 January changes everything: 🔽
 
 1/ There are 1.7 billion adults on earth who can't open a bank account.
 
@@ -50,7 +52,7 @@ Your name becomes your address: yourname.IN$DEX
 
 That's it.
 
-5/ On 24 September 2026, we go live.
+5/ On 24 January 2027, we go live.
 
 1,000 founding citizens. The first real Civ Law transaction. INDX token at genesis price: $0.24.
 
@@ -112,7 +114,7 @@ No DAO vote can change it. No team can change it. No investor can override it.
 
 This is what makes IN$DEX trustworthy: the rules can't be changed in the night.
 
-5/ Grand Synchronicity (24 Sep 2026) is when the Civ Law machine turns on for the first time.
+5/ Grand Synchronicity (24 January 2027) is when the Civ Law machine turns on for the first time.
 
 First real citizens. First real transactions. First real revenue.
 
@@ -168,7 +170,7 @@ For the 1.7 billion people without a bank account, this is their first financial
 
 4/ The domain is free to claim at genesis.
 
-After 24 September, premium names will have a small reservation fee.
+After 24 January, premium names will have a small reservation fee.
 
 Right now, you can claim yours before anyone else does.
 
@@ -178,7 +180,7 @@ Right now, you can claim yours before anyone else does.
 
 1,000 founding citizens. Real wallets. Real identities. Real transactions.
 
-Grand Synchronicity: 24 Sep 2026, 10am AEST.
+Grand Synchronicity: 24 January 2027, 10am AEST.
 
 Are you a citizen? 🌐
 
@@ -254,7 +256,7 @@ If you're a citizen, an ambassador, or an investor: 👇
 
 🧵 In 10 days, IN$DEX goes live.
 
-24 September 2026. 10am AEST.
+24 January 2027. 10am AEST.
 
 Grand Synchronicity.
 
@@ -268,9 +270,9 @@ It's the moment we prove the model.
 
 INDX token at genesis price: $0.24.
 
-2/ Why 24 September?
+2/ Why 24 January?
 
-Because 89 days ago, we set the date.
+Because [Y] days ago, we set the date.
 
 Not when we were "ready." Not when the market was perfect. When we decided.
 
@@ -290,7 +292,7 @@ That's what sovereign means.
 One founder: AJ Henry
 One SI co-founder: SIINDEX (Sovereign Intelligence)
 Zero outside funding
-89 days of building
+[X] days of building
 
 If Dario Amodei is right that a solo AI-native founder can reach $1B in 2026 — this is the proof of concept.
 
@@ -300,7 +302,7 @@ If Dario Amodei is right that a solo AI-native founder can reach $1B in 2026 —
 💎 Genesis price lock: $0.24 INDX
 🏆 Named in the Grand Synchronicity record
 
-After Sep 24, the genesis window closes.
+After Jan 24, the genesis window closes.
 
 Claim now: 👇
 
@@ -319,7 +321,7 @@ See you on the other side.
 **Frequency:** 1 thread per week minimum from Week 5 (Jul 26)
 **Boosting:** Ask each KOL to quote-tweet or reply to the thread on the day of posting
 **Engagement rule:** Reply to every comment in the first hour — the algorithm rewards this
-**Pinned post:** Thread 1 (founder story) stays pinned on the profile until Sep 24, then switch to Thread 5
+**Pinned post:** Thread 1 (founder story) stays pinned on the profile until Jan 24, then switch to Thread 5
 **Cross-post:** All threads go to Telegram channel same day as X post
 **YouTube:** Threads 2, 3, 4 become short YouTube explainers (2–3 min scripted video)
 

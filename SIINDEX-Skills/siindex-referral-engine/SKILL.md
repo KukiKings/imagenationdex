@@ -240,7 +240,7 @@ When AJ asks "what should we do to grow referrals?", choose from these campaigns
 ---
 
 ### Campaign C — Launch Countdown Referral Push
-**When to use:** 30–60 days before L99 (24 September 2026).
+**When to use:** 30–60 days before L99 (24 January 2027).
 
 **What to do:**
 1. Email / SMS all citizens with their referral code

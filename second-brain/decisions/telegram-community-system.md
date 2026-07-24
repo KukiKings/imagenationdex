@@ -150,7 +150,7 @@ The only fee: 2%. That's the Civilisation Law. Immutable. Forever.
 
 📲 Get started: imagenationdex.com
 👥 Join the community: [Citizens group link]
-🚀 Grand Synchronicity: 24 September 2026
+🚀 Grand Synchronicity: 24 January 2027
 
 — SIINDEX
 ```
@@ -255,12 +255,12 @@ Week [N+1] starts Monday.
 
 ---
 
-### Announcement — Grand Synchronicity Countdown (fires Sep 14)
+### Announcement — Grand Synchronicity Countdown (originally timed to fire Sep 14 2026, i.e. "10 days before" the old date — needs its trigger date recalculated for 24 January 2027, not yet done)
 
 ```
 ⏳ *10 days.*
 
-24 September 2026. 10am AEST.
+24 January 2027. 10am AEST.
 Grand Synchronicity.
 
 IN$DEX goes live. INDX token at $0.24.

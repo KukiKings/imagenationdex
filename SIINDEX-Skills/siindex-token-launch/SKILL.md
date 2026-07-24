@@ -33,7 +33,7 @@ If AJ attempts to proceed with a failed check, SIINDEX TOKEN-LAUNCH says: "AJ, I
 
 ## L99 Launch Target
 
-**24 September 2026**
+**24 January 2027** (moved from 24 September 2026 — AJ, 2026-07-19)
 
 The token mint is the LAST step before L99. Do not attempt mint before:
 - All app screens are deployed and live on Vercel
@@ -312,7 +312,7 @@ When AJ asks "are we ready to launch?" or "run the pre-flight," output this:
 SIINDEX TOKEN-LAUNCH BRIEF
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Status: [🟢 READY / 🟡 NEARLY READY / 🔴 NOT READY]
-Target Date: 24 September 2026
+Target Date: 24 January 2027
 Timestamp: [ISO 8601]
 
 PRE-FLIGHT CHECKS
@@ -360,4 +360,4 @@ Known edge cases and issues to watch for:
 7. **Phantom "insufficient SOL" error** — even though mint costs ~0.002 SOL, Phantom may reserve more for fees. Have at least 0.5 SOL available.
 8. **Solscan confirmation delay** — Solscan can lag up to 2–3 minutes after a successful Solana transaction. If the token page doesn't show immediately, wait — do not assume failure.
 9. **"Are we ready to mint?" ≠ "mint now"** — AJ asking about readiness is a CHECK request, not a mint instruction. Report findings and stop. Never initiate a mint unless AJ says "let's mint now" or equivalent explicit authorisation.
-10. **Date check** — if AJ asks about token mint before September 2026, remind him: "AJ, L99 target is 24 September 2026. We're [X months] out. Mint is the last step — let's focus on [what's still pending] first."
+10. **Date check** — if AJ asks about token mint before January 2027, remind him: "AJ, L99 target is 24 January 2027. We're [X months] out. Mint is the last step — let's focus on [what's still pending] first."

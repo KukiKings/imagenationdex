@@ -48,4 +48,4 @@ Quit and reopen Claude. The MCP will appear as "indx-mcp" in your connectors.
 | get_listings | Marketplace listings with filters |
 | get_referral_stats | Referral count, completed, INDX earned |
 | get_governance | Active MemeDAO proposals |
-| get_days_to_launch | Days to 24 September 2026 |
+| get_days_to_launch | Days to 24 January 2027 |

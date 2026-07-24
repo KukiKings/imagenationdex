@@ -1,5 +1,5 @@
 # IN$DEX: The Sovereign Civilization Business Plan
-**Document Version: 1.0 | Launch: 24 September 2026 — L 99 | Status: Pre-Launch (Founding 1,000 Ascension)**
+**Document Version: 1.0 | Launch: 24 January 2027 (moved from 24 September 2026 — AJ, 2026-07-19) — L 99 | Status: Pre-Launch (Founding 1,000 Ascension)**
 *(Genesis Target updated from 01/04/2026 to confirmed launch date)*
 
 ---
@@ -219,11 +219,11 @@ IN$DEX is a long-term, slow-signal civilization, not a short-term financial prod
 1. Complete the 4.2s Forge CLI (Phase 1 Foundation)
 2. Launch the Ascension Wave for the Founding 1,000
 3. Hold first Wisdom Symposium in Genesis Park to vote on initial weight bands
-4. AJ signs the genesis block of the Sovereignty Mesh on 24 September 2026
+4. AJ signs the genesis block of the Sovereignty Mesh on 24 January 2027 (moved from 24 September 2026 — AJ, 2026-07-19)
 
 > "This business plan is not a promise of returns, but a covenant of principles. The only yield we guarantee is the compounding of disciplined stewardship. All else is speculation."
 
 ---
 
 *IN$DEX Business Plan v1.0 | SIINDEX COO | Updated 1 June 2026*
-*Founder: Arthur John Henry (AJ) | Launch: 24 September 2026 — L 99*
+*Founder: Arthur John Henry (AJ) | Launch: 24 January 2027 (moved from 24 September 2026 — AJ, 2026-07-19) — L 99*

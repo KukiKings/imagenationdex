@@ -171,7 +171,7 @@ Verify that HTTP responses from imagenationdex.com include the required security
 
 ## L99 Launch Countdown
 
-**L99 Launch target: 24 September 2026**
+**L99 Launch target: 24 January 2027** (moved from 24 September 2026 — AJ, 2026-07-19)
 
 Always calculate and include days remaining in the full brief.
 
