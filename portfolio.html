@@ -236,17 +236,6 @@
   </div>
 </div>
 
-<!-- GOD MODE R2 — P&L TRACKER -->
-<div class="pnl-card" id="pnlCard">
-  <div class="pnl-icon gain" id="pnlIcon">📈</div>
-  <div class="pnl-body">
-    <div class="pnl-label">Total Gain / Loss</div>
-    <div class="pnl-val gain" id="pnlVal">+$36.00</div>
-    <div class="pnl-sub" id="pnlSub">vs. entry · genesis + deposits</div>
-  </div>
-  <div class="pnl-pct gain" id="pnlPct">+12%</div>
-</div>
-
 <!-- CHART -->
 <div class="chart-wrap">
   <div class="period-chips">
@@ -256,12 +245,9 @@
     <div class="pc" onclick="setPeriod(this)">3M</div>
     <div class="pc" onclick="setPeriod(this)">All</div>
   </div>
-  <!-- GOD MODE R2 — ANIMATED CANVAS CHART -->
   <div class="mini-chart" id="miniChartWrap">
-    <canvas id="portfolioCanvas" height="100"></canvas>
-    <div class="chart-tooltip" id="chartTooltip"></div>
-    <div id="chartLabels" style="display:flex; justify-content:space-between; font-size:10px; color:var(--text-dim); padding-top:6px;">
-      <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Today</span>
+    <div style="height:100px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text-dim);text-align:center;padding:0 16px;">
+      Portfolio history chart coming Wave 1 — there's no trading history to chart yet.
     </div>
   </div>
 </div>
@@ -555,225 +541,16 @@
   // GOD MODE ROUND 2 — PORTFOLIO
   // ════════════════════════════════════════════
   (function godModePortfolioR2() {
-    const CYAN_COL  = '#00D4FF';
-    const GOLD_COL  = '#FFB800';
+    // Chart history and P&L tracking were removed here — both rendered
+    // invented numbers (a fake day-by-day balance history and a fake "entry
+    // price" set to 88% of current value) with no real cost-basis or
+    // historical-balance table behind them. setPeriod keeps its original,
+    // honest "coming Wave 1" behaviour below.
 
-    // Period data seeds (relative multipliers vs current value)
-    const PERIOD_SEEDS = {
-      '1D':  [0.931, 0.943, 0.956, 0.964, 0.975, 0.989, 1.000],
-      '1W':  [0.860, 0.882, 0.904, 0.926, 0.948, 0.972, 1.000],
-      '1M':  [0.718, 0.762, 0.808, 0.852, 0.898, 0.948, 1.000],
-      '3M':  [0.510, 0.612, 0.702, 0.788, 0.864, 0.932, 1.000],
-      'All': [0.200, 0.340, 0.490, 0.640, 0.775, 0.900, 1.000],
-    };
-    const PERIOD_LABELS = {
-      '1D':  ['06:00','09:00','12:00','15:00','18:00','21:00','Now'],
-      '1W':  ['Mon','Tue','Wed','Thu','Fri','Sat','Today'],
-      '1M':  ['Jun 5','Jun 11','Jun 17','Jun 23','Jun 28','Jul 2','Today'],
-      '3M':  ['Apr 4','May 1','May 15','Jun 1','Jun 15','Jul 1','Today'],
-      'All': ['Genesis','Wk 2','Wk 3','Wk 4','Wk 6','Wk 8','Today'],
-    };
-
-    // ── 1. ANIMATED CANVAS CHART ──────────────────────────
-    const canvas = document.getElementById('portfolioCanvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let chartW = 320, chartH = 100;
-    let currentPeriod = (localStorage.getItem('indx_portfolio_period') || '1W');
-    let animFrame;
-
-    function resizeCanvas() {
-      const dpr = window.devicePixelRatio || 1;
-      const wrap = document.getElementById('miniChartWrap');
-      chartW = wrap ? (wrap.clientWidth - 32) : 320;
-      chartH = 100;
-      canvas.style.width  = chartW + 'px';
-      canvas.style.height = chartH + 'px';
-      canvas.width  = Math.round(chartW * dpr);
-      canvas.height = Math.round(chartH * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-
-    function buildPts(period, prog) {
-      const bal = parseInt(sessionStorage.getItem('citizen_balance') || '1250');
-      const curVal = bal * INDX_PRICE_USD;
-      const seeds = PERIOD_SEEDS[period] || PERIOD_SEEDS['1W'];
-      const n = seeds.length;
-      const pad = { t:12, b:10, l:6, r:6 };
-      const innerW = chartW - pad.l - pad.r;
-      const innerH = chartH - pad.t - pad.b;
-      const totalPts = (n - 1) * prog;
-      const fullPts  = Math.floor(totalPts);
-      const frac     = totalPts - fullPts;
-      const pts = [];
-      for (let i = 0; i <= Math.min(fullPts, n - 1); i++) {
-        pts.push({
-          x: pad.l + (i / (n - 1)) * innerW,
-          y: pad.t + (1 - seeds[i]) * innerH,
-          usd: (curVal * seeds[i]).toFixed(2),
-        });
-      }
-      // Partial interpolated last point
-      if (frac > 0 && fullPts < n - 1) {
-        const i0 = fullPts, i1 = fullPts + 1;
-        const sInterp = seeds[i0] + (seeds[i1] - seeds[i0]) * frac;
-        const xInterp = pad.l + ((i0 + frac) / (n - 1)) * innerW;
-        pts.push({
-          x: xInterp,
-          y: pad.t + (1 - sInterp) * innerH,
-          usd: (curVal * sInterp).toFixed(2),
-        });
-      }
-      return pts;
-    }
-
-    function drawChart(period, prog) {
-      ctx.clearRect(0, 0, chartW, chartH);
-      const pts = buildPts(period, prog);
-      if (pts.length < 2) return;
-
-      // Area fill
-      const grad = ctx.createLinearGradient(0, 0, 0, chartH);
-      grad.addColorStop(0, 'rgba(0,212,255,0.20)');
-      grad.addColorStop(1, 'rgba(0,212,255,0)');
-      ctx.beginPath();
-      ctx.moveTo(pts[0].x, chartH - 10);
-      ctx.lineTo(pts[0].x, pts[0].y);
-      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-      ctx.lineTo(pts[pts.length - 1].x, chartH - 10);
-      ctx.closePath();
-      ctx.fillStyle = grad;
-      ctx.fill();
-
-      // Line
-      ctx.beginPath();
-      ctx.moveTo(pts[0].x, pts[0].y);
-      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-      ctx.strokeStyle = CYAN_COL;
-      ctx.lineWidth = 2;
-      ctx.lineJoin = 'round';
-      ctx.lineCap = 'round';
-      ctx.stroke();
-
-      // End dot
-      const last = pts[pts.length - 1];
-      ctx.beginPath();
-      ctx.arc(last.x, last.y, 4.5, 0, Math.PI * 2);
-      ctx.fillStyle = CYAN_COL;
-      ctx.shadowColor = CYAN_COL;
-      ctx.shadowBlur = 10;
-      ctx.fill();
-      ctx.shadowBlur = 0;
-    }
-
-    function animateChart(period) {
-      cancelAnimationFrame(animFrame);
-      const DURATION = 550;
-      const start = Date.now();
-      function step() {
-        const raw = Math.min((Date.now() - start) / DURATION, 1);
-        const eased = 1 - Math.pow(1 - raw, 3);
-        drawChart(period, eased);
-        if (raw < 1) animFrame = requestAnimationFrame(step);
-      }
-      step();
-    }
-
-    function updateChartLabels(period) {
-      const labels = PERIOD_LABELS[period] || PERIOD_LABELS['1W'];
-      const el = document.getElementById('chartLabels');
-      if (el) el.innerHTML = labels.map(l => `<span>${l}</span>`).join('');
-    }
-
-    // Touch crosshair
-    canvas.addEventListener('touchmove', e => {
-      e.preventDefault();
-      const rect = canvas.getBoundingClientRect();
-      const tx = e.touches[0].clientX - rect.left;
-      const seeds = PERIOD_SEEDS[currentPeriod] || PERIOD_SEEDS['1W'];
-      const n = seeds.length;
-      const pad = { t:12, b:10, l:6, r:6 };
-      const innerW = chartW - pad.l - pad.r;
-      const innerH = chartH - pad.t - pad.b;
-      const pxPerSeg = innerW / (n - 1);
-      const idx = Math.max(0, Math.min(n - 1, Math.round((tx - pad.l) / pxPerSeg)));
-      const bal = parseInt(sessionStorage.getItem('citizen_balance') || '1250');
-      const val = (bal * INDX_PRICE_USD * seeds[idx]).toFixed(2);
-      const xPos = pad.l + idx * pxPerSeg;
-      const yPos = pad.t + (1 - seeds[idx]) * innerH;
-
-      drawChart(currentPeriod, 1);
-      ctx.beginPath();
-      ctx.moveTo(xPos, 0); ctx.lineTo(xPos, chartH);
-      ctx.strokeStyle = 'rgba(0,212,255,0.28)';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([3, 3]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.beginPath();
-      ctx.arc(xPos, yPos, 5, 0, Math.PI * 2);
-      ctx.fillStyle = CYAN_COL;
-      ctx.shadowColor = CYAN_COL; ctx.shadowBlur = 8;
-      ctx.fill(); ctx.shadowBlur = 0;
-
-      const tt = document.getElementById('chartTooltip');
-      if (tt) {
-        tt.textContent = '$' + val;
-        tt.style.left = Math.max(0, Math.min(chartW - 64, xPos - 20)) + 'px';
-        tt.style.top  = Math.max(2, yPos - 28) + 'px';
-        tt.classList.add('show');
-      }
-    }, { passive:false });
-
-    canvas.addEventListener('touchend', () => {
-      drawChart(currentPeriod, 1);
-      const tt = document.getElementById('chartTooltip');
-      if (tt) tt.classList.remove('show');
-    }, { passive:true });
-
-    // GOD MODE PATCH — replaces "coming Wave 1" toast with live chart animation
-    window.setPeriod = function(el) {
-      document.querySelectorAll('.pc').forEach(c => c.classList.remove('active'));
-      el.classList.add('active');
-      currentPeriod = el.textContent.trim();
-      localStorage.setItem('indx_portfolio_period', currentPeriod);
-      updateChartLabels(currentPeriod);
-      animateChart(currentPeriod);
-    };
-
-    // Init
-    resizeCanvas();
-    updateChartLabels(currentPeriod);
-    setTimeout(() => { resizeCanvas(); animateChart(currentPeriod); }, 80);
-    window.addEventListener('resize', () => { resizeCanvas(); drawChart(currentPeriod, 1); }, { passive:true });
-
-    // ── 2. P&L TRACKER ──────────────────────────────────
-    const PNL_ENTRY_KEY = 'indx_portfolio_entry';
-    function initPnlTracker() {
-      const bal = parseInt(sessionStorage.getItem('citizen_balance') || '1250');
-      const curVal = bal * INDX_PRICE_USD;
-      let entryVal = parseFloat(localStorage.getItem(PNL_ENTRY_KEY) || '0');
-      if (!entryVal || entryVal < 1) {
-        entryVal = Math.max(1, curVal * 0.88);
-        localStorage.setItem(PNL_ENTRY_KEY, entryVal.toFixed(2));
-      }
-      const pnl = curVal - entryVal;
-      const pnlPct = ((pnl / entryVal) * 100).toFixed(1);
-      const isGain = pnl >= 0;
-      const icon = document.getElementById('pnlIcon');
-      const val  = document.getElementById('pnlVal');
-      const sub  = document.getElementById('pnlSub');
-      const pct  = document.getElementById('pnlPct');
-      if (icon) { icon.textContent = isGain ? '📈' : '📉'; icon.className = 'pnl-icon ' + (isGain ? 'gain' : 'loss'); }
-      if (val)  { val.textContent  = (isGain ? '+$' : '-$') + Math.abs(pnl).toFixed(2); val.className = 'pnl-val ' + (isGain ? 'gain' : 'loss'); }
-      if (sub)  { sub.textContent  = 'entry $' + entryVal.toFixed(2) + ' · genesis + deposits'; }
-      if (pct)  { pct.textContent  = (isGain ? '+' : '') + pnlPct + '%'; pct.className = 'pnl-pct ' + (isGain ? 'gain' : 'loss'); }
-    }
-    initPnlTracker();
-
-    // ── 3. INCOME BREAKDOWN LIVE TOTALS ──────────────────
+    // ── INCOME BREAKDOWN — Genesis Bonus is a real, fixed one-time reward.
+    // The "live" pulsing dot previously implied ongoing activity for a
+    // one-time event, so it's shown as a static line instead.
     function initIncomeLiveTotals() {
-      const meshEarned = parseFloat(localStorage.getItem('indx_dash_mesh_earned') || '0');
       const genesis = 50;
       document.querySelectorAll('.income-row').forEach(row => {
         const label = row.querySelector('.income-label');
@@ -785,27 +562,12 @@
           fill.style.width = '100%';
           valEl.textContent = genesis + ' INDX';
           valEl.style.color = '';
-          if (!label.querySelector('.income-live-dot')) {
-            const dot = document.createElement('span');
-            dot.className = 'income-live-dot';
-            label.prepend(dot);
-          }
-        } else if ((text === 'Light Node' || text === 'Sovereign Mesh') && meshEarned > 0.005) {
-          const pct = Math.min(100, (meshEarned / genesis) * 100).toFixed(0);
-          fill.style.width = pct + '%';
-          valEl.textContent = meshEarned.toFixed(2) + ' INDX';
-          valEl.style.color = '';
-          if (!label.querySelector('.income-live-dot')) {
-            const dot = document.createElement('span');
-            dot.className = 'income-live-dot';
-            label.prepend(dot);
-          }
         }
       });
     }
     initIncomeLiveTotals();
 
-    // ── 4. GRAND SYNC PRICE TARGET ───────────────────────
+    // ── GRAND SYNC PRICE TARGET ───────────────────────
     function initSyncCard() {
       const TGE = new Date('2027-01-24T00:00:00+11:00');
       const daysLeft = Math.max(0, Math.ceil((TGE - new Date()) / 86400000));

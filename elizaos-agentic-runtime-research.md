@@ -95,6 +95,14 @@ If AJ wants to pursue this, the lowest-risk entry point mirrors the CharacterStu
 
 This doc is research and fact-checking only. No code has been written, no screen has been built, and nothing here should be treated as scheduled work until AJ decides to greenlight it.
 
+## Part 6 — Prototype Attempt Log (2026-07-24, same day)
+
+**elizaOS character file — done.** Wrote `siindex-elizaos-character.json` in this folder: a private, non-production elizaOS character file encoding SIINDEX's bio, voice/style rules, canonical IN$DEX facts, and the Seven Security Laws / hard stops from CLAUDE.md and security-canon.md. This is data-authoring only — no model provider set, no plugins loaded, no credentials present, not connected to any real Grid Account, wallet, Solana RPC, or elizaOS runtime. The file's own `_readme` and `security._note` fields explicitly flag that the "security" block documents intent, not enforcement — elizaOS's character-file schema has no mechanism that actually enforces 98/2, no-solo-signing, or no-seed-phrase at runtime. Real enforcement stays in Agent Wallet policy code, PQSI, and Supabase RLS, exactly as Part 4 point 3 above already warned.
+
+**CharacterStudio sandbox run — could not attempt, environment-limited, not a code/tooling failure.** Tried `git clone` on `github.com/M3-org/CharacterStudio` from this session's sandbox shell. Result: `403 Forbidden`, `X-Proxy-Error: blocked-by-allowlist`. Confirmed this is a sandbox network policy, not a one-off — `github.com`, `raw.githubusercontent.com`, and `registry.npmjs.org` are all blocked by the sandbox's outbound allowlist (checked directly with `curl -I`, same 403/blocked-by-allowlist response on all three). This sandbox can fetch individual web pages (via the workspace fetch tool, which proxies through an allowlisted fetch service) but cannot run `git clone`, `npm install`, or anything else requiring raw outbound network access to code-hosting/package-registry domains. No render, no build, no VRM export was observed — nothing here should be read as validating or invalidating CharacterStudio's real-world performance. The 30-minute sanity check from Part 5 step 1 still needs to happen on AJ's own machine (or an environment with unrestricted outbound network access), not in this sandbox.
+
+---
+
 ## Sources (2026-07-24 web search + direct fetch)
 - elizaOS/eliza repo — https://github.com/elizaOS/eliza
 - elizaOS documentation — https://docs.elizaos.ai/

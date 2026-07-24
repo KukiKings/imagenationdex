@@ -124,14 +124,19 @@
       <div style="font-size:18px;font-weight:800;">Income Streams</div>
       <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">9 ways your money works for you</div>
     </div>
-    <div style="font-size:13px;font-weight:700;color:var(--cyan);cursor:pointer;" onclick="showToast('Withdrawing earnings…')">Withdraw</div>
+    <div style="font-size:13px;font-weight:700;color:var(--cyan);cursor:pointer;" onclick="openWithdraw()">Withdraw</div>
   </div>
 
   <div class="scroll-body">
 
+    <!-- PREVIEW DISCLOSURE — moved above the hero so the caveat is seen before any number -->
+    <div style="margin:14px 20px 0;background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.25);border-radius:14px;padding:12px 14px;font-size:12px;line-height:1.5;color:var(--text-muted);">
+      <strong style="color:var(--gold);">Preview mode.</strong> Every number on this overview screen — totals, per-stream stats, the live ticker, the referral leaderboard, and one-tap "Withdraw All" — is illustrative example data, not your real activity. Your real balances live on the per-stream pages: <a href="staking.html" style="color:var(--cyan);">Sovereign Yield</a> and <a href="sovereign-lending.html" style="color:var(--cyan);">Sovereign Lending</a> are wired to real data today.
+    </div>
+
     <!-- EARNINGS HERO -->
     <div class="earn-hero">
-      <div class="earn-today-label">Total earned this month</div>
+      <div class="earn-today-label">Total earned this month (example)</div>
       <div class="earn-today" id="totalEarned">312</div>
       <div class="earn-today-usd" id="totalUsd">≈ $156.00 USD</div>
       <div class="earn-stats">
@@ -148,11 +153,6 @@
         <div class="uc-amount" id="unclaimedAmt">0.000 INDX</div>
       </div>
       <button class="uc-btn" onclick="openWithdraw()">Withdraw All</button>
-    </div>
-
-    <!-- PREVIEW DISCLOSURE -->
-    <div style="margin:10px 20px 0;background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.25);border-radius:14px;padding:12px 14px;font-size:12px;line-height:1.5;color:var(--text-muted);">
-      <strong style="color:var(--gold);">Preview mode.</strong> This overview's live ticker and one-tap "Withdraw All" simulate a future combined auto-claim across streams — they don't move real INDX. Your real earnings live per-stream: <a href="staking.html" style="color:var(--cyan);">Sovereign Yield</a> and <a href="sovereign-lending.html" style="color:var(--cyan);">Sovereign Lending</a> are wired to your real balance today.
     </div>
 
     <!-- GOD MODE: STREAM PERFORMANCE CHART -->
@@ -299,18 +299,16 @@
           </div>
         </div>
         <div class="sc-body-detail" id="detail-referral" style="display:none;">
-          <div class="sc-detail-row"><span>Total referrals</span><span>7 people</span></div>
-          <div class="sc-detail-row"><span>Earned from referrals</span><span style="color:var(--purple);">+350 INDX</span></div>
+          <div class="sc-detail-row"><span>Total referrals</span><span id="refCount">— people</span></div>
+          <div class="sc-detail-row"><span>Earned from referrals</span><span id="refEarned" style="color:var(--purple);">— INDX</span></div>
           <div class="sc-detail-row"><span>Ongoing trade commission</span><span>5% of their fees</span></div>
           <div class="ref-link-box">
-            <div class="ref-link">index.app/r/mariasantos</div>
+            <div class="ref-link" id="refLinkDisplay">index.app/r/you</div>
             <div class="ref-copy" onclick="copyRef()">Copy</div>
           </div>
           <div style="font-size:11px;color:var(--text-muted);margin-top:8px;">Share on WhatsApp, SMS, or post your link. Every person who joins = 50 INDX for you.</div>
           <div style="margin-top:12px;font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:8px;">Referral leaderboard</div>
-          <div class="lb-row"><div class="lb-rank">1</div><div class="lb-avatar">SK</div><div class="lb-name">sione.IN$DEX</div><div class="lb-earn">1,200 INDX</div></div>
-          <div class="lb-row"><div class="lb-rank">2</div><div class="lb-avatar">AT</div><div class="lb-name">aiko.IN$DEX</div><div class="lb-earn">950 INDX</div></div>
-          <div class="lb-row" style="opacity:0.6;"><div class="lb-rank">3</div><div class="lb-avatar">MS</div><div class="lb-name">You</div><div class="lb-earn">350 INDX</div></div>
+          <div style="font-size:12px;color:var(--text-muted);padding:10px 0;">No referrals yet. The leaderboard fills in as citizens invite friends after launch.</div>
           <button class="sc-action-btn" style="background:var(--purple);color:#fff;" onclick="window.location.href='referral.html'">Share your link →</button>
         </div>
       </div>
@@ -500,6 +498,33 @@
     animateCount('totalEarned', 0, totalBase, 1200);
     animateCount('todayVal', 0, todayBase, 800, '+');
     setTimeout(animateBars, 400);
+
+    // Referral card — real citizen data if present, honest zero-state otherwise (no fake leaderboard)
+    const refCount = parseInt(sessionStorage.getItem('citizen_referral_count') || '0');
+    const refEarned = parseFloat(sessionStorage.getItem('citizen_referral_earned') || '0');
+    const refCountEl = document.getElementById('refCount');
+    const refEarnedEl = document.getElementById('refEarned');
+    if (refCountEl) refCountEl.textContent = refCount + ' people';
+    if (refEarnedEl) refEarnedEl.textContent = refEarned.toFixed(0) + ' INDX';
+    const refLinkEl = document.getElementById('refLinkDisplay');
+    if (refLinkEl) refLinkEl.textContent = 'imagenationdex.com/r/' + (sessionStorage.getItem('citizen_web3_domain') || 'you');
+
+    // compute away earnings and seed unclaimed (preview only — disclosed above)
+    const awayEarned = computeAwayEarnings();
+    _unclaimed += awayEarned;
+    persistVisit();
+    if (awayEarned > 0.001) showToast('💰 Preview: would have earned ' + awayEarned.toFixed(3) + ' INDX while away (simulated)');
+
+    // restore last open card
+    const lastCard = localStorage.getItem(IS_KEY.openCard);
+    if (lastCard) setTimeout(() => { const el = document.getElementById('detail-' + lastCard); if (el) { el.style.display = 'block'; animateBars(); } }, 200);
+
+    // lending monthly for chart
+    const lendingMonthly = lendingDeposit * APY_LENDING;
+    renderStreamChart(lendingMonthly);
+
+    // start live ticker (disclosed as preview above)
+    startEarningsTicker();
   });
 
   function animateCount(id, from, to, dur, prefix='') {
@@ -535,7 +560,7 @@
   }
 
   function copyRef() {
-    const name = sessionStorage.getItem('citizen_web3_domain') || 'mariasantos';
+    const name = sessionStorage.getItem('citizen_web3_domain') || 'you';
     const url = 'imagenationdex.com/r/' + name;
     if (navigator.share) { navigator.share({ title: 'Join IN$DEX', url: 'https://' + url }); }
     else {
@@ -651,27 +676,6 @@
     const isNowOpen = el && el.style.display !== 'none';
     localStorage.setItem(IS_KEY.openCard, isNowOpen ? key : '');
   };
-
-  // ── DOMContentLoaded PATCHES ────────────────────────────────────
-  window.addEventListener('DOMContentLoaded', () => {
-    // compute away earnings and seed unclaimed
-    const awayEarned = computeAwayEarnings();
-    _unclaimed += awayEarned;
-    persistVisit();
-    if (awayEarned > 0.001) showToast('💰 Preview: would have earned ' + awayEarned.toFixed(3) + ' INDX while away (simulated)');
-
-    // restore last open card
-    const lastCard = localStorage.getItem(IS_KEY.openCard);
-    if (lastCard) setTimeout(() => { const el = document.getElementById('detail-' + lastCard); if (el) { el.style.display = 'block'; animateBars(); } }, 200);
-
-    // lending monthly for chart
-    const lendingDeposit = parseFloat(sessionStorage.getItem('citizen_lending_deposit') || '0');
-    const lendingMonthly = lendingDeposit * APY_LENDING;
-    renderStreamChart(lendingMonthly);
-
-    // start live ticker
-    startEarningsTicker();
-  }, { once: false }); // supplemental listener — main DOMContentLoaded above handles lending display
 
   let toastTimer;
   function showToast(msg) {

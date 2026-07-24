@@ -292,8 +292,6 @@
       <div class="yield-label">Current Est. APY</div>
       <div class="yield-apy">5.5%</div>
       <div class="yield-apy-sub">Variable · Sovereign Yield · Unlocks at Wisdom Score 100</div>
-      <!-- Staker rank badge -->
-      <div class="staker-rank">🛡 Staker <span class="rank-n">#847</span> · Top 30% of 1,204</div>
       <div class="yield-stats">
         <div class="ys"><div class="ys-val" style="color:var(--green)" id="heroStaked">—</div><div class="ys-label">INDX Staked</div></div>
         <div class="ys"><div class="ys-val" style="color:var(--cyan)" id="heroStakers">—</div><div class="ys-label">Stakers</div></div>
@@ -315,7 +313,7 @@
       </div>
     </div>
 
-    <!-- WS PROGRESS RING (God Mode) -->
+    <!-- WS PROGRESS RING (God Mode) — driven by real sessionStorage citizen_wisdom, see renderWsProgress() -->
     <div class="ws-ring-wrap" id="wsRingWrap" onclick="toggleWsMilestones()">
       <svg width="58" height="58" viewBox="0 0 58 58" style="flex-shrink:0;">
         <circle cx="29" cy="29" r="23" fill="none" stroke="rgba(255,184,0,0.15)" stroke-width="4.5"/>
@@ -324,22 +322,15 @@
           stroke-dasharray="144.5" stroke-dashoffset="144.5"
           transform="rotate(-90 29 29)"
           style="transition:stroke-dashoffset 1.3s cubic-bezier(0.4,0,0.2,1);"/>
-        <text x="29" y="34" text-anchor="middle" font-size="13" font-weight="900" fill="#FFB800">62</text>
+        <text id="wsRingText" x="29" y="34" text-anchor="middle" font-size="13" font-weight="900" fill="#FFB800">0</text>
       </svg>
       <div style="flex:1;">
-        <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:3px;">Wisdom Score: 62 / 100</div>
-        <div style="font-size:12px;color:var(--text-muted);line-height:1.55;">38 points from Sovereign Yield. Tap for milestones. <span style="color:var(--cyan);font-weight:600;" onclick="event.stopPropagation();window.location.href='wisdom-score.html'">Level up →</span></div>
+        <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:3px;" id="wsRingLabel">Wisdom Score: 0 / 100</div>
+        <div style="font-size:12px;color:var(--text-muted);line-height:1.55;" id="wsRingSub">Tap for milestones. <span style="color:var(--cyan);font-weight:600;" onclick="event.stopPropagation();window.location.href='wisdom-score.html'">Level up →</span></div>
       </div>
       <span class="ws-chevron">▾</span>
     </div>
-    <div class="ws-milestones" id="wsMilestones">
-      <div class="ws-ms-row ws-ms-done"><span class="ws-ms-badge done">WS 50 ✓</span><span>Card unlocked · Sovereign SBT minted</span></div>
-      <div class="ws-ms-row ws-ms-done"><span class="ws-ms-badge done">WS 62 ▶</span><span style="color:var(--text);">You are here · Keep going</span></div>
-      <div class="ws-ms-row"><span class="ws-ms-badge">WS 75</span><span>Cashback 2.0% · PQSI T2 threat access</span></div>
-      <div class="ws-ms-row"><span class="ws-ms-badge">WS 100</span><span style="color:var(--gold);font-weight:700;">🔓 Sovereign Yield unlocked · 5.5%+ APY</span></div>
-      <div class="ws-ms-row"><span class="ws-ms-badge">WS 150</span><span>Referral 2× bonus · Genesis Vault</span></div>
-      <div class="ws-ms-row"><span class="ws-ms-badge">WS 200</span><span>🏛 Civilisation Builder · 10% max APY</span></div>
-    </div>
+    <div class="ws-milestones" id="wsMilestones"></div>
 
     <!-- TABS -->
     <div class="tabs">
@@ -562,14 +553,14 @@
       <div class="rewards-chart-wrap">
         <div class="rc-header">
           <div class="rc-title">Cumulative Earnings</div>
-          <div><div class="rc-total-label">5-day total</div><div class="rc-total-val">+0.68 INDX</div></div>
+          <div><div class="rc-total-label">Recent total</div><div class="rc-total-val">0.00 INDX</div></div>
         </div>
         <canvas id="rewardsSparkline"></canvas>
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px;">
         <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:14px;">All-Time Rewards</div>
-        <div style="font-size:36px;font-weight:900;color:var(--green);margin-bottom:4px;">+4.54 INDX</div>
-        <div style="font-size:13px;color:var(--text-muted);">≈ $2.27 earned from staking</div>
+        <div style="font-size:36px;font-weight:900;color:var(--green);margin-bottom:4px;">0.00 INDX</div>
+        <div style="font-size:13px;color:var(--text-muted);">≈ $0.00 earned from staking</div>
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
         <div class="rewards-history-head">
@@ -883,6 +874,7 @@
       container.innerHTML = '';
       if (emptyState) emptyState.style.display = 'block';
       startNextUnlockCountdown(); // GOD MODE PATCH R3 — hides the strip when there's nothing to count down to
+      updateStakingStreak();
       return;
     }
     if (emptyState) emptyState.style.display = 'none';
@@ -925,6 +917,7 @@
     }).join('');
     if (typeof injectLiveTickers === 'function') injectLiveTickers();
     startNextUnlockCountdown(); // GOD MODE PATCH R3 — live countdown to nearest real unlock
+    updateStakingStreak(); // real streak from earliest actual position, not a fabricated anchor
   }
 
   async function claimRewards(positionId) {
@@ -1083,8 +1076,8 @@
   document.addEventListener('DOMContentLoaded', async function() {
     await initRealSession(); // GOD MODE PATCH R3 — resolve real access token before any RPC call
     refreshBalance();
-    loadStakingData();
-    initStakingStreak(); // GOD MODE PATCH R2 — cosmetic streak tracker, not a financial claim
+    loadStakingData(); // also drives the real staking streak via renderMyStakes() -> updateStakingStreak()
+    renderWsProgress(); // real Wisdom Score ring/milestones from sessionStorage citizen_wisdom
   });
 
   // ── COMPOUND CALCULATOR ──────────────────────────────────────────────
@@ -1173,11 +1166,15 @@
   }
 
   const TIPS = {
-    yield: { title: 'Sovereign Yield', body: 'Stake INDX to earn passive interest. Rates: 4% (flex) · 5.5% (30d) · 7.2% (90d) · 10% (365d). Requires Wisdom Score 100. Your staked INDX stays in a non-custodial smart contract only you can withdraw.', link: 'help.html' },
-    ws: { title: 'Wisdom Score', body: 'Your reputation score (0–200) earned by trading, verifying, voting, and referring. WS 100 is required to unlock Sovereign Yield. You currently have WS 62 38 points to go.', link: 'wisdom-score.html' }
+    yield: { title: 'Sovereign Yield', body: 'Stake INDX to earn passive interest. Est. ranges: 3–5% (flex) · 4–7% (30d) · 6–9% (90d) · 9–13% (365d). Requires Wisdom Score 100. Your staked INDX stays in a non-custodial smart contract only you can withdraw.', link: 'help.html' },
+    ws: { title: 'Wisdom Score', body: 'Your reputation score (0–200) earned by trading, verifying, voting, and referring. WS 100 is required to unlock Sovereign Yield.', link: 'wisdom-score.html' }
   };
   function showTip(key) {
     const tip = TIPS[key]; if (!tip) return;
+    if (key === 'ws') {
+      const s = parseInt(sessionStorage.getItem('citizen_wisdom') || '0');
+      tip.body = TIPS.ws.body + (s >= 100 ? ' You currently have WS ' + s + ' Sovereign Yield unlocked.' : ' You currently have WS ' + s + ' — ' + (100 - s) + ' points to go.');
+    }
     let el = document.getElementById('tipOverlay');
     if (!el) { el = document.createElement('div'); el.id = 'tipOverlay'; el.style.cssText = 'position:fixed;inset:0;z-index:999;display:flex;align-items:flex-end;justify-content:center;padding:0 0 90px;background:rgba(0,0,0,0.55);'; el.onclick = hideTip; document.body.appendChild(el); }
     el.innerHTML = `<div onclick="event.stopPropagation()" style="background:#1A1D25;border:1px solid #2A2D38;border-radius:18px 18px 14px 14px;padding:20px;max-width:390px;width:calc(100% - 32px);"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><div style="font-size:14px;font-weight:800;color:#00D4FF;">${tip.title}</div><div onclick="hideTip()" style="width:28px;height:28px;border-radius:50%;background:#22252F;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;color:#6B7080;">✕</div></div><div style="font-size:13px;color:#EAEAEA;line-height:1.7;margin-bottom:14px;">${tip.body}</div><a href="${tip.link}" style="display:block;text-align:center;padding:11px;background:#00D4FF;color:#090A10;font-size:13px;font-weight:800;border-radius:10px;text-decoration:none;">Learn more →</a></div>`;
@@ -1313,23 +1310,26 @@
     if (ov) ov.classList.remove('show');
   }
 
-  // Feature 4: Staking streak tracker + social share
-  function initStakingStreak() {
-    var key = 'indx_stake_streak_start';
-    var now = Date.now();
-    var streakStart = parseInt(localStorage.getItem(key) || '0');
-    if (!streakStart) {
-      // Anchor to 17 days ago (existing staker)
-      streakStart = now - (17 * 24 * 3600 * 1000);
-      localStorage.setItem(key, String(streakStart));
-    }
-    var days = Math.floor((now - streakStart) / 86400000);
+  // Feature 4: Staking streak tracker + social share — computed from the real
+  // earliest started_at among the citizen's actual staking_positions, not a
+  // fabricated anchor date. Called from renderMyStakes() once real positions load.
+  function updateStakingStreak() {
     var el = document.getElementById('streakDays');
-    if (el) el.textContent = days + ' day staking streak';
+    if (!el) return;
+    if (!stakingPositions.length) { el.textContent = 'Stake INDX to start your streak'; return; }
+    var earliest = null;
+    stakingPositions.forEach(function(p) {
+      var t = new Date(p.started_at).getTime();
+      if (!isNaN(t) && (earliest === null || t < earliest)) earliest = t;
+    });
+    var days = earliest ? Math.max(0, Math.floor((Date.now() - earliest) / 86400000)) : 0;
+    el.textContent = days + (days === 1 ? ' day staking streak' : ' day staking streak');
   }
 
   function shareStakingPosition() {
-    var text = '🔒 I’ve staked 700 INDX in IN$DEX earning Sovereign Yield\n🏁 Staker #847 · Top 30% of 1,204\n🔗 indx.app/stake\n\n#INDX #SovereignYield #Web3';
+    var totalEl = document.getElementById('ssTotalStaked');
+    var total = totalEl ? totalEl.textContent : '0';
+    var text = '🔒 I’ve staked ' + total + ' INDX in IN$DEX earning Sovereign Yield\n🔗 indx.app/stake\n\n#INDX #SovereignYield #Web3';
     if (navigator.share) {
       navigator.share({ title: 'My IN$DEX Stake', text: text }).catch(function() {});
     } else {
@@ -1544,16 +1544,48 @@
     const isOpen = m.classList.toggle('open');
     if (w) w.classList.toggle('open-ms', isOpen);
   }
-  // Animate ring on load
-  (function animateWsRing() {
+  // Real Wisdom Score ring + milestone list — driven by sessionStorage citizen_wisdom
+  // (set from the real citizens.wisdom_score / award_wisdom RPC elsewhere in the app),
+  // not a fabricated fixed score. Canonical gates per whitepaper Appendix A: 50/100/150/200.
+  function renderWsProgress() {
+    const score = parseInt(sessionStorage.getItem('citizen_wisdom') || '0');
     const arc = document.getElementById('wsRingArc');
-    if (!arc) return;
-    const circ = 2 * Math.PI * 23; // r=23, C≈144.5
-    const filled = circ * (1 - 62 / 100);
-    setTimeout(function() { arc.style.strokeDashoffset = filled.toFixed(1); }, 350);
-  })();
+    const textEl = document.getElementById('wsRingText');
+    const labelEl = document.getElementById('wsRingLabel');
+    const subEl = document.getElementById('wsRingSub');
+    const gate = 100; // Sovereign Yield gate
+    if (textEl) textEl.textContent = score;
+    if (labelEl) labelEl.textContent = 'Wisdom Score: ' + score + ' / ' + gate;
+    if (subEl) {
+      const levelUpLink = '<span style="color:var(--cyan);font-weight:600;" onclick="event.stopPropagation();window.location.href=\'wisdom-score.html\'">Level up →</span>';
+      subEl.innerHTML = (score >= gate
+        ? 'Sovereign Yield unlocked ✓ Tap for milestones. '
+        : (gate - score) + ' points from Sovereign Yield. Tap for milestones. ') + levelUpLink;
+    }
+    if (arc) {
+      const circ = 2 * Math.PI * 23; // r=23, C≈144.5
+      const pct = Math.max(0, Math.min(1, score / gate));
+      const filled = circ * (1 - pct);
+      setTimeout(function() { arc.style.strokeDashoffset = filled.toFixed(1); }, 350);
+    }
 
-  // Feature 4: Rank badge – already in HTML, pop-in fires via CSS animation on load
+    // Canonical milestone list — matches whitepaper Appendix A exactly, no invented tiers/rewards
+    const MILESTONES = [
+      { threshold: 50,  label: 'Governor — governance voting unlocked' },
+      { threshold: 100, label: 'Sovereign — Sovereign Yield + Staking unlocked' },
+      { threshold: 150, label: 'Elder — Civilisation Fee reduced' },
+      { threshold: 200, label: 'Sovereign Elder — maximum tier' }
+    ];
+    const track = document.getElementById('wsMilestones');
+    if (track) {
+      track.innerHTML = MILESTONES.map(function(m) {
+        if (score >= m.threshold) {
+          return '<div class="ws-ms-row ws-ms-done"><span class="ws-ms-badge done">WS ' + m.threshold + ' ✓</span><span>' + m.label + '</span></div>';
+        }
+        return '<div class="ws-ms-row"><span class="ws-ms-badge">WS ' + m.threshold + '</span><span>' + m.label + '</span></div>';
+      }).join('');
+    }
+  }
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>
