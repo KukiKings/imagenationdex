@@ -215,7 +215,7 @@ body{background:var(--black);color:#E8EAF0;font-family:'Segoe UI',system-ui,sans
 <div class="section reveal">
   <div class="section-label">Document Ingestion Simulator</div>
   <div class="ingest-wrap">
-    <div style="font-size:12px;color:rgba(232,234,240,.5);margin-bottom:12px">Watch SIINDEX convert a document into permanent organisational memory</div>
+    <div style="font-size:12px;color:rgba(232,234,240,.5);margin-bottom:12px">Simulation of the ingestion pipeline design — no file is uploaded, no document is actually stored. There is no live document-ingestion backend behind this yet.</div>
     <div class="ingest-row">
       <select class="ingest-select" id="docType">
         <option value="PDF">📄 PDF</option>
@@ -249,15 +249,16 @@ body{background:var(--black);color:#E8EAF0;font-family:'Segoe UI',system-ui,sans
 
 <!-- GOD MODE 3: CROSS-SOURCE QUERY SIMULATOR -->
 <div class="section reveal">
-  <div class="section-label">Cross-Source Query Simulator</div>
-  <div style="font-size:12px;color:rgba(232,234,240,.5);margin-bottom:14px">SIINDEX reasons across your entire knowledge graph — not just one file. Tap a query to execute.</div>
+  <div class="section-label">Cross-Source Query Simulator <span style="text-transform:none;letter-spacing:0;color:rgba(232,234,240,.4);font-weight:600;">— static examples</span></div>
+  <div style="font-size:12px;color:rgba(232,234,240,.5);margin-bottom:14px">These are pre-written reference answers, not a live query engine — there is no knowledge graph behind this yet. Tap a query to reveal its example answer.</div>
   <div class="query-grid" id="queryGrid"></div>
   <div class="query-count">Queries executed: <span id="queryCount" style="color:var(--green);font-weight:700">0</span> / 6</div>
 </div>
 
 <!-- GOD MODE 4: LIVE KNOWLEDGE BASE GROWTH COUNTER -->
 <div class="section reveal">
-  <div class="section-label">Live Knowledge Base</div>
+  <div class="section-label">Illustrative Knowledge Base <span style="text-transform:none;letter-spacing:0;color:rgba(232,234,240,.4);font-weight:600;">— projected scale, not live data</span></div>
+  <div style="font-size:12px;color:rgba(232,234,240,.5);margin-bottom:14px">No document-ingestion backend exists yet, so these numbers do not reflect real activity. They show what a fully-scaled knowledge base could look like once ingestion ships.</div>
   <div class="kb-grid">
     <div class="kb-stat">
       <div class="kb-val" id="kbDocs">0</div>
@@ -573,7 +574,6 @@ const QUERIES = [
 ];
 
 let queriesDone = new Set(JSON.parse(localStorage.getItem('indx_knowledge_queries_done')||'[]'));
-let queriesRunningSet = new Set();
 
 function buildQueryGrid(){
   const grid = document.getElementById('queryGrid');
@@ -588,72 +588,37 @@ function buildQueryGrid(){
 }
 
 function runQuery(idx){
-  if(queriesDone.has(idx) || queriesRunningSet.has(idx)) return;
-  queriesRunningSet.add(idx);
+  // Reveals its pre-written reference answer instantly — no fake "thinking" delay,
+  // because there is no live query engine behind this to actually think.
+  if(queriesDone.has(idx)) return;
   const card = document.getElementById('qc'+idx);
-  card.classList.add('running');
-  setTimeout(()=>{
-    card.classList.remove('running');
-    card.classList.add('done');
-    document.getElementById('qr'+idx).textContent = QUERIES[idx].answer;
-    queriesDone.add(idx);
-    queriesRunningSet.delete(idx);
-    localStorage.setItem('indx_knowledge_queries_done', JSON.stringify([...queriesDone]));
-    document.getElementById('queryCount').textContent = queriesDone.size;
-    showToast('Knowledge retrieved across ' + QUERIES[idx].sources.length + ' sources', 'green');
-    if(queriesDone.size === 6) setTimeout(()=>showToast('All queries executed — full reasoning demo complete','gold'),800);
-  }, 1300);
+  card.classList.add('done');
+  document.getElementById('qr'+idx).textContent = QUERIES[idx].answer;
+  queriesDone.add(idx);
+  localStorage.setItem('indx_knowledge_queries_done', JSON.stringify([...queriesDone]));
+  document.getElementById('queryCount').textContent = queriesDone.size;
+  showToast('Reference answer shown (static example, not a live query)', 'green');
 }
 
 buildQueryGrid();
 
-// ── GOD MODE 4: LIVE KNOWLEDGE BASE GROWTH COUNTER ──
-const KB_KEY = 'indx_knowledge_base_stats';
-const KB_DEFAULTS = {docs:47, nodes:3820, rels:12540, savings:84, lastTs:Date.now()};
-let kbState = Object.assign({}, KB_DEFAULTS, JSON.parse(localStorage.getItem(KB_KEY)||'null'));
-// Compute elapsed growth since last visit
-const elapsed = Math.floor((Date.now() - (kbState.lastTs||Date.now())) / 1000);
-const sessionDocsAdded = Math.floor(elapsed * 0.004);   // ~14/hr
-const sessionNodesAdded = Math.floor(elapsed * 0.12);    // ~430/hr
-const sessionRelsAdded = Math.floor(elapsed * 0.38);     // ~1370/hr
-kbState.docs += sessionDocsAdded;
-kbState.nodes += sessionNodesAdded;
-kbState.rels += sessionRelsAdded;
-kbState.savings = Math.min(97, kbState.savings + Math.floor(elapsed * 0.001));
-kbState.lastTs = Date.now();
-
-let sessionDocsDelta = 0, sessionNodesDelta = 0, sessionRelsDelta = 0;
-
-function saveKb(){ localStorage.setItem(KB_KEY, JSON.stringify(kbState)); }
+// ── ILLUSTRATIVE KNOWLEDGE BASE — static projection, not a live counter ──
+// No document-ingestion backend exists in Supabase to back real doc/node/relationship
+// counts, so these are fixed example figures. The old version faked organic growth with
+// Math.random() on a timer and persisted it to localStorage to look like real activity —
+// that has been removed.
+const KB_PROJECTION = {docs:47, nodes:3820, rels:12540, savings:84};
 
 function renderKb(){
-  document.getElementById('kbDocs').textContent = kbState.docs.toLocaleString();
-  document.getElementById('kbNodes').textContent = kbState.nodes.toLocaleString();
-  document.getElementById('kbRels').textContent = kbState.rels.toLocaleString();
-  document.getElementById('kbSavings').textContent = kbState.savings + '%';
-  document.getElementById('kbDocsDelta').textContent = '+' + sessionDocsDelta + ' this session';
-  document.getElementById('kbNodesDelta').textContent = '+' + sessionNodesDelta + ' this session';
-  document.getElementById('kbRelsDelta').textContent = '+' + sessionRelsDelta + ' this session';
+  document.getElementById('kbDocs').textContent = KB_PROJECTION.docs.toLocaleString();
+  document.getElementById('kbNodes').textContent = KB_PROJECTION.nodes.toLocaleString();
+  document.getElementById('kbRels').textContent = KB_PROJECTION.rels.toLocaleString();
+  document.getElementById('kbSavings').textContent = KB_PROJECTION.savings + '%';
+  document.getElementById('kbDocsDelta').textContent = 'Example projection';
+  document.getElementById('kbNodesDelta').textContent = 'Example projection';
+  document.getElementById('kbRelsDelta').textContent = 'Example projection';
 }
 renderKb();
-
-function tickKb(){
-  // Slow drift — realistic knowledge ingestion pace
-  if(Math.random() < 0.06){ kbState.docs++; sessionDocsDelta++; }
-  kbState.nodes += Math.random() < 0.5 ? 1 : 0;
-  if(Math.random() < 0.5){ sessionNodesDelta++; }
-  kbState.rels += Math.random() < 0.7 ? 1 : 0;
-  if(Math.random() < 0.7){ sessionRelsDelta++; }
-  if(kbState.savings < 97 && Math.random() < 0.01) kbState.savings++;
-  kbState.lastTs = Date.now();
-  saveKb();
-  renderKb();
-  setTimeout(tickKb, 1800 + Math.random()*1200);
-}
-setTimeout(tickKb, 2000);
-
-// Bump KB stats when a doc is successfully ingested
-const origIngestBtn = window.runIngestion;
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

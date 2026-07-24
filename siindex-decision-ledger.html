@@ -688,7 +688,7 @@
   <div class="bottom-sheet" id="appealSheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title">File an Appeal</div>
-    <div class="sheet-sub">Describe what you believe was incorrect. Your appeal will be reviewed by the IN$DEX Governance Council within 5 business days.</div>
+    <div class="sheet-sub">Describe what you believe was incorrect. This draft is saved on this device — to actually reach the IN$DEX Governance Council, email it to <strong>imagenationdex@gmail.com</strong> with the Decision ID (a "Copy for email" button appears after you save).</div>
     <div class="sheet-field">
       <label>Decision ID</label>
       <textarea id="appealDecId" rows="1" readonly style="opacity:0.6;cursor:default;"></textarea>
@@ -1006,6 +1006,14 @@
       document.getElementById('appealSheet').classList.remove('open');
     }
 
+    // Honesty fix: there is no real backend endpoint wired to this screen that
+    // actually delivers an appeal to the IN$DEX Governance Council (no appeals/
+    // decision-ledger table exists yet, and the `complaints` table has no citizen
+    // INSERT policy). Saving to localStorage and then claiming "Appeal submitted...
+    // reviewed within 5 business days" was a fake-success message — nothing was
+    // transmitted anywhere. This now saves the draft locally (real, honest) and
+    // copies an email-ready version to the clipboard so the citizen can actually
+    // send it, instead of silently doing nothing beyond the local save.
     function submitAppeal() {
       const reason = document.getElementById('appealReason').value.trim();
       if (!reason) { showToast('Please describe the reason for your appeal.'); return; }
@@ -1015,12 +1023,17 @@
         decId: currentAppealId,
         reason,
         ts: Date.now(),
-        status: 'submitted'
+        status: 'draft_saved_locally'
       });
       localStorage.setItem(LEDGER_KEY, JSON.stringify(appeals));
 
+      const emailBody = `Decision ID: ${currentAppealId}\nAppeal reason: ${reason}\n\n— Sent from IN$DEX SIINDEX Decision Ledger`;
+      const mailto = `mailto:imagenationdex@gmail.com?subject=${encodeURIComponent('SIINDEX Decision Ledger Appeal — ' + currentAppealId)}&body=${encodeURIComponent(emailBody)}`;
+
       closeAppeal();
-      showToast('Appeal submitted. Reference: ' + currentAppealId);
+      if (navigator.clipboard) navigator.clipboard.writeText(emailBody).catch(() => {});
+      showToast('Saved locally. Opening email to actually send it…');
+      window.location.href = mailto;
       updateStats();
     }
 

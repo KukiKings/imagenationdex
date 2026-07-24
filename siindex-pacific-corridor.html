@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>Pacific Corridors — IN$DEX</title>
   <meta name="description" content="Send INDX to the Pacific Islands at a fraction of the cost. AU→Tonga, Samoa, Fiji, Vanuatu, Papua New Guinea. Real-time fee comparison and purchasing power." />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" crossorigin="anonymous"></script>
+  <script src="js/indx-db.js"></script>
   <style>
     :root {
       --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
@@ -197,8 +199,8 @@
   <!-- GM4: TRANSFER HISTORY -->
   <div class="hist-section">
     <div class="hist-hdr">
-      <span class="sect-lbl">Your Pacific Transfers</span>
-      <span style="font-size:11px;color:var(--cyan);cursor:pointer;font-weight:700;" onclick="clearHistory()">Clear</span>
+      <span class="sect-lbl">Your Recent Transfers</span>
+      <span style="font-size:11px;color:var(--cyan);cursor:pointer;font-weight:700;" onclick="loadRealHistory()">Refresh</span>
     </div>
     <div id="histList"></div>
     <div id="histEmpty" class="hist-empty" style="display:none;">No transfers yet. Send to the Pacific to see your history here.</div>
@@ -218,7 +220,6 @@
     // ── CONSTANTS ────────────────────────────────────────
     const INDX_PRICE_USD  = 0.24;
     const INDX_FEE_PCT    = 0.005;   // 0.5%
-    const HIST_KEY        = 'indx_pacific_history';
     const POOL_KEY        = 'indx_pacific_pools';
 
     // ── CORRIDOR DATA ────────────────────────────────────
@@ -357,6 +358,7 @@
       activeCorridor = code;
       renderCorridorGrid();
       recalcAll();
+      renderCommunityPools();
     }
 
     // ── GM1: FEE COMPARISON ───────────────────────────────
@@ -451,13 +453,14 @@
       const contrib = saved[poolKey] || 0;
       const target  = 5000;
       const pct     = Math.min(100, Math.round(contrib / target * 100));
-      const members = saved[activeCorridor + '_members'] || Math.floor(Math.random() * 12) + 4;
+      // No shared multi-citizen pool backend exists yet — this is your own local
+      // contribution tracker, not a live shared pool. Never fabricate a member count.
 
       el.innerHTML = `
         <div class="cf-pool">
           <div class="cf-pool-top">
             <div class="cf-pool-name">${c.poolName}</div>
-            <div class="cf-pool-members">${members} members</div>
+            <div class="cf-pool-members">Your tracker — preview</div>
           </div>
           <div class="cf-pool-bar-wrap">
             <div class="cf-pool-bar" style="width:${pct}%"></div>
@@ -483,30 +486,38 @@
       showToast(`+${amount} INDX contributed to ${CORRIDORS[activeCorridor].poolName}`);
     }
 
-    // ── GM4: TRANSFER HISTORY + ANALYTICS ────────────────
-    function getHistory() { try{return JSON.parse(localStorage.getItem(HIST_KEY)||'[]');}catch{return[];} }
-
-    function saveTransfer(entry) {
-      const h = getHistory();
-      h.unshift(entry);
-      localStorage.setItem(HIST_KEY, JSON.stringify(h.slice(0,50)));
-      renderHistory();
+    // This screen is a fee/purchasing-power calculator — it never held a recipient
+    // field, so it cannot honestly complete a transfer itself. remittance.html is the
+    // real, backend-wired send flow (transfer_indx RPC, real recipient selection).
+    // "Send" hands off the amount + corridor and never fakes a "delivered" result.
+    const CORRIDOR_TO_REMIT_KEY = { TO:'🇦🇺→🇹🇴', WS:'🇦🇺→🇼🇸', FJ:'🇦🇺→🇫🇯', VU:'🇦🇺→🇻🇺', PG:'🇦🇺→🇵🇬' };
+    function initiateSend() {
+      const amount = parseFloat(document.getElementById('sendAmount').value) || 0;
+      if (amount <= 0) { showToast('Enter amount to send', 'gold'); return; }
+      const c   = CORRIDORS[activeCorridor];
+      const usd = amount * INDX_PRICE_USD;
+      try {
+        localStorage.setItem('indx_remittance_draft', JSON.stringify({
+          amt: usd, activeKey: CORRIDOR_TO_REMIT_KEY[activeCorridor] || null, fromRegion: 'AU', ts: Date.now()
+        }));
+      } catch(e) {}
+      showToast(`Opening secure transfer to ${c.name}…`, 'gold');
+      setTimeout(() => { window.location.href = 'remittance.html'; }, 500);
     }
 
-    function clearHistory() {
-      localStorage.removeItem(HIST_KEY);
-      renderHistory();
-      showToast('History cleared');
-    }
-
-    function renderHistory() {
-      const h     = getHistory();
-      const el    = document.getElementById('histList');
+    // ── GM4b: REAL TRANSFER HISTORY (transactions table via INDXDB) ─────
+    async function loadRealHistory() {
+      const el = document.getElementById('histList');
       const empty = document.getElementById('histEmpty');
       const analytics = document.getElementById('histAnalytics');
+      let txs = [];
+      try {
+        txs = (typeof INDXDB !== 'undefined') ? await INDXDB.getTransactions(10, 'send') : [];
+      } catch (e) { txs = []; }
 
-      if (!h.length) {
+      if (!txs || !txs.length) {
         el.innerHTML = '';
+        empty.textContent = 'No transfers yet. Send to the Pacific to see your history here.';
         empty.style.display = 'block';
         analytics.style.display = 'none';
         return;
@@ -514,71 +525,33 @@
       empty.style.display = 'none';
       analytics.style.display = 'block';
 
-      el.innerHTML = h.slice(0,10).map(e => {
-        const c   = CORRIDORS[e.corridor] || {};
-        const dt  = new Date(e.ts).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'2-digit'});
-        const saving = (e.worstFee - e.fee).toFixed(2);
+      el.innerHTML = txs.map(tx => {
+        const dt = tx.created_at ? new Date(tx.created_at).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'2-digit'}) : '';
         return `<div class="hist-item">
           <div class="hist-top">
-            <div class="hist-flag">${c.flag||'🏝️'}</div>
-            <div class="hist-title">${c.name||e.corridor} · ${dt}</div>
-            <div class="hist-amount">${e.amount} INDX</div>
+            <div class="hist-flag">🌊</div>
+            <div class="hist-title">${esc(tx.counterparty_address || 'Transfer')} · ${esc(dt)}</div>
+            <div class="hist-amount">${esc(tx.amount_indx)} INDX</div>
           </div>
           <div class="hist-meta">
-            <span>Recipient got: ${e.recvLocal.toLocaleString()} ${c.currency||''}</span>
-            <span>Fee: $${e.fee.toFixed(2)} USD</span>
+            <span>Status: ${esc(tx.status || 'complete')}</span>
           </div>
-          <div class="hist-saving">Saved $${saving} vs cash providers</div>
         </div>`;
       }).join('');
 
-      // Analytics
-      const totalUSD  = h.reduce((s,e) => s+e.usd, 0);
-      const totalSaved = h.reduce((s,e) => s+(e.worstFee-e.fee), 0);
-      const corridors = [...new Set(h.map(e=>e.corridor))].length;
+      const totalIndx = txs.reduce((s,t) => s + (parseFloat(t.amount_indx) || 0), 0);
       analytics.innerHTML = `
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px;">
-          ${[
-            {lbl:'Transfers', val:h.length},
-            {lbl:'Total USD', val:'$'+totalUSD.toFixed(0)},
-            {lbl:'Total Saved', val:'$'+totalSaved.toFixed(0)},
-            {lbl:'Corridors', val:corridors},
-            {lbl:'Avg Transfer', val:'$'+(totalUSD/h.length||0).toFixed(0)},
-            {lbl:'Avg Fee', val:'0.5%'},
-          ].map(c=>`<div style="background:var(--surface2);border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:8px;text-align:center;">
-            <div style="font-size:15px;font-weight:800;">${c.val}</div>
-            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-top:2px;">${c.lbl}</div>
-          </div>`).join('')}
-        </div>`;
-    }
-
-    function initiateSend() {
-      const amount = parseFloat(document.getElementById('sendAmount').value) || 0;
-      if (amount <= 0) { showToast('Enter amount to send', 'gold'); return; }
-      const c       = CORRIDORS[activeCorridor];
-      const usd     = amount * INDX_PRICE_USD;
-      const fee     = usd * INDX_FEE_PCT;
-      const worstFee = c.providers[c.providers.length-1].fee * usd;
-      const recvUSD = usd - fee;
-      const recvLocal = Math.round(recvUSD * c.rate);
-
-      const entry = {
-        corridor: activeCorridor, amount, usd,
-        fee, worstFee, recvUSD, recvLocal, ts: Date.now()
-      };
-      saveTransfer(entry);
-      showToast(`✅ ${amount} INDX → ${c.name} — ${recvLocal.toLocaleString()} ${c.currency} delivered`);
-    }
-
-    // ── SEED HISTORY ─────────────────────────────────────
-    function seedHistoryIfEmpty() {
-      if (getHistory().length) return;
-      const seeds = [
-        { corridor:'TO', amount:1000, usd:240, fee:1.20, worstFee:24, recvUSD:238.80, recvLocal:585, ts: Date.now()-86400000 },
-        { corridor:'WS', amount:500,  usd:120, fee:0.60, worstFee:12, recvUSD:119.40, recvLocal:325, ts: Date.now()-172800000 },
-      ];
-      localStorage.setItem(HIST_KEY, JSON.stringify(seeds));
-      renderHistory();
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;">
+          <div style="background:var(--surface2);border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:8px;text-align:center;">
+            <div style="font-size:15px;font-weight:800;">${txs.length}</div>
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-top:2px;">Transfers</div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid rgba(255,255,255,0.05);border-radius:8px;padding:8px;text-align:center;">
+            <div style="font-size:15px;font-weight:800;">${totalIndx.toFixed(0)} INDX</div>
+            <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-top:2px;">Total Sent</div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);text-align:center;">Your recent IN$DEX transfers · corridor tagging coming soon</div>`;
     }
 
     // ── INIT ─────────────────────────────────────────────
@@ -586,8 +559,7 @@
       renderCorridorGrid();
       recalcAll();
       renderCommunityPools();
-      renderHistory();
-      seedHistoryIfEmpty();
+      loadRealHistory();
     });
   </script>
 <script src="siindex-speak-core.js"></script>

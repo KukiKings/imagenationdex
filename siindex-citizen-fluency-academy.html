@@ -323,6 +323,8 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
+
 <!-- LESSON LAUNCH SHEET -->
 <div class="sheet-overlay" id="sheetOverlay" onclick="closeLessonSheet()"></div>
 <div class="lesson-sheet" id="lessonSheet">
@@ -366,6 +368,62 @@
 
 <script>
   const INDX_PRICE_USD = 0.24;
+
+  // ── REAL SUPABASE — wisdom_actions (award_wisdom points) and memory_items (Brain
+  // Passport export) are real, citizen-writable tables via RLS (citizen_id/owner_citizen_id
+  // must match the authenticated citizen). Previously "Mark as Complete" and "Export to
+  // Brain Passport" only wrote to localStorage and always showed a fake-success toast.
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  let _realAccessToken = null;
+  async function initRealSession() {
+    try {
+      if (window.supabase) {
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const { data } = await sb.auth.getSession();
+        if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+      }
+    } catch (e) { /* stay on anon key */ }
+  }
+  function rpcHeaders() {
+    return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' };
+  }
+  const citizenId = sessionStorage.getItem('citizen_id');
+
+  async function awardLessonWisdom(lessonOutput) {
+    if (!citizenId) return { success:false, reason:'NO_SESSION' };
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/wisdom_actions', {
+        method:'POST',
+        headers: { ...rpcHeaders(), 'Prefer':'return=representation' },
+        body: JSON.stringify({ citizen_id: citizenId, action_key:'academy_lesson_complete', points:2, source: lessonOutput })
+      });
+      if (!res.ok) return { success:false, reason:'RLS_OR_ERROR' };
+      return { success:true };
+    } catch (e) { return { success:false, reason:'NETWORK' }; }
+  }
+
+  async function exportProofsToMemory(proofs) {
+    if (!citizenId) return { success:false, reason:'NO_SESSION' };
+    try {
+      const rows = proofs.map(p => ({
+        owner_citizen_id: citizenId,
+        class: 'operational',
+        source: 'siindex-citizen-fluency-academy',
+        purpose: p.label,
+        permission_granted: true,
+        sensitivity: 'normal',
+        evidence_refs: JSON.stringify([{ lesson: p.lesson, date: p.date, status: p.status }])
+      }));
+      const res = await fetch(SUPABASE_URL + '/rest/v1/memory_items', {
+        method:'POST',
+        headers: { ...rpcHeaders(), 'Prefer':'return=representation' },
+        body: JSON.stringify(rows)
+      });
+      if (!res.ok) return { success:false, reason:'RLS_OR_ERROR' };
+      return { success:true, count: rows.length };
+    } catch (e) { return { success:false, reason:'NETWORK' }; }
+  }
 
   // ── DATA ──
 
@@ -798,7 +856,7 @@
     }
     el.innerHTML = _proofs.map((p, i) => {
       const def = PROOF_TYPES.find(pt=>pt.key===p.key) || { icon:'📄', label:p.label, lesson:p.lesson };
-      return `<div class="proof-item" onclick="showToast('✓ '+def.label+' — logged in your Brain Passport')">
+      return `<div class="proof-item" onclick="showToast('${def.label} — from: ${p.lesson}. Tap Export All to send this to your Brain Passport.')">
         <div class="proof-item-icon">${def.icon}</div>
         <div class="proof-item-info">
           <div class="proof-item-name">${def.label}</div>
@@ -811,9 +869,20 @@
     exportEl.style.display = _proofs.length > 0 ? 'block' : 'none';
   }
 
-  function exportToPassport() {
-    showToast('✓ ' + _proofs.length + ' proof' + (_proofs.length===1?'':'s') + ' exported to Brain Passport');
-    localStorage.setItem('indx_academy_passport_export', Date.now());
+  // REAL: writes each proof as a memory_items row (RLS: owner_citizen_id must match the
+  // authenticated citizen, class 'operational'). Previously this call only set a
+  // localStorage timestamp and always showed a fake "exported" toast with nothing
+  // actually sent anywhere.
+  async function exportToPassport() {
+    const result = await exportProofsToMemory(_proofs);
+    if (result.success) {
+      showToast('✓ ' + result.count + ' proof' + (result.count===1?'':'s') + ' exported to Brain Passport');
+      localStorage.setItem('indx_academy_passport_export', Date.now());
+    } else if (result.reason === 'NO_SESSION') {
+      showToast('Sign in to export proofs to your Brain Passport');
+    } else {
+      showToast('Could not export to Brain Passport — try again');
+    }
   }
 
   // ── LESSON SHEET ──
@@ -844,7 +913,7 @@
     document.getElementById('lessonSheet').classList.remove('show');
   }
 
-  function markLessonDone() {
+  async function markLessonDone() {
     if (!_currentLesson || !_currentLessonKey) return;
     _completedLessons[_currentLessonKey] = true;
     localStorage.setItem('indx_academy_done', JSON.stringify(_completedLessons));
@@ -866,7 +935,18 @@
     renderPathways();
     renderLibContent();
     renderProofLedger();
-    showToast('✓ Lesson complete — ' + _currentLesson.output + ' added to your Proof Ledger');
+
+    // REAL: write a wisdom_actions row (RLS: citizen_id must match the authenticated
+    // citizen). Previously this only updated localStorage and always claimed success —
+    // now the toast reflects what actually happened on the server.
+    const result = await awardLessonWisdom(_currentLesson.output);
+    if (result.success) {
+      showToast('✓ Lesson complete — ' + _currentLesson.output + ' added · +2 Wisdom Score');
+    } else if (result.reason === 'NO_SESSION') {
+      showToast('✓ Lesson complete (local only — sign in to earn Wisdom Score)');
+    } else {
+      showToast('✓ Lesson complete — ' + _currentLesson.output + ' added (Wisdom Score sync failed, saved locally)');
+    }
   }
 
   // ── DOCTRINE ──
@@ -884,13 +964,14 @@
   }
 
   // ── INIT ──
-  window.addEventListener('DOMContentLoaded', () => {
+  window.addEventListener('DOMContentLoaded', async () => {
     renderPathways();
     renderLibTabs();
     renderLibContent();
     renderFluency();
     renderProofLedger();
     renderDoctrine();
+    await initRealSession();
   });
 </script>
 <script src="siindex-speak-core.js"></script>

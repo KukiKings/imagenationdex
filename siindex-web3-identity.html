@@ -455,8 +455,24 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
   const INDX_PRICE_USD = 0.24;
+
+  // ── REAL SUPABASE SESSION — same pattern as security-settings.html / governance.html ──
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let _realAccessToken = null;
+  async function initRealSession() {
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+    } catch (e) { /* stay on anon key */ }
+  }
+  function rpcHeaders() {
+    return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' };
+  }
 
   // ── GOD MODE F5 — BIOMETRIC LOGIN SIMULATOR ──
   const LOGIN_STEPS = [
@@ -529,44 +545,85 @@
     });
   }
 
-  // ── GOD MODE F6 — CREDENTIAL LIFECYCLE ──
-  const CRED_ITEMS = [
-    { icon:'🧬', name:'Biometric Sovereign Credential', days:312, total:365, status:'valid',    lastVerified:'9 Jul 2025' },
-    { icon:'🪪', name:'KYC / Identity Verification',   days:58,  total:730, status:'valid',    lastVerified:'12 Feb 2025' },
-    { icon:'🏪', name:'Verified Merchant Badge',        days:22,  total:365, status:'expiring', lastVerified:'18 Jun 2025' },
-    { icon:'🎨', name:'Cultural Stewardship Certificate',days:280,total:365, status:'valid',    lastVerified:'2 Apr 2025'  },
-    { icon:'📊', name:'Wisdom Score Credential',        days:1,   total:1,   status:'valid',    lastVerified:'Live — auto-updated' },
-  ];
+  // ── GOD MODE F6 — CREDENTIAL LIFECYCLE — real data via get_my_credentials RPC ──
+  let CRED_ITEMS = [];
+  const CRED_ICONS = { biometric:'🧬', kyc:'🪪', merchant:'🏪', cultural:'🎨', wisdom:'📊' };
+
+  function credIcon(type) {
+    const t = (type || '').toLowerCase();
+    for (const k in CRED_ICONS) if (t.includes(k)) return CRED_ICONS[k];
+    return '📄';
+  }
+
+  async function loadCredentials() {
+    const el = document.getElementById('credLifecycle');
+    if (!el) return;
+    const citizenId = sessionStorage.getItem('citizen_id');
+    if (!citizenId) {
+      el.innerHTML = '<div style="padding:16px 20px;font-size:12px;color:var(--muted);">Sign in to see your real credentials.</div>';
+      return;
+    }
+    el.innerHTML = '<div style="padding:16px 20px;font-size:12px;color:var(--muted);">Loading your credentials…</div>';
+    try {
+      await initRealSession();
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_my_credentials', {
+        method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizenId })
+      });
+      const rows = await res.json();
+      CRED_ITEMS = Array.isArray(rows) ? rows.map(r => {
+        const expires = r.expires_at ? new Date(r.expires_at) : null;
+        const issued = r.issued_at ? new Date(r.issued_at) : null;
+        let status = 'valid', pct = 100, dText = 'No expiry';
+        if (expires) {
+          const now = Date.now();
+          const totalMs = issued ? (expires - issued) : (expires - now);
+          const remainMs = expires - now;
+          pct = totalMs > 0 ? Math.max(0, Math.min(100, Math.round((remainMs / totalMs) * 100))) : 0;
+          const daysLeft = Math.ceil(remainMs / 86400000);
+          if (remainMs <= 0) { status = 'expired'; dText = 'Expired'; }
+          else if (daysLeft <= 30) { status = 'expiring'; dText = daysLeft + ' days remaining'; }
+          else { dText = daysLeft + ' days remaining'; }
+        }
+        return {
+          icon: credIcon(r.credential_type),
+          name: r.credential_type,
+          status,
+          pct,
+          dText,
+          lastVerified: issued ? issued.toLocaleDateString('en-NZ',{day:'numeric',month:'short',year:'numeric'}) : '—',
+          issuer: r.issuer_name || r.issuer_type || '—',
+        };
+      }) : [];
+      renderCredLifecycle();
+    } catch (e) {
+      el.innerHTML = '<div style="padding:16px 20px;font-size:12px;color:var(--muted);">Could not load credentials — try again.</div>';
+    }
+  }
 
   function renderCredLifecycle() {
     const el = document.getElementById('credLifecycle');
     if (!el) return;
+    if (!CRED_ITEMS.length) {
+      el.innerHTML = '<div style="padding:16px 20px;font-size:12px;color:var(--muted);">No active credentials on record yet.</div>';
+      return;
+    }
     el.innerHTML = CRED_ITEMS.map((c, i) => {
-      const pct   = Math.round((c.days / c.total) * 100);
       const color = c.status === 'valid' ? 'var(--green)' : c.status === 'expiring' ? 'var(--gold)' : 'var(--red)';
       const label = c.status === 'valid' ? 'Valid' : c.status === 'expiring' ? 'Expiring Soon' : 'Expired';
-      const dText = c.total === 1 ? 'Real-time' : c.days + ' days remaining';
       return `
         <div class="cred-item fade-in" style="animation-delay:${i*0.06}s">
           <div class="cred-item-row">
             <div class="cred-icon">${c.icon}</div>
-            <div class="cred-name">${c.name}</div>
+            <div class="cred-name">${c.name} <span style="color:var(--muted);font-weight:400;">· ${c.issuer}</span></div>
             <div class="cred-status-badge ${c.status}">${label}</div>
           </div>
-          <div class="cred-bar-wrap"><div class="cred-bar-fill" style="width:${pct}%;background:${color};"></div></div>
+          <div class="cred-bar-wrap"><div class="cred-bar-fill" style="width:${c.pct}%;background:${color};"></div></div>
           <div class="cred-meta">
-            <span>Last verified: ${c.lastVerified}</span>
-            <span style="color:${color};font-weight:700;">${dText}</span>
+            <span>Issued: ${c.lastVerified}</span>
+            <span style="color:${color};font-weight:700;">${c.dText}</span>
           </div>
-          ${c.status === 'expiring' ? `<span class="cred-renew" onclick="renewCred('${c.name}')">↻ Renew now →</span>` : ''}
         </div>`;
     }).join('');
-  }
-
-  function renewCred(name) {
-    const item = CRED_ITEMS.find(c => c.name === name);
-    if (item) { item.status = 'valid'; item.days = item.total; item.lastVerified = 'Just now'; renderCredLifecycle(); }
-    showToast('↻ Credential renewed: ' + name);
   }
 
   // ── GOD MODE F7 — AGENT IDENTITY REGISTRY ──
@@ -604,7 +661,7 @@
   function revokeAgent(name) {
     const idx = AGENTS_DATA.findIndex(a => a.name === name);
     if (idx > -1) { AGENTS_DATA.splice(idx, 1); renderAgentGrid(); }
-    showToast('✗ Agent access revoked — ' + name);
+    showToast('✗ Removed from this preview — no live agent registry yet');
   }
 
   // ── GOD MODE F8 — SYBIL RESISTANCE ──
@@ -730,7 +787,10 @@
   // ── GOD MODE F2 — SEND BY NAME ──
   function setSend(val) { document.getElementById('sendInput').value = val; }
 
-  function runResolve() {
+  // Real lookup via get_public_domain_view RPC — no fabricated address. Wallet addresses are
+  // deliberately excluded from the public domain view (privacy doctrine), so this resolver
+  // confirms whether a sovereign identity exists but does not invent a Solana address for it.
+  async function runResolve() {
     const raw = document.getElementById('sendInput').value.trim();
     if (!raw) { showToast('Enter a name, phone, or email'); return; }
 
@@ -739,49 +799,75 @@
     resolveEl.classList.add('show');
     resultEl.classList.remove('show');
 
-    // Detect input type
-    let resolvedName, resolvedAddr;
-    if (raw.includes('@')) {
-      resolvedName = raw.split('@')[0] + '.IN$DEX';
-      resolvedAddr = '7xKp…' + Math.random().toString(36).slice(-4).toUpperCase();
-    } else if (raw.startsWith('+') || /^\d/.test(raw)) {
-      resolvedName = 'cousin.IN$DEX';
-      resolvedAddr = '9mBz…' + Math.random().toString(36).slice(-4).toUpperCase();
-    } else {
-      resolvedName = raw.includes('.IN$DEX') ? raw : raw + '.IN$DEX';
-      resolvedAddr = '3pRq…' + Math.random().toString(36).slice(-4).toUpperCase();
-    }
-
+    const isEmail = raw.includes('@');
+    const isPhone = raw.startsWith('+') || /^\d/.test(raw);
+    const resolvedName = isEmail ? (raw.split('@')[0] + '.IN$DEX')
+      : isPhone ? raw
+      : (raw.replace(/\.IN\$DEX$/i, '') + '.IN$DEX');
     document.getElementById('resolvedName').textContent = resolvedName;
 
-    const steps = [
-      { dot:'rd1', val:'rv1', valText:'IN$DEX Resolver v1', delay:400 },
-      { dot:'rd2', val:'rv2', valText:resolvedName, delay:900 },
-      { dot:'rd3', val:'rv3', valText:resolvedAddr, delay:1500 },
-      { dot:'rd4', val:'rv4', valText:'✓ 400ms', delay:2000 },
-    ];
+    const setStep = (i, active, text) => {
+      const dot = document.getElementById('rd' + i), val = document.getElementById('rv' + i);
+      if (dot) dot.className = 'resolve-dot ' + (active ? 'active' : 'done');
+      if (val && text !== undefined) val.textContent = text;
+    };
+    setStep(1, true);
+    await new Promise(r => setTimeout(r, 350));
+    setStep(1, false, 'IN$DEX Resolver');
+    setStep(2, true);
 
-    steps.forEach((s, i) => {
-      setTimeout(() => {
-        if (i > 0) {
-          document.getElementById(steps[i-1].dot).className = 'resolve-dot done';
-        }
-        document.getElementById(s.dot).className = 'resolve-dot active';
-        document.getElementById(s.val).textContent = '';
-      }, s.delay - 200);
-
-      setTimeout(() => {
-        document.getElementById(s.dot).className = 'resolve-dot done';
-        document.getElementById(s.val).textContent = s.valText;
-      }, s.delay);
-    });
-
-    setTimeout(() => {
+    if (isEmail || isPhone) {
+      // No real backend resolves phone/email to a sovereign name yet — say so honestly.
+      await new Promise(r => setTimeout(r, 350));
+      setStep(2, false, 'Not supported yet');
+      setStep(3, false, '—');
+      setStep(4, false, '—');
       resultEl.classList.add('show');
+      resultEl.style.background = 'rgba(255,184,0,0.07)';
+      resultEl.style.borderColor = 'rgba(255,184,0,0.2)';
       document.getElementById('sendResultDetail').textContent =
-        raw + ' → ' + resolvedName + ' → ' + resolvedAddr + ' (Solana) — Ready in 400ms. No address copied. No error possible.';
-      showToast('✓ Resolved — ' + resolvedName);
-    }, 2200);
+        (isEmail ? 'Email' : 'Phone') + ' → sovereign name resolution is not live yet. Try a name like mamaNoe.IN$DEX, or use the full Send screen.';
+      showToast('⚠ Not resolved — try a .IN$DEX name');
+      return;
+    }
+
+    try {
+      await initRealSession();
+      const slug = raw.replace(/\.IN\$DEX$/i, '').trim();
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_public_domain_view', {
+        method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_slug: slug })
+      });
+      const data = await res.json();
+      setStep(2, false, 'Checked');
+      setStep(3, true);
+      await new Promise(r => setTimeout(r, 300));
+
+      if (data && data.found) {
+        setStep(3, false, 'Found');
+        setStep(4, false, '✓ Verified');
+        resultEl.classList.add('show');
+        resultEl.style.background = '';
+        resultEl.style.borderColor = '';
+        document.getElementById('sendResultDetail').textContent =
+          resolvedName + ' → ' + data.citizen_name + ' (' + data.wisdom_tier + ') — a real registered sovereign identity. For privacy, the wallet address is resolved securely inside the actual Send flow, not shown here.';
+        showToast('✓ Resolved — ' + data.citizen_name);
+      } else {
+        setStep(3, false, 'Not found');
+        setStep(4, false, '—');
+        resultEl.classList.add('show');
+        resultEl.style.background = 'rgba(255,77,109,0.07)';
+        resultEl.style.borderColor = 'rgba(255,77,109,0.2)';
+        document.getElementById('sendResultDetail').textContent =
+          'No sovereign identity found for "' + resolvedName + '". Check the spelling, or ask the citizen for their exact yourname.IN$DEX.';
+        showToast('⚠ No match found');
+      }
+    } catch (e) {
+      setStep(3, false, 'Error');
+      setStep(4, false, '—');
+      resultEl.classList.add('show');
+      document.getElementById('sendResultDetail').textContent = 'Could not reach the resolver — try again.';
+      showToast('⚠ Lookup failed — try again');
+    }
   }
 
   // ── GOD MODE F3 — GUARDIAN RECOVERY ──
@@ -887,7 +973,7 @@
       if (e.key === 'Enter') runResolve();
     });
     buildLoginSteps();
-    renderCredLifecycle();
+    loadCredentials();
     renderAgentGrid();
     renderSybilResistance();
   });

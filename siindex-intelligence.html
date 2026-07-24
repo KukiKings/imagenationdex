@@ -588,14 +588,22 @@
 <!-- CITIZEN MEMORY VIEWER -->
 <div class="section">
   <div class="mem-header">
-    <div class="mem-title">🧠 What SIINDEX Knows About You <span class="mem-badge">Citizen Memory</span></div>
+    <div class="mem-title">🧠 What SIINDEX Knows About You <span class="mem-badge">Real Memory</span></div>
+  </div>
+  <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--cyan);margin-bottom:6px;">Real memory — memory_items (Supabase)</div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;" id="realMemViewer">
+    <div class="mem-empty">Sign in to load your real memory_items…</div>
+  </div>
+
+  <div class="mem-header" style="margin-top:16px;">
+    <div class="mem-title" style="font-size:12px;">📱 Local Device Notes <span class="mem-badge" style="background:rgba(240,242,255,0.06);border-color:rgba(240,242,255,0.15);color:var(--text-muted);">This browser only</span></div>
     <div class="mem-clear-btn" onclick="clearCitizenMemory()">Clear</div>
   </div>
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;" id="memViewer">
     <div class="mem-empty">Loading citizen memory…</div>
   </div>
   <div style="font-size:11px;color:var(--text-muted);margin-top:10px;line-height:1.5;">
-    This memory persists across every session. Use <strong style="color:var(--purple)">@siindex remember [fact]</strong> in your PAG to store anything. Alerts and notes accumulate here automatically.
+    <strong style="color:var(--cyan)">Real memory</strong> above reads your actual memory_items rows from Supabase — citizen_personal and operational classes only, scoped to your signed-in account by row-level security. <strong>Local device notes</strong> below are stored only in this browser's localStorage — they do not sync across devices and are not SIINDEX's persistent backend memory.
   </div>
 </div>
 
@@ -647,8 +655,57 @@
   <div class="nav-item" onclick="window.location.href='profile.html'"><div class="nav-icon">👤</div><div class="nav-label">Profile</div></div>
 </nav>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
 const INDX_PRICE_USD = 0.24;
+
+// ═══════════════════════════════════════════════
+// REAL SUPABASE BACKEND — memory_items (citizen_personal / operational classes)
+// RLS (citizen_reads_own_personal_and_operational_memory) requires the citizen's own
+// authenticated session — auth.uid() must resolve — so this uses a real access token,
+// not just the anon key.
+// ═══════════════════════════════════════════════
+const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let _realAccessToken = null;
+async function initRealSession() {
+  try {
+    const { data } = await sb.auth.getSession();
+    if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+  } catch (e) { /* stay on anon key */ }
+}
+function rpcHeaders() {
+  return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' };
+}
+const citizenId = sessionStorage.getItem('citizen_id');
+
+async function loadRealCitizenMemory() {
+  const el = document.getElementById('realMemViewer');
+  if (!el) return;
+  if (!citizenId || !_realAccessToken) {
+    el.innerHTML = '<div class="mem-empty">Sign in to load your real memory_items — this view requires an authenticated citizen session.</div>';
+    return;
+  }
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/memory_items?select=*&class=in.(citizen_personal,operational)&order=created_at.desc&limit=25', {
+      headers: rpcHeaders()
+    });
+    if (!res.ok) { el.innerHTML = '<div class="mem-empty">Could not reach Supabase — try again.</div>'; return; }
+    const rows = await res.json();
+    if (!Array.isArray(rows) || !rows.length) {
+      el.innerHTML = '<div class="mem-empty">No memory_items logged yet for your account. Real data will appear here as SIINDEX writes memory.</div>';
+      return;
+    }
+    el.innerHTML = rows.map(m => `
+      <div class="mem-row">
+        <span class="mem-key">${m.purpose || 'No purpose recorded'}</span>
+        <span class="mem-val accent">${m.class}${m.promotion_stage ? ' · ' + m.promotion_stage : ''}</span>
+      </div>`).join('');
+  } catch (e) {
+    el.innerHTML = '<div class="mem-empty">Could not reach Supabase — try again.</div>';
+  }
+}
 
 // ═══════════════════════════════════════════════
 // CYBERTRON HEX CANVAS
@@ -1041,6 +1098,9 @@ function clearCitizenMemory() {
 // Render on load, refresh on tab switch
 renderMemViewer();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) renderMemViewer(); });
+
+// Load real memory_items once the citizen's real session is available
+initRealSession().then(loadRealCitizenMemory);
 
 // TOAST
 let _tt;

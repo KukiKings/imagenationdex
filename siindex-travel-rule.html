@@ -555,11 +555,13 @@
         amount, purpose,
         usd: (amount * INDX_PRICE_USD).toFixed(2),
         aud: (amount * INDX_PRICE_USD / AUD_USD_RATE).toFixed(2),
-        status: 'transmitted',
+        // No live VASP-to-VASP network is connected yet (see VASP Network tab) — this
+        // is saved to this device as a working record, not a transmitted regulatory filing.
+        status: 'pending',
         ts: Date.now()
       };
       saveLogEntry(entry);
-      showToast('✅ Travel Rule data attached & transmitted');
+      showToast('📋 Travel Rule data saved locally — live VASP transmission not yet connected');
       addAuditLogEntry(entry);
       openTab('tab-log');
     }
@@ -666,18 +668,12 @@
       `).join('');
     }
 
-    // Fake a couple of seed entries on first load for demo
+    // No live VASP-to-VASP messaging network is wired up yet (see VASP Network tab —
+    // TRISA/OpenVASP are not connected). Real entries come only from
+    // submitTravelRuleData() / submitAttestation() below — this log never fabricates
+    // demo compliance records. A false audit trail on a regulatory screen is a T3-class
+    // problem, not decoration.
     function addAuditLogEntry(entry) { /* real entries come from submitTravelRuleData */ }
-
-    function seedLogIfEmpty() {
-      if (getLog().length) return;
-      const seeds = [
-        { id:1, origName:'AJ Henry', origAccount:'aj.IN$DEX', benName:'Maria Santos', benAccount:'maria.IN$DEX', benVasp:'IN$DEX', amount:500, purpose:'Family remittance', usd:'120.00', aud:'184.62', status:'transmitted', ts: Date.now() - 3600000 },
-        { id:2, origName:'AJ Henry', origAccount:'aj.IN$DEX', benName:'Jose Reyes', benAccount:'GDxyz...7f2k', benVasp:'Self-Hosted Wallet', amount:5000, purpose:'Marketplace settlement', usd:'1200.00', aud:'1846.15', status:'transmitted', ts: Date.now() - 86400000 },
-      ];
-      localStorage.setItem(LOG_KEY, JSON.stringify(seeds));
-      renderLog();
-    }
 
     // ── GM3: WALLET ATTESTATION ───────────────────────────
     function validateAttest() {
@@ -705,10 +701,12 @@
       result.style.display = 'block';
       document.getElementById('attestBtn').disabled = true;
       const methodLabels = { sign:'Cryptographic Signature', micro:'Micro-deposit', declaration:'Statutory Declaration' };
-      result.innerHTML = `✅ Attestation complete. Wallet: ${wallet.slice(0,8)}…${wallet.slice(-6)}. Method: ${methodLabels[method]||method}. Retained for 7 years per AUSTRAC requirements. Transfer may now proceed.`;
-      showToast('✅ Wallet attestation recorded');
+      // Saved to this device only — no backend record store is wired up yet, so this
+      // cannot honestly promise the 7-year AUSTRAC retention a real filing would carry.
+      result.innerHTML = `✅ Attestation saved to this device. Wallet: ${wallet.slice(0,8)}…${wallet.slice(-6)}. Method: ${methodLabels[method]||method}. Formal 7-year AUSTRAC retention requires backend wiring — not yet connected.`;
+      showToast('📋 Attestation saved locally — not yet a backend-retained record');
       // Log it
-      saveLogEntry({ id: Date.now(), origName:'Citizen', origAccount:'Self', benName:'Self-Hosted Wallet', benAccount: wallet, benVasp:'Self-Hosted', amount:0, purpose:'Wallet attestation', usd:'0.00', aud:'0.00', status:'transmitted', ts:Date.now() });
+      saveLogEntry({ id: Date.now(), origName:'Citizen', origAccount:'Self', benName:'Self-Hosted Wallet', benAccount: wallet, benVasp:'Self-Hosted', amount:0, purpose:'Wallet attestation', usd:'0.00', aud:'0.00', status:'pending', ts:Date.now() });
     }
 
     // ── GM4: VASP ENROLLMENT CHECKLIST ────────────────────
@@ -832,7 +830,6 @@
       renderEnrolSteps();
       renderDocVault();
       renderLog();
-      seedLogIfEmpty();
       loadDraft();
 
       // Restore CO fields

@@ -444,9 +444,9 @@ const KB = [
   { q: /stop|goodbye|bye|close|exit|shut down/i,
     a: () => `Goodbye for now. Standing by when you need me.` },
 
-  // FALLBACK
+  // FALLBACK — used only when the real siindex-chat connection can't be reached
   { q: /.*/,
-    a: (q) => `I heard you "${q.substring(0, 60)}${q.length > 60 ? '…' : ''}". Let me check that. If this needs a deeper answer, I'll flag it for the knowledge base. Standing by.` }
+    a: (q) => `I heard you "${q.substring(0, 60)}${q.length > 60 ? '…' : ''}". I couldn't reach my full reasoning connection just now — try again in a moment, or ask about price, Wisdom Score, security, or build status. Standing by.` }
 ];
 
 function timeOfDay() {
@@ -454,12 +454,17 @@ function timeOfDay() {
   return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening';
 }
 
+// This is the LOCAL, offline knowledge base — used only as a fallback when the real
+// siindex-chat Edge Function (below) can't be reached. Previously this was the ONLY
+// response path: every "voice command" was actually matched against this static regex
+// list with no real backend call at all, despite the terminal presenting itself as a
+// live conversation with SIINDEX.
 function getResponse(input) {
   const q = input.trim();
   for (const entry of KB) {
     if (entry.q.test(q)) return entry.a(q);
   }
-  return `I heard you "${q.substring(0, 60)}". Let me check that. Standing by.`;
+  return `I heard you "${q.substring(0, 60)}". Standing by.`;
 }
 
 // ══════════════════════════════════════════════
@@ -792,22 +797,76 @@ function toggleListen() {
 }
 
 // ─── PROCESS INPUT ───────────────────────────────────────────────────────────
+// REAL: calls the live siindex-chat Edge Function (same one used by siindex-chat.html)
+// so voice commands get a real, reasoned response instead of only a static regex match.
+// Falls back to the local KB above only if the network call fails or returns nothing —
+// and that fallback now says so honestly instead of pretending to be the primary path.
 
-function processInput(input) {
+let _voiceApiHistory = [];
+
+async function fetchSiindexChat(text) {
+  const resp = await fetch(`${SB_URL}/functions/v1/siindex-chat`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${SB_ANON}`
+    },
+    body: JSON.stringify({
+      message: text,
+      citizen_name: citizenName,
+      wisdom_score: citizenWisdom,
+      indx_balance: citizenBal,
+      history: _voiceApiHistory.slice(-10)
+    })
+  });
+  if (!resp.ok || !resp.body) throw new Error('siindex-chat request failed: ' + resp.status);
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '', fullText = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const lines = buf.split('\n');
+    buf = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const raw = line.slice(6).trim();
+      if (raw === '[DONE]') break;
+      try {
+        const chunk = JSON.parse(raw).text || '';
+        fullText += chunk;
+        showResponse(fullText); // live-updating transcript, matches siindex-chat.html UX
+      } catch (_) {}
+    }
+  }
+  if (!fullText.trim()) throw new Error('siindex-chat returned empty response');
+  return fullText;
+}
+
+async function processInput(input) {
   if (!input.trim()) return;
 
   document.getElementById('userTranscript').textContent = ' ' + input;
   setMode('processing');
 
-  const response = getResponse(input);
+  let response;
+  let usedFallback = false;
+  try {
+    response = await fetchSiindexChat(input);
+    _voiceApiHistory.push({ role: 'user', content: input });
+    _voiceApiHistory.push({ role: 'assistant', content: response });
+  } catch (e) {
+    response = getResponse(input); // real backend unreachable — honest local fallback
+    usedFallback = true;
+  }
 
-  setTimeout(() => {
-    showResponse(response);
-    speak(response);
-    // GOD MODE PATCH R1 — history + follow-ups
-    addToHistory(input, response);
-    showFollowUps(input, response);
-  }, 300);
+  showResponse(response);
+  speak(response);
+  // GOD MODE PATCH R1 — history + follow-ups
+  addToHistory(input, response + (usedFallback ? ' (offline mode)' : ''));
+  showFollowUps(input, response);
 }
 
 function showResponse(text) {

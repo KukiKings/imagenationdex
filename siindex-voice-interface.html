@@ -217,7 +217,7 @@
   <!-- SIINDEX Response -->
   <div class="response-wrap" id="responseWrap">
     <div class="response-thinking" id="thinkingIndicator">
-      <span>SIINDEX is listening</span>
+      <span>Matching your mission to a starting point</span>
       <div class="thinking-dots">
         <div class="thinking-dot"></div>
         <div class="thinking-dot"></div>
@@ -228,7 +228,7 @@
       <div class="response-header">
         <span id="responseIcon" style="font-size:22px"></span>
         <div style="flex:1">
-          <div style="font-size:12px;color:var(--muted);margin-bottom:3px">Mission detected</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:3px">Mission type matched (local keyword match — preview, not a live SIINDEX assessment)</div>
           <div class="mission-type-badge" id="missionBadge"></div>
         </div>
       </div>
@@ -237,7 +237,7 @@
         <div class="response-text" id="respUnderstand"></div>
       </div>
       <div class="response-section">
-        <div class="response-section-label" style="color:var(--green)">Here is what I already know about you</div>
+        <div class="response-section-label" style="color:var(--green)">What's usually true at this stage (general guidance — not yet checked against your real account)</div>
         <div id="respKnow"></div>
       </div>
       <div class="response-section" id="respQuestionSection">
@@ -277,12 +277,16 @@
 <!-- ==================== TAB: GATES ==================== -->
 <div class="tab-panel" id="tab-gates">
 
-  <!-- GM3: Sensitive Action Gate Panel -->
+  <!-- REAL: pending approvals for the signed-in citizen, from citizen_intents / grant_intent_approval -->
+  <div class="section-lbl">Your Real Pending Approvals</div>
+  <div id="realGatesList"></div>
+
+  <!-- GM3: Sensitive Action Gate Panel (reference list — practice only, not live account data) -->
   <div class="gate-summary" id="gateSummary"></div>
 
-  <div class="section-lbl">Sensitive Action Gates — Require Your Approval</div>
+  <div class="section-lbl">Sensitive Action Types — Always Gated</div>
   <div class="card" style="background:rgba(255,184,0,0.04);border-color:rgba(255,184,0,0.2);margin-bottom:12px">
-    <div style="font-size:12px;color:rgba(232,234,240,0.75)">These actions will always be prepared by SIINDEX but <strong style="color:var(--gold)">never executed without your explicit approval.</strong> Tap any gate to approve or decline.</div>
+    <div style="font-size:12px;color:rgba(232,234,240,0.75)">This is a reference list of action types SIINDEX always gates behind your explicit approval. <strong style="color:var(--gold)">Tapping Approve/Decline below is a local practice run only</strong> — it does not affect your real account. Your real pending approvals, if any, appear above.</div>
   </div>
   <div id="gatesList"></div>
 
@@ -345,8 +349,31 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
   const INDX_PRICE_USD = 0.24;
+
+  /* ── REAL SUPABASE — citizen_intents (SELECT: citizen reads own rows via RLS) and
+     grant_intent_approval RPC are real. There is no client-side INSERT policy on
+     citizen_intents, so this screen cannot originate new real intents from typed/spoken
+     text — that requires a server-side process. What IS real and wired here: reading the
+     signed-in citizen's own pending intents and approving them for real. */
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  let _realAccessToken = null;
+  async function initRealSession() {
+    try {
+      if (window.supabase) {
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const { data } = await sb.auth.getSession();
+        if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+      }
+    } catch (e) { /* stay on anon key */ }
+  }
+  function rpcHeaders() {
+    return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' };
+  }
+  const citizenId = sessionStorage.getItem('citizen_id');
 
   /* ── DATA ── */
 
@@ -613,7 +640,7 @@
     _activeMission = null;
     document.getElementById('responseWrap').classList.remove('show');
     document.getElementById('speakInput').value = '';
-    showToast('Mission prepared — check the Ledger and Gates tabs', 'green');
+    showToast('Saved to this device — check the Ledger and Gates tabs', 'green');
   }
 
   /* ── EXAMPLES ── */
@@ -631,13 +658,44 @@
     setTimeout(()=>{el.style.borderColor='';el.style.color='';},600);
   }
 
+  // REAL: Web Speech API (browser-native, no backend needed) fills the textarea with
+  // what you actually said. Previously this button just toggled a CSS class and showed
+  // a toast saying to type instead — a dead click that looked like a mic control.
+  let _voiceRecognition = null;
+  let _voiceListening = false;
+  function getSpeechRecognition() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    return SR ? new SR() : null;
+  }
   function toggleMic() {
     const mic = document.getElementById('micIcon');
-    mic.classList.toggle('active');
-    if (mic.classList.contains('active')) {
-      showToast('Voice input — type your mission for now', 'cyan');
-      setTimeout(()=>mic.classList.remove('active'), 2000);
+    if (_voiceListening && _voiceRecognition) { _voiceRecognition.stop(); return; }
+    _voiceRecognition = getSpeechRecognition();
+    if (!_voiceRecognition) {
+      showToast('Voice recognition needs Chrome or Safari — type your mission instead', 'gold');
+      return;
     }
+    _voiceRecognition.lang = 'en-AU';
+    _voiceRecognition.continuous = false;
+    _voiceRecognition.interimResults = true;
+    _voiceRecognition.onstart = () => {
+      _voiceListening = true;
+      mic.classList.add('active');
+      showToast('Listening…', 'cyan');
+    };
+    _voiceRecognition.onresult = (e) => {
+      const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+      document.getElementById('speakInput').value = transcript;
+    };
+    _voiceRecognition.onerror = () => {
+      _voiceListening = false;
+      mic.classList.remove('active');
+    };
+    _voiceRecognition.onend = () => {
+      _voiceListening = false;
+      mic.classList.remove('active');
+    };
+    _voiceRecognition.start();
   }
 
   /* ── GM2: MISSION DOOR LAUNCHER ── */
@@ -704,7 +762,62 @@
     }, 100);
   }
 
-  /* ── GM3: GATE PANEL ── */
+  /* ── REAL PENDING APPROVALS — citizen_intents (own rows via RLS) + grant_intent_approval RPC ── */
+  async function renderRealGates() {
+    const el = document.getElementById('realGatesList');
+    if (!el) return;
+    if (!citizenId) {
+      el.innerHTML = '<div class="card" style="margin-bottom:14px"><div class="card-body">Sign in to see real pending approvals for your account.</div></div>';
+      return;
+    }
+    el.innerHTML = '<div class="card" style="margin-bottom:14px"><div class="card-body">Checking your account…</div></div>';
+    try {
+      const res = await fetch(
+        SUPABASE_URL + '/rest/v1/citizen_intents?citizen_id=eq.' + citizenId +
+          '&select=id,domain,risk_level,status,amount_indx,created_at&order=created_at.desc&limit=10',
+        { headers: rpcHeaders() }
+      );
+      if (!res.ok) { el.innerHTML = '<div class="card" style="margin-bottom:14px"><div class="card-body">Could not reach your account records — try again.</div></div>'; return; }
+      const rows = await res.json();
+      if (!Array.isArray(rows) || rows.length === 0) {
+        el.innerHTML = '<div class="card" style="margin-bottom:14px"><div class="card-body">No real actions awaiting your approval right now.</div></div>';
+        return;
+      }
+      el.innerHTML = rows.map(r => {
+        const needsApproval = r.status !== 'complete' && r.status !== 'halted';
+        return `<div class="gate-item" style="cursor:default">
+          <div class="gate-status ${needsApproval ? 'pending' : 'approved'}">${needsApproval ? '!' : '✓'}</div>
+          <div style="flex:1;min-width:0">
+            <div class="gate-name">${r.domain}${r.amount_indx ? ' — ' + r.amount_indx + ' INDX' : ''}</div>
+            <div class="gate-sub">Risk level ${r.risk_level} · status: ${r.status} · ${new Date(r.created_at).toLocaleDateString()}</div>
+          </div>
+          ${needsApproval ? `<div class="gate-action-btns">
+            <button class="gate-btn gate-btn-approve" onclick="approveRealIntent('${r.id}',${r.risk_level})">Approve</button>
+          </div>` : ''}
+        </div>`;
+      }).join('') + '<div style="font-size:10px;color:var(--muted);margin:6px 0 14px">There is no automated decline path yet for real actions — contact support to decline one.</div>';
+    } catch (e) {
+      el.innerHTML = '<div class="card" style="margin-bottom:14px"><div class="card-body">Could not reach your account records — try again.</div></div>';
+    }
+  }
+
+  async function approveRealIntent(intentId, riskLevel) {
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/grant_intent_approval', {
+        method: 'POST', headers: rpcHeaders(),
+        body: JSON.stringify({ p_intent_id: intentId, p_level: riskLevel || 1, p_method: 'citizen_app_confirmation' })
+      });
+      const data = await res.json();
+      if (!data || data.success === false) { showToast('Could not approve — try again', 'red'); return; }
+      showToast('✓ Approved — recorded on your account', 'green');
+      addLedgerEntry('✅', 'Real action approved — ' + intentId.slice(0,8), 'complete');
+      renderRealGates();
+    } catch (e) {
+      showToast('Could not approve — try again', 'red');
+    }
+  }
+
+  /* ── GM3: GATE PANEL (local reference/practice list — see renderRealGates for real data) ── */
   function renderGates() {
     const pending = Object.values(_gateStatuses).filter(v=>v==='pending').length;
     const approved = Object.values(_gateStatuses).filter(v=>v==='approved').length;
@@ -824,7 +937,7 @@
     document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',tabs[i]===tab));
     document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
     document.getElementById('tab-'+tab).classList.add('active');
-    if (tab==='gates') renderGates();
+    if (tab==='gates') { renderGates(); renderRealGates(); }
     if (tab==='ledger') renderLedger();
     if (tab==='doctrine') renderDoctrine();
   }
@@ -837,9 +950,10 @@
   }
 
   /* ── INIT ── */
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     renderExamples();
     renderDoors();
+    await initRealSession();
   });
 </script>
 <script src="siindex-speak-core.js"></script>

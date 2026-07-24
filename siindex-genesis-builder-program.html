@@ -300,8 +300,53 @@
   <div class="nav-item"><div class="nav-item-icon">⚙️</div>Settings</div>
 </nav>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
   const INDX_PRICE_USD = 0.24;
+
+  // ── REAL SUPABASE — the 10-question application used to claim "Application Received
+  // — SIINDEX is reviewing" while writing nothing anywhere but localStorage (invisible
+  // to AJ/SIINDEX/staff, gone if the browser storage is cleared). There is no dedicated
+  // applications table in the real schema, but memory_items (citizen-writable via RLS,
+  // class 'citizen_personal') is a real, retrievable place to persist it against the
+  // citizen's own record.
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  let _realAccessToken = null;
+  async function initRealSession() {
+    try {
+      if (window.supabase) {
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const { data } = await sb.auth.getSession();
+        if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+      }
+    } catch (e) { /* stay on anon key */ }
+  }
+  function rpcHeaders() {
+    return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' };
+  }
+  const citizenId = sessionStorage.getItem('citizen_id');
+
+  async function saveApplicationToPassport(answers, tier, ref) {
+    if (!citizenId) return { success:false, reason:'NO_SESSION' };
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/memory_items', {
+        method:'POST',
+        headers: { ...rpcHeaders(), 'Prefer':'return=representation' },
+        body: JSON.stringify({
+          owner_citizen_id: citizenId,
+          class: 'citizen_personal',
+          source: 'genesis-builder-application',
+          purpose: 'Genesis Builder Application — ' + ref + (tier ? ' — tier: ' + tier : ''),
+          permission_granted: true,
+          sensitivity: 'normal',
+          evidence_refs: JSON.stringify({ answers, tier, ref })
+        })
+      });
+      if (!res.ok) return { success:false, reason:'RLS_OR_ERROR' };
+      return { success:true };
+    } catch (e) { return { success:false, reason:'NETWORK' }; }
+  }
 
   // ── DATA ──
 
@@ -708,21 +753,35 @@
     if (_appStep > 0) { _appStep--; renderApp(); }
   }
 
-  function submitApp() {
+  async function submitApp() {
     _appAnswers._submitted = true;
     _appAnswers._ref = 'GBP-' + Date.now().toString(36).toUpperCase();
     _appAnswers._date = new Date().toLocaleDateString('en-AU', { day:'numeric', month:'short', year:'numeric' });
     localStorage.setItem('indx_genesis_app', JSON.stringify(_appAnswers));
     _appSubmitted = true;
+    _appAnswers._saveResult = await saveApplicationToPassport(_appAnswers, _selectedTier, _appAnswers._ref);
+    localStorage.setItem('indx_genesis_app', JSON.stringify(_appAnswers));
     renderAppConfirm();
   }
 
+  // NOTE: this used to unconditionally claim "SIINDEX is reviewing your application.
+  // You will receive your Genesis Builder onboarding brief within 48 hours" while the
+  // whole form only wrote to localStorage — invisible to AJ, SIINDEX, or any real
+  // review process. It now saves the application to the citizen's own memory_items
+  // record (real, retrievable) and the confirmation reflects whether that save
+  // actually succeeded, instead of always promising a follow-up that may never come.
   function renderAppConfirm() {
     document.getElementById('appProgress').innerHTML = APP_QUESTIONS.map(()=>`<div class="app-step-dot done"></div>`).join('');
+    const saved = _appAnswers._saveResult && _appAnswers._saveResult.success;
+    const statusLine = saved
+      ? 'Saved to your Brain Passport. SIINDEX and the Genesis Builder team can review it from there.'
+      : (_appAnswers._saveResult && _appAnswers._saveResult.reason === 'NO_SESSION'
+          ? 'Saved on this device only — sign in to your Grid Account so this reaches your Brain Passport and the review team.'
+          : 'Saved on this device only — we could not sync it to your Brain Passport. Please also send a copy to imagenationdex@gmail.com so it is not lost.');
     document.getElementById('appBody').innerHTML = `<div class="app-confirm">
       <div class="app-confirm-icon">🔨</div>
-      <div class="app-confirm-title">Application Received</div>
-      <div class="app-confirm-sub">SIINDEX is reviewing your application. You will receive your Genesis Builder onboarding brief within 48 hours. Your Mission Room will be prepared based on your selected tier and answers.</div>
+      <div class="app-confirm-title">Application ${saved ? 'Received' : 'Saved'}</div>
+      <div class="app-confirm-sub">${statusLine} Your Mission Room will be prepared based on your selected tier and answers once reviewed.</div>
       <div class="app-confirm-ref">Reference: ${_appAnswers._ref} · Submitted ${_appAnswers._date}</div>
       <div class="app-confirm-next">
         While you wait: open the 30-Day Genesis Journey above and complete Week 1. Your Brain Passport, Identity Brain, and Opportunity Brain do not require approval to start. Begin building now.
@@ -742,7 +801,7 @@
           <div class="network-role-count">${r.count}</div>
           <div class="network-role-milestone">Recent: ${r.milestone}</div>
         </div>
-        <div class="network-join" onclick="showToast('✓ Interest registered — SIINDEX will connect you with ${r.name}')">Join →</div>
+        <div class="network-join" onclick="showToast('Noted on this device — email imagenationdex@gmail.com to connect with ${r.name}')">Join →</div>
       </div>
     </div>`).join('');
   }
@@ -750,7 +809,7 @@
   function renderEvents() {
     const el = document.getElementById('eventsList');
     const registered = _eventInterests.length;
-    document.getElementById('eventsRegistered').textContent = registered + ' registered';
+    document.getElementById('eventsRegistered').textContent = registered + ' interested (local)';
     el.innerHTML = EVENTS.map((e, ei) => {
       const isReg = _eventInterests.includes(e.key);
       return `<div class="event-card fade-in" style="animation-delay:${ei*0.03}s">
@@ -760,20 +819,23 @@
             <div class="event-title">${e.title}</div>
             <div class="event-meta">${e.meta}</div>
           </div>
-          <div class="event-interest ${isReg?'registered':''}" onclick="toggleEventInterest('${e.key}')">${isReg?'✓ Going':'Register'}</div>
+          <div class="event-interest ${isReg?'registered':''}" onclick="toggleEventInterest('${e.key}')">${isReg?'✓ Interested':'I\'m interested'}</div>
         </div>
       </div>`;
     }).join('');
   }
 
+  // NOTE: there is no real events/registrations table backing this yet, so interest is
+  // saved to this device only — it does not book a seat or notify the events team.
+  // Copy below says so explicitly instead of claiming a confirmed "Registered" status.
   function toggleEventInterest(key) {
     if (_eventInterests.includes(key)) {
       _eventInterests = _eventInterests.filter(k=>k!==key);
-      showToast('Removed from event interest list');
+      showToast('Removed from your local interest list');
     } else {
       _eventInterests.push(key);
       const ev = EVENTS.find(e=>e.key===key);
-      showToast('✓ Registered — ' + ev.title);
+      showToast('Noted on this device — ' + ev.title + '. Email imagenationdex@gmail.com to confirm a seat.');
     }
     localStorage.setItem('indx_genesis_events', JSON.stringify(_eventInterests));
     renderEvents();
@@ -794,13 +856,14 @@
   }
 
   // ── INIT ──
-  window.addEventListener('DOMContentLoaded', () => {
+  window.addEventListener('DOMContentLoaded', async () => {
     renderTiers();
     renderJourney();
     renderApp();
     renderNetwork();
     renderEvents();
     renderDoctrine();
+    await initRealSession();
   });
 </script>
 <script src="siindex-speak-core.js"></script>

@@ -194,6 +194,18 @@
   <script>
     const INDX_PRICE_USD = 0.24;
 
+    // ── REAL SUPABASE (public-read registry tables — known_malicious_indicators,
+    // verified_sender_registry — built for exactly this screen, previously unused) ──
+    const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+    async function sbSelect(table, query) {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY }
+      });
+      if (!res.ok) throw new Error('lookup failed');
+      return res.json();
+    }
+
     function openTab(id) {
       document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -219,20 +231,51 @@
       { pattern: /unlock.*wallet|wallet.*unlock/i, verdict: 'fake', note: '"Unlock wallet" requests are a known scam pattern. SIINDEX never sends these.' },
     ];
 
-    function runLookup() {
+    // Checks the real verified_sender_registry / known_malicious_indicators tables
+    // first (authoritative, DB-backed — these tables exist precisely for this lookup
+    // but were previously never queried, so every result here used to come from a
+    // hardcoded JS pattern list only). Falls back to the local heuristic patterns
+    // below if nothing real matches, and is honest when the DB check itself fails.
+    async function checkRealRegistry(val) {
+      try {
+        const malicious = await sbSelect('known_malicious_indicators',
+          `status=eq.active&indicator_value=ilike.*${encodeURIComponent(val)}*&select=indicator_value,severity,reason&limit=1`);
+        if (malicious && malicious.length) return { verdict: 'fake', source: 'db', note: malicious[0].reason || 'Reported and confirmed malicious.' };
+
+        const verified = await sbSelect('verified_sender_registry',
+          `select=trading_name,authorised_domains,revocation_status&app_identifier=ilike.*${encodeURIComponent(val)}*&limit=1`);
+        if (verified && verified.length && verified[0].revocation_status !== 'revoked') {
+          return { verdict: 'real', source: 'db', note: `Verified sender on file: ${verified[0].trading_name}.` };
+        }
+      } catch (e) { return { verdict: null, source: 'db_error' }; }
+      return { verdict: null, source: 'db' };
+    }
+
+    async function runLookup() {
       const val = document.getElementById('lookupInput').value.trim();
       const res = document.getElementById('lookupResult');
       if (!val) { showToast('Enter a URL, address, or handle first'); return; }
       res.style.display = 'block';
+      res.className = 'lookup-result unknown';
+      res.innerHTML = 'Checking registry…';
+
+      const dbResult = await checkRealRegistry(val);
 
       let verdict = null;
       for (const p of OFFICIAL_PATTERNS) {
         if (p.pattern.test(val)) { verdict = p; break; }
       }
 
-      if (!verdict) {
+      if (dbResult.verdict === 'fake') {
+        res.className = 'lookup-result fake';
+        res.innerHTML = `<strong>🚨 Reported malicious</strong><br>${dbResult.note} Source: verified scam registry.`;
+      } else if (dbResult.verdict === 'real') {
+        res.className = 'lookup-result real';
+        res.innerHTML = `<strong>✅ Verified official SIINDEX</strong><br>${dbResult.note}`;
+      } else if (!verdict) {
         res.className = 'lookup-result unknown';
-        res.innerHTML = `<strong>⚠️ Not found in registry</strong><br>This URL, address, or handle was not found in the official SIINDEX registry. That does not mean it is safe — it may be a new scam or a legitimate unlisted resource.<br><br>If you are unsure, <strong>do not proceed</strong>. Contact support through Grid Account.`;
+        const dbNote = dbResult.source === 'db_error' ? ' (registry check unavailable — try again shortly)' : '';
+        res.innerHTML = `<strong>⚠️ Not found in registry</strong><br>This URL, address, or handle was not found in the official SIINDEX registry${dbNote}. That does not mean it is safe — it may be a new scam or a legitimate unlisted resource.<br><br>If you are unsure, <strong>do not proceed</strong>. Contact support through Grid Account.`;
       } else if (verdict.verdict === 'real') {
         res.className = 'lookup-result real';
         res.innerHTML = `<strong>✅ Verified official SIINDEX</strong><br>${verdict.note}`;
@@ -309,13 +352,37 @@
       { title: 'Phishing site — imagenation-dex.com', date: '2 Jul 2026', desc: 'A site using the domain imagenation-dex.com (with hyphen) is collecting wallet signatures. This is not an IN$DEX property. Official domain is imagenationdex.com (no hyphen).' },
     ];
 
-    function renderScams() {
-      document.getElementById('scamList').innerHTML = SCAMS.map(s => `
-        <div class="scam-item">
-          <div class="scam-top"><div class="scam-dot"></div><div class="scam-title">${s.title}</div><div class="scam-date">${s.date}</div></div>
-          <div class="scam-desc">${s.desc}</div>
-        </div>
-      `).join('');
+    function scamRowHtml(title, date, desc) {
+      return `<div class="scam-item">
+          <div class="scam-top"><div class="scam-dot"></div><div class="scam-title">${title}</div><div class="scam-date">${date}</div></div>
+          <div class="scam-desc">${desc}</div>
+        </div>`;
+    }
+
+    // Loads real reported/active indicators from known_malicious_indicators (a real
+    // table built for this tab that was previously never queried) and shows them
+    // above the curated historical examples, which are now clearly labelled as
+    // reference material rather than implied to be a live feed themselves.
+    async function renderScams() {
+      const list = document.getElementById('scamList');
+      let realHtml = '';
+      try {
+        const rows = await sbSelect('known_malicious_indicators',
+          'status=eq.active&select=indicator_type,indicator_value,severity,reason,created_at&order=created_at.desc&limit=10');
+        if (rows && rows.length) {
+          realHtml += '<div class="sect-lbl" style="margin-top:0;">🔴 Reported (live)</div>';
+          realHtml += rows.map(r => scamRowHtml(
+            `${(r.indicator_type || 'Indicator')} — ${r.indicator_value}`,
+            new Date(r.created_at).toLocaleDateString('en-AU', { day:'numeric', month:'short', year:'numeric' }),
+            r.reason || `Severity: ${r.severity || 'unknown'}.`
+          )).join('');
+        }
+      } catch (e) { /* registry check unavailable — fall through to reference list */ }
+
+      const staticHtml = `<div class="sect-lbl">${realHtml ? 'Known historical patterns (reference)' : 'Known historical patterns (reference — live registry currently empty)'}</div>` +
+        SCAMS.map(s => scamRowHtml(s.title, s.date, s.desc)).join('');
+
+      list.innerHTML = realHtml + staticHtml;
     }
 
     function reportScam() {

@@ -298,8 +298,8 @@
 <div class="dock-card fade-in" style="animation-delay:.16s">
   <div class="dock-hdr">
     <div class="dock-hdr-left">
-      <h3>Launch Vanuatu Print Bundle</h3>
-      <p>Mission Room · 3 members · 7 agents · IN progress</p>
+      <h3>Launch Vanuatu Print Bundle <span style="color:var(--muted);font-weight:600">(example mission)</span></h3>
+      <p>Illustrative sample mission — not a live citizen Mission Room</p>
     </div>
     <div class="dock-hdr-actions">
       <div class="dock-ctrl" onclick="dockAllPause()">Pause All</div>
@@ -313,7 +313,7 @@
 <!-- GM3: AGENT EVALUATION SCORECARD -->
 <div class="section-hdr fade-in" style="animation-delay:.22s;margin-top:8px">
   <h2>📊 Agent Evaluation Scorecard</h2>
-  <span>14 dimensions</span>
+  <span>14 dimensions · preview</span>
 </div>
 <div class="eval-card fade-in" style="animation-delay:.24s">
   <div class="eval-hdr">
@@ -326,6 +326,7 @@
       <div class="eval-score-label" id="evalLabel">Select an agent</div>
     </div>
     <div class="eval-key-q">Key question: Did the agent know when <em>not</em> to act?</div>
+    <div class="eval-key-q" style="color:var(--text2);border-color:var(--border);background:transparent;">Preview scores below are illustrative placeholders (not live evaluation telemetry) — tap a dimension to see how the scoring mechanic works.</div>
   </div>
   <div id="evalDims"></div>
 </div>
@@ -369,7 +370,7 @@
     </div>
     <div class="brief-generate" onclick="generateBrief()">Generate Agent Mission Brief →</div>
     <div class="brief-output" id="briefOutput">
-      <div class="brief-output-hdr">SIINDEX Agent Mission Brief — Decision Ledger Reference: <span id="briefRef">—</span></div>
+      <div class="brief-output-hdr">SIINDEX Agent Mission Brief — Local Reference (session only, not saved to server): <span id="briefRef">—</span></div>
       <div id="briefSections"></div>
       <div class="brief-copy" onclick="copyBrief()">Copy Agent Brief to Clipboard</div>
     </div>
@@ -729,13 +730,17 @@
     renderRegistry();
   }
 
+  // NOTE: agent_registry (the real backend table) is founder-SELECT-only in the live
+  // schema — there is no write RPC or RLS policy letting any client pause/activate a
+  // real agent row. This registry is illustrative doctrine documentation, not a live
+  // control panel, so toggling here is explicitly a local-only preview and says so.
   function toggleAgentStatus(key, evt) {
     evt.stopPropagation();
     const current = getAgentStatus(key);
     _agentStatuses[key] = current === 'paused' ? 'active' : 'paused';
     localStorage.setItem('indx_agent_status', JSON.stringify(_agentStatuses));
     const a = AGENTS.find(a=>a.key===key);
-    showToast(`${a.icon} ${a.name} ${_agentStatuses[key] === 'paused' ? 'paused' : 'activated'}`);
+    showToast(`${a.icon} ${a.name} ${_agentStatuses[key] === 'paused' ? 'paused (local preview only)' : 'activated (local preview only)'}`);
     renderRegistry();
     renderDock();
   }
@@ -886,7 +891,7 @@
 
     const agents = _briefAgents.map(k=>AGENTS.find(a=>a.key===k)).filter(Boolean);
     const ctxFlags = _briefContexts.length ? _briefContexts.join(', ') : 'None flagged';
-    const ref = 'DL-' + Date.now().toString(36).toUpperCase();
+    const ref = 'LOCAL-' + Date.now().toString(36).toUpperCase();
     document.getElementById('briefRef').textContent = ref;
     _currentBriefText = ref;
 
@@ -921,7 +926,9 @@
 
   function copyBrief() {
     const ref = document.getElementById('briefRef').textContent;
-    const text = `SIINDEX Agent Mission Brief — ${ref}\nGenerated: ${new Date().toLocaleString()}\n\nSee Decision Ledger entry: ${ref}`;
+    const el = document.getElementById('briefSections');
+    const bodyText = el ? el.innerText.replace(/\n{3,}/g, '\n\n') : '';
+    const text = `SIINDEX Agent Mission Brief — Local Reference ${ref} (session only, not saved to server)\nGenerated: ${new Date().toLocaleString()}\n\n${bodyText}`;
     navigator.clipboard.writeText(text).then(()=>showToast('✓ Agent brief copied to clipboard')).catch(()=>showToast('Brief reference: ' + ref));
   }
 

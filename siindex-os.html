@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>SI OS — SIINDEX Operating System</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" crossorigin="anonymous"></script>
   <style>
     :root {
       --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
@@ -391,6 +392,26 @@
 <div id="toast"></div>
 
 <script>
+// ── REAL SUPABASE SESSION (System Alerts → security_events) ──
+const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let _realAccessToken = null;
+async function initRealSession() {
+  try {
+    const { data } = await sb.auth.getSession();
+    if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+  } catch (e) { /* stay on anon key */ }
+}
+function rpcHeaders() {
+  return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' };
+}
+async function sbFetch(path, opts = {}) {
+  const res = await fetch(SUPABASE_URL + path, { ...opts, headers: { ...rpcHeaders(), ...(opts.headers || {}) } });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 // ── CONSTANTS ──
 const LAYERS = [
   {
@@ -1014,60 +1035,43 @@ function drawSparkline(layerIdx) {
   if (curEl) curEl.textContent = Math.round(data[data.length - 1]);
 }
 
-// ── SOVEREIGN ALERT QUEUE ──
+// ── SOVEREIGN ALERT QUEUE — real security_events (immutable audit log, founder-read-only) ──
 let alertsData = [];
-let alertIdCounter = 0;
 
-function generateAlerts() {
-  const newAlerts = [];
-  layerHealth.forEach((h, i) => {
-    if (h.score < 76) {
-      newAlerts.push({
-        id: ++alertIdCounter, sev: 'crit', icon: '🔴',
-        msg: `${LAYERS[i].icon} ${LAYERS[i].name} health critical — ${h.score}% (threshold: 76%)`,
-        meta: `Layer ${i+1} · ${formatTime()} · Latency: ${h.latency}ms`
-      });
-    } else if (h.score < 86) {
-      newAlerts.push({
-        id: ++alertIdCounter, sev: 'warn', icon: '⚠️',
-        msg: `${LAYERS[i].icon} ${LAYERS[i].name} health degraded — ${h.score}%`,
-        meta: `Layer ${i+1} · ${formatTime()} · Throughput: ${h.throughput} ops/sec`
-      });
-    }
-    if (h.memory > 88) {
-      newAlerts.push({
-        id: ++alertIdCounter, sev: 'warn', icon: '⚠️',
-        msg: `Layer ${i+1} memory pressure: ${h.memory}% — workload distribution recommended`,
-        meta: `${LAYERS[i].name} · ${formatTime()}`
-      });
-    }
-  });
-  if (Math.random() < 0.26) {
-    const infoMsgs = [
-      `Autonomous Improvement Loop #${248 + Math.floor(Math.random() * 14)} complete`,
-      `Memory consolidation: ${Math.floor(Math.random() * 28) + 10} entries archived`,
-      `Governance audit complete — 0 Civilisation Law violations detected`,
-      `Decision cascade milestone: ${totalDecisions} sovereign decisions processed`,
-      `Evaluation Engine scored 100% pass rate on last 22 outputs`,
-    ];
-    newAlerts.push({
-      id: ++alertIdCounter, sev: 'info', icon: 'ℹ️',
-      msg: infoMsgs[Math.floor(Math.random() * infoMsgs.length)],
-      meta: formatTime()
-    });
-  }
-  if (newAlerts.length > 0) {
-    alertsData = [...newAlerts, ...alertsData].slice(0, 5);
+function tierToSev(tier) {
+  if (tier === 'T4' || tier === 'T3') return 'crit';
+  if (tier === 'T2') return 'warn';
+  return 'info';
+}
+function tierToIcon(tier) {
+  if (tier === 'T4' || tier === 'T3') return '🔴';
+  if (tier === 'T2') return '⚠️';
+  return 'ℹ️';
+}
+
+async function fetchSecurityAlerts() {
+  try {
+    const rows = await sbFetch('/rest/v1/security_events?resolved=eq.false&order=created_at.desc&limit=5&select=id,created_at,tier,zone,description');
+    alertsData = (rows || []).map(r => ({
+      id: r.id,
+      sev: tierToSev(r.tier),
+      icon: tierToIcon(r.tier),
+      msg: r.description || 'Security event',
+      meta: `${r.zone || 'Unknown zone'} · ${new Date(r.created_at).toLocaleTimeString('en-AU', {hour:'2-digit', minute:'2-digit'})} · ${r.tier || ''}`
+    }));
     alertsData.sort((a, b) => ({crit:0,warn:1,info:2}[a.sev] - {crit:0,warn:1,info:2}[b.sev]));
-    renderAlerts();
+  } catch (e) {
+    // No founder session / RLS denied / offline — show honest empty state, never fabricate.
+    alertsData = [];
   }
+  renderAlerts();
 }
 
 function renderAlerts() {
   const list = document.getElementById('alertList');
   const countEl = document.getElementById('alertCount');
   if (!alertsData.length) {
-    list.innerHTML = '<div class="alert-empty">✓ All systems nominal</div>';
+    list.innerHTML = '<div class="alert-empty">✓ No unresolved security events</div>';
     if (countEl) countEl.textContent = '0 active';
     return;
   }
@@ -1079,20 +1083,22 @@ function renderAlerts() {
         <div class="alert-msg">${a.msg}</div>
         <div class="alert-meta">${a.meta}</div>
       </div>
-      <button class="alert-ack" onclick="dismissAlert(${a.id})">Ack</button>
+      <button class="alert-ack" onclick="dismissAlert('${a.id}')">Dismiss</button>
     </div>
   `).join('');
 }
 
+// Security events are an immutable audit log (no deletion/modification — PQSI Law 7).
+// "Dismiss" only clears the card from this local view; it never writes to security_events.
 function dismissAlert(id) {
   alertsData = alertsData.filter(a => a.id !== id);
   renderAlerts();
-  showToast('Alert acknowledged');
+  showToast('Dismissed from view — audit log unchanged');
 }
 
 function initAlertQueue() {
-  generateAlerts();
-  setInterval(generateAlerts, 16000);
+  fetchSecurityAlerts();
+  setInterval(fetchSecurityAlerts, 30000);
 }
 
 // ── TOAST ──
@@ -1106,7 +1112,8 @@ function showToast(msg) {
 }
 
 // ── INIT ──
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await initRealSession();
   buildStack();
   renderLog();
   document.getElementById('heroExplored').textContent = exploredLayers.size;

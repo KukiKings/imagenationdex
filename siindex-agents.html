@@ -249,7 +249,7 @@
     <div class="orch-node">◈</div>
     <div>
       <div class="orch-title">Strategic Planner</div>
-      <div class="orch-sub">Orchestrating 4 parallel task streams</div>
+      <div class="orch-sub">Illustrative view · 4 parallel task streams</div>
     </div>
   </div>
   <div class="task-streams" id="taskStreams">
@@ -261,7 +261,7 @@
 <button class="resume-all-btn" id="resumeAllBtn" onclick="resumeAll()">↺ Resume All Paused Agents</button>
 
 <!-- AGENTS -->
-<div class="section-label">Agent Roster</div>
+<div class="section-label">Agent Roster — local founder view only (pause/resume does not change live agent execution)</div>
 <div class="agents-wrap" id="agentsWrap">
   <!-- Rendered by JS -->
 </div>
@@ -302,7 +302,25 @@
 
 <div id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
+// ── REAL SUPABASE (agent_messages / agent_registry are real, founder-gated read-only tables) ──
+const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+let _realAccessToken = null;
+async function initRealSession() {
+  try {
+    if (window.supabase) {
+      const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const { data } = await sb.auth.getSession();
+      if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+    }
+  } catch (e) { /* stay on anon key */ }
+}
+function rpcHeaders() {
+  return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' };
+}
+
 // ── CONSTANTS ──
 const AGENTS = [
   {
@@ -450,11 +468,14 @@ const COMMS_TEMPLATES = [
 
 const EXPLORE_KEY = 'indx_agents_explored';
 const PAUSED_KEY = 'indx_agents_paused';
-const DECISIONS_KEY = 'indx_agents_decisions';
 
 let exploredAgents = new Set(JSON.parse(localStorage.getItem(EXPLORE_KEY) || '[]'));
 let pausedAgents = new Set(JSON.parse(localStorage.getItem(PAUSED_KEY) || '[]'));
-let totalDecisions = parseInt(localStorage.getItem(DECISIONS_KEY) || '0');
+// "Decisions" stat = count of decision entries actually shown in the roster below —
+// this used to be a localStorage counter that incremented forever on a timer with no
+// real backend behind it (a permanently-inflating fake number). It's now a real count
+// of the decision log entries genuinely rendered on this page.
+let totalDecisions = AGENTS.reduce((sum, a) => sum + a.decisions.length, 0);
 let expandedAgent = null;
 
 // ── TASK STREAMS ──
@@ -482,23 +503,10 @@ function buildTaskStreams() {
   `).join('');
 }
 
-function driftTaskPcts() {
-  taskPcts = taskPcts.map((p, i) => {
-    const newP = Math.min(100, p + 1 + Math.floor(Math.random() * 3));
-    const barEl = document.getElementById(`tsbar-${i}`);
-    const pctEl = document.getElementById(`tspct-${i}`);
-    if (barEl) barEl.style.width = newP + '%';
-    if (pctEl) pctEl.textContent = newP + '%';
-    if (newP >= 100) {
-      totalDecisions++;
-      document.getElementById('heroDecisions').textContent = totalDecisions;
-      localStorage.setItem(DECISIONS_KEY, totalDecisions.toString());
-      return 5 + Math.floor(Math.random() * 20);
-    }
-    return newP;
-  });
-}
-setInterval(driftTaskPcts, 3200);
+// NOTE: task-stream % progress below is illustrative only — there is no live backend
+// tracking real-time task completion percentage for these agents, so it is rendered
+// as a static snapshot rather than a fake auto-advancing animation (which would imply
+// live telemetry that doesn't exist).
 
 // ── BUILD AGENTS ──
 function getStatusClass(status) {
@@ -587,13 +595,18 @@ function toggleAgent(i) {
   document.getElementById('heroExplored').textContent = exploredAgents.size;
 }
 
+// NOTE: there is no write RPC or RLS policy allowing any client to update agent_registry
+// (it's founder-SELECT-only in the real schema). Pause/Resume here is a local-only
+// founder view override — it does not touch the real agent_registry row or change what
+// the live agent network actually does. Copy below says so explicitly rather than
+// implying a persisted server-side action.
 function togglePause(i) {
   if (pausedAgents.has(i)) {
     pausedAgents.delete(i);
-    showToast(`▶ ${AGENTS[i].name} resumed`);
+    showToast(`▶ ${AGENTS[i].name} resumed (local view)`);
   } else {
     pausedAgents.add(i);
-    showToast(`⏸ ${AGENTS[i].name} paused — awaiting manual direction`);
+    showToast(`⏸ ${AGENTS[i].name} paused (local view only)`);
   }
   localStorage.setItem(PAUSED_KEY, JSON.stringify([...pausedAgents]));
   buildAgents(); // Rebuild to reflect new state
@@ -607,7 +620,7 @@ function resumeAll() {
   pausedAgents.clear();
   localStorage.setItem(PAUSED_KEY, JSON.stringify([]));
   buildAgents();
-  showToast('▶ All agents resumed');
+  showToast('▶ All agents resumed (local view)');
 }
 
 function updatePausedUI() {
@@ -635,29 +648,55 @@ function updateExploreProgress() {
   document.getElementById('exploreSub').textContent = sub;
 }
 
-// ── COMMS FEED ──
+// ── COMMS FEED — REAL: reads the agent_messages table (founder-gated RLS).
+// Previously this rendered randomly-generated canned messages every few seconds
+// labelled "Live Feed" with a pulsing dot — that was fake-live theater with nothing
+// real behind it. It now queries the real table. agent_messages is currently empty
+// in production (no agent-to-agent messages logged yet) and is founder-SELECT-only,
+// so most viewers will correctly see an honest empty/locked state rather than fabricated chatter.
 let commsEntries = [];
 let commsPaused = false;
 const MAX_COMMS = 6;
 
-function formatTime() {
-  const d = new Date();
+function formatTime(iso) {
+  const d = iso ? new Date(iso) : new Date();
   return d.getHours().toString().padStart(2,'0') + ':' +
     d.getMinutes().toString().padStart(2,'0') + ':' +
     d.getSeconds().toString().padStart(2,'0');
 }
 
-function addCommsEntry() {
+async function loadCommsFeed() {
   if (commsPaused) return;
-  const t = COMMS_TEMPLATES[Math.floor(Math.random() * COMMS_TEMPLATES.length)];
-  const entry = { ...t, time: formatTime() };
-  commsEntries.unshift(entry);
-  if (commsEntries.length > MAX_COMMS) commsEntries.pop();
-  renderComms();
+  try {
+    const res = await fetch(
+      SUPABASE_URL + '/rest/v1/agent_messages?select=agent_id,task_id,action_requested,output,created_at&order=created_at.desc&limit=' + MAX_COMMS,
+      { headers: rpcHeaders() }
+    );
+    if (!res.ok) { commsEntries = null; renderComms(); return; } // RLS-blocked (not signed in as founder) — honest locked state
+    const rows = await res.json();
+    commsEntries = (rows || []).map(r => ({
+      from: 'Agent ' + String(r.agent_id).slice(0, 8),
+      to: r.task_id || 'task queue',
+      msg: r.action_requested || (r.output ? JSON.stringify(r.output) : '(no message content)'),
+      time: formatTime(r.created_at)
+    }));
+    renderComms();
+  } catch (e) {
+    commsEntries = null;
+    renderComms();
+  }
 }
 
 function renderComms() {
   const list = document.getElementById('commsList');
+  if (commsEntries === null) {
+    list.innerHTML = `<div class="comms-entry" style="cursor:default;"><div class="comms-msg">Sign in with founder access to view live inter-agent messages.</div></div>`;
+    return;
+  }
+  if (commsEntries.length === 0) {
+    list.innerHTML = `<div class="comms-entry" style="cursor:default;"><div class="comms-msg">No inter-agent messages logged yet.</div></div>`;
+    return;
+  }
   list.innerHTML = commsEntries.map((e, idx) => `
     <div class="comms-entry${idx === 0 ? ' new-msg' : ''}" onclick="copyComms(${idx})">
       <div class="comms-top">
@@ -673,6 +712,7 @@ function renderComms() {
 
 function copyComms(i) {
   const e = commsEntries[i];
+  if (!e) return;
   navigator.clipboard.writeText(`[${e.time}] ${e.from} → ${e.to}: ${e.msg}`).catch(() => {});
   showToast('Message copied');
 }
@@ -680,13 +720,7 @@ function copyComms(i) {
 function toggleCommsPause() {
   commsPaused = !commsPaused;
   document.getElementById('commsPauseBtn').textContent = commsPaused ? '▶ Resume' : '⏸ Pause';
-}
-
-// Seed comms
-for (let i = 0; i < 5; i++) {
-  const t = COMMS_TEMPLATES[(COMMS_TEMPLATES.length - 1 - i) % COMMS_TEMPLATES.length];
-  const d = new Date(Date.now() - (4 - i) * 42000);
-  commsEntries.push({ ...t, time: d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0') + ':' + d.getSeconds().toString().padStart(2,'0') });
+  if (!commsPaused) loadCommsFeed();
 }
 
 // ── TOAST ──
@@ -700,18 +734,14 @@ function showToast(msg) {
 }
 
 // ── INIT ──
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   buildTaskStreams();
   buildAgents();
-  renderComms();
   document.getElementById('heroExplored').textContent = exploredAgents.size;
   document.getElementById('heroDecisions').textContent = totalDecisions;
-  setInterval(addCommsEntry, 3600);
-  setInterval(() => {
-    totalDecisions++;
-    document.getElementById('heroDecisions').textContent = totalDecisions;
-    localStorage.setItem(DECISIONS_KEY, totalDecisions.toString());
-  }, 8000);
+  await initRealSession();
+  await loadCommsFeed();
+  setInterval(loadCommsFeed, 15000); // real periodic refresh of agent_messages, not a fake generator
 });
 </script>
 <script src="siindex-speak-core.js"></script>

@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>SIINDEX Team Portal — Internal Operations</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <style>
   :root {
     --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
@@ -246,12 +247,16 @@
     <div class="health-sum-item"><div class="health-sum-num" id="healthAmberCount" style="color:var(--gold)">--</div><div class="health-sum-lbl">Attention</div></div>
     <div class="health-sum-item"><div class="health-sum-num" id="healthRedCount" style="color:var(--red)">--</div><div class="health-sum-lbl">Action Needed</div></div>
   </div>
-  <button class="refresh-health-btn" onclick="renderHealth()">↻ Refresh Health Status</button>
+  <button class="refresh-health-btn" onclick="refreshHealth()">↻ Refresh Health Status</button>
+  <div class="health-grid" id="healthGridLive" style="margin-bottom:10px;"></div>
   <div class="health-grid" id="healthGrid"></div>
 </div>
 
 <!-- TAB: KPIs -->
 <div class="tab-content" id="tab-kpi">
+  <div class="sect-label">Platform (Live · get_founder_dashboard_stats)</div>
+  <div class="kpi-grid" id="kpiGridLive"></div>
+
   <div class="sect-label">Founder Pool</div>
   <div class="kpi-grid" id="kpiGrid"></div>
   <div class="kpi-lp-bar">
@@ -306,6 +311,37 @@ const POOL_TARGET = 100000;
 const TGE_DATE = new Date('2027-01-24T00:00:00+11:00');
 const PORTAL_PIN_KEY = 'indx_portal_pin';
 const DEFAULT_PIN = '1919'; // AJ can change this by entering new PIN
+
+// ── REAL SUPABASE — founder-gated platform stats ──
+// PIN above is a local device-lock convenience only. Real authorisation for the
+// numbers below comes from get_founder_dashboard_stats(), which is is_founder()-gated
+// server-side (same pattern as siindex-command-center.html / security-settings.html).
+// If no real founder session exists in this browser, the RPC refuses and the UI
+// says so honestly instead of showing fabricated numbers.
+const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let _realAccessToken = null;
+async function initRealSession() {
+  try {
+    const { data } = await sb.auth.getSession();
+    if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+  } catch (e) { /* stay on anon key — RPC will correctly refuse */ }
+}
+function rpcHeaders() {
+  return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' };
+}
+
+let platformStats = null; // null = not loaded / not authorised. Never faked.
+async function loadPlatformStats() {
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_founder_dashboard_stats', {
+      method: 'POST', headers: rpcHeaders(), body: JSON.stringify({})
+    });
+    if (!res.ok) { platformStats = null; return; }
+    platformStats = await res.json();
+  } catch (e) { platformStats = null; }
+}
 
 // ── PIN GATE ──
 let _pinBuffer = '';
@@ -507,7 +543,45 @@ const HEALTH_SYSTEMS = [
     statusText: 'OPERATIONAL' },
 ];
 
+async function refreshHealth() {
+  await loadPlatformStats();
+  renderHealth();
+  showToast(platformStats ? '✅ Live health refreshed' : '⚠️ Live stats unavailable — showing curated status only');
+}
+
+function renderLiveHealth() {
+  const liveGrid = document.getElementById('healthGridLive');
+  if (!liveGrid) return;
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+  if (!platformStats) {
+    liveGrid.innerHTML = `<div class="health-card status-amber" style="grid-column:1/-1;">
+      <div class="health-dot amber"></div>
+      <div class="health-name">🔒 Live platform health unavailable</div>
+      <div class="health-status-text">Sign in as a verified founder elsewhere in the platform (e.g. Command Center) to load real kill-switch + security event status here — not faked.</div>
+    </div>`;
+    return;
+  }
+  const killStatus = platformStats.kill_switch_engaged ? 'red' : 'green';
+  const evCount = platformStats.unresolved_elevated_events_7d || 0;
+  const evStatus = evCount > 0 ? 'amber' : 'green';
+  liveGrid.innerHTML = `
+    <div class="health-card status-${killStatus}">
+      <div class="health-dot ${killStatus}"></div>
+      <div class="health-name">🔴 Kill Switch (live)</div>
+      <div class="health-status-text">${platformStats.kill_switch_engaged ? 'ENGAGED — platform paused' : 'Not engaged — platform live'}</div>
+      <div class="health-updated">Live · get_founder_dashboard_stats · ${timeStr}</div>
+    </div>
+    <div class="health-card status-${evStatus}">
+      <div class="health-dot ${evStatus}"></div>
+      <div class="health-name">🛡️ Security Events (live)</div>
+      <div class="health-status-text">${evCount} unresolved T2+ event${evCount === 1 ? '' : 's'} · last 7 days</div>
+      <div class="health-updated">Live · get_founder_dashboard_stats · ${timeStr}</div>
+    </div>`;
+}
+
 function renderHealth() {
+  renderLiveHealth();
   const grid = document.getElementById('healthGrid');
   const now = new Date();
   const timeStr = now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
@@ -532,7 +606,31 @@ function renderHealth() {
 }
 
 // ── GM3: PLATFORM KPI SNAPSHOT ──
+function renderPlatformLive() {
+  const el = document.getElementById('kpiGridLive');
+  if (!el) return;
+  if (!platformStats) {
+    el.innerHTML = `<div class="card" style="grid-column:1/-1;">
+      <div class="card-title">Live platform stats unavailable</div>
+      <div class="card-sub">Sign in as a verified founder elsewhere in the platform to load real citizen and transaction counts here — not faked.</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-value" style="color:var(--cyan)">${(platformStats.citizens_count || 0).toLocaleString()}</div>
+      <div class="kpi-label">Total Citizens (live)</div>
+      <div class="kpi-delta neutral">get_founder_dashboard_stats()</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-value" style="color:var(--green)">${(platformStats.transactions_count || 0).toLocaleString()}</div>
+      <div class="kpi-label">Total Transactions (live)</div>
+      <div class="kpi-delta neutral">get_founder_dashboard_stats()</div>
+    </div>`;
+}
+
 function renderKPIs() {
+  renderPlatformLive();
   // Pull from founders-pool localStorage if available
   const founders = JSON.parse(localStorage.getItem('indx_founders_pool_members') || '[]');
   const active = founders.filter(f => f.status === 'active');
@@ -677,7 +775,7 @@ function initOpsLinks() {
 }
 
 // ── INIT ──
-function initPortal() {
+async function initPortal() {
   initWarRoom();
   renderHealth();
   renderKPIs();
@@ -685,6 +783,14 @@ function initPortal() {
   initOpsLinks();
   updateTGEWar();
   setInterval(updateTGEWar, 1000);
+
+  // Real founder-gated platform stats load async, then re-render the two
+  // tabs that show them (no visible flash for the common case — cards start
+  // in the honest "unavailable" state above, then upgrade to live numbers).
+  await initRealSession();
+  await loadPlatformStats();
+  renderLiveHealth();
+  renderPlatformLive();
 }
 
 document.addEventListener('DOMContentLoaded', () => {

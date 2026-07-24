@@ -183,6 +183,7 @@
       <div class="voice-status-label" id="voiceStatusLbl">TAP TO SPEAK</div>
       <div class="voice-transcript" id="voiceTranscript"></div>
       <div class="voice-response" id="voiceResponse">Good morning. I am SIINDEX — the sovereign intelligence of IN$DEX. Tap the orb or type a command below. I am ready.</div>
+      <div style="font-size:10px;color:var(--muted);max-width:320px;margin:0 auto 6px;line-height:1.5;">Preview mode: spoken replies below are scripted examples of how SIINDEX will respond. Specific numbers (buyer counts, payout amounts, proposal IDs) are illustrative, not yet pulled from your live account — except your account security check, which is real.</div>
       <div class="voice-controls">
         <button class="vc-btn vc-mic" id="voiceMicBtn" onclick="toggleVoice()">🎙 Hold to Speak</button>
         <button class="vc-btn vc-brief" onclick="generateDailyBrief(); openTab('tab-brief')">📋 Prepare My Day</button>
@@ -214,6 +215,7 @@
         </div>
         <button class="brief-read-btn" id="briefReadBtn" onclick="readBriefAloud()">🔊 Read Aloud</button>
       </div>
+      <div style="font-size:10px;color:var(--muted);padding-bottom:8px;line-height:1.5;">Preview mode: this brief is a scripted example layout. Balance and Wisdom Score above use your session data — buyer, payout, and governance line items are illustrative, not live yet.</div>
       <div id="briefSections">
         <div style="font-size:13px;color:var(--muted);padding:8px 0;">Tap "Prepare My Day" to generate your brief.</div>
       </div>
@@ -231,6 +233,7 @@
         <span class="sect-lbl">Mission Queue</span>
         <button class="sect-add" onclick="addTestMission()">+ New</button>
       </div>
+      <div style="font-size:10px;color:var(--muted);margin:-4px 0 10px;line-height:1.5;">Missions here are saved to this device only, as a preview of the approval flow — SIINDEX is not yet actually drafting listings, replies, or videos in the background.</div>
       <div class="mission-list" id="missionList"></div>
     </div>
   </div>
@@ -267,7 +270,43 @@
 
   <div class="toast-el" id="toastEl"></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
   <script>
+    // ── REAL SUPABASE — get_security_settings RPC and security_events table are real
+    // (same backend security-settings.html uses). Wired here so the voice "security"
+    // command reports the citizen's actual security state instead of a fabricated
+    // "2FA is active, no anomalies detected" claim with nothing behind it.
+    const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+    let _realAccessToken = null;
+    async function initRealSession() {
+      try {
+        if (window.supabase) {
+          const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+          const { data } = await sb.auth.getSession();
+          if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+        }
+      } catch (e) { /* stay on anon key */ }
+    }
+    function rpcHeaders() {
+      return { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' };
+    }
+    const citizenId = sessionStorage.getItem('citizen_id');
+
+    async function fetchRealSecurityCheck() {
+      if (!citizenId) return null;
+      try {
+        const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_security_settings', {
+          method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizenId })
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        const evRes = await fetch(SUPABASE_URL + '/rest/v1/security_events?detail->>citizen_id=eq.' + citizenId + '&order=created_at.desc&limit=3', { headers: rpcHeaders() });
+        const events = evRes.ok ? await evRes.json() : [];
+        return { data, events: Array.isArray(events) ? events : [] };
+      } catch (e) { return null; }
+    }
+
     // ── CONSTANTS ──────────────────────────────────────────
     const INDX_PRICE_USD = 0.24;
     const TGE_DATE       = new Date('2027-01-24T00:00:00+11:00');
@@ -406,7 +445,7 @@
       }
     }
 
-    function submitVoiceCmd(input) {
+    async function submitVoiceCmd(input) {
       input = (input || '').trim();
       if (!input) return;
       document.getElementById('vcTextInput').value = '';
@@ -496,9 +535,21 @@
         addMission('Weekend Live Commerce', '📺', 'Prepare weekend live commerce plan + social schedule — awaiting approval', 'pending');
         openTab('tab-missions'); return;
       }
-      // Security
+      // Security — REAL: get_security_settings RPC + security_events table
       if (/secure.*account|security|check.*security|account.*safe/i.test(input)) {
-        const r = "Your account security check: 2FA is active, session sovereignty is enabled, last login was from your registered device. No anomalies detected. Do you want me to open the Security Centre?";
+        document.getElementById('voiceResponse').textContent = 'Checking your real security settings…';
+        const real = await fetchRealSecurityCheck();
+        let r;
+        if (!citizenId) {
+          r = "I can't check a real security state without a signed-in account — sign in first, then ask me again.";
+        } else if (!real) {
+          r = "I couldn't reach your real security settings just now — try again in a moment.";
+        } else {
+          const prefs = (real.data && real.data.security_prefs) || {};
+          const twoFA = real.data && real.data.totp_enabled;
+          const evCount = real.events.length;
+          r = `Your real account security check: biometric ${prefs.biometric_enabled !== false ? 'enabled' : 'disabled'}, two-factor authentication ${twoFA ? 'active' : 'not set up'}. ${evCount ? evCount + ' recent security event' + (evCount===1?'':'s') + ' on record.' : 'No recent security events on record.'} Open Security Settings for the full picture.`;
+        }
         document.getElementById('voiceResponse').textContent = r;
         speak(r); return;
       }
@@ -720,7 +771,7 @@
       saveMissions(missions);
       addAudit(`Mission approved: ${getMissions().find(m=>m.id===id)?.title || id}`, 'approve');
       renderMissions();
-      showToast('Mission approved and executing');
+      showToast('Mission marked approved (saved on this device)');
     }
 
     function rejectMission(id) {
@@ -795,7 +846,8 @@
     }
 
     // ── INIT ───────────────────────────────────────────────
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
+      await initRealSession();
       renderQuickCmds();
       renderMissions();
       renderToolGrid();

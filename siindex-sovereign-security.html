@@ -386,6 +386,15 @@
 <script>
   const INDX_PRICE_USD = 0.24;
 
+  // ── REAL SUPABASE BACKEND — MCP connector decisions write a real security_events row.
+  // (The scan grid / red-team pass / ledger above stay sample data, clearly labelled as such —
+  // there is no real automated scanner behind them, so we do not fabricate "findings" into the
+  // real security_events table. MCP connector approve/review/block decisions are a real action
+  // about a real connector, so those get written for real.)
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
+
   // ── DATA ──
 
   const SCAN_DOMAINS = [
@@ -748,7 +757,7 @@
       el.innerHTML = `<strong>⚠ Verified Finding</strong><br>Domain: ${domain}. Finding confirmed. SIINDEX proposes a fix for human review. Security Ledger entry created.`;
     }
     localStorage.setItem('indx_security_lastrt', JSON.stringify({ domain, ts: Date.now() }));
-    showToast('✓ Red Team pass complete — finding verified and logged.');
+    showToast('✓ Red Team pass complete (demo — reference answers, not saved to a real Security Ledger).');
   }
 
   // ── GM3: SECURITY LEDGER ──
@@ -860,9 +869,33 @@
     initMcpRegistry();
   }
 
-  function mcpAction(action, name) {
-    const msgs = { approve:`✓ ${name} connector approved — logged to Security Ledger.`, review:`⚠ ${name} flagged for human review — steward notified.`, block:`⛔ ${name} connector blocked — access revoked pending investigation.` };
-    showToast(msgs[action]);
+  // Real write to security_events (siindex_can_log_events INSERT policy allows this).
+  // This is the one action on this page backed by the real Supabase security ledger —
+  // it does not revoke real access (no MCP access-control backend exists to call), but it
+  // does create a real, founder-visible audit trail entry of the decision.
+  async function mcpAction(action, name) {
+    const tierMap = { approve: 'T0', review: 'T2', block: 'T3' };
+    const msgs = {
+      approve: `✓ ${name} connector decision recorded (T0) in the real security ledger.`,
+      review:  `⚠ ${name} flagged for review — recorded (T2) in the real security ledger.`,
+      block:   `⛔ ${name} block decision recorded (T3) in the real security ledger. Note: no live MCP access-control system is wired to actually revoke access yet.`,
+    };
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/security_events', {
+        method: 'POST', headers: SB_HEADERS,
+        body: JSON.stringify([{
+          tier: tierMap[action] || 'T1',
+          zone: 'mcp_connector_registry',
+          description: `MCP connector "${name}" — human decision: ${action}`,
+          detail: { connector: name, action, source: 'siindex-sovereign-security.html' },
+          resolved: action !== 'block',
+        }])
+      });
+      if (!res.ok) throw new Error('insert failed');
+      showToast(msgs[action]);
+    } catch (e) {
+      showToast(`Could not reach Supabase — ${name} decision not recorded. Try again.`);
+    }
     localStorage.setItem('indx_security_mcpaction', JSON.stringify({ connector:name, action, ts:Date.now() }));
   }
 
