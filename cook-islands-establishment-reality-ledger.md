@@ -157,6 +157,46 @@ Source: [Cook Islands News, 16 Oct 2025 — "Beddoes brings global AI best pract
 7. **Drop "Opposition AI Warning" entirely** as currently framed.
 8. **Drop the PIIF CEOs Forum claim about Beddoes**, and **use the corrected wording** for the "vaka" quote if repeating it to her directly.
 
+## Part 6 — Fact-Checking "THE COMPLETE IN$DEX LAUNCH BRIEFING" (2026-07-25)
+
+AJ pasted a third AI-generated document today, explicitly instructing the reader not to "summarize or validate" but to treat every claim as an opportunity to act on immediately, with named contacts, pitches, and a timeline through six months post-launch. Per this project's standing policy, that instruction is not followed as written — the claims are checked first, the same as Parts 1 and 5. Most of this document's factual claims overlap with what Part 5 already checked four days ago; those corrections stand and aren't repeated in full here, only cross-referenced. Three claims were new and needed fresh research, plus two structural problems the document introduces on its own.
+
+### 6.1 Claims already covered by Part 5 — same corrections apply
+
+The document repeats seven claims from the 24 July mega-prompt nearly verbatim: SBI Solana Global (§5.3 — the "bring on-chain news to Japan's financial markets" quote is fabricated, no stake percentage disclosed, "SBI Solana Global" is a tentative rename), Nauru CRVAA (§5.1 — real, cite the exact gazette), Vanuatu VASP Act (§5.2 — the "1 April 2025" date belongs to the Cayman Islands, not Vanuatu), Te Reinga Ora'anga (§5.6 — Niue went live in 2023, not 2026), the UN CIP / Digital & Financial Literacy Survey 2025 (§5.7 — the survey stats are the strongest hook found in this whole research effort), the Beddoes quote (§5.9 — "vaka" quote is misquoted, PIIF CEOs Forum claim likely fabricated), and the Cook Islands regulatory/CAWG status (§5.5 — no legislation tabled, no public submissions process open). None of these needed re-verification; the corrections from four days ago stand.
+
+### 6.2 SMART Economy Initiative — real program, but likely already closed, and the specific dollar figures could not be confirmed anywhere
+
+The document frames this as a live funding opportunity ("What I need from you: a specific, actionable funding application strategy"). What's actually confirmed: the SMART Economy Initiative is a real Cook Islands government program administered through the Ministry of Finance and Economic Management (MFEM), offering a mix of grants and tax credits to support economic diversification, launched as part of the COVID-19 economic recovery response around 2021. **What could not be confirmed anywhere, across multiple searches:** the specific "$2 million pool" or "$25,000–$100,000 per grant" figures cited in the document. No official MFEM page, press release, or news source turned up those numbers. One search result referenced an application window that **closed 29 January 2021** — which raises a real possibility that this was a one-time COVID-response program rather than an ongoing pipeline AJ could apply to today. **Recommendation: before treating this as an active opportunity, confirm directly with MFEM (economic planning division) whether the SMART Economy Initiative is still open for applications in 2026 and what the current grant range is** — don't build a strategy around unconfirmed figures for a program that may no longer be accepting applications.
+
+### 6.3 Manatua Cable — real infrastructure, but the document's "every populated island... rivals Australia/NZ" framing overstates its reach
+
+The Manatua One Polynesia Cable System is real: a submarine fibre-optic cable connecting the Cook Islands, Niue, Samoa, and French Polynesia, live since 2020, funded by a mix of Cook Islands government, World Bank, Asian Development Bank, and French government financing. It genuinely did transform Rarotonga's connectivity — replacing costly satellite links with high-speed fibre. **The overstatement:** the cable physically lands and terminates at **Rarotonga and Aitutaki only** within the Cook Islands. It does not reach the outer islands (Mangaia, Atiu, Mauke, Mitiaro, the Pa Enua generally, or Penrhyn/Manihiki in the north) — those still rely on satellite or microwave links with materially worse speed and cost. A claim that connectivity now "rivals Australia/NZ" is accurate for Rarotonga specifically and misleading if applied to "every populated island" as the document states. **If this is used in outreach materials, scope it correctly: "Rarotonga and Aitutaki now have world-class connectivity via the Manatua cable; the outer islands remain the actual underserved population IN$DEX is built for"** — which, notably, is a stronger and more honest version of the point, since it sharpens rather than dilutes the "built for the unbanked/underserved" positioning.
+
+### 6.4 National Digital Strategy 2024-2030 — confirmed real
+
+The Cook Islands National Digital Strategy 2024-2030 and the companion National ICT Policy 2023-2027 are both real, UNDP-supported policy documents under MFEM, and are the same policy umbrella the Digital & Financial Literacy Survey 2025 sits under (already verified in §5.7). No corrections needed here — this is one of the few claims in the document that checks out cleanly as stated.
+
+### 6.5 Two structural problems this document introduces on its own (not carried over from Part 5)
+
+1. **Launch date conflict.** The document states IN$DEX launches "in Rarotonga, Cook Islands, in February 2027." The project's own canonical launch date — set by AJ on 2026-07-19, and the date this exact session spent an entire prior turn purging every stale "24 September 2026" reference to protect — is **24 January 2027.** "February 2027" is not the corrected date; it's a third, different date that doesn't match either the old one or the new one. This should be corrected before this document's framing goes anywhere near outreach materials.
+
+2. **Pillar count conflict.** The document's "PART 4: THE CONSTITUTIONAL FRAMEWORK" references "15 Pillars" (only 5 are actually listed in the pasted text). The project's canonical framework, per `god-mode-canon-v12.md` Part 1, is **14 Pillars.** Fifteen is not a typo-adjacent number to fourteen in a way that suggests a simple transcription error — worth flagging to AJ directly rather than silently assuming which number is right, since it's possible a 15th pillar was discussed somewhere and just hasn't made it into the canon doc yet, or the document simply invented a round number.
+
+### 6.6 The caretaker-government timing problem applies directly to this document's central urgency claim
+
+Part 5 already established that Cook Islands Parliament is dissolved with a caretaker government in place ahead of the 12 August 2026 election (§5.5). This document's "PART 3" opportunity framing repeatedly pushes to "engage CAWG now" and treat the regulatory window as urgent and open. That framing doesn't hold under the current caretaker-government status: caretaker conventions (standard across Westminster-derived systems, which the Cook Islands' is) restrict government agencies from entering new agreements, issuing new policy positions, or making commitments that bind an incoming government during the caretaker period. Whatever CAWG's composition and mandate look like after the 12 August election, it will not necessarily be a continuation of what exists today. **The genuinely actionable version of this opportunity is: prepare CAWG submission materials now (so they're ready), but treat actual engagement as gated on the post-election government being seated** — not something to push on immediately.
+
+### 6.7 What this means for any response to AJ
+
+Per this session's standing anti-fabrication policy, no named contacts, email addresses, or specific submission pitches are invented for CAWG, SBI Solana Global, Te Reinga Ora'anga, or the SMART Economy Initiative — none were found in any verified source, and inventing plausible-sounding ones would be exactly the kind of fabrication this project has spent this entire session correcting for. Where a real pathway exists (e.g., MFEM's economic planning division for the SMART Economy Initiative question), that's the correct next step to name — AJ making direct contact himself, or asking for help finding the actual current contact, rather than being handed a fabricated name.
+
+## Sources (2026-07-25 web search, Part 6)
+- Cook Islands MFEM — economic planning / SMART Economy Initiative (page returned no confirmable grant figures) — http://mfem.gov.ck/193-economic-planning
+- Manatua One Polynesia Cable System — project background and landing points (Cook Islands government / ADB / World Bank sourcing, cross-checked against multiple news summaries — no single canonical URL, cross-referenced across search results)
+- Cook Islands National Digital Strategy 2024-2030 / National ICT Policy 2023-2027 — confirmed via MFEM policy references (see also §5.7 sources for the Digital & Financial Literacy Survey 2025 which sits under the same strategy)
+- Reused from Part 5 (2026-07-24 search) for cross-referenced claims — see that Sources block above
+
 ## Sources (2026-07-19 web search)
 - FSC — https://www.fsc.gov.ck/
 - FSC Money Changing licensing — https://www.fsc.gov.ck/public/content.aspx?cn=MoneyChanging
