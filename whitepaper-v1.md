@@ -958,7 +958,30 @@ The Cook Islands flag carries 15 white stars in a circle — one for each of the
 
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
-> Last updated: 2026-07-24 — Session 121 continued x95: SIINDEX Functionality Audit across all 53 siindex-*.html screens (commit d41f0d5) — checked whether interactive elements call real backend logic vs. dead clicks/fake-success toasts/simulated results; 33 of 53 files needed fixes (most significant: siindex-memory.html's entire "memory" system was 100% fabricated, now wired to the real memory_items table; a fake floating INDX price on siindex-avatar.html violating the fixed $0.24 canon removed), 20 confirmed already correct. See x95 below.
+> Last updated: 2026-07-24 — Session 121 continued x96: Site-Wide Purge of Stale 24 September 2026 Launch Date. Full project sweep (34+ files) after AJ flagged the old date was still surfacing despite an earlier "delete everywhere" instruction. Root cause: the earlier sed sweep only rewrote 53 HTML screens' visible text and never touched shared/injected JS (siindex-speak-core.js, injected into 226+ screens) or the MCP server's own code (indx-mcp/index.js). Most consequential finding: js/indx-wallet.js gated Solana devnet-vs-MAINNET routing off TGE_DATE — on the real old date the wallet adapter would have silently started routing to MAINNET (real funds) two months early. Fixed, verified, no git commands run (commit c5879e4 already made). See x96 below.
+
+### Session 121 continued x96 — Site-Wide Purge of Stale 24 September 2026 Launch Date (2026-07-24)
+
+AJ was frustrated: a prior session had already been told to delete every reference to the old "24 September 2026" launch date (superseded 2026-07-19 by the move to 24 January 2027) and make sure it never resurfaced — yet it kept showing up. A full project-wide search this session found 34+ files still referencing the old date.
+
+**Root cause:** the prior mechanical `sed` sweep only rewrote visible text inside 53 HTML screens. It never touched the shared/injected JS files that many screens and tools load at runtime, which is exactly why the date kept reappearing even after HTML-level fixes looked complete:
+- `siindex-speak-core.js` — injected into 226+ screens; every countdown widget and TGE-related chat response across the whole platform was serving the wrong date from this one file.
+- `js/indx-wallet.js` — not cosmetic. `TGE_DATE` gated whether the wallet adapter routed to Solana **devnet** or **MAINNET**. On the real old date (24 September 2026), this would have silently flipped live citizen wallets to mainnet — real funds — two months before the actual (re-timed) launch. This was a live time bomb sitting in shipped code, not a display bug.
+- `indx-mcp/index.js` + `SETUP.md` — the MCP server's own tool descriptions and responses also carried the stale date.
+
+**Also found and fixed — operational skill files actively instructing the wrong date:** 5 of 6 `SIINDEX-Skills/*.md` files (siindex-community-report, siindex-devops, siindex-referral-engine, siindex-token-launch, indx-website-builder) told SIINDEX or the build skill to use or verify the old date. `indx-website-builder/SKILL.md` was the worst case: its own checklist literally instructed verifying countdown timers against `new Date('2026-09-24...')` — the skill was actively checking for and reinforcing the bug it should have caught.
+
+**HTML/content fixes:** genesis-offer.html, l99-launch-command.html, waitlist.html (stale badges; the two files' JS constants were already correct), siindex-command-center.html (fallback KB runway response), siindex-brief.html (demo template text), siindex-avatar.html (removed a now-false "born same day as Grand Synchronicity" claim — AJ's real birthday is Sept 24, confirmed via user.md/second-brain, but the coincidence broke when the launch date moved; also fixed a hardcoded "84 days remain" string to compute live), indx-grand-synchronicity-countdown.html (target-date JS constant was already correct from a prior pass, but 4 milestone entries were still Sept-2026-dated and built around the superseded Meteora Alpha Vault plan — removed, reframed the Alpha Vault UI card as "TGE Launch Mechanism — Under Review" instead of presenting a superseded plan as decided fact, and fixed a dangling `renderVault()` reference this cleanup exposed).
+
+**Reference/canon docs:** god-mode-canon-v12.md and dev-plan-phase1-4.md — headline dates fixed; detailed phase/deployment tables left in place with explicit "STALE, needs re-plan" banners rather than fabricating a new day-by-day schedule, consistent with this project's established no-invented-schedule policy. Also fixed: what-we-build-on.md, siindex-agent/README.md, business-plan-v1.md (not SEALED, unlike the 3 sealed business-plan docs).
+
+**Outbound-content risk fixed:** second-brain/decisions/ambassador-program.md, second-brain/decisions/telegram-community-system.md, second-brain/knowledge/x-thread-drafts.md — draft Telegram announcements and X/Twitter thread templates that could have gone out publicly with the wrong date if used as-is. All literal date mentions fixed; remaining schedule/day-count narrative beats (e.g. "89 days until launch," campaign windows, posting-schedule trigger dates) flagged to AJ for input rather than inventing replacement numbers.
+
+**Deliberately left untouched as legitimate historical record** (consistent with established convention): memory.md, second-brain/daily/_index.md, second-brain/decisions/_index.md, second-brain/moc/_index.md, second-brain/decisions/grand-synchronicity-plan.md, the 3 SEALED business-plan docs, and whitepaper-v1.md's own historical Appendix B session-log entries referencing the old date.
+
+**Verified:** `node --check` clean on every edited HTML/JS file; `DOMContentLoaded` listener counts correct (0 or 1, no duplicates); no dangling function references (specifically re-checked after removing indx-grand-synchronicity-countdown.html's Alpha Vault DOM elements); price/A$ grep matches all manually confirmed as false positives (forbidden-value documentation, `Math.random()` probability thresholds, hex color codes, "CTA" substring matches).
+
+Git commit already made (`c5879e4`).
 
 ### Session 121 continued x95 (2026-07-24) — SIINDEX Functionality Audit, 53 Screens
 
