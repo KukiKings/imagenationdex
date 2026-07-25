@@ -275,11 +275,11 @@
     <!-- HERO APY CARD -->
     <div class="hero">
       <div class="hero-label">Current Depositor APY</div>
-      <div class="hero-apy" id="heroApy">11.2%</div>
-      <div class="hero-apy-sub" id="heroApySub">Pool utilisation: <span id="heroUtil">67%</span> — High demand → Higher yield</div>
+      <div class="hero-apy" id="heroApy">–</div>
+      <div class="hero-apy-sub" id="heroApySub">Pool utilisation: <span id="heroUtil">–</span></div>
       <div class="hero-stats">
         <div class="hs">
-          <div class="hs-val" id="statPool">2.85M</div>
+          <div class="hs-val" id="statPool">–</div>
           <div class="hs-label">Pool Size</div>
         </div>
         <div class="hs">
@@ -530,7 +530,9 @@
     <!-- GOD MODE: POOL ACTIVITY FEED -->
     <div class="activity-section">
       <div class="activity-title">Live Pool Activity</div>
-      <div class="activity-feed" id="activityFeed"></div>
+      <div class="activity-feed" id="activityFeed">
+        <div style="padding:16px;text-align:center;color:var(--text-muted,#5A6080);font-size:13px;">No activity yet — pool opens at launch, 24 January 2027.</div>
+      </div>
     </div>
 
     <!-- POOL STATS -->
@@ -539,7 +541,7 @@
       <div class="stats-card">
         <div class="stat-row">
           <span class="stat-label">Total Pool Size</span>
-          <span class="stat-value" id="psSizeVal">2,847,500 INDX</span>
+          <span class="stat-value" id="psSizeVal">– INDX</span>
         </div>
         <div class="stat-row">
           <span class="stat-label">Total Borrowed</span>
@@ -613,7 +615,7 @@
     </div>
     <div class="sheet-row">
       <span class="sr-label">Current APY</span>
-      <span class="sr-value green" id="confirmSheetApy">11.2%</span>
+      <span class="sr-value green" id="confirmSheetApy">–</span>
     </div>
     <div class="sheet-row">
       <span class="sr-label">Est. daily yield</span>
@@ -674,8 +676,12 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const INDX_PRICE = 0.24;
-let APY = 0.112; // updated from lending-pool-stats edge function
-let poolTotalDeposited = 2847500;
+// Corrected 2026-07-25: fallback defaults were fabricated (11.2% APY, 2,847,500 INDX pool) — the
+// lending-pool-stats edge function itself is real (queries the real lending_positions table, real
+// kink interest-rate model, real Pyth SOL/USD price), so it's honest to default to 0 while it loads
+// rather than showing invented numbers pre-fetch.
+let APY = 0;
+let poolTotalDeposited = 0;
 
 const EDGE_FN_URL = 'https://zljgthfzbalsunuoohcd.supabase.co/functions/v1/lending-pool-stats';
 
@@ -776,7 +782,9 @@ function updatePositionCard() {
     document.getElementById('posDeposit').textContent = myDeposit.toLocaleString(undefined, {maximumFractionDigits: 2}) + ' INDX';
     document.getElementById('posToday').textContent = '+' + todayYield.toFixed(4) + ' INDX (~$' + (todayYield * INDX_PRICE).toFixed(2) + ')';
     document.getElementById('posTotal').textContent = '+' + totalEarned.toFixed(6) + ' INDX';
-    const share = (myDeposit / 2847500 * 100).toFixed(4);
+    // Corrected 2026-07-25: was hardcoded to the fake 2,847,500 pool size instead of the live
+    // poolTotalDeposited value fetched from the real edge function above.
+    const share = poolTotalDeposited > 0 ? (myDeposit / poolTotalDeposited * 100).toFixed(4) : '0.0000';
     document.getElementById('posShare').textContent = share + '% of pool';
   } else {
     document.getElementById('emptyPosition').style.display = 'block';
@@ -1118,6 +1126,10 @@ document.getElementById('depositInput').addEventListener('input', function() {
   updateSyncCard(parseFloat(this.value) || 0);
 });
 
+// Corrected 2026-07-25: this entire feed was fabricated — a canned list of fake deposits,
+// withdrawals, and yield events ("Yield paid to 1,247 citizens", "1,200 INDX deposited") randomly
+// selected and injected every 8-14 seconds with fake "Xs/Xm ago" timestamps, directly contradicting
+// the real pool stats fetched above (which honestly show $0/0 depositors pre-launch). Disabled.
 // ── GOD MODE — LIVE POOL ACTIVITY FEED ──
 const _AF_EVENTS = [
   {cls:'deposit',icon:'💰',texts:['500 INDX deposited','1,200 INDX deposited','250 INDX deposited','800 INDX deposited','2,000 INDX deposited'],hasAmt:true,color:'green'},
@@ -1174,7 +1186,7 @@ function seedActivityFeed() {
 }
 
 init();
-seedActivityFeed();
+// seedActivityFeed(); — Corrected 2026-07-25: disabled, see comment at _AF_EVENTS above.
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>
