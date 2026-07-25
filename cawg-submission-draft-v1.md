@@ -6,11 +6,15 @@
 
 ## Cover note to AJ — read this before using anything below
 
-Three things need to be true before this goes to CAWG, and none of them are true yet:
+Four things need to be true before this goes to CAWG, and none of them are true yet:
 
 1. **CAWG needs to actually be able to receive it.** Cook Islands Parliament is currently dissolved, caretaker government in place, general election 12 August 2026. Caretaker conventions generally block government agencies from new commitments during this period. CAWG's composition and mandate after the election are not guaranteed to be the same as today's. This draft should sit ready, not be sent, until that's resolved — check the post-election government's posture before submitting.
-2. **The citizen number in this draft is honest, not impressive, and that's deliberate.** The live Supabase `citizens` table currently shows **11 real citizens** — this is a pre-launch platform (target launch 24 January 2027), not an operating one. The seeded waitlist counter shown on the public site (2,847+) is a marketing display device, not a real user count, and using it in a government submission would be a factual misstatement to a regulator who is already wary of crypto-sector overstatement (see reality ledger §2.1, §1.4). This draft frames IN$DEX honestly as pre-launch and asks for a constructive relationship, not credibility based on scale it doesn't have yet.
-3. **This needs Cook Islands legal counsel review before it's filed anywhere.** I'm not a lawyer, and nothing in this draft should be read as legal advice. The trustee company or law firm handling the FSC/BTIB face-to-face meetings should review this before it's submitted in any form.
+2. **CAWG is not currently accepting outside submissions at all — this is bigger than the caretaker timing issue.** Per the Office of the Prime Minister's own 9 March 2026 announcement (verified 2026-07-25), CAWG is an internal cross-agency working group — OPM, FIU, FSC, Crown Law Office, MFEM, Ministry of Foreign Affairs & Immigration, Ministry of Justice — reporting findings *to the Prime Minister*, not a public consultation body. The PM's own release says explicitly: "A further timeline for any subsequent public consultation or policy development will be determined once that advice is received." No public consultation window has opened yet. Sending this now, even after the election, would likely land with no formal process to receive it. **Recommend waiting for OPM to announce a consultation window, then submitting through that process**, rather than cold-emailing a working group with no public intake.
+3. **No CAWG-specific contact exists — here are the two real, verified general channels, for AJ's judgment, not for me to pick unilaterally:**
+   - Office of the Prime Minister: pmoffice@cookislands.gov.ck | +682 25494 | Mon–Fri 8am–4pm CKT (source: pmoffice.gov.ck)
+   - FSC / Financial Intelligence Unit (CAWG co-chair): Inquire@fsc.gov.ck | +682 20798 (source: fsc.gov.ck)
+   Neither of these is a confirmed CAWG intake address — they're the general channels of the two co-chairing bodies. Given point 2 above, the better use of either right now is a low-key "we'd like to be included when CAWG opens consultation" note, not the full submission.
+4. **This needs Cook Islands legal counsel review before it's filed anywhere.** I'm not a lawyer, and nothing in this draft should be read as legal advice. No specific law firm or trustee company has been engaged yet for the FSC/BTIB face-to-face meetings (checked project files — none confirmed); whichever firm ends up handling that should review this before it's submitted in any form.
 
 Everything else below is built only from claims verified in the reality ledger — nothing here is invented, no contact name is fabricated, and the specific dollar/scale claims from the AI-generated documents this week (SBI Solana Global's fabricated quote, the "140+ partners" claim, the seeded citizen count) are deliberately excluded.
 
@@ -63,8 +67,14 @@ To be direct about what this submission is not: it is not a claim of an existing
 
 ---
 
+## Sources checked 2026-07-25 (this session)
+
+- [OPM — Government Establishes Cryptocurrency Advisory Working Group, 9 Mar 2026](https://www.pmoffice.gov.ck/2026/03/09/government-establishes-cryptocurrency-advisory-working-group/) — confirms CAWG membership, mandate, and that no public consultation window has opened
+- [OPM — Contact](https://www.pmoffice.gov.ck/contact/) / pmoffice@cookislands.gov.ck / +682 25494
+- [FSC Cook Islands — home](https://www.fsc.gov.ck/) / Inquire@fsc.gov.ck / +682 20798
+
 ## Not included in this draft — needs AJ's input before finalizing
 
-- A named CAWG contact to address this to. None was found in any public source; this needs to go through the Office of the Prime Minister / Financial Intelligence Unit general channel, or a contact AJ has directly, not a name I invent.
+- A named CAWG contact to address this to. No CAWG-specific intake address exists publicly — see cover note point 3 above for the two verified general channels. CAWG is not yet open for outside submissions (cover note point 2), so this may be moot until OPM announces a consultation process.
 - Confirmation of whether the SMART Economy Initiative is worth mentioning as a parallel track — its current application status is unconfirmed (see reality ledger §6.2); recommend leaving it out of this submission entirely unless MFEM confirms it's active.
 - Final sign-off on framing — this draft assumes a modest, honest, "we want a relationship, not a licence yet" tone. If AJ wants a different posture, that's a real editorial decision, not a fact-check one.
