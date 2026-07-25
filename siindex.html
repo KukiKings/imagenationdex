@@ -645,9 +645,13 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 </nav>
 <div class="scroll-pad"></div>
 
+<!-- FIXED 2026-07-25: added Supabase SDK so the ticker strip below can pull a real citizens count instead of a fabricated one -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
 // ── GOD MODE — SIINDEX ──────────────────────────────────────────────────────
 const INDX_PRICE_USD = 0.24;
+const SUPA_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
 
 // Feature 1: Personalised Citizen Greeting
 function gmInitGreeting() {
@@ -753,19 +757,22 @@ function gmInitCapabilityReveal() {
 }
 
 // ── GOD MODE R2: TICKER STRIP ──
-let _solPrice = 74.94;
-let _citizens = 1247;
+// FIXED 2026-07-25: was fabricated data — a fake SOL price random-walking every 6s, a fake
+// citizens counter starting at 1247 and randomly incrementing, a fake "$7.8B DEX Vol 7D", and a
+// fake "99.97% Uptime" with no real feed behind any of them. Citizens now comes from the real
+// Supabase get_waitlist_count() RPC (same pattern as home-v2.html); the invented SOL price, DEX
+// volume, and uptime figures are removed rather than replaced with a different fake number — see
+// gotchas.md.
+let _citizens = null; // null until the real count loads — never shows a fabricated starting number
 function tickerBuildItems() {
   const gs = (0.24 / 2.50 * 100).toFixed(1);
   return [
     { lbl: 'INDX', val: '$0.24 USD', cls: 'tick-gold' },
-    { lbl: 'SOL', val: '$' + _solPrice.toFixed(2) + ' USD', cls: '' },
     { lbl: 'Grand Sync', val: gs + '% to $2.50', cls: 'tick-gold' },
-    { lbl: 'Citizens', val: _citizens.toLocaleString() + ' protected', cls: 'tick-green' },
+    { lbl: 'Citizens', val: _citizens === null ? '—' : _citizens.toLocaleString() + ' protected', cls: 'tick-green' },
     { lbl: 'PQSI', val: 'T0 CLEAR ●', cls: 'tick-green' },
     { lbl: 'Civ Law', val: '2% active', cls: '' },
-    { lbl: 'DEX Vol 7D', val: '$7.8B', cls: '' },
-    { lbl: 'Uptime', val: '99.97%', cls: 'tick-green' },
+    { lbl: 'Launch', val: 'Pre-launch — 24 Jan 2027', cls: '' },
   ];
 }
 function initTicker() {
@@ -777,12 +784,14 @@ function initTicker() {
     ).join('');
   }
   render();
-  setInterval(() => {
-    _solPrice += (Math.random() - 0.48) * 0.12;
-    _solPrice = Math.max(72, Math.min(78, _solPrice));
-    _citizens += Math.random() > 0.6 ? 1 : 0;
+  (async () => {
+    try {
+      const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+      const { data } = await sb.rpc('get_waitlist_count');
+      if (typeof data === 'number' && data >= 0) _citizens = data;
+    } catch (e) {}
     render();
-  }, 6000);
+  })();
 }
 
 // ── GOD MODE R2: GRAND SYNC COUNTDOWN ──

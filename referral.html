@@ -620,16 +620,12 @@ const SEED_NAMES = [
 const COUNTRIES = ['🇳🇿','🇦🇺','🇫🇯','🇹🇴','🇸🇧','🇵🇬','🇵🇭','🇯🇵','🇰🇷','🇸🇬'];
 function getActivity() { return JSON.parse(localStorage.getItem(ACTIVITY_KEY) || '[]'); }
 function saveActivity(list) { localStorage.setItem(ACTIVITY_KEY, JSON.stringify(list.slice(0,20))); }
+// FIXED 2026-07-25: was fabricated data — this seeded fake "Recent Joins" activity
+// (fictional names/countries/timestamps) into localStorage so the feed looked live
+// on first load. No real join events exist pre-launch, so we no longer seed anything;
+// the feed now stays honestly empty until real referral activity happens. See gotchas.md.
 function seedActivityIfEmpty() {
-  const existing = getActivity();
-  if (existing.length > 0) return;
-  const now = Date.now();
-  const seeded = SEED_NAMES.map((n, i) => ({
-    name: n[0], initial: n[1], color: n[2],
-    country: COUNTRIES[i % COUNTRIES.length],
-    ts: now - (i * 8 * 60000 + Math.random() * 5 * 60000)
-  }));
-  saveActivity(seeded);
+  return;
 }
 function timeAgo(ts) {
   const diff = Date.now() - ts;
@@ -644,6 +640,10 @@ function renderActivityFeed() {
   const list = getActivity();
   const container = document.getElementById('activityList');
   if (!container) return;
+  if (!list.length) {
+    container.innerHTML = '<div style="padding:14px 16px;font-size:12px;color:var(--text-muted);text-align:center;">No activity yet — IN$DEX launches 24 January 2027</div>';
+    return;
+  }
   container.innerHTML = list.map(a => `
     <div class="activity-item">
       <div class="activity-avatar" style="background:${a.color}">${a.initial}</div>
@@ -658,13 +658,11 @@ function addActivityEvent(name, initial, color, country) {
   saveActivity(list);
   renderActivityFeed();
 }
+// FIXED 2026-07-25: was a fake growth-simulation loop — every 45-90s it injected a
+// fictional "X joined via your link" event using made-up names/countries to fake
+// live activity. Disabled; no real activity feed source exists yet. See gotchas.md.
 function startActivitySimulator() {
-  // occasionally adds a new simulated event every 45–90s to show life
-  setInterval(() => {
-    const r = SEED_NAMES[Math.floor(Math.random() * SEED_NAMES.length)];
-    const c = COUNTRIES[Math.floor(Math.random() * COUNTRIES.length)];
-    addActivityEvent(r[0], r[1], r[2], c);
-  }, 45000 + Math.random() * 45000);
+  return;
 }
 
 const SUPABASE_URL  = 'https://zljgthfzbalsunuoohcd.supabase.co';
@@ -673,12 +671,10 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 let CITIZEN_REF_CODE = '';
 let CITIZEN_REF_LINK = 'https://imagenationdex.com/join';
 
-const LEADERBOARD = [
-  { rank:1,  name:'James Tuilagi',  domain:'jamestuilagi',  referred:42, earned:2100, color:'linear-gradient(135deg,#FFD700,#FFA500)' },
-  { rank:2,  name:'Sione Fale',     domain:'sionefale',     referred:38, earned:1900, color:'linear-gradient(135deg,#C0C0C0,#A0A0A0)' },
-  { rank:3,  name:'Ana Reyes',      domain:'anareyes',      referred:31, earned:1550, color:'linear-gradient(135deg,#CD7F32,#A05020)' },
-  { rank:4,  name:'David Chen',     domain:'davidchen',     referred:27, earned:1350, color:'linear-gradient(135deg,#0099BB,#00D4FF)' },
-];
+// FIXED 2026-07-25: was a hardcoded fake leaderboard (fictional names/referral counts/earnings)
+// presented as "Top Recruiters Wave 1" — no real referral-leaderboard RPC exists yet, so
+// showing an honest empty list instead of fabricated recruiters. See gotchas.md.
+const LEADERBOARD = [];
 
 async function sbPost(path, body) {
   const r = await fetch(SUPABASE_URL + path, {
@@ -745,6 +741,10 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 function renderLeaderboard(list) {
   const rows = list || LEADERBOARD;
+  if (!rows.length) {
+    document.getElementById('leaderboard').innerHTML = '<div style="text-align:center;padding:20px 0;font-size:12px;color:var(--text-muted);">No recruiters yet — be the first to refer someone before launch on 24 January 2027.</div>';
+    return;
+  }
   document.getElementById('leaderboard').innerHTML = rows.map(l => `
 
     <div class="leaderboard-item" style="${l.isYou ? 'border:1px solid var(--cyan-border);background:var(--cyan-bg);' : ''}">
@@ -891,15 +891,16 @@ function shareNow() {
       const stored = JSON.parse(localStorage.getItem(WEEKLY_KEY) || 'null');
       if (stored && stored.length === 4) return stored;
     } catch(e) {}
-    // Seed with demo data
+    // FIXED 2026-07-25: was fabricated data — Math.random() generated fake past-week
+    // referral counts to make the chart look active. No real per-week referral history
+    // exists pre-launch, so all weeks show an honest 0. See gotchas.md.
     const now = new Date();
     const weeks = [];
     for (let i = 3; i >= 0; i--) {
       const d = new Date(now); d.setDate(d.getDate() - i * 7);
       const lbl = d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
-      weeks.push({ lbl, count: Math.floor(Math.random() * 4) + 1 });
+      weeks.push({ lbl, count: 0 });
     }
-    weeks[3].count = 0; // current week: just started
     return weeks;
   }
   function renderWeeklyChart() {

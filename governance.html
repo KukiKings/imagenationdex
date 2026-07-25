@@ -241,7 +241,8 @@
     <div class="stat-label">Active</div>
   </div>
   <div class="stat-card">
-    <div class="stat-val" style="color:var(--green);">12</div>
+    <!-- FIXED 2026-07-25: was a hardcoded fake "12" that never updated — now filled by loadPassedCount() from real data, honest "—" until it resolves -->
+    <div class="stat-val" style="color:var(--green);" id="statPassedVal">—</div>
     <div class="stat-label">Passed</div>
   </div>
   <div class="stat-card">
@@ -286,38 +287,12 @@
 </div>
 
 <!-- PASSED PANEL -->
+<!-- FIXED 2026-07-25: was two hardcoded fake "passed" proposals with fabricated vote counts
+     (3,201 votes / 5,000+ votes) that never came from Supabase — replaced with a real fetch
+     against governance_proposals?status=eq.passed, honest empty state if none exist yet. -->
 <div id="panelPassed" style="display:none;">
-  <div class="proposals">
-    <div class="proposal-card voted">
-      <div class="proposal-header">
-        <span class="proposal-tag passed-tag">PASSED</span>
-        <div class="proposal-body">
-          <div class="proposal-title">Genesis Citizen bonus: 50 INDX on signup</div>
-          <div class="proposal-author">Proposed by aj.IN$DEX · Founding Proposal</div>
-        </div>
-      </div>
-      <div class="proposal-desc">All founding citizens joining during the Genesis period receive 50 INDX as a welcome bonus, bootstrapping participation and rewarding early adopters.</div>
-      <div class="vote-bar-wrap">
-        <div class="vote-labels"><span class="vote-for">For 98%</span><span class="vote-against">Against 2%</span></div>
-        <div class="vote-bar-track"><div class="vote-bar-fill" style="width:98%;"></div></div>
-        <div class="vote-meta"><span>3,201 votes</span><span>✅ Enacted</span></div>
-      </div>
-    </div>
-    <div class="proposal-card">
-      <div class="proposal-header">
-        <span class="proposal-tag passed-tag">PASSED</span>
-        <div class="proposal-body">
-          <div class="proposal-title">98/2 Law: Citizens keep 98% of all marketplace sales</div>
-          <div class="proposal-author">Constitutional Proposal</div>
-        </div>
-      </div>
-      <div class="proposal-desc">The foundational economic law of IN$DEX sellers always keep 98% of every transaction. The 2% Civilisation Fee funds protocol development, Light Node rewards, and ecosystem growth.</div>
-      <div class="vote-bar-wrap">
-        <div class="vote-labels"><span class="vote-for">For 100%</span><span class="vote-against">Against 0%</span></div>
-        <div class="vote-bar-track"><div class="vote-bar-fill" style="width:100%;"></div></div>
-        <div class="vote-meta"><span>5,000+ votes</span><span>✅ Constitutional</span></div>
-      </div>
-    </div>
+  <div class="proposals" id="passedProposalsContainer">
+    <div style="text-align:center;padding:48px 20px;color:var(--text-muted);font-size:14px;">Loading…</div>
   </div>
 </div>
 
@@ -563,6 +538,49 @@ async function loadProposals() {
   }
 }
 
+// FIXED 2026-07-25: real "Passed" count + passed-proposals list (was hardcoded fake "12"
+// stat and two fabricated proposal cards with made-up vote totals — see gotchas.md).
+async function loadPassedCount() {
+  try {
+    const passed = await sbFetch('/rest/v1/governance_proposals?status=eq.passed&select=id');
+    document.getElementById('statPassedVal').textContent = (passed || []).length;
+  } catch (e) {
+    document.getElementById('statPassedVal').textContent = '—';
+  }
+}
+
+async function loadPassedProposals() {
+  const container = document.getElementById('passedProposalsContainer');
+  try {
+    const passed = await sbFetch('/rest/v1/governance_proposals?status=eq.passed&order=created_at.desc&select=*');
+    if (!passed || passed.length === 0) {
+      container.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">No passed proposals yet</div><div class="empty-desc">The Civilisation is young. Proposals that pass will show up here with their real vote counts.</div></div>';
+      return;
+    }
+    container.innerHTML = passed.map(p => {
+      const total  = (p.votes_for || 0) + (p.votes_against || 0);
+      const forPct = total > 0 ? Math.round((p.votes_for / total) * 100) : 0;
+      return `<div class="proposal-card voted">
+        <div class="proposal-header">
+          <span class="proposal-tag passed-tag">PASSED</span>
+          <div class="proposal-body">
+            <div class="proposal-title">${esc(p.title)}</div>
+            <div class="proposal-author">Proposed by Citizen Assembly · ${relTime(p.created_at)}</div>
+          </div>
+        </div>
+        <div class="proposal-desc">${esc(p.description)}</div>
+        <div class="vote-bar-wrap">
+          <div class="vote-labels"><span class="vote-for">For ${forPct}%</span><span class="vote-against">Against ${100 - forPct}%</span></div>
+          <div class="vote-bar-track"><div class="vote-bar-fill" style="width:${forPct}%;"></div></div>
+          <div class="vote-meta"><span>${total.toLocaleString()} votes</span><span>✅ Enacted</span></div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><div class="empty-title">Couldn\'t load passed proposals</div><div class="empty-desc">Check your connection and try again.</div></div>';
+  }
+}
+
 // ── LOAD MY VOTES PANEL ──
 async function loadMyVotesPanel() {
   if (!CITIZEN_ID || Object.keys(myVotes).length === 0) return;
@@ -661,6 +679,7 @@ function switchTab(el, tab) {
   const key = tab.charAt(0).toUpperCase() + tab.slice(1);
   document.getElementById('panel' + key).style.display = 'block';
   if (tab === 'mine') loadMyVotesPanel();
+  if (tab === 'passed') loadPassedProposals();
 }
 
 // ── PROPOSE SHEET ──
@@ -832,27 +851,11 @@ function showToast(msg) {
   requestAnimationFrame(draw);
 })();
 
-// Feature 3: Live voter count — add live pulse dots and auto-increment counts
-function injectLiveVoterPulse() {
-  document.querySelectorAll('.vote-meta span:first-child').forEach(el => {
-    if (el.querySelector('.vote-pulse')) return;
-    el.classList.add('vote-count-anim');
-    const pulse = document.createElement('span');
-    pulse.className = 'vote-pulse';
-    pulse.innerHTML = '<span class="vp-dot"></span> Live';
-    el.appendChild(pulse);
-    // Randomly tick up votes every 8-20s per proposal card
-    const delay = 8000 + Math.random()*12000;
-    setTimeout(function tick(){
-      const cur = parseInt(el.textContent.replace(/,/g,'')) || 0;
-      const newVal = cur + 1;
-      el.firstChild.textContent = newVal.toLocaleString() + ' votes cast';
-      el.classList.add('flash');
-      setTimeout(() => el.classList.remove('flash'), 300);
-      setTimeout(tick, 8000 + Math.random()*14000);
-    }, delay);
-  });
-}
+// FIXED 2026-07-25: was a fake "live" vote counter — a setTimeout loop that used
+// Math.random() to invent new votes every 8-20s with no real data behind it (classic
+// fabricated-activity pattern flagged in gotchas.md). Real vote counts already refresh
+// from Supabase in castVote(); this no longer fakes additional activity on top of that.
+function injectLiveVoterPulse() { /* no-op — see fix note above */ }
 
 // Feature 4: Live countdown timers on proposal cards
 function injectCountdownBadges() {
@@ -898,6 +901,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Load data
   await loadMyVotes();
   await loadProposals();
+  await loadPassedCount(); // FIXED 2026-07-25: real count, was hardcoded fake "12"
 });
 
 // ════════════════════════════════════════════

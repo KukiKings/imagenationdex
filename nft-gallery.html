@@ -159,12 +159,16 @@
 
 <!-- GRID VIEW -->
 <div id="gridView">
-  <!-- Genesis NFT receipt (demo, shown as minted from onboarding) -->
+  <!-- FIXED 2026-07-25: was a "demo" Genesis Mint Receipt card shown to EVERY visitor
+       as fact ("Minted on Solana", a fake Math.random() token ID, mint date "today"),
+       regardless of whether they're actually a genesis citizen or minted anything.
+       Now hidden by default and only shown after a real Supabase check confirms
+       citizens.genesis_citizen = true for this session. See gotchas.md. -->
   <div class="section-label" id="secAll">All Assets</div>
   <div class="nft-grid" id="nftGrid">
 
-    <!-- GENESIS RECEIPT NFT -->
-    <div class="nft-card glow" onclick="openDetail('genesis')">
+    <!-- GENESIS RECEIPT NFT (hidden until confirmed real) -->
+    <div class="nft-card glow" id="genesisCard" style="display:none;" onclick="openDetail('genesis')">
       <div class="nft-art" style="background:linear-gradient(135deg,rgba(43,53,216,0.3),rgba(139,63,232,0.3));">
         🏛️
         <span class="nft-badge receipt">RECEIPT</span>
@@ -219,7 +223,8 @@
 <!-- LIST VIEW -->
 <div id="listView" style="display:none;">
   <div class="nft-list" id="nftList">
-    <div class="nft-list-item" onclick="openDetail('genesis')">
+    <!-- FIXED 2026-07-25: hidden until confirmed real, same as the grid card above -->
+    <div class="nft-list-item" id="genesisListItem" style="display:none;" onclick="openDetail('genesis')">
       <div class="nft-list-thumb" style="background:linear-gradient(135deg,rgba(43,53,216,0.3),rgba(139,63,232,0.3));">🏛️</div>
       <div class="nft-list-body">
         <div class="nft-list-name">Genesis Mint Receipt</div>
@@ -335,21 +340,10 @@
 
 <script>
 // NFT data store in real app this comes from Solana/Metaplex API
-const NFT_STORE = {
-  genesis: {
-    emoji: '🏛️',
-    name: 'Genesis Mint Receipt',
-    sub: 'IN$DEX Founding Citizen · Compressed NFT (Bubblegum)',
-    type: 'Receipt',
-    id: 'GNES-' + Math.random().toString(36).slice(2,8).toUpperCase(),
-    date: new Date().toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'}),
-    royalty: '5%',
-    artBg: 'linear-gradient(135deg,rgba(43,53,216,0.3),rgba(139,63,232,0.3))',
-    value: '50 INDX',
-    showRoyalty: true,
-    category: 'receipt'
-  }
-};
+// FIXED 2026-07-25: no longer hardcodes a fake "genesis" entry for every visitor —
+// the real entry (if any) is added by checkRealGenesisStatus() below after a real
+// Supabase check. See gotchas.md.
+const NFT_STORE = {};
 
 // Load any NFTs minted in this session (from receipt.html / rwa.html)
 function loadSessionNFTs() {
@@ -376,10 +370,50 @@ let currentView = 'grid';
 let currentTab = 'all';
 let currentNFT = null;
 
+// FIXED 2026-07-25: real check for genesis status instead of always assuming it —
+// see gotchas.md. Uses the same Supabase project/anon key already wired into
+// citizen-dashboard.html and login.html.
+const SUPA_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPA_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+
+async function checkRealGenesisStatus() {
+  const citizenId = sessionStorage.getItem('citizen_id');
+  if (!citizenId) return;
+  try {
+    const res = await fetch(
+      `${SUPA_URL}/rest/v1/citizens?id=eq.${encodeURIComponent(citizenId)}&select=genesis_citizen,created_at`,
+      { headers: { apikey: SUPA_ANON_KEY, Authorization: `Bearer ${SUPA_ANON_KEY}` } }
+    );
+    if (!res.ok) return;
+    const rows = await res.json();
+    const row = rows && rows[0];
+    if (!row || !row.genesis_citizen) return; // not a genesis citizen — leave card hidden
+    NFT_STORE.genesis = {
+      emoji: '🏛️',
+      name: 'Genesis Mint Receipt',
+      sub: 'IN$DEX Founding Citizen · Compressed NFT (Bubblegum)',
+      type: 'Receipt',
+      id: 'GNES-' + citizenId.slice(0, 8).toUpperCase(),
+      date: row.created_at ? new Date(row.created_at).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'}) : 'Genesis',
+      royalty: '5%',
+      artBg: 'linear-gradient(135deg,rgba(43,53,216,0.3),rgba(139,63,232,0.3))',
+      value: '50 INDX',
+      showRoyalty: true,
+      category: 'receipt'
+    };
+    const gc = document.getElementById('genesisCard');
+    const gl = document.getElementById('genesisListItem');
+    if (gc) gc.style.display = '';
+    if (gl) gl.style.display = '';
+    updateStats();
+  } catch (e) { /* no real data available — card stays hidden */ }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   loadSessionNFTs();
   updateStats();
   renderGrid();
+  checkRealGenesisStatus();
 });
 
 function updateStats() {

@@ -481,7 +481,14 @@
     <button class="tlb-export-btn" onclick="exportTimeline()">📋 Export Full Timeline</button>
   </div>
 
+  <!-- FIXED 2026-07-25: this whole panel is static illustrative content (confirmed: no
+  supabase.createClient or fetch call anywhere in this file) presented with zero
+  disclaimer as real legal evidence-readiness status, including a specific citizen count
+  ("1,240 of 2,260 verified") that's implausible at IN$DEX's actual pre-launch scale
+  (11 real citizens). Adding an explicit illustrative-template disclaimer and removing
+  the fabricated citizen count below — see gotchas.md. -->
   <div class="section-lbl">Evidence Vault Status <span class="card-badge badge-green" style="margin-left:6px">GOD MODE</span></div>
+  <div style="font-size:11px;color:var(--text-muted,#9aa);margin-bottom:8px;padding:8px 10px;background:rgba(255,184,0,0.08);border-radius:8px;">⚠ Illustrative template — these completeness percentages are example content, not a live tracked audit.</div>
   <div id="vaultCategories"></div>
 
   <button class="freeze-btn" onclick="freezeEvidence()">&#10052;&#65039; Freeze Evidence Snapshot &#8212; Chain of Custody</button>
@@ -857,7 +864,7 @@
     {icon:'&#9878;&#65039;',name:'Decision Ledger Entries',pct:72,status:'Last updated: 2026-07-10'},
     {icon:'&#128737;&#65039;',name:'Security Ledger Records',pct:65,status:'Last updated: 2026-07-09'},
     {icon:'&#9726;',name:'Artifact Ledger Entries',pct:80,status:'Last updated: 2026-07-10'},
-    {icon:'&#9989;',name:'Citizen Consent Receipts',pct:55,status:'Partial — 1,240 of 2,260 verified'},
+    {icon:'&#9989;',name:'Citizen Consent Receipts',pct:55,status:'Partial — manual verification, not yet automated'},
     {icon:'&#128181;',name:'Transaction Evidence',pct:90,status:'AUSTRAC-compliant records maintained'},
     {icon:'&#127963;&#65039;',name:'Governance Vote Records',pct:88,status:'All votes since 2025 archived'},
     {icon:'&#128196;',name:'Policy &amp; Terms Versions',pct:60,status:'Privacy policy update pending'},
@@ -1216,16 +1223,25 @@ SIINDEX can prepare. Lawyers must represent.`;
   }
 
   /* ── GOD MODE 4: Evidence Freeze ── */
-  function freezeEvidence() {
+  // FIXED 2026-07-25: "chain of custody" hash was 'COC-'+Date.now()+Math.random() — a
+  // fabricated random string with no cryptographic relationship to the frozen content,
+  // presented as a chain-of-custody hash in a legal defense tool. Now computes a real
+  // SHA-256 digest of the actual snapshot content via the Web Crypto API, so the hash
+  // genuinely verifies the frozen data — see gotchas.md.
+  async function freezeEvidence() {
     const ts = new Date().toISOString().replace('T',' ').slice(0,19)+' UTC';
-    const hash = 'COC-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,8).toUpperCase();
     const avgPct = Math.round(EVIDENCE_VAULT.reduce((a,c)=>a+c.pct,0)/EVIDENCE_VAULT.length);
-    const entry = {
-      ts,
-      hash,
-      desc: `Evidence snapshot frozen. ${EVIDENCE_VAULT.length} categories. Average completeness: ${avgPct}%. Authority: SIINDEX Legal Defense Layer.`,
-      categories: EVIDENCE_VAULT.map(c=>c.name+' ('+c.pct+'%)'),
-    };
+    const categories = EVIDENCE_VAULT.map(c=>c.name+' ('+c.pct+'%)');
+    const desc = `Evidence snapshot frozen. ${EVIDENCE_VAULT.length} categories. Average completeness: ${avgPct}%. Authority: SIINDEX Legal Defense Layer.`;
+    const payload = JSON.stringify({ ts, desc, categories });
+    let hash;
+    try {
+      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload));
+      hash = 'SHA256-' + Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,32).toUpperCase();
+    } catch(e) {
+      hash = 'COC-'+Date.now().toString(36).toUpperCase(); // fallback if Web Crypto unavailable — no random component
+    }
+    const entry = { ts, hash, desc, categories };
     _frozenEntries.unshift(entry);
     localStorage.setItem('indx_legal_frozen',JSON.stringify(_frozenEntries.slice(0,20)));
     document.getElementById('statFrozen').textContent = _frozenEntries.length;

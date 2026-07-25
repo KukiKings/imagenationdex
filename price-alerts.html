@@ -75,6 +75,10 @@
     <div class="section">
       <!-- WATCHLIST -->
       <div style="font-size:12px;font-weight:800;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px;">Watchlist</div>
+      <!-- FIXED 2026-07-25: these SOL/ETH/BTC prices are static placeholders, not a
+           live feed (INDX itself is fixed at $0.24 — see driftTokens fix above).
+           Disclosed so they aren't mistaken for real-time prices. See gotchas.md. -->
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">⚠️ Illustrative prices — no live market feed connected yet.</div>
       <div class="watchlist-row" id="watchlist"></div>
 
       <!-- CREATE ALERT -->
@@ -178,11 +182,10 @@ function showToast(m){const t=document.getElementById('toast');t.textContent=m;t
 
 // ── GOD MODE — price-alerts.html ──
 const AL_KEY='indx_alerts_list';
-const SEED_ALERTS=[
-  {tok:'INDX',dir:'up',price:'0.42',notif:['Push','InApp'],date:'4 Jun'},
-  {tok:'INDX',dir:'down',price:'0.27',notif:['Push','Agent'],date:'1 Jun'},
-  {tok:'SOL',dir:'up',price:'160',notif:['InApp'],date:'30 May'},
-];
+// FIXED 2026-07-25: was seeding every citizen's alert list with 3 fake
+// pre-existing alerts (as if they'd already set them) — honest empty default
+// instead. See gotchas.md.
+const SEED_ALERTS=[];
 
 // F1: Alert persistence
 function loadAlerts(){try{return JSON.parse(localStorage.getItem(AL_KEY)||'null')||SEED_ALERTS;}catch(e){return SEED_ALERTS;}}
@@ -215,23 +218,13 @@ function createAlert(){
   document.getElementById('alertPrice').value='';
 }
 
-// F2: Live multi-token drift (all 4 tokens)
-const TOKEN_DRIFT=[0.003,0.5,8,150]; // per-tick drift magnitudes
-function driftTokens(){
-  tokens.forEach((t,i)=>{
-    const prev=t.price;
-    const drift=(Math.random()-0.47)*TOKEN_DRIFT[i];
-    t.price=Math.max(t.price*0.9,t.price+drift);
-    t.up=t.price>=prev;
-    const pct=((t.price-t.price/(1+(Math.random()*0.04-0.02)))/t.price*100);
-    t.ch=(t.up?'+':'')+Math.abs(pct).toFixed(1)+'%';
-  });
-  // Keep INDX in $0.21-$0.28 range
-  tokens[0].price=Math.max(0.21,Math.min(0.28,tokens[0].price));
-  selPrice=tokens.find(t=>t.sym===selTok)?.price.toFixed(selTok==='INDX'?4:0)||selPrice;
-  buildWatchlist();
-  updateNote();
-}
+// FIXED 2026-07-25: was driftTokens() — a setInterval (every 4s) that used
+// Math.random() to fabricate live price movement for all 4 watchlist tokens,
+// including drifting INDX itself between $0.21-$0.28. INDX is fixed at $0.24
+// USD (Genesis price, no live market yet) — this violated that constant
+// outright. Disabled entirely; no fake price feed for any token here.
+// See gotchas.md.
+function driftTokens(){ /* no-op: no real price feed connected yet */ }
 
 // F3: Grand Synchronicity target quick-fill
 function setGSTarget(){
@@ -246,25 +239,14 @@ function setGSTarget(){
   showToast('🌐 Grand Synchronicity target pre-filled');
 }
 
-// F4: Alert trigger simulator
-let _simTimer=null;
-function scheduleAlertSim(){
-  const delay=90000+Math.random()*30000;
-  _simTimer=setTimeout(()=>{
-    const alerts=loadAlerts();
-    if(!alerts.length){scheduleAlertSim();return;}
-    const a=alerts[Math.floor(Math.random()*alerts.length)];
-    document.getElementById('anTitle').textContent=`${a.tok} ${a.dir==='up'?'rises above':'falls below'} $${a.price}`;
-    document.getElementById('anSub').textContent=`Alert triggered · Price crossed $${a.price}`;
-    document.getElementById('alertNotif').classList.add('show');
-    setTimeout(()=>document.getElementById('alertNotif').classList.remove('show'),5000);
-    scheduleAlertSim();
-  },delay);
-}
+// FIXED 2026-07-25: was scheduleAlertSim() — a recursive setTimeout (every
+// ~90-120s) that randomly picked one of the citizen's real saved alerts and
+// fired a fake "Alert triggered · Price crossed $X" notification, even though
+// no real price ever crossed anything (there's no live price feed). Disabled —
+// see gotchas.md.
 function dismissAlertNotif(){document.getElementById('alertNotif').classList.remove('show');}
 
-buildWatchlist();updateNote();renderAlerts();scheduleAlertSim();
-setInterval(driftTokens,4000);
+buildWatchlist();updateNote();renderAlerts();
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

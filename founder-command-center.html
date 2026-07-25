@@ -346,23 +346,21 @@ function tickCountdowns() {
 tickCountdowns();
 setInterval(tickCountdowns, 1000);
 
-// ── GOD MODE: LIVE RATE TICKER ─────────────────────────────────────────
-let _tickerPrice = INDX_PRICE_USD;
-let _tickerOpen  = INDX_PRICE_USD;
+// FIXED 2026-07-25: was a fake "Live Rate Ticker" — Math.random() jitter on price and a
+// randomly-generated 24h volume, refreshed every 8s to look like a real live market feed.
+// There is no live exchange for INDX pre-launch, so this fabricated a price history and
+// trading volume that don't exist. Now shows the real fixed genesis price and an honest
+// "no live market yet" state instead of inventing movement. See gotchas.md.
 function updateTicker() {
-  _tickerPrice = Math.max(0.18, Math.min(0.32, _tickerPrice + (Math.random() - 0.5) * 0.003));
-  const chg = ((_tickerPrice - _tickerOpen) / _tickerOpen) * 100;
-  const mcap = (_tickerPrice * TOTAL_SUPPLY / 1e6).toFixed(1);
-  const vol  = (Math.random() * 2.4 + 0.8).toFixed(2);
-  document.getElementById('tickerPrice').textContent  = '$' + _tickerPrice.toFixed(3);
+  const mcap = (INDX_PRICE_USD * TOTAL_SUPPLY / 1e6).toFixed(1);
+  document.getElementById('tickerPrice').textContent  = '$' + INDX_PRICE_USD.toFixed(3);
   const chgEl = document.getElementById('tickerChange');
-  chgEl.textContent = (chg >= 0 ? '+' : '') + chg.toFixed(2) + '%';
-  chgEl.style.color = chg >= 0 ? 'var(--green)' : 'var(--red)';
-  document.getElementById('tickerMcap').textContent   = '$' + mcap + 'M';
-  document.getElementById('tickerVol').textContent    = '$' + vol + 'M';
+  chgEl.textContent = 'Pre-launch';
+  chgEl.style.color = 'var(--text-dim)';
+  document.getElementById('tickerMcap').textContent   = '$' + mcap + 'M (genesis)';
+  document.getElementById('tickerVol').textContent    = '— (no live market yet)';
 }
 updateTicker();
-setInterval(updateTicker, 8000);
 
 // ── FOUNDER WALLET ─────────────────────────────────────────────────────
 function initWallet() {
@@ -373,24 +371,28 @@ function initWallet() {
   const unstaked     = founderBase - staked;
   const yieldMonthly = Math.floor(staked * 0.112 / 12);
   const usdVal       = (founderBase * INDX_PRICE_USD).toLocaleString('en-AU', {maximumFractionDigits: 0});
-  const changeVal    = (Math.random() * 8 + 2).toFixed(2);
 
   document.getElementById('walletIndx').textContent   = founderBase.toLocaleString();
   document.getElementById('walletUsd').textContent    = '≈ $' + usdVal + ' USD';
   document.getElementById('walletStaked').textContent = staked.toLocaleString();
   document.getElementById('walletYield').textContent  = yieldMonthly.toLocaleString() + ' INDX';
+  // FIXED 2026-07-25: was Math.random()*8+2 fabricating a fake "+X.XX% (30d)" balance
+  // change every load — no real balance-history tracking exists yet, so this now shows
+  // an honest "no history yet" state instead of inventing a growth number. See gotchas.md.
   const chgEl = document.getElementById('walletChange');
-  chgEl.textContent = '↑ +' + changeVal + '% (30d)';
-  chgEl.className = 'wallet-change up';
+  chgEl.textContent = 'No 30d history yet';
+  chgEl.className = 'wallet-change';
+  chgEl.style.background = 'transparent';
+  chgEl.style.color = 'var(--text-dim)';
 
-  // Store history for sparkline
+  // FIXED 2026-07-25: was seeding 7 fake days of balance history with
+  // founderBase * (0.94 + Math.random()*0.10) to draw a sparkline that looked like real
+  // trading activity. Real balance doesn't change day-to-day pre-launch, so we now only
+  // record the actual balance on real visits — no fabricated past values. See gotchas.md.
   let hist = [];
   try { hist = JSON.parse(localStorage.getItem('indx_founder_balance_hist') || '[]'); } catch(e) {}
   if (hist.length === 0) {
-    // Seed 7 days of simulated history
-    for (let i = 6; i >= 0; i--) {
-      hist.push({ ts: Date.now() - i * 86400000, bal: founderBase * (0.94 + Math.random() * 0.10) });
-    }
+    hist.push({ ts: Date.now(), bal: founderBase });
     localStorage.setItem('indx_founder_balance_hist', JSON.stringify(hist));
   }
   // Append today if last entry is old
@@ -406,6 +408,16 @@ function initWallet() {
 // ── GOD MODE: BALANCE SPARKLINE ────────────────────────────────────────
 function drawSparkline(hist) {
   const canvas = document.getElementById('balanceSparkline');
+  // FIXED 2026-07-25: guard against a single-point history (now the honest starting
+  // state since we no longer fabricate 7 days of fake history — see initWallet fix).
+  // Division by (vals.length - 1) would be NaN with exactly 1 point.
+  if (!hist || hist.length < 2) {
+    const ctx0 = canvas.getContext('2d');
+    ctx0.clearRect(0, 0, canvas.width, canvas.height);
+    const rangeLabel = document.getElementById('sparklineRange');
+    if (rangeLabel) rangeLabel.textContent = 'Not enough history yet';
+    return;
+  }
   const dpr    = window.devicePixelRatio || 1;
   const W      = canvas.offsetWidth || canvas.parentElement.clientWidth - 28;
   const H      = 52;
@@ -461,35 +473,25 @@ function drawSparkline(hist) {
   document.getElementById('sparklineRange').textContent = minB + ' – ' + maxB + ' INDX';
 }
 
-// ── TREASURY ───────────────────────────────────────────────────────────
+// FIXED 2026-07-25: these were hardcoded "Simulated treasury values" ($85M INDX reserve,
+// $2.4M USDC, $680K alt assets, etc.) displayed as real dollar figures on AJ's own
+// command center with no "not real" labeling anywhere in the UI — exactly the fake
+// treasury-balance pattern flagged in gotchas.md. No live treasury-tracking backend
+// exists yet, so this now shows an honest "not tracked live yet" state instead of
+// invented numbers. Wire this to a real Supabase/on-chain treasury source when one exists.
 function initTreasury() {
-  // Simulated treasury values — update these as real data comes in
-  const indxReserve  = 85_000_000;
-  const usdcStable   = 2_400_000;
-  const altAssets    = 680_000;
-  const monthlyBurn  = 95_000;
-  const civFund      = 142_500;
-  const totalUsd     = (indxReserve * INDX_PRICE_USD) + usdcStable + altAssets;
-  const runway       = Math.floor(totalUsd / monthlyBurn);
-  const healthPct    = Math.min(100, Math.round((runway / 36) * 100));
+  document.getElementById('treasuryBal').textContent  = 'Not tracked live yet';
+  document.getElementById('treasuryRunway').textContent = '—';
+  document.getElementById('tIndx').textContent   = '—';
+  document.getElementById('tUsdc').textContent   = '—';
+  document.getElementById('tAlt').textContent    = '—';
+  document.getElementById('tBurn').textContent   = '—';
+  document.getElementById('tCivFund').textContent= '—';
+  document.getElementById('gaugePct').textContent = '—';
 
-  document.getElementById('treasuryBal').textContent  = '$' + (totalUsd / 1e6).toFixed(2) + 'M USD';
-  document.getElementById('treasuryRunway').textContent = runway + ' months';
-  document.getElementById('tIndx').textContent   = indxReserve.toLocaleString() + ' INDX';
-  document.getElementById('tUsdc').textContent   = '$' + usdcStable.toLocaleString();
-  document.getElementById('tAlt').textContent    = '$' + altAssets.toLocaleString();
-  document.getElementById('tBurn').textContent   = '$' + monthlyBurn.toLocaleString() + '/mo';
-  document.getElementById('tCivFund').textContent= '$' + civFund.toLocaleString() + ' accum.';
-  document.getElementById('gaugePct').textContent = healthPct + '%';
-
-  // Animate gauge arc
-  const circumference = 175.93;
-  const offset = circumference * (1 - healthPct / 100);
-  setTimeout(() => {
-    const arc = document.getElementById('gaugeArc');
-    arc.style.strokeDashoffset = offset;
-    arc.style.stroke = healthPct > 70 ? 'var(--green)' : healthPct > 40 ? 'var(--gold)' : 'var(--red)';
-  }, 400);
+  // No fake gauge fill — leave the arc at 0 until real treasury data exists
+  const arc = document.getElementById('gaugeArc');
+  if (arc) arc.style.stroke = 'var(--text-dim)';
 }
 
 // ── GOD MODE: PRIVATE ALERT FEED ──────────────────────────────────────

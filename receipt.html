@@ -279,12 +279,20 @@
         <div class="vs-feed-item" id="vsf1"></div>
         <div class="vs-feed-item" id="vsf2"></div>
       </div>
-      <div class="vs-finalized" id="vsFinalized">🟢 BLOCK FINALIZED — IMMUTABLE ON CHAIN</div>
+      <div class="vs-finalized" id="vsFinalized">Not yet recorded on Solana — pre-launch preview</div>
     </div>
 
     <!-- TRIANGULAR FUSION ENGINE -->
+    <!-- FIXED 2026-07-25: every field below (NFT ID, TX hash, block number, ZK proof
+         hash) was Math.random()-generated fiction, and the pass/clear/immutable rows
+         were hardcoded static claims — none of it backed by a real on-chain check,
+         since send.html/pay.html never pass a real tx param into this page. Presenting
+         this as a verified, immutable, on-chain receipt for a transaction that was
+         never actually recorded on Solana was actively misleading. Now shows honest
+         pending state until real settlement exists. See gotchas.md. -->
     <div class="fusion-section">
       <div class="fusion-title">🔺 Triangular Fusion Engine — Layer 1</div>
+      <div style="font-size:11px;color:var(--gold);margin-bottom:10px;">⚠️ Preview — IN$DEX hasn't launched. This transaction has not been recorded on Solana yet; the fields below will show real on-chain data once settlement is live.</div>
       <div class="fusion-card">
         <div class="fusion-row">
           <span class="fr-label">Receipt NFT ID</span>
@@ -300,15 +308,15 @@
         </div>
         <div class="fusion-row">
           <span class="fr-label">SIINDEX Pre-Flight</span>
-          <span class="fr-val green">✅ 7/7 Passed</span>
+          <span class="fr-val" style="color:var(--text-muted);">Pending — pre-launch</span>
         </div>
         <div class="fusion-row">
           <span class="fr-label">Sanctions Scan</span>
-          <span class="fr-val green">✅ Clear</span>
+          <span class="fr-val" style="color:var(--text-muted);">Pending — pre-launch</span>
         </div>
         <div class="fusion-row">
           <span class="fr-label">PQSI Threat Level</span>
-          <span class="fr-val green">T0 — All Clear</span>
+          <span class="fr-val" style="color:var(--text-muted);">Not yet scanned</span>
         </div>
         <div class="fusion-row">
           <span class="fr-label">ZK Proof Hash</span>
@@ -320,7 +328,7 @@
         </div>
         <div class="fusion-row">
           <span class="fr-label">Receipt Immutable</span>
-          <span class="fr-val green">✅ On-chain · Cannot be altered</span>
+          <span class="fr-val" style="color:var(--text-muted);">Not yet on-chain</span>
         </div>
       </div>
     </div>
@@ -485,44 +493,20 @@ function initCommentary(amount, recipientSlug) {
   setInterval(function() { idx = (idx + 1) % msgs.length; showMsg(idx); }, 5000);
 }
 
-// ── GOD MODE: VALIDATOR TICKER ──
-function initValidatorTicker() {
-  var TARGET = 1247, DURATION = 8000, INTERVAL = 80, step = 0;
-  var steps = DURATION / INTERVAL;
-  var countEl = document.getElementById('vsCount');
-  var fillEl = document.getElementById('vsFill');
-  var feedItems = [document.getElementById('vsf0'), document.getElementById('vsf1'), document.getElementById('vsf2')];
-  var finalizedEl = document.getElementById('vsFinalized');
-  var validators = [
-    'v4sE…3kXP · Validators.app · ✓ Signed',
-    'bR2m…9wFJ · Solana Foundation · ✓ Signed',
-    'pQ7n…1mLK · Everstake · ✓ Signed'
-  ];
-  validators.forEach(function(v, i) {
-    setTimeout(function() {
-      if (feedItems[i]) { feedItems[i].textContent = v; feedItems[i].classList.add('vis'); }
-    }, (i + 1) * 1800);
-  });
-  var timer = setInterval(function() {
-    step++;
-    var progress = step / steps;
-    var eased = 1 - Math.pow(1 - progress, 3);
-    var current = Math.round(eased * TARGET);
-    countEl.textContent = current.toLocaleString();
-    fillEl.style.width = (eased * 100) + '%';
-    if (step >= steps) {
-      clearInterval(timer);
-      countEl.textContent = TARGET.toLocaleString();
-      fillEl.style.width = '100%';
-      finalizedEl.style.display = 'block';
-    }
-  }, INTERVAL);
-}
+// FIXED 2026-07-25: this used to animate a fake count up to 1,247 "validators
+// confirming" with three invented validator names/signatures ("v4sE…3kXP ·
+// Validators.app · ✓ Signed" etc.) streaming in, ending in a fake "BLOCK
+// FINALIZED" state — pure theater with no real Solana confirmation behind it.
+// Now just shows the honest pre-launch label already set in the HTML/CSS
+// above and does nothing else. See gotchas.md.
+function initValidatorTicker() { /* no-op: no real settlement to confirm yet */ }
 
 // ── GOD MODE: RECEIPT VAULT ──
 function saveAndLoadHistory(amount, senderSlug, recipientSlug, txHash) {
   var hist = JSON.parse(localStorage.getItem('indx_receipt_hist') || '[]');
-  hist.unshift({ amount: amount, sender: senderSlug, recipient: recipientSlug, tx: txHash.slice(0, 8), ts: Date.now() });
+  // FIXED 2026-07-25: txHash is now null when there's no real on-chain tx (see top
+  // of file) — guard against calling .slice() on null.
+  hist.unshift({ amount: amount, sender: senderSlug, recipient: recipientSlug, tx: txHash ? txHash.slice(0, 8) : 'pending', ts: Date.now() });
   if (hist.length > 10) hist.splice(10);
   localStorage.setItem('indx_receipt_hist', JSON.stringify(hist));
   var past = hist.slice(1, 6);
@@ -574,7 +558,12 @@ function goReplay() {
 
 const params     = new URLSearchParams(window.location.search);
 const rawAmount  = parseFloat(params.get('amount') || '25');
-const txHash     = params.get('tx') || generateTxHash();
+// FIXED 2026-07-25: was `params.get('tx') || generateTxHash()` — since send.html/
+// pay.html never pass a real 'tx' param, this fabricated an 88-char fake hash on
+// every single receipt and displayed/linked it as if it were a real Solana tx.
+// isRealTx tracks whether we actually have one; txHash is null when we don't.
+const isRealTx   = !!params.get('tx');
+const txHash     = params.get('tx') || null;
 const senderP    = params.get('sender') || sessionStorage.getItem('citizen_name') || 'mariasantos';
 const recipientP = params.get('recipient') || 'jakenuku';
 
@@ -594,12 +583,14 @@ function init() {
   document.getElementById('recipientName').textContent  = toTitle(recipientSlug);
   document.getElementById('recipientDomain').textContent = recipientSlug + '.IN$DEX';
 
-  const shortHash = txHash.slice(0,4) + '…' + txHash.slice(-8);
-  document.getElementById('txHashDisplay').textContent = txHash;
+  const shortHash = isRealTx ? (txHash.slice(0,4) + '…' + txHash.slice(-8)) : 'Pending — pre-launch';
+  document.getElementById('txHashDisplay').textContent = isRealTx ? txHash : 'Not yet recorded on Solana — pre-launch';
   document.getElementById('fusionTxHash').textContent  = shortHash;
-  document.getElementById('nftId').textContent         = 'NFT-' + genId();
-  document.getElementById('fusionBlock').textContent   = (300000000 + Math.floor(Math.random() * 1000000)).toLocaleString();
-  document.getElementById('zkProofHash').textContent   = genZkHash();
+  // FIXED 2026-07-25: was fabricated NFT ID / block height / ZK proof hash via
+  // Math.random() shown as if real on-chain data — see fusion-section comment above.
+  document.getElementById('nftId').textContent         = 'Pending — pre-launch';
+  document.getElementById('fusionBlock').textContent   = '—';
+  document.getElementById('zkProofHash').textContent   = 'Pending — pre-launch';
 
   const civFund  = rawAmount * 0.02;
   const received = rawAmount * 0.98;
@@ -630,12 +621,16 @@ function genZkHash(){
 }
 
 function copyTxHash(){
+  if (!isRealTx) { showToast('Nothing to copy yet — not recorded on-chain'); return; }
   navigator.clipboard?.writeText(txHash).catch(()=>{});
   showToast('✓ TX hash copied');
 }
 
 function openExplorer(e){
   e.preventDefault();
+  // FIXED 2026-07-25: used to open explorer.solana.com/tx/<fabricated hash>, which
+  // would show "Transaction not found" — only open it when we have a real tx.
+  if (!isRealTx) { showToast('Not yet recorded on Solana — pre-launch'); return; }
   window.open('https://explorer.solana.com/tx/'+txHash,'_blank');
 }
 

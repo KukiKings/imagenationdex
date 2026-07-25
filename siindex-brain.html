@@ -961,12 +961,12 @@ const GOALS_DATA = [
 ];
 
 let goalPcts = [];
-let goalsSaved = JSON.parse(localStorage.getItem('indx_brain_goals') || 'null');
+// FIXED 2026-07-25: no longer reads/writes indx_brain_goals in localStorage — that cache
+// only ever held fabricated drifted values from the removed driftGoals() loop. Always
+// render the static illustrative initPct now.
 
 function buildGoals() {
-  goalPcts = goalsSaved
-    ? goalsSaved.pcts
-    : GOALS_DATA.map(g => g.initPct);
+  goalPcts = GOALS_DATA.map(g => g.initPct);
 
   const list = document.getElementById('goalList');
   GOALS_DATA.forEach((g, i) => {
@@ -1003,24 +1003,15 @@ function buildGoals() {
   const alignScore = (goalPcts[0] * 0.42 + goalPcts[1] * 0.34 + goalPcts[2] * 0.24).toFixed(1);
   document.getElementById('gasAlignVal').textContent = alignScore + '%';
 
-  // Drift progress every 8s
-  setInterval(driftGoals, 8000);
+  // FIXED 2026-07-25: was setInterval(driftGoals, 8000) — a fake "growth simulation" loop
+  // that used Math.random() to make goal-completion % climb forever in localStorage with
+  // no real backend behind it (fabricated progress dressed up as live tracking). Goal
+  // percentages below are now a static illustrative snapshot only — see gotchas.md.
 }
 
-function driftGoals() {
-  GOALS_DATA.forEach((g, i) => {
-    const delta = (Math.random() * 1.2).toFixed(1);
-    goalPcts[i] = Math.min(99.5, goalPcts[i] + parseFloat(delta));
-    // Update arc
-    const arc = document.getElementById('goalArc' + i);
-    const txt = document.getElementById('goalPctText' + i);
-    if (arc) arc.setAttribute('stroke-dashoffset', 2*Math.PI*24*(1-goalPcts[i]/100));
-    if (txt) txt.textContent = goalPcts[i].toFixed(1) + '%';
-  });
-  localStorage.setItem('indx_brain_goals', JSON.stringify({ pcts: goalPcts }));
-  const alignScore = (goalPcts[0] * 0.42 + goalPcts[1] * 0.34 + goalPcts[2] * 0.24).toFixed(1);
-  document.getElementById('gasAlignVal').textContent = alignScore + '%';
-}
+// FIXED 2026-07-25: driftGoals() removed — it fabricated ever-increasing goal completion
+// percentages via Math.random() and persisted them to localStorage to look like real
+// progress tracking. No real goal-tracking backend exists for these targets.
 
 // ── GOD MODE ROUND 2 FEATURE 3: LOOP PERFORMANCE DASHBOARD ──
 const PERF_METRICS = [
@@ -1030,7 +1021,9 @@ const PERF_METRICS = [
   { key:'gain',     label:'Throughput Gain',   color:'#FFB800', unit:'',   suffix:'%',   baseVal:34,  incRate:0.02, decRate:0   },
 ];
 
-let perfStats = JSON.parse(localStorage.getItem('indx_brain_perf') || 'null');
+// FIXED 2026-07-25: no longer reads/writes indx_brain_perf in localStorage — that cache
+// only ever held numbers fabricated by the removed tickPerf() Math.random() loop below.
+let perfStats = null;
 let sparkData = {};
 
 function buildPerfGrid() {
@@ -1048,13 +1041,16 @@ function buildPerfGrid() {
       <div class="perf-delta up" id="perfDelta${i}">▲ ${m.incRate > 0 ? (m.incRate * 10).toFixed(2) : '—'}</div>
       <div class="perf-label">${m.label}</div>
       <div class="perf-val" id="perfVal${i}" style="color:${m.color}">${formatPerfVal(m, perfStats[m.key])}</div>
-      <div class="perf-sub">since session start</div>
+      <div class="perf-sub">illustrative snapshot</div>
       <div class="perf-spark"><canvas id="spark${i}" height="28"></canvas></div>`;
     grid.appendChild(card);
     setTimeout(() => drawSparkline(i, m, sparkData[m.key]), 50);
   });
 
-  setInterval(tickPerf, 14000);
+  // FIXED 2026-07-25: was setInterval(tickPerf, 14000) — a fake "growth simulation" loop
+  // using Math.random() to make these performance numbers climb forever with no real
+  // telemetry behind them, persisted to localStorage to look like a live-tracked session.
+  // tickPerf() removed; values now stay at their static illustrative baseline.
 }
 
 function formatPerfVal(m, val) {
@@ -1097,21 +1093,8 @@ function drawSparkline(i, m, data) {
   ctx.fill();
 }
 
-function tickPerf() {
-  PERF_METRICS.forEach((m, i) => {
-    if (m.key === 'procs') {
-      if (Math.random() > 0.6) perfStats[m.key] += 1;
-    } else {
-      perfStats[m.key] = parseFloat((perfStats[m.key] + m.incRate + (Math.random() * m.incRate * 0.5)).toFixed(3));
-    }
-    sparkData[m.key].push(perfStats[m.key]);
-    if (sparkData[m.key].length > 12) sparkData[m.key].shift();
-    const el = document.getElementById('perfVal' + i);
-    if (el) el.textContent = formatPerfVal(m, perfStats[m.key]);
-    drawSparkline(i, m, sparkData[m.key]);
-  });
-  localStorage.setItem('indx_brain_perf', JSON.stringify(perfStats));
-}
+// FIXED 2026-07-25: tickPerf() removed — it fabricated ever-increasing performance stats
+// via Math.random() and wrote them to localStorage every 14s to simulate live telemetry.
 
 // ── GOD MODE ROUND 2 FEATURE 4: REASONING TRACE FEED ──
 const TRACE_PHASES = [
@@ -1142,41 +1125,21 @@ let traceEntries = [];
 let tracePaused = false;
 const MAX_TRACE = 6;
 
+// FIXED 2026-07-25: was seeding 5 fake backdated "reasoning" entries with fabricated
+// timestamps and specific numbers (e.g. "Loop #246 score: 94.7", "847 transactions
+// checked"), then running setInterval(addTraceEntry, 4000) with Math.random() to keep
+// cycling canned TRACE_THOUGHTS in forever — a fake live activity feed with a pulsing
+// "live" dot and nothing real behind it. No real reasoning-trace telemetry exists, so
+// this now shows an honest empty state instead of fabricated SIINDEX "thoughts".
 function buildTraceFeed() {
-  // Seed 5 backdated entries
-  for (let i = 0; i < 5; i++) {
-    const [ph, layer, conf, thought] = TRACE_THOUGHTS[(TRACE_THOUGHTS.length - 1 - i) % TRACE_THOUGHTS.length];
-    const phase = TRACE_PHASES.find(p => p.name === ph);
-    const d = new Date(Date.now() - (4-i) * 52000);
-    traceEntries.push({ ph, phase, layer, conf, thought, time: fmtTime(d) });
-  }
   renderTrace();
-  setInterval(addTraceEntry, 4000);
 }
 
-function addTraceEntry() {
-  if (tracePaused) return;
-  const [ph, layer, conf, thought] = TRACE_THOUGHTS[Math.floor(Math.random() * TRACE_THOUGHTS.length)];
-  const phase = TRACE_PHASES.find(p => p.name === ph);
-  traceEntries.unshift({ ph, phase, layer, conf, thought, time: fmtTime(new Date()) });
-  if (traceEntries.length > MAX_TRACE) traceEntries.pop();
-  renderTrace();
-}
+function addTraceEntry() { /* removed — see FIXED note above buildTraceFeed() */ }
 
 function renderTrace() {
   const list = document.getElementById('traceList');
-  list.innerHTML = traceEntries.map((e, idx) => `
-    <div class="trace-entry${idx===0?' new-trace':''}" onclick="copyTrace(${idx})">
-      <div class="trace-top">
-        <div class="trace-phase" style="background:${e.phase.bg};color:${e.phase.color};">${e.ph}</div>
-        <div class="trace-layer">${e.layer}</div>
-        <div class="trace-conf">✓ ${e.conf}%</div>
-        <div class="trace-time">${e.time}</div>
-      </div>
-      <div class="trace-thought">${e.thought}</div>
-      <div class="trace-copy-hint">tap to copy</div>
-    </div>
-  `).join('');
+  list.innerHTML = `<div class="trace-entry" style="cursor:default;"><div class="trace-thought">No live reasoning trace available pre-launch — this requires real agent telemetry that doesn't exist yet.</div></div>`;
 }
 
 function copyTrace(i) {

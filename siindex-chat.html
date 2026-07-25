@@ -840,32 +840,23 @@ history.push = function(...args) {
 restoreChatHistory();
 
 // ── GOD MODE F2: INDX PRICE TICKER ───────────────────────────────
-const PRICE_KEY_CHAT = 'indx_chat_price';
-const PRICE_TS_KEY_CHAT = 'indx_chat_price_ts';
+// FIXED 2026-07-25: was faking a "live" price ticker — setInterval(updatePriceChip, 30000)
+// used Math.random() to drift the displayed price randomly between $0.22-$0.28 every
+// 30-60s, persisted to localStorage to look like real market movement. INDX has not
+// launched — there is no live market and no real price feed. This directly violated the
+// canonical fixed genesis price ($0.24 USD, never a different number — see CLAUDE.md).
+// Now always shows the real fixed genesis price with no invented movement.
 const INDX_BASE = 0.24;
-let _chatPrice = INDX_BASE;
+const _chatPrice = INDX_BASE;
 
 function updatePriceChip() {
-  const saved = parseFloat(localStorage.getItem(PRICE_KEY_CHAT) || '0');
-  const savedTs = parseInt(localStorage.getItem(PRICE_TS_KEY_CHAT) || '0');
-  if (saved > 0 && Date.now() - savedTs < 60000) {
-    _chatPrice = saved;
-  } else {
-    const drift = (Math.random() - 0.46) * 0.004;
-    _chatPrice = Math.min(0.28, Math.max(0.22, _chatPrice + drift));
-    localStorage.setItem(PRICE_KEY_CHAT, String(_chatPrice));
-    localStorage.setItem(PRICE_TS_KEY_CHAT, String(Date.now()));
-  }
-  const prevPrice = parseFloat(localStorage.getItem(PRICE_KEY_CHAT + '_prev') || String(INDX_BASE));
-  const up = _chatPrice >= prevPrice;
-  localStorage.setItem(PRICE_KEY_CHAT + '_prev', String(_chatPrice));
   const chip = document.getElementById('priceChip');
-  chip.textContent = (up ? '▲' : '▼') + ' $' + _chatPrice.toFixed(4);
-  chip.className = 'price-chip' + (up ? '' : ' down');
+  if (!chip) return;
+  chip.textContent = '$' + _chatPrice.toFixed(2) + ' genesis';
+  chip.className = 'price-chip';
 }
 
 updatePriceChip();
-setInterval(updatePriceChip, 30000);
 
 // ── GOD MODE F3: WISDOM SCORE CHIP + NUDGE ───────────────────────
 (function initWsChip() {

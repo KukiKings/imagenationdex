@@ -497,9 +497,10 @@
   <div class="node-status-text" id="nodeStatusText">Offline</div>
   <div class="node-earning-rate"><span id="earnRate">0</span> INDX/day</div>
   <div class="node-earning-sub" id="earnSub">Activate your node to start earning</div>
+  <!-- FIXED 2026-07-25: was a fake peer count (hardcoded 12, drifting via setInterval+Math.random) with no real P2P mesh table behind it — honest label instead, see gotchas.md -->
   <div class="peer-strip" id="peerStrip" style="justify-content:center;display:none;">
     <div class="peer-dot"></div>
-    <span id="peerCount">12</span> peers connected · Sovereign Mesh
+    <span>Sovereign Mesh · not live yet</span>
   </div>
 </div>
 
@@ -733,19 +734,20 @@
     localStorage.setItem(NODE_TODAY_KEY, todayAmt.toFixed(6));
   }
 
-  // Compute earned-while-away INDX
+  // FIXED 2026-07-25: was a fabricated "earned while away" calculator (invented an
+  // INDX amount out of elapsed wall-clock time with no real Light Node network
+  // behind it) that fed straight into the persisted "Total Earned" balance — a
+  // classic growth-simulation loop. Light Node rewards aren't live yet, so this
+  // now always returns 0 instead of inventing a number. See gotchas.md.
   function computeAwayEarnings(startTs) {
-    if (!startTs) return 0;
-    const hoursAway = Math.min((Date.now() - startTs) / 3600000, 24); // cap at 24h
-    const rate = 5.5 / 24; // avg 5.5 INDX/day = ~0.229/hr
-    return hoursAway * rate;
+    return 0;
   }
 
   let nodeActive = false;
   let earningInterval = null;
   let todayTotal = 0;
   let totalAllTime = 0;
-  const RATE_PER_TICK = 0.003; // INDX per tick (simulated)
+  const RATE_PER_TICK = 0.003; // INDX per tick (simulated) — no longer used to auto-increment, see gotchas.md
 
   // GOD MODE PATCH — restore persisted state on load
   (function restoreNodeState() {
@@ -753,19 +755,10 @@
     todayTotal = p.todayEarned;
     totalAllTime = p.total;
     if (p.active) {
-      const awayEarned = computeAwayEarnings(p.startTs);
-      if (awayEarned > 0) {
-        todayTotal += awayEarned;
-        totalAllTime += awayEarned;
-        persistNode(true, totalAllTime, todayTotal);
-        localStorage.removeItem(NODE_START_KEY);
-        localStorage.setItem(NODE_START_KEY, String(Date.now()));
-      }
       // Activate silently without overlay
       setTimeout(() => {
         nodeActive = false; // allow activateNode to proceed
         activateNodeSilent();
-        if (awayEarned > 0) showToast('⚡ Earned ' + awayEarned.toFixed(2) + ' INDX while away!');
       }, 500);
     }
     if (todayTotal > 0 || totalAllTime > 0) {
@@ -774,17 +767,10 @@
     }
   })();
 
-  // ── GOD MODE: LIVE PEER COUNT ──
-  let peerCount = 12;
+  // FIXED 2026-07-25: was a fake "live peer count" (hardcoded start, drifting via setInterval+Math.random with no real P2P mesh table behind it) — now just shows/hides the honest "not live yet" strip, see gotchas.md
   function startPeerTicker() {
-    const peerEl = document.getElementById('peerCount');
     const peerStrip = document.getElementById('peerStrip');
     if (peerStrip) peerStrip.style.display = 'flex';
-    setInterval(() => {
-      const drift = Math.floor(Math.random() * 5) - 2;
-      peerCount = Math.max(8, Math.min(28, peerCount + drift));
-      if (peerEl) peerEl.textContent = peerCount;
-    }, 5000);
   }
   function stopPeerTicker() {
     const peerStrip = document.getElementById('peerStrip');
@@ -809,7 +795,10 @@
     days.forEach((d, i) => {
       const isToday = i === todayIdx;
       const isPast = i < todayIdx;
-      const val = isPast ? dailyRate * (0.7 + Math.random() * 0.6) : (isToday ? todayTotal : dailyRate);
+      // FIXED 2026-07-25: was fabricating a fake "past days" earnings history via
+      // Math.random (days that never actually happened) — past days with no real
+      // recorded earnings now show as 0, not an invented number, see gotchas.md
+      const val = isPast ? 0 : (isToday ? todayTotal : dailyRate);
       const maxVal = dailyRate * 1.6;
       const h = Math.max(4, (val / maxVal) * 48);
       const barDiv = document.createElement('div');
@@ -822,10 +811,12 @@
   }
 
   // ── GOD MODE: SHARE NODE ──
+  // FIXED 2026-07-25: was claiming a fabricated "earned X INDX" total and a fake
+  // "#847 in the Pacific region" rank in a message meant to be shared with real
+  // people — removed both invented figures, see gotchas.md
   function shareNode() {
     const days = localStorage.getItem(NODE_START_KEY) ? Math.ceil((Date.now() - parseInt(localStorage.getItem(NODE_START_KEY) || Date.now())) / 86400000) : 0;
-    const earned = totalAllTime.toFixed(1);
-    const msg = `My IN$DEX Light Node has been online${days > 0 ? ' for ' + days + ' day' + (days !== 1 ? 's' : '') : ''} · earned ${earned} INDX passively · ranked #847 in the Pacific region.\n\nYour phone can do this too: imagenationdex.com`;
+    const msg = `My IN$DEX Light Node has been online${days > 0 ? ' for ' + days + ' day' + (days !== 1 ? 's' : '') : ''}.\n\nYour phone can do this too: imagenationdex.com`;
     if (navigator.share) {
       navigator.share({ title:'My IN$DEX Light Node', text: msg, url:'https://imagenationdex.com' });
     } else {
@@ -834,12 +825,14 @@
     }
   }
 
-  // Build uptime chart
+  // FIXED 2026-07-25: was a hardcoded fake 7-day uptime history ([30,60,90,100,70,0,0])
+  // with no real uptime-tracking table behind it — now shows an honest flat/empty
+  // week until real uptime data exists, see gotchas.md
   function buildUptimeChart() {
     const chart = document.getElementById('uptimeChart');
     chart.innerHTML = '';
-    const heights = [30,60,90,100,70,0,0]; // last 7 days, last 2 are today/tomorrow
-    const classes = ['active','active','active','active','partial','',''];
+    const heights = [0,0,0,0,0,0,0]; // no real uptime history yet
+    const classes = ['','','','','','',''];
     heights.forEach((h, i) => {
       const bar = document.createElement('div');
       bar.className = 'uptime-bar' + (classes[i] ? ' ' + classes[i] : '');
@@ -893,14 +886,16 @@
     document.getElementById('activateBtn').classList.add('on');
     document.getElementById('uptimePct').textContent = '100%';
     document.getElementById('uptimeHrs').textContent = 'Running now';
-    document.getElementById('nodeRank').textContent = '#847';
+    // FIXED 2026-07-25: was a hardcoded fake "#847" regional rank with no real
+    // node registry behind it — honest pending state instead, see gotchas.md
+    document.getElementById('nodeRank').textContent = '—';
   }
 
   function activateNode() {
     nodeActive = true;
     _activateNodeUI();
     // GOD MODE PATCH — update earnSub with live peer count ref, persist, start peer ticker
-    document.getElementById('earnSub').textContent = 'Sovereign Mesh · ' + peerCount + ' peers';
+    document.getElementById('earnSub').textContent = 'Sovereign Mesh · not live yet';
     persistNode(true, totalAllTime, todayTotal);
     startPeerTicker();
 
@@ -911,18 +906,10 @@
     // GOD MODE PATCH — render projection
     renderProjection(5.5);
 
-    // Simulate live earnings
-    earningInterval = setInterval(() => {
-      todayTotal += RATE_PER_TICK;
-      totalAllTime += RATE_PER_TICK;
-      const pct = Math.min(100, (todayTotal / 8) * 100);
-      document.getElementById('todayEarnings').textContent = todayTotal.toFixed(3);
-      document.getElementById('totalEarned').textContent = totalAllTime.toFixed(3);
-      document.getElementById('dailyBar').style.width = pct.toFixed(1) + '%';
-      document.getElementById('dailyPct').textContent = pct.toFixed(0) + '%';
-      // Persist every 10 ticks
-      if (Math.round(todayTotal * 1000) % 30 === 0) persistNode(true, totalAllTime, todayTotal);
-    }, 2000);
+    // FIXED 2026-07-25: was a fake earnings ticker (setInterval incrementing a
+    // persisted "Total Earned" balance every 2s with no real Light Node reward
+    // backend) — a growth-simulation loop. Removed; earnings stay at their real
+    // (zero) persisted value until Light Node rewards actually go live. See gotchas.md.
   }
 
   // GOD MODE: silent activation (no overlay, used on page restore)
@@ -930,7 +917,7 @@
     if (nodeActive) return;
     nodeActive = true;
     _activateNodeUI();
-    document.getElementById('earnSub').textContent = 'Sovereign Mesh · ' + peerCount + ' peers · Restored';
+    document.getElementById('earnSub').textContent = 'Sovereign Mesh · not live yet · Restored';
     startPeerTicker();
     renderProjection(5.5);
     const startPct = Math.min(100, (todayTotal / 8) * 100);
@@ -938,16 +925,8 @@
     document.getElementById('dailyPct').textContent = startPct.toFixed(0) + '%';
     document.getElementById('todayEarnings').textContent = todayTotal.toFixed(3);
     document.getElementById('totalEarned').textContent = totalAllTime.toFixed(3);
-    earningInterval = setInterval(() => {
-      todayTotal += RATE_PER_TICK;
-      totalAllTime += RATE_PER_TICK;
-      const pct = Math.min(100, (todayTotal / 8) * 100);
-      document.getElementById('todayEarnings').textContent = todayTotal.toFixed(3);
-      document.getElementById('totalEarned').textContent = totalAllTime.toFixed(3);
-      document.getElementById('dailyBar').style.width = pct.toFixed(1) + '%';
-      document.getElementById('dailyPct').textContent = pct.toFixed(0) + '%';
-      if (Math.round(todayTotal * 1000) % 30 === 0) persistNode(true, totalAllTime, todayTotal);
-    }, 2000);
+    // FIXED 2026-07-25: was the same fake earnings ticker as activateNode() (see
+    // gotchas.md) — removed rather than silently fabricating growth on restore too.
   }
 
   // ACTIVATION OVERLAY
