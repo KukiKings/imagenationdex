@@ -832,7 +832,7 @@
       <!-- GOD MODE F3: Social proof citizen counter -->
       <div class="citizen-counter" id="citizenCounter">
         <div class="counter-dot"></div>
-        <span class="counter-num" id="counterNum">12,847</span> citizens joined
+        <span class="counter-num" id="counterNum">–</span> citizens joined
       </div>
 
       <!-- GOD MODE F4: Referral welcome banner (shown when ?ref= in URL) -->
@@ -1707,21 +1707,18 @@
     }, 600);
   };
 
-  // F3: Animated citizen counter — increments slowly to simulate live joins
+  // Corrected 2026-07-25: previously started at a fabricated 12,847 and drifted upward forever
+  // (1-3 more "citizens" every 8-18s, persisted in localStorage so it never resets) with zero real
+  // backing. Now pulls the real Supabase citizen count, same source used site-wide.
   (function initCitizenCounter() {
-    const stored = parseInt(localStorage.getItem('indx_onboarding_citizencount') || '12847');
-    let count = stored;
     const el = document.getElementById('counterNum');
     if (!el) return;
-    el.textContent = count.toLocaleString();
-    // Drift up by 1-3 every 8-18s
-    function tick() {
-      count += Math.floor(Math.random() * 3) + 1;
-      localStorage.setItem('indx_onboarding_citizencount', count);
-      el.textContent = count.toLocaleString();
-      setTimeout(tick, 8000 + Math.random() * 10000);
-    }
-    setTimeout(tick, 5000);
+    (async () => {
+      try {
+        const { data } = await sb.rpc('get_waitlist_count');
+        if (typeof data === 'number' && data >= 0) el.textContent = data.toLocaleString();
+      } catch (e) {}
+    })();
   })();
 
   // F4: Auto-detect referral code from URL and show banner
