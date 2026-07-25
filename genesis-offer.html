@@ -223,8 +223,8 @@ footer{background:var(--surface);border-top:1px solid rgba(255,255,255,0.06);pad
       <div class="cd-sep">:</div>
       <div class="cd-unit"><span class="cd-num" id="cdSecs">--</span><span class="cd-lab">Secs</span></div>
     </div>
-    <div class="spots-count">Genesis Package closes when <strong id="spotsRemain">2,153</strong> of 5,000 remaining spots are claimed.</div>
-    <div class="spots-bar-outer"><div class="spots-bar-inner" id="spotsBar" style="width:57%;"></div></div>
+    <div class="spots-count">Genesis Package closes when <strong id="spotsRemain">–</strong> of 5,000 remaining spots are claimed.</div>
+    <div class="spots-bar-outer"><div class="spots-bar-inner" id="spotsBar" style="width:0%;"></div></div>
   </div>
 </div>
 
@@ -243,7 +243,7 @@ footer{background:var(--surface);border-top:1px solid rgba(255,255,255,0.06);pad
       <div class="sp-avatar">CK</div>
       <div class="sp-avatar">+</div>
     </div>
-    <div class="sp-text"><strong id="heroCount">2,847</strong> people already on the waitlist</div>
+    <div class="sp-text"><strong id="heroCount">–</strong> people already on the waitlist</div>
   </div>
 
   <div class="package">
@@ -528,7 +528,10 @@ tick();setInterval(tick,1000);
 // ── LIVE WAITLIST COUNTER ──
 const SUPA_URL='https://zljgthfzbalsunuoohcd.supabase.co';
 const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
-let base=2847;
+// Corrected 2026-07-25: was hardcoded to a fake base of 2,847 with no real backing. Now pulls the
+// real citizen count from Supabase, same as home-v2.html. Falls back to 0 (not a fabricated number)
+// if the fetch fails.
+let base=null;
 function updateCounterUI(n){
   const spots=5000-n;
   const pct=Math.round((n/5000)*100);
@@ -542,9 +545,9 @@ function updateCounterUI(n){
   try{
     const sb=supabase.createClient(SUPA_URL,SUPA_KEY);
     const {data}=await sb.rpc('get_waitlist_count');
-    if(typeof data==='number'&&data>0) base=data;
+    if(typeof data==='number'&&data>=0) base=data;
   }catch(e){}
-  updateCounterUI(base);
+  updateCounterUI(base===null?0:base);
 })();
 
 function toggleFaq(el){
@@ -577,20 +580,29 @@ function updateGenesisDomain() {
   }
 }
 
+// Corrected 2026-07-25: this ticker showed 12 fictional named people ("noe", "sarah", "thomas"...)
+// as if they had just joined in real time — no real signup-activity feed exists to back this, so
+// it's disabled rather than left showing invented names. Re-enable once a real recent-signups feed
+// is wired up.
 // GOD MODE: FEATURE 1 — Social proof join ticker
-(function buildGenesisTicker() {
-  const JOINS = [
-    {flag:'🇨🇰',domain:'noe'},{flag:'🇻🇺',domain:'sarah'},{flag:'🇵🇬',domain:'thomas'},
-    {flag:'🇫🇯',domain:'lani'},{flag:'🇹🇴',domain:'mele'},{flag:'🇼🇸',domain:'josie'},
-    {flag:'🇫🇯',domain:'ratu'},{flag:'🇵🇭',domain:'maria'},{flag:'🇳🇿',domain:'james'},
-    {flag:'🇸🇧',domain:'lei'},{flag:'🇦🇺',domain:'ajhenry'},{flag:'🇻🇺',domain:'kalo'},
-  ];
+// (function buildGenesisTicker() {
+//   const JOINS = [
+//     {flag:'🇨🇰',domain:'noe'},{flag:'🇻🇺',domain:'sarah'},{flag:'🇵🇬',domain:'thomas'},
+//     {flag:'🇫🇯',domain:'lani'},{flag:'🇹🇴',domain:'mele'},{flag:'🇼🇸',domain:'josie'},
+//     {flag:'🇫🇯',domain:'ratu'},{flag:'🇵🇭',domain:'maria'},{flag:'🇳🇿',domain:'james'},
+//     {flag:'🇸🇧',domain:'lei'},{flag:'🇦🇺',domain:'ajhenry'},{flag:'🇻🇺',domain:'kalo'},
+//   ];
+//   const track = document.getElementById('genesisTickerTrack');
+//   if (!track) return;
+//   const doubled = [...JOINS, ...JOINS];
+//   track.innerHTML = doubled.map(j =>
+//     `<span class="genesis-ticker-item">${j.flag} <strong>${j.domain}.IN$DEX</strong> just joined</span>`
+//   ).join('');
+// })();
+(function hideGenesisTicker() {
   const track = document.getElementById('genesisTickerTrack');
-  if (!track) return;
-  const doubled = [...JOINS, ...JOINS];
-  track.innerHTML = doubled.map(j =>
-    `<span class="genesis-ticker-item">${j.flag} <strong>${j.domain}.IN$DEX</strong> just joined</span>`
-  ).join('');
+  const wrap = track && track.closest('.genesis-ticker-wrap, .genesis-ticker');
+  if (wrap) wrap.style.display = 'none'; else if (track) track.style.display = 'none';
 })();
 
 // GOD MODE: FEATURE 2 — Referral INDX calculator
@@ -610,35 +622,12 @@ function updateRefCalc() {
   if (slider) { if (saved) slider.value = saved; updateRefCalc(); }
 })();
 
+// Corrected 2026-07-25: initSpotsDecay() faked a declining "spots remaining" number via a random
+// localStorage-based timer, completely disconnected from real signups — it would have fought with
+// and overwritten the real Supabase-driven figure set by updateCounterUI() above. Disabled; the
+// real spots-remaining value (5000 - actual citizen count) is the only one written now.
 // GOD MODE: FEATURE 3 — Spots remaining local decay
-(function initSpotsDecay() {
-  const KEY = 'indx_genesis_spots';
-  const TS_KEY = 'indx_genesis_spots_ts';
-  const INTERVAL_MS = 5 * 60 * 1000;
-  const now = Date.now();
-  let stored = parseInt(localStorage.getItem(KEY) || '0');
-  let lastTs = parseInt(localStorage.getItem(TS_KEY) || '0');
-  if (!stored || stored < 1 || stored > 2153) stored = 2153;
-  if (!lastTs) { lastTs = now; localStorage.setItem(TS_KEY, String(now)); }
-  const ticks = Math.floor((now - lastTs) / INTERVAL_MS);
-  if (ticks > 0) {
-    stored = Math.max(1, stored - (ticks * (1 + Math.floor(Math.random() * 2))));
-    localStorage.setItem(TS_KEY, String(now));
-  }
-  localStorage.setItem(KEY, String(stored));
-  function applyCount(n) {
-    const el = document.getElementById('spotsRemain');
-    if (el) { el.textContent = n.toLocaleString(); if (n < 300) el.classList.add('spots-urgent'); }
-    const bar = document.getElementById('spotsBar');
-    if (bar) bar.style.width = Math.min(100, Math.round(((5000 - n) / 5000) * 100)) + '%';
-  }
-  applyCount(stored);
-  setInterval(function() {
-    stored = Math.max(1, stored - (1 + Math.floor(Math.random() * 2)));
-    localStorage.setItem(KEY, String(stored));
-    applyCount(stored);
-  }, INTERVAL_MS);
-})();
+// (function initSpotsDecay() { ... removed ... })();
 
 // GOD MODE: FEATURE 4 — WhatsApp / copy share on domain claim
 function showGenesisShare(slug) {
