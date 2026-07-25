@@ -22,6 +22,8 @@ Everything else below is built only from claims verified in the reality ledger �
 
 ## Draft Submission
 
+Dear Prime Minister Brown,
+
 ### 1. Who we are
 
 IN$DEX (Image Nation Decentralised Exchange) is a sovereign digital money platform being built to give people without a bank account — no ID, no branch nearby, no minimum balance they can meet — a way to hold, send, and receive money using just a phone. It is founder-built by AJ Henry, a Cook Islands and New Zealand citizen, with an AI co-founder (SIINDEX) handling day-to-day compliance, governance, and citizen onboarding operations. Built on Solana. No outside investors, no venture funding.
