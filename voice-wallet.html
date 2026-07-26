@@ -540,6 +540,9 @@ function init() {
 const SIINDEX_MESSAGES = {
   idle:       'Tap the mic and tell me what you need. Try "Send $20 to Mum" or "Check my balance."',
   listening:  'Listening… speak naturally.',
+  // FIXED 2026-07-26: added below — see onerror handler
+  errorNetwork: 'Voice needs an internet connection right now — try typing your request instead.',
+  errorMic:   'I need microphone access — check your browser permissions and try again.',
   processing: 'Got it. Running pre-flight check…',
   confirm:    'Pre-flight complete. 7/7 passed. Confirm below or say "yes".',
   success:    'Done. Standing by.',
@@ -619,10 +622,19 @@ function startListening() {
     }
   };
 
-  recognition.onerror = () => {
+  // FIXED 2026-07-26: every error (mic denied, no network, no match) showed the same
+  // "I didn't catch that... speak clearly" message. That's actively misleading for a
+  // 'network' error — the Web Speech API needs Chrome with a working connection to
+  // Google's speech servers, so no amount of speaking clearly fixes it; the citizen
+  // needs to know to type instead. Real platform limitation, not fixable here — but
+  // the message can at least be honest about what's actually wrong.
+  recognition.onerror = (e) => {
     stopListening();
-    typeSIINDEX(SIINDEX_MESSAGES.error, null, true);
-    setSIINDEX('idle', 'SIINDEX · Try again', SIINDEX_MESSAGES.error);
+    const msg = e.error === 'network' ? SIINDEX_MESSAGES.errorNetwork
+              : e.error === 'not-allowed' ? SIINDEX_MESSAGES.errorMic
+              : SIINDEX_MESSAGES.error;
+    typeSIINDEX(msg, null, true);
+    setSIINDEX('idle', 'SIINDEX · Try again', msg);
   };
 
   recognition.onend = () => { isListening = false; resetMicBtn(); };

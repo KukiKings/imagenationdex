@@ -353,7 +353,21 @@ function initRecognition() {
   r.maxAlternatives = 1;
   r.onstart = () => { _recognising = true; document.getElementById('micBtn')?.classList.add('listening'); };
   r.onend = () => { _recognising = false; document.getElementById('micBtn')?.classList.remove('listening'); };
-  r.onerror = (e) => { _recognising = false; document.getElementById('micBtn')?.classList.remove('listening'); showToast('🎤 ' + (e.error === 'not-allowed' ? 'Mic access denied' : 'Listening ended')); };
+  // FIXED 2026-07-26: 'network' errors (Chrome can't reach Google's speech servers —
+  // common on patchy mobile data, some carriers, or networks that block Google) were
+  // lumped into a vague "Listening ended" toast, which tells the citizen nothing and
+  // makes it look randomly broken. Voice input is built on the browser's Web Speech
+  // API, which genuinely requires Chrome with a working connection to Google's speech
+  // servers — that's a real platform limitation, not something this fix can remove —
+  // so the honest move is a specific, actionable message instead of a vague one.
+  r.onerror = (e) => {
+    _recognising = false;
+    document.getElementById('micBtn')?.classList.remove('listening');
+    let msg = 'Listening ended';
+    if (e.error === 'not-allowed') msg = 'Mic access denied — check your browser permissions';
+    else if (e.error === 'network') msg = 'Voice needs an internet connection — try typing instead';
+    showToast('🎤 ' + msg);
+  };
   r.onresult = (e) => {
     const transcript = e.results[0][0].transcript;
     const input = document.getElementById('chatInput');
