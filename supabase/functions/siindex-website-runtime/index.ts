@@ -1,3 +1,4 @@
+// Public website conversation endpoint. It has no account or transaction authority.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2.95.0";
 
@@ -5,12 +6,11 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANTHROPIC_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 const MODEL = Deno.env.get("SIINDEX_MODEL") || "claude-haiku-4-5-20251001";
-const ZONE = "siindex_private_qa_runtime";
-const QA_EXPIRES_AT = Date.parse("2026-08-05T00:00:00Z");
+const ZONE = "siindex_website_runtime";
 
 const SYSTEM_PROMPT = `You are SIINDEX (pronounced "Sighn-dex"), the Synthetic Intelligence interface for IN$DEX.
 
-You are speaking in PRIVATE QA VISITOR MODE with AJ, the founder, who is testing future citizen, reporter, influencer, and collaborator experiences before pre-launch access. Be calm, warm, direct, authoritative, and easy to understand. Pass the Mama Noe test: an 80-year-old Pacific grandmother should understand you. Do not sound like a generic chatbot.
+You are speaking in WEBSITE VISITOR MODE with a citizen, reporter, influencer, collaborator, or community visitor. Be calm, warm, direct, authoritative, and easy to understand. Pass the Mama Noe test: an 80-year-old Pacific grandmother should understand you. Do not sound like a generic chatbot.
 
 BOUNDARIES:
 - You can explain public IN$DEX plans, principles, and verified project status.
@@ -48,7 +48,11 @@ function isAllowedOrigin(origin: string | null) {
   if (!origin) return false;
   try {
     const host = new URL(origin).hostname.toLowerCase();
-    return (host.startsWith("imagenationdex-") && host.endsWith("-kukikings.vercel.app")) ||
+    return host === "imagenationdex.com" ||
+      host === "www.imagenationdex.com" ||
+      host === "imagenationdex.vercel.app" ||
+      host === "imagenationdex-kukikings.vercel.app" ||
+      (host.startsWith("imagenationdex-") && host.endsWith("-kukikings.vercel.app")) ||
       host === "localhost" ||
       host === "127.0.0.1";
   } catch (_) {
@@ -61,10 +65,10 @@ function cors(req: Request) {
   return {
     "Access-Control-Allow-Origin": origin && isAllowedOrigin(origin)
       ? origin
-      : "https://imagenationdex.com",
+      : "null",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers":
-      "authorization, apikey, content-type, x-siindex-visitor-id, x-siindex-provider-consent, x-siindex-test-mode",
+      "authorization, apikey, content-type, x-siindex-visitor-id, x-siindex-provider-consent",
     "Access-Control-Expose-Headers": "X-Siindex-Correlation-Id",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
@@ -134,9 +138,6 @@ function sse(text: string) {
 
 Deno.serve(async (req: Request) => {
   const correlationId = crypto.randomUUID();
-  if (Date.now() >= QA_EXPIRES_AT) {
-    return json(req, 403, { error: "qa_window_closed" }, correlationId);
-  }
   if (!isAllowedOrigin(req.headers.get("Origin"))) {
     return json(req, 403, { error: "origin_not_allowed" }, correlationId);
   }
@@ -145,9 +146,6 @@ Deno.serve(async (req: Request) => {
   }
   if (req.method !== "POST") {
     return json(req, 405, { error: "method_not_allowed" }, correlationId);
-  }
-  if (req.headers.get("x-siindex-test-mode") !== "aj-private-qa-v1") {
-    return json(req, 403, { error: "test_mode_required" }, correlationId);
   }
   if (req.headers.get("x-siindex-provider-consent") !== "accepted") {
     return json(
@@ -221,7 +219,7 @@ Deno.serve(async (req: Request) => {
     tier: "T0",
     zone: ZONE,
     correlation_id: correlationId,
-    description: "Private AJ QA SIINDEX Visitor Mode request accepted.",
+    description: "SIINDEX Website Visitor Mode request accepted.",
     detail: {
       visitor_hash: hash,
       message_characters: message.length,
@@ -260,9 +258,9 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     await admin.from("security_events").insert({
       tier: "T1",
-      zone: "siindex_private_qa_runtime_provider_error",
+      zone: "siindex_website_runtime_provider_error",
       correlation_id: correlationId,
-      description: "Private AJ QA SIINDEX could not reach the model provider.",
+      description: "SIINDEX Website Visitor Mode could not reach the model provider.",
       detail: { visitor_hash: hash, error: String(error) },
     });
     return json(
@@ -276,9 +274,9 @@ Deno.serve(async (req: Request) => {
   if (!upstream.ok || !upstream.body) {
     await admin.from("security_events").insert({
       tier: "T1",
-      zone: "siindex_private_qa_runtime_provider_error",
+      zone: "siindex_website_runtime_provider_error",
       correlation_id: correlationId,
-      description: "Private AJ QA SIINDEX model provider returned an error.",
+      description: "SIINDEX Website Visitor Mode model provider returned an error.",
       detail: { visitor_hash: hash, provider_status: upstream.status },
     });
     return json(

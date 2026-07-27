@@ -1,3 +1,4 @@
+// Public website microphone transcription endpoint. Raw audio is not stored.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2.95.0";
 
@@ -5,15 +6,18 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ELEVENLABS_KEY = Deno.env.get("ELEVENLABS_API_KEY");
 const MODEL = "scribe_v2";
-const ZONE = "siindex_private_qa_voice_transcribe";
+const ZONE = "siindex_website_voice_transcribe";
 const MAX_BYTES = 5 * 1024 * 1024;
-const QA_EXPIRES_AT = Date.parse("2026-08-05T00:00:00Z");
 
 function isAllowedOrigin(origin: string | null) {
   if (!origin) return false;
   try {
     const host = new URL(origin).hostname.toLowerCase();
-    return (host.startsWith("imagenationdex-") && host.endsWith("-kukikings.vercel.app")) ||
+    return host === "imagenationdex.com" ||
+      host === "www.imagenationdex.com" ||
+      host === "imagenationdex.vercel.app" ||
+      host === "imagenationdex-kukikings.vercel.app" ||
+      (host.startsWith("imagenationdex-") && host.endsWith("-kukikings.vercel.app")) ||
       host === "localhost" ||
       host === "127.0.0.1";
   } catch (_) {
@@ -26,10 +30,10 @@ function cors(req: Request) {
   return {
     "Access-Control-Allow-Origin": origin && isAllowedOrigin(origin)
       ? origin
-      : "https://imagenationdex.com",
+      : "null",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers":
-      "authorization, apikey, content-type, x-siindex-visitor-id, x-siindex-provider-consent, x-siindex-test-mode",
+      "authorization, apikey, content-type, x-siindex-visitor-id, x-siindex-provider-consent",
     "Access-Control-Expose-Headers": "X-Siindex-Correlation-Id",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
@@ -100,9 +104,6 @@ function extensionFor(type: string) {
 
 Deno.serve(async (req: Request) => {
   const correlationId = crypto.randomUUID();
-  if (Date.now() >= QA_EXPIRES_AT) {
-    return json(req, 403, { error: "qa_window_closed" }, correlationId);
-  }
   if (!isAllowedOrigin(req.headers.get("Origin"))) {
     return json(req, 403, { error: "origin_not_allowed" }, correlationId);
   }
@@ -111,9 +112,6 @@ Deno.serve(async (req: Request) => {
   }
   if (req.method !== "POST") {
     return json(req, 405, { error: "method_not_allowed" }, correlationId);
-  }
-  if (req.headers.get("x-siindex-test-mode") !== "aj-private-qa-v1") {
-    return json(req, 403, { error: "test_mode_required" }, correlationId);
   }
   if (req.headers.get("x-siindex-provider-consent") !== "accepted") {
     return json(
@@ -186,7 +184,7 @@ Deno.serve(async (req: Request) => {
     tier: "T0",
     zone: ZONE,
     correlation_id: correlationId,
-    description: "Private AJ QA transcription request accepted; raw audio was not stored.",
+    description: "SIINDEX website transcription request accepted; raw audio was not stored.",
     detail: {
       visitor_hash: hash,
       audio_bytes: audio.size,
@@ -218,9 +216,9 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     await admin.from("security_events").insert({
       tier: "T1",
-      zone: "siindex_private_qa_voice_transcribe_provider_error",
+      zone: "siindex_website_voice_transcribe_provider_error",
       correlation_id: correlationId,
-      description: "Private AJ QA microphone could not reach the transcription provider.",
+      description: "SIINDEX website microphone could not reach the transcription provider.",
       detail: { visitor_hash: hash, error: String(error) },
     });
     return json(
@@ -234,9 +232,9 @@ Deno.serve(async (req: Request) => {
   if (!provider.ok) {
     await admin.from("security_events").insert({
       tier: "T1",
-      zone: "siindex_private_qa_voice_transcribe_provider_error",
+      zone: "siindex_website_voice_transcribe_provider_error",
       correlation_id: correlationId,
-      description: "Private AJ QA transcription provider returned an error.",
+      description: "SIINDEX website transcription provider returned an error.",
       detail: { visitor_hash: hash, provider_status: provider.status, model: MODEL },
     });
     return json(
@@ -258,9 +256,9 @@ Deno.serve(async (req: Request) => {
 
   await admin.from("security_events").insert({
     tier: "T0",
-    zone: "siindex_private_qa_voice_transcribe_success",
+    zone: "siindex_website_voice_transcribe_success",
     correlation_id: correlationId,
-    description: "Private AJ QA utterance transcribed; raw audio was not stored.",
+    description: "SIINDEX website utterance transcribed; raw audio was not stored.",
     detail: {
       visitor_hash: hash,
       transcript_characters: transcript.length,

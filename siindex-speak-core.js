@@ -1,25 +1,31 @@
 /**
- * SIINDEX Private QA Voice Core v2
+ * SIINDEX Website Voice Core v3
  *
  * One shared, real conversation controller for the homepage and every page
- * that already includes this file. This build is limited to AJ's protected
- * preview. It has no account access, tools, or transaction authority.
+ * that already includes this file. It has no account access, tools, or
+ * transaction authority.
  */
 (function () {
   "use strict";
 
+  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.0") return;
+
   const SUPABASE_URL = "https://zljgthfzbalsunuoohcd.supabase.co";
   const SUPABASE_KEY = "sb_publishable_rSl7P028UrBn8KCUSSbjAg_mT3FWoxV";
   const ENDPOINTS = {
-    runtime: `${SUPABASE_URL}/functions/v1/siindex-private-qa-runtime`,
-    transcribe: `${SUPABASE_URL}/functions/v1/siindex-private-qa-transcribe`,
-    voice: `${SUPABASE_URL}/functions/v1/siindex-private-qa-voice-tts`,
+    runtime: `${SUPABASE_URL}/functions/v1/siindex-website-runtime`,
+    transcribe: `${SUPABASE_URL}/functions/v1/siindex-website-transcribe`,
+    voice: `${SUPABASE_URL}/functions/v1/siindex-website-voice-tts`,
   };
-  const HISTORY_KEY = "siindex_private_qa_conversation_v2";
-  const VISITOR_KEY = "siindex_private_qa_visitor_id";
-  const VOICE_KEY = "siindex_private_qa_voice_enabled";
-  const PROVIDER_CONSENT_KEY = "siindex_private_qa_provider_consent_v1";
-  const PRIVATE_QA_MODE =
+  const HISTORY_KEY = "siindex_website_conversation_v3";
+  const VISITOR_KEY = "siindex_website_visitor_id";
+  const VOICE_KEY = "siindex_website_voice_enabled";
+  const PROVIDER_CONSENT_KEY = "siindex_website_provider_consent_v1";
+  const WEBSITE_MODE =
+    location.hostname === "imagenationdex.com" ||
+    location.hostname === "www.imagenationdex.com" ||
+    location.hostname === "imagenationdex.vercel.app" ||
+    location.hostname === "imagenationdex-kukikings.vercel.app" ||
     location.hostname === "localhost" ||
     location.hostname === "127.0.0.1" ||
     (
@@ -74,7 +80,6 @@
         localStorage.getItem(PROVIDER_CONSENT_KEY) === "accepted"
           ? "accepted"
           : "not-accepted",
-      "x-siindex-test-mode": "aj-private-qa-v1",
     };
     if (contentType) result["Content-Type"] = contentType;
     return result;
@@ -129,20 +134,12 @@
         "Immediate after you choose.",
       );
     }
-    if (code === "private_qa_only" || code === "test_mode_required") {
+    if (code === "website_only") {
       return explain(
-        "This microphone build is restricted to AJ's protected testing preview.",
-        "Open the protected preview link. Do not test this version from the public website.",
-        "AJ controls preview access; Vercel enforces the protection.",
-        "Available immediately inside the protected preview.",
-      );
-    }
-    if (code === "qa_window_closed") {
-      return explain(
-        "This temporary private test window has closed automatically.",
-        "Ask for the private QA window to be reviewed and reopened before testing again.",
-        "The development team can reopen it with AJ's approval.",
-        "Usually within one development session.",
+        "This SIINDEX voice service is available only on the official IN$DEX website.",
+        "Open imagenationdex.com and try again.",
+        "IN$DEX controls access to the website voice service.",
+        "Available immediately on the official website.",
       );
     }
     if (code === "no_speech_detected") {
@@ -301,7 +298,7 @@
         "box-shadow:0 24px 80px rgba(0,0,0,.55);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;";
       dialog.innerHTML = `
         <h2 id="siindex-consent-title" style="margin:0 0 12px;font-size:20px;">Before SIINDEX continues</h2>
-        <p style="margin:0 0 12px;color:#c8cede;font-size:13px;line-height:1.6;">This private test uses three external providers:</p>
+        <p style="margin:0 0 12px;color:#c8cede;font-size:13px;line-height:1.6;">SIINDEX voice uses external providers:</p>
         <ul style="margin:0 0 14px;padding-left:20px;color:#c8cede;font-size:13px;line-height:1.7;">
           <li>Microphone audio is sent to ElevenLabs for transcription.</li>
           <li>Your transcript or typed question is sent to Anthropic for the answer.</li>
@@ -311,7 +308,7 @@
         <p style="margin:0 0 18px;color:#ffcf72;font-size:13px;line-height:1.6;">Never share passwords, seed phrases, private keys, identity documents, or sensitive account information.</p>
         <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
           <button type="button" data-si-consent-decline style="border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:10px 16px;background:transparent;color:#d6dbea;cursor:pointer;">Not now</button>
-          <button type="button" data-si-consent-accept style="border:0;border-radius:20px;padding:10px 16px;background:linear-gradient(135deg,#00d4ff,#2b35d8);color:#fff;font-weight:800;cursor:pointer;">Continue private test</button>
+          <button type="button" data-si-consent-accept style="border:0;border-radius:20px;padding:10px 16px;background:linear-gradient(135deg,#00d4ff,#2b35d8);color:#fff;font-weight:800;cursor:pointer;">Continue</button>
         </div>`;
       overlay.appendChild(dialog);
       document.body.appendChild(overlay);
@@ -362,28 +359,36 @@
 
   async function startRecording(options) {
     const source = options && options.source || "global";
+    const onTranscript = options && options.onTranscript;
+    const onError = options && options.onError;
+    const onEnd = options && options.onEnd;
+    const autoStopMs = Math.min(
+      Math.max(Number(options && options.autoStopMs) || MAX_RECORDING_MS, 1000),
+      MAX_RECORDING_MS,
+    );
     if (recording) {
       stopRecording(true, source);
       return;
     }
-    if (!PRIVATE_QA_MODE) {
-      showError(new SiindexError("private_qa_only"), "access", source);
+    if (!WEBSITE_MODE) {
+      const error = new SiindexError("website_only");
+      if (typeof onError === "function") onError(error);
+      else showError(error, "access", source);
+      if (typeof onEnd === "function") onEnd();
       return;
     }
     if (!await ensureProviderConsent()) {
-      showError(
-        new SiindexError("provider_consent_declined"),
-        "consent",
-        source,
-      );
+      const error = new SiindexError("provider_consent_declined");
+      if (typeof onError === "function") onError(error);
+      else showError(error, "consent", source);
+      if (typeof onEnd === "function") onEnd();
       return;
     }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
-      showError(
-        new SiindexError("microphone_not_supported"),
-        "microphone",
-        source,
-      );
+      const error = new SiindexError("microphone_not_supported");
+      if (typeof onError === "function") onError(error);
+      else showError(error, "microphone", source);
+      if (typeof onEnd === "function") onEnd();
       return;
     }
 
@@ -407,6 +412,9 @@
       recordingStartedAt = Date.now();
       recorder._source = source;
       recorder._shouldTranscribe = true;
+      recorder._onTranscript = onTranscript;
+      recorder._onError = onError;
+      recorder._onEnd = onEnd;
 
       recorder.ondataavailable = (event) => {
         if (event.data && event.data.size) recordingChunks.push(event.data);
@@ -414,11 +422,17 @@
       recorder.onerror = (event) => {
         recording = false;
         stopTracks();
-        showError(event.error || new Error("recording_failed"), "microphone", source);
+        const error = event.error || new Error("recording_failed");
+        if (typeof onError === "function") onError(error);
+        else showError(error, "microphone", source);
+        if (typeof onEnd === "function") onEnd();
       };
       recorder.onstop = async () => {
         const shouldTranscribe = recorder._shouldTranscribe;
         const requestSource = recorder._source || source;
+        const transcriptHandler = recorder._onTranscript;
+        const errorHandler = recorder._onError;
+        const endHandler = recorder._onEnd;
         const mime = recorder.mimeType || mimeType || "audio/webm";
         recording = false;
         stopTracks();
@@ -429,13 +443,31 @@
 
         if (!shouldTranscribe) {
           setStatus("idle", "Ready. Tap the microphone to speak.");
+          if (typeof endHandler === "function") endHandler();
           return;
         }
         if (duration < 350 || blob.size < 500) {
-          showError(new SiindexError("no_speech_detected"), "microphone", requestSource);
+          const error = new SiindexError("no_speech_detected");
+          if (typeof errorHandler === "function") errorHandler(error);
+          else showError(error, "microphone", requestSource);
+          if (typeof endHandler === "function") endHandler();
           return;
         }
-        await transcribeAndAsk(blob, mime, requestSource);
+        try {
+          const transcript = await transcribeAudio(blob, mime, requestSource);
+          emit("transcript", { text: transcript, source: requestSource });
+          if (typeof transcriptHandler === "function") {
+            await transcriptHandler(transcript);
+            setStatus("idle", "Voice captured.");
+          } else {
+            await ask(transcript, { source: requestSource });
+          }
+        } catch (error) {
+          if (typeof errorHandler === "function") errorHandler(error);
+          else showError(error, "transcription", requestSource);
+        } finally {
+          if (typeof endHandler === "function") endHandler();
+        }
       };
 
       recorder.start(250);
@@ -444,11 +476,13 @@
         "listening",
         "Listening. Speak now, then tap the microphone again to send.",
       );
-      recordingTimer = setTimeout(() => stopRecording(true, source), MAX_RECORDING_MS);
+      recordingTimer = setTimeout(() => stopRecording(true, source), autoStopMs);
     } catch (error) {
       recording = false;
       stopTracks();
-      showError(error, "microphone", source);
+      if (typeof onError === "function") onError(error);
+      else showError(error, "microphone", source);
+      if (typeof onEnd === "function") onEnd();
     }
   }
 
@@ -459,28 +493,23 @@
     return "webm";
   }
 
-  async function transcribeAndAsk(blob, mime, source) {
+  async function transcribeAudio(blob, mime, source) {
     setStatus("transcribing", "Turning your voice into text. Audio is not being saved.");
     const data = new FormData();
     data.append("audio", blob, `siindex-question.${audioExtension(mime)}`);
 
-    try {
-      const response = await fetch(ENDPOINTS.transcribe, {
-        method: "POST",
-        headers: headers(),
-        body: data,
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new SiindexError(result.error || "transcription_failed", response.status, result);
-      }
-      const transcript = String(result.transcript || "").trim();
-      if (!transcript) throw new SiindexError("no_speech_detected", 422, result);
-      emit("transcript", { text: transcript, source });
-      await ask(transcript, { source });
-    } catch (error) {
-      showError(error, "transcription", source);
+    const response = await fetch(ENDPOINTS.transcribe, {
+      method: "POST",
+      headers: headers(),
+      body: data,
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new SiindexError(result.error || "transcription_failed", response.status, result);
     }
+    const transcript = String(result.transcript || "").trim();
+    if (!transcript) throw new SiindexError("no_speech_detected", 422, result);
+    return transcript;
   }
 
   async function readFailure(response) {
@@ -496,8 +525,8 @@
     const source = options && options.source || "global";
     text = String(text || "").trim();
     if (!text || busy) return;
-    if (!PRIVATE_QA_MODE) {
-      showError(new SiindexError("private_qa_only"), "access", source);
+    if (!WEBSITE_MODE) {
+      showError(new SiindexError("website_only"), "access", source);
       return;
     }
     if (!await ensureProviderConsent()) {
@@ -848,11 +877,11 @@
         <div class="siindex-avatar" aria-hidden="true">SI</div>
         <div class="siindex-heading">
           <div class="siindex-name">SIINDEX</div>
-          <div class="siindex-mode">Synthetic Intelligence · Private QA Mode</div>
+          <div class="siindex-mode">Synthetic Intelligence · Website Voice</div>
         </div>
         <button type="button" class="siindex-icon-btn" data-si-close aria-label="Close SIINDEX">×</button>
       </header>
-      <div class="siindex-privacy">Private AJ testing only — not available to citizens yet. Tap the microphone only when ready. Your audio is sent securely to ElevenLabs for transcription, the transcript or typed question is sent to Anthropic, and SIINDEX replies are sent to ElevenLabs when voice is on. IN$DEX does not store raw audio or QA conversations on its servers. Do not share passwords, seed phrases, private keys, identity documents, or sensitive account details. This test mode cannot access accounts or take actions.</div>
+      <div class="siindex-privacy">Tap the microphone only when ready. With your permission, audio is sent securely to ElevenLabs for transcription, your transcript or typed question is sent to Anthropic, and SIINDEX replies are sent to ElevenLabs when voice is on. IN$DEX does not store raw audio or website conversations on its servers. Do not share passwords, seed phrases, private keys, identity documents, or sensitive account details. Website Voice cannot access accounts or take actions.</div>
       <div class="siindex-messages" data-si-messages>
         <div class="siindex-empty" data-si-empty>Ask me what is genuinely live, what is planned, how the Pacific-first pilot works, or how to collaborate. Tap the microphone, speak, then tap again to send. You can type at any time.</div>
       </div>
@@ -932,8 +961,8 @@
     get recording() {
       return recording;
     },
-    mode: "private-qa",
-    version: "2.0.0",
+    mode: "website",
+    version: "3.0.0",
   };
 
   // Backwards-compatible entrypoint used by a few existing pages.
@@ -945,5 +974,70 @@
     injectWidget();
   }
 
-  emit("ready", { mode: "private-qa", version: "2.0.0" });
+  class SIINDEXSpeechRecognition {
+    constructor() {
+      this.lang = "en-AU";
+      this.continuous = false;
+      this.interimResults = false;
+      this.maxAlternatives = 1;
+      this.onstart = null;
+      this.onresult = null;
+      this.onerror = null;
+      this.onend = null;
+      this._active = false;
+    }
+
+    start() {
+      if (this._active) throw new DOMException("Recognition already started", "InvalidStateError");
+      this._active = true;
+      if (typeof this.onstart === "function") this.onstart(new Event("start"));
+      startRecording({
+        source: "legacy-microphone",
+        autoStopMs: this.continuous ? MAX_RECORDING_MS : 8000,
+        onTranscript: (transcript) => {
+          const alternative = { transcript, confidence: 1 };
+          const result = [alternative];
+          result.isFinal = true;
+          const results = [result];
+          results.item = (index) => results[index];
+          if (typeof this.onresult === "function") {
+            this.onresult({ results, resultIndex: 0 });
+          }
+        },
+        onError: (error) => {
+          const code = error && (error.code || error.name || error.message);
+          const mapped = code === "NotAllowedError"
+            ? "not-allowed"
+            : code === "no_speech_detected"
+            ? "no-speech"
+            : "network";
+          if (typeof this.onerror === "function") {
+            this.onerror({ error: mapped, message: errorMessage(error, "microphone") });
+          }
+        },
+        onEnd: () => {
+          this._active = false;
+          if (typeof this.onend === "function") this.onend(new Event("end"));
+        },
+      });
+    }
+
+    stop() {
+      if (!this._active) return;
+      stopRecording(true, "legacy-microphone");
+    }
+
+    abort() {
+      if (!this._active) return;
+      stopRecording(false, "legacy-microphone");
+      this._active = false;
+    }
+  }
+
+  window.SIINDEXNativeSpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  window.SpeechRecognition = SIINDEXSpeechRecognition;
+  window.webkitSpeechRecognition = SIINDEXSpeechRecognition;
+
+  emit("ready", { mode: "website", version: "3.0.0" });
 })();
