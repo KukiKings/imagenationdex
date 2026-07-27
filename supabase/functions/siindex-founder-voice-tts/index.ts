@@ -6,6 +6,8 @@ const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ELEVENLABS_KEY = Deno.env.get("ELEVENLABS_API_KEY");
 const VOICE_ID = Deno.env.get("ELEVENLABS_VOICE_ID") || "19STyYD15bswVz51nqLf";
+const MODEL_ID = "eleven_flash_v2_5";
+const OUTPUT_FORMAT = "pcm_24000";
 
 function allowedOrigin(origin: string | null): string {
   if (!origin) return "https://imagenationdex.com";
@@ -25,7 +27,8 @@ function cors(req: Request) {
     "Access-Control-Allow-Origin": allowedOrigin(req.headers.get("Origin")),
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "authorization, apikey, content-type",
-    "Access-Control-Expose-Headers": "X-Siindex-Correlation-Id",
+    "Access-Control-Expose-Headers":
+      "X-Siindex-Correlation-Id, X-Siindex-Audio-Format, X-Siindex-Voice-Model",
     "Vary": "Origin",
   };
 }
@@ -109,26 +112,30 @@ Deno.serve(async (req: Request) => {
 
   let provider: Response;
   try {
-    provider = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
-      method: "POST",
-      signal: AbortSignal.timeout(20_000),
-      headers: {
-        "xi-api-key": ELEVENLABS_KEY,
-        "Content-Type": "application/json",
-        "Accept": "audio/mpeg",
-      },
-      body: JSON.stringify({
-        text,
-        model_id: "eleven_multilingual_v2",
-        voice_settings: {
-          stability: 0.42,
-          similarity_boost: 0.83,
-          style: 0.20,
-          use_speaker_boost: true,
-          speed: 0.88,
+    provider = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}/stream?output_format=${OUTPUT_FORMAT}`,
+      {
+        method: "POST",
+        signal: AbortSignal.timeout(20_000),
+        headers: {
+          "xi-api-key": ELEVENLABS_KEY,
+          "Content-Type": "application/json",
+          "Accept": "audio/pcm",
         },
-      }),
-    });
+        body: JSON.stringify({
+          text,
+          model_id: MODEL_ID,
+          apply_text_normalization: "auto",
+          voice_settings: {
+            stability: 0.42,
+            similarity_boost: 0.83,
+            style: 0,
+            use_speaker_boost: true,
+            speed: 0.88,
+          },
+        }),
+      },
+    );
   } catch (error) {
     await admin.from("security_events").insert({
       tier: "T1",
@@ -146,7 +153,12 @@ Deno.serve(async (req: Request) => {
       zone: "siindex_founder_voice_provider_error",
       correlation_id: correlationId,
       description: "Founder Voice Room voice provider returned an error.",
-      detail: { auth_user_id: authUserId, provider_status: provider.status },
+      detail: {
+        auth_user_id: authUserId,
+        provider_status: provider.status,
+        provider_request_id: provider.headers.get("request-id"),
+        model_id: MODEL_ID,
+      },
     });
     return json(req, 502, { error: "voice_provider_error", provider_status: provider.status }, correlationId);
   }
@@ -156,16 +168,23 @@ Deno.serve(async (req: Request) => {
     zone: "siindex_founder_voice_tts",
     correlation_id: correlationId,
     description: "Founder Voice Room generated one authenticated spoken response.",
-    detail: { auth_user_id: authUserId, characters: text.length },
+    detail: {
+      auth_user_id: authUserId,
+      characters: text.length,
+      model_id: MODEL_ID,
+      output_format: OUTPUT_FORMAT,
+    },
   });
 
   return new Response(provider.body, {
     status: 200,
     headers: {
       ...cors(req),
-      "Content-Type": "audio/mpeg",
+      "Content-Type": "audio/pcm;rate=24000",
       "Cache-Control": "no-store",
       "X-Siindex-Correlation-Id": correlationId,
+      "X-Siindex-Audio-Format": OUTPUT_FORMAT,
+      "X-Siindex-Voice-Model": MODEL_ID,
       "X-Content-Type-Options": "nosniff",
     },
   });
