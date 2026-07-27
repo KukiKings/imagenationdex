@@ -502,11 +502,13 @@
   <div class="input-area">
     <input type="text" id="msgInput" class="msg-input"
       placeholder="Ask SIINDEX anything..."
-      maxlength="500"
+      maxlength="1200"
       autocomplete="off"
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();handleSend();}">
+    <button class="send-btn" id="chatMicBtn" onclick="startChatVoice()" aria-label="Start or stop microphone" aria-pressed="false">🎙</button>
     <button class="send-btn" id="sendBtn" onclick="handleSend()">➤</button>
   </div>
+  <div id="chatVoiceStatus" aria-live="polite" style="padding:0 16px 10px;color:rgba(255,255,255,.45);font-size:10px;line-height:1.45;text-align:center;">Tap once to start · tap again to send. Provider permission is requested first. Do not share passwords, seed phrases, private keys, identity documents, or sensitive account details.</div>
 
 </div>
 
@@ -1087,6 +1089,83 @@ setTimeout(() => {
   document.querySelectorAll('.msg-row.siindex').forEach(row => attachCopyBtn(row));
 }, 200);
 </script>
+<script>window.SIINDEX_NO_GLOBAL_WIDGET = true;</script>
 <script src="siindex-speak-core.js"></script>
+<script>
+// SIINDEX Citizen Voice Core adapter — replaces the retired public chat endpoint.
+(function () {
+  const coreRows = new Map();
+
+  function updateAssistant(detail) {
+    let record = coreRows.get(detail.id);
+    if (!record) {
+      const created = createSIBubble();
+      record = created;
+      coreRows.set(detail.id, record);
+    }
+    record.bubbleEl.innerHTML = formatSI(detail.text);
+    if (!detail.streaming) {
+      record.timeEl.textContent = now();
+      attachCopyBtn(record.rowEl);
+    }
+    scroll();
+  }
+
+  window.addEventListener('siindex:message', event => {
+    const detail = event.detail || {};
+    if (detail.source !== 'chat-page') return;
+    if (detail.role === 'user') {
+      addUserMsg(detail.text);
+    } else {
+      hideTyping();
+      updateAssistant(detail);
+    }
+  });
+
+  window.addEventListener('siindex:status', event => {
+    const detail = event.detail || {};
+    const status = document.getElementById('chatVoiceStatus');
+    const mic = document.getElementById('chatMicBtn');
+    if (status) status.textContent = detail.text || 'Ready.';
+    if (mic) {
+      const live = detail.state === 'listening';
+      mic.setAttribute('aria-pressed', live ? 'true' : 'false');
+      mic.style.background = live ? 'var(--red)' : '';
+    }
+  });
+
+  handleSend = function () {
+    const input = document.getElementById('msgInput');
+    const text = input.value.trim();
+    if (!text || !window.SIINDEXVoice) return;
+    input.value = '';
+    const chips = document.getElementById('promptsRow');
+    if (chips) chips.remove();
+    document.querySelectorAll('.si-followup-row').forEach(el => el.remove());
+    showTyping();
+    window.SIINDEXVoice.ask(text, { source: 'chat-page' });
+  };
+
+  window.startChatVoice = function () {
+    if (window.SIINDEXVoice) window.SIINDEXVoice.listen({ source: 'chat-page' });
+  };
+
+  toggleVoice = function () {
+    if (!window.SIINDEXVoice) return;
+    window.SIINDEXVoice.setVoiceEnabled(!window.SIINDEXVoice.voiceEnabled);
+    voiceOn = window.SIINDEXVoice.voiceEnabled;
+    const button = document.getElementById('voiceBtn');
+    button.textContent = voiceOn ? '🔊 Voice' : '🔇 Voice';
+    button.classList.toggle('active', voiceOn);
+  };
+
+  voiceOn = window.SIINDEXVoice ? window.SIINDEXVoice.voiceEnabled : false;
+  const voiceButton = document.getElementById('voiceBtn');
+  if (voiceButton) {
+    voiceButton.textContent = voiceOn ? '🔊 Voice' : '🔇 Voice';
+    voiceButton.classList.toggle('active', voiceOn);
+  }
+})();
+</script>
 </body>
 </html>
