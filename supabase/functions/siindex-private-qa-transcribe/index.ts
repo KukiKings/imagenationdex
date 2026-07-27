@@ -3,8 +3,8 @@ import { createClient } from "jsr:@supabase/supabase-js@2.95.0";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const OPENAI_KEY = Deno.env.get("OPENAI_API_KEY");
-const MODEL = "gpt-4o-mini-transcribe";
+const ELEVENLABS_KEY = Deno.env.get("ELEVENLABS_API_KEY");
+const MODEL = "scribe_v2";
 const ZONE = "siindex_private_qa_voice_transcribe";
 const MAX_BYTES = 5 * 1024 * 1024;
 const QA_EXPIRES_AT = Date.parse("2026-08-05T00:00:00Z");
@@ -123,7 +123,7 @@ Deno.serve(async (req: Request) => {
       correlationId,
     );
   }
-  if (!OPENAI_KEY) {
+  if (!ELEVENLABS_KEY) {
     return json(
       req,
       503,
@@ -178,12 +178,9 @@ Deno.serve(async (req: Request) => {
     "file",
     new File([audio], `siindex-utterance.${extensionFor(type)}`, { type }),
   );
-  outbound.set("model", MODEL);
-  outbound.set("response_format", "json");
-  outbound.set(
-    "prompt",
-    "SIINDEX, INDX, IN$DEX, ImageNation DEX, Cook Islands, Rarotonga, Pacific Islands, Mama Noe",
-  );
+  outbound.set("model_id", MODEL);
+  outbound.set("tag_audio_events", "false");
+  outbound.set("timestamps_granularity", "none");
 
   const { error: auditError } = await admin.from("security_events").insert({
     tier: "T0",
@@ -210,12 +207,11 @@ Deno.serve(async (req: Request) => {
 
   let provider: Response;
   try {
-    provider = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    provider = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
       method: "POST",
       signal: AbortSignal.timeout(30_000),
       headers: {
-        "Authorization": `Bearer ${OPENAI_KEY}`,
-        "OpenAI-Safety-Identifier": hash,
+        "xi-api-key": ELEVENLABS_KEY,
       },
       body: outbound,
     });

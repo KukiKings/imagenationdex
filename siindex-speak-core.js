@@ -169,7 +169,7 @@
       return explain(
         "The secure speech-to-text service is not available right now.",
         "Type your question in the box so SIINDEX can still answer.",
-        "A project administrator must check the OpenAI transcription service.",
+        "A project administrator must check the ElevenLabs transcription service.",
         "Text works now; microphone recovery depends on the provider check.",
       );
     }
@@ -303,7 +303,7 @@
         <h2 id="siindex-consent-title" style="margin:0 0 12px;font-size:20px;">Before SIINDEX continues</h2>
         <p style="margin:0 0 12px;color:#c8cede;font-size:13px;line-height:1.6;">This private test uses three external providers:</p>
         <ul style="margin:0 0 14px;padding-left:20px;color:#c8cede;font-size:13px;line-height:1.7;">
-          <li>Microphone audio is sent to OpenAI for transcription.</li>
+          <li>Microphone audio is sent to ElevenLabs for transcription.</li>
           <li>Your transcript or typed question is sent to Anthropic for the answer.</li>
           <li>SIINDEX's reply is sent to ElevenLabs when voice replies are on.</li>
         </ul>
@@ -852,7 +852,7 @@
         </div>
         <button type="button" class="siindex-icon-btn" data-si-close aria-label="Close SIINDEX">×</button>
       </header>
-      <div class="siindex-privacy">Private AJ testing only — not available to citizens yet. Tap the microphone only when ready. Your audio is sent securely to OpenAI for transcription, the transcript or typed question is sent to Anthropic, and SIINDEX replies are sent to ElevenLabs when voice is on. IN$DEX does not store raw audio or QA conversations on its servers. Do not share passwords, seed phrases, private keys, identity documents, or sensitive account details. This test mode cannot access accounts or take actions.</div>
+      <div class="siindex-privacy">Private AJ testing only — not available to citizens yet. Tap the microphone only when ready. Your audio is sent securely to ElevenLabs for transcription, the transcript or typed question is sent to Anthropic, and SIINDEX replies are sent to ElevenLabs when voice is on. IN$DEX does not store raw audio or QA conversations on its servers. Do not share passwords, seed phrases, private keys, identity documents, or sensitive account details. This test mode cannot access accounts or take actions.</div>
       <div class="siindex-messages" data-si-messages>
         <div class="siindex-empty" data-si-empty>Ask me what is genuinely live, what is planned, how the Pacific-first pilot works, or how to collaborate. Tap the microphone, speak, then tap again to send. You can type at any time.</div>
       </div>
