@@ -42,6 +42,7 @@
   let currentStreamMessage = null;
   let busy = false;
   let recording = false;
+  let consentPromise = null;
   let voiceEnabled = localStorage.getItem(VOICE_KEY) !== "false";
 
   class SiindexError extends Error {
@@ -278,23 +279,60 @@
   }
 
   function ensureProviderConsent() {
-    if (localStorage.getItem(PROVIDER_CONSENT_KEY) === "accepted") return true;
-    const accepted = window.confirm(
-      "Before SIINDEX continues:\n\n" +
-      "• Microphone audio is sent to OpenAI for transcription.\n" +
-      "• Your transcript or typed question is sent to Anthropic for the answer.\n" +
-      "• SIINDEX's reply is sent to ElevenLabs when voice replies are on.\n" +
-      "• IN$DEX does not store the raw audio or Visitor Mode conversation on its servers. A copy of the conversation stays only on this device until you clear it.\n\n" +
-      "Do not share passwords, seed phrases, private keys, identity documents, or sensitive account information.\n\n" +
-      "Choose OK to continue, or Cancel to keep using the website without SIINDEX Visitor Mode.",
-    );
-    if (accepted) {
-      localStorage.setItem(PROVIDER_CONSENT_KEY, "accepted");
-      emit("consent", { accepted: true });
-      return true;
+    if (localStorage.getItem(PROVIDER_CONSENT_KEY) === "accepted") {
+      return Promise.resolve(true);
     }
-    emit("consent", { accepted: false });
-    return false;
+    if (consentPromise) return consentPromise;
+
+    consentPromise = new Promise((resolve) => {
+      const overlay = document.createElement("div");
+      overlay.id = "siindex-consent-overlay";
+      overlay.style.cssText =
+        "position:fixed;inset:0;z-index:10050;display:grid;place-items:center;padding:20px;" +
+        "background:rgba(6,8,14,.88);backdrop-filter:blur(6px);";
+
+      const dialog = document.createElement("section");
+      dialog.setAttribute("role", "dialog");
+      dialog.setAttribute("aria-modal", "true");
+      dialog.setAttribute("aria-labelledby", "siindex-consent-title");
+      dialog.style.cssText =
+        "width:min(100%,520px);max-height:88vh;overflow:auto;padding:24px;border-radius:22px;" +
+        "border:1px solid rgba(0,212,255,.35);background:#11141f;color:#f4f6ff;" +
+        "box-shadow:0 24px 80px rgba(0,0,0,.55);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;";
+      dialog.innerHTML = `
+        <h2 id="siindex-consent-title" style="margin:0 0 12px;font-size:20px;">Before SIINDEX continues</h2>
+        <p style="margin:0 0 12px;color:#c8cede;font-size:13px;line-height:1.6;">This private test uses three external providers:</p>
+        <ul style="margin:0 0 14px;padding-left:20px;color:#c8cede;font-size:13px;line-height:1.7;">
+          <li>Microphone audio is sent to OpenAI for transcription.</li>
+          <li>Your transcript or typed question is sent to Anthropic for the answer.</li>
+          <li>SIINDEX's reply is sent to ElevenLabs when voice replies are on.</li>
+        </ul>
+        <p style="margin:0 0 12px;color:#c8cede;font-size:13px;line-height:1.6;">IN$DEX does not store raw audio or the Visitor Mode conversation on its servers. A copy of the conversation stays only on this device until you clear it.</p>
+        <p style="margin:0 0 18px;color:#ffcf72;font-size:13px;line-height:1.6;">Never share passwords, seed phrases, private keys, identity documents, or sensitive account information.</p>
+        <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+          <button type="button" data-si-consent-decline style="border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:10px 16px;background:transparent;color:#d6dbea;cursor:pointer;">Not now</button>
+          <button type="button" data-si-consent-accept style="border:0;border-radius:20px;padding:10px 16px;background:linear-gradient(135deg,#00d4ff,#2b35d8);color:#fff;font-weight:800;cursor:pointer;">Continue private test</button>
+        </div>`;
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+
+      const finish = (accepted) => {
+        if (accepted) localStorage.setItem(PROVIDER_CONSENT_KEY, "accepted");
+        overlay.remove();
+        emit("consent", { accepted });
+        consentPromise = null;
+        resolve(accepted);
+      };
+      const accept = dialog.querySelector("[data-si-consent-accept]");
+      const decline = dialog.querySelector("[data-si-consent-decline]");
+      accept.addEventListener("click", () => finish(true), { once: true });
+      decline.addEventListener("click", () => finish(false), { once: true });
+      overlay.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") finish(false);
+      });
+      accept.focus();
+    });
+    return consentPromise;
   }
 
   function stopTracks() {
@@ -332,7 +370,7 @@
       showError(new SiindexError("private_qa_only"), "access", source);
       return;
     }
-    if (!ensureProviderConsent()) {
+    if (!await ensureProviderConsent()) {
       showError(
         new SiindexError("provider_consent_declined"),
         "consent",
@@ -462,7 +500,7 @@
       showError(new SiindexError("private_qa_only"), "access", source);
       return;
     }
-    if (!ensureProviderConsent()) {
+    if (!await ensureProviderConsent()) {
       showError(
         new SiindexError("provider_consent_declined"),
         "consent",
