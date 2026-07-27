@@ -171,8 +171,28 @@
       const email = el('email').value.trim();
       if (!email) return setStatus(el('authStatus'),'Enter your founder email first.','err');
       setStatus(el('authStatus'),'Sending your secure sign-in link…','warn');
-      const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.href } });
-      if (error) return setStatus(el('authStatus'), explain(error.message,'Check the email and try once more.','Supabase Auth or a human steward if it repeats.','About 2 minutes.'),'err');
+      const emailRedirectTo = new URL(location.pathname, location.origin).href;
+      const { error } = await sb.auth.signInWithOtp({
+        email,
+        options: {
+          shouldCreateUser: false,
+          emailRedirectTo
+        }
+      });
+      if (error) {
+        const rateLimited = /rate limit/i.test(error.message || '');
+        return setStatus(el('authStatus'), rateLimited ? explain(
+          'The project’s temporary email allowance has been used.',
+          'Do not request another link yet. Wait until one hour after the last successful email, then retry once using the existing founder account.',
+          'You can retry after the allowance resets; a Supabase administrator must configure custom SMTP for the permanent fix.',
+          'Up to 60 minutes for this test; custom SMTP should be completed before wider testing.'
+        ) : explain(
+          error.message,
+          'Confirm that you entered the existing founder account, then retry once.',
+          'You can correct the address; Supabase Auth or a human steward is needed if it repeats.',
+          'Usually 1–2 minutes.'
+        ),'err');
+      }
       setStatus(el('authStatus'),`Link sent to ${email}. Open it on this device to continue.`,'ok');
     }
 
