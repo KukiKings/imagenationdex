@@ -126,7 +126,9 @@
     let recognition = null;
     let listening = false;
     let voiceOn = true;
-    let currentAudio = null;
+    let audioContext = null;
+    let activeAudioSources = new Set();
+    let playbackGeneration = 0;
     let runtimeAbort = null;
     let voiceAbort = null;
     let pendingFactorId = null;
@@ -261,7 +263,7 @@
     function stopEverything(message='Interrupted. I have stopped speaking and stopped the current response.') {
       runtimeAbort?.abort(); runtimeAbort = null;
       voiceAbort?.abort(); voiceAbort = null;
-      if (currentAudio) { currentAudio.pause(); currentAudio.src=''; currentAudio=null; }
+      stopPcmPlayback();
       window.speechSynthesis?.cancel();
       if (recognition && listening) { try { recognition.abort(); } catch(_){} }
       listening = false;
@@ -269,9 +271,88 @@
       setStatus(el('voiceStatus'),message,'warn');
     }
 
+    async function ensureAudioContext() {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return null;
+      if (!audioContext || audioContext.state === 'closed') {
+        audioContext = new AudioContextClass({sampleRate:24000});
+      }
+      if (audioContext.state === 'suspended') await audioContext.resume();
+      return audioContext;
+    }
+
+    function stopPcmPlayback() {
+      playbackGeneration += 1;
+      for (const source of activeAudioSources) {
+        try { source.stop(); } catch (_) {}
+      }
+      activeAudioSources.clear();
+    }
+
+    async function playPcmStream(response) {
+      const context = await ensureAudioContext();
+      if (!context || !response.body) throw new Error('Streaming audio is unavailable in this browser.');
+
+      const generation = ++playbackGeneration;
+      const reader = response.body.getReader();
+      const sampleRate = 24000;
+      const frameBytes = 8192;
+      let pending = new Uint8Array(0);
+      let nextStartAt = context.currentTime + 0.12;
+      let finalSource = null;
+
+      function schedule(bytes) {
+        if (!bytes.length || generation !== playbackGeneration) return;
+        const sampleCount = Math.floor(bytes.length / 2);
+        if (!sampleCount) return;
+        const samples = new Float32Array(sampleCount);
+        const view = new DataView(bytes.buffer, bytes.byteOffset, sampleCount * 2);
+        for (let i=0; i<sampleCount; i++) {
+          samples[i] = view.getInt16(i * 2, true) / 32768;
+        }
+        const buffer = context.createBuffer(1, sampleCount, sampleRate);
+        buffer.copyToChannel(samples, 0);
+        const source = context.createBufferSource();
+        source.buffer = buffer;
+        source.connect(context.destination);
+        activeAudioSources.add(source);
+        source.onended = () => activeAudioSources.delete(source);
+        if (activeAudioSources.size === 1) {
+          setStatus(el('voiceStatus'),'SIINDEX is speaking. Tap Interrupt or the microphone to stop her.','ok');
+        }
+        nextStartAt = Math.max(nextStartAt, context.currentTime + 0.08);
+        source.start(nextStartAt);
+        nextStartAt += buffer.duration;
+        finalSource = source;
+      }
+
+      while (true) {
+        const {done,value} = await reader.read();
+        if (done || generation !== playbackGeneration) break;
+        const merged = new Uint8Array(pending.length + value.length);
+        merged.set(pending);
+        merged.set(value, pending.length);
+        let offset = 0;
+        while (merged.length - offset >= frameBytes) {
+          schedule(merged.slice(offset, offset + frameBytes));
+          offset += frameBytes;
+        }
+        pending = merged.slice(offset);
+      }
+      if (generation === playbackGeneration && pending.length >= 2) {
+        schedule(pending.slice(0, pending.length - (pending.length % 2)));
+      }
+      if (finalSource && generation === playbackGeneration) {
+        finalSource.addEventListener('ended', () => {
+          if (generation === playbackGeneration) setStatus(el('voiceStatus'),'Ready.','ok');
+        }, {once:true});
+      }
+    }
+
     async function ask(text) {
       text = String(text || '').trim();
       if (!text || !requireFounder()) return;
+      await ensureAudioContext().catch(()=>null);
       stopEverything('Preparing your request…');
       addMessage('you',text);
       const answer = addMessage('si','Thinking…');
@@ -334,11 +415,9 @@
           body:JSON.stringify({text:spoken})
         });
         if (!response.ok) throw new Error(`secure voice returned ${response.status}`);
-        const audio = new Audio(URL.createObjectURL(await response.blob()));
-        currentAudio = audio;
-        audio.onended = () => { currentAudio=null; setStatus(el('voiceStatus'),'Ready.','ok'); };
-        setStatus(el('voiceStatus'),'SIINDEX is speaking. Tap Interrupt or the microphone to stop her.','ok');
-        await audio.play();
+        const format = response.headers.get('X-Siindex-Audio-Format');
+        if (format !== 'pcm_24000') throw new Error('The secure voice returned an unsupported audio format.');
+        await playPcmStream(response);
       } catch (error) {
         if (error.name === 'AbortError') return;
         if (!window.speechSynthesis) return setStatus(el('voiceStatus'),explain('Premium voice is unavailable and this browser has no fallback.','Continue by reading or typing.','A human checks the voice provider account.','Text works now; voice timing depends on the provider.'),'err');
