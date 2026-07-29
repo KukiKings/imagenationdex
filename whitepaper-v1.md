@@ -932,7 +932,7 @@ The Cook Islands flag carries 15 white stars in a circle — one for each of the
 ### Progressive Biometric KYC Tiers
 | Tier | Requirements |
 |---|---|
-| 0 | Phone number + liveness scan only (no documents) |
+| 0 | **Phone number / contact only — no documents, no face scan, no liveness check.** Corrected 2026-07-29: this row previously read "phone number + liveness scan only". The founder decision of 2026-07-27 removed biometrics from Tier 0 entirely, and `biometric-kyc.html` and `onboarding-flow.html` were rebuilt to phone + OTP on that basis — but this canon row was never updated, so Appendix A contradicted the shipped screens for two days. A face-verified credential (CPT) is a candidate for a future Tier 1 step and is never required to get started. |
 | 1 | ID document |
 | 2 | Enhanced due diligence |
 | 3+ | Full compliance |
