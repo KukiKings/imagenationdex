@@ -402,15 +402,20 @@ function speakSIINDEX(text, onend) {
   if (!window.speechSynthesis) { if (onend) onend(); return; }
   window.speechSynthesis.cancel();
   const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = 'en-AU';
+  // American accent canon (AJ 2026-07-29). This screen was hard-pinned to en-AU for both
+  // the utterance language and the voice lookup — the most explicitly Australian of all
+  // the pickers. Speech RECOGNITION further down stays en-AU on purpose: that governs how
+  // AJ's and Australian citizens' speech is understood, not how SIINDEX sounds.
+  const voices = window.speechSynthesis.getVoices();
+  const us = voices.filter(v => /^en[-_]US/i.test(v.lang || ''));
+  const pick = us.find(v => /samantha|ava|allison|susan|zoe|nicky|victoria|zira|aria|google us english/i.test(v.name))
+    || us.find(v => /female|woman/i.test(v.name))
+    || us[0]
+    || voices.find(v => /^en/i.test(v.lang || ''));
+  if (pick) utter.voice = pick;
+  utter.lang = 'en-US';
   utter.rate = 0.9;
   utter.pitch = 1.05;
-  // Prefer a female voice if available
-  const voices = window.speechSynthesis.getVoices();
-  const femaleAU = voices.find(v => v.lang === 'en-AU' && /female|woman|samantha|karen|tessa/i.test(v.name))
-    || voices.find(v => v.lang === 'en-AU')
-    || voices.find(v => /en/i.test(v.lang));
-  if (femaleAU) utter.voice = femaleAU;
   // 300ms buffer after TTS ends before chaining next action (e.g. listenForYes)
   if (onend) utter.onend = () => setTimeout(onend, 300);
   window.speechSynthesis.speak(utter);

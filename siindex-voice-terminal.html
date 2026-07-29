@@ -648,17 +648,19 @@ let isSpeaking = false;
 
 function loadVoices() {
   voices = speechSynthesis.getVoices();
-  // Prefer: Samantha (Mac), Karen (Mac AU), Moira (Mac IE), Zira (Windows), Google UK English Female
-  const preferred = ['Samantha', 'Karen', 'Moira', 'Zira', 'Google UK English Female', 'Google US English'];
+  // American accent canon (AJ 2026-07-29). The old preference order was
+  // Samantha → Karen (AU) → Moira (IE) → Zira → Google UK English Female → Google US
+  // English, i.e. it reached for Australian, Irish and British voices before American.
+  const preferred = ['Samantha', 'Ava', 'Allison', 'Susan', 'Zoe', 'Nicky', 'Victoria',
+                     'Zira', 'Aria', 'Google US English'];
+  const us = voices.filter(v => /^en[-_]US/i.test(v.lang || ''));
   for (const name of preferred) {
-    selectedVoice = voices.find(v => v.name === name);
+    selectedVoice = us.find(v => v.name === name) || voices.find(v => v.name === name && /^en[-_]US/i.test(v.lang || ''));
     if (selectedVoice) break;
   }
-  if (!selectedVoice) {
-    selectedVoice = voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('female'));
-  }
+  if (!selectedVoice) selectedVoice = us.find(v => /female|woman/i.test(v.name)) || us[0];
   if (!selectedVoice && voices.length) {
-    selectedVoice = voices.find(v => v.lang.startsWith('en')) || voices[0];
+    selectedVoice = voices.find(v => (v.lang || '').startsWith('en')) || voices[0];
   }
 }
 
@@ -710,6 +712,7 @@ async function speak(text) {
   if (!window.speechSynthesis) return;
   const utter = new SpeechSynthesisUtterance(spoken);
   if (selectedVoice) utter.voice = selectedVoice;
+  utter.lang  = 'en-US';   // American accent canon
   utter.rate  = 0.92;
   utter.pitch = 1.05;
   utter.volume = 1;

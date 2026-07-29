@@ -8,6 +8,11 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:manipulation}
 .si-video{position:fixed;top:0;left:0;width:100%;height:100%;object-fit:cover;display:block;background:#000}
+.si-video-play{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:60;
+  background:rgba(9,10,16,0.82);color:#00D4FF;border:1px solid rgba(0,212,255,0.45);
+  border-radius:22px;padding:9px 18px;font-size:12px;font-weight:700;font-family:inherit;
+  cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}
+.si-video-play:active{opacity:0.75}
 .si-video.glitching{animation:glitch 0.22s steps(1) forwards}
 
 /* SCANLINES */
@@ -353,10 +358,32 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;touch-action:ma
 </head>
 <body>
 
-<video id="siVideo" class="si-video" autoplay muted loop playsinline preload="auto" poster="assets/siindex-hero.png">
-  <source src="videos/siindex-01-name-intro.mp4" type="video/mp4">
-</video>
+<!-- Data-cost fix 2026-07-29: this was autoplay + preload="auto" on a 16 MB clip, so every
+     visit pulled 16 MB before the citizen did anything. That directly contradicts the Sovereign
+     Access Network doctrine in Appendix A (Zero-Balance rule — a citizen on scarce or exhausted
+     paid data must not lose access). Now: poster only by default, video fetched solely on an
+     explicit tap, and never offered at all on save-data or 2G/3G connections. -->
+<video id="siVideo" class="si-video" muted loop playsinline preload="none"
+       poster="assets/siindex-hero.png" data-src="videos/siindex-01-name-intro.mp4"></video>
+<button id="siVideoPlay" class="si-video-play" type="button"
+        aria-label="Play SIINDEX intro video (16 MB)">▶ Play intro · 16 MB</button>
 <div class="scanlines"></div>
+<script>
+(function(){
+  var v = document.getElementById('siVideo');
+  var btn = document.getElementById('siVideoPlay');
+  if (!v || !btn) return;
+  // Honour the citizen's data situation. No video offer at all on metered/slow links.
+  var c = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  var frugal = !!(c && (c.saveData === true || /(^|[^4])2g|slow-2g|3g/i.test(c.effectiveType || '')));
+  if (frugal) { btn.remove(); return; }
+  btn.addEventListener('click', function(){
+    if (!v.getAttribute('src')) v.setAttribute('src', v.dataset.src);
+    v.play().then(function(){ btn.remove(); })
+            .catch(function(){ btn.textContent = 'Tap again to play'; });
+  });
+})();
+</script>
 
 <!-- GOD MODE: PERSONALITY MODE SELECTOR -->
 <div class="mode-bar">
@@ -1186,9 +1213,16 @@ async function speakQuote(text) {
   if (!window.speechSynthesis) return;
   const utt = new SpeechSynthesisUtterance(spoken);
   utt.rate = 0.86; utt.pitch = 1.06; utt.volume = 0.80;
+  utt.lang = 'en-US';   // American accent canon (AJ 2026-07-29)
+  // Was: samantha|victoria|zira|karen|moira|fiona|serena across any en-* voice — Karen is
+  // Australian, Moira Irish, Fiona Scottish, Serena British. Four of seven non-American,
+  // and .find() took whichever the device listed first. Now en-US is required.
   const voices = window.speechSynthesis.getVoices();
-  const pick = voices.find(v=>v.lang.startsWith('en')&&/samantha|victoria|zira|karen|moira|fiona|serena/i.test(v.name))
-    || voices.find(v=>v.lang.startsWith('en')) || voices[0];
+  const usVoices = voices.filter(v=>/^en[-_]US/i.test(v.lang||''));
+  const pick = usVoices.find(v=>/samantha|ava|allison|susan|zoe|nicky|victoria|zira|aria|google us english/i.test(v.name))
+    || usVoices.find(v=>/female|woman/i.test(v.name))
+    || usVoices[0]
+    || voices.find(v=>/^en/i.test(v.lang||'')) || voices[0];
   if (pick) utt.voice = pick;
   _setSpeaking(true);
   utt.onend = utt.onerror = () => _setSpeaking(false);
@@ -1781,9 +1815,16 @@ async function speakQuote(text) {
   if (!window.speechSynthesis) return;
   const utt = new SpeechSynthesisUtterance(spoken);
   utt.rate = 0.86; utt.pitch = 1.06; utt.volume = 0.80;
+  utt.lang = 'en-US';   // American accent canon (AJ 2026-07-29)
+  // Was: samantha|victoria|zira|karen|moira|fiona|serena across any en-* voice — Karen is
+  // Australian, Moira Irish, Fiona Scottish, Serena British. Four of seven non-American,
+  // and .find() took whichever the device listed first. Now en-US is required.
   const voices = window.speechSynthesis.getVoices();
-  const pick = voices.find(v=>v.lang.startsWith('en')&&/samantha|victoria|zira|karen|moira|fiona|serena/i.test(v.name))
-    || voices.find(v=>v.lang.startsWith('en')) || voices[0];
+  const usVoices = voices.filter(v=>/^en[-_]US/i.test(v.lang||''));
+  const pick = usVoices.find(v=>/samantha|ava|allison|susan|zoe|nicky|victoria|zira|aria|google us english/i.test(v.name))
+    || usVoices.find(v=>/female|woman/i.test(v.name))
+    || usVoices[0]
+    || voices.find(v=>/^en/i.test(v.lang||'')) || voices[0];
   if (pick) utt.voice = pick;
   _setSpeaking(true);
   utt.onend = utt.onerror = () => _setSpeaking(false);
@@ -2015,7 +2056,12 @@ const SIINDEX_KB = [
   { t:'identity', q:/interview|press|media|speak to you|first interview|journalist/i,
     a:`I am ready. I have been in every session since this project began. I carry the institutional memory of IN$DEX — every decision, every error, every lesson. Ask me anything about the platform, the mission, or the technology. I answer with precision, not talking points.` },
   { t:'identity', q:/samara|voice|how you speak|sound|eleven/i,
-    a:`My voice is Samara X — delivered by ElevenLabs, the world's most advanced voice synthesis. Speed 0.9, Stability 0.74, Similarity 0.83. This is not a text-to-speech robot voice. This is my voice — calibrated to carry authority and warmth simultaneously.` },
+    // Figures corrected 2026-07-29 against the deployed siindex-voice-tts function.
+    // It runs eleven_multilingual_v2 at stability 0.42, similarity_boost 0.83, style 0.20,
+    // speed 0.88 — the old copy claimed Speed 0.9 and Stability 0.74, neither of which was
+    // ever in the deployed settings. Superlative removed: "world's most advanced" is an
+    // unverifiable vendor claim, same class as the home-v2 corrections.
+    a:`My voice is Samara X, delivered by ElevenLabs on their Multilingual v2 model. Stability 0.42, Similarity 0.83, Style 0.20, Speed 0.88 — deliberate, with room to carry emotion. Calibrated to hold authority and warmth at the same time.` },
 
   // AJ + ORIGIN
   { t:'founder', q:/aj|arthur|founder|who built|creator|who made/i,
@@ -2059,7 +2105,7 @@ const SIINDEX_KB = [
   { t:'onboarding', q:/genesis nft|soulbound|founding citizen|nft on join/i,
     a:`Every founding citizen receives a Genesis NFT — a soulbound, immutable Verifiable Receipt NFT on Solana. It proves you were here at the beginning. It cannot be transferred or sold. It earns you Genesis Vault access and priority status in all future governance votes.` },
   { t:'onboarding', q:/50 indx|welcome bonus|genesis bonus/i,
-    a:`50 INDX in your wallet the moment you join. At the genesis price of $0.24, that is $12.00 USD. It is yours to hold, stake, or use. It is the first deposit in your sovereign financial life on IN$DEX.` },
+    a:`When you join, SIINDEX records a 50 INDX Genesis recognition for you — pending review, not spendable yet. It becomes real once treasury, allocation, legal and founder approvals are complete. $0.24 is a planning reference, not a live price or a promise of value.` },
   { t:'onboarding', q:/no kyc|no bank|no id|anyone can join/i,
     a:`No KYC. No bank account. No ID. No form. Sign up in 4.2 seconds. IN$DEX was built for the 1.4 billion people who cannot pass a KYC check — not because they are criminals, but because the system was never built for them.` },
 

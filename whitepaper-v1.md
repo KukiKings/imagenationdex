@@ -195,7 +195,7 @@ Elon Musk's X Money launched on June 26, 2026 for US Premium+ subscribers, offer
 
 X Money validated that a 6% APY digital account with no traditional bank account is a viable and desirable product. IN\$DEX offers 3.7× the yield, zero geographic restriction, and no forced identity verification at entry. This is not competition — it is confirmation.
 
-### Signal 4 — The Cycle Bottom Alignment (Q4 2026)
+### Signal 4 — The Cycle Bottom Alignment (Q4 2026 – Q1 2027)
 
 Bitcoin peaked in October 2025 and fell approximately 52% to ~$60,000 USD by February 2026. The historical 4-year halving cycle (April 2024 halving) and convergent analyst data from CryptoQuant, Glassnode, and Fidelity Digital Assets point to October–November 2026 as the cycle bottom.
 
@@ -220,7 +220,7 @@ These five signals are not individual data points. They are a convergence:
 1. The establishment admits banking is broken (Fink)
 2. The world's biggest payment networks chose our blockchain (OUSD on Solana)
 3. The market confirmed our product model is right (X Money 6% APY)
-4. The macro cycle will turn up exactly when we launch (Grand Sync Q4 2026)
+4. The macro cycle will turn up exactly when we launch (Grand Sync, 24 January 2027)
 5. The people we serve are ready — they just need the tool (1.54B unbanked, 84% with phones)
 
 IN\$DEX was not lucky to be here at this moment. This moment was always coming. We just built early.
@@ -959,6 +959,22 @@ The Cook Islands flag carries 15 white stars in a circle — one for each of the
 ## APPENDIX B — Platform Build Status
 > Updated each session. Use this to avoid building what already exists.
 > Last updated: 2026-07-25 — Session 121 continued x97: Fact-Checked "Complete IN$DEX Launch Briefing" document, added Part 6 to cook-islands-establishment-reality-ledger.md. Cross-referenced 7 recycled claims against Part 5's existing corrections (all stand unchanged); researched 3 net-new claims (SMART Economy Initiative — real but likely closed 2021, dollar figures unconfirmed; Manatua Cable — real but only lands at Rarotonga/Aitutaki, not "every populated island"; National Digital Strategy 2024-2030 — confirmed clean). Flagged two internal conflicts the document introduced on its own: launch date stated as "February 2027" (conflicts with canonical 24 January 2027) and "15 Pillars" (canon is 14, per god-mode-canon-v12.md). Re-flagged the caretaker-government constraint (Parliament dissolved, election 12 Aug 2026) directly against this document's "engage CAWG now" urgency framing. No contacts, pitches, or figures fabricated per standing policy. Commit 021fb56. See x97 below.
+
+### Session 122 — Unsafe-claim completion, American voice accent, forced-video-load fix (2026-07-29)
+
+**Unsafe claims, `home-v2.html`.** The earlier corrections pass fixed 1 of 11 "50 Free INDX / Worth $12.00 USD at launch" instances; the remaining ten were still live, including the `<meta name="description">`, the `og:description` rendered in every shared link preview, both hero CTAs, the launch FAQ, the SIINDEX chat knowledge base and the `navigator.share` payload. All corrected to Genesis Recognition language (recorded pending treasury/legal/founder approval; not automatically transferred, spendable, or worth a fixed USD amount). Two claims of a **different and more serious class** were found that no prior sweep had looked for: `siKB.price` — SIINDEX's own homepage chat voice — stated *"Grand Sync target: $2.50 by 24 January 2027. 10.4× from here"*, and the same forecast appeared again in the Macro CTA. A dated price target with a stated multiple, spoken by SIINDEX, for a token whose mint decision is formally paused and while a live AUSTRAC VASP/RSP registration sits under assessment. Both removed. Also reframed: the PQSI 7-point pre-flight (written present-tense as if running), "Your 50 INDX Genesis Bonus lands immediately", auto-minting Receipt NFTs, and "70% of discovery — guaranteed".
+
+**Referral economics.** `home-v2.html` was the lone file claiming "+5 INDX" per referral against three files stating 50 — a typo, corrected. Removed "you both earn 50 INDX instantly, no conditions" and a "+5 INDX · $1.20 USD at launch price" fixed-valuation claim. **Flagged, not decided:** `referral.html` (flat 50/referral) and `referral-dashboard.html` (tiered +25/+50/+10, milestone bar computing 25/referral) encode two incompatible reward designs. That changes real INDX outflow per citizen, so it awaits a founder ruling; both screens now declare the schedule provisional and unpaid.
+
+**Voice accent — founder decision, AJ 2026-07-29: SIINDEX speaks with an AMERICAN accent.** Supersedes the Pacific-accent direction in the pre-migration brief (tension with the "Pacific First" frame was stated to AJ before he chose). Seven browser-TTS pickers were preferring non-American voices *in code* — `siindex-speak-core.js` (injected into 226+ screens) matched `karen|tessa|moira` (Australian/South African/Irish) and fell back `en-AU|en-GB|en-US` in that order; `siindex-voice-terminal.html` and `founder-voice.html` ranked *Google UK English Female above Google US English*; `home-v3.html` had no `en-US` in its list at all; `voice-wallet.html` was hard-pinned to `en-AU`. All seven now require `^en[-_]US` and set `utterance.lang='en-US'`. **Speech recognition deliberately left `en-AU`/`en-NZ`** — that governs how citizens are *understood*, not how SIINDEX sounds. On the ElevenLabs path, confirmed from deployed source that voice `19STyYD15bswVz51nqLf` is "Samara X" and that both TTS functions read `ELEVENLABS_VOICE_ID` first, so changing SIINDEX's voice is a **Supabase secret change, not a code change**. Command written for AJ, not run.
+
+**Data-cost fix.** `siindex-avatar.html` served `autoplay` + `preload="auto"` on a **16 MB** clip, pulling 16 MB before a citizen did anything — a direct contradiction of the Appendix A Zero-Balance rule. Now poster-only by default, fetched solely on explicit tap, and not offered at all on save-data or 2G/3G connections. Also corrected that screen's misreported voice settings (claimed Speed 0.9 / Stability 0.74; deployed values are 0.88 / 0.42 / style 0.20) and removed an unverifiable "world's most advanced voice synthesis" vendor superlative.
+
+**New internal tool:** `voice-accent-preview.html` — unlinked, `noindex`, contains no API key, never for deployment. Panel A speaks real canon SIINDEX lines through the device's own `en-US` voices (doubles as a live test of the fallback fix); Panel B embeds ElevenLabs' public preview clips for Sarah/Serena/Aria/Rachel, explicitly labelled as vendor sample sentences at default settings rather than SIINDEX copy.
+
+**Video inventory:** 11 SIINDEX clips catalogued; 5 already staged in `videos/` but only 1 wired. `SIINDEX WEB3 Domain.mp4` is **0 bytes** (failed download, needs re-pull by AJ) and clips 01/03/05 are the same face-scan shot three times. Nothing placed — the face-scan clips collide with the 2026-07-27 founder decision that Tier 0 requires no face scan or liveness check.
+
+Local commit only. Not pushed, not deployed, no Supabase migration or config change. Full detail in `gotchas.md`.
 
 ### Session 121 continued x97 — Fact-Check: Complete IN$DEX Launch Briefing (2026-07-25)
 

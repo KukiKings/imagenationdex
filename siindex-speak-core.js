@@ -69,7 +69,7 @@
       "Cultural sovereignty means: your story, your IP, your earnings — protected by doctrine, not by a platform's terms of service. I enforce that protection across every transaction.",
     ],
     solana: [
-      "IN$DEX runs on Solana — Token-2022 Transfer Hooks for automatic fee routing, Raydium CPMM for the LP, Streamflow for vesting and distributions, SolSplits for composable revenue splitting.",
+      "IN$DEX runs on Solana — INDX is a plain SPL Token (original Token Program, not Token-2022, verified via mainnet 2026-07-22). SolSplits handles automatic fee routing, Raydium CPMM is the LP, Streamflow handles vesting and distributions.",
       "Solana's P-Token (2026) reduces token instruction compute by 96%. More block space, lower fees, faster settlement. Good for the civilization.",
     ],
     agents: [
@@ -198,12 +198,23 @@
   let synth = window.speechSynthesis;
   let femaleVoice = null;
 
+  // Accent canon (AJ decision 2026-07-29): SIINDEX speaks with an AMERICAN accent.
+  // The previous picker listed samantha|karen|victoria|tessa|moira and fell back to
+  // en-AU|en-GB before en-US. Only Samantha and Victoria are American — Karen is
+  // Australian, Moira Irish, Tessa South African — and .find() returns whichever the
+  // platform happens to list first, so the accent was effectively a lottery that
+  // usually landed non-American. Now: en-US is required, never merely preferred.
+  const US_FEMALE = /samantha|ava|allison|susan|zoe|nicky|victoria|zira|aria|google us english/i;
   function loadVoice() {
     if (!synth) return;
     const voices = synth.getVoices();
-    // Prefer female English voices
-    femaleVoice = voices.find(v => /female|woman|samantha|karen|victoria|tessa|moira/i.test(v.name) && /en/i.test(v.lang))
-      || voices.find(v => /en-AU|en-GB|en-US/i.test(v.lang))
+    const us = voices.filter(v => /^en[-_]US/i.test(v.lang || ''));
+    femaleVoice = us.find(v => US_FEMALE.test(v.name))
+      || us.find(v => /female|woman/i.test(v.name))
+      || us[0]
+      // No en-US voice installed on this device — fall back to any English rather than
+      // going silent, but never prefer en-AU/en-GB by name the way this used to.
+      || voices.find(v => /^en/i.test(v.lang || ''))
       || voices[0] || null;
   }
   if (synth) {
@@ -216,6 +227,7 @@
     synth.cancel();
     const utt = new SpeechSynthesisUtterance(text);
     if (femaleVoice) utt.voice = femaleVoice;
+    utt.lang  = 'en-US';   // American accent canon — see loadVoice() above
     utt.rate  = 0.92;
     utt.pitch = 1.08;
     utt.volume = 1;

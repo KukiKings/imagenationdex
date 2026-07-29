@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>SIINDEX Voice &amp; Accent Preview — internal</title>
+<!--
+  INTERNAL TOOL — not a citizen screen, not linked from anywhere, not for deployment.
+  Built 2026-07-29 so AJ can pick SIINDEX's accent by ear instead of by description.
+
+  Two panels, and they are NOT the same thing:
+
+  PANEL A — your device's own voices, speaking real SIINDEX lines.
+    Runs entirely offline via window.speechSynthesis. No network, no API key, no cost.
+    This is exactly what citizens hear when ElevenLabs is unavailable and the app falls
+    back to browser TTS. Use this to confirm the American fallback now behaves.
+
+  PANEL B — ElevenLabs' own public sample clips.
+    Plain <audio> pointing at ElevenLabs' public preview MP3s. These are ElevenLabs'
+    stock sample sentences, NOT SIINDEX copy, and they are NOT generated with the
+    project's voice settings. They are for judging accent and timbre only. Generating
+    real SIINDEX lines in these voices needs the ElevenLabs API key, which this page
+    deliberately does not have and must never contain.
+-->
+<style>
+  :root{
+    --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8; --black:#090A10;
+    --green:#00E5A0; --gold:#FFB800; --red:#FF4D6D;
+    --surface:#12141F; --surface2:#1A1D2E; --surface3:#22263A;
+    --text:#EAF2FF; --muted:#8A93AD;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--black);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:430px;margin:0 auto;padding:0 18px 60px;}
+  .topbar{position:sticky;top:0;z-index:20;background:rgba(9,10,16,0.92);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    border-bottom:1px solid rgba(255,255,255,0.06);padding:16px 18px;margin:0 -18px 18px;}
+  .eyebrow{font-size:10px;letter-spacing:1.6px;text-transform:uppercase;color:var(--cyan);font-weight:700}
+  h1{font-size:19px;margin:5px 0 0;font-weight:800;letter-spacing:-0.3px}
+  .note{background:var(--surface);border:1px solid rgba(255,184,0,0.30);
+    border-left:3px solid var(--gold);border-radius:12px;padding:12px 14px;
+    font-size:11.5px;line-height:1.6;color:var(--muted);margin:14px 0}
+  .note b{color:var(--gold)}
+  h2{font-size:13px;margin:26px 0 4px;letter-spacing:0.3px}
+  .sub{font-size:11.5px;color:var(--muted);line-height:1.6;margin:0 0 12px}
+  .line-pick{width:100%;background:var(--surface2);color:var(--text);
+    border:1px solid rgba(255,255,255,0.10);border-radius:11px;padding:11px 12px;
+    font-size:12.5px;font-family:inherit;margin-bottom:14px}
+  .row{background:var(--surface);border:1px solid rgba(255,255,255,0.07);
+    border-radius:14px;padding:13px 14px;margin-bottom:9px;
+    display:flex;align-items:center;gap:12px}
+  .row.best{border-color:rgba(0,229,160,0.35);background:linear-gradient(135deg,rgba(0,229,160,0.05),var(--surface))}
+  .meta{flex:1;min-width:0}
+  .nm{font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px}
+  .tag{font-size:8.5px;font-weight:800;letter-spacing:0.7px;text-transform:uppercase;
+    padding:2px 6px;border-radius:5px;background:rgba(0,229,160,0.15);color:var(--green)}
+  .tag.warn{background:rgba(255,77,109,0.15);color:var(--red)}
+  .dsc{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.45}
+  .play{flex-shrink:0;background:linear-gradient(135deg,var(--blue),var(--cyan));
+    color:#fff;border:none;border-radius:10px;padding:9px 15px;font-size:12px;
+    font-weight:700;font-family:inherit;cursor:pointer}
+  .play:active{opacity:0.8}
+  .play[disabled]{background:var(--surface3);color:var(--muted);cursor:not-allowed}
+  audio{width:100%;margin-top:9px;height:34px}
+  .empty{background:var(--surface2);border:1px dashed rgba(255,255,255,0.14);
+    border-radius:12px;padding:18px 14px;font-size:11.5px;color:var(--muted);
+    text-align:center;line-height:1.6}
+  .foot{font-size:10.5px;color:var(--muted);line-height:1.6;margin-top:26px;
+    padding-top:14px;border-top:1px solid rgba(255,255,255,0.06)}
+  code{background:var(--surface3);padding:1px 5px;border-radius:4px;font-size:10.5px;color:var(--cyan)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="eyebrow">Internal · not a citizen screen</div>
+    <h1>SIINDEX Voice &amp; Accent Preview</h1>
+  </div>
+
+  <div class="note">
+    <b>Read this first.</b> Panel A is your Mac's own voices speaking real SIINDEX lines —
+    that's the offline fallback citizens hear when ElevenLabs is down. Panel B is
+    ElevenLabs' stock sample clips for judging accent only; they are not SIINDEX copy and
+    not generated with this project's voice settings. Picking a voice by ear here does not
+    change anything live — the switch is a Supabase secret, and that stays your call.
+  </div>
+
+  <h2>Panel A — your device, real SIINDEX lines</h2>
+  <p class="sub">Filtered to <code>en-US</code> only, matching the accent fix applied across
+  the app today. If this list is empty, your Mac has no American voice installed — that is
+  itself the finding.</p>
+
+  <select class="line-pick" id="linePick"></select>
+  <div id="localVoices"></div>
+
+  <h2>Panel B — ElevenLabs sample clips</h2>
+  <p class="sub">Verified American female voices from ElevenLabs' documented premade set.
+  Stock sample sentences, not SIINDEX lines. Accent and timbre only.</p>
+  <div id="elevenVoices"></div>
+
+  <div class="foot">
+    Currently live: <code>19STyYD15bswVz51nqLf</code> — named "Samara X" in the deployed
+    <code>siindex-voice-tts</code> source comment. The app runs it on
+    <code>eleven_multilingual_v2</code>; the public website runs the same voice on
+    <code>eleven_flash_v2_5</code>. Two models, one voice — worth reconciling separately.
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // Real SIINDEX copy, canon-compliant (siindex-voice.md). Pronunciation swaps match
+  // the ones the app already applies before speaking.
+  var LINES = [
+    "Welcome to IN$DEX. I'm SIINDEX, your Sovereign SI.",
+    "Done. Your domain is claimed. Standing by.",
+    "AJ, I've flagged something for you. Tap to review.",
+    "You keep ninety-eight percent. Every time. That's hardcoded.",
+    "I've paused that transfer. It triggered a compliance check.",
+    "You're all set."
+  ];
+
+  var AMERICAN = /samantha|ava|allison|susan|zoe|nicky|victoria|zira|aria|google us english/i;
+
+  function spoken(t) {
+    return t.replace(/SIINDEX/g, 'Sighn-dex')
+            .replace(/IN\$DEX/g, 'in-dex')
+            .replace(/INDX/g, 'indx');
+  }
+
+  var pick = document.getElementById('linePick');
+  LINES.forEach(function (l, i) {
+    var o = document.createElement('option');
+    o.value = String(i);
+    o.textContent = l.length > 52 ? l.slice(0, 52) + '…' : l;
+    pick.appendChild(o);
+  });
+
+  var localBox = document.getElementById('localVoices');
+
+  function renderLocal() {
+    var synth = window.speechSynthesis;
+    if (!synth) {
+      localBox.innerHTML = '<div class="empty">This browser has no speechSynthesis support.</div>';
+      return;
+    }
+    var all = synth.getVoices();
+    if (!all.length) return; // voices load async; onvoiceschanged will call again
+    var us = all.filter(function (v) { return /^en[-_]US/i.test(v.lang || ''); });
+
+    if (!us.length) {
+      localBox.innerHTML = '<div class="empty">No <b>en-US</b> voice found on this device (' +
+        all.length + ' voices total). The app will fall back to any English voice, which is ' +
+        'exactly the accent problem. Add one in System Settings › Accessibility › Spoken Content.</div>';
+      return;
+    }
+
+    us.sort(function (a, b) {
+      return (AMERICAN.test(b.name) ? 1 : 0) - (AMERICAN.test(a.name) ? 1 : 0);
+    });
+
+    localBox.innerHTML = '';
+    us.forEach(function (v) {
+      var preferred = AMERICAN.test(v.name);
+      var row = document.createElement('div');
+      row.className = 'row' + (preferred ? ' best' : '');
+      row.innerHTML =
+        '<div class="meta"><div class="nm">' + v.name +
+        (preferred ? ' <span class="tag">app picks this</span>' : '') +
+        '</div><div class="dsc">' + v.lang + (v.localService ? ' · on-device' : ' · network') +
+        '</div></div>';
+      var b = document.createElement('button');
+      b.className = 'play';
+      b.type = 'button';
+      b.textContent = 'Speak';
+      b.addEventListener('click', function () {
+        synth.cancel();
+        var u = new SpeechSynthesisUtterance(spoken(LINES[+pick.value]));
+        u.voice = v;
+        u.lang = 'en-US';
+        u.rate = 0.92;
+        u.pitch = 1.06;
+        synth.speak(u);
+      });
+      row.appendChild(b);
+      localBox.appendChild(row);
+    });
+  }
+
+  renderLocal();
+  if (window.speechSynthesis && speechSynthesis.onvoiceschanged !== undefined) {
+    speechSynthesis.onvoiceschanged = renderLocal;
+  }
+
+  // ElevenLabs public preview clips. URLs are ElevenLabs' own published samples.
+  var EL = [
+    { n: 'Sarah',  id: 'EXAVITQu4vr4xnSDxMaL', d: 'Confident, warm, professional — closest to the CEO/COO brief', best: true,
+      u: 'https://storage.googleapis.com/eleven-public-prod/premade/voices/EXAVITQu4vr4xnSDxMaL/01a3e33c-6e99-4ee7-8543-ff2216a32186.mp3' },
+    { n: 'Serena', id: 'pMsXgVXv3BLzUgSXRplE', d: 'Pleasant, middle-aged, calm', best: true,
+      u: 'https://storage.googleapis.com/eleven-public-prod/premade/voices/pMsXgVXv3BLzUgSXRplE/d61f18ed-e5b0-4d0b-a33c-5c6e7e33b053.mp3' },
+    { n: 'Aria',   id: '9BWtsMINqrJLrRacOk9x', d: 'Middle-aged, African-American accent, calm with rasp', best: false,
+      u: 'https://storage.googleapis.com/eleven-public-prod/premade/voices/9BWtsMINqrJLrRacOk9x/405766b8-1f4e-4d3c-aba1-6f25333823ec.mp3' },
+    { n: 'Rachel', id: '21m00Tcm4TlvDq8ikWAM', d: 'Calm, young — the safe default', best: false,
+      u: 'https://storage.googleapis.com/eleven-public-prod/premade/voices/21m00Tcm4TlvDq8ikWAM/b4928a68-c03b-411f-8533-3d5c299fd451.mp3' }
+  ];
+
+  var elBox = document.getElementById('elevenVoices');
+  EL.forEach(function (v) {
+    var wrap = document.createElement('div');
+    wrap.className = 'row' + (v.best ? ' best' : '');
+    wrap.style.display = 'block';
+    wrap.innerHTML =
+      '<div class="nm">' + v.n + (v.best ? ' <span class="tag">strong fit</span>' : '') + '</div>' +
+      '<div class="dsc">' + v.d + '</div>' +
+      '<div class="dsc" style="margin-top:4px"><code>' + v.id + '</code></div>' +
+      '<audio controls preload="none" src="' + v.u + '"></audio>';
+    elBox.appendChild(wrap);
+  });
+})();
+</script>
+</body>
+</html>
