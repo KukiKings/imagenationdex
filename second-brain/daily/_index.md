@@ -125,6 +125,25 @@ Next: Log 14 Jul work properly in memory.md. Watch imagenationdex@gmail.com for 
 
 ---
 
+### 2026-07-15 → 2026-07-28 (gap entry — reconstructed by nightly pass 2026-07-29)
+
+No nightly pass ran between 15 and 28 July, and memory.md has no session entry after Session 119 x36 (13 Jul), so this period is reconstructed from whitepaper-v1.md Appendix B and git log. It covers Session 121 (x1–x97) and the run-up to Session 122 — the largest stretch of work in the project so far, and almost entirely **replacing fake with real** rather than adding surface.
+Built: Real auth foundation (founder sign-in, citizen linking, siindex-runtime v2 durable sessions, real RLS + negative tests) — including the fix for a `kyc_tier` type mismatch that had been **silently breaking every citizen signup**. Full-codebase anon-key audit (31 screens, all 4 real-backend money screens affected). Platform-wide fabrication sweep ("delete everything that's fake") — 26 screens audited, 22 fixed; fabricated regulatory registrations removed from audit-transparency.html and reserve-transparency.html. Real TOTP 2FA, real card/account freeze, governance voting rebuilt, Sovereign Domain Phase 1, consent receipts, Trust Before Transaction screen-flow. Assurance Layer v1 all 4 phases complete. Four new constitutions into canon (Laws 12, 13, 22–34, 35–48). SIINDEX Command Center live. Whitepaper rewritten (pilot-first delivery); v2.0 Partner Prelaunch Edition .docx produced. AUSTRAC REG-22048 + UER-162931 submitted 17 Jul.
+Decisions: **Launch date moved 24 Sep 2026 → 24 Jan 2027** (AJ, 19 Jul). $1T valuation target and single-launch-day roadmap withdrawn. INDX confirmed a **plain SPL Token**, not Token-2022 — keep the mint, no migration. Founder oversight ≠ unrestricted access. **Tier 0 = phone + OTP only, no face scan, no liveness** (27 Jul). elizaOS + CharacterStudio researched, **not adopted**.
+State: The stale-date purge (x96) found `js/indx-wallet.js` gating **devnet vs MAINNET on TGE_DATE** — on the old date, live citizen wallets would have flipped to real funds two months early. A prior `sed` sweep missed it because it only rewrote visible HTML text, never the shared/injected JS. Five of six SIINDEX-Skills files were also instructing the wrong date.
+Next: (carried into 29 Jul) land the uncommitted backlog, finish the unsafe-claim purge.
+
+---
+
+### 2026-07-29
+
+Built: Site-wide unsafe-claim purge **shipped to production** — 15 commits, 84 files, +3,253/−1,234, verified live at `97b5da5`. Removed 48 return-promise instances across 25 files, 28 "50 Free INDX / Worth $12.00" Genesis claims (including `<title>`, meta and OpenGraph, so every search result and shared link carried it), a live localStorage scarcity engine seeding "2,153 spots remaining" against a `waitlist` table with **zero rows**, a `Math.random()` yield-payout function, and token.html's 41.7x return calculator. Corrected Tier-0 no-biometrics across 15 files **including privacy-policy.html and terms-of-service.html**, which described collecting a liveness scan that is never collected. Withdrew the fabricated Swiss Verein / Wyoming DAO structure from 5 remaining files. Fixed Raydium CLMM→CPMM drift and removed AJ's personal ABN from two public pages. Seven browser-TTS voice pickers switched to `^en[-_]US`. siindex-avatar.html's 16 MB autoplay clip made poster-only. New internal tool `voice-accent-preview.html` (unlinked, noindex). Cook Islands registry account submitted, company name decided.
+Decisions: SIINDEX speaks with an **American accent**. **Cook Islands only** — AUSTRAC no longer a gating constraint. **Launchpad category is architecturally closed to INDX** — Raydium CPMM is the only venue that can list it, which finally settles the Meteora vs Raydium conflict open since Session 83; the proposed Pump.fun "test launch" was declined. Standing autonomy granted (approvals reserved for git push, deploy, Supabase).
+State: Production is clean of the return promise and the Genesis valuation claim. A **stale `.git/index.lock`** (zero bytes, no live process, since 27 Jul 16:16) had been silently rejecting every git write for two days — it explains 30 files of work described as "delivered" with nothing behind it. Cleared. Working tree now near-clean (`founder-voice.html` untracked). Session 122's own local commit is **not pushed and not deployed**. memory.md still has no entry after 13 Jul.
+Next: Founder rulings needed on **14 vs 15 Pillars** (god-mode-canon-v12.md says 14, about.html says 15, Appendix B records the 15 as deliberate — two canon files disagree), **referral reward design** (referral.html flat 50 vs referral-dashboard.html tiered 25/50/10 — this changes real INDX outflow per citizen), and **three auth accounts for AJ with 50 INDX recorded twice**. Re-pull the 0-byte `SIINDEX WEB3 Domain.mp4`. Update AUSTRAC commencement date (still recorded as 24 Sep 2026). Backfill memory.md for Sessions 120–122.
+
+---
+
 ## Template
 
 ```

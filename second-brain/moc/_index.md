@@ -299,3 +299,46 @@ High-level summaries that link bodies of work together. Build these when a topic
 **Launch architecture (Session 114, 2026-07-08):** Two-phase — Phase A Meteora Alpha Vault citizen pre-allocation (Sep 10–17, 60–75 SOL pre-committed) → Phase B Raydium LaunchLab Virtual-CPMM public curve (Sep 24 00:00 UTC, 150 SOL / ~$30K graduation threshold, LP burn). Team/treasury vesting via Streamflow, 12-month founder cliff.
 
 **Token minted (Session 119 x33, 12 Jul 2026):** INDX is live on Solana mainnet — Mint `9p9VMkgTEVdAeohk1zEuepvwBYUkzjnovMwwazyxsSEZ`, 100M supply, 6 decimals, Freeze/Mint authority revoked. Full supply now held in INDX protocol wallet `8HxNac3HAT56gJk3LRdGqiwq6DgciGK4cnaVMUNZaMZt`. LP pairing (Raydium CPMM per Session 63) and LaunchLab graduation still pending per Two-Phase Launch Architecture.
+
+---
+
+## Nightly Brain Pass — 2026-07-29 Consolidation (Sessions 121–122, 15–29 Jul 2026)
+
+*The previous nightly pass ran 2026-07-14. This entry closes a 15-day gap covering Session 121 (x1–x97) and Session 122. Source of record for the period is whitepaper-v1.md Appendix B — memory.md has no session entries after Session 119 x36 (13 Jul).*
+
+### ⚠️ Canon changes that supersede everything above
+
+Three facts stated as current elsewhere in this file have moved. Historical lines above are left unaltered per standing convention; **these are the live values:**
+
+1. **Launch date: 24 January 2027** (AJ, 2026-07-19, Session 121 x76). Supersedes 24 September 2026 everywhere. Note the date no longer coincides with AJ's birthday — the "Grand Synchronicity" coincidence broke when the date moved, and the "born same day" claim was removed from siindex-avatar.html.
+2. **No public price target.** The $2.50 / 10.4× figure was removed from **48 instances across 25 files** (Session 122). It traces to `decisions/grand-synchronicity-plan.md` (27 Jun, "LOCKED"), whose own Price Catalyst Map calls $2.50 conditional on stacked catalysts — a conditional internal target that leaked into citizen copy as fact. Retained in the planning record only. `moc-tokenomics` above still states it; treat that line as historical.
+3. **Cook Islands only** (AJ, 2026-07-29). AUSTRAC is no longer treated as a gating constraint on structure. The Swiss Verein / Wyoming DAO LLC structure was **fabricated** and is withdrawn.
+
+### Screens / systems — real backend work
+
+The dominant theme of Sessions 121–122 was **replacing fake with real**, not adding surface:
+
+- **Auth foundation rebuilt** — real founder sign-in path, citizen linking ceremony, `siindex-runtime` v2 with durable sessions, real RLS with negative tests (x54, x56). Systemic bug found and fixed: **every citizen signup had been silently broken** by a `kyc_tier` type mismatch (x67). Founder bootstrap ceremony succeeded for real for the first time (x68).
+- **Anon-key audit** — full-codebase sweep found 31 screens using the anon key where an authenticated session was required; 4 real-money screens fixed, then 14 more (x85–x88). Four of four real-backend screens were affected.
+- **Fabrication sweep, platform-wide** — "delete everything that's fake" (x80). 26 screens audited, 22 fixed in one batch (x90); fabricated regulatory registrations found in `audit-transparency.html` and `reserve-transparency.html` (x79); `home-v2.html` — the *actual* live homepage — carried fabrications earlier sweeps missed because `index.html` isn't the homepage (x82).
+- **Real features built** — TOTP 2FA in security-settings.html, real card/account freeze enforcement, governance voting rebuilt, Sovereign Domain Phase 1 (credentials table + agent-vouch RPC + domain.html), consent receipts, Trust Before Transaction screen-flow, live Supabase wiring for the golden path.
+- **Assurance Layer v1 — all 4 phases complete** (x45–x45d): Identity/Delegation/Blast-Radius enforcement, policy log + Threshold Authority + Constitutional Invariants, Provenance/BOM/Trace/Replay/Crypto Inventory/Safety Cases, Memory Promotion/Truth Maintenance/Verification Kit/Incident Command.
+- **New canon docs**: Operating-System Re-Engineering Constitution, Media/Design/Publishing Constitution (Laws 22–34), Loop Engineering & Evaluator Council Constitution (Laws 35–48), Presence & Capability Layer, Executive/Citizen Operating Modes (Law 12), Trusted Relationship & Citizen Safety Layer (Law 13), SIINDEX Master Architecture.
+- **SIINDEX Command Center** shipped live (x52) — AJ's own operator console.
+- **Whitepaper rewritten** (x72) — "Current Stage, Delivery Model, and Partner Architecture." Retired the $1T valuation target and the single-launch-day roadmap in favour of pilot-first delivery. External deliverable produced: `IN$DEX_Whitepaper_v2.0_Partner_Prelaunch_Edition.docx` (x73).
+
+### The live time bomb (worth remembering)
+
+The stale-date purge (x96) found `js/indx-wallet.js` gating **devnet vs MAINNET routing** on `TGE_DATE`. On the old date, live citizen wallets would have silently flipped to mainnet — real funds — two months early. It survived a prior `sed` sweep because that sweep only rewrote visible text in 53 HTML files and never touched shared/injected JS. **Lesson filed: text-level sweeps do not fix behaviour-level bugs.** Five of six `SIINDEX-Skills/*.md` files were also instructing the wrong date; `indx-website-builder/SKILL.md` was checking countdowns *against* the stale constant — the skill was reinforcing the bug it should have caught.
+
+### Release engineering
+
+- `.git/index.lock` had been stale since 27 Jul 16:16 — zero bytes, no live process — silently rejecting every git write for two days. It explains 30 files of "delivered" work with nothing behind it. Cleared 2026-07-29; backlog landed.
+- **Deploy verification gotcha:** the apex domain served the *previous* build for minutes after a successful deploy while `www` served the new one. CDN cache, not a failed deploy. Verify the bare domain with a cache-busting query string — a clean `www` check is a false pass.
+
+### Core docs — current state
+
+- whitepaper-v1.md ✅ Appendix B last updated 2026-07-29 (Session 122). **This is now the session log of record.**
+- memory.md ⚠️ last session entry is Session 119 x36 (13 Jul). Sessions 120–122 were never appended. Appendix D's own protocol requires it.
+- gotchas.md — referenced as holding Session 122 detail.
+- CLAUDE.md — referenced as canonical for the 2026-07-27 mint and Tier-0 decisions, **but no CLAUDE.md exists in the repo** (not tracked, not on disk). Canon is citing a file that isn't there.

@@ -1,5 +1,7 @@
 # Companies
 
+> **[SUPERSEDED — see 2026-07-29 section at foot of file]** Entries below dated before 2026-07-15 reflect what was true at the time. Three canonical facts have since moved: the launch date (24 Sep 2026 → **24 Jan 2027**, AJ 2026-07-19), the public price target (**$2.50 removed entirely** from all citizen-facing copy — internal conditional target only), and the entity path (**Cook Islands only**; AUSTRAC no longer treated as a gating constraint, AJ 2026-07-29). Historical lines are retained unaltered per standing convention.
+
 ## SIINDEX / IN$DEX (ImageNation Decentralised Exchange)
 
 - **Type:** Web3 DEX + P2P marketplace + creator economy
@@ -72,3 +74,32 @@
 3. Immediate P2P RWA + digital asset trading
 4. Creator/meme economy built-in (MemeDAO, NFT skins, merch)
 5. Autonomous AI (SIINDEX QPSI) runs platform 24/7
+
+---
+
+## Nightly Brain Pass — 2026-07-29 Additions (Sessions 121–122, 15–29 Jul 2026)
+
+*Consolidating a 15-day gap: the previous nightly pass ran 2026-07-14. Sessions 121 (x1–x97) and 122 landed in between.*
+
+### Infrastructure — newly filed
+
+- **[[twilio]]** — SMS/voice OTP provider behind Supabase Auth phone login. Since the 2026-07-27 Tier 0 decision (phone + contact + OTP only, no face scan, no liveness), Twilio is the **sole verification step at Tier 0** and therefore a single point of failure for citizen signup. Blocked Part Sixteen Stage C (Session 121 x74, 18 Jul). Pacific-corridor deliverability and cost untested; Africa's Talking / WhatsApp Business API floated as alternatives, no decision recorded.
+
+### Researched, not adopted
+
+- **[[elizaos]]** — open-source agentic runtime (ex-ai16z), proposed as the substrate SIINDEX would *run on*. Fact-checked Session 121 x92–x93 (24 Jul); repo and rebrand verified real. Prototype `siindex-elizaos-character.json` exists. Supersedes the unverified "de-facto Linux layer for on-chain agents" line in `indx-crucial-additions-2026.md`. **No adoption decision made** — needs an explicit founder ruling before anything depends on it.
+- **[[characterstudio]]** — open-source VRM avatar toolkit proposed as SIINDEX's visual embodiment layer alongside elizaOS. Sandbox-blocked, not adopted. Must clear the Living Interface System guardrail ("if 3D blocks access, 3D weakens sovereignty") and the Mama Noe test first.
+
+### Launch venue — question closed
+
+- **[[pumpfun]]** — evaluated and **rejected**. Every bonding-curve launchpad mints its own token; INDX already exists on mainnet with mint + freeze authority burned, so no launchpad can list it (Meteora DBC states this outright; LaunchLab and Pump.fun the same). **[[raydium]] CPMM is the only venue able to list INDX** — this settles the long-standing Meteora vs Raydium LP conflict flagged since Session 83, by architecture rather than preference. A proposed Pump.fun "test launch" marketed to the IN$DEX community was declined (0.198% graduation rate; contradicts the 98/2 doctrine). Detail in `launchpad-research-2026.md`.
+
+### Status corrections to entries above
+
+- **[[meteora]]** — the "conflicts with Session 63's Raydium CPMM decision, needs reconciliation" note on line 25 is now **RESOLVED**: Raydium CPMM, per the launchpad architecture finding above. The Two-Phase Meteora Alpha Vault → LaunchLab plan (Session 114) is superseded; the Alpha Vault UI card was reframed as "TGE Launch Mechanism — Under Review" (Session 121 x96).
+- **[[austrac]]** — AAN 263945366 enrolment remains submitted; REG-22048 IND Remitter registration and UER-162931 enrolment-detail update both **SUBMITTED 17 Jul 2026** (Session 121 x49–x50). Registration now sits **under assessment**. Note the recorded commencement date (24 Sep 2026) predates the launch move to 24 Jan 2027 and may need updating with the regulator. As of 2026-07-29 AUSTRAC is no longer treated as the gating constraint on structure — Cook Islands only.
+- **[[cook-islands]]** — registry account submitted and company name decided (2026-07-29, commit c50f2b9). Constraint of record: Parliament is dissolved, caretaker government, **election 12 Aug 2026** — this undercuts any "engage CAWG now" urgency framing. FSC review expected December.
+
+### Fabricated entities — withdrawn, do not re-file
+
+- **Swiss Verein** and **Wyoming DAO LLC** — recorded as fabricated 2026-07-22, but the correction reached only one file; still live in five as of 2026-07-29 including a `kyc-compliance.html` "View Charter & Registration" button for a charter that never existed. Now withdrawn explicitly and re-framed to Cook Islands only. **Neither entity exists. Never re-introduce.**
