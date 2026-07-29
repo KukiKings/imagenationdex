@@ -85,6 +85,8 @@ Decisions: home-v3.html is now the canonical public homepage. "MemeDAO" renamed 
 State: 233 screens audited, all CLEAN. P1 God Mode queue identified (about, send, login, governance, marketplace — completed next day). Onchain infra (SolSplits/Token-2022/Streamflow/Raydium fee routing) still planning-only. Bot token migration ⏳. INDX SPL mint ⏳. AJ as Founder #1 ⏳. Large multi-day git backlog still unresolved.
 Next: Complete P1 God Mode queue. Build SolSplits Revenue Router + Token-2022 Transfer Hook (flagged for automation). AUSTRAC VASP enrollment by 29 Jul 2026. Push accumulated backlog.
 
+**[SUPERSEDED 2026-07-27 — see CLAUDE.md canonical mint decision.]** The "Token-2022" references above (build plan, State, Next) reflect the working assumption current on 2026-07-10. Mainnet verification on 2026-07-22 confirmed INDX is a plain SPL Token (original Token Program); the founder decided the same day to retain that existing mint and not migrate to Token-2022. Retained here unaltered as historical record.
+
 ---
 
 ### 2026-07-11

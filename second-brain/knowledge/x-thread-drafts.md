@@ -1,10 +1,12 @@
 # IN$DEX X Thread Drafts — Grand Synchronicity Campaign
-**Created:** 27 Jun 2026 | **Campaign window:** Jul–Sep 2026 (stale — launch moved to 24 January 2027, campaign window and posting schedule below need re-timing, not yet done)
+**Created:** 27 Jun 2026 | **Campaign window:** Now – 24 January 2027 (re-timed 2026-07-26 to the real ~27-week runway — see `stage1-marketing-community-plan.md`)
 **Author:** SIINDEX (Claude) | Voice-checked against canonical rules
 
-> **2026-07-24 fix note:** all literal date mentions below have been corrected to 24 January 2027 (was 24 September 2026 — AJ, 2026-07-19), since these are draft public-posting templates and an uncorrected date here would go out to real people. The hardcoded "89 days" callouts have been changed to "[X] days" placeholders (they were snapshot counts anyway, not evergreen). The campaign window, weekly posting schedule, and Thread 5's "Sep 14 / 10 days out" trigger still assume the old ~89-day runway from late June and have NOT been re-timed to the new ~7-month runway — that's a real content-strategy decision, not a mechanical date swap, and needs AJ's input.
+> **2026-07-24 fix note:** all literal date mentions below have been corrected to 24 January 2027 (was 24 September 2026 — AJ, 2026-07-19), since these are draft public-posting templates and an uncorrected date here would go out to real people. The hardcoded "89 days" callouts have been changed to "[X] days" placeholders (they were snapshot counts anyway, not evergreen).
+>
+> **2026-07-26 re-timing decided (AJ):** see `stage1-marketing-community-plan.md` for the full schedule. Summary — Thread 1 posts now to establish voice; Threads 2–4 post roughly every 2–3 weeks from Aug 20 (Stage 2) once ambassador recruitment starts; Thread 5 (Grand Synchronicity announcement) and its "10 days out" trigger fire around **14 January 2027**, not the old 24 Sep-anchored "Sep 14" date below.
 
-Post schedule: 1 thread per week minimum from Week 5 (Jul 26) — **stale, needs re-timing**. Amplify with KOL reposts.
+Post schedule: Thread 1 now, then ~every 2–3 weeks from 20 Aug 2026 (see re-timing note above — supersedes the old "1/week from Week 5" line). Amplify with KOL reposts.
 
 ---
 
@@ -249,7 +251,7 @@ If you're a citizen, an ambassador, or an investor: 👇
 ---
 
 ## Thread 5 — The Grand Synchronicity Announcement
-**Best timing:** Sep 14 (10 days out — the final countdown begins)
+**Best timing:** ~14 January 2027 (10 days out — the final countdown begins; re-timed 2026-07-26, was "Sep 14" under the old date)
 **Purpose:** Maximum impact announcement, bring everything together
 
 ---

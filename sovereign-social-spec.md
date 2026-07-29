@@ -323,7 +323,7 @@ Pacific nations have communal cultural heritage — traditional siva, meke, haka
 | Component | Tech | Phase |
 |-----------|------|-------|
 | Content storage | Arweave (permanent) + IPFS (fast) | Phase 5 |
-| Content NFT minting | Solana SPL Token-2022 / Metaplex | Phase 5 |
+| Content NFT minting | Solana Metaplex (compressed NFT) — [SUPERSEDED 2026-07-27, see CLAUDE.md mint decision] row originally read "Solana SPL Token-2022 / Metaplex"; Token-2022 rejected for INDX and INDX-adjacent mints 2026-07-22, non-fungible receipts use Metaplex/cNFT per sitewide pattern | Phase 5 |
 | SovToken transactions | Solana transfer_indx RPC | Phase 5 |
 | View rewards engine | Supabase Edge Function (daily cron) | Phase 5 |
 | Creator earnings dashboard | Supabase + citizen-dashboard.html | Phase 5 |

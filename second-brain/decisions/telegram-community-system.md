@@ -255,7 +255,7 @@ Week [N+1] starts Monday.
 
 ---
 
-### Announcement — Grand Synchronicity Countdown (originally timed to fire Sep 14 2026, i.e. "10 days before" the old date — needs its trigger date recalculated for 24 January 2027, not yet done)
+### Announcement — Grand Synchronicity Countdown (re-timed 2026-07-26: trigger is now ~14 January 2027, "10 days before" 24 Jan 2027 — see `stage1-marketing-community-plan.md`)
 
 ```
 ⏳ *10 days.*

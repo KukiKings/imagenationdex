@@ -27,7 +27,7 @@ Under the surface, value moves as the platform's INDX token on the Solana blockc
 | Marketplace | Goods/services listings settled in INDX under the same transaction controls |
 
 ## Technology
-- **Blockchain:** Solana mainnet; INDX is an SPL Token-2022 asset (100,000,000 fixed supply; mint and freeze authority burned)
+- **Blockchain:** Solana mainnet; INDX is a plain SPL Token asset on the original Token Program, not Token-2022 (100,000,000 fixed supply; mint and freeze authority burned; verified via mainnet 2026-07-22). Canonical intended deployment, subject to final independent verification, complete allocation reconciliation, treasury multisig handover, Cook Islands legal and tax review, and final founder acceptance — release status remains paused pending those steps.
 - **Backend:** Supabase (PostgreSQL, Sydney region ap-southeast-2 — Australian data residency), row-level security, append-only compliance event ledger
 - **Identity:** progressive verification tiers; biometric liveness processed on-device only
 - **Monitoring:** PQSI real-time tiered transaction monitoring (T0–T4) with automated halt capability

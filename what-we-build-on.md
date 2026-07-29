@@ -19,7 +19,7 @@
 | Field | Value |
 |---|---|
 | Name | INDX |
-| Standard | SPL Token-2022 (Solana) |
+| Standard | SPL Token — original Token Program (Solana). Canonical intended deployment, pending final verification/reconciliation/legal review (AJ decision, 2026-07-27). Token-2022 was an earlier working assumption, superseded 2026-07-22 — not the current standard. |
 | Supply | 100,000,000 (fixed — mint authority burned at launch) |
 | Canonical price in all UI | $0.24 USD (genesis price — never $0.35; corrected 2026-07-19, this row previously contradicted the row below it) |
 | Governance | MemeDAO — one token, one vote |
@@ -32,7 +32,7 @@
 | Component | Technology |
 |---|---|
 | Blockchain | **Solana Mainnet** — 65,000 TPS, sub-cent fees |
-| Token standard | **SPL Token-2022** |
+| Token standard | **SPL Token** (original Token Program) — canonical intended deployment, pending final verification/reconciliation/legal review. Token-2022 superseded 2026-07-22; not used. |
 | DEX / Liquidity | **Raydium AMM** (INDX/SOL pool) |
 | LP lock | **Streamflow** — 12–24 months from pool creation |
 | EVM compatibility | **Neon EVM** — ERC-20 assets can flow in |

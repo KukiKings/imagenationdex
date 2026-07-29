@@ -518,7 +518,7 @@
 
 **5 tabs:** 🏛️ Overview / 👥 Roles / 📊 Capacity / 🗄️ Audit / 🔗 Connectors
 
-**Alerts on Overview:** AUSTRAC VASP enrollment deadline (29 Jul) with live day countdown; SolSplits + Token-2022 build pending warning; Raydium pool not yet created warning; connector status summary.
+**Alerts on Overview:** AUSTRAC VASP enrollment deadline (29 Jul) with live day countdown; SolSplits + Token-2022 build pending warning; Raydium pool not yet created warning; connector status summary. **[SUPERSEDED 2026-07-27 — see CLAUDE.md canonical mint decision; this entry originally referenced Token-2022 as a pending build item, retained as historical record. Token-2022 was rejected 2026-07-22 — INDX is a plain SPL Token; fee routing runs through SolSplits only.]**
 
 **Cross-screen integration:** Reads `indx_founders_pool_members` for capital totals. Shares audit log to `indx_admin_audit`. Role changes auto-log to audit center.
 
@@ -533,7 +533,7 @@
 
 **Research findings canonised:**
 - **SolSplits** (solsplits.xyz) — composable on-chain revenue splitting on Solana. Payable smart contracts split SOL/SPL to multiple destinations. This is the implementation tool for 30/30/30/10 covenant routing.
-- **Token-2022 Transfer Hooks** — Solana's Token Extensions Program. Automatic fee routing at transfer level. Supports soulbound (non-transferable) tokens for Merchant Trust Credential NFTs.
+- **Token-2022 Transfer Hooks** — Solana's Token Extensions Program. Automatic fee routing at transfer level. Supports soulbound (non-transferable) tokens for Merchant Trust Credential NFTs. **[SUPERSEDED 2026-07-27 — see CLAUDE.md canonical mint decision; this entry originally recorded Token-2022 as the canonised implementation tool for fee routing, retained as historical record. Token-2022 was rejected 2026-07-22 — INDX is a plain SPL Token; fee routing runs through SolSplits only, and Merchant Trust Credentials use separate soulbound cNFT/Metaplex mints, not Token-2022.]**
 - **Streamflow Finance** — Solana-native token distribution, vesting, subscriptions, recurring payments. Handles Vault of Virja distributions and founder pool payouts.
 - **Raydium CPMM** — `protocol_owner` + `fund_owner` addresses collect accumulated pool fees. IN$DEX controls these wallets → can route programmatically.
 - **Agentic DeFi 2026** — AI agents as autonomous LP managers with circuit breakers, threshold monitoring, auto-rebalancing. SIINDEX operates exactly this pattern.
@@ -543,7 +543,7 @@
 - (GM1) SIINDEX Revenue Event Logger — Log each revenue event by source (Marketplace Sale / SIINDEX Credits / Mission Room / Agent License / Partner Fee / NFT / Grant / Cultural Licensing) → protocol revenue computed (2% for marketplace, full amount for others) → covenant auto-applied by source type → splits shown instantly per event (LP/Ops/Vault/Security) → accumulating totals (Total Revenue / To LP / To Vault). SIINDEX auto-logs each event to agent action log. Feed shows last 30 events. Persisted to `indx_flywheel_events`.
 - (GM2) Automation Rule Builder — Set trigger rules with condition (LP drops below / revenue exceeds / stream inactive / compliance RED / pool % below / founders below), threshold value, covenant to apply, and action (initiate LP top-up / run covenant split / alert team / pause investor onboarding / generate memo / flag for review). Status cycle: ARMED → TRIGGERED → PAUSED. Persisted to `indx_flywheel_rules`. Summary bar: Armed / Triggered / Paused counts.
 - (GM3) SIINDEX Flywheel Agent Monitor — Shows what she's watching (6 live metrics: LP pool funding, revenue events, rules armed, AUSTRAC compliance, treasury accumulation, onchain infra); recent auto-actions log (fed by event logging); circuit breakers (6 conditions: LP below $10K / AUSTRAC unconfirmed after 29 Jul / streams inactive 30d / memo unexecuted 7d / agent deployment without legal review / cultural routing before creator confirmed). AUSTRAC circuit breaker showing TRIGGERED (red).
-- (GM4) Onchain Infrastructure Planner — 5 components with BUILD/DEPLOY/LIVE stages and per-component checklists: (1) Raydium CPMM Pool — 4/6 steps done, DEPLOY stage; (2) SolSplits Revenue Router — 0/5 steps, BUILD; (3) Token-2022 Transfer Hook — 0/5 steps, BUILD; (4) Streamflow Distribution Engine — 0/4 steps, BUILD; (5) SIINDEX Flywheel Agent — 2/6 steps done (agent logic + rules system already built this session), BUILD.
+- (GM4) Onchain Infrastructure Planner — 5 components with BUILD/DEPLOY/LIVE stages and per-component checklists: (1) Raydium CPMM Pool — 4/6 steps done, DEPLOY stage; (2) SolSplits Revenue Router — 0/5 steps, BUILD; (3) Token-2022 Transfer Hook — 0/5 steps, BUILD; (4) Streamflow Distribution Engine — 0/4 steps, BUILD; (5) SIINDEX Flywheel Agent — 2/6 steps done (agent logic + rules system already built this session), BUILD. **[SUPERSEDED 2026-07-27 — see CLAUDE.md canonical mint decision; the "Token-2022 Transfer Hook" component listed here was rejected 2026-07-22 (INDX confirmed a plain SPL Token on mainnet); retained as historical record of the Session 119 x18 planner state. Fee routing runs through SolSplits only.]**
 
 **4 tabs:** 📡 Events / ⚙️ Rules / 🤖 SIINDEX / 🔗 Onchain
 

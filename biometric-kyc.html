@@ -136,20 +136,25 @@
   </div>
 
   <!-- STEP DOTS -->
+  <!-- Corrected 2026-07-27: removed dot3 (was the Liveness step) — Tier 0 is now
+       phone + OTP only, so only 3 stages remain before the success screen. -->
   <div class="step-dots">
     <div class="dot active" id="dot0"></div>
     <div class="dot" id="dot1"></div>
     <div class="dot" id="dot2"></div>
-    <div class="dot" id="dot3"></div>
   </div>
 
   <!-- SCREEN 0: INTRO -->
+  <!-- Corrected 2026-07-27: Tier 0 no longer requires or presents a face scan/liveness
+       step. Founder decision: Tier 0 = phone number only, zero biometric. A face-verified
+       credential may become a future Tier 1 step but is never required to get started.
+       See screen3 below (kept, not deleted — no longer reachable from this flow). -->
   <div class="screen active" id="screen0">
     <div class="screen-inner">
       <div class="intro-hero">
         <div class="ih-emoji">🛡️</div>
-        <div class="ih-title">You're in, in 90 seconds.</div>
-        <div class="ih-sub">No ID card. No passport. No bank account. Just your phone and your face. That's sovereignty.</div>
+        <div class="ih-title">You're in, in 60 seconds.</div>
+        <div class="ih-sub">No ID card. No passport. No bank account. No face scan. Just your phone number. That's sovereignty.</div>
       </div>
 
       <div class="tier-path">
@@ -157,11 +162,6 @@
           <div class="ti-circle now">📱</div>
           <div class="ti-label">Phone</div>
           <div class="ti-limit">Step 1</div>
-        </div>
-        <div class="tier-item">
-          <div class="ti-circle later">🤳</div>
-          <div class="ti-label">Liveness</div>
-          <div class="ti-limit">Step 2</div>
         </div>
         <div class="tier-item">
           <div class="ti-circle later">🌐</div>
@@ -173,15 +173,15 @@
       <div class="promise-list">
         <div class="pl-item">
           <div class="pl-ico">⚡</div>
-          <div class="pl-text"><strong>Done in 90 seconds.</strong> No waiting. No appointments.</div>
+          <div class="pl-text"><strong>Done in 60 seconds.</strong> No waiting. No appointments.</div>
         </div>
         <div class="pl-item">
           <div class="pl-ico">📱</div>
-          <div class="pl-text"><strong>No ID card required.</strong> Phone number + face scan is all you need to start.</div>
+          <div class="pl-text"><strong>No ID card required.</strong> Just your phone number is all you need to start.</div>
         </div>
         <div class="pl-item">
           <div class="pl-ico">🔒</div>
-          <div class="pl-text"><strong>Your face never leaves your phone.</strong> Biometric data is processed on-device never stored on our servers.</div>
+          <div class="pl-text"><strong>No documents. No face scan.</strong> A face-verified credential is planned for a future step and is never required to get started.</div>
         </div>
         <div class="pl-item">
           <div class="pl-ico">🌍</div>
@@ -245,7 +245,12 @@
     </div>
   </div>
 
-  <!-- SCREEN 3: LIVENESS SCAN -->
+  <!-- SCREEN 3: LIVENESS SCAN — NOT PART OF TIER 0 (corrected 2026-07-27) -->
+  <!-- Per founder decision: Tier 0 must not require a face scan or liveness check.
+       This screen is no longer reachable from the primary flow (OTP confirmation now
+       calls completeOnboarding() directly). Left in place, not deleted, as a possible
+       Tier 1 candidate for future, independently tested biometric verification — do
+       not wire this back into the main flow without an explicit founder decision. -->
   <div class="screen hidden-right" id="screen3">
     <div class="screen-inner" style="display:flex;flex-direction:column;align-items:center;">
       <div class="camera-frame">
@@ -309,7 +314,8 @@ let otpInterval = null;
 let scanRunning = false;
 
 function updateDots(step){
-  for(let i=0;i<4;i++){
+  // Corrected 2026-07-27: loop bound 4→3 — dot3 (Liveness) was removed, see step-dots above.
+  for(let i=0;i<3;i++){
     const d = document.getElementById('dot'+i);
     d.className = 'dot';
     if(i < step) d.classList.add('done');
@@ -317,16 +323,17 @@ function updateDots(step){
   }
 }
 
+// Corrected 2026-07-27: screen3 (liveness scan) removed from the sequence — Tier 0 is
+// phone + OTP only. Step index 3 now maps straight to screen4 (success).
 function goToStep(step){
-  const screens = ['screen0','screen1','screen2','screen3','screen4'];
-  const titles = ['Sovereign Onboarding','Step 1 · Phone','Step 2 · Confirm','Step 3 · Liveness scan','You\'re in ✓'];
+  const screens = ['screen0','screen1','screen2','screen4'];
+  const titles = ['Sovereign Onboarding','Step 1 · Phone','Step 2 · Confirm','You\'re in ✓'];
   document.getElementById(screens[currentStep]).className = 'screen hidden-left';
   document.getElementById(screens[step]).className = 'screen active';
   currentStep = step;
   document.getElementById('tbTitle').textContent = titles[step];
   updateDots(step);
   if(step === 2) startOtpTimer();
-  if(step === 3) setTimeout(()=>autoScanDemo(), 1200);
 }
 
 function goBack(){
@@ -385,10 +392,15 @@ function otpKey(k){
   if(otpDigits.length === 6){
     clearInterval(otpInterval);
     showToast('✓ Code confirmed!');
-    setTimeout(()=>goToStep(3), 700);
+    // Corrected 2026-07-27: previously routed to the liveness scan (old step 3) before
+    // completing. Tier 0 is phone + OTP only now — go straight to account creation.
+    setTimeout(()=>completeOnboarding(), 700);
   }
 }
 
+// startScan() / autoScanDemo() are orphaned from the primary flow (corrected 2026-07-27,
+// see screen3 comment above) — kept only in case screen3 is reused for a future,
+// independently built Tier 1 biometric step. Not called by the Tier 0 wizard.
 function startScan(){
   if(scanRunning) return;
   scanRunning = true;
@@ -427,7 +439,9 @@ function autoScanDemo(){
 
 async function completeOnboarding() {
   try {
-    // Link auth or create citizen
+    // Link auth or create citizen. p_zk_proof is a placeholder identifier for this
+    // Tier 0 phone-only flow (no biometric scan occurs) — kept as-is to match the
+    // existing link_citizen_auth RPC contract; not a claim of biometric verification.
     const zkProof = 'zk_' + Array.from({length:16},()=>Math.floor(Math.random()*16).toString(16)).join('');
     const { data, error } = await sb.rpc('link_citizen_auth', {
       p_phone:    verifiedPhone,
@@ -447,7 +461,9 @@ async function completeOnboarding() {
     sessionStorage.setItem('citizen_balance', '0');
     sessionStorage.setItem('citizen_wisdom', '0');
   }
-  setTimeout(() => goToStep(4), 1200);
+  // Corrected 2026-07-27: success screen is now step index 3 (screen3/liveness removed
+  // from the sequence — see goToStep()), not 4.
+  setTimeout(() => goToStep(3), 1200);
 }
 
 function finishOnboarding() {

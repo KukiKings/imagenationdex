@@ -914,11 +914,14 @@
           <input class="field-input" id="contactInput" type="text" placeholder="+61 4xx xxx xxx or you@email.com" autocomplete="email" oninput="checkIdentityForm()">
         </div>
 
-        <!-- KYC Tier 0 note -->
+        <!-- KYC Tier 0 note — corrected 2026-07-27: face scan is NOT part of Tier 0.
+             Tier 0 is phone/contact + name + domain claim + portal activation only.
+             Face/liveness (CPT) is a planned future Tier 1 step — see screen3 below,
+             which is no longer reachable from this primary path. -->
         <div style="display:flex;align-items:flex-start;gap:10px;background:rgba(0,229,160,0.06);border:1px solid rgba(0,229,160,0.18);border-radius:12px;padding:12px 14px;margin-bottom:20px;">
           <div style="font-size:16px;flex-shrink:0;">🔐</div>
           <div style="font-size:12px;color:var(--text-muted);line-height:1.5;">
-            <strong style="color:var(--green);">One quick selfie — that's it.</strong> Your face becomes your Citizen Proof Token (CPT) — a soul-bound NFT on Solana. No passport. No bank statement. Your face data <strong style="color:#EAEAEA;">never leaves your device</strong>.
+            <strong style="color:var(--green);">No documents. No face scan.</strong> Just your name and a phone number or email. No passport. No bank statement. A face-verified credential is planned for a future step and is never required to get started.
           </div>
         </div>
 
@@ -976,14 +979,21 @@
           </div>
         </div>
 
-        <button class="btn-primary" id="btn2" disabled onclick="goToFaceScan()">
-          Continue to Face Scan →
+        <button class="btn-primary" id="btn2" disabled onclick="activatePortal()">
+          Activate My Portal →
         </button>
         <button class="btn-secondary" onclick="goToScreen(1, true)">← Back</button>
       </div>
     </div>
 
-    <!-- ═══ SCREEN 3: CPT FACE SCAN ═══ -->
+    <!-- ═══ SCREEN 3: CPT FACE SCAN — NOT PART OF TIER 0 (corrected 2026-07-27) ═══
+         Per founder decision: Tier 0 must not require face scan or liveness.
+         This screen and its mint theater are no longer reachable from the primary
+         onboarding path (screen2's button now calls activatePortal() directly).
+         Left in place, not deleted, as a Tier 1 candidate for future, independently
+         tested biometric verification — do not wire this back into the main flow
+         without a real (non-simulated) mint pipeline and an explicit founder
+         decision to add Tier 1. ═══ -->
     <div class="screen" id="screen3">
       <div class="logo"><img src="./logo.svg" alt="IN$DEX" style="height:48px;width:auto;object-fit:contain;" onerror="this.style.display='none';this.nextSibling.style.display='inline'"><span style="display:none;font-size:18px;font-weight:900;color:#00D4FF;letter-spacing:0.1em;">IN$DEX</span></div>
 
@@ -1072,8 +1082,8 @@
 
       <div class="stats-row">
         <div class="stat-card">
-          <div class="stat-value">50</div>
-          <div class="stat-label">INDX Genesis Bonus ready to use</div>
+          <div class="stat-value" style="font-size:15px;">Pending</div>
+          <div class="stat-label">50 INDX Genesis recognition — under review, not yet spendable</div>
         </div>
         <div class="stat-card">
           <div class="stat-value">98%</div>
@@ -1201,7 +1211,7 @@
     <div class="loading-step" id="ls1"><span class="ls-icon">○</span> Registering your sovereign identity</div>
     <div class="loading-step" id="ls2"><span class="ls-icon">○</span> Creating your Grid Account keys</div>
     <div class="loading-step" id="ls3"><span class="ls-icon">○</span> Minting your .IN$DEX domain</div>
-    <div class="loading-step" id="ls4"><span class="ls-icon">○</span> Depositing 50 INDX Genesis bonus</div>
+    <div class="loading-step" id="ls4"><span class="ls-icon">○</span> Recording your Genesis recognition (pending review)</div>
     <div class="loading-step" id="ls5"><span class="ls-icon">○</span> Portal going live welcome, citizen</div>
   </div>
   <div class="loading-label">Sovereign onboarding in progress…</div>
@@ -1407,13 +1417,19 @@
           });
           const data = created && created.success ? { id: created.id } : null;
           const error = created && !created.success ? { code: created.reason === 'duplicate' ? '23505' : 'unknown', message: created.reason, details: created.detail } : rpcError;
+          // NOTE (2026-07-27): claim_genesis_signup_bonus_anon is being changed to write a
+          // pending_review row to recognition_ledger instead of crediting spendable
+          // indx_balance directly — see recognition-ledger migration draft. Once that
+          // migration is applied, this RPC call no longer makes 50 INDX spendable; it only
+          // records eligibility. Do not re-introduce a hardcoded '50' balance below.
           if (data?.id) await sb.rpc('claim_genesis_signup_bonus_anon', { p_citizen_id: data.id });
 
           if (data?.id) {
             sessionStorage.setItem('citizen_id', data.id);
             sessionStorage.setItem('citizen_name', name);
             sessionStorage.setItem('citizen_wisdom', '25');
-            sessionStorage.setItem('citizen_balance', '50');
+            sessionStorage.setItem('citizen_balance', '0');
+            sessionStorage.setItem('citizen_genesis_recognition_pending', '50');
             sessionStorage.setItem('citizen_web3_domain', slug + '.IN$DEX');
             sessionStorage.setItem('citizen_genesis', 'true');
 
@@ -1444,8 +1460,11 @@
                 if (fBody?.success && fBody?.payment_sent) {
                   // Reflect the arrived payment in this device's own session so the
                   // rest of the app (balance display etc.) is correct immediately —
-                  // it was already written for real server-side above.
-                  const newBal = 50 + Number(fBody.amount_indx || 0);
+                  // it was already written for real server-side above. Base is 0
+                  // (Genesis recognition is pending, not spendable — see note above);
+                  // the instant-invite amount IS real, already-spendable indx_balance
+                  // moved from an existing citizen, so it's the only thing added here.
+                  const newBal = Number(fBody.amount_indx || 0);
                   sessionStorage.setItem('citizen_balance', String(newBal));
                 }
               } catch(e) { console.error('[onboarding-flow] instant invite fulfillment failed (non-critical, account still created):', e); }
@@ -1501,7 +1520,13 @@
     }, delay);
   }
 
-  // ── FACE SCAN + CPT MINT ──
+  // ── FACE SCAN + CPT MINT ── ORPHANED FROM PRIMARY FLOW (2026-07-27) ──
+  // These functions are no longer called from screen2 (which now calls activatePortal()
+  // directly per the Tier 0 correction above). Kept for a possible future Tier 1 build,
+  // NOT deleted per founder instruction to preserve/mark rather than silently remove.
+  // The CPT "mint" sequence below (startSelfCptMint/activateCmoStage) is simulated
+  // (setTimeout/Math.random progress bars) and was never wired to a real Solana mint —
+  // do not present it as live if this is ever reconnected without a real mint pipeline.
   let _selfName = '';
   let _selfSlug = '';
   let _fssGuidanceInterval = null;
