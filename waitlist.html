@@ -192,11 +192,11 @@
     </div>
     <div class="perk-row">
       <div class="perk-icon">⚡</div>
-      <div class="perk-text"><strong>90-second onboarding</strong> phone number only. No face scan, no bank account, no paperwork, no waiting.</div>
+      <div class="perk-text"><strong>phone-only onboarding</strong> phone number only. No face scan, no bank account, no paperwork, no waiting.</div>
     </div>
     <div class="perk-row">
       <div class="perk-icon">🛡️</div>
-      <div class="perk-text"><strong>$10K Transaction Protection</strong> every payment covered by SIINDEX Agent Wallet.</div>
+      <div class="perk-text"><strong>$10K Transaction Protection (planned)</strong> a design parameter of $10,000/month per Grid Account. No policy is in force yet. Intended cover by SIINDEX Agent Wallet.</div>
     </div>
     <div class="perk-row">
       <div class="perk-icon">🏛️</div>
@@ -258,9 +258,6 @@
   updateCountdown();
   setInterval(updateCountdown, 1000);
 
-  // Corrected 2026-07-25: this counter had no real data connection at all — it started at a
-  // fabricated 2,847 and randomly incremented by 1 every ~8 seconds with a 20% chance, purely to
-  // simulate activity. Replaced with the real Supabase citizen count, same source used site-wide.
   const WL_SUPA_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
   const WL_SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
   // `base` is also read/written by joinWaitlist() further down (queue position = base + 1) — keep
@@ -333,40 +330,48 @@
     const referredBy = document.getElementById('refInput').value.trim() || null;
 
     try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/waitlist`, {
+      // Calls the join_waitlist RPC instead of POSTing to the table directly.
+      // The direct POST used Prefer: return=representation, which makes PostgREST
+      // read the row back after inserting. SELECT on waitlist is founder-only, so
+      // the read was denied and the whole insert rolled back — every public signup
+      // failed with "Something went wrong" while the queue sequence still advanced.
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/join_waitlist`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'Prefer': 'return=representation'
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
         },
-        body: JSON.stringify({ name, contact, region, referred_by: referredBy })
+        body: JSON.stringify({
+          p_name: name, p_contact: contact,
+          p_region: region, p_referred_by: referredBy
+        })
       });
 
-      if (!res.ok) {
-        const err = await res.json();
-        // Duplicate contact treat gracefully
-        if (err.code === '23505') {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const result = await res.json();
+
+      if (!result.ok) {
+        if (result.already_joined) {
           showToast('You\'re already on the list! Check your spot below.');
         } else {
-          throw new Error(err.message);
+          showToast(result.error || 'Could not save your spot. Please try again.');
         }
+        btn.textContent = 'Join the Sovereign Republic';
+        btn.disabled = false;
+        return;
       }
 
-      const data = await res.json();
-      const row = Array.isArray(data) ? data[0] : data;
-      const refCode = row?.referral_code || 'IND-' + Math.random().toString(36).substr(2,6).toUpperCase();
-      const pos = base + 1;
+      const refCode = result.referral_code;
+      const pos     = result.queue_position;
 
-      // Show success
       document.getElementById('signupForm').style.display = 'none';
       document.getElementById('shareCard').style.display = 'none';
       document.getElementById('successState').classList.add('show');
       document.getElementById('queuePosition').textContent = '#' + pos.toLocaleString();
       document.getElementById('shareLink').textContent = 'https://imagenationdex.com/join?ref=' + refCode;
-      base = pos;
-      document.getElementById('waitlistCount').textContent = pos.toLocaleString();
+      base = result.total;
+      document.getElementById('waitlistCount').textContent = result.total.toLocaleString();
 
     } catch (e) {
       console.error('Waitlist error:', e);
@@ -376,7 +381,7 @@
     }
   }
 
-  const shareText = 'I just joined the IN$DEX waitlist the world\'s first sovereign DeFi for real people. 90 seconds to onboard, no bank needed. Get your spot:';
+  const shareText = 'I just joined the IN$DEX waitlist the world\'s first sovereign DeFi for real people. a phone number to onboard, no bank needed. Get your spot:';
   const shareUrl = 'https://imagenationdex.com/join';
 
   function shareWA() { window.open('https://wa.me/?text=' + encodeURIComponent(shareText + ' ' + shareUrl)); }
