@@ -229,6 +229,14 @@
     return `sim-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   }
 
+  function normalizeAssistantText(text) {
+    return String(text || "")
+      .replace(/\*\*/g, "")
+      .replace(/__/g, "")
+      .replace(/^\s{0,3}#{1,6}\s*/gm, "")
+      .replace(/`([^`\n]+)`/g, "$1");
+  }
+
   function emitMessage(role, text, id, streaming, source) {
     emit("message", {
       role,
@@ -558,6 +566,7 @@
     emitMessage("assistant", "Thinking…", assistantId, true, source);
     setStatus("thinking", "SIINDEX is thinking…");
     runtimeAbort = new AbortController();
+    let rawText = "";
     let fullText = "";
 
     try {
@@ -588,7 +597,8 @@
           try {
             const event = JSON.parse(raw);
             if (event.text) {
-              fullText += event.text;
+              rawText += event.text;
+              fullText = normalizeAssistantText(rawText);
               renderMessage("assistant", fullText, assistantId);
               emitMessage("assistant", fullText, assistantId, true, source);
             }
