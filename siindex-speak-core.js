@@ -26,10 +26,16 @@
     location.hostname === "www.imagenationdex.com" ||
     location.hostname === "imagenationdex.vercel.app" ||
     location.hostname === "imagenationdex-kukikings.vercel.app" ||
+    location.hostname === "imagenation-dex.vercel.app" ||
+    location.hostname === "imagenation-dex-kukikings.vercel.app" ||
     location.hostname === "localhost" ||
     location.hostname === "127.0.0.1" ||
     (
       location.hostname.startsWith("imagenationdex-") &&
+      location.hostname.endsWith("-kukikings.vercel.app")
+    ) ||
+    (
+      location.hostname.startsWith("imagenation-") &&
       location.hostname.endsWith("-kukikings.vercel.app")
     );
   const MAX_HISTORY = 20;
