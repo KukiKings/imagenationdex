@@ -19,6 +19,9 @@ function isAllowedOrigin(origin: string | null) {
       host === "imagenationdex.vercel.app" ||
       host === "imagenationdex-kukikings.vercel.app" ||
       (host.startsWith("imagenationdex-") && host.endsWith("-kukikings.vercel.app")) ||
+      host === "imagenation-dex.vercel.app" ||
+      host === "imagenation-dex-kukikings.vercel.app" ||
+      (host.startsWith("imagenation-") && host.endsWith("-kukikings.vercel.app")) ||
       host === "localhost" ||
       host === "127.0.0.1";
   } catch (_) {
