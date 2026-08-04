@@ -28,6 +28,7 @@ requireText(core, /navigator\.mediaDevices\.getUserMedia/, "MediaRecorder captur
 forbidText(core, /x-siindex-test-mode|qa_window_closed/, "temporary QA gate remains");
 
 const directCorePages = [
+  "public-home.html",
   "home-v2.html",
   "siindex-chat.html",
   "siindex-voice-interface.html",
@@ -35,7 +36,7 @@ const directCorePages = [
   "siindex-voice-terminal.html",
 ];
 for (const file of directCorePages) {
-  requireText(file, /<script src="siindex-speak-core\.js"><\/script>/, "shared voice core is not loaded");
+  requireText(file, /<script src="\/?siindex-speak-core\.js"><\/script>/, "shared voice core is not loaded");
 }
 
 const earlyBridgePages = [
@@ -56,8 +57,11 @@ for (const file of earlyBridgePages) {
 }
 
 requireText("home-v2.html", /window\.SIINDEXVoice\.listen\(\{ source: 'homepage' \}\)/, "homepage microphone is not routed through the core");
+requireText("public-home.html", /window\.SIINDEXVoice\.listen\(\{source:'public-home'\}\)/, "approved public microphone is not routed through the core");
+requireText("public-home.html", /window\.SIINDEXVoice\.interrupt\(\)/, "approved public interruption control is missing");
 requireText("siindex-chat.html", /window\.SIINDEXVoice\.listen\(\{ source: 'chat-page' \}\)/, "chat microphone is not routed through the core");
 forbidText("home-v2.html", /Google's servers|webkitSpeechRecognition|SpeechRecognition/, "homepage still contains the retired Google speech path");
+forbidText(core, /Sighn-dex/, "retired SIINDEX pronunciation remains in the voice core");
 
 const functions = [
   "supabase/functions/siindex-website-runtime/index.ts",
