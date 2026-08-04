@@ -1,26 +1,20 @@
-/* IN$DEX Service Worker — Golden Path offline shell
-   Canon: offline is read + draft only. No sensitive execution offline.
-   Update strategy: bump VERSION → old caches deleted on activate. */
-const VERSION = 'indx-v3'; // v3: root now maps to home-v2.html (real homepage), not index.html (dev navigator) — see gotchas.md 2026-07-22
+/* IN$DEX Service Worker — verified public information shell.
+   Transactional prototypes are intentionally excluded from public caching. */
+const VERSION = 'indx-v4';
 const SHELL = 'indx-shell-' + VERSION;
 const PAGES = 'indx-pages-' + VERSION;
 
-/* Precache: golden path + shell only (low-data strategy — small, essential set) */
+/* Precache only the approved public surface. */
 const PRECACHE = [
-  '/speak-to-siindex.html',
-  '/grid-account-onboarding.html',
-  '/onboarding-flow.html',
-  '/receive.html',
-  '/send.html',
-  '/withdraw-fiat.html',
-  '/help.html',
-  '/home-v2.html',
-  '/offline-fallback.html',
+  '/',
+  '/public-home.html',
+  '/planned.html',
+  '/privacy-policy.html',
+  '/terms-of-service.html',
   '/manifest.json',
-  '/indx-pwa.js',
-  '/indx-golden.js',
   '/siindex-speak-core.js',
-  '/assets/icon-192.png'
+  '/assets/icon-192.png',
+  '/assets/siindex-hero.png'
 ];
 
 self.addEventListener('install', (e) => {
@@ -40,8 +34,8 @@ self.addEventListener('activate', (e) => {
 });
 
 /* Strategy:
-   - Golden path + shell: cache-first (instant, works offline)
-   - Other same-origin pages: network-first, cache fallback, offline.html last resort
+   - Approved shell: cache-first (instant, works offline)
+   - Other same-origin pages: network-first, cache fallback, planned-status page last
    - Cross-origin (Supabase, CDNs): network only — NEVER cache live data or execute stale state
    - Low-data: only successful, basic, same-origin GET responses are cached */
 self.addEventListener('fetch', (e) => {
@@ -50,7 +44,7 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // Supabase/CDN: network only
 
-  const path = url.pathname === '/' ? '/home-v2.html' : url.pathname;
+  const path = url.pathname;
 
   if (PRECACHE.includes(path)) {
     e.respondWith(
@@ -70,7 +64,7 @@ self.addEventListener('fetch', (e) => {
         if (res && res.ok) { const copy = res.clone(); caches.open(PAGES).then((c) => c.put(path, copy)); }
         return res;
       }).catch(() =>
-        caches.match(path).then((hit) => hit || caches.match('/offline-fallback.html'))
+        caches.match(path).then((hit) => hit || caches.match('/planned.html'))
       )
     );
     return;
@@ -88,7 +82,6 @@ self.addEventListener('fetch', (e) => {
   );
 });
 
-/* Draft sync signal: when connectivity returns, tell open pages to sync safe drafts */
 self.addEventListener('message', (e) => {
   if (e.data === 'SKIP_WAITING') self.skipWaiting();
 });
