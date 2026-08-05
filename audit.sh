@@ -52,13 +52,12 @@ audit_file() {
   local violations=0
   local messages=()
 
-  # ── Check 1: Price violation ($0.35 — genesis price is $0.24) ──
+  # ── Check 1: Retired monetary prices ($0.35/$0.36 — launch reference is $0.24) ──
   local price_hits
-  price_hits=$(grep -n -E "0\.35\b" "$file" \
-    | grep -v "cubic-bezier\|opacity\|animation\|ease\|transition\|rgba\|0\.35s\|0\.350\|[0-9]0\.35\|0\.35em\|0\.35rem" \
-    || true)
+  price_hits=$(grep -ni -E '(\$|USD[[:space:]]*)0\.(35|36)\b|0\.(35|36)[[:space:]]*(USD|USDC)\b' "$file" \
+    | grep -v "AUDIT-EXEMPT" || true)
   if [[ -n "$price_hits" ]]; then
-    messages+=("${RED}  ✗ PRICE VIOLATION (0.35): Genesis price is 0.24 USD${RESET}")
+    messages+=("${RED}  ✗ PRICE VIOLATION (0.35/0.36): Launch reference is 0.24 USD${RESET}")
     while IFS= read -r line; do
       messages+=("${RED}    Line: ${line}${RESET}")
     done <<< "$price_hits"
@@ -67,7 +66,7 @@ audit_file() {
 
   # ── Check 2: AUD / A$ currency (must be USD only) ──────────────
   local aud_hits
-  aud_hits=$(grep -nF 'A$' "$file" \
+  aud_hits=$(grep -nE '(^|[^[:alnum:]_])A\$' "$file" \
     | grep -v "cubic-bezier\|opacity\|animation\|IN\$DEX\|IN\$\|URL\|href\|src\|url\|cdn\|github\|imagenation\|AUDIT-EXEMPT" \
     || true)
   if [[ -n "$aud_hits" ]]; then
@@ -121,6 +120,11 @@ audit_file() {
   # ── Output ──────────────────────────────────────────────────────
   if [[ ${#messages[@]} -eq 0 ]]; then
     echo -e "  ${GREEN}✓ CLEAN${RESET}  ${basename}"
+  elif [[ $violations -eq 0 ]]; then
+    echo -e "  ${YELLOW}⚠ WARN${RESET}   ${BOLD}${basename}${RESET}"
+    for msg in "${messages[@]}"; do
+      echo -e "$msg"
+    done
   else
     echo -e "  ${RED}✗ FAIL${RESET}   ${BOLD}${basename}${RESET}"
     for msg in "${messages[@]}"; do
