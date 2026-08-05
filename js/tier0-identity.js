@@ -57,7 +57,7 @@
     'otpMessage', 'otpError', 'verifyOtpButton', 'resendButton', 'displayNameInput',
     'handleInput', 'domainPreview', 'availabilityStatus', 'identityError',
     'issueIdentityButton', 'issuedName', 'issuedDomain', 'issuedReceipt',
-    'openPortalButton', 'openSwarmButton', 'liveStatus'
+    'openPortalButton', 'openSwarmButton', 'openSecurityButton', 'liveStatus'
   ];
 
   function cacheElements() {
@@ -473,6 +473,9 @@
     });
     el.openSwarmButton.addEventListener('click', function () {
       window.location.assign('/swarm-preview');
+    });
+    el.openSecurityButton.addEventListener('click', function () {
+      window.location.assign('/account-security');
     });
     el.otpInputs.forEach(function (input, index) {
       input.addEventListener('input', function (event) { handleOtpInput(event, index); });

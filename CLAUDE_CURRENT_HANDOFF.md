@@ -1,7 +1,42 @@
 # IN$DEX Current Claude Handoff
 
-**Recorded:** 5 August 2026  
+**Recorded:** 6 August 2026
 **Purpose:** prevent daily agents from mixing the clean Codex build with other local clones
+
+## Latest AJ direction and local build checkpoint
+
+AJ replaced permanent feature canonization with a Living Build Directive. New utilities and use cases may be added continuously. Safety, identity, price and release boundaries remain enforceable controls. Read `INDEX_SIINDEX_LIVING_BUILD_DIRECTIVE_V4_3.md` before product work.
+
+The current local product slice is **Persistent Citizen Accounts and Recovery**. It is implemented and verified in this branch, but it is not pushed, migrated, preview-deployed or activated in production.
+
+Key implementation files:
+
+- `account-recovery.html`
+- `account-security.html`
+- `js/citizen-account-core.js`
+- `js/account-recovery.js`
+- `js/account-security.js`
+- `supabase/migrations/20260806_citizen_accounts_recovery.sql`
+- `citizen-account-recovery-activation.md`
+- `scripts/verify-citizen-account-recovery.mjs`
+
+Non-negotiable recovery boundaries:
+
+- Recovery uses `signInWithOtp` with `shouldCreateUser: false`.
+- Recovery never looks up a citizen through an arbitrary phone RPC.
+- Supabase Auth owns session tokens and session revocation.
+- Device rows are citizen-visible evidence only. They do not store tokens, OTPs, raw phone numbers, IP addresses or browser fingerprints.
+- Recovery signs out other provider sessions before it reports completion.
+- Recovery never changes a wallet, token, balance, identity or security hold.
+- Do not restore the retired Cloud Key, Recovery Key, fake security score, individual-device revocation or automatic unfreeze claims.
+- The legacy `security-settings.html` and `siindex-session-sovereignty.html` routes must continue to resolve to `account-security.html`.
+- No Claude scheduled checker may apply this migration, publish the routes or change production. Report defects as `REPAIR_REQUIRED`.
+
+Required local gate after any change:
+
+`node scripts/verify-citizen-account-recovery.mjs`
+
+Activation must follow `citizen-account-recovery-activation.md` in a non-production Supabase environment first.
 
 ## Verified Codex workspace
 
