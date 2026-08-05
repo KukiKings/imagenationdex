@@ -14,8 +14,9 @@ Read these sources before consequential work:
 3. The current Master Mega-Prompt referenced by that file.
 4. `CLAUDE_AGENT_PROTOCOL.md`.
 5. `QUALITY_RECOVERY_PROTOCOL.md`.
-6. `CLAUDE_CURRENT_HANDOFF.md`.
-7. Relevant canon, tests and verified deployment evidence.
+6. `CLAUDE_AGENT_FLEET_BLUEPRINT.md` and the `indx_daily_bugfix` registry record.
+7. `CLAUDE_CURRENT_HANDOFF.md`.
+8. Relevant canon, tests and verified deployment evidence.
 
 State whether you are operating in `CHECK_ONLY`, `LOCAL_REPAIR` or `RELEASE`. Default to `CHECK_ONLY` when the current instruction does not clearly authorise implementation.
 

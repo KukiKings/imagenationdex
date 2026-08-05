@@ -5,7 +5,8 @@ Required reading:
 1. Protected parent `CLAUDE.md`.
 2. The current Master Mega-Prompt referenced there.
 3. `CLAUDE_AGENT_PROTOCOL.md`.
-4. `CLAUDE_CURRENT_HANDOFF.md`.
+4. `CLAUDE_AGENT_FLEET_BLUEPRINT.md` and the `indx_daily_audit` record in `claude-agent-responsibility-registry.json`.
+5. `CLAUDE_CURRENT_HANDOFF.md`.
 
 Prove the workspace identity before checking code. Report path, branch, HEAD, remote, ahead/behind counts and all working-tree counts.
 

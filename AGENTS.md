@@ -11,8 +11,9 @@ Before consequential work, read in this order:
 3. The current IN$DEX Master Mega-Prompt referenced by the protected file.
 4. `CLAUDE_AGENT_PROTOCOL.md`.
 5. `QUALITY_RECOVERY_PROTOCOL.md`.
-6. `CLAUDE_CURRENT_HANDOFF.md`.
-7. Current repository tests, canon and verified deployment evidence relevant to the task.
+6. `CLAUDE_AGENT_FLEET_BLUEPRINT.md` and `claude-agent-responsibility-registry.json` when scheduled-agent work is involved.
+7. `CLAUDE_CURRENT_HANDOFF.md`.
+8. Current repository tests, canon and verified deployment evidence relevant to the task.
 
 If the protected instructions or current Master Mega-Prompt are required but unavailable or contradictory, stop consequential work and report `MISSING_OR_CONFLICTING_AUTHORITY`.
 

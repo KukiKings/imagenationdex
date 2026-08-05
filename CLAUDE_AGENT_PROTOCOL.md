@@ -13,7 +13,8 @@ Before analysing, changing or publishing anything, read the controlling instruct
 3. The current IN$DEX Master Mega-Prompt referenced by that protected file.
 4. This protocol.
 5. `QUALITY_RECOVERY_PROTOCOL.md` when diagnosing or repairing a defect.
-6. Current repository canon, tests and verified deployment evidence.
+6. `CLAUDE_AGENT_FLEET_BLUEPRINT.md` and `claude-agent-responsibility-registry.json` when scheduled-agent work is involved.
+7. Current repository canon, tests and verified deployment evidence.
 
 If the Master Mega-Prompt is missing, inaccessible, duplicated or contradictory, stop consequential work. Report `MISSING_OR_CONFLICTING_AUTHORITY`. Do not recreate its contents from memory and do not silently choose an older copy.
 

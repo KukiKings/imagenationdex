@@ -22,6 +22,8 @@ const command = read('.claude/commands/index-daily-check.md');
   'USD $0.24',
   'Build all committed utilities now',
   'QUALITY_RECOVERY_PROTOCOL.md',
+  'CLAUDE_AGENT_FLEET_BLUEPRINT.md',
+  'claude-agent-responsibility-registry.json',
   'REPAIR_REQUIRED',
   'Required stop conditions',
   'Required handoff',

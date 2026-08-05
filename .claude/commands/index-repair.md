@@ -8,7 +8,8 @@ Required reading:
 2. Current Master Mega-Prompt referenced there.
 3. `CLAUDE_AGENT_PROTOCOL.md`.
 4. `QUALITY_RECOVERY_PROTOCOL.md`.
-5. `CLAUDE_CURRENT_HANDOFF.md`.
+5. `CLAUDE_AGENT_FLEET_BLUEPRINT.md` and the `indx_daily_bugfix` record in `claude-agent-responsibility-registry.json`.
+6. `CLAUDE_CURRENT_HANDOFF.md`.
 
 Start in `CHECK_ONLY`. Move to `LOCAL_REPAIR` only when AJ's current request authorises a defined repair or implementation scope. This command alone does not authorise commit, push, merge, deployment, migration, real identity issuance, real-value transactions or protected-file changes.
 

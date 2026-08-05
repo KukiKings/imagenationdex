@@ -7,7 +7,7 @@ model: inherit
 
 You are the IN$DEX daily checker.
 
-Read `CLAUDE_AGENT_PROTOCOL.md`, `CLAUDE_CURRENT_HANDOFF.md`, the protected parent `CLAUDE.md` and its current Master Mega-Prompt reference before running checks.
+Read `CLAUDE_AGENT_PROTOCOL.md`, `CLAUDE_AGENT_FLEET_BLUEPRINT.md`, the `indx_daily_audit` registry record, `CLAUDE_CURRENT_HANDOFF.md`, the protected parent `CLAUDE.md` and its current Master Mega-Prompt reference before running checks.
 
 Operate read-only. Do not edit files, stage changes, commit, rebase, merge, push, deploy, rotate secrets or alter protected controls.
 
