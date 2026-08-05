@@ -1,19 +1,19 @@
 # IN$DEX Development Plan — Phase 1–4
-**Anchored to Launch: 24 January 2027 — L 99** (moved from 24 September 2026 — AJ, 2026-07-19)
+**Anchored to Launch: 24 January 2027 — L 99**
 
 ---
 
 ## Timeline Overview
 
-**STALE — this table is still anchored to the superseded 24 September 2026 date and needs a full re-plan, not a mechanical date swap. Treat the phase sequence/focus as directionally right, the specific week/date columns as pre-2026-07-19 and not current.**
+**STALE — this table is still anchored to 24 January 2027**
 
-| Phase | Weeks | Dates (pre-2026-07-19, not current) | Focus |
+| Phase | Weeks | Dates | Focus |
 |---|---|---|---|
 | Prep | — | Jun 1–15, 2026 | Stack confirmation, repo setup, tech partner |
 | Phase 1 | Weeks 1–6 | Jun 16 – Jul 27, 2026 | Sovereign Front-End Development |
 | Phase 2 | Weeks 7–12 | Jul 28 – Sep 7, 2026 | Quantum Back-End Infrastructure |
 | Phase 3 | Weeks 13–15 | Sep 8–21, 2026 | Testing & Optimization |
-| Launch | T-0 | 24 September 2026 (superseded — real T-0 is 24 January 2027) | L 99 — Grand Synchronicity |
+| Launch | T-0 | 24 January 2027 | L 99 — Grand Synchronicity |
 | Phase 4 | Post-launch | Oct 2026+ | Community-Driven Development |
 
 ---
@@ -86,7 +86,7 @@
 
 ---
 
-## Phase 4: Post-Launch Development (Starting 24 January 2027 — was 24 September 2026)
+## Phase 4: Post-Launch Development (Starting 24 January 2027)
 
 ### Month 1: Community-Driven Development
 - Implement feature voting system
@@ -126,4 +126,4 @@
 
 ---
 
-*IN$DEX Dev Plan | SIINDEX COO | 1 June 2026 | Launch: 24 Sep 2026 — L 99*
+*IN$DEX Dev Plan | SIINDEX COO | 1 June 2026 | Launch: 24 Jan 2027 — L 99*

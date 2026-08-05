@@ -8,6 +8,6 @@
 - Referenced in Session 61 when completing SRI supply-chain hardening across 24 SIINDEX screens
 - His framework guided the SRI + pinning decision:
   - Supply chain risk → mitigated via SRI SHA-384 integrity hashes + CDN version pinning
-  - C2-via-prompt-injection → noted as ongoing architectural awareness for AI agent layer (SIINDEX QPSI)
+  - C2-via-prompt-injection → noted as ongoing architectural awareness for the SI agent layer (SIINDEX PQSI)
 
 **Last referenced:** Session 61 — SRI hardening pass

@@ -322,11 +322,11 @@ Launch corridors:
 
 ### Layer 15 — SIINDEX Voice-First Demo
 
-60–90 second scripted demo on homepage.
+60–phone-only scripted demo on homepage.
 
 **Citizen:** "SIINDEX, I want to send money to my mum and sell my handmade prints."
 
-**SIINDEX:** "I can help. First, I'll create your Grid Account — that takes 90 seconds. Then I'll show you the exact fee before anything moves. After that, I can help turn your prints into a listing. If the design has cultural meaning, I'll check permission before publishing. Shall we begin?"
+**SIINDEX:** "I can help. First, I'll create your Grid Account — that needs only your phone number. Then I'll show you the exact fee before anything moves. After that, I can help turn your prints into a listing. If the design has cultural meaning, I'll check permission before publishing. Shall we begin?"
 
 This demo communicates more than 20 sections of text.
 

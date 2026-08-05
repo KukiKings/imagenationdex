@@ -676,10 +676,6 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const INDX_PRICE = 0.24;
-// Corrected 2026-07-25: fallback defaults were fabricated (11.2% APY, 2,847,500 INDX pool) — the
-// lending-pool-stats edge function itself is real (queries the real lending_positions table, real
-// kink interest-rate model, real Pyth SOL/USD price), so it's honest to default to 0 while it loads
-// rather than showing invented numbers pre-fetch.
 let APY = 0;
 let poolTotalDeposited = 0;
 
@@ -782,8 +778,6 @@ function updatePositionCard() {
     document.getElementById('posDeposit').textContent = myDeposit.toLocaleString(undefined, {maximumFractionDigits: 2}) + ' INDX';
     document.getElementById('posToday').textContent = '+' + todayYield.toFixed(4) + ' INDX (~$' + (todayYield * INDX_PRICE).toFixed(2) + ')';
     document.getElementById('posTotal').textContent = '+' + totalEarned.toFixed(6) + ' INDX';
-    // Corrected 2026-07-25: was hardcoded to the fake 2,847,500 pool size instead of the live
-    // poolTotalDeposited value fetched from the real edge function above.
     const share = poolTotalDeposited > 0 ? (myDeposit / poolTotalDeposited * 100).toFixed(4) : '0.0000';
     document.getElementById('posShare').textContent = share + '% of pool';
   } else {
@@ -996,12 +990,6 @@ function renderHistory() {
   const list = document.getElementById('historyList');
   // Load from localStorage + add today's yield credit
   let history = JSON.parse(localStorage.getItem('lendingHistory') || '[]');
-  // [Fixed 2026-07-27] Previously seeded 3 fake "Yield paid" entries computed
-  // from the citizen's current deposit whenever real history was empty —
-  // these were never actual recorded payments. Removed per the sitewide
-  // simulated-yield-history sweep. Real entries only get added here once a
-  // real deposit/withdrawal/yield event is recorded to localStorage elsewhere
-  // in this file's flow.
   if (history.length === 0) { card.style.display = 'none'; return; }
   list.innerHTML = history.slice(-5).reverse().map(h =>
     `<div class="hc-item"><div class="hc-left"><div class="hc-type">${h.type}</div><div class="hc-date">${h.date}</div></div><div class="hc-amt">${h.amt}</div></div>`
@@ -1100,8 +1088,6 @@ updatePositionCard = (function(orig){
 })(updatePositionCard);
 
 // ── GOD MODE — GRAND SYNCHRONICITY VALUE CARD ──
-// AUDIT 2026-07-30: was 2.50 — a dated price target written into #syncAtTarget, whose own label reads
-// "Total in INDX (no USD forecast)". Residue of the 2026-07-29 $2.50 purge. Now the genesis reference.
 const SYNC_TARGET_PRICE = INDX_PRICE;
 const SYNC_DATE = new Date('2027-01-24T00:00:00+10:00');
 
@@ -1123,16 +1109,9 @@ document.getElementById('depositInput').addEventListener('input', function() {
   updateSyncCard(parseFloat(this.value) || 0);
 });
 
-// Corrected 2026-07-25: this entire feed was fabricated — a canned list of fake deposits,
-// withdrawals, and yield events ("Yield paid to 1,247 citizens", "1,200 INDX deposited") randomly
-// selected and injected every 8-14 seconds with fake "Xs/Xm ago" timestamps, directly contradicting
-// the real pool stats fetched above (which honestly show $0/0 depositors pre-launch). Disabled.
-// ── GOD MODE — LIVE POOL ACTIVITY FEED ──
 const _AF_EVENTS = [
   {cls:'deposit',icon:'💰',texts:['500 INDX deposited','1,200 INDX deposited','250 INDX deposited','800 INDX deposited','2,000 INDX deposited'],hasAmt:true,color:'green'},
   {cls:'yield',icon:'📈',texts:['Yield distributed to all depositors','Daily yield credited','Yield paid to 1,247 citizens'],hasAmt:false,color:'green'},
-  // AUDIT 2026-07-30: the 2026-07-25 fix replaced the fabricated 11.2% fallback constant but left the
-  // same figure in this activity-ticker string, in the very file documenting its removal at line 679.
   {cls:'apy',icon:'⚡',texts:['Rate not set — no pool exists yet','Pool not funded','MarginFi integration not connected','SIINDEX pool scan: pre-launch'],hasAmt:false,color:'gold'},
   {cls:'withdraw',icon:'↩️',texts:['120 INDX withdrawn','300 INDX withdrawn','50 INDX withdrawn'],hasAmt:true,color:'red'},
 ];
@@ -1191,7 +1170,6 @@ function seedActivityFeed() {
 }
 
 init();
-// seedActivityFeed(); — Corrected 2026-07-25: disabled, see comment at _AF_EVENTS above.
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

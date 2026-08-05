@@ -77,7 +77,7 @@ class CommandHandler:
             return "Grand Synchronicity has arrived. The Sovereign Economy is live."
         return (
             f"Grand Synchronicity is {cd['days']} days, {cd['hours']} hours away. "
-            f"Target: $2.50 INDX. Genesis price: $0.24. "
+            f"Genesis planning reference: $0.24. No price target is published. "
             f"The clock is running."
         )
 

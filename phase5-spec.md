@@ -119,11 +119,10 @@ created_at (timestamptz)
 
 ## Workstream 3: Solana Smart Contract + Raydium LP
 > Dated execution plan (added 2026-07-16, re-timed 2026-07-19): `launch-runway-plan-2026.md`. Parameter-lock (Stage 4, Jan 5–10, 2027) and execution (Stage 5, Jan 11–13, 2027) are separate weeks — see that doc for the day-by-day breakdown.
-> **Corrected 2026-07-27:** the "open question on whether the 100M INDX mint has already happened" below is resolved — the mint happened 12 July 2026 as a plain SPL Token (original Token Program), verified on mainnet 2026-07-22, and retained as the canonical intended deployment per AJ's 2026-07-27 decision (pending final verification/reconciliation/legal review — see CLAUDE.md). The "Mint INDX" step below is therefore already done; only LP seeding remains. References to SPL Token-2022 in this workstream are superseded and left below for traceability only.
 
 ### What "done" looks like
 - INDX token minted on Solana mainnet — **done 12 Jul 2026, plain SPL Token (original Token Program), not Token-2022** ([SUPERSEDED] this line originally said "SPL Token-2022")
-- Raydium CLMM INDX/SOL pool seeded with AJ's Phantom wallet
+- Raydium CPMM INDX/SOL pool seeded with AJ's Phantom wallet
 - liquidity-pool-setup.html connected to real pool data
 - Token listed and tradeable
 
@@ -132,14 +131,14 @@ created_at (timestamptz)
 |---|---|---|
 | Mint authority | AJ's wallet / multisig | Multisig (Grid Account) — **Human Validation Zone** |
 | Initial liquidity | $1K / $5K / $10K SOL+INDX | AJ to decide based on available capital |
-| Price range (CLMM) | Tight / full range | Full range first — adjust post-launch |
+| Price range (CPMM full-range) | Tight / full range | Full range first — adjust post-launch |
 | Fee tier | 0.25% / 1% | 0.25% — standard for established pairs |
 | Freeze authority | Enabled / disabled | Disabled post-mint — sovereignty principle |
 
 ### Steps
 1. Finalize token parameters with AJ — **Human Validation Zone**
 2. ~~Mint INDX on Solana mainnet using SPL Token-2022~~ — [SUPERSEDED] already done 12 Jul 2026 as a plain SPL Token (original Token Program), not Token-2022; no mint step remains, only LP seeding.
-3. Create Raydium CLMM pool (INDX/SOL, 0.25% fee)
+3. Create Raydium CPMM pool (INDX/SOL, 0.25% fee)
 4. Seed pool from AJ's Phantom wallet — **Human Validation Zone**
 5. Update liquidity-pool-setup.html with real pool address
 6. Update l99-launch-command.html with live pool stats endpoint
@@ -152,7 +151,7 @@ created_at (timestamptz)
 
 ### Gotchas
 - [SUPERSEDED 2026-07-27] "Token-2022 has different instruction set from standard SPL — use correct SDK" — no longer applicable; INDX mint is a plain SPL Token (original Token Program), verified via mainnet 2026-07-22. Retained here for traceability only.
-- CLMM pool creation requires SOL for rent — ensure AJ's wallet has sufficient SOL
+- CPMM pool creation requires SOL for rent — ensure AJ's wallet has sufficient SOL
 - 98/2 Law enforcement happens at application layer (not on-chain at launch) — document this clearly
 - Never sign a transaction without SIINDEX pre-flight 7-point check
 
@@ -166,7 +165,7 @@ Week 2: Supabase — waitlist + citizens tables + wire forms
 Week 3: Supabase — Wisdom Score + tx history
 Week 4: Solana token mint + Raydium LP (with AJ sign-off)
 Pre-L99: Full integration test across all 3 workstreams
-L99: 24 January 2027 (moved from 24 September 2026 — AJ, 2026-07-19)
+L99: 24 January 2027
 ```
 
 ---

@@ -17,8 +17,8 @@ ECOSYSTEM_FACTS = """
 IN$DEX (ImageNation DEX) is the Pacific-first Sovereign Economy platform.
 
 KEY FACTS:
-- INDX genesis price: $0.24 USD (set at launch, locks Grand Synchronicity: 24 Sep 2026)
-- Grand Synchronicity target: $2.50 USD — the first milestone price
+- INDX genesis price: $0.24 USD (set at launch, locks Grand Synchronicity: 24 Jan 2027)
+- Grand Synchronicity: launch event, no price target published USD — the first milestone price
 - 2% Civilisation Law: every transaction sends 2% to the Civilisation Fund, 98% to creators/users
 - Wisdom Score (WS): earned by engaging, referring, trading, creating — governs citizen rank
 - SovTokens: tip/support tokens sent between citizens (Wave/Mana/Aloha/Sovereign/Elder tiers)

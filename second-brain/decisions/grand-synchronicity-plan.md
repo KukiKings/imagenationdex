@@ -1,10 +1,19 @@
 # Grand Synchronicity Deployment Plan
-**Target Date:** 24 September 2026 — 10:00am AEST
-**Days Remaining (from 27 Jun 2026):** 89 days
-**Price Target:** INDX $2.50 (10.4× genesis at $0.24)
+**Target Date:** 24 January 2027 — 10:00am AEST
 **Citizen Target:** 1,000 founding citizens active
-**Status:** LOCKED — living document, updated each session
+**Status:** Live for the launch-event planning · **all price-target content `[SUPERSEDED]`**
 **Author:** SIINDEX (Claude) + AJ Henry
+
+> ### ⚠️ `[SUPERSEDED]` — every price target in this document
+> **Marked 2026-07-30.** The header previously read **"Price Target: INDX $2.50 (10.4× genesis at $0.24)"**, and the same figure recurs at lines ~15, ~186 and ~199 including a "stacked catalysts" map explaining how $2.50 is reached.
+>
+> **The $2.50 target was withdrawn on 2026-07-29** and 48 instances were purged from the platform. This file was missed because it sits in `second-brain/decisions/` rather than in a screen.
+>
+> **Grand Synchronicity is a launch event, not a price event.** No price target and no return multiple is published or promised, and none may be reintroduced. A dated price forecast attached to a launch is the single claim most likely to be read as a financial promise to citizens — which is a regulatory problem, not a marketing one.
+>
+> The **event planning** in this document — sequencing, comms, readiness checklist — remains useful. Any line tying the event to a price does not. Retained rather than deleted per AJ's standing instruction on superseded records.
+>
+> *"Days Remaining (from 27 Jun 2026): 89 days" also removed — a hardcoded countdown that was wrong the day after it was written, and computed against the superseded date.*
 
 ---
 
@@ -12,7 +21,7 @@
 
 Grand Synchronicity is not a marketing event. It is a civilisational proof point.
 
-On 24 September 2026, IN$DEX shows the world that a sovereign financial system built by one founder and one AI partner can reach critical mass — real citizens, real transactions, real Civ Law revenue. $2.50 is the number the market assigns when it prices in what comes next.
+On 24 January 2027, IN$DEX shows the world that a sovereign financial system built by one founder and one AI partner can reach critical mass — real citizens, real transactions, real Civ Law revenue. `[SUPERSEDED 2026-07-29 — no price target is published. Original sentence claimed a specific number the market would assign.]`
 
 Everything in this plan serves that proof.
 
@@ -130,11 +139,11 @@ Teams that reverse this order build audiences with no retention. We do not rever
 **Goal:** Visible countdown. Press coverage. Exchange pre-listing groundwork. Unstoppable.
 
 #### Media
-- [ ] Press release: "IN$DEX Grand Synchronicity — 24 Sep 2026" to 10 crypto media outlets
+- [ ] Press release: "IN$DEX Grand Synchronicity — 24 Jan 2027" to 10 crypto media outlets
   - CoinTelegraph, Decrypt, The Block, BeInCrypto, CoinGape, Pacific Beat (ABC)
 - [ ] 3 podcast appearances (Pacific/SEA focus)
 - [ ] 1 long-form X thread by AJ: "Why I built IN$DEX" — personal founder story
-- [ ] YouTube: "Grand Synchronicity — What Happens on 24 Sep 2026" explainer
+- [ ] YouTube: "Grand Synchronicity — What Happens on 24 Jan 2027" explainer
 
 #### Exchange Groundwork
 - [ ] Research CEX listing requirements: Raydium (DEX), Jupiter (DEX aggregator), Gate.io, MEXC

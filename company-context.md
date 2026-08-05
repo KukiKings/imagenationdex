@@ -5,7 +5,9 @@
 **Blockchain:** Solana (integrated with Raydium + Neon EVM)
 **Stage:** Idea / Whitepaper — pre-product
 **Founded:** 2025 by Arthur John Henry (AJ)
-**Target:** $1 trillion valuation by 2027
+**Status:** Pre-launch. No citizens onboarded, no transactions settled, no revenue. Target launch 24 January 2027.
+
+> *Valuation target removed 2026-07-30.* This line read "**Target:** $1 trillion valuation by 2027". AJ withdrew that target on 2026-07-19, but it remained here and in six other places for eleven days, including a public hero stat and SIINDEX's own answer script. A valuation projection attached to a pre-revenue platform is the first thing an FSC or BTIB reviewer will discount, and it undermines the parts of this document that are true and verifiable.
 
 ## The Problem
 
@@ -17,7 +19,7 @@ Meanwhile, a girl selling coconuts on the roadside in the Cook Islands can't acc
 
 IN$DEX is a sovereign decentralised exchange with two equal pillars:
 
-**1. Financial Inclusion** — Zero-friction onboarding for the unbanked and underserved globally. No KYC. No bank account. Sign up via email, mobile number, QR code, or card. Instantly receive a free Web3 domain (yourname.IN$DEX). Immediately able to buy, sell, and receive payments for real-world assets (RWA) and digital assets P2P.
+**1. Financial Inclusion** — Zero-friction onboarding for the unbanked and underserved globally. Tier 0 needs only a phone number. No bank account. Sign up via email, mobile number, QR code, or card. Instantly receive a free Web3 domain (yourname.IN$DEX). Immediately able to buy, sell, and receive payments for real-world assets (RWA) and digital assets P2P.
 
 **2. Creator / Meme Economy** — A living meme economy where creators mint memes as NFTs, sell merch P2P, earn INDX tokens, and govern the platform via MemeDAO. Memes become value. Creators become sovereign.
 
@@ -29,7 +31,7 @@ What they all get wrong: onboarding is slow, complicated, and exclusionary. IN$D
 - Instant onboarding via email, mobile, QR code, or card
 - Free Web3 domain name on signup — no cost, no forms
 - Immediate P2P trading of RWA and digital assets
-- No KYC requirement
+- Progressive KYC — Tier 0 is a phone number only (no documents, no face scan), capped at $1,000 USD-equivalent per month
 
 ## Products & Features (Planned)
 
@@ -45,9 +47,9 @@ What they all get wrong: onboarding is slow, complicated, and exclusionary. IN$D
 
 **INDX** — governance, payments, staking, rewards, and rank progression
 
-## The AI COO
+## The SI COO — Synthetic Intelligence, not AI
 
-**SIINDEX** (Quantum Physical Synthetic Intelligence / QPSI) runs the platform autonomously — compliance, governance, liquidity, marketplace operations, community management, and 24/7 workflows. The platform is designed to be self-operating.
+**SIINDEX** (PQSI — **P**hysical **Q**uantum **S**ynthetic **I**ntelligence) operates the platform day-to-day: compliance, governance, liquidity, marketplace operations and community management. AJ retains Human Validation Zones over Solana transactions, 98/2 Law changes, production deploys and any external API touching real data.
 
 ## Mission
 

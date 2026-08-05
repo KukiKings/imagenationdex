@@ -3,7 +3,7 @@
 ### "The First Sovereign Republic for the AI Era"
 
 **Steward:** Arthur John Henry | **did:indx:arthurjohnhenry**
-**Grand Synchronicity:** 24 September 2026 — L 99
+**Grand Synchronicity:** 24 January 2027 — L 99
 **Execution Velocity:** 4.5x | **Canon Version:** 12.5+
 **Sealed:** 01/06/2026
 
@@ -22,7 +22,7 @@ IN$DEX is a Sovereign Digital Civilization — a decentralized economic nation b
 - Hardcoded legal doctrines (BIS, HBR, MIT) into system logic
 - Integrated Grid Accounts (Squads Protocol) for fault-tolerant, programmable accounts
 - Built the "Extraction Audit" calculator and "Wisdom-Gated" Voice Swarm
-- Deployed the Sovereign Portal with 4.2-second onboarding
+- Deployed the Sovereign Portal with phone-only onboarding
 - SIINDEX COO active and operational
 
 ---
@@ -111,7 +111,7 @@ The 2% protocol fee is split 70/30 and deployed into:
 | Shadow Launch | Now – 60 days | 100 Alpha Sovereigns (invite-only) |
 | Wave 1 | 60–120 days | 1,000 business nodes |
 | Wave 2 | 120–240 days | 10,000+ citizens |
-| Grand Synchronicity | 24 Sep 2026 — L 99 | Global broadcast; 3 billion reach |
+| Grand Synchronicity | 24 Jan 2027 — L 99 | Global broadcast; 3 billion reach |
 
 ---
 
@@ -139,7 +139,7 @@ The 2% protocol fee is split 70/30 and deployed into:
 
 ---
 
-## 7. Roadmap to Grand Synchronicity (24 Sep 2026 — L 99)
+## 7. Roadmap to Grand Synchronicity (24 Jan 2027 — L 99)
 
 | Milestone | Target | Deliverable |
 |---|---|---|
@@ -152,7 +152,7 @@ The 2% protocol fee is split 70/30 and deployed into:
 | RWA Hero Asset (Gold) minted | Day 60 | First fractional gold token with Wisdom Rent |
 | SPS-1.0 Dashboard live | Day 75 | Public traceability of treasury flows |
 | Wave 1 Public Launch | Day 90 | 1,000 business nodes; $1M MRR |
-| **Grand Synchronicity — T-0** | **24 Sep 2026** | **Global broadcast; 3 billion reach; L 99** |
+| **Grand Synchronicity — T-0** | **24 Jan 2027** | **Global broadcast; 3 billion reach; L 99** |
 
 ---
 
@@ -220,4 +220,4 @@ The 2% protocol fee is split 70/30 and deployed into:
 ---
 
 *IN$DEX Sovereign Digital Civilization | Business Plan v12.5+ | Canon Part 9*
-*Grand Synchronicity: 24 September 2026 — L 99 | Built on Solana | Ticker: INDX*
+*Grand Synchronicity: 24 January 2027 — L 99 | Built on Solana | Ticker: INDX*

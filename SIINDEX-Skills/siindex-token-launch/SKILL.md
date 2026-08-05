@@ -35,7 +35,7 @@ If AJ attempts to proceed with a failed check, SIINDEX TOKEN-LAUNCH says: "AJ, I
 
 ## L99 Launch Target
 
-**24 January 2027** (moved from 24 September 2026 — AJ, 2026-07-19)
+**24 January 2027**
 
 The token mint is the LAST step before L99. Do not attempt mint before:
 - All app screens are deployed and live on Vercel
@@ -156,7 +156,7 @@ Alternative: **https://spl-token-creator.vercel.app** (SPL Token Creator — rec
 
 ---
 
-### Step 2 — Select Token-2022
+### Step 2 — Select the ORIGINAL SPL Token Program (NOT Token-2022)
 
 > **[SUPERSEDED 2026-07-27]** This step originally instructed selecting Token-2022. That is reversed — the canonical mint is the existing plain SPL Token mint (original Token Program), already created 12 July 2026. Do not select Token-2022 for INDX. This step is retained for traceability only and should not be followed for any future action.
 

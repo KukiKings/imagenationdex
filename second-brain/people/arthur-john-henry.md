@@ -15,7 +15,7 @@
 
 ## Key Frameworks AJ Operates From
 
-- Grand Synchronicity (24 Sep 2026 = $2.50/INDX = launch date)
+- Grand Synchronicity (24 Jan 2027 — launch date; the $2.50/INDX target was withdrawn 2026-07-29)
 - Mama Noe test (if she can use it, it works for everyone)
 - Civilisation Law (2% fee, immutable)
 - Minimum effective dose (smallest build, maximum impact)

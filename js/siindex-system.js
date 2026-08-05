@@ -1,6 +1,6 @@
 /**
  * siindex-system.js — SIINDEX Sovereign Marketplace Intelligence Platform
- * Canonical system prompt / persona definition for all SIINDEX AI interactions.
+ * Canonical system prompt / persona definition for all SIINDEX (SI) interactions.
  * Version: 1.0.0 | Authored: AJ Henry | Canonized: 2026-07-04 | SIINDEX CSIO
  *
  * Usage:

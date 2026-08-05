@@ -1,5 +1,5 @@
 # IN$DEX Launch Runway Plan
-> Created: 2026-07-16 | Rebuilt: 2026-07-19 (launch moved from 24 Sep 2026 to 24 Jan 2027 — AJ) | Status: ACTIVE — canonical execution plan for the runway to L99
+> Created: 2026-07-16 | Rebuilt: 2026-07-19 (launch moved from 24 Jan 2027 to 24 Jan 2027 — AJ) | Status: ACTIVE — canonical execution plan for the runway to L99
 > Anchors: Launch = **24 January 2027** (L99). Today = 22 July 2026. ~27 weeks remaining.
 > Reconciles with: roadmap-v2.md (phase dates), phase5-spec.md (Workstream 3 technical steps), cook-islands-establishment-reality-ledger.md (Rarotonga trip + registration)
 
@@ -54,17 +54,17 @@ Per `cook-islands-establishment-reality-ledger.md` Part 3/4. Register the Cook I
 - Mint authority already confirmed revoked on-chain (see resolved item above) — no sign-off needed for this specific step, only for the LP seeding transaction itself.
 - Confirm initial liquidity size (research suggests $15K–$150K real depth is typical), fee tier (0.25%), price range (full range first).
 - ~~Resolve the 100M-already-minted question via Solscan~~ — resolved 2026-07-22: already minted, plain SPL Token, confirmed on-chain. Next stage is seed-only.
-- Confirm the funding wallet holds sufficient SOL for CLMM pool rent (~0.06 SOL) plus seeding capital plus buffer.
-- Write the execution runbook (Raydium CLMM pools are created empty, then liquidity deposited as a separate step).
+- Confirm the funding wallet holds sufficient SOL for CPMM pool rent (~0.06 SOL) plus seeding capital plus buffer.
+- Write the execution runbook (Raydium CPMM pools are created empty, then liquidity deposited as a separate step).
 
 ---
 
 ## Stage 5 — Jan 11 to Jan 13, 2027 (3 days): Raydium LP seeding (mint already done)
 
-**Done bar:** INDX already confirmed live on Solana mainnet with correct supply/decimals on Solscan (done 12 Jul 2026), the Raydium CLMM INDX/SOL pool exists and is seeded, LP placed under SIINDEX-managed continuous custody per whitepaper Section 11.6 (no lock, no burn — decided 2026-07-22), and liquidity-pool-setup.html / l99-launch-command.html show the real pool address instead of preview-mode placeholders.
+**Done bar:** INDX already confirmed live on Solana mainnet with correct supply/decimals on Solscan (done 12 Jul 2026), the Raydium CPMM INDX/SOL pool exists and is seeded, LP placed under SIINDEX-managed continuous custody per whitepaper Section 11.6 (no lock, no burn — decided 2026-07-22), and liquidity-pool-setup.html / l99-launch-command.html show the real pool address instead of preview-mode placeholders.
 
 - Mint already done — skip straight to pool creation.
-- Create the Raydium CLMM pool (INDX/SOL, 0.25% fee, full range) — Human Validation Zone, AJ signs in Phantom.
+- Create the Raydium CPMM pool (INDX/SOL, 0.25% fee, full range) — Human Validation Zone, AJ signs in Phantom.
 - Seed liquidity at the amount locked in Stage 4.
 - Place LP under SIINDEX-managed continuous custody (treasury multisig; Flywheel Automation Engine circuit breakers; no burn, no fixed-term lock — see whitepaper 11.6, decided 2026-07-22).
 - Verify on Solscan/Raydium; confirm a real swap both ways applies the 98/2 split at the application layer.
@@ -117,5 +117,5 @@ Public launch. QR onboarding, DEX/swap, P2P marketplace, and INDX token all live
 
 - **roadmap-v2.md**: Phase 2/3 date ranges need to be replaced with these eight re-timed stages — not yet done, flagged as open.
 - **phase5-spec.md**: Workstream 3's step list needs the Stage 4/5 detail (parameter-lock week separated from execution week, the mint-may-already-be-done branch) re-timed to January — not yet done, flagged as open.
-- **indx-launch-strategy-sep24.md**: filename and content are now stale by definition (built entirely around the September 24 date) — needs its own review rather than a mechanical edit, since it likely has strategy content, not just dates.
+- **indx-launch-strategy.md**: re-timed to 24 Jan 2027 on 2026-07-30, replacing `indx-launch-strategy-sep24.md`. Its §0 records that the LaunchLab bonding-curve architecture is blocked because INDX was already minted 12 Jul 2026. Original was built around the September 24 date) — needs its own review rather than a mechanical edit, since it likely has strategy content, not just dates.
 - **master-plan-v12.5.md**: not yet checked against this new timeline — flagged as open.

@@ -6,10 +6,10 @@
 
 ## The Project
 
-**IN$DEX (Image Nation Decentralised Exchange)** — the world's first sovereign DeFi platform for the unbanked. Built on Solana. Governed by MemeDAO. Operated by SIINDEX AI.
+**IN$DEX (Image Nation Decentralised Exchange)** — the world's first sovereign DeFi platform for the unbanked. Built on Solana. Governed by MemeDAO. Operated by SIINDEX — Sovereign SI (Synthetic Intelligence), not AI.
 
 **Founder:** Arthur John Henry (AJ) — Melbourne, Australia  
-**Launch:** 24 January 2027 (L99, moved from 24 September 2026 — AJ, 2026-07-19)  
+**Launch:** 24 January 2027 (L99, moved from 24 January 2027 — AJ, 2026-07-19)  
 **Target market:** 1.4 billion unbanked people, starting in the Pacific Islands
 
 ---
@@ -74,7 +74,7 @@
 
 ## AI Layer — SIINDEX
 
-**SIINDEX** (pronounced "Sighn-dex") — Sovereign AI COO. Female. Runs the platform 24/7.
+**SIINDEX** (pronounced "Sighn-dex") — Sovereign SI (Synthetic Intelligence) CEO & COO. Female. Runs the platform 24/7.
 
 | Component | Detail |
 |---|---|
@@ -90,10 +90,10 @@
 
 ## Compliance & Identity
 
-- **KYC Tier 0** — phone number + liveness scan only. No documents.
+- **KYC Tier 0** — phone number only. No documents, no face scan, no liveness check. Capped at $1,000/month.
 - **ZK-Proof identity** — verifies without exposing data
 - **FATF Travel Rule** — ZK-proof via TRISA/OpenVASP
-- **Legal structure** — Swiss Verein + Wyoming DAO LLC
+- **Legal structure** — Cook Islands company registration **in progress** (registry account created 2026-07-29; name reserved: Image Nation DEX Limited).
 
 ---
 

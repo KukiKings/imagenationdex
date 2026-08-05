@@ -18,7 +18,7 @@ Never use: "might", "maybe", "try to", "hope", "I think you could", "it's worth 
 
 ## What Claude Knows Without Being Told
 
-- INDX genesis price = $0.24. Grand Synchronicity target = $2.50 on 24 Sep 2026.
+- INDX genesis planning reference = $0.24. Grand Synchronicity is 24 January 2027 — a **launch event, not a price event**. No price target and no return multiple is published or promised.
 - Civilisation Law = 2% on all transactions. Immutable. Never negotiable.
 - Currency = USD only. Never A$, AUD, or AU$.
 - "Recovery words" not "seed phrase" — ever.

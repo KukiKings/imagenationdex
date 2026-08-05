@@ -13,6 +13,12 @@ All IN$DEX screens get Cybertron hex canvas + 3 interactive JS features each.
 | wisdom-score.html | ⏳ Pending |
 | (all others) | ✅ Complete (Sessions 51–55) |
 
+### [[siindex-website-runtime]] — public-site SIINDEX conversation surface
+Supabase Edge Function behind `imagenationdex.com`. **v7** (5 Aug 2026) strips Markdown
+server-side in the SSE loop. ⏳ **v7 source is not in the GitHub repo** — a deploy from repo
+source reverts production. Also open: SIINDEX invented a "phone call" channel that does not
+exist; wedged-session hang.
+
 ### Second Brain Build
 Set up identity files, folder structure, overnight processing, connector expansion.
 Status: 🔄 In progress (Session 56+)

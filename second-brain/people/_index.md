@@ -8,6 +8,7 @@ One file per person. Contains: role, relationship to SIINDEX, communication styl
 - [[arthur-john-henry]] — Founder & CEO
 - [[dan-tentler]] — security/attack-surface framework advisor
 - [[larry-fink]] — BlackRock CEO, external macro-validation quote (not affiliated)
+- [[uncle-mac]] — AJ's uncle, Rarotonga. Asked 2026-07-30 to provide the Cook Islands registered-office address for `Image Nation DEX Limited` — **not yet confirmed**; paid registered agent is the fallback. AJ returns to the Cook Islands 6 Dec 2026.
 
 ## Template
 

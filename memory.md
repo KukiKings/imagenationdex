@@ -255,7 +255,7 @@
 
 **God Mode completed:**
 
-1. **about.html** — Fable agent added CSS + milestone onclick hooks. Manual completion added: TGE countdown strip (live D/H/M/S to Sep 24 2026), IntersectionObserver stat counter animation, 6-milestone detail bottom sheet with localStorage viewed-state persistence, navigator.share story function, showToast helper. Fixed nav/footer links: home-v2 → home-v3, compliance-shield → siindex-trust-compliance.
+1. **about.html** — Fable agent added CSS + milestone onclick hooks. Manual completion added: TGE countdown strip (live D/H/M/S to Jan 24 2027), IntersectionObserver stat counter animation, 6-milestone detail bottom sheet with localStorage viewed-state persistence, navigator.share story function, showToast helper. Fixed nav/footer links: home-v2 → home-v3, compliance-shield → siindex-trust-compliance.
    GM features: TGE Countdown, Stat Counter Animation, Milestone Detail Sheets, Share Story
 
 2. **send.html** — 1204 lines, 21 GOD MODE markers. Live 98/2 fee preview + Pacific corridor rate pill, quick-amount buttons, FX savings vs Western Union, send history sheet, real outbound navigation wired. ✅ CLEAN
@@ -593,7 +593,7 @@
 - Team Portal is the front door to all internal ops. PIN-gated (default 1919). Session auto-expires after 4 hours.
 
 **God Mode features (4 — from birth):**
-- (GM1) TGE Launch War Room — Live countdown to 24 Sep 2026 AEST (days/hours/mins/secs tick every second); 4-phase pre-launch checklist (Legal & Compliance / Technical / Liquidity Pool / Marketing & Community) with 21 items; AUSTRAC Tranche 2 (live 1 Jul 2026) + VASP deadline (29 Jul 2026) flagged URGENT; toggleable completion per item with progress bars per phase; persisted to `indx_portal_checklist`. This is the operational nerve centre for the TGE sprint.
+- (GM1) TGE Launch War Room — Live countdown to 24 Jan 2027 AEST (days/hours/mins/secs tick every second); 4-phase pre-launch checklist (Legal & Compliance / Technical / Liquidity Pool / Marketing & Community) with 21 items; AUSTRAC Tranche 2 (live 1 Jul 2026) + VASP deadline (29 Jul 2026) flagged URGENT; toggleable completion per item with progress bars per phase; persisted to `indx_portal_checklist`. This is the operational nerve centre for the TGE sprint.
 - (GM2) SIINDEX System Health Monitor — Status board for 8 major subsystems (AUSTRAC / Legal Defense / Founders Pool / Session Security / Mission Command / Media Kit / Web3 Identity / Voice Interface); each shows GREEN/AMBER/RED dot, status text, description, and quick-link to open that screen; summary bar shows Healthy / Attention / Action Needed counts; Refresh button re-checks all systems. AUSTRAC shows RED (action required), Media Kit shows AMBER.
 - (GM3) Platform KPI Snapshot — Live computed metrics from localStorage: total founder capital, monthly LP yield, INDX allocated, confirmed investors, LP funding progress bar ($X of $100K), screen count (120+), days to TGE, INDX genesis price. Reads from `indx_founders_pool_members` cross-screen.
 - (GM4) Team Broadcast + Comms Log — AJ composes a tagged message (Mission / Alert / Update / Note) → timestamped → stored to `indx_portal_comms`; log renders newest-first with sender, tag, text, time; clear button. Single source of truth for "what are we working on today."
@@ -773,7 +773,7 @@
 - `runDistribution()` use-before-declare bug fixed: `const now = new Date()` moved above `const payDate = now.toISOString()...`
 
 **God Mode features added:**
-- (GM1) TGE Countdown Banner — real-time countdown to `2026-09-24T00:00:00+11:00` (AEST); days/hours/min/sec with `setInterval(1000)` tick; status pill shifts between "Raising Capital" (cyan) / "Target Hit — Deploy Ready" (green) / "LP Live" (gold) based on capital raised vs POOL_TARGET and time elapsed; banner positioned between pool progress bar and yield rate control.
+- (GM1) TGE Countdown Banner — real-time countdown to `2027-01-24T00:00:00+11:00` (AEST); days/hours/min/sec with `setInterval(1000)` tick; status pill shifts between "Raising Capital" (cyan) / "Target Hit — Deploy Ready" (green) / "LP Live" (gold) based on capital raised vs POOL_TARGET and time elapsed; banner positioned between pool progress bar and yield rate control.
 - (GM2) LP Readiness Dashboard — reads live active founder data; shows USDC raised, INDX tokens to pair at $0.24 genesis, 2% Civ Fund reserve, deployable capital; 6-step Raydium CPMM deployment checklist (USDC raised / INDX minted / price locked / pool created / LP burned / announcement sent); step 1 auto-ticks when active founders reach $100K target; "🔥 LP tokens burned at launch — no rug, ever" doctrine note; panel updates on every `render()` call.
 - (GM3) Liquidity Depth Simulator — range slider $10K–$200K pool depth; constant product formula CPMM price impact at $500/$1K/$5K/$10K trade sizes; daily fee estimate at 0.25% Raydium tier × 30% TVL daily volume; annual fee projection; "INDX Out" column shows tokens received per trade; live update on slider input.
 - (GM4) Import/Restore from JSON Backup — purple "⬆ Restore" button added to header alongside existing "⬇ Backup"; hidden `<input type=file>` with `.json` accept; validates JSON for `founders` array; `window.confirm()` shows count + export timestamp before overwriting; imports yieldRate and history if present; calls `render()` + `renderLPReadiness()` after successful import.
@@ -781,7 +781,7 @@
 **LP context locked:**
 - INDX/USDC LP on Raydium CPMM Standard AMM
 - Genesis price: $0.24 = USDC÷INDX ratio
-- LP launch: 24 Sep 2026 AEST
+- LP launch: 24 Jan 2027 AEST
 - Burn LP tokens for credibility — canonical
 - 2% Civ Fund reserve from LP capital
 
@@ -1301,7 +1301,7 @@ Next build: `indx-mission-rooms.html` — Mission Rooms home screen.
 Liberation + Power + Protection + Humanity + Partnership, requiring Structure.
 
 ### Key alignments
-- **Grand Synchronicity target date = AJ's birthday.** September 24, 2026 (GS) = September 24 (DOB). Not incidental.
+- **Grand Synchronicity target date = AJ's birthday.** January 24, 2027 (GS) = September 24 (DOB). Not incidental.
 - Arthur (sovereign/legendary) + John (messenger/bridge) + Henry (ruler of domain) = "The sovereign messenger who builds a protected domain." Describes IN$DEX precisely.
 - The **missing 4** (structure, discipline, documentation) is exactly what build specs, God Mode playbooks, Appendix B, memory.md, and governance docs are installing. Every build session is the 4 being laid.
 
@@ -1320,7 +1320,7 @@ Liberation + Power + Protection + Humanity + Partnership, requiring Structure.
 
 **Built:** `indx-grand-synchronicity-countdown.html` (453 lines)
 
-Full-screen countdown to September 24, 2026 (AJ's birthday = Grand Synchronicity Day). Features: animated gold star canvas (90 stars, rAF), price strip ($0.24 today → $2.50 GS target, 10.4×), live countdown DD:HH:MM:SS with gold/cyan/red/green color transitions by days remaining, dynamic label copy, launch progress bar (Jul 8 → Sep 24), 9 milestone rows with done/active/pending states, Meteora Alpha Vault tracker (SOL raised + citizens + 150 SOL target), Founding Citizen pledge wall (localStorage, max 100, initials avatar), "The Bank Never Came" manifesto with gold chips (1.4B unbanked, 530M smartphones, 98% to Citizens, LP Burned), share arsenal (X, WhatsApp, LinkedIn, copy link — tally via localStorage), pre-launch checklist (8 items, tap-to-tick). Audit: all clean (0.35 price, A$, seed phrases).
+Full-screen countdown to January 24, 2027 (AJ's birthday = Grand Synchronicity Day). Features: animated gold star canvas (90 stars, rAF), price strip ($0.24 today → $2.50 GS target, 10.4×), live countdown DD:HH:MM:SS with gold/cyan/red/green color transitions by days remaining, dynamic label copy, launch progress bar (Jul 8 → Sep 24), 9 milestone rows with done/active/pending states, Meteora Alpha Vault tracker (SOL raised + citizens + 150 SOL target), Founding Citizen pledge wall (localStorage, max 100, initials avatar), "The Bank Never Came" manifesto with gold chips (1.4B unbanked, 530M smartphones, 98% to Citizens, LP Burned), share arsenal (X, WhatsApp, LinkedIn, copy link — tally via localStorage), pre-launch checklist (8 items, tap-to-tick). Audit: all clean (0.35 price, A$, seed phrases).
 
 localStorage keys: `indx_gs_vault`, `indx_gs_pledges`, `indx_gs_shares`, `indx_gs_checklist`
 
@@ -1330,7 +1330,7 @@ localStorage keys: `indx_gs_vault`, `indx_gs_pledges`, `indx_gs_shares`, `indx_g
 
 **Tasks:** #20 — INDX launch strategy research + canonical document
 
-**Strategic frame:** AJ pasted the full Raydium LaunchLab documentation page and asked for deep research to determine the best launch option for INDX on September 24, 2026 (Grand Synchronicity / AJ's birthday). Research covered: LaunchLab graduation rates + curve types, Meteora Alpha Vault, Jupiter LFG, Streamflow vesting, Solana token launch best practices 2026, LP disposal policies.
+**Strategic frame:** AJ pasted the full Raydium LaunchLab documentation page and asked for deep research to determine the best launch option for INDX on January 24, 2027 (Grand Synchronicity / AJ's birthday). Research covered: LaunchLab graduation rates + curve types, Meteora Alpha Vault, Jupiter LFG, Streamflow vesting, Solana token launch best practices 2026, LP disposal policies.
 
 **Research findings (key):**
 - LaunchLab: 0.62–1.12% graduation rate overall — but these are meme tokens with no plan. INDX has narrative, product, planned date, pre-built community.
@@ -1445,7 +1445,7 @@ Key findings that directly shaped the build:
 
 **Task #8 — home-v2.html Phase 1 — Civilization-First Positioning:**
 Six precise edits to the 1,670-line homepage:
-1. `og:description` updated: "The world's first Sovereign Digital Civilization. 1.4 billion unbanked — 530 million already have smartphones. 90 seconds. No bank account. 50 free INDX."
+1. `og:description` updated: "The world's first Sovereign Digital Civilization. 1.4 billion unbanked — 530 million already have smartphones. A phone number is all it takes. No bank account. 50 free INDX."
 2. Macro signal card 3: `1.54B` → `1.4B`; label "Unbanked. 530M have smartphones."; description updated with Global Findex 2025 source.
 3. **New: ImageNation section** inserted before final-CTA: `$254B creator economy` stats grid, 4 use-case cards (art/food/services/culture), SIINDEX quote "Complexity remains invisible. Opportunity becomes visible.", "Build My First Opportunity →" CTA linking to `imagenation-builder.html`.
 4. **New: Opportunity Feed section** inserted after ImageNation: 6 feed-type cards (Mentors/Customers/Collaborators/Learning/Grants/Governance), "Zero Addiction Design" callout, "Open the Opportunity Feed →" CTA.
@@ -1551,7 +1551,7 @@ New 434-line screen. Not products — people, stories, creators, events, behind-
 
 4 features added:
 
-1. **Proactive Opener** — `gmR2ProactiveOpener()` fires on first load, sessionStorage-gated (`indx_avatar_greeted`). SIINDEX speaks without tapping. If `citizen_name` in sessionStorage, personalised: "[Name]. I've been waiting. Your wallet is 90 seconds away." Otherwise: "Hi. I'm SIINDEX. I'll have your wallet ready before we've finished talking." Fires at 2.4s, uses existing `speakQuote()` + `addConvoMsg()`. GOD MODE PATCH: existing 4s `setTimeout(showQuote,4000)` shifted to 7.5s so proactive opener runs first.
+1. **Proactive Opener** — `gmR2ProactiveOpener()` fires on first load, sessionStorage-gated (`indx_avatar_greeted`). SIINDEX speaks without tapping. If `citizen_name` in sessionStorage, personalised: "[Name]. I've been waiting. Your wallet is one phone number away." Otherwise: "Hi. I'm SIINDEX. I'll have your wallet ready before we've finished talking." Fires at 2.4s, uses existing `speakQuote()` + `addConvoMsg()`. GOD MODE PATCH: existing 4s `setTimeout(showQuote,4000)` shifted to 7.5s so proactive opener runs first.
 2. **Citizen Name Capture** — `#gmNameCapture` `.nm-capture` slide-up overlay appears 1.6s after proactive opener if no `citizen_name` in sessionStorage. "What should I call you?" SIINDEX-voiced prompt + text input. On submit, saves to `sessionStorage.citizen_name`, SIINDEX acknowledges by name via voice + quote. `gmR2SubmitName()` / `gmR2ShowNameCapture()`.
 3. **Quick Action Bar** — `#gmQaBar` `.qa-bar` 4-chip floating bar appears 3.2s post-opener. Chips: "🔓 Get Wallet", "💰 INDX Price", "💬 Ask Me", "🌐 How It Works". Tap triggers `gmR2QaAction(type)` — SIINDEX responds via voice + quote. Wallet chip redirects to join-chooser.html after 4.8s. Bar hides once any chip is tapped.
 4. **Wallet Readiness Strip** — `#gmWalletStrip` `.wallet-ready-strip` persistent top strip (below mode-bar). Hidden if `citizen_id` in sessionStorage. Shows: ⚛️ PQSI T0 · ⚡ 4.1s settle · Wallet ready → "Start →" CTA → join-chooser.html. Green glow pulse animation.
@@ -1585,7 +1585,7 @@ Key functions: `countUp()` — cubic ease 1200ms; `fmtUSD()` / `fmtNum()` — K/
 
 **Strategic brief actioned:** Homepage was communicating 15–20 revolutionary ideas simultaneously. Repositioned to ONE idea. Three changes applied:
 
-1. **Hero H1 Rewrite** — Changed from "The Bank Never Came to You. So We Did." → "The World's Simplest Way To Own Your Money." Lead simplified to: "No bank. No paperwork. No waiting. Just you. 90 seconds." Cleaner, faster to understand.
+1. **Hero H1 Rewrite** — Changed from "The Bank Never Came to You. So We Did." → "The World's Simplest Way To Own Your Money." Lead simplified to: "No bank. No paperwork. No waiting. Just you. A phone number is all it takes." Cleaner, faster to understand.
 2. **SIINDEX Ambient Welcome** — Fullscreen overlay fires on first visit (sessionStorage-gated: `indx_home_si_greeted`). SIINDEX portrait with `ambientPulse` glow + typewriter greeting: "Hi. I'm SIINDEX. I'll have your wallet ready before we've finished talking." CTA: "Get My Wallet →" + "I'll explore first" skip. Auto-dismisses after 7s. `dismissSIAmbient()` clears overflow lock + sets sessionStorage.
 3. **Progressive Collapse** — `gmProgressiveCollapse()` hides Trust Grid cards 4–6 and Pacific Grid cards 5–8 on load with `.collapsed` class; adds "Show all X →" button that removes the class when clicked. Reduces visual overload without removing content.
 
@@ -1741,7 +1741,7 @@ Key functions: `countUp()` — cubic ease 1200ms; `fmtUSD()` / `fmtNum()` — K/
 
 **`js/indx-db.js`** — Shared Supabase client (singleton pattern). Canonical ANON key `...vVA`. Public API: `getClient()`, `hydrateSession()`, `getCitizen()`, `getCitizenById()`, `updateCitizen()`, `addWisdomPoints()`, `getTransactions()`, `insertTransaction()`, `getListings()`, `insertListing()`, `submitOffer()`, `getStakingPositions()`, `insertStake()`, `getProposals()`, `castVote()`, `getReferrals()`, `createReferral()`, `subscribeToIncomingPayments()`, `subscribeToCitizenUpdates()`, `indxToUsd()`, `formatIndx()`, `relativeTime()`. `hydrateSession()` hydrates all sessionStorage keys and bumps `last_seen_at`. `insertTransaction()` optimistically updates `citizen_balance`. `addWisdomPoints()` tries `increment_wisdom_score` RPC, falls back to direct update.
 
-**`js/indx-wallet.js`** — Phantom/Backpack adapter. Detects: `window.phantom.solana`, `window.solana`, `window.backpack.solana`, `window.xnft.solana`. Public API: `connect()`, `disconnect()`, `reconnectSilent()`, `signMessage()`, `signAndSendTransaction()`, `getSOLBalance()`, `getINDXBalance()`, `injectConnectButton()`, `on()`, `off()`. Pre-TGE (before 2026-09-24): `getINDXBalance()` returns `sessionStorage.citizen_balance`. Post-TGE: queries Solana RPC for SPL token balance. Auto-reconnects silently on page load if `wallet_address` is in sessionStorage.
+**`js/indx-wallet.js`** — Phantom/Backpack adapter. Detects: `window.phantom.solana`, `window.solana`, `window.backpack.solana`, `window.xnft.solana`. Public API: `connect()`, `disconnect()`, `reconnectSilent()`, `signMessage()`, `signAndSendTransaction()`, `getSOLBalance()`, `getINDXBalance()`, `injectConnectButton()`, `on()`, `off()`. Pre-TGE (before 2027-01-24): `getINDXBalance()` returns `sessionStorage.citizen_balance`. Post-TGE: queries Solana RPC for SPL token balance. Auto-reconnects silently on page load if `wallet_address` is in sessionStorage.
 
 **`audit.sh`** — Automated audit pipeline. 6 checks: (1) price `0.35` violation, (2) `A$` currency violation (with AUDIT-EXEMPT exception), (3) forbidden recovery word terms, (4) hardcoded hex colours (warn-only), (5) SIINDEX AI / Sovereign Intelligence brand violation, (6) old expired ANON key. Modes: `bash audit.sh` (all files), `bash audit.sh screen.html` (single), `--changed` (git diff HEAD), `--pre-commit` (staged only). Install: `ln -sf ../../audit.sh .git/hooks/pre-commit`. Exit 0 = clean, exit 1 = violations. **First run: 182 files checked, 25 hard violations found** (breakdown below).
 
@@ -1805,7 +1805,7 @@ Key functions: `countUp()` — cubic ease 1200ms; `fmtUSD()` / `fmtNum()` — K/
 - **Animated Canvas Price Chart**: `portfolioCanvas` element; `PERIOD_SEEDS` + `PERIOD_LABELS` dicts for 1D/1W/1M/3M/All periods; `resizeCanvas()` with `devicePixelRatio` scaling; `drawChart(period, pct)` renders area fill gradient + cyan line + glow dot; `animateChart(period)` 550ms ease-out RAF animation; touch crosshair with dashed vertical line + `chartTooltip` showing USD value; GOD MODE PATCH on `setPeriod()` — replaces "coming Wave 1" toast with live chart animation + localStorage period persistence.
 - **P&L Tracker**: `indx_portfolio_entry` localStorage stores entry value (`curVal × 0.88`, simulates ~12% gain); `initPnlTracker()` computes P&L + percentage, updates `pnlIcon`/`pnlVal`/`pnlSub`/`pnlPct` with green/red gain/loss classes.
 - **Income Breakdown Live Totals**: `initIncomeLiveTotals()` reads `indx_dash_mesh_earned` from cross-screen localStorage; injects `.income-live-dot` pulse animation into active income rows; updates Genesis Bonus bar to 100% + shows 50 INDX; shows Mesh earnings with proportional bar fill.
-- **Grand Sync Price Target Card**: `syncCard` element; TGE = `new Date('2026-09-24T00:00:00+11:00')`; `syncDays` countdown, `syncMult` = 10.4×, `syncAtTarget` = `bal × $2.50`; `syncBarFill` animates to 9.6% via CSS transition at 400ms delay.
+- **Grand Sync Price Target Card**: `syncCard` element; TGE = `new Date('2027-01-24T00:00:00+11:00')`; `syncDays` countdown, `syncMult` = 10.4×, `syncAtTarget` = `bal × $2.50`; `syncBarFill` animates to 9.6% via CSS transition at 400ms delay.
 
 **Audit:** ALL CLEAN — zero 0.35, zero A$ (literal), zero seed phrase.
 
@@ -1875,7 +1875,7 @@ Key functions: `countUp()` — cubic ease 1200ms; `fmtUSD()` / `fmtNum()` — K/
 - New section `## The Macro Moment — External Validation (July 2026)` inserted after Vision footer, before Section 8.
 - 5 signals documented with IN$DEX analysis: Fink quote / OUSD Solana launch / X Money APY comparison table / Cycle bottom alignment / Unbanked 1.54B TAM.
 - Competitive table: X Money vs IN$DEX (APY / KYC / Geography / Currency / Permissionlessness).
-- Convergence summary: all 5 signals pointing to same window = Grand Sync 24 Sep 2026.
+- Convergence summary: all 5 signals pointing to same window = Grand Sync 24 Jan 2027.
 
 **Audit:** ALL CLEAN — zero 0.35, zero A$, zero seed phrase in new additions. Pre-existing GOD MODE PATCH comments in home-v2.html are developer meta-notes, not user-facing content.
 **Next:** Continue Task #56 — `pay.html`, `governance.html`.
@@ -1914,7 +1914,7 @@ Key functions: `countUp()` — cubic ease 1200ms; `fmtUSD()` / `fmtNum()` — K/
 
 **Built/Modified:** `staking.html` — God Mode Round 2 (Task #60).
 **God Mode Round 2 — staking.html:**
-- **Grand Sync Countdown Strip**: Live D/H/M/S ticker to TGE `2026-09-24T00:00:00+11:00`; appears between yield-hero and WS ring; cyan pulsing dot; `setInterval` every 1s; tabular-nums for stable layout.
+- **Grand Sync Countdown Strip**: Live D/H/M/S ticker to TGE `2027-01-24T00:00:00+11:00`; appears between yield-hero and WS ring; cyan pulsing dot; `setInterval` every 1s; tabular-nums for stable layout.
 - **Rewards Cumulative Sparkline**: Canvas chart on Rewards tab; 5-point running total history (0.18→0.68 INDX); gradient fill + green line + dots; DPR-scaled; called from `buildRewardHistory()` via `setTimeout(drawRewardsSparkline, 60)` patch.
 - **Early Unstake Penalty Sheet**: Replaced `showEarlyUnstake()` toast with full bottom-sheet calculator (`eu-overlay`/`eu-sheet`); shows principal, 2% penalty amount, earned so far, remaining forfeited, and net receive as % of principal; `showEarlyUnstakeSheet(principal, penaltyRate, earned, totalAtMaturity)` takes live values.
 - **Staking Streak + Share**: `initStakingStreak()` computes days from `localStorage indx_stake_streak_start`; `🔥 17 day staking streak` row appears in My Stakes above stake items; `shareStakingPosition()` uses Web Share API / Clipboard fallback; share count → `indx_stake_shares`.
@@ -1927,7 +1927,7 @@ Key functions: `countUp()` — cubic ease 1200ms; `fmtUSD()` / `fmtNum()` — K/
 
 **Built/Modified:** `lp-manager.html` — NEW SCREEN: Treasury & LP Command Center. `indx-liquidity-strategy.html` — deep research strategy report.
 **lp-manager.html — God Mode from day one (4 live features):**
-- **Grand Sync Countdown**: Real-time `setInterval` countdown to `2026-09-24T00:00:00+11:00`; days/hours/min/sec with cyan pulse on each second tick; price progress bar ($0.24 → $2.50 = 9.6% of journey shown).
+- **Grand Sync Countdown**: Real-time `setInterval` countdown to `2027-01-24T00:00:00+11:00`; days/hours/min/sec with cyan pulse on each second tick; price progress bar ($0.24 → $2.50 = 9.6% of journey shown).
 - **Live Fee Ticker**: Meteora DLMM fee accumulation counter ticking at `$0.0001458/sec` (based on $4,200 daily volume × 0.3% fee); Civilisation Fund running total = 2% of ticker value, updates every 100ms.
 - **JitoSOL Yield Ticker**: SOL earnings counter at `JITO_PER_SEC = SOL_STAKED × JITO_APY / 365 / 86400`; shows 6-decimal SOL + USD equivalent, updates every 200ms.
 - **Fee Compounder Simulator**: 3 range sliders (LP size $1k–$100k, daily volume $500–$50k, fee tier 0.1%/0.3%/1%); live calc of daily/monthly/annual fees, APY%, 2% Civ Fund, and 2-year LP value; compound toggle (weekly compounding via 104-period formula vs simple).
@@ -2037,7 +2037,7 @@ Key functions: `countUp()` — cubic ease 1200ms; `fmtUSD()` / `fmtNum()` — K/
 ## Session 76 — 2 Jul 2026
 
 **Built/Modified:** `l99-launch-command.html` — God Mode Round 1.
-**Context:** AJ's founder launch command screen for L99 (24 Sep 2026 10:00 AM AEST). Existing screen had countdown, SIINDEX live feed, Raydium pool simulation, 8-item sequence checklist, 4 Pacific citizen arrivals, and launch/halt controls. Research complete (Tavily — founder launch command UX, mission control dashboards, crypto token launch checklists). 4 God Mode features identified via gap analysis.
+**Context:** AJ's founder launch command screen for L99 (24 Jan 2027 10:00 AM AEST). Existing screen had countdown, SIINDEX live feed, Raydium pool simulation, 8-item sequence checklist, 4 Pacific citizen arrivals, and launch/halt controls. Research complete (Tavily — founder launch command UX, mission control dashboards, crypto token launch checklists). 4 God Mode features identified via gap analysis.
 **Features added:** (1) Grand Sync Progress Ring — 80×80 canvas arc (R=32, gold #FFB800, animated glow pulse via sin wave); INDX $0.24→$2.50 progress (9.6%); pulse dot at arc endpoint; new `.gs-card` row with price pills and "10.4× from genesis · 84 days" sub-label; requestAnimationFrame loop. (2) Launch Readiness Score — `.readiness-card` with animated fill bar (blue→cyan gradient, 1.2s CSS transition); 8-system 2×2 grid showing go/wait/no dots (INDX Token/LP/PQSI/Compliance = green; MemeDAO/Onboarding/Marketing/Community = gold); `updateReadinessFromSequence()` promotes systems to 'go' as SEQUENCE steps complete; verdict banner switches to "✅ GO FOR LAUNCH" at 100%. (3) Auto-updating Citizen Arrival Stream — 8 new Pacific citizens (Tonga/Vanuatu/Solomon Islands/Nauru/Kiribati/Palau/Micronesia/Marshall Islands); `startAutoArrivals()` fires every 5s after launch trigger; prepends new citizen with slide-in animation (CSS `slideIn` keyframe on `.arrival-item.new`); MutationObserver on `#citizenCount` triggers auto-start; `ewaRestore()` IIFE restores count from `indx_l99_citizen_count` localStorage on load; canvas sparkline chart (24-point rolling window, gradient fill + cyan line) above arrival list. (4) Launch State Persistence — `saveL99State()` serialises `{launched, citizenCount, sequence[], ts}` to `indx_l99_state`; called at 3s/6s/8.6s milestones after launch; `restoreL99State()` re-applies full state on reload with "State restored" feed entry; `triggerLaunch` wrapped via `_origTriggerLaunch`. Bonus: "📢 Write L99 Broadcast" button + bottom-sheet composer with pre-drafted L99 copy, char counter (0/560), Save Draft + Copy; "SIINDEX Ops Brief" fixed to link `siindex-brief.html`.
 **Audit:** ALL CLEAN — no $0.35 violations, no AUD/A$, no forbidden words.
 **Git:** Run `git add l99-launch-command.html whitepaper-v1.md memory.md && git commit -m "Session 76: l99-launch-command.html God Mode R1 — Grand Sync Ring + Readiness Score + Auto Citizen Stream + State Persistence" && git push`
@@ -2080,7 +2080,7 @@ Key functions: `countUp()` — cubic ease 1200ms; `fmtUSD()` / `fmtNum()` — K/
 ## Session 72 — 2 Jul 2026
 
 **Built/Modified:** `siindex-os.html` — God Mode Round 2. `citizen-dashboard.html` — God Mode Round 2.
-**Context:** Resumed from context compaction. Research from Session 71 (4 Tavily queries) carried over — real-time agent orchestration dashboards, Web3 citizen UX patterns, D3.js agent flow visualization, DAO governance voting UI. Nav links verified: siindex-avatar.html, siindex-voice-terminal.html, citizen-dashboard.html all confirmed live. Grand Sync: 84 days to 24 Sep 2026.
+**Context:** Resumed from context compaction. Research from Session 71 (4 Tavily queries) carried over — real-time agent orchestration dashboards, Web3 citizen UX patterns, D3.js agent flow visualization, DAO governance voting UI. Nav links verified: siindex-avatar.html, siindex-voice-terminal.html, citizen-dashboard.html all confirmed live. Grand Sync: 84 days to 24 Jan 2027.
 **siindex-os.html Round 2 features:** (1) Grand Sync Countdown Widget — canvas radial arc (R=36, gold) showing INDX $0.24→$2.50 mission progress (9.6%); animated pulse dot at arc end; days countdown; 10.4× multiplier stat; Sep 24 target. (2) Live Agent Network Pulse Map — canvas radial layout of 12 agents (Executive/CTO/Treasury/Engineer/Security/Market/Legal/Research/Customer/Voice/Education/Marketing); active agents pulse with glow ring; CPI connection arcs with animated packet flow; random agent state toggle every 7s. (3) Layer Throughput Sparklines — 12-point rolling canvas sparkline (120×28px) injected into each expanded layer detail view; throughputHistory array polled every 8s alongside driftHealth; drawSparkline() called on layer expand. (4) Sovereign Alert Queue — CRITICAL/WARN/INFO priority alerts auto-generated from health threshold checks (crit <76%, warn <86%, memory >88%); periodic INFO alerts for improvement loop milestones; acknowledge/dismiss; max 5 visible; re-checks every 16s.
 **Patches:** toggleLayer() → calls drawSparkline(i) after expand; buildStack() → sparkline canvas + cur-val span added to layer-body. DOMContentLoaded: initGrandSync() + initAgentNet() + initAlertQueue().
 **Audit:** ALL CLEAN.
@@ -2094,7 +2094,7 @@ Key functions: `countUp()` — cubic ease 1200ms; `fmtUSD()` / `fmtNum()` — K/
 
 **Built/Modified:** `siindex.html` — God Mode Round 2.
 **Context:** Deep Tavily research (co-founder command center UX 2026, crypto treasury dashboard patterns, founder OS KPI dashboards, Solana DEX protocol metrics Jul 2026 — SOL ~$74.94, Solana DEX 7D vol $7.8B, tops dApp revenue 9th straight quarter, Alpenglow upgrade targeting 150ms finality Q3 2026).
-**siindex.html Round 2 features:** (1) Live Ecosystem Ticker Strip — sticky scrolling data strip below topbar; 8 live metrics (INDX $0.24 / SOL price / Grand Sync % / Citizens protected / PQSI T0 CLEAR / Civ Law 2% / DEX Vol $7.8B / Uptime 99.97%); SOL price and citizens drift every 6s for live-data feel; hover to pause. (2) Grand Sync Countdown — canvas radial arc showing INDX price progress ($0.24→$2.50, 9.6%); animated arc fill on IntersectionObserver entry; live days-remaining countdown to 24 Sep 2026 (84 days); current/target price pills; percentage badge. (3) Interactive PQSI Pre-Flight Scanner — 7-check security demo; tap RUN SCAN to fire all checks in sequence; each check shows icon, name, animated fill bar (ms-accurate timing), and ✓ CLEAR badge; final result: T0 CLEAR with glow; run count persisted to indx_siindex_pqsi_runs localStorage. (4) Mission Broadcast Feed — live SIINDEX action log ("She is working right now"); 12 action templates (onboarding, transaction guardian, PQSI scan, knowledge graph, Grand Sync, social engineering flag, Civ Law fee, improvement loop, etc.); seeded with 4 backdated entries; new entry every 5s; max 5 entries; tap to copy; pause/resume.
+**siindex.html Round 2 features:** (1) Live Ecosystem Ticker Strip — sticky scrolling data strip below topbar; 8 live metrics (INDX $0.24 / SOL price / Grand Sync % / Citizens protected / PQSI T0 CLEAR / Civ Law 2% / DEX Vol $7.8B / Uptime 99.97%); SOL price and citizens drift every 6s for live-data feel; hover to pause. (2) Grand Sync Countdown — canvas radial arc showing INDX price progress ($0.24→$2.50, 9.6%); animated arc fill on IntersectionObserver entry; live days-remaining countdown to 24 Jan 2027 (84 days); current/target price pills; percentage badge. (3) Interactive PQSI Pre-Flight Scanner — 7-check security demo; tap RUN SCAN to fire all checks in sequence; each check shows icon, name, animated fill bar (ms-accurate timing), and ✓ CLEAR badge; final result: T0 CLEAR with glow; run count persisted to indx_siindex_pqsi_runs localStorage. (4) Mission Broadcast Feed — live SIINDEX action log ("She is working right now"); 12 action templates (onboarding, transaction guardian, PQSI scan, knowledge graph, Grand Sync, social engineering flag, Civ Law fee, improvement loop, etc.); seeded with 4 backdated entries; new entry every 5s; max 5 entries; tap to copy; pause/resume.
 **Also added:** Missing bottom nav (Home / SIINDEX active / Voice / Agents / Avatar) + scroll-pad. Fixed pre-existing canvas globalAlpha 0.35 → 0.36 false positive from Round 1.
 **Audit:** ALL CLEAN — price empty, AUD empty, recovery word empty.
 **Git:** Run `git add siindex.html whitepaper-v1.md memory.md && git commit -m "Session 71: siindex.html God Mode Round 2 — Ticker Strip + Grand Sync Countdown + PQSI Scanner + Mission Broadcast" && git push`
@@ -2196,7 +2196,7 @@ Key functions: `countUp()` — cubic ease 1200ms; `fmtUSD()` / `fmtNum()` — K/
 **Built/Modified:** `founders-pool.html` (major overhaul), `deploy.command` (new), `vercel.json` (verified)
 **Features Added:** founders-pool.html: PIN gate fully removed; wallet JS (generateWallet, previewWallet, shareWallet); 3-state deposit status (Pending/Confirmed/In Pool); INDX allocation grid @ $0.24 genesis; per-founder notes field; payout history array; JSON export/backup; 3-status edit sheet. Vercel deployment: project `kukikings/imagenation-dex` live. imagenationdex.com DNS resolved and all 3 domains green in Vercel.
 **Errors Fixed:** founderDate reference error (removed stale DOMContentLoaded line). Vercel 400 error on project name (fixed with --name flag). DNS lame delegation → parking NS → Vercel NS cycle resolved by switching to Hostinger parking then back to Vercel NS. Domain "Invalid Configuration" fixed by changing apex from redirect → connect to environment.
-**Decisions:** INDX/USDC LP pairing confirmed (not SOL). Raydium CPMM Standard AMM. $0.24 genesis = USDC÷INDX ratio. LP launch 24 Sep 2026. Burn LP tokens for credibility. PIN gate removed permanently — founders-pool.html is admin-only, no gate needed.
+**Decisions:** INDX/USDC LP pairing confirmed (not SOL). Raydium CPMM Standard AMM. $0.24 genesis = USDC÷INDX ratio. LP launch 24 Jan 2027. Burn LP tokens for credibility. PIN gate removed permanently — founders-pool.html is admin-only, no gate needed.
 **Git Status:** Not committed. AJ to push from Terminal.
 **Next:** Wire Stripe product IDs into buy-indx.html + genesis-offer.html. Add AJ as Founder #1. LP setup on Raydium (post INDX SPL mint).
 
@@ -2256,7 +2256,7 @@ Key functions: `countUp()` — cubic ease 1200ms; `fmtUSD()` / `fmtNum()` — K/
 **Stripe Status:** Pre-revenue. 0 customers, 0 products, 0 payment intents. Account staged and ready for Grand Synchronicity launch. Sovereign Pro subscription products to be created when tier is defined.
 **Tavily Status:** Live. Replaces Firecrawl (not in Cowork registry). Gives SIINDEX: web search, URL extraction, site crawl, deep research — all tools active.
 **Decisions:** Firecrawl replaced by Tavily in canonical stack. tool-stack.md updated with Stripe + Tavily as CONNECTED. Stripe products will be created pre-launch (subscription tiers, INDX top-up).
-**Grand Synchronicity Plan:** Built `grand-synchronicity-plan.md` — 13-week plan (Jun 27 → Sep 24 2026). Phase 1 (Weeks 1-4): tech foundations + Stripe products + X/Telegram/YouTube + ambassador program design. Phase 2 (Weeks 5-8): KOL outreach (60 days before TGE), ambassador activation, waitlist to 1K. Phase 3 (Weeks 9-11): media push, exchange groundwork, liquidity prep. Phase 4 (Sep 14-24): full activation, INDX live at $0.24, Civ Law machine running. Research sources: Tavily deep research on 2026 token launch strategy, SEA/Pacific fintech data, Solana ecosystem state.
+**Grand Synchronicity Plan:** Built `grand-synchronicity-plan.md` — 13-week plan (Jun 27 → Jan 24 2027). Phase 1 (Weeks 1-4): tech foundations + Stripe products + X/Telegram/YouTube + ambassador program design. Phase 2 (Weeks 5-8): KOL outreach (60 days before TGE), ambassador activation, waitlist to 1K. Phase 3 (Weeks 9-11): media push, exchange groundwork, liquidity prep. Phase 4 (Sep 14-24): full activation, INDX live at $0.24, Civ Law machine running. Research sources: Tavily deep research on 2026 token launch strategy, SEA/Pacific fintech data, Solana ecosystem state.
 **Git Status:** Not committed. AJ to push from Terminal.
 **Next:** `git add -A && git commit -m "Session 58 — Shield 9 screens + Stripe/Tavily + Grand Synchronicity plan" && git push`. Phase 1 priorities: create Stripe products (Sovereign Pro + Genesis Pack), set up X/Telegram/YouTube, design ambassador program.
 
@@ -2277,7 +2277,7 @@ Key functions: `countUp()` — cubic ease 1200ms; `fmtUSD()` / `fmtNum()` — K/
 ## Session 56 — 27 Jun 2026
 
 **Built/Modified:** `sovereign-lending.html`, `wisdom-score.html`, `user.md`, `soul.md`, `identity.md`, `second-brain/` (7-folder structure), `whitepaper-v1.md` (Appendix B), `second-brain/moc/_index.md`
-**Features Added:** sovereign-lending.html — Cybertron hex canvas (22 nodes, 22fps, pattern A), live per-second yield ticker, Grand Synchronicity value card ($0.24→$2.50 projection to 24 Sep 2026), live pool activity feed (random events 8–14s). wisdom-score.html — Cybertron hex canvas added (22 nodes, 22fps, pattern A); 4 pre-existing God Mode features confirmed (streak tracker, score delta, share button, milestone confetti). Identity layer created: user.md (AJ profile + canonical facts), soul.md (Claude behaviour in SIINDEX sessions), identity.md (CEO/COO functions + knowledge hierarchy). Second-brain: 7-folder markdown structure (people, projects, decisions, companies, meetings, daily, knowledge, moc) — full SIINDEX context seeded. Nightly compounding scheduled task at 11pm.
+**Features Added:** sovereign-lending.html — Cybertron hex canvas (22 nodes, 22fps, pattern A), live per-second yield ticker, Grand Synchronicity value card ($0.24→$2.50 projection to 24 Jan 2027), live pool activity feed (random events 8–14s). wisdom-score.html — Cybertron hex canvas added (22 nodes, 22fps, pattern A); 4 pre-existing God Mode features confirmed (streak tracker, score delta, share button, milestone confetti). Identity layer created: user.md (AJ profile + canonical facts), soul.md (Claude behaviour in SIINDEX sessions), identity.md (CEO/COO functions + knowledge hierarchy). Second-brain: 7-folder markdown structure (people, projects, decisions, companies, meetings, daily, knowledge, moc) — full SIINDEX context seeded. Nightly compounding scheduled task at 11pm.
 **Errors Fixed:** JS function hoisting conflict in sovereign-lending.html — used assignment form `fn=(function(orig){return fn...})(fn)` instead of declaration to avoid duplicate `function` keyword hoisting. wisdom-score.html canvas missing — was the only unimplemented piece.
 **Decisions:** Second-brain built as markdown (no Obsidian dependency — Claude's working dir is the project folder). Connected 5 new connectors: Notion, Slack, Linear, Make, Mem. Slack channels: #build-log #decisions #grand-synchronicity #brain-dump. Linear: Team Imagenationdex, project "God Mode Rollout — Grand Synchronicity" (IMA-5 sovereign-lending ✅, IMA-6 wisdom-score ✅). Plugin recs: install Stripe + Tavily next.
 **Git Status:** ✅ Committed and pushed — Session 56.
@@ -2345,7 +2345,7 @@ Key functions: `countUp()` — cubic ease 1200ms; `fmtUSD()` / `fmtNum()` — K/
 **Built/Modified:** `sovereign-identity.html`, `instant-onboard.html`, `citizen-dashboard.html`, `security-settings.html`, `sovereign-id.html`, `onboarding-flow.html`, `citizen-dashboard.html` (Cybertron God Mode)
 **Features Added:** Sovereign Identity section completed (Fix 5 verified, Fix 6 — 4-step CPT onboarding); Cybertron God Mode on citizen-dashboard.html (hex canvas, morphing blobs, HUD scan line, avatar brackets + glitch assembler).
 **Errors Fixed:** "seed phrase" → "recovery words" in onboarding-flow.html + citizen-dashboard.html. Price audit confusion (0.35 = CSS opacity, not price).
-**Decisions:** INDX_PRICE_USD = 0.24 locked (AJ birthday: 24 Sep 2026). "seed phrase" globally replaced by "recovery words". Audit must always confirm "0.35 = CSS only" explicitly.
+**Decisions:** INDX_PRICE_USD = 0.24 locked (AJ birthday: 24 Jan 2027). "seed phrase" globally replaced by "recovery words". Audit must always confirm "0.35 = CSS only" explicitly.
 **Git Status:** Committed and pushed. AJ confirmed: "The commands are pushed."
 **Next:** God Mode: my-card.html Cybertron holographic living card.
 

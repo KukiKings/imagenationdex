@@ -40,7 +40,7 @@
 2. Institutional issuer accounts, the Credential Issuance Console, any cross-institution recognition (Part Sixteen) — no institutions have accounts on this platform yet.
 3. The other 8 domain views (Employer, Education, Business, Government, Community, Private, Emergency, Customer) — Public View only this phase.
 4. Any of Parts Two–Eighteen's specific use cases (Living CV, apprenticeship passport, PALM worker passport, health credentials, disaster mode, etc.) — all depend on the foundation this phase builds, none are in scope yet.
-5. Any KYC tier change — platform stays Tier 0 (phone + liveness) only; this phase does not touch KYC.
+5. Any KYC tier change — platform stays Tier 0 (phone number only) ; this phase does not touch KYC.
 6. **The full Sovereign Agent product** (agent registration screen, agent dashboard, commission tracking/payout) — this phase builds only the credential-issuance primitive (one RPC an agent could call once they have an `account_type` of `community_agent`). The registration flow and dashboard are their own build, flagged separately below — not assumed in scope here just because the credential type is being added now.
 
 **Checkpoint — what AJ reviews before the next step:** the `credentials` table schema + one real rendered domain page (probably yours) before a second credential type or a second view gets built.

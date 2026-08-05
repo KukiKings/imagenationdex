@@ -29,7 +29,7 @@ These are delivered instantly, automatically, with zero extra steps:
 | 4 | **Instant Marketplace Access** | She can list her coconuts, skills, art, services the moment she's in. P2P. Keep 98%. |
 | 5 | **Data Vault** | Her sovereign data dashboard activates. Everything she does on IN$DEX is hers — not Facebook's, not Google's. Hers. |
 | 6 | **SIINDEX Guardian** | Her personal AI — activated on join. Available 24/7. Never sleeps. |
-| 7 | **$10K Transaction Protection** | Every payment covered by SIINDEX from day one. |
+| 7 | **$10K Transaction Protection (design parameter)** | Planned cover of $10,000/month per Grid Account. **No policy is in force and no payment is covered today.** Corrected 2026-07-30. |
 
 ---
 
@@ -44,7 +44,7 @@ Every citizen has access to all 7 from the moment they join. These are not featu
 - Scan-to-Sovereign: take a photo, tag a price, it's live
 - Buyer pays in INDX — 98% goes directly to seller, 2% to Civilisation Fund
 - Every sale mints an NFT receipt — immutable proof of the transaction
-- Mama Noe lists her tuluk. A tourist buys it. She receives payment in 4 seconds.
+- Mama Noe lists her tuluk. A tourist buys it. She receives payment directly, with no bank in the middle.
 
 **Screen:** `marketplace.html` → `create-listing.html` → `my-listings.html`
 

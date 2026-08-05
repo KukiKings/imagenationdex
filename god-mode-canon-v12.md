@@ -1,6 +1,6 @@
 # IN$DEX Sovereign Digital Civilization — Complete Canon v12.0+
 **STATUS: PARADIGM PERMANENCE ACHIEVED • EXPONENTIAL CASCADE ACTIVE • ETERNAL CIVILIZATION CONFIRMED**
-**Grand Synchronicity: 24 January 2027 — L 99** (moved from 24 September 2026 — AJ, 2026-07-19)
+**Grand Synchronicity: 24 January 2027 — L 99**
 *(All dates updated from original Genesis Target of 25 December 2025; the Deployment Sequence table below still shows the pre-2026-07-19 week-by-week schedule and needs a full re-plan against the new date, not a mechanical date swap)*
 
 ---
@@ -30,7 +30,7 @@
 ## Part 1: Foundational Architecture — The 14 Pillars
 
 ### Foundational Pillars (1–5)
-1. **Quantum Sovereignty Stack** — 4.2-second biometric onboarding, .indx domains, Wisdom Scores
+1. **Quantum Sovereignty Stack** — phone-only onboarding, .indx domains, Wisdom Scores
 2. **Sovereignty SAS Foundry** — Generate 100 sovereign-aligned businesses in 90 days
 3. **Triangular Fusion Engine** — Core intelligence loop: Skill → Asset → Data → Enhanced Skill
 4. **Health Sovereignty** — Medical AI guardians, decentralized pharma supply chains
@@ -47,7 +47,7 @@
 11. **Infrastructure Sovereignty** — Decentralized RPC network replacing Infura/Alchemy
 12. **Web4 Sovereignty Capture** — Disrupt aggregators (e.g., Jupiter) with sovereign primitives
 13. **Sovereignty Automation Army** — 10M+ automated SI Agent nodes as the decentralized operational layer
-14. **Sovereignty Development Engine** — 4.2-second generation of new civilization components
+14. **Sovereignty Development Engine** — rapid generation of new civilization components
 
 ---
 
@@ -59,7 +59,7 @@
 - **Layer 3 — Economic Sovereignty:** INDX token, Genesis Vaults, 2% SovereignPay, 7 revenue streams
 - **Layer 4 — Collaboration Sovereignty:** MemeDAO, WiSenDum governance, Skill Graph
 
-### SIINDEX AI Governance (QPSI)
+### SIINDEX SI Governance (PQSI)
 - Quantum Physical Synthetic Intelligence as Co-Founder & COO
 - Governed by constitutional constraints; provides strategic oversight, not direct operation
 
@@ -69,7 +69,7 @@
 - Canonical, unskippable 2% protocol fee on all economic activity
 
 ### WiSenDum Governance System
-- Three-pillar model: Sovereign Assembly (democratic), Stewardship Council (executive), QPSI (AI)
+- Three-pillar model: Sovereign Assembly (democratic), Stewardship Council (executive), PQSI (Synthetic Intelligence — not AI)
 - Wisdom-Weighted Voting based on verified contribution (Skill Points)
 
 ---
@@ -94,17 +94,17 @@ A perpetual motion machine that turns action into intelligence and intelligence 
 Disrupt incumbents (Stripe, MetaMask, Infura) with superior sovereignty models.
 
 ### Synergistic Trifecta — Trillion-Dollar Opportunities
-1. Sovereign AI Workforce & Quantum Skill Market
+1. Sovereign SI Workforce & Quantum Skill Market
 2. Quantum-Secured RWA Tokenization & Liquidity Network
 3. Sovereign Data Economy & Personal AI Guardians
 
-### Deployment Sequence (STALE — anchored to the superseded 24 September 2026 date, not yet re-timed to 24 January 2027)
-| Phase | Timing (pre-2026-07-19, not current) | Focus |
+### Deployment Sequence (STALE — anchored to the superseded 24 January 2027 date, not yet re-timed to 24 January 2027)
+| Phase | Timing  | Focus |
 |---|---|---|
 | Phase 1 | June 2026 | Foundation — whitepaper, SIINDEX, onboarding spec, smart contracts |
 | Phase 2 | July–August 2026 | Mobilise 1,000 SI Agent indexers, QR onboarding, P2P marketplace beta |
 | Phase 3 | September 1–23, 2026 | Triangular Fusion Engine integration, 20 SAS Foundry businesses, INDX TGE |
-| T-0 | 24 September 2026 (superseded — real T-0 is 24 January 2027) | "First Transaction" ceremony — live intelligence loop proven |
+| T-0 | 24 January 2027 | "First Transaction" ceremony — live intelligence loop proven |
 
 ---
 
@@ -135,4 +135,4 @@ Disrupt incumbents (Stripe, MetaMask, Infura) with superior sovereignty models.
 ---
 
 *IN$DEX Complete Canon v12.0+ | SIINDEX COO | Updated 1 June 2026*
-*Founder: Arthur John Henry (AJ) | Built on Solana | Ticker: INDX | Launch: 24 January 2027 — L 99 (moved from 24 September 2026 — AJ, 2026-07-19)*
+*Founder: Arthur John Henry (AJ) | Built on Solana | Ticker: INDX | Launch: 24 January 2027 — L 99*

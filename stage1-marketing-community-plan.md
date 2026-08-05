@@ -17,7 +17,7 @@ None of this needs to be invented from scratch. What's actually missing is (1) r
 
 ## 1. What needs your call: re-timing the pace
 
-The X-thread and Telegram docs were built for the old 24 Sep 2026 date on an 89-day sprint. The individual dates in the copy are already fixed to 24 Jan 2027, but the **posting cadence** still assumes that compressed sprint (1 thread/week starting immediately, countdown triggers at "10 days out" from the old date). Stretching content that was paced for 89 days across the real ~27 weeks isn't a find-and-replace — it's a real decision about whether you want steady low-key posting for months or to hold most of it back and compress into a shorter pre-launch push closer to January.
+The X-thread and Telegram docs were built for the old 24 Jan 2027 date on an 89-day sprint. The individual dates in the copy are already fixed to 24 Jan 2027, but the **posting cadence** still assumes that compressed sprint (1 thread/week starting immediately, countdown triggers at "10 days out" from the old date). Stretching content that was paced for 89 days across the real ~27 weeks isn't a find-and-replace — it's a real decision about whether you want steady low-key posting for months or to hold most of it back and compress into a shorter pre-launch push closer to January.
 
 **Decided 2026-07-26 — going with the proposed default:**
 

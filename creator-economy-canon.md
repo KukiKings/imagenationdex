@@ -116,7 +116,7 @@ From the moment IN$DEX launches, every transaction generates a Verifiable Receip
 - Soulbound to buyer's Grid Account (cannot be transferred — it's a receipt, not an asset)
 - Forms Layer 1 of the Triangular Fusion Engine
 
-**Status:** Queued for Solana minting on L99 launch day (24 Sep 2026)
+**Status:** Queued for Solana minting on L99 launch day (24 Jan 2027)
 
 ---
 

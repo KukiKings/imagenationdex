@@ -39,7 +39,7 @@ That gap — banked but not digitally served, aware of digital risk but underser
 ### 3. Compliance-by-design — what's actually built, not promised
 
 - **No seed phrases.** Every account uses a Grid Account: Squads Protocol v4 multisig, 2-of-3 MPC key custody. There is no single seed phrase for a citizen (or an attacker) to lose or steal.
-- **Progressive biometric KYC.** Entry-level access requires only a phone and a liveness scan — no documents needed to start — with identity verification layered in as transaction thresholds rise.
+- **Progressive biometric KYC.** Entry-level access requires only a phone number — no documents, no face scan, no liveness check — no documents needed to start — with identity verification layered in as transaction thresholds rise.
 - **Zero-knowledge compliance checks.** Identity, sanctions screening, and Travel Rule compliance are verified via zero-knowledge proofs — the underlying personal data never leaves the citizen's device.
 - **FATF Travel Rule compliance** for transfers above $1,000, via the TRISA/OpenVASP standard.
 - **An immutable 2% network fee** (the "Civilisation Law") replaces the patchwork of hidden fees, FX spreads, and service charges typical of remittance corridors — the fee structure is fixed in the protocol, not adjustable after the fact.

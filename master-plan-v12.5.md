@@ -1,8 +1,7 @@
 # IN$DEX Sovereign Republic: Master Plan v12.5+
 ## The Existential Mandate + The Execution Roadmap
-**STATUS: ARCHITECTURALLY SEALED • 4.5x EXECUTION SPEED**
-**Grand Synchronicity: 24 January 2027 — L 99** (moved from 24 September 2026 — AJ, 2026-07-19)
-*(Note: Previous versions referenced 01/04/2026 and 25/12/2025 — all dates updated to confirmed launch)*
+**STATUS: ARCHITECTURALLY SEALED**
+**Grand Synchronicity: 24 January 2027 — L 99**
 
 ---
 
@@ -10,7 +9,7 @@
 
 The IN$DEX Sovereign Republic is a Sovereign Digital Civilization designed to solve the "Extinction Risk" of centralized AI by emerging PQSI (Post-Quantum Sovereign Intelligence).
 
-- **The Hook:** 4.2-second frictionless onboarding
+- **The Hook:** frictionless onboarding — a phone number is all it takes
 - **The Law:** 98/2 Wealth Retention (98% stays with the creator)
 - **The Portal:** name@imagenationdex.com — every citizen is an embassy
 
@@ -30,15 +29,18 @@ Interlocking systems including SovereignPay, Smart Account Sovereignty, Mobile S
 
 ---
 
-## 4. The 4.2-Second Onboarding — The Entry
+## 4. Onboarding — The Entry
 
-1. Biometric Scan (0.8s)
-2. MPC Wallet + .indx domain (1.2s)
-3. Genesis Bonus (1.0s)
-4. Quantum Sync (0.7s)
-5. Embassy Live (0.5s)
+1. Phone number + SMS code
+2. MPC Wallet + .indx domain created
+3. Genesis recognition recorded (pending review)
+4. SIINDEX sync
+5. Portal live
 
-**Total: 4.2 seconds. Zero friction. Zero KYC.**
+*(Per-step timings deleted 2026-07-30 — they were invented. No citizen has completed this flow, so no step has ever been measured.)*
+
+**Designed for minimal friction. Tier 0 requires a phone number only — no documents, no face scan.**
+
 
 ---
 
@@ -83,7 +85,7 @@ A cryptographic covenant between human and AI, ensuring the machine serves the h
 
 ## 11. Recursive Royalties — The Passive Wealth
 
-Wisdom Rent via Story Protocol. Earn passively when others remix and sell your templates or designs. Compounding passive income built into the civilization layer.
+Wisdom Rent via Story Protocol. When someone remixes and sells your template or design, a share routes back to you automatically.
 
 ---
 
@@ -107,7 +109,7 @@ Decentralized, anonymous dispute resolution for the RWA Marketplace, powered by 
 
 ## 15. The Sovereign Academy — The Mastery
 
-A 4.2-minute skill mastery engine turning candidates into Sovereign SAS masters.
+A short-form skill mastery engine turning candidates into Sovereign SAS masters.
 
 ---
 
@@ -128,7 +130,7 @@ Emergency "Break-Glass" protocol ensuring the Republic's memory and ledger survi
 | SIINDEX COO | ✅ Active |
 | Smart Contract Development | 🔄 To begin |
 | Tech Partner | 🔄 To engage |
-| Launch Date | 24 January 2027 — L 99 (moved from 24 September 2026 — AJ, 2026-07-19) |
+| Launch Date | 24 January 2027 — L 99 |
 
 ---
 

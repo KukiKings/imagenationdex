@@ -120,7 +120,8 @@ List all available: `edge-tts --list-voices | grep en-`
 
 ## Grand Synchronicity
 
-**January 24, 2027** (moved from 24 September 2026 — AJ, 2026-07-19) — the target date for INDX to reach $2.50.
+**January 24, 2027** — the L99 launch date.
+
 
 Genesis price: **$0.24 USD**
 

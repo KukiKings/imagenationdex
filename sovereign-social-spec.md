@@ -36,7 +36,7 @@ YouTube, TikTok, and Meta have eligibility requirements tied to bank accounts, t
 
 The Asia-Pacific creator economy is worth $30 billion in 2026 and growing to $88 billion by 2033. Pacific nations creators receive almost none of it.
 
-**IN$DEX is the first platform with zero eligibility barriers.** Phone + face = citizen. Citizen = creator. Creator = earns.
+**IN$DEX is the first platform with zero eligibility barriers.** Phone number = citizen. Citizen = creator. Creator = earns.
 
 ### Web3 social hasn't cracked it
 
@@ -428,7 +428,7 @@ Addition 4 references low-bandwidth mode. This addition hardens it into a full o
 - All content (video, audio, post, image) is drafted and saved locally first, always
 - Upload is a separate step — the queue fills locally, flushes on connection
 - Queue status shows clearly on `content-upload.html`: "1 post queued. Will publish when connected."
-- SIINDEX monitors queue and notifies on publish: "Your video just went live from the queue. Earned first view in 4 seconds. Standing by."
+- SIINDEX monitors queue and notifies on publish: "Your video just went live from the queue. Earned first view without a bank in the middle. Standing by."
 - SovTokens queued offline (citizen tips a creator with no connection) — signed locally, broadcast when connection restores
 - **Zero data loss on connection drop** — if upload fails mid-transfer, it resumes from the byte it left off
 

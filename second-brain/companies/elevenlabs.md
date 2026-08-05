@@ -1,7 +1,7 @@
 # ElevenLabs
 
 - **Type:** AI voice synthesis platform
-- **Role in SIINDEX:** Voice provider for SIINDEX QPSI / desktop agent voice output
+- **Role in SIINDEX:** Voice provider for SIINDEX PQSI / desktop agent voice output
 - **Workspace:** ElevenCreative
 - **Voice locked:** Samara X — Smooth Classy British
   - Voice ID: `19STyYD15bswVz51nqLf`

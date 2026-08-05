@@ -1,7 +1,7 @@
 # IN$DEX: Complete Business Plan v12.0+
 ## "Product as the Movement – Sovereignty as a Service"
 **Part 8 of the IN$DEX Canon | Immutable as of 01/06/2026**
-**Launch: 24 September 2026 — L 99**
+**Launch: 24 January 2027 — L 99**
 
 ---
 
@@ -217,7 +217,7 @@ IN$DEX generates revenue exclusively through the 2% protocol fee (the "Civilizat
 | Genesis Cohort onboarding | August 2026 | 1,000 founding stewards, first trades |
 | Triangular Fusion Engine v1 | September 1–15, 2026 | Verifiable Receipts + Skill Graph + Wisdom Digest |
 | Sovereign Component Marketplace | September 15–23, 2026 | 10 components listed, 98/2 split live |
-| **Grand Synchronicity — T-0** | **24 September 2026** | **First public transaction ceremony — L 99** |
+| **Grand Synchronicity — T-0** | **24 January 2027** | **First public transaction ceremony — L 99** |
 | Year 2: Solar Commonwealth prep | 2027 | Inter-sovereign messaging, cross-chain bridges |
 | Year 5: Digital Homeland complete | 2030 | 1M sovereigns, fully self-governing |
 
@@ -242,4 +242,4 @@ We are not asking for permission. We are asking for the first sovereigns to clai
 ---
 
 *IN$DEX Complete Business Plan v12.0+ | Part 8 of Canon | Sealed 01/06/2026*
-*Launch: 24 September 2026 — L 99 | Built on Solana | Ticker: INDX*
+*Launch: 24 January 2027 — L 99 | Built on Solana | Ticker: INDX*

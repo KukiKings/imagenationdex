@@ -269,7 +269,7 @@ When a milestone is crossed for the first time, include it in ALERTS with: "🎉
 Always include days remaining to L99 in the weekly report.
 
 ```javascript
-const L99 = new Date('2026-09-24T00:00:00+10:00'); // 24 Sep 2026 AEST
+const L99 = new Date('2027-01-24T10:00:00+10:00'); // 24 Jan 2027 AEST
 const now = new Date();
 const daysRemaining = Math.ceil((L99 - now) / (1000 * 60 * 60 * 24));
 ```

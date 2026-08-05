@@ -43,8 +43,6 @@ The pasted plan was right about the shape of this. Verified details:
 
 ## ✅ You CAN register online, today, from Melbourne
 
-Corrected 2026-07-29 — an earlier draft of this page framed the registered office as a blocker on *you*. It isn't. Verified: **no physical presence and no residency in the Cook Islands is required** to incorporate. The entire process is online — account, Form A-1, payment, certificate by email.
-
 ## Decision 1 — You need one Cook Islands address to put in the form
 
 Form A-1 asks for a **registered office** and a **principal place of business**. The registered office must be a **physical Cook Islands address** — a PO Box alone does not satisfy the requirement. That's the only thing you don't currently have.

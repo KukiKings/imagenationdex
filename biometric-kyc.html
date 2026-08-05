@@ -136,20 +136,14 @@
   </div>
 
   <!-- STEP DOTS -->
-  <!-- Corrected 2026-07-27: removed dot3 (was the Liveness step) — Tier 0 is now
-       phone + OTP only, so only 3 stages remain before the success screen. -->
-  <div class="step-dots">
+<div class="step-dots">
     <div class="dot active" id="dot0"></div>
     <div class="dot" id="dot1"></div>
     <div class="dot" id="dot2"></div>
   </div>
 
   <!-- SCREEN 0: INTRO -->
-  <!-- Corrected 2026-07-27: Tier 0 no longer requires or presents a face scan/liveness
-       step. Founder decision: Tier 0 = phone number only, zero biometric. A face-verified
-       credential may become a future Tier 1 step but is never required to get started.
-       See screen3 below (kept, not deleted — no longer reachable from this flow). -->
-  <div class="screen active" id="screen0">
+<div class="screen active" id="screen0">
     <div class="screen-inner">
       <div class="intro-hero">
         <div class="ih-emoji">🛡️</div>
@@ -245,7 +239,7 @@
     </div>
   </div>
 
-  <!-- SCREEN 3: LIVENESS SCAN — NOT PART OF TIER 0 (corrected 2026-07-27) -->
+  <!-- SCREEN 3: LIVENESS SCAN — NOT PART OF TIER 0 -->
   <!-- Per founder decision: Tier 0 must not require a face scan or liveness check.
        This screen is no longer reachable from the primary flow (OTP confirmation now
        calls completeOnboarding() directly). Left in place, not deleted, as a possible
@@ -314,7 +308,6 @@ let otpInterval = null;
 let scanRunning = false;
 
 function updateDots(step){
-  // Corrected 2026-07-27: loop bound 4→3 — dot3 (Liveness) was removed, see step-dots above.
   for(let i=0;i<3;i++){
     const d = document.getElementById('dot'+i);
     d.className = 'dot';
@@ -323,8 +316,6 @@ function updateDots(step){
   }
 }
 
-// Corrected 2026-07-27: screen3 (liveness scan) removed from the sequence — Tier 0 is
-// phone + OTP only. Step index 3 now maps straight to screen4 (success).
 function goToStep(step){
   const screens = ['screen0','screen1','screen2','screen4'];
   const titles = ['Sovereign Onboarding','Step 1 · Phone','Step 2 · Confirm','You\'re in ✓'];
@@ -392,14 +383,11 @@ function otpKey(k){
   if(otpDigits.length === 6){
     clearInterval(otpInterval);
     showToast('✓ Code confirmed!');
-    // Corrected 2026-07-27: previously routed to the liveness scan (old step 3) before
-    // completing. Tier 0 is phone + OTP only now — go straight to account creation.
     setTimeout(()=>completeOnboarding(), 700);
   }
 }
 
-// startScan() / autoScanDemo() are orphaned from the primary flow (corrected 2026-07-27,
-// see screen3 comment above) — kept only in case screen3 is reused for a future,
+// startScan() / autoScanDemo() are orphaned from the primary flow — kept only in case screen3 is reused for a future,
 // independently built Tier 1 biometric step. Not called by the Tier 0 wizard.
 function startScan(){
   if(scanRunning) return;
@@ -453,6 +441,9 @@ async function completeOnboarding() {
       sessionStorage.setItem('citizen_name',     data.name || data.full_name || 'Sovereign');
       sessionStorage.setItem('citizen_balance',  data.balance_indx || '0');
       sessionStorage.setItem('citizen_wisdom',   data.wisdom_score || '0');
+      // BUGFIX 2026-08-05: citizen_web3_domain is the canonical key read by the rest of
+      // the app; citizen_domain alone was invisible to every other screen. Both written.
+      sessionStorage.setItem('citizen_web3_domain', data.sovereign_domain || '');
       sessionStorage.setItem('citizen_domain',   data.sovereign_domain || '');
     }
   } catch(e) {
@@ -461,14 +452,14 @@ async function completeOnboarding() {
     sessionStorage.setItem('citizen_balance', '0');
     sessionStorage.setItem('citizen_wisdom', '0');
   }
-  // Corrected 2026-07-27: success screen is now step index 3 (screen3/liveness removed
-  // from the sequence — see goToStep()), not 4.
   setTimeout(() => goToStep(3), 1200);
 }
 
 function finishOnboarding() {
   // Route to claim-domain if no domain yet, else dashboard
-  const domain = sessionStorage.getItem('citizen_domain');
+  // BUGFIX 2026-08-05: read canonical key first, else a citizen who already had a domain
+  // from onboarding-flow.html was sent back to claim-domain.html to re-claim it.
+  const domain = sessionStorage.getItem('citizen_web3_domain') || sessionStorage.getItem('citizen_domain');
   if (!domain) {
     window.location.href = 'claim-domain.html';
   } else {

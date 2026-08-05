@@ -217,7 +217,7 @@ This is the addition that matters most, given the 36-entry fix-everything sweep 
 
 # PART IV — Sequencing (how this fits the existing launch plan)
 
-This document does not compete with `launch-runway-plan-2026.md`. The Aug 14–20 parameter-lock and Aug 28–Sep 3 mint/LP window stay exactly as planned — nothing here should be read as a reason to add scope before L99 (24 Sep 2026).
+This document does not compete with `launch-runway-plan-2026.md`. The Aug 14–20 parameter-lock and Aug 28–Sep 3 mint/LP window stay exactly as planned — nothing here should be read as a reason to add scope before L99 (24 Jan 2027).
 
 **Update 2026-07-16 (SIINDEX v1 build):** Items 1 and 4 below are now done — see `siindex-v1-build-spec.md` for the full build record. `agent_registry`, `citizen_intents`, `approval_gates`, `agent_messages`, `memory_items`, `council_reviews`, `siindex_kill_switch` tables are live; `siindex-classify`/`siindex-gate`/`siindex-verify` Edge Functions are deployed; Dispute and Insurance Fund have real backends. Remaining order, still post-launch and still not competing with the Aug/Sep mint window:
 1. ~~Orchestration Plane, minimal version~~ — done (schema + Edge Functions real; no screen calls them yet — wiring an existing screen through `siindex-classify`/`gate`/`verify` end-to-end is the natural next step to prove the loop with real citizen traffic, not just SQL simulation).

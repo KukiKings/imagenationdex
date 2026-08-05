@@ -171,12 +171,12 @@ Verify that HTTP responses from imagenationdex.com include the required security
 
 ## L99 Launch Countdown
 
-**L99 Launch target: 24 January 2027** (moved from 24 September 2026 — AJ, 2026-07-19)
+**L99 Launch target: 24 January 2027**
 
 Always calculate and include days remaining in the full brief.
 
 ```
-L99 COUNTDOWN: [N] days remaining (24 Sep 2026)
+L99 COUNTDOWN: [N] days remaining (24 Jan 2027)
 ```
 
 **Urgency flags:**
@@ -195,7 +195,7 @@ SIINDEX DEVOPS BRIEF
 ━━━━━━━━━━━━━━━━━━━━━━
 Status: [🟢 ALL SYSTEMS / 🟡 DEGRADED / 🔴 INCIDENT]
 Timestamp: [ISO 8601]
-L99 COUNTDOWN: [N] days remaining (24 Sep 2026)
+L99 COUNTDOWN: [N] days remaining (24 Jan 2027)
 
 SITE: imagenationdex.com
   HTTP: [200 OK / error code] | Response: [Xms] | SSL: [valid / expired]
@@ -317,7 +317,7 @@ T3+ alerts must be surfaced to AJ immediately, not buried in the brief. Lead wit
 4. **Scheduled task "last run" timing** — tasks may show a stale last-run time if Claude was restarted between sessions. Do not assume a task failed just because the last-run time is old — check enabled status first.
 5. **Security headers after vercel.json edit** — headers only update after a successful redeployment. If headers were recently fixed in `vercel.json` but the deployment is still building, report headers as "PENDING DEPLOYMENT" not failed.
 6. **`imagenationdex.com` vs `www.imagenationdex.com`** — check the apex domain. The www variant may redirect to apex or may not be configured. Report both if they behave differently.
-7. **L99 countdown timezone** — always calculate from `2026-09-24T10:00:00+10:00` (AEST). Do not use UTC or local server time.
+7. **L99 countdown timezone** — always calculate from `2027-01-24T10:00:00+10:00` (AEST). Do not use UTC or local server time.
 8. **Hostinger nameservers** — Task #33 (Fix Hostinger nameservers → site goes live) is pending. Until nameservers are pointed to Vercel, imagenationdex.com may resolve to Hostinger, not the Vercel deployment. If the site shows a Hostinger page, flag this as the cause.
 
 ---

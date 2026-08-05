@@ -74,7 +74,7 @@ grep -n "\$0\.35\|\$0\.512\|\$0\.50 USD\|\$0\.28" [FILE] | grep -v "opacity\|rgb
 ```
 
 **Pass:** All price variables = 0.24. No wrong display prices.
-**Fail:** Any variable ≠ 0.24, or any display text showing $0.35 / $0.512 / $0.28
+**Fail:** Any variable ≠ 0.24, or any display text showing a price other than $0.35 / $0.512 / $0.28
 
 ---
 

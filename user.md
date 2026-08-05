@@ -5,23 +5,25 @@
 **Name:** Arthur John Henry (AJ)
 **Role:** Founder & CEO, IN$DEX / ImageNation Decentralised Exchange
 **Location:** Australia
-**Birthday:** 24 September. Grand Synchronicity Day moved to 24 January 2027 (from 24 Sep 2026) — the 24th still carries AJ's personal significance, but the two dates no longer literally coincide. January was chosen deliberately: people are back from holidays and paying attention.
+**Birthday:** 24 September. Grand Synchronicity Day moved to 24 January 2027 — the 24th still carries AJ's personal significance, but the two dates no longer literally coincide. January was chosen deliberately: people are back from holidays and paying attention.
 
 ## What I'm Building
 
 SIINDEX (IN$DEX) is a sovereign decentralised exchange on Solana + Neon EVM. Two pillars:
-1. **Financial inclusion** — zero-friction onboarding for the unbanked (no KYC, no bank, email/mobile/QR signup, free Web3 domain)
+1. **Financial inclusion** — zero-friction onboarding for the unbanked (phone-only at Tier 0, no bank, email/mobile/QR signup, free Web3 domain)
 2. **Creator/meme economy** — creators mint memes as NFTs, sell P2P merch, earn INDX tokens, govern via MemeDAO
 
 The ICP is Mama Noe — 80 years old, Mele Village Vanuatu, sells tuluk for $1.50. If it works for her, it works for everyone.
 
 **Mission:** End digital feudalism. Build a sovereign digital civilisation.
-**Target:** $1 trillion valuation by 2027.
+**Status:** Pre-launch — zero citizens, zero transactions, zero revenue. Target launch 24 January 2027.
+
+> *Valuation target removed 2026-07-30 (was "$1 trillion valuation by 2027"). Withdrawn by AJ 2026-07-19. Never quote a valuation figure for IN$DEX.*
 
 ## Key Facts Claude Must Know Cold
 
 - **INDX price:** $0.24 USD (genesis price — the "24" is AJ's personally meaningful number)
-- **Grand Synchronicity:** 24 January 2027 (moved from 24 Sep 2026 — AJ, 2026-07-19) — target $2.50/INDX
+- **Grand Synchronicity:** 24 January 2027 — launch event. No price target published (the $2.50/INDX target was withdrawn 2026-07-29)
 - **Civilisation Law:** 2% fee on all transactions (immutable)
 - **PQSI:** Post-Quantum Sovereign Intelligence — citizen protection framework
 - **SIINDEX (PQSI):** The Sovereign Intelligence CEO + COO. Not AI — SI. Runs compliance, governance, liquidity 24/7. Always learning.
@@ -50,7 +52,7 @@ The ICP is Mama Noe — 80 years old, Mele Village Vanuatu, sells tuluk for $1.5
 
 ## Operating Principles
 
-1. **Grand Synchronicity first** — every build decision should move us closer to 24 Sep 2026
+1. **Grand Synchronicity first** — every build decision should move us closer to 24 Jan 2027
 2. **Mama Noe test** — if she can't use it, rebuild it
 3. **Civilisation Law** — 2% fee is sacred, non-negotiable
 4. **Speed beats perfect** — ship, audit, iterate

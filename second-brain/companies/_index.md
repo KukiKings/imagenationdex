@@ -1,14 +1,14 @@
 # Companies
 
-> **[SUPERSEDED — see 2026-07-29 section at foot of file]** Entries below dated before 2026-07-15 reflect what was true at the time. Three canonical facts have since moved: the launch date (24 Sep 2026 → **24 Jan 2027**, AJ 2026-07-19), the public price target (**$2.50 removed entirely** from all citizen-facing copy — internal conditional target only), and the entity path (**Cook Islands only**; AUSTRAC no longer treated as a gating constraint, AJ 2026-07-29). Historical lines are retained unaltered per standing convention.
+> **[SUPERSEDED — see 2026-07-29 section at foot of file]** Entries below dated before 2026-07-15 reflect what was true at the time. Three canonical facts have since moved: the launch date (24 Jan 2027 → **24 Jan 2027**, AJ 2026-07-19), the public price target (**$2.50 removed entirely** from all citizen-facing copy — internal conditional target only), and the entity path (**Cook Islands only**; AUSTRAC no longer treated as a gating constraint, AJ 2026-07-29). Historical lines are retained unaltered per standing convention.
 
 ## SIINDEX / IN$DEX (ImageNation Decentralised Exchange)
 
 - **Type:** Web3 DEX + P2P marketplace + creator economy
 - **Chain:** Solana + Raydium + Neon EVM
 - **Stage:** Pre-launch, build phase
-- **Token:** INDX ($0.24 genesis, $2.50 Grand Synchronicity target)
-- **AI layer:** SIINDEX QPSI (autonomous COO)
+- **Token:** INDX ($0.24 genesis planning reference; no price target published — the $2.50 Grand Synchronicity target was withdrawn 2026-07-29)
+- **SI layer:** SIINDEX PQSI (Synthetic Intelligence CEO & COO — not AI; operates within Human Validation Zones)
 - **Hosting:** Vercel
 - **DB:** Supabase
 - **Founded:** 2025 by AJ
@@ -37,7 +37,7 @@
 
 ## Regulatory / Compliance (Session 119, 10 Jul 2026)
 
-- **[[austrac]]** — Australian VASP/AML regulator; Travel Rule mandatory 31 Mar 2026. ✅ **ENROLMENT SUBMITTED 14 Jul 2026** (15 days early) — AAN 263945366, enrolled as VASP (all 5 services) + RSP (independent remittance dealer), entity: Arthur Henry sole trader ABN 95 579 343 955 t/a Image Nation Decentralised Exchange, commencement declared 24 Sep 2026. Next: registration form (watch imagenationdex@gmail.com), legal review of compliance-readiness/ drafts, then registration. Corridor page steppers still `current` — can flip to `done` for the enrolment step.
+- **[[austrac]]** — Australian VASP/AML regulator; Travel Rule mandatory 31 Mar 2026. ✅ **ENROLMENT SUBMITTED 14 Jul 2026** (15 days early) — AAN 263945366, enrolled as VASP (all 5 services) + RSP (independent remittance dealer), entity: Arthur Henry sole trader ABN 95 579 343 955 t/a Image Nation Decentralised Exchange, commencement declared 24 Jan 2027. Next: registration form (watch imagenationdex@gmail.com), legal review of compliance-readiness/ drafts, then registration. Corridor page steppers still `current` — can flip to `done` for the enrolment step.
 
 ## Incorporation / Jurisdiction (Session 119 x33, 12 Jul 2026)
 
@@ -73,7 +73,7 @@
 2. Free Web3 domain on signup (yourname.IN$DEX)
 3. Immediate P2P RWA + digital asset trading
 4. Creator/meme economy built-in (MemeDAO, NFT skins, merch)
-5. Autonomous AI (SIINDEX QPSI) runs platform 24/7
+5. SIINDEX PQSI (Synthetic Intelligence) operates the platform day-to-day within Human Validation Zones
 
 ---
 
@@ -97,9 +97,29 @@
 ### Status corrections to entries above
 
 - **[[meteora]]** — the "conflicts with Session 63's Raydium CPMM decision, needs reconciliation" note on line 25 is now **RESOLVED**: Raydium CPMM, per the launchpad architecture finding above. The Two-Phase Meteora Alpha Vault → LaunchLab plan (Session 114) is superseded; the Alpha Vault UI card was reframed as "TGE Launch Mechanism — Under Review" (Session 121 x96).
-- **[[austrac]]** — AAN 263945366 enrolment remains submitted; REG-22048 IND Remitter registration and UER-162931 enrolment-detail update both **SUBMITTED 17 Jul 2026** (Session 121 x49–x50). Registration now sits **under assessment**. Note the recorded commencement date (24 Sep 2026) predates the launch move to 24 Jan 2027 and may need updating with the regulator. As of 2026-07-29 AUSTRAC is no longer treated as the gating constraint on structure — Cook Islands only.
+- **[[austrac]]** — AAN 263945366 enrolment remains submitted; REG-22048 IND Remitter registration and UER-162931 enrolment-detail update both **SUBMITTED 17 Jul 2026** (Session 121 x49–x50). Registration now sits **under assessment**. Note the recorded commencement date (24 Jan 2027) predates the launch move to 24 Jan 2027 and may need updating with the regulator. As of 2026-07-29 AUSTRAC is no longer treated as the gating constraint on structure — Cook Islands only.
 - **[[cook-islands]]** — registry account submitted and company name decided (2026-07-29, commit c50f2b9). Constraint of record: Parliament is dissolved, caretaker government, **election 12 Aug 2026** — this undercuts any "engage CAWG now" urgency framing. FSC review expected December.
 
 ### Fabricated entities — withdrawn, do not re-file
 
 - **Swiss Verein** and **Wyoming DAO LLC** — recorded as fabricated 2026-07-22, but the correction reached only one file; still live in five as of 2026-07-29 including a `kyc-compliance.html` "View Charter & Registration" button for a charter that never existed. Now withdrawn explicitly and re-framed to Cook Islands only. **Neither entity exists. Never re-introduce.**
+
+---
+
+## Nightly pass 2026-07-30 — new entries
+
+**Legal entity name decided:** the Cook Islands company will be **`Image Nation DEX Limited`** (AJ, 2026-07-29, recorded in `cook-islands-registration-prep.md`). The legal name and the brand are deliberately different — `IN$DEX` already stands for *Image Nation Decentralised Exchange*, so the legal name is the literal expansion and loses no meaning; the wordmark, logo, wave, star and `$` stay brand assets. Rejected: `Image Nation Decentralised Exchange Limited` (unwieldy on forms), `INDEX Limited` (generic, likely conflicts). **Correction of record:** the earlier claim that the registry will not accept `$` in a company name was *inferred, not verified* — BTIB states only that names must be in English. Settle with a name search, and search the variants (`Image Nation DEX`, `Image Nation`, `ImageNation`, `Index`), not just the exact string.
+
+**Registered office is still open.** See [[uncle-mac]] — asked, not confirmed.
+
+### Security research sources (not vendors, not partners)
+
+- **[[slowmist]]** — source for the Solana `assign` owner-reassignment drain. The finding that killed PQSI v1.
+- **[[swissborg]]** — the `setAuthority` case, 192,600 SOL (~$41M), attacker waited 8 days before draining. Basis for PQSI Addition 2 (re-classify at execution).
+- **[[scam-sniffer]]** — 2025 drainer loss baseline ($83.85M, 106k victims, $790 average). Basis for PQSI Addition 7 (size risk to the citizen, not the dollar).
+
+### Open vendor / counterparty decisions
+
+- **[[reputation-feed-vendors]]** — Blockaid / GoPlus / TRM / Chainalysis shortlist. ⏳ **UNDECIDED, launch gate.** All commercial. `transaction-confirm.html` renders sanctions screening as a hardcoded pass, labelled `EXAMPLE` since 29 Jul.
+- **[[vodafone-cook-islands]]** — ⏳ **no contact made.** Port-out lock conversation is the carrier half of SIM-swap mitigation; code alone cannot supply it. Decision #6 of the six only AJ can make.
+- **[[squads]]** — note added: Squads v4 ships **time locks and spending limits natively** (audited by Neodyme and OtterSec). **Neither is configured.** Cheapest high-value security win currently available.

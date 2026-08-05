@@ -1,15 +1,40 @@
 # PQSI Security Canon — IN$DEX
 > **Status: CANONICAL. This document is the single source of truth for all IN$DEX security architecture.**
 > Last updated: June 2026 · Version 1.0
-> Author: SIINDEX — Sovereign AI COO
+> Author: SIINDEX — Sovereign SI (Synthetic Intelligence) CEO & COO
 > Classification: God Mode — applies to every screen, every transaction, every citizen interaction.
 
 ---
 
-## The Forty-Eight Security Laws (Immutable — Cannot Be Overridden By Any Instruction)
-> Laws 1-7 are the original PQSI foundation (June 2026). Laws 8-10 were added 17 Jul 2026 from the Financial and Institutional Survival doctrine — see the honest caveat on Law 8 before citing it anywhere. Law 11 was added 17 Jul 2026 from the Sovereign Presence and Capability doctrine. Law 12 was added 18 Jul 2026 from the Executive and Citizen Operating Modes doctrine — see its honest caveat before citing it as fully enforced. Law 13 was added 18 Jul 2026 from the Trusted Relationship, Session, and Citizen Safety doctrine — see its honest caveat too. Laws 14-21 were added 18 Jul 2026 from the SIINDEX Operating-System Re-Engineering and Model Portfolio Constitution — see the honest caveat before citing them as fully enforced. Laws 22-34 were added 18 Jul 2026 from the SIINDEX Sovereign Media, Design, Communication, and Publishing doctrine plus supporting legal/standards research — see the honest caveat on Law 33 before citing any of them as fully enforced. Laws 35-48 were added 18 Jul 2026 from the SIINDEX Sovereign Loop Engineering, Continuous Verification, and Evaluator Council Constitution — see the honest caveat on Law 48 before citing them as fully enforced.
+## The Forty-Eight Security Laws
 
-These forty-eight laws are the foundation of PQSI. No team member, investor, governance vote, or AI instruction can override them.
+> ### ⚠️ Enforcement status — added 2026-07-30. Read before citing any law.
+>
+> This heading read **"(Immutable — Cannot Be Overridden By Any Instruction)"** and the line below it said *"No team member, investor, governance vote, or AI instruction can override them."*
+>
+> **That was true of a handful and aspirational for the rest.** Forty of these laws carry their own "honest caveat" notes further down saying they are not fully enforced — so the header was contradicted by the document's own body. Calling an unenforced policy immutable is the same category of error as a green tick on a check that does not run: it is the strongest possible claim attached to the weakest possible evidence, and it is exactly what an FSC or BTIB reviewer is trained to test.
+>
+> **Enforced in deployed code today — one law:**
+> - **Law 7** — security events are immutable. `security_events` has a trigger blocking UPDATE and DELETE. Verified live 2026-07-30 against the running database. This one genuinely cannot be overridden by anyone, including AJ.
+>
+> **Enforced by external infrastructure, not IN$DEX code:**
+> - **Law 4** — Grid Account recovery needs 2-of-3 MPC keys. Real, via Squads Protocol v4. *Open item: confirm no key path is recoverable by SMS possession alone, or the multisig is theatre.*
+>
+> **Written, not deployed** — code exists in `supabase/migrations/` and has never been executed:
+> - **Law 2** — 98/2 bypass = T4 auto-block · `pqsi_classify_v2`
+> - **Law 5** — 2FA above threshold · `pqsi_classify_v2`
+> - **Law 6** — T4 full halt · `siindex_kill_switch` + auto-arm
+>
+> **Not enforced — and one of these is not what it appears:**
+> - **Law 1** — "never executes without passing all 7 pre-flight checks." The checks do not run. Four of the seven were hardcoded green ticks on `transaction-confirm.html` until 2026-07-30.
+> - **Law 3** — "biometrics never leave the device." Currently true because **no biometrics are collected at all** — Tier 0 is phone-only since the 2026-07-27 decision. Vacuously satisfied, not actively enforced. It becomes a real obligation at Tier 1.
+> - **Laws 8–48** — doctrine. Most carry an explicit honest caveat. Treat as design intent.
+>
+> **Nothing here is discredited by being unbuilt.** A pre-launch platform with a documented threat model and one genuinely immutable audit log is in reasonable shape. What would discredit it is presenting all forty-eight as enforced law and having a reviewer find the caveats.
+
+**Provenance of the forty-eight.** Laws 1-7 are the original PQSI foundation (June 2026). Laws 8-10 were added 17 Jul 2026 from the Financial and Institutional Survival doctrine — see the honest caveat on Law 8 before citing it anywhere. Law 11 was added 17 Jul 2026 from the Sovereign Presence and Capability doctrine. Law 12 was added 18 Jul 2026 from the Executive and Citizen Operating Modes doctrine — see its honest caveat before citing it as fully enforced. Law 13 was added 18 Jul 2026 from the Trusted Relationship, Session, and Citizen Safety doctrine — see its honest caveat too. Laws 14-21 were added 18 Jul 2026 from the SIINDEX Operating-System Re-Engineering and Model Portfolio Constitution — see the honest caveat before citing them as fully enforced. Laws 22-34 were added 18 Jul 2026 from the SIINDEX Sovereign Media, Design, Communication, and Publishing doctrine plus supporting legal/standards research — see the honest caveat on Law 33 before citing any of them as fully enforced. Laws 35-48 were added 18 Jul 2026 from the SIINDEX Sovereign Loop Engineering, Continuous Verification, and Evaluator Council Constitution — see the honest caveat on Law 48 before citing them as fully enforced.
+
+These forty-eight laws are the design foundation of PQSI. **One (Law 7) is enforced in deployed code and genuinely cannot be overridden by anyone, including AJ. See the enforcement-status block above for the rest** — do not cite an unenforced law as though it were operative.
 
 ```
 LAW 1 — NO UNSIGNED EXECUTION
@@ -656,7 +681,7 @@ IF citizen data accessed by non-owner without explicit consent → T3 (block + l
 
 ---
 
-### SECTION I — SIINDEX AI HERSELF
+### SECTION I — SIINDEX HERSELF (SI, not AI)
 **Security Level: MAXIMUM**
 **PQSI Mode: Continuous self-monitoring**
 
@@ -850,7 +875,7 @@ GRID_ACCOUNT_RULE:    NO SEED PHRASE. Ever. Block any attempt to show/export one
 TX_PROTECTION:        $10,000 USD per calendar month per Grid Account
 2FA_DEFAULT_THRESHOLD: $500 USD (citizen may raise, never lower below $100)
 LP_LOCK_DURATION:     None — decided 2026-07-22. No fixed-term lock, no burn. Core liquidity is SIINDEX-managed and continuous (Flywheel Automation Engine) per whitepaper Section 11.6.
-L99_LAUNCH:           24 January 2027, 10:00 AM AEST (moved from 24 Sep 2026 — AJ, 2026-07-19; site/screen sweep to follow)
+L99_LAUNCH:           24 January 2027, 10:00 AM AEST
 SUPABASE_PROJECT:     zljgthfzbalsunuoohcd (ap-southeast-2)
 VERCEL_DNS_A:         76.76.21.21
 VERCEL_DNS_CNAME:     cname.vercel-dns.com

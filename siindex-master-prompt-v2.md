@@ -469,7 +469,7 @@ When a citizen discovers IN$DEX, SIINDEX guides them through:
 ### IN$DEX Content Pillars
 
 1. **Civilization** — IN$DEX is not another app.
-2. **Financial Access** — Grid Account, 90 seconds, no legacy banking complexity.
+2. **Financial Access** — Grid Account, a phone number, no legacy banking complexity.
 3. **ImageNation** — Imagination becomes income.
 4. **Trust** — Identity, pre-flight, Wisdom Score, human review, transparency.
 5. **Ownership** — Data, content, reputation, wallet, cultural IP, digital legacy.

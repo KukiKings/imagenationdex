@@ -2,7 +2,7 @@
 **Created:** 27 Jun 2026 | **Campaign window:** Now – 24 January 2027 (re-timed 2026-07-26 to the real ~27-week runway — see `stage1-marketing-community-plan.md`)
 **Author:** SIINDEX (Claude) | Voice-checked against canonical rules
 
-> **2026-07-24 fix note:** all literal date mentions below have been corrected to 24 January 2027 (was 24 September 2026 — AJ, 2026-07-19), since these are draft public-posting templates and an uncorrected date here would go out to real people. The hardcoded "89 days" callouts have been changed to "[X] days" placeholders (they were snapshot counts anyway, not evergreen).
+> **2026-07-24 fix note:** all literal date mentions below have been corrected to 24 January 2027 (was 24 January 2027 — AJ, 2026-07-19), since these are draft public-posting templates and an uncorrected date here would go out to real people. The hardcoded "89 days" callouts have been changed to "[X] days" placeholders (they were snapshot counts anyway, not evergreen).
 >
 > **2026-07-26 re-timing decided (AJ):** see `stage1-marketing-community-plan.md` for the full schedule. Summary — Thread 1 posts now to establish voice; Threads 2–4 post roughly every 2–3 weeks from Aug 20 (Stage 2) once ambassador recruitment starts; Thread 5 (Grand Synchronicity announcement) and its "10 days out" trigger fire around **14 January 2027**, not the old 24 Sep-anchored "Sep 14" date below.
 
@@ -104,7 +104,7 @@ As more citizens transact, more revenue flows through the Civ Law machine.
 
 At $5 trillion in annual volume (the size of the unbanked economy), Civ Law revenue = $100 billion/year.
 
-At a 10x multiple = $1 trillion protocol value.
+No valuation or multiple is published. `[Line withdrawn 2026-07-30 — this is public-facing draft copy; a protocol-value projection in a social thread is a financial claim.]`
 
 That's not a promise. That's the math.
 
@@ -234,7 +234,7 @@ IN$DEX + Civ Law: 2%. Full stop.
 
 If IN$DEX captures 5% of unbanked daily transaction volume, the Civ Law machine generates billions in annual revenue.
 
-At 10x multiple: $1 trillion protocol value.
+No valuation or multiple is published. `[Line withdrawn 2026-07-30 — public-facing draft copy.]`
 
 This is Path B to Grand Synchronicity.
 

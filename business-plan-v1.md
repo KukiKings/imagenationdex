@@ -1,6 +1,5 @@
 # IN$DEX: The Sovereign Civilization Business Plan
-**Document Version: 1.0 | Launch: 24 January 2027 (moved from 24 September 2026 — AJ, 2026-07-19) — L 99 | Status: Pre-Launch (Founding 1,000 Ascension)**
-*(Genesis Target updated from 01/04/2026 to confirmed launch date)*
+**Document Version: 1.0 | Launch: 24 January 2027 — L 99 | Status: Pre-Launch (Founding 1,000 Ascension)**
 
 ---
 
@@ -10,7 +9,7 @@ IN$DEX is a decentralized digital nation built on the principles of long-term in
 
 **Core Value Proposition:**
 - **For Citizens:** A tamper-proof "Rich Life" monument (Crystalline Bloom) that grows with every disciplined action. Access to a P2P marketplace of citizen-built tools, governance rights, and a 98% creator wealth retention model.
-- **For Builders:** The 4.2s Component Forge (Pillar 14) to instantly deploy mesh-integrated apps, earning INDX from usage with only a 2% civilization fee.
+- **For Builders:** The Component Forge (Pillar 14) to instantly deploy mesh-integrated apps, earning INDX from usage with only a 2% civilization fee.
 - **For the Collective:** A self-funding Resilience Fund (2% of all transactions) that capitalizes public goods like the Genesis Park and system upgrades.
 
 **Unique Market Position:** Unlike Web3 "gambling casinos" (speculative DEXs, NFT flips), IN$DEX is a slow-signal, compounding economy where status is a reflection of service and time in the system.
@@ -32,7 +31,7 @@ IN$DEX is a decentralized digital nation built on the principles of long-term in
 **Core Principles:**
 - Diversification — No over-concentration in any single pillar (Monochrome Warning & Systemic Resilience Score)
 - Compounding — Small, regular actions (Wisdom Petals) create exponential growth in legacy and influence
-- Low-Cost Automation — The 4.2s Forge and Autopilot Trust Ladder remove friction without extracting value
+- Low-Cost Automation — The Component Forge and Autopilot Trust Ladder remove friction without extracting value
 - Sovereign Choice — Citizens retain veto power; the system advises, never controls
 
 ---
@@ -44,13 +43,13 @@ IN$DEX is a decentralized digital nation built on the principles of long-term in
 | 1 | Quantum Sovereignty Auth | Biometric + QR handshake for identity & transactions | Enables secure P2P; no direct fee |
 | 3 | Wisdom Commons | Collective intelligence & governance | Drives engagement; data feeds premium analytics |
 | 5 | Planetary Stewardship | Environmental contributions (weighted 1.5x) | Attracts ESG capital; public goods funding |
-| 7 | Biometric Vault | Stores QSA keys on mobile node | Essential for 4.2s transaction signing |
+| 7 | Biometric Vault | Stores QSA keys on mobile node | Essential for fast transaction signing |
 | 9 | Mobile Node Infrastructure | Edge computing & mesh routing | Node operators earn INDX |
 | 10 | Invitation Protocol | Meritocratic ascension scoring (Sa) | Controls supply; prevents sybil attacks |
 | 11 | Sovereignty Mesh | Decentralized P2P transaction layer | 2% civilization fee on every trade |
 | 12 | Sovereign Terminal | Aggregator of on-mesh data & analytics | Premium tier (future revenue) |
 | 13 | SI Agent | Autopilot, Resilience Pulse, Wisdom Petal, Nudge | Core retention feature |
-| 14 | 4.2s Component Forge | SDK + CLI for citizen-built components | 2% fee on component sales |
+| 14 | Component Forge | SDK + CLI for citizen-built components | 2% fee on component sales |
 
 **Key Product Loops:**
 1. Stewardship Diversification Loop: Contributions → Resilience Score → Monochrome Warning / Wisdom Nudge → Rebalancing → Bloom growth
@@ -64,7 +63,7 @@ IN$DEX is a decentralized digital nation built on the principles of long-term in
 **Primary (Years 0–2):**
 - Crypto-native investors tired of pump-and-dump culture, seeking long-term value
 - Digital sovereigns (privacy advocates, decentralized identity users)
-- Developers attracted to the 4.2s Forge and 98% revenue share
+- Developers attracted to the Component Forge and 98% revenue share
 
 **Secondary (Years 2–5):**
 - ESG-conscious institutions interested in Planetary Stewardship
@@ -117,12 +116,12 @@ Age 22–40, full-stack developer. Motivated by 98% creator share and zero-frict
 
 ## 6. Growth Strategy
 
-### Phase 0 — Foundation (Now – 24 Sep 2026)
-- Launch 4.2s Component Forge with analytics-district default template
+### Phase 0 — Foundation (Now – 24 Jan 2027)
+- Launch Component Forge with analytics-district default template
 - Onboard Founding 1,000 via Ascension Score (900 merit + 100 diversity wild cards)
 - Activate Genesis Park with Stewardship Seed contributions (10 INDX each → 10,000 INDX pool)
 
-### Phase 1 — Genesis Day (24 Sep 2026 — L 99)
+### Phase 1 — Genesis Day (24 Jan 2027 — L 99)
 - Open marketplace with first 50 citizen-built components
 - Begin bi-weekly Wisdom Symposium votes
 - Public launch of Sovereign Terminal (free tier)
@@ -142,7 +141,7 @@ Age 22–40, full-stack developer. Motivated by 98% creator share and zero-frict
 - Targeted ads (crypto Twitter, developer forums): $5–10 per signup
 - Node operator bounties: $20 per active node (paid in INDX)
 
-**LTV per citizen (3 years):** 4 INDX/month × 36 = 144 INDX → ~$288 at $2/INDX (conservative). LTV/CAC > 10 for organic cohort.
+**LTV per citizen (3 years):** 4 INDX/month × 36 = 144 INDX → no USD figure — INDX has no published price target, and $0.24 is a planning reference only. LTV/CAC > 10 for organic cohort.
 
 ---
 
@@ -216,14 +215,14 @@ IN$DEX is a long-term, slow-signal civilization, not a short-term financial prod
 
 ## 10. Next Steps
 
-1. Complete the 4.2s Forge CLI (Phase 1 Foundation)
+1. Complete the Component Forge CLI (Phase 1 Foundation)
 2. Launch the Ascension Wave for the Founding 1,000
 3. Hold first Wisdom Symposium in Genesis Park to vote on initial weight bands
-4. AJ signs the genesis block of the Sovereignty Mesh on 24 January 2027 (moved from 24 September 2026 — AJ, 2026-07-19)
+4. AJ signs the genesis block of the Sovereignty Mesh on 24 January 2027
 
 > "This business plan is not a promise of returns, but a covenant of principles. The only yield we guarantee is the compounding of disciplined stewardship. All else is speculation."
 
 ---
 
 *IN$DEX Business Plan v1.0 | SIINDEX COO | Updated 1 June 2026*
-*Founder: Arthur John Henry (AJ) | Launch: 24 January 2027 (moved from 24 September 2026 — AJ, 2026-07-19) — L 99*
+*Founder: Arthur John Henry (AJ) | Launch: 24 January 2027 — L 99*
