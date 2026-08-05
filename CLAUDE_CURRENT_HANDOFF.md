@@ -7,7 +7,7 @@
 
 AJ replaced permanent feature canonization with a Living Build Directive. New utilities and use cases may be added continuously. Safety, identity, price and release boundaries remain enforceable controls. Read `INDEX_SIINDEX_LIVING_BUILD_DIRECTIVE_V4_3.md` before product work.
 
-The current local product slice is **Persistent Citizen Accounts and Recovery**. It is implemented and verified in this branch, but it is not pushed, migrated, preview-deployed or activated in production.
+The current local product sequence includes **Tier 0 Identity**, **Persistent Citizen Accounts and Recovery**, **Policy-Bound SIINDEX Swarm**, and the new **Wallet and Payments Core**. The first three slices were locally verified and committed. The wallet slice is under final local verification. None of these new slices is pushed, migrated, preview-deployed or activated in production.
 
 Key implementation files:
 
@@ -19,6 +19,12 @@ Key implementation files:
 - `supabase/migrations/20260806_citizen_accounts_recovery.sql`
 - `citizen-account-recovery-activation.md`
 - `scripts/verify-citizen-account-recovery.mjs`
+- `wallet-payments.html`
+- `js/wallet-payments-core.js`
+- `js/wallet-payments.js`
+- `supabase/migrations/20260806_private_test_wallet_payments.sql`
+- `wallet-payments-activation.md`
+- `scripts/verify-wallet-payments.mjs`
 
 Non-negotiable recovery boundaries:
 
@@ -38,21 +44,43 @@ Required local gate after any change:
 
 Activation must follow `citizen-account-recovery-activation.md` in a non-production Supabase environment first.
 
+Non-negotiable wallet and payments boundaries:
+
+- Only TEST_USDC and TEST_INDX are available. They have no value and cannot leave the private ledger.
+- The wallet stores no private key, recovery words, OTP, session token, card PAN, CVV or real balance.
+- No browser, SIINDEX agent or scheduled Claude agent may sign or submit a blockchain transaction.
+- Do not use `js/indx-wallet.js` for this slice. It contains retired mainnet and browser-balance behavior.
+- Do not restore undocumented payment RPCs, sessionStorage balances or scripted success receipts from legacy pages.
+- All legacy payment routes must resolve to `wallet-payments.html` until explicitly replaced by a reviewed canonical journey.
+- Every ledger action must remain double-entry, atomic, idempotent and subject to security holds and daily limits.
+- Refunds require the receiving citizen's explicit approval. No sender may silently reverse a completed transfer.
+- Test bill schedules require manual approval. No automatic charge or autonomous agent spending is allowed.
+- Merchant orders settle only inside the private-test ledger. No external acquirer, bank or card-network settlement is connected.
+- The test card is not a network card and must never expose a PAN, CVV or expiry date.
+- Solana Pay remains an unsigned, approval-gated adapter. No invented recipient address, mainnet action or settlement claim.
+- No scheduled checker may apply the migration, publish the route or change production. Report defects as `REPAIR_REQUIRED`.
+
+Required local gate after any wallet change:
+
+`node scripts/verify-wallet-payments.mjs`
+
+Activation must follow `wallet-payments-activation.md` in a non-production Supabase environment first.
+
 ## Verified Codex workspace
 
 - Repository: `KukiKings/imagenationdex`
 - Branch: `codex/tier0-real-otp-identity`
-- Verified protocol baseline: `54daac3`
+- Latest completed product checkpoint before this wallet build: `dc825b0`
 - Base: `78fb06b`
-- Working tree at protocol baseline: clean
-- Local product commits ahead of `origin/main`: two
+- Prior local product commits ahead of `origin/main`:
   - `66dd2cf` Build verified Tier 0 identity issuance
   - `ec21d1c` Build policy-bound SIINDEX swarm and Solana adapters
-- Local governance commit ahead of `origin/main`: one
   - `54daac3` Add Claude daily agent protocol
-- Local quality-control commit ahead of `origin/main`: one
   - `98657c2` Add supervised quality recovery agent
-- Scheduled-agent fleet update: built and verified locally after `98657c2`; included in the same commit as this handoff
+  - `b040fd1` Add researched Claude agent fleet controls
+  - `4004cb5` Add living INDX build directive
+  - `dc825b0` Build persistent citizen account recovery
+- Wallet and payments checkpoint: the commit containing this handoff
 - Publication status: not pushed
 - Production impact: none
 - Publication blocker: GitHub CLI is unavailable in the Codex workspace
@@ -82,15 +110,16 @@ Claude reported that clone at commit `5e8d784` with 139 unstaged files and six c
 
 Do not run `git add -A`, rebase, push `main` or combine this Mac worktree with the clean Codex branch. Inspect and branch the Mac work separately before any write.
 
-## Next approved product sequence
+## Next controlled release sequence
 
-1. Publish the clean Codex branch without altering its two existing commits.
-2. Open a draft pull request into `main`.
-3. Run pull-request and preview checks.
-4. Merge only after AJ approves the verified preview.
-5. Apply the Tier 0 and swarm Supabase migrations in the private environment.
-6. Deploy the private swarm runtime.
-7. Run authenticated Tier 0, command-centre, Solana Pay, x402 and media workflow tests.
+1. Finish the wallet and payments local verification and commit only its exact files.
+2. Publish the clean Codex branch without rewriting existing commits.
+3. Open a draft pull request into `main`.
+4. Run pull-request checks and inspect a protected preview.
+5. Apply Tier 0, citizen account, wallet and swarm migrations to a private Supabase environment in dependency order.
+6. Run authenticated multi-account identity, recovery, transfer, refund, payment request, bill and card tests.
+7. Run private swarm, Solana Pay, x402 and media workflow tests with signing and external settlement disabled.
+8. Merge or activate production only after AJ reviews the evidence and gives separate approval.
 
 ## Daily-agent reminder
 
