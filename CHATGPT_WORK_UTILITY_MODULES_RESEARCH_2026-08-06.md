@@ -233,3 +233,168 @@ Rules:
 These modules are researched and planned. None is recorded as installed, connected, tested or live for IN$DEX.
 
 Installing a plugin, authenticating a provider, sending outreach, publishing media or deploying a Site requires its own scoped action and evidence.
+
+## 12. Sovereign-civilization framework intake
+
+AJ submitted a broader governance, commerce, media, data, Cook Islands and Sites service framework on 6 August 2026. The useful modules enter the living build. Conflicting claims remain research items until resolved.
+
+| Submitted concept | Build decision |
+|---|---|
+| `Sovereign Republic` | Hold as an unresolved brand concept. Never imply a legally sovereign state or government. |
+| `14 Pillars` | Hold until AJ supplies the fourteen names and maps them to Learn, Create, Earn, Own, Govern and Legacy. |
+| 4.2-second biometric onboarding | Reject as a current Tier 0 claim. Tier 0 remains phone consent, real SMS OTP, name.IN$DEX and portal activation with no face scan. |
+| Wisdom-weighted voting | Research for advisory expertise and proposal review. Do not use an opaque score to control binding citizen rights. |
+| SovereignPay performance | Treat sub-cent and sub-second behavior as a network reference and private-test target, not an IN$DEX guarantee. |
+| 100 businesses in 90 days | Treat as a proposed SAS Foundry experiment, not verified capacity or a public promise. |
+| Autonomous commerce | Keep preparation and verification automatic. Identity, funds, refunds, public communications and binding governance stay policy and approval controlled. |
+| Self-optimizing swarm | Limit to measured recommendations and versioned proposals. Agents do not expand their own permissions or deploy their own changes. |
+| Unlimited digital-twin videos | Reject. Current HeyGen plans use quotas or credits. |
+| 175+ languages | Record as a current HeyGen plan claim. Test every chosen language, accent, script, caption and lip-sync result before publication. |
+| Sites funds the IN$DEX liquidity pool | Hold. Sites service revenue and INDX liquidity are separate financial decisions. |
+
+## 13. Sites commercial-service experiment
+
+Sites supports hosted full-stack applications, lightweight D1 structured storage, R2 object storage, private access, public sharing where enabled and custom domains where available.
+
+Limits that govern every client offer:
+
+- Every deployment URL is production.
+- Availability depends on plan, region and workspace settings.
+- Usage and storage limits apply.
+- Sites does not provide data or inference residency at launch.
+- Sites must not process payment-card data or protected health information.
+- Sites must not enable financial transactions.
+- Sites must not target children below the applicable digital-consent age.
+- A separate scheduled task refreshes approved data. The Site does not schedule itself.
+- The client offer must disclose hosting, access, storage, retention and platform dependency.
+
+### Offer A: Lead-form website
+
+Initial scope:
+
+- Public service information
+- Contact or booking request form
+- Private submission view
+- Spam controls
+- Consent notice
+- Export and deletion path
+- Mobile and accessibility checks
+
+Do not promise a finished client site in ten minutes. Measure discovery, copy, design, domain, privacy, testing, revisions, deployment and handover time.
+
+### Offer B: Search-visibility audit
+
+Initial scope:
+
+- Semrush evidence
+- Technical findings
+- Content gaps
+- Prioritized ninety-day work plan
+- Private client dashboard
+- Source freshness and limitations
+
+Do not promise rankings, traffic or revenue. Separate audit fees from implementation fees.
+
+### Offer C: Private operational dashboard
+
+Initial scope:
+
+- Approved business metrics
+- Source freshness
+- Filters and calculations
+- Data-quality warnings
+- Scheduled draft refresh
+
+Exclude protected health data, payment-card data and regulated financial processing. Email, calendar and task connections require the client's exact permission.
+
+### Offer D: Partner-research campaign
+
+Initial scope:
+
+- Client-approved ideal organisation profile
+- Deduplicated companies and professional contacts
+- Source and freshness evidence
+- Draft outreach only
+- Suppression and opt-out controls
+
+No bulk sending, hidden scraping, purchased lists without provenance or contact with children.
+
+### Offer E: Member portal
+
+Initial scope:
+
+- Authenticated access where supported
+- Member resources
+- Progress or request tracking
+- Admin review
+- Export and deletion path
+
+Do not claim Sites replaces a regulated identity, payment, learning-management or community-safety system.
+
+## 14. Commercial evidence gates
+
+Prices in the submitted framework are hypotheses with unspecified currency.
+
+Before publishing a service package:
+
+1. Select AUD or NZD.
+2. Record provider credits and subscriptions.
+3. Measure discovery, build, testing, revisions, deployment, support and handover time.
+4. Define included pages, forms, storage, integrations and revision count.
+5. Define domain, hosting and data ownership.
+6. Prepare terms, privacy notice, consent wording and refund rules.
+7. Calculate tax, payment fees, refund reserve and support margin.
+8. Complete one consenting pilot.
+9. Record the result and client feedback.
+10. Price from evidence.
+
+Revenue projections of USD 2,000 to 10,000 per month are not forecasts. They are scenarios requiring lead volume, close rate, delivery capacity, churn, support and margin evidence.
+
+## 15. Revenue and liquidity boundary
+
+Service income does not flow automatically to an INDX liquidity pool.
+
+Required order:
+
+1. Receive revenue through the approved legal business channel.
+2. Record tax and accounting treatment.
+3. Cover direct provider costs, refunds and support obligations.
+4. Maintain an operating and incident reserve.
+5. Keep repayable family or friend capital separate.
+6. Obtain legal, token, custody, accounting, allocation, multisignature and founder approval for liquidity.
+7. Transfer only an approved amount through an auditable treasury process.
+
+No Site, scheduled task, agent or connector performs the transfer.
+
+## 16. Cook Islands corrections
+
+- The Ministry of Justice registry lists NZD 75 for a Cook Islands company-incorporation application.
+- The Incorporated Societies Act requires at least 15 people and a purpose not for pecuniary gain.
+- The current society-incorporation fee is NZD 50, not NZD 30.
+- The general election is scheduled for 12 August 2026.
+- No reviewed official source makes the election a prerequisite for ordinary company registration.
+- Image Nation Dex Limited registration preparation should continue now.
+- Civilisation Fund structure needs Cook Islands legal and tax advice before choosing a society, company or another vehicle.
+
+## 17. Revised thirty-day evidence plan
+
+| Week | Core build | Commercial experiment |
+|---|---|---|
+| 1 | Continue Tier 0 private-environment preparation | Define one lead-form offer, currency, contract, privacy and demo acceptance tests |
+| 2 | Continue wallet and Media Agent private testing | Build one private demo and measure total delivery time |
+| 3 | Continue swarm dependency and security review | Run one consenting pilot with no financial transactions |
+| 4 | Continue whole-system integration | Review cost, quality, support load and demand before public outreach |
+
+The commercial experiment does not replace the committed IN$DEX build. It runs as a separate, measured workstream.
+
+## 18. Additional primary sources
+
+- OpenAI Sites: https://learn.chatgpt.com/docs/sites
+- OpenAI internal-app guidance: https://learn.chatgpt.com/use-cases/build-and-deploy-internal-apps
+- OpenAI dashboard guidance: https://learn.chatgpt.com/use-cases/analyze-data-export
+- Cook Islands registry fees: https://registry.justice.gov.ck/public/fees.aspx
+- Cook Islands Incorporated Societies Act 1994: https://registry.justice.gov.ck/documentation/ck/Incorporated_Societies_Act_1994.pdf
+- Cook Islands Parliament election notice: https://parliament.gov.ck/parliamentary-business/bills/
+- Solana payments: https://solana.com/docs/payments
+- Solana Pay: https://solana.com/docs/tools/solana-pay
+- HeyGen credit plans: https://help.heygen.com/en/articles/15125761-heygen-credit-based-pricing-plans-explained

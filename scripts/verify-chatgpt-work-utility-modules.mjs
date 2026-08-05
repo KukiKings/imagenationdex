@@ -20,6 +20,12 @@ const required = [
   'Sites deployments are production deployments.',
   'Dynamic tool discovery creates a conflict with the IN$DEX deny-by-default manifest.',
   'None is recorded as installed, connected, tested or live for IN$DEX.',
+  'Sites must not enable financial transactions.',
+  'No Site, scheduled task, agent or connector performs the transfer.',
+  'The current society-incorporation fee is NZD 50, not NZD 30.',
+  'The commercial experiment does not replace the committed IN$DEX build.',
+  'Treat as a proposed SAS Foundry experiment, not verified capacity or a public promise.',
+  'Do not promise a finished client site in ten minutes.',
 ];
 
 for (const text of required) {
@@ -34,6 +40,9 @@ const forbidden = [
   /The system runs itself/i,
   /automatic mass outreach/i,
   /automatic public publication/i,
+  /^\| 4\.2-second biometric onboarding \| Approved/im,
+  /^\| 100 businesses in 90 days \| Verified/im,
+  /^A finished client site takes ten minutes\.?$/im,
 ];
 
 for (const pattern of forbidden) {

@@ -13,6 +13,15 @@ AJ added a researched ChatGPT Work utility programme on 6 August 2026. Read `CHA
 
 Run `node scripts/verify-chatgpt-work-utility-modules.mjs` after changing this programme or its handoff boundary.
 
+The same research file records AJ's later Sites service, governance, commerce and Cook Islands framework. Preserve these current boundaries:
+
+- The approved top-level structure remains six civilization pillars. The submitted fourteen-pillar structure is unresolved.
+- Tier 0 remains phone and real SMS OTP with no biometric requirement or fixed 4.2-second promise.
+- Wisdom Score is advisory research, not automatic control over binding citizen votes.
+- Sites must not enable financial transactions or hold sovereign citizen identity, payment-card, protected-health or child-protected records.
+- Sites service revenue stays separate from any future INDX liquidity decision.
+- Cook Islands company preparation continues now. The 12 August 2026 election is not recorded as a registry prerequisite.
+
 ## Founder context AJ should not need to repeat
 
 - Founder: Arthur John Henry, known as AJ.
