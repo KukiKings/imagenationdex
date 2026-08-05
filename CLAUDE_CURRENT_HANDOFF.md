@@ -9,6 +9,10 @@ AJ replaced permanent feature canonization with a Living Build Directive. New ut
 
 The current local product sequence includes **Tier 0 Identity**, **Persistent Citizen Accounts and Recovery**, **Policy-Bound SIINDEX Swarm**, and **Wallet and Payments Core**. All four slices are locally verified and committed. None of these new slices is pushed, migrated, preview-deployed or activated in production.
 
+AJ added a researched ChatGPT Work utility programme on 6 August 2026. Read `CHATGPT_WORK_UTILITY_MODULES_RESEARCH_2026-08-06.md` before media, partner research, search visibility, recorded workflow, Sites or external-connector work. The modules remain researched and planned. None is installed, connected, tested or live for IN$DEX.
+
+Run `node scripts/verify-chatgpt-work-utility-modules.mjs` after changing this programme or its handoff boundary.
+
 ## Founder context AJ should not need to repeat
 
 - Founder: Arthur John Henry, known as AJ.
