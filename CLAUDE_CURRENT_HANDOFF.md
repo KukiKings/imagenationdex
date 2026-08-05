@@ -7,7 +7,17 @@
 
 AJ replaced permanent feature canonization with a Living Build Directive. New utilities and use cases may be added continuously. Safety, identity, price and release boundaries remain enforceable controls. Read `INDEX_SIINDEX_LIVING_BUILD_DIRECTIVE_V4_3.md` before product work.
 
-The current local product sequence includes **Tier 0 Identity**, **Persistent Citizen Accounts and Recovery**, **Policy-Bound SIINDEX Swarm**, and the new **Wallet and Payments Core**. The first three slices were locally verified and committed. The wallet slice is under final local verification. None of these new slices is pushed, migrated, preview-deployed or activated in production.
+The current local product sequence includes **Tier 0 Identity**, **Persistent Citizen Accounts and Recovery**, **Policy-Bound SIINDEX Swarm**, and **Wallet and Payments Core**. All four slices are locally verified and committed. None of these new slices is pushed, migrated, preview-deployed or activated in production.
+
+## Founder context AJ should not need to repeat
+
+- Founder: Arthur John Henry, known as AJ.
+- AJ has confirmed that he is a New Zealand citizen and a Cook Islands citizen.
+- Do not classify AJ as a foreign investor solely because he has Australian business registrations.
+- Cook Islands citizenship, residence, company control and regulatory classification are separate questions. Verify the official requirement instead of guessing.
+- Never ask AJ to repeat a confirmed founder fact already recorded here unless newer evidence conflicts with it.
+- The old Mega Prompt v4.0 is historical input. It is not controlling authority because AJ rejected permanent feature canonization.
+- New utilities and use cases must be added to the living build, classified by status and tested. Do not delete them merely because they were absent from an older plan.
 
 Key implementation files:
 
@@ -80,7 +90,7 @@ Activation must follow `wallet-payments-activation.md` in a non-production Supab
   - `b040fd1` Add researched Claude agent fleet controls
   - `4004cb5` Add living INDX build directive
   - `dc825b0` Build persistent citizen account recovery
-- Wallet and payments checkpoint: the commit containing this handoff
+- Wallet and payments checkpoint: `2ad4e8b`
 - Publication status: not pushed
 - Production impact: none
 - Publication blocker: GitHub CLI is unavailable in the Codex workspace
@@ -123,6 +133,8 @@ Do not run `git add -A`, rebase, push `main` or combine this Mac worktree with t
 
 ## Daily-agent reminder
 
-Read `CLAUDE_AGENT_PROTOCOL.md`, `CLAUDE_AGENT_FLEET_BLUEPRINT.md`, the agent's exact registry record and the protected Master Mega-Prompt before acting. Scheduled checks remain read-only unless AJ gives a separate implementation or publication instruction.
+Read `INDEX_SIINDEX_LIVING_BUILD_DIRECTIVE_V4_3.md`, this handoff, `CLAUDE_AGENT_PROTOCOL.md`, `CLAUDE_AGENT_FLEET_BLUEPRINT.md` and the agent's exact registry record before acting. Scheduled checks remain read-only unless AJ gives a separate implementation or publication instruction.
+
+Do not reconstruct or treat the historical Mega Prompt v4.0 as a permanent canon. Use AJ's latest instruction, the Living Build Directive, verified build evidence and this handoff.
 
 Use `QUALITY_RECOVERY_PROTOCOL.md` for any supervised defect repair. Codex and Claude must follow its one-writer rule and use `QUALITY_RECOVERY_REPORT_TEMPLATE.md` for evidence.
