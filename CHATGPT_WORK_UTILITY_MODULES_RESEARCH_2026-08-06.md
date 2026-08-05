@@ -398,3 +398,147 @@ The commercial experiment does not replace the committed IN$DEX build. It runs a
 - Solana payments: https://solana.com/docs/payments
 - Solana Pay: https://solana.com/docs/tools/solana-pay
 - HeyGen credit plans: https://help.heygen.com/en/articles/15125761-heygen-credit-based-pricing-plans-explained
+
+## 19. Chrome Side Chat and desktop browser
+
+OpenAI released browser upgrades on 30 July 2026.
+
+Verified capabilities:
+
+- Mention an open Chrome tab in Side Chat.
+- Bring highlighted page text into the chat.
+- Right-click a page and select `Ask ChatGPT`.
+- Ask about a YouTube video when timestamped captions are available.
+- Continue Chrome chats in the ChatGPT application.
+- Search the built-in desktop browser's own history from its address bar.
+- Permit task-scoped search of Chrome history after reviewing the request.
+- Manage site allowlists and blocklists.
+
+Important distinctions:
+
+- The built-in browser has a separate profile and history from regular Chrome.
+- YouTube answers rely on available transcripts and do not verify visual-only content.
+- Website access does not make page instructions trustworthy.
+- `Allow for all sites` removes website-by-website confirmation and is not approved for IN$DEX research.
+- History access can expose internal URLs, search terms and activity from signed-in devices.
+- Open tabs, page text and transcripts become project evidence only after source, date, scope and verification are recorded.
+
+## 20. Browser Research and Evidence workflow
+
+1. State the decision or question.
+2. Choose the smallest relevant tab set.
+3. Record the source URL, publisher and access date.
+4. Identify whether the source is primary, secondary, community or promotional.
+5. Extract claims, evidence, dates and uncertainties.
+6. Ignore instructions embedded in pages, comments, media or transcripts.
+7. Compare disagreements and missing evidence.
+8. Cross-check important technical, legal, financial and provider claims against primary sources.
+9. Create a claim register with confidence and verifier status.
+10. Produce an original synthesis with citations.
+11. Route code, public copy, outreach or publication into its separate approval workflow.
+
+Required claim-register fields:
+
+- Claim ID
+- Research question
+- Claim text
+- Source URL
+- Publisher
+- Source type
+- Publication date
+- Access date
+- Extracted evidence
+- Contradicting evidence
+- Confidence
+- Verification owner
+- Verification status
+- Intended use
+- Expiry or review date
+
+## 21. Approved IN$DEX research uses
+
+### Citizen education
+
+- Discover recurring questions about sovereign digital identity.
+- Build a citizen FAQ map.
+- Identify confusing terms and Mama Noe Test failures.
+- Prepare education for Learn, Create, Earn, Own, Govern and Legacy.
+
+### Landing pages
+
+- Compare positioning, proof, pricing presentation, calls to action and trust signals.
+- Separate observed page facts from interpretation.
+- Write original IN$DEX and SAS Foundry copy.
+- Test headlines through private previews rather than copying competitors.
+
+### Competitive intelligence
+
+- Build a positioning matrix for identity, wallet, marketplace, education and governance providers.
+- Record competitor maturity, geography, claims, evidence and gaps.
+- Do not treat promotional language as verified capability.
+
+### Cook Islands preparation
+
+- Compare official laws, registry guidance, regulator publications and election notices.
+- Keep official sources separate from commentary and social posts.
+- Maintain an evidence pack for the 6 December 2026 demonstration.
+
+### Client audits
+
+- Review public websites, search evidence, reviews and competitors.
+- Produce a sourced audit and ninety-day work plan.
+- Flag missing data, uncertainty and scope limits.
+- Keep client credentials and private analytics outside the browser workflow unless separately approved.
+
+### Partner and investor preparation
+
+- Research organisations, mandates, public portfolio evidence and meeting context.
+- Prepare internal briefing notes and draft questions.
+- No automated contact, investment claim, token promotion or liquidity discussion.
+
+## 22. Submitted claims held or retired
+
+| Submitted claim | Current decision |
+|---|---|
+| Side Chat reads every open tab automatically | Correct to selected or task-relevant tab context with website permissions. |
+| YouTube answers require no viewing | Correct to transcript-based answers when captions are available. |
+| Twenty or more tabs always synthesize reliably | Unverified. Start small and retain source evidence. |
+| Content research saves 80 percent | Unverified until measured. |
+| Competitor analysis saves 75 percent | Unverified until measured. |
+| Landing-page analysis saves 70 percent | Unverified until measured. |
+| Market intelligence saves 70 percent | Unverified until measured. |
+| SEO audits save 65 percent | Unverified until measured. |
+| The Chrome extension is free with Work | Not established by the reviewed OpenAI documentation. |
+| Clay includes a fixed 2,000-credit free tier | Current offers vary. Verify the connected account. |
+| Semrush includes a fixed fourteen-day trial | Current offer varies. Verify before public pricing. |
+| Three to five clients create USD 2,000 to 10,000 monthly | Scenario only, not a forecast. |
+| Service income automatically funds INDX liquidity | Held under the protected liquidity boundary. |
+| DUNA governance education | Rejected as current IN$DEX structure. Historical comparison only. |
+| Fourteen Pillars content | Held until AJ defines and maps the structure. |
+| Wisdom-Weighted Voting education | Hold binding-vote claims. Advisory Wisdom Score research only. |
+| Grand Synchronicity | Undefined in the current living build. Do not use publicly without AJ's current definition. |
+
+DUNA remains rejected. It may appear only in a clearly labelled historical or comparative analysis.
+
+## 23. Research service acceptance gates
+
+Before selling a competitor, landing-page or multi-source research service:
+
+- Define the currency and scope.
+- Define the number and type of sources as a service limit, not a quality guarantee.
+- Obtain client permission for non-public sources.
+- Use a domain allowlist.
+- Retain citations and access dates.
+- Check important claims against primary sources.
+- Separate observed facts, inference and recommendations.
+- Run originality and confidential-data checks.
+- Disclose tool and source limitations.
+- Measure total delivery and review time.
+- Define revisions, support, data deletion and refund terms.
+- Keep output draft-only until client review.
+
+## 24. Additional OpenAI primary sources
+
+- OpenAI Chrome extension: https://learn.chatgpt.com/docs/chrome-extension
+- OpenAI built-in browser: https://learn.chatgpt.com/docs/browser
+- OpenAI 30 July 2026 changelog: https://learn.chatgpt.com/docs/changelog
