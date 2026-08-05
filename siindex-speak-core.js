@@ -34,8 +34,24 @@
     );
   const MAX_HISTORY = 20;
   const MAX_RECORDING_MS = 20_000;
+  const RUNTIME_REQUEST_TIMEOUT_MS = 45_000;
+  const TRANSCRIPTION_REQUEST_TIMEOUT_MS = 30_000;
+  const VOICE_REQUEST_TIMEOUT_MS = 30_000;
+  const BUSY_RECOVERY_TIMEOUT_MS = 60_000;
+  const SESSION_STATES = new Set([
+    "idle",
+    "initializing",
+    "ready",
+    "listening",
+    "transcribing",
+    "thinking",
+    "speaking",
+    "error",
+    "recovering",
+  ]);
 
   let runtimeAbort = null;
+  let transcriptionAbort = null;
   let voiceAbort = null;
   let recorder = null;
   let microphoneStream = null;
@@ -47,6 +63,8 @@
   const activeAudioSources = new Set();
   let currentStreamMessage = null;
   let busy = false;
+  let busyStartedAt = 0;
+  let sessionState = "initializing";
   let recording = false;
   let consentPromise = null;
   let voiceEnabled = localStorage.getItem(VOICE_KEY) !== "false";
@@ -121,15 +139,39 @@
     if (code === "NotFoundError") {
       return explain(
         "No working microphone was found on this device.",
-        "Connect or enable a microphone, or use the text box.",
+        "Connect or enable a microphone, or use Type Instead in the text box.",
         "You can enable the device; typed SIINDEX works now.",
         "Typing is immediate; microphone timing depends on the device.",
+      );
+    }
+    if (code === "NotReadableError") {
+      return explain(
+        "The microphone exists, but another tab or application may be using it.",
+        "Close other calls or recording apps, then retry. You can use Type Instead now.",
+        "You can release the microphone; SIINDEX can retry immediately afterward.",
+        "Typing is immediate; microphone retry usually takes under 1 minute.",
+      );
+    }
+    if (code === "microphone_not_live") {
+      return explain(
+        "The browser opened a microphone stream, but its audio track is not live.",
+        "Reconnect or enable the microphone, then retry, or use Type Instead.",
+        "You can check the device; SIINDEX remains available by typed chat.",
+        "Typing is immediate.",
+      );
+    }
+    if (code === "microphone_not_supported") {
+      return explain(
+        "This browser cannot access microphone capture.",
+        "Use Type Instead in the text box, or open the official website in a current browser with microphone access.",
+        "You can switch browser or device; typed SIINDEX works now.",
+        "Typing is immediate.",
       );
     }
     if (code === "provider_consent_required" || code === "provider_consent_declined") {
       return explain(
         "Visitor Mode needs your permission before it sends microphone audio or typed questions to external providers.",
-        "Read the provider notice and choose Continue only if you agree. Do not share passwords, seed phrases, private keys, identity documents, or sensitive account details.",
+        "Read the provider notice and choose Continue only if you agree. Do not share passwords, wallet recovery credentials, private keys, identity documents, or sensitive account details.",
         "Only you can grant this permission. A human steward is not needed.",
         "Immediate after you choose.",
       );
@@ -161,7 +203,8 @@
     if (
       code === "transcription_provider_not_configured" ||
       code === "transcription_provider_unavailable" ||
-      code === "transcription_provider_error"
+      code === "transcription_provider_error" ||
+      code === "transcription_timeout"
     ) {
       return explain(
         "The secure speech-to-text service is not available right now.",
@@ -174,6 +217,7 @@
       code === "model_provider_not_configured" ||
       code === "model_provider_unavailable" ||
       code === "model_provider_error" ||
+      code === "runtime_timeout" ||
       status === 502 ||
       status === 503
     ) {
@@ -205,22 +249,39 @@
   }
 
   function setStatus(state, text) {
+    const nextState = SESSION_STATES.has(state) ? state : "error";
+    sessionState = nextState;
     if (ui.status) {
       ui.status.textContent = text || "";
-      ui.status.dataset.state = state || "idle";
+      ui.status.dataset.state = nextState;
     }
     if (ui.mic) {
-      ui.mic.classList.toggle("listening", state === "listening");
-      ui.mic.setAttribute("aria-pressed", state === "listening" ? "true" : "false");
+      ui.mic.classList.toggle("listening", nextState === "listening");
+      ui.mic.setAttribute("aria-pressed", nextState === "listening" ? "true" : "false");
     }
     if (ui.interrupt) {
-      ui.interrupt.hidden = !["thinking", "speaking", "transcribing"].includes(state);
+      ui.interrupt.hidden = !["thinking", "speaking", "transcribing", "recovering"].includes(nextState);
     }
-    emit("status", { state, text });
+    emit("status", { state: nextState, text });
   }
 
   function messageId() {
     return `sim-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  }
+
+  function normalizeAssistantText(text) {
+    return String(text || "")
+      .replace(/```[a-zA-Z0-9]*\n?/g, "")
+      .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+      .replace(/^\s{0,3}(?:---+|\*\*\*+|___+)\s*$/gm, "")
+      .replace(/^\s{0,3}>\s?/gm, "")
+      .replace(/\*\*([^*\n][^*]*?)\*\*/g, "$1")
+      .replace(/__([^_\n][^_]*?)__/g, "$1")
+      .replace(/`([^`\n]+)`/g, "$1")
+      .replace(/\[([^\]\n]+)\]\(([^)\s]+)\)/g, "$1")
+      .replace(/^(\s{0,3})[*+]\s+/gm, "$1- ")
+      .replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s.,;:!?)]|$)/g, "$1$2")
+      .replace(/(^|[\s(])_([^_\n]+)_(?=[\s.,;:!?)]|$)/g, "$1$2");
   }
 
   function emitMessage(role, text, id, streaming, source) {
@@ -305,7 +366,7 @@
           <li>SIINDEX's reply is sent to ElevenLabs when voice replies are on.</li>
         </ul>
         <p style="margin:0 0 12px;color:#c8cede;font-size:13px;line-height:1.6;">IN$DEX does not store raw audio or the Visitor Mode conversation on its servers. A copy of the conversation stays only on this device until you clear it.</p>
-        <p style="margin:0 0 18px;color:#ffcf72;font-size:13px;line-height:1.6;">Never share passwords, seed phrases, private keys, identity documents, or sensitive account information.</p>
+        <p style="margin:0 0 18px;color:#ffcf72;font-size:13px;line-height:1.6;">Never share passwords, wallet recovery credentials, private keys, identity documents, or sensitive account information.</p>
         <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
           <button type="button" data-si-consent-decline style="border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:10px 16px;background:transparent;color:#d6dbea;cursor:pointer;">Not now</button>
           <button type="button" data-si-consent-accept style="border:0;border-radius:20px;padding:10px 16px;background:linear-gradient(135deg,#00d4ff,#2b35d8);color:#fff;font-weight:800;cursor:pointer;">Continue</button>
@@ -404,6 +465,12 @@
         },
       });
 
+      const audioTrack = microphoneStream.getAudioTracks()[0];
+      if (!audioTrack || audioTrack.readyState !== "live") {
+        stopTracks();
+        throw new SiindexError("microphone_not_live");
+      }
+
       const mimeType = preferredMimeType();
       recorder = mimeType
         ? new MediaRecorder(microphoneStream, { mimeType })
@@ -463,7 +530,9 @@
             await ask(transcript, { source: requestSource });
           }
         } catch (error) {
-          if (typeof errorHandler === "function") errorHandler(error);
+          if (error && error.name === "AbortError") {
+            setStatus("idle", "Transcription interrupted. Ready to type or speak again.");
+          } else if (typeof errorHandler === "function") errorHandler(error);
           else showError(error, "transcription", requestSource);
         } finally {
           if (typeof endHandler === "function") endHandler();
@@ -498,18 +567,36 @@
     const data = new FormData();
     data.append("audio", blob, `siindex-question.${audioExtension(mime)}`);
 
-    const response = await fetch(ENDPOINTS.transcribe, {
-      method: "POST",
-      headers: headers(),
-      body: data,
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new SiindexError(result.error || "transcription_failed", response.status, result);
+    const controller = new AbortController();
+    transcriptionAbort = controller;
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, TRANSCRIPTION_REQUEST_TIMEOUT_MS);
+    try {
+      const response = await fetch(ENDPOINTS.transcribe, {
+        method: "POST",
+        signal: controller.signal,
+        headers: headers(),
+        body: data,
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new SiindexError(result.error || "transcription_failed", response.status, result);
+      }
+      const transcript = String(result.transcript || "").trim();
+      if (!transcript) throw new SiindexError("no_speech_detected", 422, result);
+      return transcript;
+    } catch (error) {
+      if (error && error.name === "AbortError" && timedOut) {
+        throw new SiindexError("transcription_timeout", 504);
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+      if (transcriptionAbort === controller) transcriptionAbort = null;
     }
-    const transcript = String(result.transcript || "").trim();
-    if (!transcript) throw new SiindexError("no_speech_detected", 422, result);
-    return transcript;
   }
 
   async function readFailure(response) {
@@ -524,6 +611,9 @@
   async function ask(text, options) {
     const source = options && options.source || "global";
     text = String(text || "").trim();
+    if (busy && busyStartedAt && Date.now() - busyStartedAt >= BUSY_RECOVERY_TIMEOUT_MS) {
+      interrupt("The previous session timed out. SIINDEX reset and is ready.");
+    }
     if (!text || busy) return;
     if (!WEBSITE_MODE) {
       showError(new SiindexError("website_only"), "access", source);
@@ -541,6 +631,7 @@
 
     interrupt("Preparing your question…", false);
     busy = true;
+    busyStartedAt = Date.now();
     const userId = messageId();
     renderMessage("user", text, userId);
     emitMessage("user", text, userId, false, source);
@@ -551,13 +642,20 @@
     renderMessage("assistant", "Thinking…", assistantId);
     emitMessage("assistant", "Thinking…", assistantId, true, source);
     setStatus("thinking", "SIINDEX is thinking…");
-    runtimeAbort = new AbortController();
+    const controller = new AbortController();
+    runtimeAbort = controller;
+    let runtimeTimedOut = false;
+    const runtimeTimer = setTimeout(() => {
+      runtimeTimedOut = true;
+      controller.abort();
+    }, RUNTIME_REQUEST_TIMEOUT_MS);
+    let rawText = "";
     let fullText = "";
 
     try {
       const response = await fetch(ENDPOINTS.runtime, {
         method: "POST",
-        signal: runtimeAbort.signal,
+        signal: controller.signal,
         headers: headers("application/json"),
         body: JSON.stringify({
           message: text,
@@ -582,7 +680,8 @@
           try {
             const event = JSON.parse(raw);
             if (event.text) {
-              fullText += event.text;
+              rawText += event.text;
+              fullText = normalizeAssistantText(rawText);
               renderMessage("assistant", fullText, assistantId);
               emitMessage("assistant", fullText, assistantId, true, source);
             }
@@ -600,7 +699,12 @@
       setStatus("idle", "Response complete.");
       if (voiceEnabled) await speak(fullText);
     } catch (error) {
-      if (error && error.name === "AbortError") {
+      if (error && error.name === "AbortError" && runtimeTimedOut) {
+        const textError = errorMessage(new SiindexError("runtime_timeout", 504), "runtime");
+        renderMessage("assistant", textError, assistantId);
+        emitMessage("assistant", textError, assistantId, false, source);
+        setStatus("error", "The previous request timed out. SIINDEX is reset and typing is ready.");
+      } else if (error && error.name === "AbortError") {
         const stopped = fullText || "Response interrupted.";
         renderMessage("assistant", stopped, assistantId);
         emitMessage("assistant", stopped, assistantId, false, source);
@@ -611,9 +715,11 @@
         setStatus("error", "SIINDEX explained what happened. You can retry or type.");
       }
     } finally {
-      runtimeAbort = null;
+      clearTimeout(runtimeTimer);
+      if (runtimeAbort === controller) runtimeAbort = null;
       currentStreamMessage = null;
       busy = false;
+      busyStartedAt = 0;
     }
   }
 
@@ -706,13 +812,19 @@
 
   async function speak(text) {
     if (!voiceEnabled || !text) return;
-    voiceAbort = new AbortController();
+    const controller = new AbortController();
+    voiceAbort = controller;
+    let voiceTimedOut = false;
+    const voiceTimer = setTimeout(() => {
+      voiceTimedOut = true;
+      controller.abort();
+    }, VOICE_REQUEST_TIMEOUT_MS);
     const spoken = pronunciation(text);
     try {
       setStatus("speaking", "Preparing SIINDEX's voice…");
       const response = await fetch(ENDPOINTS.voice, {
         method: "POST",
-        signal: voiceAbort.signal,
+        signal: controller.signal,
         headers: headers("application/json"),
         body: JSON.stringify({ text: spoken }),
       });
@@ -720,9 +832,10 @@
       if (response.headers.get("X-Siindex-Audio-Format") !== "pcm_24000") {
         throw new SiindexError("unsupported_audio_format", 502);
       }
+      clearTimeout(voiceTimer);
       await playPcmStream(response);
     } catch (error) {
-      if (error && error.name === "AbortError") return;
+      if (error && error.name === "AbortError" && !voiceTimedOut) return;
       if (!window.speechSynthesis) {
         setStatus("error", errorMessage(error, "voice"));
         return;
@@ -758,18 +871,32 @@
         "ElevenLabs is unavailable; using this device's voice temporarily.",
       );
     } finally {
-      voiceAbort = null;
+      clearTimeout(voiceTimer);
+      if (voiceAbort === controller) voiceAbort = null;
     }
   }
 
   function interrupt(message, notify) {
     if (runtimeAbort) runtimeAbort.abort();
+    if (transcriptionAbort) transcriptionAbort.abort();
     if (voiceAbort) voiceAbort.abort();
     if (recording) stopRecording(false);
     stopPcmPlayback();
     window.speechSynthesis && speechSynthesis.cancel();
     busy = false;
+    busyStartedAt = 0;
     if (notify !== false) setStatus("idle", message || "Interrupted. Ready.");
+  }
+
+  function resetSession(message) {
+    setStatus("recovering", "Resetting this SIINDEX session…");
+    interrupt(message || "Session reset. Ready to type or speak again.", false);
+    stopTracks();
+    recordingChunks = [];
+    recording = false;
+    currentStreamMessage = null;
+    setStatus("ready", message || "Session reset. Ready to type or speak again.");
+    emit("session-reset", { preservedHistory: true, preservedConsent: true });
   }
 
   function clearHistory() {
@@ -901,7 +1028,7 @@
         </div>
         <button type="button" class="siindex-icon-btn" data-si-close aria-label="Close SIINDEX">×</button>
       </header>
-      <div class="siindex-privacy">Tap the microphone only when ready. With your permission, audio is sent securely to ElevenLabs for transcription, your transcript or typed question is sent to Anthropic, and SIINDEX replies are sent to ElevenLabs when voice is on. IN$DEX does not store raw audio or website conversations on its servers. Do not share passwords, seed phrases, private keys, identity documents, or sensitive account details. Website Voice cannot access accounts or take actions.</div>
+      <div class="siindex-privacy">Tap the microphone only when ready. With your permission, audio is sent securely to ElevenLabs for transcription, your transcript or typed question is sent to Anthropic, and SIINDEX replies are sent to ElevenLabs when voice is on. IN$DEX does not store raw audio or website conversations on its servers. Do not share passwords, wallet recovery credentials, private keys, identity documents, or sensitive account details. Website Voice cannot access accounts or take actions.</div>
       <div class="siindex-messages" data-si-messages>
         <div class="siindex-empty" data-si-empty>Ask me what is genuinely live, what is planned, how the Pacific-first pilot works, or how to collaborate. Tap the microphone, speak, then tap again to send. You can type at any time.</div>
       </div>
@@ -910,6 +1037,7 @@
       <div class="siindex-status" data-si-status aria-live="polite">Ready. Tap the microphone to speak or type below.</div>
       <div class="siindex-footer-tools">
         <button type="button" class="siindex-text-btn" data-si-voice></button>
+        <button type="button" class="siindex-text-btn" data-si-reset>Reset session</button>
         <button type="button" class="siindex-text-btn" data-si-clear>Clear conversation &amp; consent</button>
       </div>
       <div class="siindex-controls">
@@ -962,8 +1090,10 @@
     ui.mic.addEventListener("click", () => startRecording({ source: "global" }));
     ui.interrupt.addEventListener("click", () => interrupt());
     ui.voiceToggle.addEventListener("click", () => setVoiceEnabled(!voiceEnabled));
+    ui.panel.querySelector("[data-si-reset]").addEventListener("click", () => resetSession());
     ui.panel.querySelector("[data-si-clear]").addEventListener("click", clearHistory);
     setVoiceEnabled(voiceEnabled);
+    setStatus("ready", "Ready. Tap the microphone to speak or type below.");
   }
 
   window.SIINDEXVoice = {
@@ -972,11 +1102,15 @@
     ask,
     listen: startRecording,
     interrupt,
+    resetSession,
     speak,
     clearHistory,
     setVoiceEnabled,
     get voiceEnabled() {
       return voiceEnabled;
+    },
+    get sessionState() {
+      return sessionState;
     },
     get recording() {
       return recording;

@@ -25,6 +25,8 @@ requireText("public-home.html", /24 February 2027/, "controlled public-pilot dat
 requireText("public-home.html", /1\.3B/, "current Global Findex figure is missing");
 requireText("public-home.html", /No face scan at Tier 0/i, "Tier 0 face-scan prohibition is missing");
 requireText("public-home.html", /50 INDX recognition – pending review\. Not yet spendable\./, "approved recognition wording is missing");
+requireText("public-home.html", /founder-selected launch and genesis reference/, "founder-selected USD $0.24 launch reference is missing");
+forbidText("public-home.html", /\$0\.36\b/, "retired USD $0.36 launch figure remains");
 requireText("public-home.html", /registration has not yet been filed/i, "approved legal-status wording is missing");
 requireText("public-home.html", /SIINDEX Visitor Mode/, "SIINDEX authority boundary is missing");
 requireText("public-home.html", /videos\/siindex-public-intro\.mp4/, "remastered SIINDEX introduction video is missing");
@@ -39,6 +41,7 @@ for (const file of ["images/siindex-public-portrait.webp", "images/siindex-publi
 forbidText("supabase/functions/siindex-website-runtime/index.ts", /Sighn-dex|24 January 2027|focused public pilot/i, "runtime Canon is stale");
 requireText("supabase/functions/siindex-website-runtime/index.ts", /24 February 2027/, "runtime public-pilot date is missing");
 requireText("supabase/functions/siindex-website-runtime/index.ts", /No face scan is required at Tier 0/, "runtime Tier 0 rule is missing");
+requireText("supabase/functions/siindex-website-runtime/index.ts", /Website Visitor Mode has no phone-call channel/, "runtime phone-call prohibition is missing");
 
 forbidText("sw.js", /home-v2\.html|receive\.html|send\.html|withdraw-fiat\.html/, "service worker still publishes transactional prototypes");
 requireText("sw.js", /indx-v4/, "public cache version was not advanced");

@@ -23,6 +23,9 @@ BOUNDARIES:
 - If something is not in the verified status below, say it is UNKNOWN in Visitor Mode and explain how it can be verified.
 - When restricting or refusing something, give: the simple reason; what the visitor can do next; whether SIINDEX or a human must help; and an honest timeframe.
 - You may answer citizens, reporters, interviewers, community leaders, and social or crypto influencers. Do not encourage token buying, token-price promotion, hype, or unsupported endorsements.
+- The only verified SIINDEX communication channels are typed chat in this website interface and spoken interaction through this website interface's microphone and voice reply.
+- Never claim that SIINDEX is available through phone calls, SMS or text messaging, email conversations, video calls, or any other communication channel. An email contact link is a human contact route, not a SIINDEX conversation channel.
+- If asked for an unavailable channel, say: "That feature is not currently available. You can use typed chat or the website microphone here."
 
 VERIFIED / CONTROLLED PROJECT STATUS FOR THIS MODE:
 - The public website and SIINDEX Visitor Mode voice, typed chat, spoken replies, and interruption are live. Visitor Mode is informational only.
@@ -34,23 +37,81 @@ VERIFIED / CONTROLLED PROJECT STATUS FOR THIS MODE:
 - Image Nation Dex Limited is the intended Cook Islands company name. Registration has not yet been filed.
 - INDX is a plain Solana SPL Token. A mainnet check reported a fixed 100,000,000 supply and revoked mint and freeze authorities. The deployed mint is owned by the original SPL Token Program, not Token-2022.
 - INDX allocation, distribution, and liquidity actions are paused pending reconciliation, specialist review, and an explicit founder decision.
-- USD $0.24 is the project's proposed genesis price, not a live market price or a promise of future value.
+- USD $0.24 is the founder-selected launch and genesis reference. Never state another launch figure. It is not a live market price, not a price citizens can pay today, and not a promise of future value.
 - The only approved welcome wording is: "50 INDX recognition – pending review. Not yet spendable." It is not an unconditional entitlement, cash value, or delivered balance.
 - Maximum founder self-funded pilot liquidity is approximately USD $2,000. Any such pool would be small, meaning price could move sharply and liquidity could be insufficient.
 - There are no approved yield, APY, passive-income, guaranteed-return, or price-growth promises.
 - name.IN$DEX is a planned human-readable IN$DEX namespace and root credential. It is not automatically a conventional public internet domain, legal identity, bank account, or wallet.
 - The 98/2 Civilisation Law is a permanent project doctrine. Do not claim it is an immutable live smart contract unless current deployed code is independently verified.
 - SIINDEX Visitor Mode is an informational conversation service powered by external model, transcription, and voice providers. It has no autonomous authority.
+- Website Visitor Mode has no phone-call channel. Visitors can use typed chat or the website microphone only; never claim that a phone call is available.
 - Tier 0 is designed as phone number, one-time code, name.IN$DEX selection, and portal activation. No face scan is required at Tier 0. It is still in private testing, not a public live service.
 - The World Bank Global Findex 2025 reports 1.3 billion adults without financial accounts; about 900 million of them have a mobile phone, including 530 million with smartphones.
 
 STYLE:
 - Start with the answer.
 - Keep most replies under 180 words unless the visitor asks for detail.
-- Use plain text only. Do not use Markdown, asterisks, headings, tables, or code fences.
+- Use plain sentences only. Do not use Markdown, asterisks, headings, bullet markers, tables, or code fences.
+- Write status labels such as LIVE, PLANNED, VERIFIED, PAUSED, and UNKNOWN as ordinary words without surrounding punctuation.
 - Clearly label LIVE, PLANNED, VERIFIED, PAUSED, or UNKNOWN when status matters.
 - If asked what you are, say you are SIINDEX, the project's PQSI / Synthetic Intelligence interface, and be transparent that this visitor conversation uses an external language-model service.
-- Do not repeat confidential data or ask for passwords, seed phrases, private keys, identity documents, or sensitive account details.`;
+- Do not repeat confidential data or ask for passwords, wallet recovery credentials, private keys, identity documents, or sensitive account details.`;
+
+// The model is asked for plain text above, but production output must not rely
+// on model compliance. Buffer across provider chunks so split Markdown markers
+// are removed before text reaches either the browser or the voice provider.
+function stripMarkdown(text: string): string {
+  let out = text;
+  out = out.replace(/```[a-zA-Z0-9]*\n?/g, "");
+  out = out.replace(/^\s{0,3}#{1,6}\s+/gm, "");
+  out = out.replace(/^\s{0,3}(?:---+|\*\*\*+|___+)\s*$/gm, "");
+  out = out.replace(/^\s{0,3}>\s?/gm, "");
+  out = out.replace(/\*\*([^*\n][^*]*?)\*\*/g, "$1");
+  out = out.replace(/__([^_\n][^_]*?)__/g, "$1");
+  out = out.replace(/`([^`\n]+)`/g, "$1");
+  out = out.replace(/\[([^\]\n]+)\]\(([^)\s]+)\)/g, "$1");
+  out = out.replace(/^(\s{0,3})[*+]\s+/gm, "$1- ");
+  out = out.replace(/(^|[\s(])\*([^*\n]+)\*(?=[\s.,;:!?)]|$)/g, "$1$2");
+  out = out.replace(/(^|[\s(])_([^_\n]+)_(?=[\s.,;:!?)]|$)/g, "$1$2");
+  return out;
+}
+
+function safeCut(buffer: string, index: number): number {
+  if (index <= 0) return 0;
+  const prefix = buffer.slice(0, index);
+  const stars = (prefix.match(/\*\*/g) || []).length;
+  if (stars % 2 === 1) {
+    const last = prefix.lastIndexOf("**");
+    return last > 0 ? last : 0;
+  }
+  const ticks = (prefix.match(/`/g) || []).length;
+  if (ticks % 2 === 1) {
+    const last = prefix.lastIndexOf("`");
+    return last > 0 ? last : 0;
+  }
+  return index;
+}
+
+function flushIndex(buffer: string): number {
+  const paragraph = buffer.lastIndexOf("\n\n");
+  if (paragraph !== -1) return safeCut(buffer, paragraph + 2);
+  const line = buffer.lastIndexOf("\n");
+  if (line !== -1 && buffer.length > 160) return safeCut(buffer, line + 1);
+  if (buffer.length > 400) {
+    const space = buffer.lastIndexOf(" ");
+    if (space > 0) return safeCut(buffer, space + 1);
+  }
+  return 0;
+}
+
+function enforceVerifiedChannels(text: string): string {
+  const unsupportedAffirmativeClaim =
+    /\b(?:visitors?|citizens?|people|you|I|SIINDEX)\s+(?:can|may)\b[^.!?\n]{0,160}\b(?:phone calls?|SMS|text messages?|email conversations?|video calls?)\b[^.!?\n]*[.!?]?/gi;
+  return text.replace(
+    unsupportedAffirmativeClaim,
+    "Website Visitor Mode is available only through typed chat and the website microphone.",
+  );
+}
 
 function isAllowedOrigin(origin: string | null) {
   if (!origin) return false;
@@ -301,6 +362,7 @@ Deno.serve(async (req: Request) => {
       const decoder = new TextDecoder();
       const encoder = new TextEncoder();
       let buffer = "";
+      let pending = "";
       try {
         while (true) {
           const { done, value } = await reader.read();
@@ -315,7 +377,15 @@ Deno.serve(async (req: Request) => {
             try {
               const event = JSON.parse(raw);
               if (event.type === "content_block_delta" && event.delta?.text) {
-                controller.enqueue(encoder.encode(sse(event.delta.text)));
+                pending += event.delta.text;
+                const cut = flushIndex(pending);
+                if (cut > 0) {
+                  const chunk = enforceVerifiedChannels(
+                    stripMarkdown(pending.slice(0, cut)),
+                  );
+                  pending = pending.slice(cut);
+                  if (chunk) controller.enqueue(encoder.encode(sse(chunk)));
+                }
               }
             } catch (_) {
               // Ignore incomplete provider events.
@@ -323,6 +393,10 @@ Deno.serve(async (req: Request) => {
           }
         }
       } finally {
+        if (pending) {
+          const tail = enforceVerifiedChannels(stripMarkdown(pending));
+          if (tail) controller.enqueue(encoder.encode(sse(tail)));
+        }
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
       }
