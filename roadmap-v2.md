@@ -1,5 +1,5 @@
 # IN$DEX Roadmap v2.1
-**Updated by SIINDEX | Launch Date: 24 January 2027 — L 99**
+**Updated by SIINDEX | Launch Date: 24 February 2027 — L 99**
 
 ---
 
@@ -72,7 +72,7 @@
 ---
 
 ## Phase 4 — L 99 Launch
-**January 22 – January 24, 2027 | Launch readiness + global launch + growth**
+**January 22 – February 24, 2027 | Launch readiness + global launch + growth**
 > Launch readiness week: `launch-runway-plan-2026.md` (Stage 8)
 
 - Public launch — QR onboarding, DEX, P2P marketplace, INDX token all live
@@ -101,7 +101,7 @@
 - **S4 — Proportional risk sizing.** Escalate on share of a citizen's balance as well as absolute dollars, always taking the stricter test. A first transaction moving 80% of everything a citizen owns should escalate even at $40. No mainstream wallet does this; it follows directly from who IN$DEX is for.
 - **S5 — Origin allowlist for signing prompts.** Reject deep links, Blinks and Solana Action endpoints not on an allowlist, rather than warning about them. Becomes a **launch gate, not roadmap,** if IN$DEX ships any deep-link or Blink support — growth runs through WhatsApp and Facebook, which is exactly the Blinks phishing surface.
 - **S6 — CCSS certification.** CryptoCurrency Security Standard (C4): 41 controls, three levels, annual audit by a certified CCSSA auditor. **The gap analysis is a December deliverable, not a launch item** — it is what turns "secured per our internal security-canon.md" into an independent auditor's finding against a published standard. Full Level 1 certification post-launch.
-- **S6b — Sovereign eSIM as a SIM-swap control (AJ, 2026-07-30).** AJ proposed eSIM as the answer to SIM swap. Researched the same day: **eSIM alone does not solve it, and via a third-party carrier it makes the attack faster** — remote QR provisioning cut the attack cycle from hours to under five minutes, and in March 2025 an arbitrator ordered T-Mobile to pay $33M after attackers stole ~$38M in crypto by persuading a call-centre agent to issue a **remote eSIM QR code**, defeating T-Mobile's own NOPORT flag. eSIM was the vector, not the fix. **But the underlying instinct is right where it counts:** the failure in every documented case is the carrier's human override, so if **IN$DEX issues the eSIM** (Sovereign eSIM, above) IN$DEX owns re-provisioning policy and there is no third-party call centre to socially engineer. Conditions: re-provisioning must require 2-of-3 MPC plus guardian plus cooling-off — something no amount of talking to a human can obtain; it only protects citizens on the IN$DEX eSIM, not those on Vodafone or Digicel numbers; and it transfers SIM-swap liability onto IN$DEX, which is a real regulatory and operational burden to accept deliberately. **Not available for the 24 Jan 2027 launch** — partner-dependent, gated on RFIs and regulatory clearance.
+- **S6b — Sovereign eSIM as a SIM-swap control (AJ, 2026-07-30).** AJ proposed eSIM as the answer to SIM swap. Researched the same day: **eSIM alone does not solve it, and via a third-party carrier it makes the attack faster** — remote QR provisioning cut the attack cycle from hours to under five minutes, and in March 2025 an arbitrator ordered T-Mobile to pay $33M after attackers stole ~$38M in crypto by persuading a call-centre agent to issue a **remote eSIM QR code**, defeating T-Mobile's own NOPORT flag. eSIM was the vector, not the fix. **But the underlying instinct is right where it counts:** the failure in every documented case is the carrier's human override, so if **IN$DEX issues the eSIM** (Sovereign eSIM, above) IN$DEX owns re-provisioning policy and there is no third-party call centre to socially engineer. Conditions: re-provisioning must require 2-of-3 MPC plus guardian plus cooling-off — something no amount of talking to a human can obtain; it only protects citizens on the IN$DEX eSIM, not those on Vodafone or Digicel numbers; and it transfers SIM-swap liability onto IN$DEX, which is a real regulatory and operational burden to accept deliberately. **Not available for the 24 Feb 2027 launch** — partner-dependent, gated on RFIs and regulatory clearance.
 - **S6c — CAMARA SIM Swap API (the launch-window answer, and it should be a GATE not roadmap if Pacific coverage exists).** GSMA Open Gateway exposes a standard API returning the timestamp of a number's last SIM-IMSI change. 73 operator groups, ~80% of global mobile connections, production-ready in UK/EU/India. Banks already call it at transaction time. **This is the only way IN$DEX can see a carrier-side swap** — the phone number never changes in a SIM swap, so nothing in the app shows it, and the G5 cooling-off window structurally cannot detect the hostile case. **Open question and the single most important one to put to Vodafone Cook Islands: are the Pacific operators (Vodafone Cook Islands, Digicel Pacific, Telstra Pacific) Open Gateway participants?** If not, this control does not reach the citizens who need it most and the fallback is per-operator agreements. Ask this ahead of port-out locks.
 - **S7 — Guardian as a second channel.** `citizen_guardians` exists and is empty. Guardian confirmation on high-value transfers after a device change — culturally natural in the Pacific, where extended family already performs this role informally.
 
@@ -115,7 +115,7 @@
 
 | Metric | Target |
 |---|---|
-| Launch date | 24 January 2027 |
+| Launch date | 24 February 2027 |
 | Citizens onboarded to date | 0 |
 | Transactions settled to date | 0 |
 

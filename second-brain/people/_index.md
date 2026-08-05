@@ -20,3 +20,7 @@ One file per person. Contains: role, relationship to SIINDEX, communication styl
 **Notes:** 
 **Last interaction:** 
 ```
+
+## Added by nightly pass 2026-08-05 (late)
+
+- [[tayla-jayne-beddoes]] — founder of [[pacific-group-ai]], built the Cook Islands Parliament's first AI agents (INA, Tumutoa). **Verified as a real public figure via RNZ and Cook Islands News; the reported meeting with AJ is ⏳ unconfirmed by any source in this project.** Not an advisor, not a partner.

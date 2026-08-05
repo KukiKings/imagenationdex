@@ -26,7 +26,7 @@
 
 ## Registration status log
 - 2026-07-14 — Documents drafted. Enrolment not yet started at time of drafting.
-- ✅ 2026-07-14 — **Enrolment SUBMITTED** — beat the 29 Jul deadline by 15 days. Enrolled as both VASP (all 5 services: exchange w/ money, exchange w/ VA, value transfer, safekeeping, offer/sale financial services) and RSP (independent remittance dealer). Commencement declared: 24 Jan 2027.
+- ✅ 2026-07-14 — **Enrolment SUBMITTED** — beat the 29 Jul deadline by 15 days. Enrolled as both VASP (all 5 services: exchange w/ money, exchange w/ VA, value transfer, safekeeping, offer/sale financial services) and RSP (independent remittance dealer). Commencement declared: 24 Feb 2027.
 - ✅ **AUSTRAC Account Number (AAN): 263945366** — quote in all AUSTRAC contact.
 - ✅ 2026-07-17 — **Registration form SUBMITTED** via AUSTRAC Online. Receipt number **NEWREG-CGAHBH-115011**, submitted 08:06:08 PM UTC+10:00. Compliance Officer on file: Arthur Henry, imagenationdex@gmail.com.
 - ✅ 2026-07-17, ~11:50 PM — Reply to AUSTRAC reminder [NewReg-32011] **SENT** from dadyboy73@gmail.com to contact@austrac.gov.au, covering all six requested items (formation/incorporation evidence, beneficial ownership, ML/TF risk assessment, AML/CTF policies, personnel due diligence, service-location address), grounded in the real Part A/B program content and honest founder-only staffing status. Note: sent to AUSTRAC's general contact address rather than a direct reply, since the original reminder email could not be located in the connected mailbox to confirm the exact reply-to/case-officer address — the body identifies the entity by AAN (263945366) and ABN so it should route correctly, but flag if AUSTRAC doesn't acknowledge it within a few business days.

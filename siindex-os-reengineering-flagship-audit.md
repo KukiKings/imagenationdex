@@ -5,7 +5,7 @@
 
 ## 1. Current-state map
 
-**Objective (what result is expected):** Ship a working, honest, secure sovereign DeFi platform for the unbanked by L99 (24 Jan 2027), with SIINDEX operating it day-to-day and AJ confirming/authorising only what needs his own identity or judgment.
+**Objective (what result is expected):** Ship a working, honest, secure sovereign DeFi platform for the unbanked by L99 (24 Feb 2027), with SIINDEX operating it day-to-day and AJ confirming/authorising only what needs his own identity or judgment.
 
 **Current workflow (how the build actually happens today):**
 1. AJ pastes a directive (constitution, spec, or "god mode, proceed") in chat.

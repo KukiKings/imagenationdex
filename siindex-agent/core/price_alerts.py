@@ -98,7 +98,7 @@ class PriceAlertEngine:
                 alert_id=  gs_id,
                 direction= "above",
                 target=    GRAND_SYNC_TARGET_USD,
-                label=     "Grand Synchronicity — launch event 24 Jan 2027",  # was "INDX reached $2.50!" — price target withdrawn 2026-07-29
+                label=     "Grand Synchronicity — launch event 24 Feb 2027",  # was "INDX reached $2.50!" — price target withdrawn 2026-07-29
             ))
             self._save()
 

@@ -5,7 +5,7 @@
 **Blockchain:** Solana (integrated with Raydium + Neon EVM)
 **Stage:** Idea / Whitepaper — pre-product
 **Founded:** 2025 by Arthur John Henry (AJ)
-**Status:** Pre-launch. No citizens onboarded, no transactions settled, no revenue. Target launch 24 January 2027.
+**Status:** Pre-launch. No citizens onboarded, no transactions settled, no revenue. Target launch 24 February 2027.
 
 > *Valuation target removed 2026-07-30.* This line read "**Target:** $1 trillion valuation by 2027". AJ withdrew that target on 2026-07-19, but it remained here and in six other places for eleven days, including a public hero stat and SIINDEX's own answer script. A valuation projection attached to a pre-revenue platform is the first thing an FSC or BTIB reviewer will discount, and it undermines the parts of this document that are true and verifiable.
 

@@ -77,7 +77,7 @@ Every page must include:
 
 ### Step 6 — SIINDEX integration
 If the page includes any AI/COO reference:
-- She is female, pronounced "Sighn-dex"
+- She is female, pronounced "Syn-dex"
 - Voice: "Done. [summary]. Standing by."
 - Never: "Great question!" / "Of course!" / "Happy to help"
 - Terminal UI: black bg, purple border, courier new font, t0 CLEAR signoff
@@ -92,7 +92,7 @@ If the page includes any AI/COO reference:
 - [ ] 98/2 Law referenced correctly if transactions are discussed
 - [ ] Primary CTA links to correct destination (waitlist.html or app-lock.html)
 - [ ] Mobile layout works below 680px (no horizontal overflow)
-- [ ] Countdown (if present) uses `new Date('2027-01-24T10:00:00+10:00')`
+- [ ] Countdown (if present) uses `new Date('2027-02-24T10:00:00+10:00')`
 - [ ] SIINDEX voice is correct (female, JARVIS-style, correct phrases)
 - [ ] SEO meta description under 160 chars
 - [ ] File saved to /Users/arthurjohnhenry/CoWork/Projects/ImageNation DEX/

@@ -87,7 +87,7 @@ siindex-agent/
 | "morning briefing" | INDX price, balance, WS, countdown |
 | "my balance" | Shows wallet balance in INDX + USD |
 | "my wisdom score" | WS, rank, next milestone |
-| "grand synchronicity countdown" | Days until 24 Jan 2027 |
+| "grand synchronicity countdown" | Days until 24 Feb 2027 |
 | "search for [topic]" | Web search via DuckDuckGo |
 | "open my wallet" | Opens citizen-dashboard.html |
 | "open the swap" | Opens dex-swap.html |
@@ -120,7 +120,7 @@ List all available: `edge-tts --list-voices | grep en-`
 
 ## Grand Synchronicity
 
-**January 24, 2027** — the L99 launch date.
+**February 24, 2027** — the L99 launch date.
 
 
 Genesis price: **$0.24 USD**

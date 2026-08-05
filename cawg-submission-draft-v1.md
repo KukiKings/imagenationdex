@@ -57,7 +57,7 @@ IN$DEX's stated goals sit directly under the Cook Islands' own **National Digita
 
 ### 6. Current status and the actual ask
 
-IN$DEX has not yet publicly launched — target date 24 January 2027. Today, this is a working platform in closed development and testing, not a live financial service with existing Cook Islands users. The actual ask of CAWG at this stage is narrow:
+IN$DEX has not yet publicly launched — target date 24 February 2027. Today, this is a working platform in closed development and testing, not a live financial service with existing Cook Islands users. The actual ask of CAWG at this stage is narrow:
 
 - To be included as a stakeholder in CAWG's ongoing policy consultation, once CAWG resumes normal operations after the current caretaker period.
 - To understand, directly from CAWG, what a constructive path to eventual Cook Islands registration and (if applicable) licensing would look like for a platform structured this way.

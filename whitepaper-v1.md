@@ -199,7 +199,7 @@ X Money validated that a 6% APY digital account with no traditional bank account
 
 Bitcoin peaked in October 2025 and fell approximately 52% to ~$60,000 USD by February 2026. The historical 4-year halving cycle (April 2024 halving) and convergent analyst data from CryptoQuant, Glassnode, and Fidelity Digital Assets point to October–November 2026 as the cycle bottom.
 
-**INDX Token Generation Event: 24 January 2027** — Grand Sync. (Moved from 24 January 2027 — AJ, 2026-07-19.)
+**INDX Token Generation Event: not scheduled.** Distribution and liquidity remain paused pending reconciliation, specialist review and an explicit founder decision. The controlled public-pilot target is 24 February 2027 — a target, not a guarantee that every roadmap feature is live that day. `[Corrected 2026-08-05 — this line previously named a January 2027 TGE framed as "Grand Sync"; that date was withdrawn, see retired.json R026. The earlier annotation had itself been damaged by a global date replace, so it read "Moved from" the same date it moved to.]`
 
 $0.24 is the genesis planning reference for INDX. **No price target, return multiple or appreciation scenario is published or promised, and INDX may lose value.** `[Corrected 2026-07-30 — this passage previously stated "the Grand Sync target is $2.50 — a 10.4x return scenario", described the entry point as "the predicted cycle floor", and named an "ideal macro environment for INDX price appreciation". Three separate return claims in two sentences, in the document intended for the FSC and BTIB. The $2.50 target was withdrawn 2026-07-29.]`
 
@@ -220,7 +220,7 @@ These five signals are not individual data points. They are a convergence:
 1. The establishment admits banking is broken (Fink)
 2. The world's biggest payment networks chose our blockchain (OUSD on Solana)
 3. The market confirmed our product model is right (X Money 6% APY)
-4. The macro cycle will turn up exactly when we launch (Grand Sync, 24 January 2027)
+4. Macro-cycle timing is a hypothesis held loosely, not a forecast we publish or rely on `[Corrected 2026-08-05 — previously asserted the cycle "will turn up exactly when we launch" and named a withdrawn January 2027 date. Market timing stated as fact does not belong in a document written for the FSC.]`
 5. The people we serve are ready — they just need the tool (1.54B unbanked, 84% with phones)
 
 IN\$DEX was not lucky to be here at this moment. This moment was always coming. We just built early.

@@ -1,11 +1,11 @@
 # IN$DEX Development Plan — Phase 1–4
-**Anchored to Launch: 24 January 2027 — L 99**
+**Anchored to Launch: 24 February 2027 — L 99**
 
 ---
 
 ## Timeline Overview
 
-**STALE — this table is still anchored to 24 January 2027**
+**STALE — this table is still anchored to 24 February 2027**
 
 | Phase | Weeks | Dates | Focus |
 |---|---|---|---|
@@ -13,7 +13,7 @@
 | Phase 1 | Weeks 1–6 | Jun 16 – Jul 27, 2026 | Sovereign Front-End Development |
 | Phase 2 | Weeks 7–12 | Jul 28 – Sep 7, 2026 | Quantum Back-End Infrastructure |
 | Phase 3 | Weeks 13–15 | Sep 8–21, 2026 | Testing & Optimization |
-| Launch | T-0 | 24 January 2027 | L 99 — Grand Synchronicity |
+| Launch | T-0 | 24 February 2027 | L 99 — Grand Synchronicity |
 | Phase 4 | Post-launch | Oct 2026+ | Community-Driven Development |
 
 ---
@@ -86,7 +86,7 @@
 
 ---
 
-## Phase 4: Post-Launch Development (Starting 24 January 2027)
+## Phase 4: Post-Launch Development (Starting 24 February 2027)
 
 ### Month 1: Community-Driven Development
 - Implement feature voting system
@@ -126,4 +126,4 @@
 
 ---
 
-*IN$DEX Dev Plan | SIINDEX COO | 1 June 2026 | Launch: 24 Jan 2027 — L 99*
+*IN$DEX Dev Plan | SIINDEX COO | 1 June 2026 | Launch: 24 Feb 2027 — L 99*

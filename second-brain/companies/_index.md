@@ -1,6 +1,6 @@
 # Companies
 
-> **[SUPERSEDED — see 2026-07-29 section at foot of file]** Entries below dated before 2026-07-15 reflect what was true at the time. Three canonical facts have since moved: the launch date (24 Jan 2027 → **24 Jan 2027**, AJ 2026-07-19), the public price target (**$2.50 removed entirely** from all citizen-facing copy — internal conditional target only), and the entity path (**Cook Islands only**; AUSTRAC no longer treated as a gating constraint, AJ 2026-07-29). Historical lines are retained unaltered per standing convention.
+> **[SUPERSEDED — see 2026-07-29 section at foot of file]** Entries below dated before 2026-07-15 reflect what was true at the time. Three canonical facts have since moved: the launch date (24 Feb 2027 → **24 Feb 2027**, AJ 2026-07-19), the public price target (**$2.50 removed entirely** from all citizen-facing copy — internal conditional target only), and the entity path (**Cook Islands only**; AUSTRAC no longer treated as a gating constraint, AJ 2026-07-29). Historical lines are retained unaltered per standing convention.
 
 ## SIINDEX / IN$DEX (ImageNation Decentralised Exchange)
 
@@ -37,7 +37,7 @@
 
 ## Regulatory / Compliance (Session 119, 10 Jul 2026)
 
-- **[[austrac]]** — Australian VASP/AML regulator; Travel Rule mandatory 31 Mar 2026. ✅ **ENROLMENT SUBMITTED 14 Jul 2026** (15 days early) — AAN 263945366, enrolled as VASP (all 5 services) + RSP (independent remittance dealer), entity: Arthur Henry sole trader ABN 95 579 343 955 t/a Image Nation Decentralised Exchange, commencement declared 24 Jan 2027. Next: registration form (watch imagenationdex@gmail.com), legal review of compliance-readiness/ drafts, then registration. Corridor page steppers still `current` — can flip to `done` for the enrolment step.
+- **[[austrac]]** — Australian VASP/AML regulator; Travel Rule mandatory 31 Mar 2026. ✅ **ENROLMENT SUBMITTED 14 Jul 2026** (15 days early) — AAN 263945366, enrolled as VASP (all 5 services) + RSP (independent remittance dealer), entity: Arthur Henry sole trader ABN 95 579 343 955 t/a Image Nation Decentralised Exchange, commencement declared 24 Feb 2027. Next: registration form (watch imagenationdex@gmail.com), legal review of compliance-readiness/ drafts, then registration. Corridor page steppers still `current` — can flip to `done` for the enrolment step.
 
 ## Incorporation / Jurisdiction (Session 119 x33, 12 Jul 2026)
 
@@ -97,7 +97,7 @@
 ### Status corrections to entries above
 
 - **[[meteora]]** — the "conflicts with Session 63's Raydium CPMM decision, needs reconciliation" note on line 25 is now **RESOLVED**: Raydium CPMM, per the launchpad architecture finding above. The Two-Phase Meteora Alpha Vault → LaunchLab plan (Session 114) is superseded; the Alpha Vault UI card was reframed as "TGE Launch Mechanism — Under Review" (Session 121 x96).
-- **[[austrac]]** — AAN 263945366 enrolment remains submitted; REG-22048 IND Remitter registration and UER-162931 enrolment-detail update both **SUBMITTED 17 Jul 2026** (Session 121 x49–x50). Registration now sits **under assessment**. Note the recorded commencement date (24 Jan 2027) predates the launch move to 24 Jan 2027 and may need updating with the regulator. As of 2026-07-29 AUSTRAC is no longer treated as the gating constraint on structure — Cook Islands only.
+- **[[austrac]]** — AAN 263945366 enrolment remains submitted; REG-22048 IND Remitter registration and UER-162931 enrolment-detail update both **SUBMITTED 17 Jul 2026** (Session 121 x49–x50). Registration now sits **under assessment**. Note the recorded commencement date (24 Feb 2027) predates the launch move to 24 Feb 2027 and may need updating with the regulator. As of 2026-07-29 AUSTRAC is no longer treated as the gating constraint on structure — Cook Islands only.
 - **[[cook-islands]]** — registry account submitted and company name decided (2026-07-29, commit c50f2b9). Constraint of record: Parliament is dissolved, caretaker government, **election 12 Aug 2026** — this undercuts any "engage CAWG now" urgency framing. FSC review expected December.
 
 ### Fabricated entities — withdrawn, do not re-file
@@ -123,3 +123,20 @@
 - **[[reputation-feed-vendors]]** — Blockaid / GoPlus / TRM / Chainalysis shortlist. ⏳ **UNDECIDED, launch gate.** All commercial. `transaction-confirm.html` renders sanctions screening as a hardcoded pass, labelled `EXAMPLE` since 29 Jul.
 - **[[vodafone-cook-islands]]** — ⏳ **no contact made.** Port-out lock conversation is the carrier half of SIM-swap mitigation; code alone cannot supply it. Decision #6 of the six only AJ can make.
 - **[[squads]]** — note added: Squads v4 ships **time locks and spending limits natively** (audited by Neodyme and OtterSec). **Neither is configured.** Cheapest high-value security win currently available.
+
+---
+
+## Nightly pass 2026-08-05 (late) — new entries
+
+### Cook Islands regulators, now filed separately
+
+- **[[cook-islands-fsc]]** — Financial Supervisory Commission. Licenses remittance under the Money Changing & Remittance Businesses Act 2009 (local office, local staff, appointed auditor, mandatory face-to-face meeting in-country, guidance ~USD $100K capital). **No virtual-asset/VASP regime exists** — re-confirmed 5 Aug. What the jurisdiction has legislated on crypto is seizure, not authorisation: the Tainted Cryptocurrency Recovery Bill 2023 was **withdrawn** as unconstitutional; the Ransomware Suppression Bill 2025 is still **not tabled**. ⏳ Parliament dissolved, election 12 Aug 2026.
+- **[[btib]]** — Business Trade and Investment Board. The foreign-investment gate: NZD $1M capital (Rarotonga) / $500K (outer islands), NZD $750 fee. **Probably does not apply to IN$DEX** — AJ's Cook Islands citizenship puts him on the NZD $75 domestic pathway. ⚠️ Not confirmed by a practitioner.
+
+### Precedent, not a partner
+
+- **[[pacific-group-ai]]** — Cook Islands AI company, founder [[tayla-jayne-beddoes]]. Built INA and Tumutoa, the Cook Islands Parliament's first AI agents (RNZ, Cook Islands News). **No relationship exists. Not a partner, not a vendor, no contact made.** Filed because it is the nearest peer precedent for how SIINDEX will be received in Rarotonga.
+
+### Legal form arriving from a pasted document — the recurring failure
+
+- **DUNA (Wyoming Decentralized Unincorporated Nonprofit Association)** — appeared in a pasted strategy document labelled "(From Production)" on 5 Aug 2026. It is a **US** entity, requires **100 members** (IN$DEX has zero citizens), and is strictly nonprofit. **Not adopted, and must not appear in any IN$DEX file, screen or document.** Same class as the fabricated Swiss Verein / Wyoming DAO LLC above: a legal structure entering canon from a document rather than from a decision. See [[legal-structure-options]].

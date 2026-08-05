@@ -88,7 +88,7 @@ Additional sequencing facts, not opinions:
 
 Found in the second brain, not invented by a screen: `second-brain/decisions/grand-synchronicity-plan.md`, authored 27 June 2026, marked **"Status: LOCKED"**.
 
-- **Target date: 24 January 2027** — the launch date that was **superseded on 2026-07-19** when AJ moved L99 to 24 January 2027. Appendix B x96 explicitly listed this file as "deliberately left untouched as legitimate historical record" during the site-wide date purge.
+- **Target date: 24 February 2027** — the launch date that was **superseded on 2026-07-19** when AJ moved L99 to 24 February 2027. Appendix B x96 explicitly listed this file as "deliberately left untouched as legitimate historical record" during the site-wide date purge.
 - **Price target: INDX $2.50 (10.4x genesis)** `[SUPERSEDED 2026-07-29 — retained as historical record of what this document claimed]` — and the doc's own *Price Catalyst Map* section states plainly: *"INDX reaching $2.50 (10.4×) **requires stacked catalysts**."*
 
 So the figure is not fabricated. It is an **internal, explicitly conditional, catalyst-dependent aspiration, anchored to a launch date that no longer exists.**

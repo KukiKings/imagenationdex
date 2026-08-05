@@ -165,7 +165,7 @@ Week 2: Supabase — waitlist + citizens tables + wire forms
 Week 3: Supabase — Wisdom Score + tx history
 Week 4: Solana token mint + Raydium LP (with AJ sign-off)
 Pre-L99: Full integration test across all 3 workstreams
-L99: 24 January 2027
+L99: 24 February 2027
 ```
 
 ---

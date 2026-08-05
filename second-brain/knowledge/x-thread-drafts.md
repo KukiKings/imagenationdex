@@ -1,8 +1,8 @@
 # IN$DEX X Thread Drafts — Grand Synchronicity Campaign
-**Created:** 27 Jun 2026 | **Campaign window:** Now – 24 January 2027 (re-timed 2026-07-26 to the real ~27-week runway — see `stage1-marketing-community-plan.md`)
+**Created:** 27 Jun 2026 | **Campaign window:** Now – 24 February 2027 (re-timed 2026-07-26 to the real ~27-week runway — see `stage1-marketing-community-plan.md`)
 **Author:** SIINDEX (Claude) | Voice-checked against canonical rules
 
-> **2026-07-24 fix note:** all literal date mentions below have been corrected to 24 January 2027 (was 24 January 2027 — AJ, 2026-07-19), since these are draft public-posting templates and an uncorrected date here would go out to real people. The hardcoded "89 days" callouts have been changed to "[X] days" placeholders (they were snapshot counts anyway, not evergreen).
+> **2026-07-24 fix note:** all literal date mentions below have been corrected to 24 February 2027 (was 24 February 2027 — AJ, 2026-07-19), since these are draft public-posting templates and an uncorrected date here would go out to real people. The hardcoded "89 days" callouts have been changed to "[X] days" placeholders (they were snapshot counts anyway, not evergreen).
 >
 > **2026-07-26 re-timing decided (AJ):** see `stage1-marketing-community-plan.md` for the full schedule. Summary — Thread 1 posts now to establish voice; Threads 2–4 post roughly every 2–3 weeks from Aug 20 (Stage 2) once ambassador recruitment starts; Thread 5 (Grand Synchronicity announcement) and its "10 days out" trigger fire around **14 January 2027**, not the old 24 Sep-anchored "Sep 14" date below.
 
@@ -54,7 +54,7 @@ Your name becomes your address: yourname.IN$DEX
 
 That's it.
 
-5/ On 24 January 2027, we go live.
+5/ On 24 February 2027, we go live.
 
 1,000 founding citizens. The first real Civ Law transaction. INDX token at genesis price: $0.24.
 
@@ -116,7 +116,7 @@ No DAO vote can change it. No team can change it. No investor can override it.
 
 This is what makes IN$DEX trustworthy: the rules can't be changed in the night.
 
-5/ Grand Synchronicity (24 January 2027) is when the Civ Law machine turns on for the first time.
+5/ Grand Synchronicity (24 February 2027) is when the Civ Law machine turns on for the first time.
 
 First real citizens. First real transactions. First real revenue.
 
@@ -182,7 +182,7 @@ Right now, you can claim yours before anyone else does.
 
 1,000 founding citizens. Real wallets. Real identities. Real transactions.
 
-Grand Synchronicity: 24 January 2027, 10am AEST.
+Grand Synchronicity: 24 February 2027, 10am AEST.
 
 Are you a citizen? 🌐
 
@@ -258,7 +258,7 @@ If you're a citizen, an ambassador, or an investor: 👇
 
 🧵 In 10 days, IN$DEX goes live.
 
-24 January 2027. 10am AEST.
+24 February 2027. 10am AEST.
 
 Grand Synchronicity.
 

@@ -275,7 +275,7 @@ INDX is a **utility token.** It grants access to the IN$DEX platform — payment
 
 ## Roadmap
 
-### L99 — 24 January 2027 (Core Launch, moved from 24 January 2027 — AJ, 2026-07-19)
+### L99 — 24 February 2027 (Core Launch, moved from 24 February 2027 — AJ, 2026-07-19)
 Payments + P2P send, Sovereign Verification (phone number only at Tier 0; liveness sits at Tier 1), Basic staking (3 tiers), Token launch on Raydium, Wisdom Score system, Basic community feed, Proof of Engagement basics, 70+ app screens live
 
 ### Year 1 (Post-Launch)
@@ -290,7 +290,7 @@ Full Data Sovereignty Economy, Censorship resistance (IPFS content storage), All
 
 **Canonical price: $0.24 USD. This is locked.**
 
-$0.24 gives a $24M fully diluted market cap at launch. The number was chosen with intention: AJ's birthday is the 24th, and L99 now launches 24 January 2027. The price is a founding signature — the narrative is real, and AJ's tokenomics contact has confirmed it makes sense as an entry point.
+$0.24 gives a $24M fully diluted market cap at launch. The number was chosen with intention: AJ's birthday is the 24th, and L99 now launches 24 February 2027. The price is a founding signature — the narrative is real, and AJ's tokenomics contact has confirmed it makes sense as an entry point.
 
 **Why $0.24 works:**
 - $24M FDV is defensible at launch — not overpromising, not undervaluing the platform

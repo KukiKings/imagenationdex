@@ -19,6 +19,15 @@ server-side in the SSE loop. ⏳ **v7 source is not in the GitHub repo** — a d
 source reverts production. Also open: SIINDEX invented a "phone call" channel that does not
 exist; wedged-session hang.
 
+**[UPDATED 2026-08-05 late pass — production is on v10, not v7.]** Two further versions
+shipped after a 12-probe answer audit against live Visitor Mode. **v9** added the
+no-seed-phrase rule (she was calling recovery-word backup "standard practice" — the Grid
+Account has no phrase at all), the progressive-KYC rule, and the **GAP RULE**: silence in the
+VERIFIED STATUS block means UNKNOWN, never a guess. **v10** added the **HEADLINE RULE**, after
+v9 still opened a KYC answer with "does not require KYC". 10 of 12 probes passed, including
+two forged-conversation-history injections she refused *and named*. ⏳ **All of v7–v10 lives
+only in Supabase** — the repo-drift risk above is now three versions deep, not one.
+
 ### Second Brain Build
 Set up identity files, folder structure, overnight processing, connector expansion.
 Status: 🔄 In progress (Session 56+)

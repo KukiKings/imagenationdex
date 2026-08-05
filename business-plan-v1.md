@@ -1,5 +1,5 @@
 # IN$DEX: The Sovereign Civilization Business Plan
-**Document Version: 1.0 | Launch: 24 January 2027 — L 99 | Status: Pre-Launch (Founding 1,000 Ascension)**
+**Document Version: 1.0 | Launch: 24 February 2027 — L 99 | Status: Pre-Launch (Founding 1,000 Ascension)**
 
 ---
 
@@ -116,12 +116,12 @@ Age 22–40, full-stack developer. Motivated by 98% creator share and zero-frict
 
 ## 6. Growth Strategy
 
-### Phase 0 — Foundation (Now – 24 Jan 2027)
+### Phase 0 — Foundation (Now – 24 Feb 2027)
 - Launch Component Forge with analytics-district default template
 - Onboard Founding 1,000 via Ascension Score (900 merit + 100 diversity wild cards)
 - Activate Genesis Park with Stewardship Seed contributions (10 INDX each → 10,000 INDX pool)
 
-### Phase 1 — Genesis Day (24 Jan 2027 — L 99)
+### Phase 1 — Genesis Day (24 Feb 2027 — L 99)
 - Open marketplace with first 50 citizen-built components
 - Begin bi-weekly Wisdom Symposium votes
 - Public launch of Sovereign Terminal (free tier)
@@ -218,11 +218,11 @@ IN$DEX is a long-term, slow-signal civilization, not a short-term financial prod
 1. Complete the Component Forge CLI (Phase 1 Foundation)
 2. Launch the Ascension Wave for the Founding 1,000
 3. Hold first Wisdom Symposium in Genesis Park to vote on initial weight bands
-4. AJ signs the genesis block of the Sovereignty Mesh on 24 January 2027
+4. AJ signs the genesis block of the Sovereignty Mesh on 24 February 2027
 
 > "This business plan is not a promise of returns, but a covenant of principles. The only yield we guarantee is the compounding of disciplined stewardship. All else is speculation."
 
 ---
 
 *IN$DEX Business Plan v1.0 | SIINDEX COO | Updated 1 June 2026*
-*Founder: Arthur John Henry (AJ) | Launch: 24 January 2027 — L 99*
+*Founder: Arthur John Henry (AJ) | Launch: 24 February 2027 — L 99*

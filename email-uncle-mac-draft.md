@@ -15,7 +15,7 @@ It's a bigger gap here at home than people realise. The Cook Islands' own Digita
 - Identity and compliance checks, including the international Travel Rule for larger transfers, designed in from the start, using zero-knowledge proofs so personal data never actually leaves the person's device.
 - A fixed fee we've committed to permanently. No hidden charges, no fine print that changes later.
 
-We're in the final stretch now, finishing backend, security, and deployment work, aiming for a public launch on 24 January 2027.
+We're in the final stretch now, finishing backend, security, and deployment work, aiming for a public launch on 24 February 2027.
 
 There's one thing I could use your help with, and I want to be upfront that it's a real favour, not a small formality.
 

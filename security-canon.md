@@ -875,7 +875,7 @@ GRID_ACCOUNT_RULE:    NO SEED PHRASE. Ever. Block any attempt to show/export one
 TX_PROTECTION:        $10,000 USD per calendar month per Grid Account
 2FA_DEFAULT_THRESHOLD: $500 USD (citizen may raise, never lower below $100)
 LP_LOCK_DURATION:     None — decided 2026-07-22. No fixed-term lock, no burn. Core liquidity is SIINDEX-managed and continuous (Flywheel Automation Engine) per whitepaper Section 11.6.
-L99_LAUNCH:           24 January 2027, 10:00 AM AEST
+L99_LAUNCH:           24 February 2027, 10:00 AM AEST
 SUPABASE_PROJECT:     zljgthfzbalsunuoohcd (ap-southeast-2)
 VERCEL_DNS_A:         76.76.21.21
 VERCEL_DNS_CNAME:     cname.vercel-dns.com

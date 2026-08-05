@@ -698,7 +698,7 @@
 
   function pronunciation(text) {
     return String(text)
-      .replace(/SIINDEX/g, "Sighn-dex")
+      .replace(/SIINDEX/g, "Syn-dex")
       .replace(/IN\$DEX/g, "in-dex")
       .replace(/\bINDX\b/g, "index")
       .slice(0, 1400);

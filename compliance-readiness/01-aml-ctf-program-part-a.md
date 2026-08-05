@@ -40,7 +40,7 @@
 ## 3. Governance & Oversight
 
 - **AML/CTF Compliance Officer:** Arthur John Henry, Founder & Director (senior management authority confirmed). Contact: ⬜ phone · imagenationdex@gmail.com.
-  - **Honest gap flagged for reviewer:** the founder does not hold prior formal AML/CTF certification. Recommendation: engage an external AML/CTF advisor for the first 12 months and complete an accredited AML/CTF compliance course before launch (L99, 24 Jan 2027).
+  - **Honest gap flagged for reviewer:** the founder does not hold prior formal AML/CTF certification. Recommendation: engage an external AML/CTF advisor for the first 12 months and complete an accredited AML/CTF compliance course before launch (L99, 24 Feb 2027).
 - **Board oversight:** the sole director reviews the compliance dashboard monthly and signs the Annual Compliance Report. All compliance events are logged immutably (§6).
 - **Program review:** independent review annually; first review scheduled before L99 launch.
 

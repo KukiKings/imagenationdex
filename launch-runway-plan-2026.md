@@ -1,6 +1,6 @@
 # IN$DEX Launch Runway Plan
-> Created: 2026-07-16 | Rebuilt: 2026-07-19 (launch moved from 24 Jan 2027 to 24 Jan 2027 — AJ) | Status: ACTIVE — canonical execution plan for the runway to L99
-> Anchors: Launch = **24 January 2027** (L99). Today = 22 July 2026. ~27 weeks remaining.
+> Created: 2026-07-16 | Rebuilt: 2026-07-19 (launch moved from 24 Feb 2027 to 24 Feb 2027 — AJ) | Status: ACTIVE — canonical execution plan for the runway to L99
+> Anchors: Launch = **24 February 2027** (L99). Today = 22 July 2026. ~27 weeks remaining.
 > Reconciles with: roadmap-v2.md (phase dates), phase5-spec.md (Workstream 3 technical steps), cook-islands-establishment-reality-ledger.md (Rarotonga trip + registration)
 
 ---
@@ -9,7 +9,7 @@
 
 This is a rebuild, not a date find-and-replace. The original plan had 10 weeks of runway and compressed backend-finish → parameter-lock → mint/LP → test → launch into that window. The runway is now ~27 weeks, and the extra time isn't padding — it's the Cook Islands establishment track (see `cook-islands-establishment-reality-ledger.md`), which genuinely needs months (trustee company engagement, BTIB/FSC/CAWG process, the December Rarotonga trip) and shouldn't be rushed to fit an old date.
 
-The plan below keeps the same work, in the same order, at the same pace, and simply doesn't invent busywork to fill the gap. Backend finishes on roughly its original schedule. Everything downstream of that — parameter lock, mint, LP seeding, the 7-day test, bug-fix buffer, launch readiness — gets moved to sit immediately before the new 24 January 2027 date, where it actually belongs. Token mint and LP seeding specifically should not happen four-plus months before public launch — seeding the pool is effectively the trading-launch moment, so it stays close to L99, not on the old accelerated clock.
+The plan below keeps the same work, in the same order, at the same pace, and simply doesn't invent busywork to fill the gap. Backend finishes on roughly its original schedule. Everything downstream of that — parameter lock, mint, LP seeding, the 7-day test, bug-fix buffer, launch readiness — gets moved to sit immediately before the new 24 February 2027 date, where it actually belongs. Token mint and LP seeding specifically should not happen four-plus months before public launch — seeding the pool is effectively the trading-launch moment, so it stays close to L99, not on the old accelerated clock.
 
 **Resolved 2026-07-22 (was an open item):** the mint already happened — 12 July 2026, mint `9p9VMkgTEVdAeohk1zEuepvwBYUkzjnovMwwazyxsSEZ`, 100,000,000 INDX, mint/freeze authority revoked, confirmed directly on Solscan. It is a **plain SPL Token (original Token Program), not Token-2022** — corrected from the earlier assumption below; see whitepaper Appendix A. This means the mint/LP stage (5) shrinks to "seed the Raydium pool" only — no mint step needed.
 
@@ -107,7 +107,7 @@ Per `cook-islands-establishment-reality-ledger.md` Part 3/4. Register the Cook I
 
 ---
 
-## 24 January 2027 — L99 Launch
+## 24 February 2027 — L99 Launch
 
 Public launch. QR onboarding, DEX/swap, P2P marketplace, and INDX token all live for real. Every "preview mode" or "not connected yet" disclosure added during this build gets removed only once — and exactly when — the real thing underneath it goes live in Stage 5–8. Nothing flips to "real" before the infrastructure behind it actually is.
 
@@ -117,5 +117,5 @@ Public launch. QR onboarding, DEX/swap, P2P marketplace, and INDX token all live
 
 - **roadmap-v2.md**: Phase 2/3 date ranges need to be replaced with these eight re-timed stages — not yet done, flagged as open.
 - **phase5-spec.md**: Workstream 3's step list needs the Stage 4/5 detail (parameter-lock week separated from execution week, the mint-may-already-be-done branch) re-timed to January — not yet done, flagged as open.
-- **indx-launch-strategy.md**: re-timed to 24 Jan 2027 on 2026-07-30, replacing `indx-launch-strategy-sep24.md`. Its §0 records that the LaunchLab bonding-curve architecture is blocked because INDX was already minted 12 Jul 2026. Original was built around the September 24 date) — needs its own review rather than a mechanical edit, since it likely has strategy content, not just dates.
+- **indx-launch-strategy.md**: re-timed to 24 Feb 2027 on 2026-07-30, replacing `indx-launch-strategy-sep24.md`. Its §0 records that the LaunchLab bonding-curve architecture is blocked because INDX was already minted 12 Jul 2026. Original was built around the September 24 date) — needs its own review rather than a mechanical edit, since it likely has strategy content, not just dates.
 - **master-plan-v12.5.md**: not yet checked against this new timeline — flagged as open.

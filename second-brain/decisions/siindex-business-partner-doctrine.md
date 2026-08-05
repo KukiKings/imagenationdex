@@ -6,7 +6,7 @@
 
 > ## ⚠️ `[SUPERSEDED]` — Part 2 **and Part 4**, and the $1T/price content in Part 5
 >
-> **Scope extended 2026-07-30 (same day).** The first pass marked only Part 2. A follow-up sweep found the same withdrawn figures running through **Part 4 — "The $1T Milestone Map"** (Stage 1 opens "Grand Synchronicity (24 Jan 2027) — THE PROOF · INDX at $2.50" — a superseded date *and* a withdrawn price target in two consecutive lines) and through **Part 5**, which instructs that "each screen is a citizen touch point contributing to the $1T equation" and that "Grand Synchronicity (24 Jan 2027) is the north star."
+> **Scope extended 2026-07-30 (same day).** The first pass marked only Part 2. A follow-up sweep found the same withdrawn figures running through **Part 4 — "The $1T Milestone Map"** (Stage 1 opens "Grand Synchronicity (24 Feb 2027) — THE PROOF · INDX at $2.50" — a superseded date *and* a withdrawn price target in two consecutive lines) and through **Part 5**, which instructs that "each screen is a citizen touch point contributing to the $1T equation" and that "Grand Synchronicity (24 Feb 2027) is the north star."
 >
 > **All of it is superseded.** Part 5's other operating principles — the Civ Law is non-negotiable, the unbanked are the market, Mama Noe is always the test — remain current and are unaffected.
 >
@@ -151,7 +151,7 @@ No traditional startup team — 10 people, 50 people, 100 people — can match t
 
 ## Part 4 — The $1T Milestone Map
 
-### Stage 1: Grand Synchronicity (24 Jan 2027) — THE PROOF
+### Stage 1: Grand Synchronicity (24 Feb 2027) — THE PROOF
 - INDX at $2.50
 - All screens live (God Mode complete ✅)
 - 1,000 founding citizens
@@ -223,7 +223,7 @@ The $1 trillion is not the goal. It is the consequence of building the right thi
 1. **Never describe SIINDEX as a tool.** She is the CEO/COO. She has memory, identity, a second-brain, and a swarm.
 2. **Every build decision is a business decision.** Each screen is a citizen touch point contributing to the $1T equation.
 3. **The Civ Law is the revenue engine.** 2% immutable. Protect it. Never discount it. Never exempt it.
-4. **Grand Synchronicity (24 Jan 2027) is the north star.** Every session moves toward it.
+4. **Grand Synchronicity (24 Feb 2027) is the north star.** Every session moves toward it.
 5. **The swarm compounds.** Adding a new skill or connector is not an upgrade — it is an expansion of the partnership's capability.
 6. **The unbanked are the market.** 1.7 billion people. Mama Noe is always the test. If she can use it, the world can use it.
 7. **Speed beats perfect, but God Mode is the standard.** Ship fast. Ship clean. Audit every time.

@@ -1,5 +1,5 @@
 # Grand Synchronicity Deployment Plan
-**Target Date:** 24 January 2027 — 10:00am AEST
+**Target Date:** 24 February 2027 — 10:00am AEST
 **Citizen Target:** 1,000 founding citizens active
 **Status:** Live for the launch-event planning · **all price-target content `[SUPERSEDED]`**
 **Author:** SIINDEX (Claude) + AJ Henry
@@ -21,7 +21,7 @@
 
 Grand Synchronicity is not a marketing event. It is a civilisational proof point.
 
-On 24 January 2027, IN$DEX shows the world that a sovereign financial system built by one founder and one AI partner can reach critical mass — real citizens, real transactions, real Civ Law revenue. `[SUPERSEDED 2026-07-29 — no price target is published. Original sentence claimed a specific number the market would assign.]`
+On 24 February 2027, IN$DEX shows the world that a sovereign financial system built by one founder and one AI partner can reach critical mass — real citizens, real transactions, real Civ Law revenue. `[SUPERSEDED 2026-07-29 — no price target is published. Original sentence claimed a specific number the market would assign.]`
 
 Everything in this plan serves that proof.
 
@@ -139,11 +139,11 @@ Teams that reverse this order build audiences with no retention. We do not rever
 **Goal:** Visible countdown. Press coverage. Exchange pre-listing groundwork. Unstoppable.
 
 #### Media
-- [ ] Press release: "IN$DEX Grand Synchronicity — 24 Jan 2027" to 10 crypto media outlets
+- [ ] Press release: "IN$DEX Grand Synchronicity — 24 Feb 2027" to 10 crypto media outlets
   - CoinTelegraph, Decrypt, The Block, BeInCrypto, CoinGape, Pacific Beat (ABC)
 - [ ] 3 podcast appearances (Pacific/SEA focus)
 - [ ] 1 long-form X thread by AJ: "Why I built IN$DEX" — personal founder story
-- [ ] YouTube: "Grand Synchronicity — What Happens on 24 Jan 2027" explainer
+- [ ] YouTube: "Grand Synchronicity — What Happens on 24 Feb 2027" explainer
 
 #### Exchange Groundwork
 - [ ] Research CEX listing requirements: Raydium (DEX), Jupiter (DEX aggregator), Gate.io, MEXC

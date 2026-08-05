@@ -1,5 +1,5 @@
 # INDX Grand Synchronicity Launch Strategy
-**Launch: 24 January 2027, 00:00 UTC — L 99**
+**Launch: 24 February 2027, 00:00 UTC — L 99**
 **Status:** research and reasoning CURRENT · **Phase B architecture BLOCKED — see §0**
 
 > ## ⚠️ Provenance — read this first
@@ -149,7 +149,7 @@ Foundation → narrative and campaign → community build and whitelist → pre-
 >
 > Every citizen who joins before the world is watching says: "I believe this is real."
 >
-> 24 January 2027 is not arbitrary. The 24th carries meaning that is personal to AJ. January was chosen on purpose — when people are back and paying attention, not buried in holiday noise. The world's first Sovereign Digital Civilisation opens on a date that means something, at a moment built for people to actually notice.
+> 24 February 2027 is not arbitrary. The 24th carries meaning that is personal to AJ. January was chosen on purpose — when people are back and paying attention, not buried in holiday noise. The world's first Sovereign Digital Civilisation opens on a date that means something, at a moment built for people to actually notice.
 
 *(This replaced the original "on AJ's birthday… because it was always meant to be" framing, which was true of 24 September and is not true of 24 January. Corrected 2026-07-19.)*
 

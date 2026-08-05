@@ -7,7 +7,7 @@
 
 Most of this is already built. Three solid, voice-checked documents already exist in this project and just need re-timing + your go-ahead, not a rewrite:
 
-- `second-brain/knowledge/x-thread-drafts.md` — 5 full X/Twitter threads (founder story, Civ Law explainer, sovereign identity, unbanked market data, Grand Synchronicity announcement), already partially corrected to the 24 Jan 2027 date.
+- `second-brain/knowledge/x-thread-drafts.md` — 5 full X/Twitter threads (founder story, Civ Law explainer, sovereign identity, unbanked market data, Grand Synchronicity announcement), already partially corrected to the 24 Feb 2027 date.
 - `second-brain/decisions/telegram-community-system.md` — a complete 3-tier Telegram architecture (announcement channel, discussion group, private Founders Circle) with Make.com automation blueprints and message templates, voice-checked.
 - `second-brain/decisions/ambassador-program.md` — a full ambassador recruitment + onboarding + referral system, targeted at Pacific Islands diaspora communities specifically.
 
@@ -17,7 +17,7 @@ None of this needs to be invented from scratch. What's actually missing is (1) r
 
 ## 1. What needs your call: re-timing the pace
 
-The X-thread and Telegram docs were built for the old 24 Jan 2027 date on an 89-day sprint. The individual dates in the copy are already fixed to 24 Jan 2027, but the **posting cadence** still assumes that compressed sprint (1 thread/week starting immediately, countdown triggers at "10 days out" from the old date). Stretching content that was paced for 89 days across the real ~27 weeks isn't a find-and-replace — it's a real decision about whether you want steady low-key posting for months or to hold most of it back and compress into a shorter pre-launch push closer to January.
+The X-thread and Telegram docs were built for the old 24 Feb 2027 date on an 89-day sprint. The individual dates in the copy are already fixed to 24 Feb 2027, but the **posting cadence** still assumes that compressed sprint (1 thread/week starting immediately, countdown triggers at "10 days out" from the old date). Stretching content that was paced for 89 days across the real ~27 weeks isn't a find-and-replace — it's a real decision about whether you want steady low-key posting for months or to hold most of it back and compress into a shorter pre-launch push closer to January.
 
 **Decided 2026-07-26 — going with the proposed default:**
 
@@ -25,7 +25,7 @@ The X-thread and Telegram docs were built for the old 24 Jan 2027 date on an 89-
 |---|---|---|
 | Foundation | Now – mid Aug (Stage 1) | Thread 1 (founder story) posts now to establish voice. Telegram channel + Founders Circle already live. No hard weekly quota yet — quality over cadence while the backend just finished. |
 | Steady build | Aug 20 – early Dec (Stage 2) | 1 thread every 2–3 weeks (Threads 2–4: Civ Law, sovereign identity, unbanked market data), Telegram Founders Circle Mon/Wed/Fri rhythm starts once ambassadors are recruited. This is also when ambassador recruitment, the public Citizens group, and KOL outreach happen. |
-| Pre-launch push | Early Dec – 24 Jan 2027 | Weekly-to-biweekly cadence increases. Thread 5 (Grand Synchronicity announcement) and the Telegram countdown fire at the real "10 days out" mark: **~14 January 2027**, not the old Sept-14 trigger. |
+| Pre-launch push | Early Dec – 24 Feb 2027 | Weekly-to-biweekly cadence increases. Thread 5 (Grand Synchronicity announcement) and the Telegram countdown fire at the real "10 days out" mark: **~14 January 2027**, not the old Sept-14 trigger. |
 
 This is now the working schedule — flag it to me if priorities shift and it needs re-timing again.
 

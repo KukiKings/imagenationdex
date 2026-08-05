@@ -2,7 +2,7 @@
 
 **Role:** Founder & CEO, IN$DEX
 **Location:** Australia
-**Birthday:** 24 September (Grand Synchronicity Day moved to 24 January 2027 — dates no longer coincide, but "24" remains the personally meaningful number behind both)
+**Birthday:** 24 September (Grand Synchronicity Day moved to 24 February 2027 — dates no longer coincide, but "24" remains the personally meaningful number behind both)
 
 ## How AJ Works
 
@@ -15,7 +15,7 @@
 
 ## Key Frameworks AJ Operates From
 
-- Grand Synchronicity (24 Jan 2027 — launch date; the $2.50/INDX target was withdrawn 2026-07-29)
+- Grand Synchronicity (24 Feb 2027 — launch date; the $2.50/INDX target was withdrawn 2026-07-29)
 - Mama Noe test (if she can use it, it works for everyone)
 - Civilisation Law (2% fee, immutable)
 - Minimum effective dose (smallest build, maximum impact)

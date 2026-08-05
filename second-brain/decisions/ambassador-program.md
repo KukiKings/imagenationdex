@@ -64,9 +64,9 @@ That's it. No sales scripts. No pressure. Genuine onboarding.
 - 0.5 INDX per citizen they onboard (paid at Grand Synchronicity)
 - Direct line to AJ + SIINDEX via Telegram
 - First access to every new feature before public release
-- Ambassador leaderboard visibility — top 10 get special recognition on Grand Synchronicity Day (24 January 2027, moved from 24 January 2027 — AJ, 2026-07-19)
+- Ambassador leaderboard visibility — top 10 get special recognition on Grand Synchronicity Day (24 February 2027, moved from 24 February 2027 — AJ, 2026-07-19)
 
-**Grand Synchronicity bonus (24 January 2027):**
+**Grand Synchronicity bonus (24 February 2027):**
 - Top ambassador (most citizens onboarded): Named in the Grand Synchronicity announcement
 - Top 10: 10 INDX bonus each
 

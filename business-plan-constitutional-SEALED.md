@@ -8,7 +8,7 @@
 
 - **Mission:** Build the first AI-augmented, citizen-owned digital republic where humans remain sovereign over machines
 - **Product:** Personal AI Guardians (PAGs) bound by a constitutional Genesis.md file, operating on a decentralized mesh network with recursive royalties and 98% value retention
-- **Target:** 5,000 active, revenue-generating citizens by Grand Synchronicity (24 Jan 2027)
+- **Target:** 5,000 active, revenue-generating citizens by Grand Synchronicity (24 Jan 2027)  [SUPERSEDED 2026-08-05 — Grand Synchronicity moved to 24 February 2027 per AJ; sealed text retained as historical record]
 - **Revenue:** Protocol fees (2%) + Recursive Royalties (Story Protocol) + Node Rewards
 - **Existential Mandate:** The only viable alternative to centralized, extractive AI
 
@@ -145,4 +145,4 @@
 ---
 
 *IN$DEX Sovereign Republic | Business Plan v12.5+ Constitutional | Sealed 01/06/2026*
-*Launch: 24 January 2027 — L 99 | Built on Solana | Ticker: INDX*
+*Launch: 24 January 2027 — L 99 | Built on Solana | Ticker: INDX*  [SUPERSEDED 2026-08-05 — launch date is now 24 February 2027 per AJ; sealed text retained as historical record]
