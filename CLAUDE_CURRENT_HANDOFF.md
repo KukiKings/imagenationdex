@@ -7,12 +7,14 @@
 
 - Repository: `KukiKings/imagenationdex`
 - Branch: `codex/tier0-real-otp-identity`
-- HEAD: `ec21d1c`
+- Verified protocol baseline: `54daac3`
 - Base: `78fb06b`
-- Working tree at handoff: clean
-- Local commits ahead of `origin/main`: two
+- Working tree at protocol baseline: clean
+- Local product commits ahead of `origin/main`: two
   - `66dd2cf` Build verified Tier 0 identity issuance
   - `ec21d1c` Build policy-bound SIINDEX swarm and Solana adapters
+- Local governance commit ahead of `origin/main`: one
+  - `54daac3` Add Claude daily agent protocol
 - Publication status: not pushed
 - Production impact: none
 - Publication blocker: GitHub CLI is unavailable in the Codex workspace
@@ -40,3 +42,5 @@ Do not run `git add -A`, rebase, push `main` or combine this Mac worktree with t
 ## Daily-agent reminder
 
 Read `CLAUDE_AGENT_PROTOCOL.md` and the protected Master Mega-Prompt before acting. Daily checks remain read-only unless AJ gives a separate implementation or publication instruction.
+
+Use `QUALITY_RECOVERY_PROTOCOL.md` for any supervised defect repair. Codex and Claude must follow its one-writer rule and use `QUALITY_RECOVERY_REPORT_TEMPLATE.md` for evidence.

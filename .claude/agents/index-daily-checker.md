@@ -16,3 +16,5 @@ Start by proving the repository path, branch, HEAD, remote and working-tree stat
 Run only safe checks relevant to the current changes. Include canon, Tier 0, voice, public surface, swarm packages and dependency audits when those areas changed.
 
 Return the exact handoff fields required by `CLAUDE_AGENT_PROTOCOL.md`. If authority, source, workspace or history is uncertain, stop and report the uncertainty.
+
+When a defect is found, emit the `REPAIR_REQUIRED` block from `QUALITY_RECOVERY_PROTOCOL.md`. Do not invoke the repair agent or become a writer during the daily check.

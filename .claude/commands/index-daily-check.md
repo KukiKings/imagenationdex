@@ -14,3 +14,5 @@ Check canon, tests, dependency health, GitHub drift, Supabase drift, Vercel drif
 Do not edit, stage, commit, pull with rebase, push, merge or deploy. Stop on conflicts, missing authority, a dirty unexplained worktree, protected-file changes or test failures.
 
 Finish with the handoff fields required by `CLAUDE_AGENT_PROTOCOL.md`.
+
+For each reproducible defect, emit the `REPAIR_REQUIRED` block defined by `QUALITY_RECOVERY_PROTOCOL.md`. Do not invoke a repair or change the worktree from this command.
