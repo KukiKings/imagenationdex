@@ -9,28 +9,32 @@
 Before analysing, changing or publishing anything, read the controlling instructions in this order:
 
 1. AJ's latest explicit instruction for the current task.
-2. The protected parent `CLAUDE.md` loaded by the workspace.
-3. The current IN$DEX Master Mega-Prompt referenced by that protected file.
-4. This protocol.
-5. `QUALITY_RECOVERY_PROTOCOL.md` when diagnosing or repairing a defect.
-6. `CLAUDE_AGENT_FLEET_BLUEPRINT.md` and `claude-agent-responsibility-registry.json` when scheduled-agent work is involved.
-7. Current repository canon, tests and verified deployment evidence.
+2. `INDEX_SIINDEX_LIVING_BUILD_DIRECTIVE_V4_3.md`.
+3. `project-status/living-verified-status.json`.
+4. The protected parent `CLAUDE.md`, when available, for safety and workspace instructions only.
+5. This protocol.
+6. `QUALITY_RECOVERY_PROTOCOL.md` when diagnosing or repairing a defect.
+7. `CLAUDE_AGENT_FLEET_BLUEPRINT.md` and `claude-agent-responsibility-registry.json` when scheduled-agent work is involved.
+8. Current repository tests and verified deployment evidence.
 
-If the Master Mega-Prompt is missing, inaccessible, duplicated or contradictory, stop consequential work. Report `MISSING_OR_CONFLICTING_AUTHORITY`. Do not recreate its contents from memory and do not silently choose an older copy.
+The historical Mega-Prompt is not required and does not control product scope.
+
+If the Living Build Directive or Living Verified Status is missing, inaccessible, contradictory, expired for the requested action or inconsistent with AJ's current instruction, stop consequential work. Report `BLOCKED_BY_SOURCE`. Do not reconstruct missing values from memory.
 
 ## Source hierarchy
 
 When sources disagree, use this order:
 
 1. AJ's current explicit decision.
-2. Protected constitutional and security canon.
-3. Current Master Mega-Prompt.
-4. Verified production state.
-5. Current merged repository state.
-6. Approved private-test branch state.
-7. Research, prototypes, memory files and historical plans.
+2. The active Living Build Directive.
+3. Protected safety, security, privacy, consent and approval controls.
+4. Living Verified Status for current facts and evidence freshness.
+5. Verified production state.
+6. Current merged repository state.
+7. Approved private-test branch state.
+8. Research, prototypes, memory files and historical plans.
 
-Historical files never override current canon merely because they contain more detail.
+Historical files never override current verified status merely because they contain more detail.
 
 ## Workspace identity check
 
@@ -60,7 +64,7 @@ If the working tree is dirty, do not pull with rebase. Do not stash, reset, disc
 - Use one branch and one reviewed pull request per coherent workstream.
 - Preserve unrelated user changes.
 
-## IN$DEX canon
+## IN$DEX current operating boundaries
 
 - IN$DEX is a Sovereign Digital Civilization and Sovereign Opportunity Economy.
 - SIINDEX is Synthetic Intelligence and the permanent civilization intelligence layer.
@@ -88,7 +92,7 @@ Check and report:
 3. Production commit versus merged `main`.
 4. Supabase function versions and source drift when access exists.
 5. Vercel production and preview status when access exists.
-6. Canon test results.
+6. Living-status and public-claim test results.
 7. Tier 0, voice, public-surface and swarm test results.
 8. Dependency audit results for changed packages.
 9. Missing credentials, approvals, consent media or physical-device tests.
@@ -105,7 +109,7 @@ Stop and report before acting when:
 - The workspace differs from the expected clone or branch.
 - The working tree contains unexplained changes.
 - A protected file would be edited.
-- The Master Mega-Prompt is unavailable or conflicts with canon.
+- The Living Build Directive or Living Verified Status is unavailable, contradictory or stale for the requested action.
 - A command would stage more files than the approved scope.
 - A rebase or merge reports conflicts.
 - Remote history moved unexpectedly.

@@ -14,7 +14,8 @@ const agent = read('.claude/agents/index-daily-checker.md');
 const command = read('.claude/commands/index-daily-check.md');
 
 [
-  'Master Mega-Prompt',
+  'Living Verified Status',
+  'BLOCKED_BY_SOURCE',
   'Never run `git add -A`',
   'Never rebase a dirty working tree',
   'Daily checks are read-only',
@@ -29,6 +30,8 @@ const command = read('.claude/commands/index-daily-check.md');
   'Required handoff',
 ].forEach((required) => assert.ok(protocol.includes(required), `Protocol is missing: ${required}`));
 
+assert.doesNotMatch(protocol, /Master Mega-Prompt/);
+
 [
   '66dd2cf',
   'ec21d1c',
@@ -36,12 +39,16 @@ const command = read('.claude/commands/index-daily-check.md');
   '54daac3',
   'Publication status: not pushed',
   'Do not run `git add -A`',
+  'project-status/living-verified-status.json',
+  'rescue/mac-canon-fixes-20260806',
 ].forEach((required) => assert.ok(handoff.includes(required), `Handoff is missing: ${required}`));
 
 assert.match(agent, /Operate read-only/);
+assert.match(agent, /project-status\/living-verified-status\.json/);
 assert.match(agent, /Never assume the desktop clone and Codex clone match/);
 assert.match(agent, /REPAIR_REQUIRED/);
 assert.match(command, /Do not edit, stage, commit/);
+assert.match(command, /project-status\/living-verified-status\.json/);
 assert.match(command, /REPAIR_REQUIRED/);
 
 console.log('IN$DEX Claude agent protocol verification passed.');

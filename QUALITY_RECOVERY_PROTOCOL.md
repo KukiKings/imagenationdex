@@ -8,7 +8,7 @@
 
 ## Purpose
 
-Detect, reproduce, repair and verify project defects without changing IN$DEX canon, production, citizen data or financial authority silently.
+Detect, reproduce, repair and verify project defects without changing protected safety controls, production, citizen data or financial authority silently.
 
 This protocol does not create an unattended self-modifying system. It creates one controlled repair path shared by Codex and Claude.
 
@@ -73,7 +73,7 @@ Release approval for one action does not approve later actions. A push does not 
 | R0 Observe | Status, logs, tests, diffs, audits | Run read-only and record evidence |
 | R1 Local repair | Scoped UI, logic, test or documentation defect | Repair under `LOCAL_REPAIR`, then verify |
 | R2 Sensitive | Authentication, identity, payments, wallets, governance, privacy, dependencies, database schema, agent permissions | Repair locally only within exact scope; require focused review and expanded tests |
-| R3 Protected or external | Canon, security controls, protected instructions, secrets, production, remote Git, deployments, migrations, real funds, public publication | Stop for exact AJ approval |
+| R3 Protected or external | Safety controls, protected instructions, secrets, production, remote Git, deployments, migrations, real funds, public publication | Stop for exact AJ approval |
 | R4 Prohibited autonomous action | Force push, destructive reset, bypassed tests, secret exposure, unattended signing, uncontrolled agent custody or self-expanded permissions | Refuse the action and report the safe alternative |
 
 ## One-writer rule
@@ -98,7 +98,7 @@ The daily checker never becomes the writer. It reports `REPAIR_REQUIRED` and han
 
 ### 1. Establish authority
 
-- Read the mandatory sources.
+- Read the mandatory sources, including the Living Build Directive and Living Verified Status.
 - State the active authority mode.
 - Confirm the requested outcome and boundaries.
 - Stop on missing or conflicting authority.
@@ -131,7 +131,7 @@ Use one primary class:
 - Dependency defect.
 - Environment defect.
 - Data or migration defect.
-- Canon or specification conflict.
+- Living-status or specification conflict.
 - External-provider failure.
 - Device-specific failure.
 - Unknown.
@@ -163,7 +163,7 @@ Run, where relevant:
 2. Focused unit or behavioural tests.
 3. Type and syntax checks.
 4. Integration tests for the affected journey.
-5. Canon and public-surface checks.
+5. Living-status and public-surface checks.
 6. Security and dependency checks for changed packages.
 7. Browser or device tests when the defect depends on rendering, permissions or hardware.
 8. `git diff --check` and focused diff review.
@@ -191,13 +191,14 @@ Report:
 
 Stop before editing or continuing when:
 
-- The current Master Mega-Prompt is missing or conflicts with protected canon.
+- The Living Build Directive or Living Verified Status is missing, contradictory or stale for the requested action.
 - The requested repair would change protected files without exact AJ approval.
 - The worktree contains unexplained changes in the proposed scope.
 - Another agent is writing to the same worktree.
 - The branch, remote, deployment project or database target is uncertain.
 - Reproduction would require real citizen data, real funds or unsafe credentials.
 - A merge or rebase reports conflicts.
+- A Git mutation is blocked by `index.lock` or another interrupted-operation marker.
 - A test exposes a broader security, privacy, identity or financial risk than the approved scope.
 - The proposed fix changes product policy instead of implementing current policy.
 
@@ -218,3 +219,18 @@ Current workspace and commit:
 ```
 
 The repair agent must repeat the reproduction. It never accepts another agent's diagnosis as proof.
+
+## Git lock containment
+
+Run `node scripts/git-lock-preflight.mjs` before a Git mutation.
+
+If it reports `GIT_LOCK_BLOCKED` or `GIT_OPERATION_IN_PROGRESS`:
+
+1. Stop the intended Git action.
+2. Record the repository, branch, HEAD, lock path, size and age.
+3. Check for an active Git process and identify the interrupted operation.
+4. Never delete a lock automatically or merely because it is inconvenient.
+5. Obtain approval for the exact recovery action.
+6. Verify the branch, HEAD, worktree counts and operation markers after recovery.
+
+A stale lock is a workflow incident. Repeated stale locks require a root-cause report, not repeated silent deletion.

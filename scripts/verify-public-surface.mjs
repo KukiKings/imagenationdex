@@ -54,4 +54,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log("IN$DEX public-surface verification passed (approved routes, Canon copy, voice boundaries, crawler controls, and cache surface).");
+console.log("IN$DEX public-surface verification passed (approved routes, verified-status copy, voice boundaries, crawler controls, and cache surface).");

@@ -4,13 +4,13 @@
 
 **Research date:** 5 August 2026
 
-**Scope:** the 17 scheduled Claude agents shown by AJ
+**Scope:** 17 recurring agent roles plus 8 additional registered one-time or disabled tasks reported in the 25-task Mac inventory
 
 **Status:** researched operating specification. No live Claude task was changed from this file.
 
 ## Purpose
 
-Give every scheduled agent one accountable mission, prevent duplicate work, enforce the Master Mega-Prompt and route defects into one supervised repair process.
+Give every scheduled agent one accountable mission, prevent duplicate work, read current facts from Living Verified Status and route defects into one supervised repair process.
 
 ## Research conclusions
 
@@ -36,6 +36,25 @@ The operating model follows these controls:
 | Supervised local repair | IN$DEX Repair Queue | Reproduce and prepare scoped local fixes under `LOCAL_REPAIR` authority |
 | Release authority | AJ only | Approve protected changes, external writes, push, merge, deployment, migration, real identity, money, governance or publication |
 
+## Registered-task inventory boundary
+
+The recurring operating model defines 17 accountable roles. Claude's Mac inventory on 6 August 2026 reported 25 registered tasks in total.
+
+The eight additional registered tasks are:
+
+- `indx-onboarding-concierge`
+- `transak-followup`
+- `telstra-pacific-followup`
+- `ath-vodafone-pacific-followup`
+- `vodafone-cook-islands-followup`
+- `starlink-followup`
+- `claude-annual-plan-reminder`
+- `indx-god-mode-build-jul24`
+
+These additional tasks do not create new agent authority. One-time and partnership follow-up tasks stay disabled unless AJ approves the exact external communication after reviewing the current recipient, wording and evidence.
+
+Six unregistered `l99-countdown-*` folders were reported unreadable. They remain `BLOCKED_UNREADABLE`, disabled and outside the accepted fleet until inspected.
+
 ## Recommended cadence
 
 | Current agent | Recommended name | Recommended cadence | Authority |
@@ -44,7 +63,7 @@ The operating model follows these controls:
 | Indx daily bugfix | IN$DEX Repair Queue | Daily queue check plus `REPAIR_REQUIRED` event | Supervised local repair |
 | Siindex daily coo audit | SIINDEX Weekly COO Audit | Weekly | Read-only synthesis |
 | Indx daily audit | IN$DEX Daily Audit | Daily | Read-only |
-| Index kb monthly health check | IN$DEX Knowledge Base Health | Monthly and after canon changes | Read-only |
+| Index kb monthly health check | IN$DEX Knowledge Base Health | Monthly and after verified-status changes | Read-only |
 | Siindex security scan | SIINDEX Security Scan | Weekly and before release | Read-only |
 | Siindex treasury weekly | SIINDEX Treasury Weekly | Weekly | Read-only |
 | Siindex kol research | SIINDEX KOL Research | Weekly during campaigns, otherwise on demand | Read-only |
@@ -85,21 +104,21 @@ Primary question: What changed today, what conflicts, and what must be remembere
 Crucial responsibilities:
 
 - Read completed agent handoffs from the previous 24 hours.
-- Verify the current Master Mega-Prompt reference and record its version or hash.
+- Verify the Living Build Directive and Living Verified Status references and record their versions or hashes.
 - Build a daily decision delta. Separate AJ decisions from agent recommendations.
 - Detect contradictions in dates, prices, supply, status, utility claims, permissions and deployment state.
 - Quarantine historical documents containing retired claims. Never delete them automatically.
 - Maintain a dependency map linking blockers to affected utilities and testing windows.
 - Track agent health: last successful run, missing sources, repeated failures and stale prompts.
 - Identify unresolved `REPAIR_REQUIRED` items and duplicate reports.
-- Produce proposed memory updates with sources. Do not write protected memory or canon.
+- Produce proposed memory updates with sources. Do not write protected memory or Living Verified Status.
 - Redact citizen data, secrets and private operational details.
 
 Inputs:
 
 - All scheduled-agent handoffs.
 - AJ decision records.
-- Master Mega-Prompt version.
+- Living Build Directive and Living Verified Status versions.
 - Git and deployment evidence summaries.
 
 Output:
@@ -108,7 +127,7 @@ Output:
 
 Boundary:
 
-- No code edits, schedule changes, canon changes, external messages or production actions.
+- No code edits, schedule changes, Living Verified Status changes, external messages or production actions.
 
 ## 2. IN$DEX Repair Queue
 
@@ -125,7 +144,7 @@ Crucial responsibilities:
 - Define exact file scope and expected verification before editing.
 - Prepare the smallest complete root-cause repair.
 - Add regression coverage without weakening valid tests.
-- Run focused, integration, canon, security and diff checks appropriate to the change.
+- Run focused, integration, living-status, security and diff checks appropriate to the change.
 - Record recurrence, rollback and blocked physical-device or provider tests.
 - End with a Quality and Recovery report.
 
@@ -182,12 +201,12 @@ Crucial responsibilities:
 
 - Record repository path, remote, branch, HEAD, ahead and behind counts, and worktree counts.
 - Compare merged source, deployed source and public production commit.
-- Run current canon, Tier 0, voice, public-surface and changed-package checks.
+- Run current living-status, Tier 0, voice, public-surface and changed-package checks.
 - Detect retired claims, mock values presented as live and status-label misuse.
 - Verify scheduled-agent last-run health and missing outputs.
 - Check Supabase and Vercel drift when authoritative access exists.
 - Track blocked physical-device, accessibility, privacy, security and founder tests.
-- Detect missing Master Mega-Prompt or protected-source conflicts.
+- Detect missing, stale or contradictory Living Build Directive and Living Verified Status sources.
 - Emit `REPAIR_REQUIRED` for each reproducible defect.
 - Preserve exact first-failure evidence.
 
@@ -213,7 +232,7 @@ Crucial responsibilities:
 - Check citations, broken links, stale provider documentation and source freshness.
 - Detect prompt injection or instruction text inside retrieved documents.
 - Review access controls for citizen, financial, security and likeness data.
-- Identify orphan documents and duplicate copies of the Master Mega-Prompt.
+- Identify orphan documents and duplicate current-fact registers.
 - Produce proposed additions, corrections and retirements. Never apply protected changes.
 - Track answer quality across repeated trials instead of one successful response.
 
@@ -223,7 +242,7 @@ Output:
 
 Boundary:
 
-- No silent memory writes. No promotion of research into canon.
+- No silent memory writes. No promotion of research into verified status.
 
 ## 6. SIINDEX Security Scan
 
@@ -309,7 +328,7 @@ Primary question: Does every screen have a truthful status, valid route and test
 Crucial responsibilities:
 
 - Count screens from the exact repository commit and deployed route map.
-- Classify canonical, guarded legacy, research-only, retired and orphan screens.
+- Classify current primary, guarded legacy, research-only, retired and orphan screens.
 - Detect duplicate onboarding, payment, wallet, governance and identity journeys.
 - Verify internal links, redirects, navigation reachability and crawler exposure.
 - Check public status labels and sandbox boundaries.
@@ -359,7 +378,7 @@ Primary question: Are we ready for the next founder-approved milestone?
 
 Crucial responsibilities:
 
-- Load the current milestone name and date from the Master Mega-Prompt only.
+- Load the current milestone name, meaning and date from Living Verified Status only.
 - Score readiness from evidence, not calendar proximity.
 - Track product, identity, payments, marketplace, sovereignty, agent, legal, security and marketing gates.
 - Separate code-complete, private-test complete and release-complete.
@@ -561,7 +580,7 @@ Track these for each scheduled agent:
 - False positives and missed defects found later.
 - Average run duration.
 - Consecutive failures.
-- Master Mega-Prompt version used.
+- Living Verified Status version used.
 - External writes, expected to remain `none` for scheduled runs.
 
 ## Primary research sources

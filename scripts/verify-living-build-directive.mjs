@@ -12,6 +12,8 @@ const required = [
   'IN$DEX has no final feature set.',
   '## 27. Continuous expansion model',
   'Build everything committed. Test everything claimed.',
+  'project-status/living-verified-status.json',
+  'BLOCKED_BY_SOURCE',
   'USD $0.24 is the sole founder-selected launch and genesis reference.',
   'The only approved top-level pillars are:',
   'No SI agent:',
