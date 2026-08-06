@@ -1,7 +1,7 @@
 # IN$DEX Claude Agent Protocol
 
-**Owner:** AJ  
-**Applies to:** every Claude agent, daily checker, sub-agent and browser session  
+**Owner:** AJ
+**Applies to:** every Claude agent, daily checker, sub-agent and browser session
 **Mode:** read first, evidence first, deny by default
 
 ## First instruction

@@ -1,7 +1,7 @@
 # SIINDEX Swarm and Digital Twin Technical Blueprint
 
-**Status:** canonical private-test architecture  
-**Updated:** 5 August 2026  
+**Status:** canonical private-test architecture
+**Updated:** 5 August 2026
 **Rule:** SIINDEX is Synthetic Intelligence. No agent owns keys or silently expands its authority.
 
 ## Founder direction preserved
