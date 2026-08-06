@@ -20,7 +20,7 @@ Status: implemented on an isolated branch. Not deployed.
 1. Back up the production database and record the current Auth configuration.
 2. Review legacy duplicate phone and `web3_domain` rows.
 3. Apply `supabase/migrations/20260805_tier0_identity_issuance.sql` to a non-production Supabase branch or test project.
-4. Confirm the new RPC grants and RLS policies.
+4. Confirm the new RPC grants and RLS policies. Verify `get_citizen_by_phone(text)` is not executable by `public`, `anon` or `authenticated`.
 5. Confirm Twilio sender coverage for every supported country.
 6. Set SMS rate limits, OTP expiry and a monthly spend ceiling in Supabase Auth.
 7. Configure CAPTCHA before any public opening. Do not place CAPTCHA or Twilio secrets in this repository.
@@ -41,6 +41,7 @@ Status: implemented on an isolated branch. Not deployed.
 | Two simultaneous claims for one handle | One succeeds and one returns `HANDLE_TAKEN` |
 | Reserved handle | Issuance is rejected |
 | Repeated submission by the same citizen | Existing identity is returned without a duplicate |
+| Legacy phone-lookup RPC | Execution is denied for anonymous and authenticated browser roles |
 | Legacy unverified onboarding route | Redirects to the canonical OTP flow |
 | Lost network during issuance | No success message appears without a server response |
 | Returning verified citizen | Existing identity is shown without reissuing it |

@@ -36,6 +36,8 @@ assert.equal(core.deviceLabel('Mozilla/5.0 (Macintosh) Chrome/126.0'), 'Chrome o
 assert.equal(core.isUuid('018f47a6-9b6b-7c33-8b07-61a44f9d1224'), true);
 
 assert.match(recoveryPage, /id="recoveryConsent"/);
+assert.match(recoveryPage, /Build Mode · Private Testing/);
+assert.match(securityPage, /Build Mode · Private Testing/);
 assert.match(recoveryPage, /id="sharedDevice"/);
 assert.match(recoveryPage, /autocomplete="one-time-code"/);
 assert.match(recoveryPage, /does not create a new citizen identity, wallet, token, payment or blockchain asset/);

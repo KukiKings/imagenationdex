@@ -53,7 +53,7 @@ for (const id of [
 
 const ids = [...page.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]);
 assert.equal(new Set(ids).size, ids.length, 'wallet page must not contain duplicate IDs');
-assert.match(page, /Private Testing/);
+assert.match(page, /Build Mode · Private Testing/);
 assert.match(page, /Nothing here moves real money/);
 assert.match(page, /TEST_USDC/);
 assert.match(page, /TEST_INDX/);

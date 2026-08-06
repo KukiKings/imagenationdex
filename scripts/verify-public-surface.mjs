@@ -33,6 +33,7 @@ requireText("public-home.html", /videos\/siindex-public-intro\.mp4/, "remastered
 requireText("public-home.html", /Read the introduction transcript/, "accessible introduction transcript is missing");
 requireText("public-home.html", /images\/siindex-public-portrait\.webp/, "optimized public portrait is missing");
 requireText("vercel.json", /jpeg\|webp\|gif/, "WebP assets are not publicly routed");
+requireText("siindex-swarm-preview.html", /Build Mode · Private Testing/, "swarm preview lacks the build and testing boundary");
 for (const file of ["images/siindex-public-portrait.webp", "images/siindex-public-video-poster.webp"]) {
   if (!fs.existsSync(file)) failures.push(`${file}: optimized public asset is missing`);
   else if (fs.statSync(file).size > 300_000) failures.push(`${file}: optimized public asset exceeds 300 KB`);

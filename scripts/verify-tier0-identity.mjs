@@ -9,6 +9,7 @@ const read = (path) => fs.readFileSync(path, 'utf8');
 const login = read('login.html');
 const controller = read('js/tier0-identity.js');
 const migration = read('supabase/migrations/20260805_tier0_identity_issuance.sql');
+const activation = read('tier0-identity-activation.md');
 const routes = JSON.parse(read('vercel.json')).routes || [];
 
 assert.deepEqual(core.normalizeE164('+61', '0412 345 678'), {
@@ -31,6 +32,7 @@ assert.equal(core.validateDisplayName(' AJ Henry ').name, 'AJ Henry');
 assert.equal(core.validateDisplayName('A').ok, false);
 
 assert.match(login, /id="phoneConsent"/);
+assert.match(login, /Build Mode · Private Testing/);
 assert.match(login, /autocomplete="one-time-code"/);
 assert.match(login, /id="handleInput"/);
 assert.match(login, /It does not create a wallet, token balance, public DNS name or blockchain asset/);
@@ -56,6 +58,10 @@ assert.match(migration, /grant execute on function public\.claim_tier0_identity\
 assert.match(migration, /revoke insert on table public\.citizens from authenticated/);
 assert.match(migration, /revoke all on function public\.create_onboarding_citizen\(jsonb\)/);
 assert.match(migration, /revoke all on function public\.claim_genesis_signup_bonus_anon\(uuid\)/);
+assert.match(migration, /revoke all on function public\.get_citizen_by_phone\(text\) from public, anon, authenticated/);
+assert.doesNotMatch(migration, /grant execute on function public\.get_citizen_by_phone\(text\)/);
+assert.match(activation, /get_citizen_by_phone\(text\).*not executable by `public`, `anon` or `authenticated`/);
+assert.match(activation, /Legacy phone-lookup RPC.*Execution is denied/);
 
 for (const page of [
   'join.html',

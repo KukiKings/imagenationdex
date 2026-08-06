@@ -518,8 +518,7 @@ begin
     execute 'revoke all on function public.claim_creator_signup_bonus(uuid) from public, anon, authenticated';
   end if;
   if to_regprocedure('public.get_citizen_by_phone(text)') is not null then
-    execute 'revoke all on function public.get_citizen_by_phone(text) from public, anon';
-    execute 'grant execute on function public.get_citizen_by_phone(text) to authenticated';
+    execute 'revoke all on function public.get_citizen_by_phone(text) from public, anon, authenticated';
   end if;
 end;
 $retire_legacy$;
