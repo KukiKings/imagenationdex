@@ -143,6 +143,7 @@ Activation must follow `wallet-payments-activation.md` in a non-production Supab
 - `daily-morning-digest` was reported enabled with incorrect SIINDEX wording. It remains `REPAIR_REQUIRED` until re-read after repair.
 - The Telegram bot token was removed from the task prompt but still requires rotation through BotFather. Keep the citizen-growth task disabled until rotation and a reviewed secret-store integration.
 - Claude re-read seven repaired prompts and all 25 registered tasks. Codex has not independently read the private scheduled-task folder.
+- Claude recovered `R015` from external retired-claim registry v13. It remains one of 27 registered claims but is intentionally skipped because `R027` restores Syn-dex or Sin-dex as the current pronunciation. Report coverage as 27 registered, 26 enforced and 1 superseded. Codex has not independently read the external Mac registry.
 
 ## Separately reported Mac workspace
 
@@ -159,7 +160,7 @@ Do not run `git add -A`, rebase, push `main` or combine this Mac worktree with t
 ## Next controlled release sequence
 
 1. Complete and verify the Living Verified Status governance repair in its isolated worktree.
-2. Recover the definition and enforcement of `R015`; do not accept a legacy checker result of `CLEAN` before then.
+2. Preserve the documented `R015` to `R027` supersession and verify the legacy checker reports 27 registered, 26 enforced and 1 superseded without treating `R015` as missing.
 3. Publish the clean Codex product branch without rewriting existing commits after separate AJ approval.
 4. Open a draft pull request into `main`.
 5. Run pull-request checks and inspect a protected preview.

@@ -23,14 +23,19 @@ Safety, consent, credentials, funds, identity, legal claims, production, citizen
 5. Review the focused diff.
 6. Keep release actions separately approved.
 
-## R015 hold
+## R015 supersession
 
-The external Mac checker was reported to fall from 27 enforced claims to 26 when `R015` disappeared. Its definition is not present in this repository.
+Claude recovered `R015` from external registry v13 at `/Users/arthurjohnhenry/CoWork/second-brain/canon/retired.json`. The registry still contains 27 claims.
 
-Until the definition is recovered independently:
+`R015` historically prohibited the pronunciation `sin-dex`. AJ's later `R027` decision restored Syn-dex or Sin-dex. The two rules cannot be enforced together, so `R015` is deliberately retained as superseded evidence and skipped by the external checker.
 
-- `R015` remains explicitly required and unresolved;
-- the legacy claim checker and public-claim audit must not report `CLEAN`;
-- unrelated builds and read-only monitors continue when their own required sources are current;
-- no agent may invent a replacement definition;
-- recovery requires source evidence and a focused review.
+Required coverage reporting:
+
+- 27 claims registered;
+- 26 claims enforced;
+- 1 claim deliberately superseded;
+- `R015` superseded by `R027` on 6 August 2026;
+- no report may describe `R015` as missing or unresolved;
+- no check may silently drop the registry total or re-enable both conflicting rules.
+
+This evidence was reported by Claude and supplied by AJ. Codex has not independently read the external Mac registry.

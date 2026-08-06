@@ -26,7 +26,7 @@ for (const relativePath of governanceFiles) {
   assert.doesNotMatch(content, /MISSING_OR_CONFLICTING_AUTHORITY/, `${relativePath} still uses the retired missing-Mega stop state`);
 }
 
-assert.equal(status.schema_version, '1.0.0');
+assert.equal(status.schema_version, '1.1.0');
 assert.equal(status.owner, 'AJ');
 assert.equal(status.operating_rules.product_scope, 'OPEN_AND_EXPANDABLE');
 assert.equal(status.operating_rules.missing_or_conflicting_source_result, 'BLOCKED_BY_SOURCE');
@@ -69,12 +69,28 @@ assert.equal(fact('milestone.grand_synchronicity_l99_historical').status, 'HISTO
 assert.equal(fact('milestone.controlled_public_pilot').current_value, '24 February 2027');
 assert.equal(fact('milestone.controlled_public_pilot').status, 'TARGET_NOT_GUARANTEE');
 
-assert.equal(status.claim_coverage.expected_minimum_enforced_claims, 27);
-assert.equal(status.claim_coverage.last_observed_enforced_claims, 26);
-assert.ok(status.claim_coverage.required_claim_ids.includes('R015'));
-assert.ok(status.claim_coverage.unresolved_claim_ids.includes('R015'));
-assert.equal(status.claim_coverage.readiness, 'BLOCKED');
+assert.equal(status.claim_coverage.external_registry_version, 13);
+assert.equal(status.claim_coverage.registry_claims, 27);
+assert.equal(status.claim_coverage.enforced_claims, 26);
+assert.equal(status.claim_coverage.superseded_claims, 1);
+assert.equal(
+  status.claim_coverage.enforced_claims + status.claim_coverage.superseded_claims,
+  status.claim_coverage.registry_claims,
+  'Enforced and deliberately superseded claims must account for the complete registry',
+);
+assert.deepEqual(status.claim_coverage.superseded_claim_ids, ['R015']);
+assert.deepEqual(status.claim_coverage.unresolved_claim_ids, []);
+assert.equal(status.claim_coverage.supersessions.length, 1);
+
+const r015 = status.claim_coverage.supersessions[0];
+assert.equal(r015.claim_id, 'R015');
+assert.equal(r015.superseded_by, 'R027');
+assert.equal(r015.superseded_on, '2026-08-06');
+assert.equal(r015.enforcement, 'SKIPPED_BY_DESIGN');
+assert.equal(r015.current_rule, 'SIINDEX is pronounced Syn-dex or Sin-dex.');
+assert.notEqual(r015.claim_id, r015.superseded_by);
+assert.equal(status.claim_coverage.readiness, 'READY_WITH_DOCUMENTED_SUPERSESSION');
 assert.deepEqual(status.claim_coverage.affected_scopes, ['legacy_claim_checker', 'public_claim_audit']);
 
 console.log('IN$DEX Living Verified Status structure passed.');
-console.log('BLOCKED_BY_SOURCE: R015 definition remains unavailable and must not be reported CLEAN.');
+console.log('CLAIM_COVERAGE_OK: 27 registered, 26 enforced, 1 deliberately superseded (R015 -> R027).');
