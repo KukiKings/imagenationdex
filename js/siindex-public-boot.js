@@ -1,7 +1,7 @@
 /**
  * siindex-public-boot.js
- * Drop-in: load once per page.
- * Loads public living knowledge, page context, and ask-bridge for SIINDEX Visitor Mode.
+ * Drop-in OR loaded by speak-core auto-append.
+ * Loads knowledge → page context → bridge.
  * SI = Synthetic Intelligence (not AI). Brand-first: always IN$DEX.
  */
 (function () {
