@@ -2,7 +2,7 @@
  * siindex-public-bridge.js
  * Patches SIINDEXVoice.ask for identity / status / brand facts from living public knowledge.
  * Self-loads knowledge + page-context if missing. SI not AI. Brand-first: always IN$DEX.
- * Version: 1.1.0
+ * Version: 1.2.0
  */
 (function () {
   'use strict';
@@ -45,11 +45,45 @@
       /\b(who are you|what are you|are you (an )?ai|artificial intelligence)\b/.test(q) ||
       (/\bsiindex\b/.test(q) && /\b(who|what|are you|ai|si)\b/.test(q)) ||
       /what is (in\$dex|index|indx)\b/.test(q) ||
-      /\b(company|registr|legal name|limited|image nation|cook island|rarotonga)\b/.test(q) ||
+      /\b(company|registr|legal name|limited|image nation|cook island|rarotonga|parliament|prime minister|licence|license)\b/.test(q) ||
       /\b(0\.24|genesis|token price)\b/.test(q) ||
-      /\b(98\s*\/?\s*2|pilot|what is live|what works)\b/.test(q) ||
-      /\b(pqsi|synthetic intelligence)\b/.test(q)
+      /\b(98\s*\/?\s*2|pilot|what is live|what works|pre-?launch)\b/.test(q) ||
+      /\b(pqsi|synthetic intelligence|mama noe)\b/.test(q) ||
+      /\b(mission|founder|aj henry|origin|problem|interview|reporter|media|collaborat|partner|autonom)\b/.test(q)
     );
+  }
+
+  function showLocalAnswer(answer, source) {
+    try {
+      var id = 'spk-' + Date.now();
+      window.dispatchEvent(
+        new CustomEvent('siindex:message', {
+          detail: { role: 'assistant', text: answer, id: id, streaming: false, source: source || 'public-knowledge' },
+        }),
+      );
+      var panel = document.getElementById('siindex-panel');
+      if (panel) {
+        var messages = panel.querySelector('[data-si-messages]');
+        var empty = panel.querySelector('[data-si-empty]');
+        if (messages) {
+          if (empty) empty.hidden = true;
+          var row = document.createElement('div');
+          row.className = 'siindex-message assistant';
+          row.dataset.messageId = id;
+          row.innerHTML =
+            '<div class="siindex-message-sender">SIINDEX</div>' +
+            '<div class="siindex-message-body"></div>';
+          row.querySelector('.siindex-message-body').textContent = answer;
+          messages.appendChild(row);
+          messages.scrollTop = messages.scrollHeight;
+        }
+        var status = panel.querySelector('[data-si-status]');
+        if (status) {
+          status.textContent = 'Answered from public living knowledge.';
+          status.dataset.state = 'idle';
+        }
+      }
+    } catch (_) {}
   }
 
   function patchAsk() {
@@ -65,58 +99,12 @@
 
       if (q && matchesPublicFact(q)) {
         var answer = window.SIINDEX_PUBLIC.answer(q);
-        try {
-          window.dispatchEvent(
-            new CustomEvent('siindex:message', {
-              detail: { role: 'user', text: q, id: 'local-u-' + Date.now(), streaming: false, source: source },
-            }),
-          );
-          window.dispatchEvent(
-            new CustomEvent('siindex:message', {
-              detail: {
-                role: 'assistant',
-                text: answer,
-                id: 'local-a-' + Date.now(),
-                streaming: false,
-                source: source,
-              },
-            }),
-          );
-        } catch (_) {}
-
-        if (window.SIINDEXVoice.speak) {
-          try { window.SIINDEXVoice.speak(answer); } catch (_) {}
+        showLocalAnswer(answer, source);
+        if (window.SIINDEXVoice.speak && window.SIINDEXVoice.voiceEnabled) {
+          try {
+            window.SIINDEXVoice.speak(answer);
+          } catch (_) {}
         }
-
-        try {
-          var panel = document.getElementById('siindex-panel');
-          var messages = panel && panel.querySelector('[data-si-messages]');
-          if (messages) {
-            var empty = messages.querySelector('[data-si-empty]');
-            if (empty) empty.hidden = true;
-            function addRow(role, body) {
-              var row = document.createElement('div');
-              row.className = 'siindex-message ' + role;
-              var sender = document.createElement('div');
-              sender.className = 'siindex-message-sender';
-              sender.textContent = role === 'user' ? 'You' : 'SIINDEX';
-              var b = document.createElement('div');
-              b.className = 'siindex-message-body';
-              b.textContent = body;
-              row.append(sender, b);
-              messages.appendChild(row);
-            }
-            addRow('user', q);
-            addRow('assistant', answer);
-            messages.scrollTop = messages.scrollHeight;
-          }
-          var status = panel && panel.querySelector('[data-si-status]');
-          if (status) {
-            status.textContent = 'Answered from public living knowledge (IN$DEX · SI · PQSI).';
-            status.dataset.state = 'idle';
-          }
-        } catch (_) {}
-
         return Promise.resolve(answer);
       }
 
@@ -126,7 +114,7 @@
     window.SIINDEXVoice._publicKnowledgePatched = true;
     window.dispatchEvent(
       new CustomEvent('siindex:public-knowledge-ready', {
-        detail: { version: (window.SIINDEX_PUBLIC && window.SIINDEX_PUBLIC.version) || '1.0.0' },
+        detail: { version: (window.SIINDEX_PUBLIC && window.SIINDEX_PUBLIC.version) || '1.2.0' },
       }),
     );
     return true;
@@ -134,7 +122,9 @@
 
   function tryPatch() {
     ensureKnowledge()
-      .then(function () { return ensurePageContext(); })
+      .then(function () {
+        return ensurePageContext();
+      })
       .then(function () {
         if (patchAsk()) return;
         var tries = 0;
