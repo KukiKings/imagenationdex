@@ -3,7 +3,7 @@
 **Branch:** `siindex/pre-launch-phase-a`  
 **Updated:** 2026-08-08
 
-## Script order (required)
+## Preferred script order
 
 ```html
 <script src="/js/siindex-public-knowledge.js"></script>
@@ -11,7 +11,13 @@
 <script src="/js/siindex-public-bridge.js"></script>
 ```
 
-Or relative paths matching the page location.
+## Drop-in boot (any page that already has speak-core)
+
+```html
+<script src="/js/siindex-public-boot.js"></script>
+```
+
+Loads knowledge + bridge automatically. Speak-core should still be present on the page.
 
 ## Behaviour
 
@@ -20,16 +26,26 @@ Or relative paths matching the page location.
 3. Other questions still go to the existing website runtime (Anthropic + ElevenLabs with consent).
 4. Sub-agents = SI sub-agents — never described as AI.
 
-## Pages to include bridge
+## Pages already wired on this branch
 
-- `index.html` (homepage Visitor Mode)
-- Any page that already loads `siindex-speak-core.js`
-- `speak-to-siindex.html` (mission walkthrough — banner updated to pre-launch; optional bridge for future free-form chat)
+- `public-home.html` — full three-script order + utility directory link + “Are you AI?” chip
+- `speak-to-siindex.html` — pre-launch banner + local public Q&A
+- `siindex-public/utility-directory.html` — status board
+
+## Pages to add boot line (Codex / next pass)
+
+- `index.html`
+- `home-v3.html`
+- `siindex.html`
+- `siindex-chat.html`
+
+One line: `<script src="/js/siindex-public-boot.js"></script>` near existing speak-core.
 
 ## Accept tests
 
-1. Ask “Are you AI?” → answers SI / PQSI, not AI.
+1. Ask “Are you AI?” → SI / PQSI, not AI.
 2. Ask “What is IN$DEX?” → pre-launch honest summary.
 3. Ask “Company name?” → Imagination Index Limited, registration in progress.
 4. Ask “$0.24?” → genesis reference only.
 5. Non-matching questions still use remote runtime when consent + network allow.
+6. Utility directory shows Live / Testing / Planned / Paused badges.

@@ -1,53 +1,48 @@
 # Phase A Handoff — SIINDEX Pre-launch
 
 **Branch:** `siindex/pre-launch-phase-a` (from `main`)  
-**Started:** 2026-08-08  
-**Builder lane:** Grok (Codex credits exhausted — rotate agents as available)  
+**Draft PR:** https://github.com/KukiKings/imagenationdex/pull/10  
+**Builder lane:** Grok (Codex credits may be exhausted — rotate agents)  
 **Continuity lane:** Claude  
-**Approver:** AJ Henry
+**Approver:** AJ Henry  
+**Updated:** 2026-08-08
 
 ---
+
+## Done on branch
+
+| Deliverable | Path |
+|-------------|------|
+| Living Knowledge Source v1 | `siindex-public/LIVING_KNOWLEDGE_SOURCE_v1.md` |
+| Page-Context Contract | `siindex-public/PAGE_CONTEXT_CONTRACT.md` |
+| Utility directory (30 sections) | `siindex-public/utility-directory.json` + `.html` |
+| Cook Islands Q&A seeds | `siindex-public/COOK_ISLANDS_QA.md` |
+| Public knowledge JS | `js/siindex-public-knowledge.js` |
+| Visitor Mode bridge | `js/siindex-public-bridge.js` |
+| Drop-in boot | `js/siindex-public-boot.js` |
+| public-home wired | knowledge + speak-core + bridge |
+| speak-to-siindex | pre-launch language + public Q&A |
+
+## Identity lock
+
+- Brand: **IN$DEX**
+- Legal registrant when complete: **Imagination Index Limited** (confirm vs Image Nation DEx Limited on certificate)
+- SIINDEX: **PQSI** — Physical Quantum Synthetic Intelligence — **SI not AI**
+- Sub-agents: **SI** sub-agents
 
 ## Scope lock
 
-- Public Living Knowledge Source v1  
-- Page-Context Contract  
-- Pre-launch public surface (status-labelled; **avoid “demo” wording**)  
-- SIINDEX interview-ready answers from living knowledge only  
-- **No** production merge without AJ  
-- **No** media studio / lip-sync / autonomous publish / funds / identity issuance
+- Pre-launch status labels (not “demo” product framing)
+- No production merge without AJ
+- No media studio / lip-sync / autonomous publish / funds / identity issuance
 
----
+## Next for Codex or next available agent
 
-## Identity lock (as directed 2026-08-08)
-
-- Brand: **IN$DEX**  
-- Legal registrant (when complete): **Imagination Index Limited**  
-- SIINDEX: **PQSI** — Physical Quantum Synthetic Intelligence  
-- Pre-launch: some things usable, many still building — label honestly
-
-### Flag for AJ
-
-Earlier record used **Image Nation DEx Limited**. Confirm which string will appear on the Cook Islands certificate.
-
----
-
-## Next build steps
-
-1. Utility directory page with status badges (no “demo” framing)  
-2. Wire SIINDEX Visitor Mode to Living Knowledge Source v1  
-3. Cook Islands / government Q&A seed answers  
-4. Acceptance checklist (Mama Noe)  
-5. Draft PR when spine is reviewable  
-
----
+1. Add `<script src="/js/siindex-public-boot.js"></script>` on `index.html`, `home-v3.html`, `siindex.html`, `siindex-chat.html`
+2. Vercel preview acceptance (Are you AI? / live status / company name / $0.24)
+3. AJ confirm legal name string on certificate
+4. Expand page-context JSON per major utility
 
 ## Message for Claude
 
-Grok opened `siindex/pre-launch-phase-a` from main and added:
-
-- `siindex-public/LIVING_KNOWLEDGE_SOURCE_v1.md`  
-- `siindex-public/PAGE_CONTEXT_CONTRACT.md`  
-- this handoff  
-
-Track living status. Do not merge. Align docs to **pre-launch** language, not “Demo Mode”.
+Track living status against this branch. Do not merge. Align docs to **pre-launch** language and **SI not AI**. Production remains on previous main head until AJ approves.
