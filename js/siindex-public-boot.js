@@ -1,8 +1,8 @@
 /**
  * siindex-public-boot.js
- * Drop-in: load this once per page.
- * Ensures public living knowledge + bridge for SIINDEX Visitor Mode.
- * SI = Synthetic Intelligence (not AI). PQSI = Physical Quantum Synthetic Intelligence.
+ * Drop-in: load once per page.
+ * Loads public living knowledge, page context, and ask-bridge for SIINDEX Visitor Mode.
+ * SI = Synthetic Intelligence (not AI). Brand-first: always IN$DEX.
  */
 (function () {
   'use strict';
@@ -31,6 +31,9 @@
   }
 
   tryLoad('/js/siindex-public-knowledge.js', 'js/siindex-public-knowledge.js')
+    .then(function () {
+      return tryLoad('/js/siindex-page-context.js', 'js/siindex-page-context.js');
+    })
     .then(function () {
       return tryLoad('/js/siindex-public-bridge.js', 'js/siindex-public-bridge.js');
     })
