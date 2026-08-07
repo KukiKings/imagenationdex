@@ -1,17 +1,15 @@
-# Codex / next agent — universal public knowledge
+# Codex / next agent
 
 **Branch:** `siindex/pre-launch-phase-a`  
 **Do not merge to production without AJ.**
 
-## Preferred: append to `siindex-speak-core.js`
+## Highest priority: speak-core auto-boot
 
-After the final line `emit("ready", { mode: "website", version: "3.0.0" });` and the closing `})();`, append:
+Append to the end of `siindex-speak-core.js` (after the final `})();`):
 
 ```js
 
-/* Phase A — auto-load public knowledge stack (brand-first IN$DEX, SI not AI).
- * Runs on every page that includes siindex-speak-core.js.
- */
+/* Phase A — auto-load public knowledge stack (brand-first IN$DEX, SI not AI). */
 (function siindexPublicAutoBoot() {
   if (typeof window === "undefined" || window.__SIINDEX_PUBLIC_BOOT__) return;
   try {
@@ -31,26 +29,18 @@ After the final line `emit("ready", { mode: "website", version: "3.0.0" });` and
 })();
 ```
 
-That wires **all** pages that already load speak-core (index, home-v3, siindex, siindex-chat, etc.).
+This wires every page that already loads speak-core.
 
-## Alternative: one line on each HTML page
+## Already on branch
 
-```html
-<script src="/js/siindex-public-boot.js"></script>
-```
-
-After `siindex-speak-core.js`.
-
-## Already live on branch
-
-- `js/siindex-public-knowledge.js` — brand-first answers
-- `js/siindex-public-bridge.js` — **self-loads** knowledge + page-context if missing, then patches `ask`
-- `js/siindex-public-boot.js` — loads knowledge → context → bridge
-- `js/siindex-page-context.js` + `page-context-map.json`
-- `speak-to-siindex.html` + compact `public-home.html`
+- Living knowledge + brand-first rules
+- `js/siindex-public-knowledge.js` / bridge (self-load) / boot / page-context
+- `speak-to-siindex.html`, `siindex-interview.html`
+- Utility directory (30 sections)
+- Cook Islands Q&A seeds
 
 ## Speech rules
 
 - Always **IN$DEX** first
-- Legal stack only when asked: Image Nation DEX → Image Nation Decentralized Exchange → Image Nation DEx Limited
+- Legal stack only when asked: Image Nation DEX → Decentralized Exchange → Image Nation DEx Limited
 - SI / PQSI — never AI
