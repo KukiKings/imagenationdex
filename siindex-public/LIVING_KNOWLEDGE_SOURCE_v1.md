@@ -1,11 +1,12 @@
-# SIINDEX Public Living Knowledge Source v1
+# SIINDEX Public Living Knowledge Source v1.1
 
 **Status:** Living — supersedable · not sealed canon  
 **Audience:** Public visitors, interviewers, government, organisations  
 **Owner:** AJ Henry  
 **Maintained for:** SIINDEX public speech (typed + spoken)  
 **Branch:** siindex/pre-launch-phase-a  
-**Updated:** 2026-08-08
+**Updated:** 2026-08-08  
+**Builder:** Grok (sole while Codex offline)
 
 ---
 
@@ -78,85 +79,80 @@ We are in **pre-launch**. Some parts of **IN$DEX** work today. Some are in testi
 |-------|--------|
 | **Live** | A real person can complete it today |
 | **Testing** | Built or partially built; not yet public-complete |
-| **Planned** | Intended; not usable as a finished public service yet |
-| **Paused** | Held until reconciliation or AJ approval |
-| **Pre-launch** | Overall programme state until controlled public pilot |
+| **Planned** | Intended; not finished |
+| **Paused** | Intentionally held pending reconciliation or approval |
+| **Pre-launch** | Programme-level status for the overall product |
 
-### Current public truth
+### Live today (public)
 
-| Area | Label |
-|------|--------|
-| Website + SIINDEX Visitor Mode | **Live** (informational only) |
-| Accounts, wallets, payments, token distribution | **Not live** |
-| Tier 0 onboarding path | **Testing / Planned** |
-| Citizen financial tools | **Planned** |
-| INDX distribution and liquidity | **Paused** |
-| Public pilot target | **24 February 2027** (target) |
-| Cook Islands interview readiness | **6 December 2026** |
+- Public website information
+- SIINDEX Visitor Mode for public questions (typed and spoken where enabled)
+- Interview Mode, Presentation Mode, utility directory (on this branch)
 
-Visitor Mode cannot see accounts, move money, sign transactions, or approve decisions.
+### Not live for the public
 
----
-
-## 4. Doctrine vs live claims
-
-| Topic | Public wording |
-|-------|----------------|
-| **98/2** | Permanent **doctrine** for **IN$DEX** — not a live smart-contract claim until verified deployed code |
-| **$0.24** | Genesis / launch **reference only** |
-| **Sovereignty** | Direction with honest dependencies |
+- Accounts and identity issuance
+- Wallets, payments, remittance settlement
+- Token distribution and public trading
+- Autonomous financial or legal decisions by SIINDEX
 
 ---
 
-## 5. Cook Islands block
+## 4. Cook Islands
 
 - Founder is a New Zealand and Cook Islands citizen.
-- **IN$DEX** is establishing its legal home in the Cook Islands.
-- Legal registrant **when asked** and when registration completes: **Image Nation DEx Limited**.
-- **Image Nation DEX** = short for **Image Nation Decentralized Exchange**.
-- Until the certificate is issued: **registration in progress**.
-- Do not invent licences, partnerships, approvals, or completed registration.
+- Legal home intended in the Cook Islands; registration **in progress** until Certificate of Incorporation.
+- **Do not claim** government licence, approval, or completed registration.
+- Interview / presentation readiness supports honest engagement from December 2026 travel window (6 December 2026 arrival referenced by founder).
 
 ---
 
-## 6. What SIINDEX can and cannot do (public)
+## 5. Doctrine markers (honest framing)
 
-### Can
-
-- Explain **IN$DEX** and what is Live / Testing / Planned / Paused
-- Answer interviews from this Living Knowledge Source
-- Guide visitors through labelled pages
-- Typed and spoken Visitor Mode
-
-### Cannot
-
-- Lead with Image Nation DEX / legal name instead of **IN$DEX**
-- Move funds, open real accounts, issue identity, publish media, or change legal records
-- Claim features are Live when they are not
-- Claim registration is complete before the certificate exists
+| Marker | Public framing |
+|--------|----------------|
+| **$0.24** | Genesis / launch reference only — not a live market price |
+| **98/2** | Permanent doctrine: citizens 98%, Civilisation Fund 2% — not a live smart-contract claim until verified deployed code |
+| **Public pilot target** | 24 February 2027 — target, not a guarantee every feature ships that day |
 
 ---
 
-## 7. Interview / media-safe rules
+## 6. SIINDEX authority boundary
 
-1. **IN$DEX** first in every ordinary answer.
-2. Image Nation DEX / Decentralized Exchange / DEx Limited only when asked.
-3. If unknown: say so, or say it requires AJ confirmation.
-4. No investment promise, no guaranteed APY, no future price as fact.
-5. Mama Noe Test — short plain sentences.
-
----
-
-## 8. Supersession
-
-**2026-08-08:** Legal registrant locked to **Image Nation DEx Limited**.  
-**2026-08-08:** Brand-first rule — always **IN$DEX**.  
-**2026-08-08:** **Image Nation DEX** = short for **Image Nation Decentralized Exchange**.
+- Explains, guides, answers from approved public knowledge
+- Designated CEO & COO under **staged founder-controlled authority**
+- Does **not** move funds, open real accounts, issue identity, publish media, or change legal records without AJ approval
+- Sub-agents are **SI** sub-agents, not AI
 
 ---
 
-## 9. Open items requiring AJ
+## 7. Interview & media
 
-1. Legal string confirmed: **Image Nation DEx Limited** (still in progress until certificate).
-2. Approve expansion of Live labels when features become truly usable.
-3. Approve production merge.
+Yes — reporters, influencers, organisations and government offices can interview SIINDEX about **IN$DEX** in Visitor Mode. Answers stay inside this living knowledge. No invented partnerships, licences, or live prices.
+
+---
+
+## 8. Collaboration
+
+Serious collaboration questions are welcome. No partnership is claimed until AJ confirms it. Human follow-up uses official contact routes.
+
+---
+
+## 9. Surfaces on this branch
+
+| Path | Role |
+|------|------|
+| `/public-home.html` | Pre-launch hub |
+| `/siindex-interview.html` | Interview Mode |
+| `/siindex-present.html` | Presentation Mode |
+| `/speak-to-siindex.html` | Guided + public Q&A |
+| `/siindex-public/utility-directory.html` | Status board |
+| `/siindex-public/COOK_ISLANDS_QA.md` | Government Q&A seeds |
+| `/siindex-public/SIINDEX_WELCOME_15S.md` | 15-second welcome scripts |
+| `/siindex-faq.html` | Public FAQ |
+
+---
+
+## 10. Change rule
+
+This file is **living**. Update it when public facts change. Do not invent dates, prices, licences, partnerships, or completion claims. Production changes require AJ approval.
