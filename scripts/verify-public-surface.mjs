@@ -15,6 +15,10 @@ const root = routes.find((route) => route.src === "^/$");
 if (root?.dest !== "/public-home.html") failures.push("vercel.json: root is not the approved public homepage");
 const legacy = routes.find((route) => route.src === "^/(.+\\.html)$");
 if (legacy?.dest !== "/planned.html") failures.push("vercel.json: legacy HTML prototypes are not quarantined");
+const buildMode = routes.find((route) => route.src.includes("tier0|login|account-recovery") && route.src.includes("wallet-payments") && route.src.includes("swarm-preview"));
+if (buildMode?.dest !== "/planned.html") failures.push("vercel.json: unfinished identity, wallet and swarm routes are not gated behind Build Mode");
+requireText("planned.html", /Build Mode · Under Construction/, "public Build Mode label is missing");
+requireText("planned.html", /SIINDEX Visitor Mode is the only operational public utility today/, "SIINDEX-only operational boundary is missing");
 
 const publicFiles = ["public-home.html", "privacy-policy.html", "terms-of-service.html", "planned.html"];
 for (const file of publicFiles) {
