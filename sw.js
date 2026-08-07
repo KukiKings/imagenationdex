@@ -1,25 +1,16 @@
 /* IN$DEX Service Worker — verified public information shell.
-   Phase A: inject SIINDEX public knowledge boot into HTML navigations.
-   Transactional prototypes are intentionally excluded from public caching. */
-const VERSION = 'indx-v5-phase-a';
+   v6: network-first for HTML so restored app is not stuck behind stale cache. */
+const VERSION = 'indx-v6-restore-home';
 const SHELL = 'indx-shell-' + VERSION;
 const PAGES = 'indx-pages-' + VERSION;
 
+/* Precache assets only — never pin HTML shells (they change during pre-launch). */
 const PRECACHE = [
-  '/',
-  '/public-home.html',
-  '/planned.html',
-  '/privacy-policy.html',
-  '/terms-of-service.html',
   '/manifest.json',
-  '/siindex-speak-core.js',
   '/js/siindex-public-boot.js',
   '/js/siindex-public-knowledge.js',
   '/js/siindex-public-bridge.js',
   '/js/siindex-page-context.js',
-  '/siindex-interview.html',
-  '/siindex-present.html',
-  '/speak-to-siindex.html',
   '/assets/icon-192.png',
   '/assets/siindex-hero.png'
 ];
@@ -36,6 +27,7 @@ function htmlWithBoot(response) {
     var next = injectPublicBoot(text);
     var headers = new Headers(response.headers);
     headers.set('Content-Type', 'text/html; charset=utf-8');
+    headers.set('Cache-Control', 'no-store');
     return new Response(next, {
       status: response.status,
       statusText: response.statusText,
@@ -56,7 +48,7 @@ self.addEventListener('install', function (e) {
 self.addEventListener('activate', function (e) {
   e.waitUntil(
     caches.keys().then(function (keys) {
-      return Promise.all(keys.filter(function (k) { return !k.endsWith(VERSION); }).map(function (k) { return caches.delete(k); }));
+      return Promise.all(keys.map(function (k) { return caches.delete(k); }));
     }).then(function () { return self.clients.claim(); })
   );
 });
@@ -69,22 +61,8 @@ self.addEventListener('fetch', function (e) {
 
   var path = url.pathname;
 
-  if (PRECACHE.indexOf(path) !== -1) {
-    e.respondWith(
-      caches.match(path).then(function (hit) {
-        return hit || fetch(req).then(function (res) {
-          if (res && res.ok) {
-            var copy = res.clone();
-            caches.open(SHELL).then(function (c) { c.put(path, copy); });
-          }
-          return res;
-        });
-      })
-    );
-    return;
-  }
-
-  if (req.mode === 'navigate' || path.endsWith('.html')) {
+  /* HTML and navigations: always network-first */
+  if (req.mode === 'navigate' || path.endsWith('.html') || path === '/') {
     e.respondWith(
       fetch(req).then(function (res) {
         if (!res || !res.ok) return res;
@@ -94,6 +72,21 @@ self.addEventListener('fetch', function (e) {
       }).catch(function () {
         return caches.match(path).then(function (hit) {
           return hit || caches.match('/planned.html');
+        });
+      })
+    );
+    return;
+  }
+
+  if (PRECACHE.indexOf(path) !== -1) {
+    e.respondWith(
+      caches.match(path).then(function (hit) {
+        return hit || fetch(req).then(function (res) {
+          if (res && res.ok) {
+            var copy = res.clone();
+            caches.open(SHELL).then(function (c) { c.put(path, copy); });
+          }
+          return res;
         });
       })
     );
@@ -116,4 +109,9 @@ self.addEventListener('fetch', function (e) {
 
 self.addEventListener('message', function (e) {
   if (e.data === 'SKIP_WAITING') self.skipWaiting();
+  if (e.data === 'CLEAR_CACHES') {
+    e.waitUntil(caches.keys().then(function (keys) {
+      return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+    }));
+  }
 });
