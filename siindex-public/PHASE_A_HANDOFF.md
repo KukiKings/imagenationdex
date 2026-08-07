@@ -1,48 +1,38 @@
 # Phase A Handoff — SIINDEX Pre-launch
 
-**Branch:** `siindex/pre-launch-phase-a` (from `main`)  
+**Branch:** `siindex/pre-launch-phase-a`  
 **Draft PR:** https://github.com/KukiKings/imagenationdex/pull/10  
-**Builder lane:** Grok (Codex credits may be exhausted — rotate agents)  
-**Continuity lane:** Claude  
-**Approver:** AJ Henry  
 **Updated:** 2026-08-08
 
----
+## Brand-first lock
 
-## Done on branch
+- Always **IN$DEX** in ordinary speech
+- **Image Nation DEX** = short for **Image Nation Decentralized Exchange** (only when asked)
+- **Image Nation DEx Limited** = legal registrant when complete (only when asked)
+- SIINDEX = SI / PQSI — not AI
 
-| Deliverable | Path |
-|-------------|------|
-| Living Knowledge Source v1 | `siindex-public/LIVING_KNOWLEDGE_SOURCE_v1.md` |
-| Page-Context Contract | `siindex-public/PAGE_CONTEXT_CONTRACT.md` |
-| Utility directory (30 sections) | `siindex-public/utility-directory.json` + `.html` |
-| Cook Islands Q&A seeds | `siindex-public/COOK_ISLANDS_QA.md` |
-| Public knowledge JS | `js/siindex-public-knowledge.js` |
-| Visitor Mode bridge | `js/siindex-public-bridge.js` |
-| Drop-in boot | `js/siindex-public-boot.js` |
-| public-home wired | knowledge + speak-core + bridge |
-| speak-to-siindex | pre-launch language + public Q&A |
+## Shipped
 
-## Identity lock
+| Item | Path |
+|------|------|
+| Living knowledge | `siindex-public/LIVING_KNOWLEDGE_SOURCE_v1.md` |
+| Public answer JS | `js/siindex-public-knowledge.js` |
+| Ask bridge | `js/siindex-public-bridge.js` |
+| Boot loader | `js/siindex-public-boot.js` |
+| Page context map | `siindex-public/page-context-map.json` |
+| Page context JS | `js/siindex-page-context.js` |
+| Utility directory (30) | `siindex-public/utility-directory.*` |
+| Cook Islands Q&A | `siindex-public/COOK_ISLANDS_QA.md` |
+| Speak path | `speak-to-siindex.html` |
+| Codex next steps | `siindex-public/CODEX_NEXT.md` |
 
-- Brand: **IN$DEX**
-- Legal registrant when complete: **Imagination Index Limited** (confirm vs Image Nation DEx Limited on certificate)
-- SIINDEX: **PQSI** — Physical Quantum Synthetic Intelligence — **SI not AI**
-- Sub-agents: **SI** sub-agents
+## Still open
 
-## Scope lock
+1. One-line boot on `index.html`, `home-v3.html`, `siindex.html`, `siindex-chat.html`
+2. Restore full public-home visual layout if desired (compact version currently on branch)
+3. Vercel preview acceptance tests
+4. AJ production approval before merge
 
-- Pre-launch status labels (not “demo” product framing)
-- No production merge without AJ
-- No media studio / lip-sync / autonomous publish / funds / identity issuance
+## Claude
 
-## Next for Codex or next available agent
-
-1. Add `<script src="/js/siindex-public-boot.js"></script>` on `index.html`, `home-v3.html`, `siindex.html`, `siindex-chat.html`
-2. Vercel preview acceptance (Are you AI? / live status / company name / $0.24)
-3. AJ confirm legal name string on certificate
-4. Expand page-context JSON per major utility
-
-## Message for Claude
-
-Track living status against this branch. Do not merge. Align docs to **pre-launch** language and **SI not AI**. Production remains on previous main head until AJ approves.
+Track living status against this branch. No production merge. Align docs to pre-launch + SI not AI + brand-first IN$DEX.
