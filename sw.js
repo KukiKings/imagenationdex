@@ -1,6 +1,6 @@
 /* IN$DEX Service Worker — verified public information shell.
    Transactional prototypes are intentionally excluded from public caching. */
-const VERSION = 'indx-v4';
+const VERSION = 'indx-v6';
 const SHELL = 'indx-shell-' + VERSION;
 const PAGES = 'indx-pages-' + VERSION;
 
@@ -13,6 +13,10 @@ const PRECACHE = [
   '/terms-of-service.html',
   '/manifest.json',
   '/siindex-speak-core.js',
+  '/siindex-presence-core.js',
+  '/images/siindex-public-portrait-v2.webp',
+  '/images/siindex-public-video-poster.webp',
+  '/videos/siindex-public-intro.en.vtt',
   '/assets/icon-192.png',
   '/assets/siindex-hero.png'
 ];

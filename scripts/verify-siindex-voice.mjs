@@ -19,7 +19,7 @@ function forbidText(file, pattern, label) {
 }
 
 const core = "siindex-speak-core.js";
-requireText(core, /version:\s*"3\.0\.0"/, "website voice core v3 is missing");
+requireText(core, /version:\s*"3\.1\.0"/, "website voice core v3.1 is missing");
 requireText(core, /siindex-website-runtime/, "website runtime endpoint is missing");
 requireText(core, /siindex-website-transcribe/, "website transcription endpoint is missing");
 requireText(core, /siindex-website-voice-tts/, "website voice endpoint is missing");
@@ -32,6 +32,7 @@ requireText(core, /BUSY_RECOVERY_TIMEOUT_MS = 60_000/, "stale-session recovery t
 requireText(core, /The previous session timed out\. SIINDEX reset and is ready\./, "stale-session reset path is missing");
 requireText(core, /const SESSION_STATES = new Set/, "session state machine is missing");
 requireText(core, /function resetSession\(message\)/, "non-destructive session reset is missing");
+requireText(core, /getHistory\(\) \{\s*return getHistory\(\)\.map/, "read-only conversation continuity bridge is missing");
 requireText(core, /data-si-reset>Reset session</, "visible session reset control is missing");
 requireText(core, /audioTrack\.readyState !== "live"/, "live microphone-track validation is missing");
 requireText(core, /code === "NotReadableError"/, "busy microphone-device guidance is missing");
@@ -81,8 +82,9 @@ for (const file of earlyBridgePages) {
 }
 
 requireText("home-v2.html", /window\.SIINDEXVoice\.listen\(\{ source: 'homepage' \}\)/, "homepage microphone is not routed through the core");
-requireText("public-home.html", /window\.SIINDEXVoice\.listen\(\{source:'public-home'\}\)/, "approved public microphone is not routed through the core");
-requireText("public-home.html", /window\.SIINDEXVoice\.interrupt\(\)/, "approved public interruption control is missing");
+requireText("public-home.html", /siindex-presence-core\.js/, "approved public presence controller is not loaded");
+requireText("siindex-presence-core.js", /window\.SIINDEXVoice\.listen\(\{ source: "public-home" \}\)/, "approved public microphone is not routed through the core");
+requireText("siindex-presence-core.js", /window\.SIINDEXVoice\.interrupt\(\)/, "approved public interruption control is missing");
 requireText("siindex-chat.html", /window\.SIINDEXVoice\.listen\(\{ source: 'chat-page' \}\)/, "chat microphone is not routed through the core");
 forbidText("home-v2.html", /Google's servers|webkitSpeechRecognition|SpeechRecognition/, "homepage still contains the retired Google speech path");
 forbidText(core, /Sighn-dex/, "retired SIINDEX pronunciation remains in the voice core");
