@@ -54,21 +54,20 @@
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault();
     deferredPrompt = e;
-    if (localStorage.getItem('indx_pwa_install_dismissed')) return;
+    if (localStorage.getItem('indx_pwa_install_dismissed') === '1') return;
     var bar = document.createElement('div');
     bar.id = 'indxInstallBar';
-    bar.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:99998;background:#12141F;' +
-      'border-top:1px solid rgba(0,212,255,0.3);padding:14px 16px;display:flex;align-items:center;gap:12px;' +
-      'max-width:430px;margin:0 auto;font-family:-apple-system,system-ui,sans-serif;';
-    bar.innerHTML =
-      '<div style="flex:1;min-width:0;">' +
-        '<div style="font-size:15px;font-weight:800;color:#F0F2FF;">Add IN$DEX to your phone</div>' +
-        '<div style="font-size:13px;color:#B0B8D8;">Works like an app. Opens even with weak signal.</div>' +
-      '</div>' +
-      '<button id="indxInstallGo" style="background:linear-gradient(135deg,#00D4FF,#2B35D8);color:#fff;border:none;border-radius:10px;padding:12px 18px;font-size:14px;font-weight:800;cursor:pointer;">Add</button>' +
-      '<button id="indxInstallNo" aria-label="Dismiss install prompt" style="background:none;border:none;color:#B0B8D8;font-size:20px;cursor:pointer;padding:8px;">✕</button>';
+    bar.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:99998;background:#12141F;color:#F0F2FF;' +
+      'padding:14px 16px;font-family:-apple-system,system-ui,sans-serif;font-size:14px;' +
+      'max-width:430px;margin:0 auto;border-radius:14px 14px 0 0;box-shadow:0 -4px 20px rgba(0,0,0,0.4);' +
+      'border-top:1px solid rgba(0,212,255,0.25);';
+    bar.innerHTML = '<div style="margin-bottom:10px;font-weight:600;">Install IN$DEX on your phone for faster access.</div>' +
+      '<div style="display:flex;gap:8px;">' +
+      '<button id="indxInstallYes" style="flex:1;padding:10px;border:0;border-radius:10px;background:#00D4FF;color:#090A10;font-weight:800;cursor:pointer;">Install</button>' +
+      '<button id="indxInstallNo" style="padding:10px 14px;border:1px solid rgba(255,255,255,0.15);border-radius:10px;background:transparent;color:#9CA3B8;cursor:pointer;">Not now</button>' +
+      '</div>';
     document.body.appendChild(bar);
-    document.getElementById('indxInstallGo').onclick = function () {
+    document.getElementById('indxInstallYes').onclick = function () {
       bar.remove();
       if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; }
     };
@@ -114,5 +113,24 @@
   if (!navigator.onLine) {
     if (document.body) showOffline();
     else document.addEventListener('DOMContentLoaded', showOffline);
+  }
+})();
+
+/* Phase A — Grok sole builder: load SIINDEX public knowledge on pages that use indx-pwa */
+(function siindexPwaPublicBoot() {
+  if (typeof window === 'undefined' || window.__SIINDEX_PUBLIC_BOOT__) return;
+  try {
+    var s = document.createElement('script');
+    s.src = '/js/siindex-public-boot.js';
+    s.async = true;
+    s.onerror = function () {
+      var s2 = document.createElement('script');
+      s2.src = 'js/siindex-public-boot.js';
+      s2.async = true;
+      (document.head || document.documentElement).appendChild(s2);
+    };
+    (document.head || document.documentElement).appendChild(s);
+  } catch (e) {
+    console.warn('[SIINDEX] pwa public boot failed', e);
   }
 })();
