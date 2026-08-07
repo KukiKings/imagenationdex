@@ -1,10 +1,10 @@
 /* IN$DEX Service Worker — verified public information shell.
+   Phase A: inject SIINDEX public knowledge boot into HTML navigations.
    Transactional prototypes are intentionally excluded from public caching. */
-const VERSION = 'indx-v4';
+const VERSION = 'indx-v5-phase-a';
 const SHELL = 'indx-shell-' + VERSION;
 const PAGES = 'indx-pages-' + VERSION;
 
-/* Precache only the approved public surface. */
 const PRECACHE = [
   '/',
   '/public-home.html',
@@ -13,75 +13,107 @@ const PRECACHE = [
   '/terms-of-service.html',
   '/manifest.json',
   '/siindex-speak-core.js',
+  '/js/siindex-public-boot.js',
+  '/js/siindex-public-knowledge.js',
+  '/js/siindex-public-bridge.js',
+  '/js/siindex-page-context.js',
+  '/siindex-interview.html',
+  '/siindex-present.html',
+  '/speak-to-siindex.html',
   '/assets/icon-192.png',
   '/assets/siindex-hero.png'
 ];
 
-self.addEventListener('install', (e) => {
+function injectPublicBoot(html) {
+  if (!html || html.indexOf('siindex-public-boot.js') !== -1) return html;
+  var tag = '<script src="/js/siindex-public-boot.js" defer></script>';
+  if (html.indexOf('</body>') !== -1) return html.replace('</body>', tag + '\n</body>');
+  return html + tag;
+}
+
+function htmlWithBoot(response) {
+  return response.text().then(function (text) {
+    var next = injectPublicBoot(text);
+    var headers = new Headers(response.headers);
+    headers.set('Content-Type', 'text/html; charset=utf-8');
+    return new Response(next, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: headers
+    });
+  });
+}
+
+self.addEventListener('install', function (e) {
   e.waitUntil(
     caches.open(SHELL)
-      .then((c) => c.addAll(PRECACHE))
-      .then(() => self.skipWaiting())
+      .then(function (c) { return c.addAll(PRECACHE); })
+      .then(function () { return self.skipWaiting(); })
+      .catch(function () { return self.skipWaiting(); })
   );
 });
 
-self.addEventListener('activate', (e) => {
+self.addEventListener('activate', function (e) {
   e.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => !k.endsWith(VERSION)).map((k) => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    caches.keys().then(function (keys) {
+      return Promise.all(keys.filter(function (k) { return !k.endsWith(VERSION); }).map(function (k) { return caches.delete(k); }));
+    }).then(function () { return self.clients.claim(); })
   );
 });
 
-/* Strategy:
-   - Approved shell: cache-first (instant, works offline)
-   - Other same-origin pages: network-first, cache fallback, planned-status page last
-   - Cross-origin (Supabase, CDNs): network only — NEVER cache live data or execute stale state
-   - Low-data: only successful, basic, same-origin GET responses are cached */
-self.addEventListener('fetch', (e) => {
-  const req = e.request;
-  if (req.method !== 'GET') return; // never intercept writes — sensitive actions need the network
-  const url = new URL(req.url);
-  if (url.origin !== self.location.origin) return; // Supabase/CDN: network only
+self.addEventListener('fetch', function (e) {
+  var req = e.request;
+  if (req.method !== 'GET') return;
+  var url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
 
-  const path = url.pathname;
+  var path = url.pathname;
 
-  if (PRECACHE.includes(path)) {
+  if (PRECACHE.indexOf(path) !== -1) {
     e.respondWith(
-      caches.match(path).then((hit) => hit ||
-        fetch(req).then((res) => {
-          if (res && res.ok) { const copy = res.clone(); caches.open(SHELL).then((c) => c.put(path, copy)); }
+      caches.match(path).then(function (hit) {
+        return hit || fetch(req).then(function (res) {
+          if (res && res.ok) {
+            var copy = res.clone();
+            caches.open(SHELL).then(function (c) { c.put(path, copy); });
+          }
           return res;
-        })
-      )
+        });
+      })
     );
     return;
   }
 
   if (req.mode === 'navigate' || path.endsWith('.html')) {
     e.respondWith(
-      fetch(req).then((res) => {
-        if (res && res.ok) { const copy = res.clone(); caches.open(PAGES).then((c) => c.put(path, copy)); }
-        return res;
-      }).catch(() =>
-        caches.match(path).then((hit) => hit || caches.match('/planned.html'))
-      )
+      fetch(req).then(function (res) {
+        if (!res || !res.ok) return res;
+        var ct = res.headers.get('content-type') || '';
+        if (ct.indexOf('text/html') === -1) return res;
+        return htmlWithBoot(res);
+      }).catch(function () {
+        return caches.match(path).then(function (hit) {
+          return hit || caches.match('/planned.html');
+        });
+      })
     );
     return;
   }
 
-  /* Static assets: stale-while-revalidate */
   e.respondWith(
-    caches.match(req).then((hit) => {
-      const net = fetch(req).then((res) => {
-        if (res && res.ok) { const copy = res.clone(); caches.open(PAGES).then((c) => c.put(req, copy)); }
+    caches.match(req).then(function (hit) {
+      var net = fetch(req).then(function (res) {
+        if (res && res.ok) {
+          var copy = res.clone();
+          caches.open(PAGES).then(function (c) { c.put(req, copy); });
+        }
         return res;
-      }).catch(() => hit);
+      }).catch(function () { return hit; });
       return hit || net;
     })
   );
 });
 
-self.addEventListener('message', (e) => {
+self.addEventListener('message', function (e) {
   if (e.data === 'SKIP_WAITING') self.skipWaiting();
 });
