@@ -1,5 +1,5 @@
 /**
- * SIINDEX Website Voice Core v3
+ * SIINDEX Website Voice Core v3.1
  *
  * One shared, real conversation controller for the homepage and every page
  * that already includes this file. It has no account access, tools, or
@@ -8,7 +8,7 @@
 (function () {
   "use strict";
 
-  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.0") return;
+  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.1.0") return;
 
   const SUPABASE_URL = "https://zljgthfzbalsunuoohcd.supabase.co";
   const SUPABASE_KEY = "sb_publishable_rSl7P028UrBn8KCUSSbjAg_mT3FWoxV";
@@ -262,6 +262,8 @@
     if (ui.interrupt) {
       ui.interrupt.hidden = !["thinking", "speaking", "transcribing", "recovering"].includes(nextState);
     }
+    if (ui.panel) ui.panel.dataset.presenceState = nextState;
+    if (ui.avatar) ui.avatar.dataset.state = nextState;
     emit("status", { state: nextState, text });
   }
 
@@ -921,8 +923,13 @@
     #siindex-overlay.show{display:block}
     #siindex-panel{position:fixed;left:0;right:0;bottom:0;max-width:460px;height:min(82vh,720px);margin:auto;background:#11141f;border:1px solid rgba(0,212,255,.24);border-bottom:0;border-radius:24px 24px 0 0;z-index:9999;transform:translateY(105%);transition:transform .3s ease;display:flex;flex-direction:column;overflow:hidden;color:#f4f6ff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
     #siindex-panel.open{transform:translateY(0)}
-    .siindex-panel-header{display:flex;gap:10px;align-items:center;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
-    .siindex-avatar{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#00d4ff,#8b3fe8);font-weight:900}
+    .siindex-panel-header{display:flex;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
+    .siindex-avatar{position:relative;width:48px;height:64px;flex:none;border-radius:14px;display:grid;place-items:center;overflow:hidden;background:radial-gradient(circle at 50% 34%,rgba(0,212,255,.18),transparent 62%),#080b16;border:1px solid rgba(0,212,255,.3)}
+    .siindex-avatar img{width:100%;height:100%;display:block;object-fit:contain;object-position:center}
+    .siindex-avatar::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;border:1px solid transparent;transition:border-color .2s ease,box-shadow .2s ease}
+    .siindex-avatar[data-state="listening"]::after{border-color:#ff7f98;box-shadow:inset 0 0 18px rgba(255,77,109,.4)}
+    .siindex-avatar[data-state="thinking"]::after,.siindex-avatar[data-state="transcribing"]::after{border-color:#c596ff;box-shadow:inset 0 0 18px rgba(139,63,232,.42)}
+    .siindex-avatar[data-state="speaking"]::after{border-color:#00e5a0;box-shadow:inset 0 0 20px rgba(0,229,160,.46)}
     .siindex-heading{flex:1}.siindex-name{font-size:15px;font-weight:850;letter-spacing:.08em}.siindex-mode{font-size:10px;color:#00e5a0;margin-top:3px;letter-spacing:.08em;text-transform:uppercase}
     .siindex-icon-btn{border:0;background:transparent;color:#c8cede;font-size:22px;padding:7px;cursor:pointer}
     .siindex-privacy{padding:9px 16px;background:rgba(0,212,255,.06);border-bottom:1px solid rgba(0,212,255,.1);color:#b5c0d3;font-size:11px;line-height:1.45}
@@ -942,7 +949,7 @@
     .siindex-footer-tools{display:flex;align-items:center;justify-content:space-between;padding:0 14px 7px;color:#8e98aa;font-size:10px}.siindex-text-btn{border:0;background:transparent;color:#8ceaff;font-size:10px;cursor:pointer}
     @keyframes siindexMicPulse{50%{transform:scale(1.12);box-shadow:0 0 20px rgba(255,77,109,.65)}}
     @media (min-width:700px){#siindex-panel{left:auto;right:18px;bottom:18px;border-bottom:1px solid rgba(0,212,255,.24);border-radius:24px;width:430px;height:min(78vh,700px)}}
-    @media (prefers-reduced-motion:reduce){#siindex-panel,.siindex-round{transition:none!important;animation:none!important}}
+    @media (prefers-reduced-motion:reduce){#siindex-panel,.siindex-round,.siindex-avatar::after{transition:none!important;animation:none!important}}
   `;
 
   const ui = {
@@ -956,6 +963,7 @@
     mic: null,
     interrupt: null,
     voiceToggle: null,
+    avatar: null,
   };
 
   function restorePanelHistory() {
@@ -1021,10 +1029,10 @@
     ui.panel.setAttribute("aria-label", "SIINDEX Visitor Mode conversation");
     ui.panel.innerHTML = `
       <header class="siindex-panel-header">
-        <div class="siindex-avatar" aria-hidden="true">SI</div>
+        <div class="siindex-avatar" data-si-avatar data-state="initializing" aria-hidden="true"><img src="/images/siindex-public-portrait-v2.webp" width="1024" height="1536" alt=""></div>
         <div class="siindex-heading">
           <div class="siindex-name">SIINDEX</div>
-          <div class="siindex-mode">Synthetic Intelligence · Website Voice</div>
+          <div class="siindex-mode">Synthetic Intelligence · Here with you</div>
         </div>
         <button type="button" class="siindex-icon-btn" data-si-close aria-label="Close SIINDEX">×</button>
       </header>
@@ -1054,6 +1062,7 @@
     ui.mic = ui.panel.querySelector("[data-si-mic]");
     ui.interrupt = ui.panel.querySelector("[data-si-interrupt]");
     ui.voiceToggle = ui.panel.querySelector("[data-si-voice]");
+    ui.avatar = ui.panel.querySelector("[data-si-avatar]");
 
     const prompts = [
       "What is genuinely live today?",
@@ -1115,8 +1124,11 @@
     get recording() {
       return recording;
     },
+    getHistory() {
+      return getHistory().map((item) => ({ ...item }));
+    },
     mode: "website",
-    version: "3.0.0",
+    version: "3.1.0",
   };
 
   // Backwards-compatible entrypoint used by a few existing pages.
@@ -1193,5 +1205,5 @@
   window.SpeechRecognition = SIINDEXSpeechRecognition;
   window.webkitSpeechRecognition = SIINDEXSpeechRecognition;
 
-  emit("ready", { mode: "website", version: "3.0.0" });
+  emit("ready", { mode: "website", version: "3.1.0" });
 })();

@@ -15,6 +15,10 @@ const root = routes.find((route) => route.src === "^/$");
 if (root?.dest !== "/public-home.html") failures.push("vercel.json: root is not the approved public homepage");
 const legacy = routes.find((route) => route.src === "^/(.+\\.html)$");
 if (legacy?.dest !== "/planned.html") failures.push("vercel.json: legacy HTML prototypes are not quarantined");
+const buildMode = routes.find((route) => route.src.includes("tier0|login|account-recovery") && route.src.includes("wallet-payments") && route.src.includes("swarm-preview"));
+if (buildMode?.dest !== "/planned.html") failures.push("vercel.json: unfinished identity, wallet and swarm routes are not gated behind Build Mode");
+requireText("planned.html", /Build Mode · Under Construction/, "public Build Mode label is missing");
+requireText("planned.html", /SIINDEX Visitor Mode is the only operational public utility today/, "SIINDEX-only operational boundary is missing");
 
 const publicFiles = ["public-home.html", "privacy-policy.html", "terms-of-service.html", "planned.html"];
 for (const file of publicFiles) {
@@ -27,13 +31,20 @@ requireText("public-home.html", /No face scan at Tier 0/i, "Tier 0 face-scan pro
 requireText("public-home.html", /50 INDX recognition – pending review\. Not yet spendable\./, "approved recognition wording is missing");
 requireText("public-home.html", /founder-selected launch and genesis reference/, "founder-selected USD $0.24 launch reference is missing");
 forbidText("public-home.html", /\$0\.36\b/, "retired USD $0.36 launch figure remains");
+requireText("public-home.html", /Proposed 98\/2 participation policy/, "98/2 is not labelled as proposed policy");
+forbidText("public-home.html", /permanent doctrine/i, "98/2 is still presented as permanent doctrine");
 requireText("public-home.html", /registration has not yet been filed/i, "approved legal-status wording is missing");
 requireText("public-home.html", /SIINDEX Visitor Mode/, "SIINDEX authority boundary is missing");
 requireText("public-home.html", /videos\/siindex-public-intro\.mp4/, "remastered SIINDEX introduction video is missing");
 requireText("public-home.html", /Read the introduction transcript/, "accessible introduction transcript is missing");
-requireText("public-home.html", /images\/siindex-public-portrait\.webp/, "optimized public portrait is missing");
+requireText("public-home.html", /images\/siindex-public-portrait-v2\.webp/, "full-frame public portrait is missing");
+requireText("public-home.html", /aspect-ratio:2\/3/, "full-frame portrait ratio is missing");
+requireText("public-home.html", /aspect-ratio:16\/9/, "introduction video is not protected from portrait cropping");
+requireText("public-home.html", /kind="captions"/, "introduction captions are missing");
+requireText("public-home.html", /introVideoStatus/, "introduction loading and error status is missing");
 requireText("vercel.json", /jpeg\|webp\|gif/, "WebP assets are not publicly routed");
-for (const file of ["images/siindex-public-portrait.webp", "images/siindex-public-video-poster.webp"]) {
+requireText("siindex-swarm-preview.html", /Build Mode · Private Testing/, "swarm preview lacks the build and testing boundary");
+for (const file of ["images/siindex-public-portrait-v2.webp", "images/siindex-public-video-poster.webp"]) {
   if (!fs.existsSync(file)) failures.push(`${file}: optimized public asset is missing`);
   else if (fs.statSync(file).size > 300_000) failures.push(`${file}: optimized public asset exceeds 300 KB`);
 }
@@ -44,7 +55,9 @@ requireText("supabase/functions/siindex-website-runtime/index.ts", /No face scan
 requireText("supabase/functions/siindex-website-runtime/index.ts", /Website Visitor Mode has no phone-call channel/, "runtime phone-call prohibition is missing");
 
 forbidText("sw.js", /home-v2\.html|receive\.html|send\.html|withdraw-fiat\.html/, "service worker still publishes transactional prototypes");
-requireText("sw.js", /indx-v4/, "public cache version was not advanced");
+requireText("public-home.html", /siindex-presence-core\.js/, "citizen presence controller is missing");
+requireText("sw.js", /siindex-presence-core\.js/, "citizen presence controller is not available offline");
+requireText("sw.js", /indx-v6/, "public cache version was not advanced");
 requireText("robots.txt", /Disallow: \/\*\.html\$/, "legacy prototype crawler rule is missing");
 requireText("sitemap.xml", /https:\/\/imagenationdex\.com\/status/, "status URL is missing from sitemap");
 
@@ -54,4 +67,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log("IN$DEX public-surface verification passed (approved routes, Canon copy, voice boundaries, crawler controls, and cache surface).");
+console.log("IN$DEX public-surface verification passed (approved routes, verified-status copy, voice boundaries, crawler controls, and cache surface).");
