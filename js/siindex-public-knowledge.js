@@ -2,19 +2,20 @@
  * siindex-public-knowledge.js
  * Public speech layer for SIINDEX — SI (Synthetic Intelligence), not AI.
  * Loads living knowledge + utility directory for Visitor Mode / interview answers.
- * Version: 1.0.0 | Phase A | Branch: siindex/pre-launch-phase-a
+ * Version: 1.0.1 | Phase A | Branch: siindex/pre-launch-phase-a
+ * Legal registrant (when complete): Image Nation DEx Limited
  */
 (function (global) {
   'use strict';
 
   var SIINDEX_PUBLIC = {
-    version: '1.0.0',
+    version: '1.0.1',
     kind: 'SI',
     full: 'Synthetic Intelligence',
     pqsi: 'Physical Quantum Synthetic Intelligence',
     never_call: ['AI', 'artificial intelligence', 'assistant'],
     brand: 'IN$DEX',
-    legal_registrant_when_complete: 'Imagination Index Limited',
+    legal_registrant_when_complete: 'Image Nation DEx Limited',
     registration_status: 'in_progress',
     founder: 'AJ Henry',
     role: 'CEO and COO under staged founder-controlled authority',
@@ -46,7 +47,6 @@
 
     status_labels: ['Live', 'Testing', 'Planned', 'Paused', 'Pre-launch'],
 
-    /** Simple keyword router for interview / typed fallback */
     answer: function (question) {
       var q = String(question || '').toLowerCase();
       if (!q.trim()) {
@@ -62,10 +62,10 @@
         return this.what_is_indx;
       }
       if (/company|registr|legal name|limited/.test(q)) {
-        return 'The brand is IN$DEX. The intended Cook Islands legal registrant when registration completes is Imagination Index Limited. Registration is in progress until the certificate is issued.';
+        return 'The brand is IN$DEX. The intended Cook Islands legal registrant when registration completes is Image Nation DEx Limited. Registration is in progress until the certificate is issued.';
       }
       if (/cook island|rarotonga|government|parliament|prime minister/.test(q)) {
-        return 'The founder is a New Zealand and Cook Islands citizen. We are establishing our legal home in the Cook Islands. I can explain IN$DEX and our pre-launch status honestly. I do not claim government licences or approvals that do not exist.';
+        return 'The founder is a New Zealand and Cook Islands citizen. We are establishing our legal home in the Cook Islands under Image Nation DEx Limited (registration in progress). I can explain IN$DEX and our pre-launch status honestly. I do not claim government licences or approvals that do not exist.';
       }
       if (/0\.24|price|token price|genesis/.test(q)) {
         return this.genesis_note + ' Distribution and liquidity remain paused pending reconciliation and approval.';

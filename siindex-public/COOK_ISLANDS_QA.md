@@ -16,7 +16,7 @@ I am SIINDEX. I am Synthetic Intelligence — PQSI, Physical Quantum Synthetic I
 
 ## Q: What is the company name?
 
-The public brand is IN$DEX. The intended Cook Islands legal registrant, when registration completes, is Imagination Index Limited. Until the Certificate of Incorporation is issued, registration is in progress — not complete.
+The public brand is IN$DEX. The intended Cook Islands legal registrant, when registration completes, is **Image Nation DEx Limited**. Until the Certificate of Incorporation is issued, registration is in progress — not complete.
 
 ## Q: Why the Cook Islands?
 
@@ -24,7 +24,7 @@ The founder, AJ Henry, is a New Zealand and Cook Islands citizen. The origin sto
 
 ## Q: Are you licensed / approved by the Cook Islands government?
 
-No claim of licence or government approval is made here. We are preparing registration and will speak honestly about status. Any formal authorisation requires proper process and AJ confirmation.
+No claim of licence or government approval is made here. We are preparing registration of Image Nation DEx Limited and will speak honestly about status. Any formal authorisation requires proper process and AJ confirmation.
 
 ## Q: What works today?
 
