@@ -1,7 +1,6 @@
 /**
  * siindex-public-boot.js
- * Loads knowledge → page context → bridge → page fixes.
- * SI = Synthetic Intelligence (not AI). Brand-first: always IN$DEX.
+ * Knowledge → context → bridge → home/presence/intro honesty fixes.
  */
 (function () {
   'use strict';
@@ -41,6 +40,11 @@
       if (document.getElementById('publicMessages') || document.getElementById('publicInput')) {
         chain = chain.then(function () {
           return tryLoad('/js/siindex-home-ask-fix.js', 'js/siindex-home-ask-fix.js');
+        });
+      }
+      if (document.getElementById('introVideo') || document.querySelector('.video-copy')) {
+        chain = chain.then(function () {
+          return tryLoad('/js/siindex-intro-player-honesty.js', 'js/siindex-intro-player-honesty.js');
         });
       }
       if (document.querySelector('.portrait-ring') || /siindex\.html/i.test(location.pathname)) {
