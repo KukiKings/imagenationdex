@@ -2,13 +2,13 @@
  * siindex-public-knowledge.js
  * Public speech layer for SIINDEX — SI (Synthetic Intelligence), not AI.
  * RULE: Always lead with brand IN$DEX. Legal name only when the visitor asks.
- * Version: 1.2.0 | Completion build
+ * Version: 1.3.0 | Cook Islands interview pack
  */
 (function (global) {
   'use strict';
 
   var SIINDEX_PUBLIC = {
-    version: '1.2.0',
+    version: '1.3.0',
     kind: 'SI',
     full: 'Synthetic Intelligence',
     pqsi: 'Physical Quantum Synthetic Intelligence',
@@ -39,6 +39,18 @@
     legal_name_answer:
       'IN$DEX is the brand. Image Nation DEX is short for Image Nation Decentralized Exchange. ' +
       'The intended Cook Islands legal registrant is Image Nation DEx Limited. Registration is in progress until the certificate is issued.',
+
+    registration_status_answer:
+      'For IN$DEX, company registration in the Cook Islands is in progress. ' +
+      'I will not claim a completed registration, a certificate number, or a government licence until that is verified and AJ confirms it may be stated publicly.',
+
+    offer_cook_islands_answer:
+      'IN$DEX offers the Cook Islands a Pacific-first digital platform built with local reality in mind — identity and everyday tools on a phone, with honest status about what is live versus planned. ' +
+      'We are not claiming to replace government systems. We want constructive engagement with organisations and officials, transparent pre-launch status, and no invented approvals.',
+
+    speak_government_answer:
+      'Yes. SIINDEX is built so organisations and government offices can interview me about IN$DEX from public living knowledge. ' +
+      'The founder plans Cook Islands engagement from December 2026. I answer honestly. I do not invent licences or completed registration.',
 
     mission_answer:
       'IN$DEX exists so ordinary people in the Pacific can complete everyday money and identity tasks on a phone without being locked out by cash gaps, complex wallets, or tools that ignore local reality. ' +
@@ -88,6 +100,18 @@
         return this.legal_name_answer;
       }
 
+      if (/registration status|registered yet|company registration|when.*regist/.test(q)) {
+        return this.registration_status_answer;
+      }
+
+      if (/offer (the )?cook|what does (in\$dex|index).*(cook|pacific)|benefit.*(cook|pacific)/.test(q)) {
+        return this.offer_cook_islands_answer;
+      }
+
+      if (/speak to (the )?(cook|government|parliament|minister)|meet (with )?government|interview.*(government|minister)/.test(q)) {
+        return this.speak_government_answer;
+      }
+
       if (/what is (in\$dex|index|indx)|about (in\$dex|indx)|tell me about (in\$dex|index)/.test(q)) {
         return this.what_is_indx;
       }
@@ -108,7 +132,7 @@
         return this.autonomy_answer;
       }
 
-      if (/collaborat|partner|work with|join|invest in us/.test(q)) {
+      if (/collaborat|partner|work with|join|invest in us|organisations collaborate|how can organisations/.test(q)) {
         return this.collab_answer;
       }
 
@@ -135,7 +159,10 @@
         );
       }
 
-      if (/0\.24|price|token price|genesis/.test(q)) {
+      if (/0\.24|price|token price|genesis|buy (the )?token|purchase/.test(q)) {
+        if (/buy|purchase|pay today/.test(q)) {
+          return 'You cannot buy an IN$DEX token at a live public price here. USD 0.24 is a genesis reference only — not a live market price or a purchasable offer today.';
+        }
         return 'For IN$DEX, ' + this.genesis_note + ' Distribution and liquidity remain paused pending reconciliation and approval.';
       }
 
@@ -147,7 +174,7 @@
         return 'IN$DEX targets a controlled public pilot on 24 February 2027 — a target, not a guarantee that every feature ships that day. Some information services are live now; financial tools are not.';
       }
 
-      if (/wallet|payment|send money|buy indx|trading|swap|stake/.test(q)) {
+      if (/wallet|payment|send money|trading|swap|stake/.test(q)) {
         return 'Those IN$DEX services are not live for the public yet. They are planned or paused. Visitor Mode is for information only.';
       }
 
@@ -166,7 +193,7 @@
       return (
         'I speak for IN$DEX from our public living knowledge. ' +
         this.what_is_indx +
-        ' Ask about status, Cook Islands, mission, founder, interviews, presentation, utilities, or what is live versus planned.'
+        ' Ask about status, Cook Islands, registration, mission, founder, interviews, presentation, utilities, or what is live versus planned.'
       );
     }
   };
