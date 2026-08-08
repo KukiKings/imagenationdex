@@ -48,7 +48,7 @@
     .transcript{border:1px solid var(--line);border-radius:16px;background:rgba(16,20,38,.8);padding:12px 15px}.transcript summary{cursor:pointer;color:var(--cyan);font-weight:800}.transcript p{color:var(--muted);font-size:13px;margin:10px 0 2px}
     .chat-panel{border:1px solid var(--line);border-radius:28px;background:rgba(16,20,38,.92);padding:18px;display:flex;flex-direction:column;min-height:620px}
     .chat-panel h3{margin:0 0 8px}.messages{flex:1;overflow:auto;display:flex;flex-direction:column;gap:10px;margin:12px 0;padding-right:4px}
-    .message{border-radius:16px;padding:12px 14px;font-size:14px;line-height:1.5;white-space:pre-wrap}.message.user{align-self:flex-end;background:linear-gradient(135deg,rgba(43,53,216,.55),rgba(139,63,232,.48))}.message.si{align-self:flex-start;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.18)}
+    .message{border-radius:16px;padding:12px 14px;font-size:14px;line-height:1.5;white-space:pre-wrap}.message.user{align-self:flex-end;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.18)}.message.user{align-self:flex-end;background:linear-gradient(135deg,rgba(43,53,216,.55),rgba(139,63,232,.48))}.message.si{align-self:flex-start;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.18)}
     .prompts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}.prompts button{border:1px solid rgba(0,212,255,.25);background:rgba(0,212,255,.06);color:#8ceaff;border-radius:999px;padding:8px 12px;font-size:12px;cursor:pointer}
     .composer{display:flex;gap:8px;align-items:center}.composer input{flex:1;border:1px solid var(--line);border-radius:999px;background:#12162a;color:#fff;padding:14px 16px;font-size:15px}.iconbtn{width:48px;height:48px;border:0;border-radius:50%;background:linear-gradient(135deg,var(--cyan),#2b35d8);color:#fff;font-size:18px;cursor:pointer}
     .voice-status{min-height:20px;color:var(--muted);font-size:12px;margin-top:8px}
@@ -106,12 +106,13 @@
           <div class="video-shell">
             <div class="video-card">
               <video id="introVideo" muted playsinline preload="metadata" poster="/images/siindex-public-video-poster.webp" aria-describedby="introTranscript">
+                <source id="introSpeakSource" src="/videos/siindex-public-intro-speak.mp4?v=1" type="video/mp4">
                 <source src="/videos/siindex-public-intro.mp4?v=speak-20260809" type="video/mp4">
               </video>
               <div class="video-shade"></div>
               <div class="video-copy">
                 <h3>SIINDEX</h3>
-                <p>Introduction for IN$DEX · spoken on this device until lip-synced media is published</p>
+                <p id="introStatusLine">Introduction for IN$DEX</p>
                 <button class="video-button" id="videoButton" type="button">▶ Play introduction</button>
               </div>
             </div>
@@ -245,47 +246,75 @@
     });
     const video = document.getElementById('introVideo');
     const videoButton = document.getElementById('videoButton');
-    const introScript = (document.querySelector('#introTranscript p') || {}).textContent || '';
+    const introStatusLine = document.getElementById('introStatusLine');
+    const introScript = ((document.querySelector('#introTranscript p') || {}).textContent || '').trim();
     let introSpeaking = false;
-    let introUtterance = null;
+    let speakMediaReady = null;
+
+    function setIntroStatus(text) {
+      if (introStatusLine) introStatusLine.textContent = text;
+    }
+
     function stopIntroSpeech() {
       if (window.speechSynthesis) window.speechSynthesis.cancel();
       introSpeaking = false;
-      introUtterance = null;
     }
-    function playIntroSpeech() {
+
+    function playDeviceSpeech() {
       stopIntroSpeech();
-      if (!window.speechSynthesis || !introScript.trim()) return false;
-      introUtterance = new SpeechSynthesisUtterance(introScript.trim());
-      introUtterance.rate = 0.95;
-      introUtterance.pitch = 1.05;
-      introUtterance.onend = () => {
-        introSpeaking = false;
-        videoButton.textContent = '▶ Play introduction';
-      };
-      introUtterance.onerror = () => {
-        introSpeaking = false;
-        videoButton.textContent = '▶ Play introduction';
-      };
+      if (!window.speechSynthesis || !introScript) return false;
+      const u = new SpeechSynthesisUtterance(introScript);
+      u.rate = 0.95;
+      u.pitch = 1.05;
+      u.onend = () => { introSpeaking = false; videoButton.textContent = '▶ Play introduction'; };
+      u.onerror = () => { introSpeaking = false; videoButton.textContent = '▶ Play introduction'; };
       introSpeaking = true;
-      window.speechSynthesis.speak(introUtterance);
+      window.speechSynthesis.speak(u);
+      setIntroStatus('Introduction for IN$DEX · spoken on this device until lip-synced media is published');
       return true;
     }
-    videoButton.addEventListener('click', () => {
-      if (introSpeaking || (video && !video.paused)) {
+
+    function checkSpeakMedia() {
+      return fetch('/videos/siindex-public-intro-speak.mp4?v=1', { method: 'HEAD', cache: 'no-store' })
+        .then(r => {
+          speakMediaReady = r.ok;
+          if (r.ok) setIntroStatus('Introduction for IN$DEX · lip-synced speaking media');
+          else setIntroStatus('Introduction for IN$DEX · spoken on this device until lip-synced media is published');
+          return r.ok;
+        })
+        .catch(() => { speakMediaReady = false; return false; });
+    }
+    checkSpeakMedia();
+
+    videoButton.addEventListener('click', async () => {
+      if (introSpeaking || (video && !video.paused && !video.ended)) {
         stopIntroSpeech();
         if (video) video.pause();
         videoButton.textContent = '▶ Play introduction';
         return;
       }
-      // Prefer device speech of the approved transcript so SIINDEX is heard
-      // even while the lip-synced media file is still being placed in the repo.
-      if (video) {
-        try { video.currentTime = 0; video.muted = true; video.play().catch(() => {}); } catch (e) {}
+      if (speakMediaReady === null) await checkSpeakMedia();
+      if (speakMediaReady && video) {
+        try {
+          const src = document.getElementById('introSpeakSource');
+          if (src) src.src = '/videos/siindex-public-intro-speak.mp4?v=1';
+          video.load();
+          video.muted = false;
+          video.currentTime = 0;
+          await video.play();
+          videoButton.textContent = '❚❚ Pause introduction';
+          setIntroStatus('Introduction for IN$DEX · lip-synced speaking media');
+          return;
+        } catch (e) {}
       }
-      const spoke = playIntroSpeech();
-      videoButton.textContent = spoke ? '❚❚ Pause introduction' : '▶ Play introduction';
-      if (!spoke && video) {
+      if (video) {
+        try { video.muted = true; video.currentTime = 0; video.play().catch(() => {}); } catch (e) {}
+      }
+      if (playDeviceSpeech()) {
+        videoButton.textContent = '❚❚ Pause introduction';
+        return;
+      }
+      if (video) {
         video.muted = false;
         video.play().catch(() => {});
         videoButton.textContent = '❚❚ Pause introduction';
