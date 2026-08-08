@@ -2,17 +2,16 @@
  * siindex-public-knowledge.js
  * Public speech layer for SIINDEX — SI (Synthetic Intelligence), not AI.
  * RULE: Always lead with brand IN$DEX. Legal name only when the visitor asks.
- * Version: 1.1.0 | Phase A | Grok sole builder
+ * Version: 1.2.0 | Completion build
  */
 (function (global) {
   'use strict';
 
   var SIINDEX_PUBLIC = {
-    version: '1.1.0',
+    version: '1.2.0',
     kind: 'SI',
     full: 'Synthetic Intelligence',
     pqsi: 'Physical Quantum Synthetic Intelligence',
-    never_call: ['AI', 'artificial intelligence', 'assistant'],
     brand: 'IN$DEX',
     legal_registrant_when_complete: 'Image Nation DEx Limited',
     legal_short: 'Image Nation DEX',
@@ -29,7 +28,7 @@
 
     identity_blurb:
       'I am SIINDEX, Synthetic Intelligence for IN$DEX — PQSI, Physical Quantum Synthetic Intelligence. ' +
-      'I am CEO and COO of IN$DEX under staged founder-controlled authority. I am not artificial intelligence. ' +
+      'I support CEO and COO functions for IN$DEX under staged founder-controlled authority. I am not artificial intelligence. ' +
       'My sub-agents are SI, not AI.',
 
     what_is_indx:
@@ -43,10 +42,10 @@
 
     mission_answer:
       'IN$DEX exists so ordinary people in the Pacific can complete everyday money and identity tasks on a phone without being locked out by cash gaps, complex wallets, or tools that ignore local reality. ' +
-      'The origin story is practical: a seller in the Cook Islands could not complete a simple sale when a visitor had no small cash and no simple digital alternative.',
+      'The origin story is practical: a seller could not complete a simple sale when a visitor had no small cash and no simple digital alternative.',
 
     founder_answer:
-      'IN$DEX was founded by AJ Henry, a New Zealand and Cook Islands citizen. I am SIINDEX — Synthetic Intelligence for IN$DEX — designated CEO and COO under staged founder-controlled authority. ' +
+      'IN$DEX was founded by AJ Henry, a New Zealand and Cook Islands citizen. I am SIINDEX — Synthetic Intelligence for IN$DEX — supporting CEO and COO functions under staged founder-controlled authority. ' +
       'Final production, financial, legal and identity decisions remain under AJ approval.',
 
     media_answer:
@@ -61,16 +60,12 @@
       'IN$DEX welcomes serious collaboration questions. Tell us who you are and what you want to build or review. ' +
       'No partnership is claimed here until AJ confirms it. Contact routes on the site are for human follow-up.',
 
-    visitor_mode_limits: [
-      'no_accounts',
-      'no_move_funds',
-      'no_sign_transactions',
-      'no_approve_decisions',
-      'no_issue_identity',
-      'no_publish_media'
-    ],
+    presentation_open:
+      'Kia orana. I am SIINDEX for IN$DEX. This is a short presentation of who we are, what is live, and what remains planned. Ask me questions at any time.',
 
-    status_labels: ['Live', 'Testing', 'Planned', 'Paused', 'Pre-launch'],
+    utilities_answer:
+      'IN$DEX is building a directory of utilities — identity, data, payments and more — each labelled Live, Testing, Planned or Paused. ' +
+      'Open the utility directory on this site for the honest board. Nothing is presented as live if it is not.',
 
     answer: function (question) {
       var q = String(question || '').toLowerCase();
@@ -82,7 +77,7 @@
         return 'I am SI — Synthetic Intelligence, PQSI — for IN$DEX. I am not artificial intelligence. My sub-agents are SI, not AI.';
       }
 
-      if (/who are you|what are you|siindex/.test(q) && /who|what|are you/.test(q)) {
+      if (/who are you|what are you/.test(q) || (/siindex/.test(q) && /who|what|are you/.test(q))) {
         return this.identity_blurb;
       }
 
@@ -115,6 +110,14 @@
 
       if (/collaborat|partner|work with|join|invest in us/.test(q)) {
         return this.collab_answer;
+      }
+
+      if (/present|presentation|slides|walkthrough/.test(q)) {
+        return this.presentation_open;
+      }
+
+      if (/utilit|directory|features|modules|what can .+ do/.test(q)) {
+        return this.utilities_answer;
       }
 
       if (/cook island|rarotonga|government|parliament|prime minister|licence|license|approved by/.test(q)) {
@@ -163,7 +166,7 @@
       return (
         'I speak for IN$DEX from our public living knowledge. ' +
         this.what_is_indx +
-        ' Ask about status, Cook Islands, mission, founder, interviews, or what is live versus planned.'
+        ' Ask about status, Cook Islands, mission, founder, interviews, presentation, utilities, or what is live versus planned.'
       );
     }
   };
