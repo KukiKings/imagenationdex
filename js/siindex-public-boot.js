@@ -1,7 +1,6 @@
 /**
  * siindex-public-boot.js
- * Drop-in OR loaded by speak-core auto-append.
- * Loads knowledge → page context → bridge.
+ * Loads knowledge → page context → bridge → home ask-fix (when Talk panel present).
  * SI = Synthetic Intelligence (not AI). Brand-first: always IN$DEX.
  */
 (function () {
@@ -36,6 +35,11 @@
     })
     .then(function () {
       return tryLoad('/js/siindex-public-bridge.js', 'js/siindex-public-bridge.js');
+    })
+    .then(function () {
+      if (document.getElementById('publicMessages') || document.getElementById('publicInput')) {
+        return tryLoad('/js/siindex-home-ask-fix.js', 'js/siindex-home-ask-fix.js');
+      }
     })
     .then(function () {
       window.dispatchEvent(new CustomEvent('siindex:public-boot-ready'));
