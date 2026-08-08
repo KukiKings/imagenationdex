@@ -1,6 +1,6 @@
 /**
  * siindex-public-boot.js
- * Loads knowledge → page context → bridge → home ask-fix (when Talk panel present).
+ * Loads knowledge → page context → bridge → page fixes.
  * SI = Synthetic Intelligence (not AI). Brand-first: always IN$DEX.
  */
 (function () {
@@ -37,9 +37,18 @@
       return tryLoad('/js/siindex-public-bridge.js', 'js/siindex-public-bridge.js');
     })
     .then(function () {
+      var chain = Promise.resolve();
       if (document.getElementById('publicMessages') || document.getElementById('publicInput')) {
-        return tryLoad('/js/siindex-home-ask-fix.js', 'js/siindex-home-ask-fix.js');
+        chain = chain.then(function () {
+          return tryLoad('/js/siindex-home-ask-fix.js', 'js/siindex-home-ask-fix.js');
+        });
       }
+      if (document.querySelector('.portrait-ring') || /siindex\.html/i.test(location.pathname)) {
+        chain = chain.then(function () {
+          return tryLoad('/js/siindex-presence-fix.js', 'js/siindex-presence-fix.js');
+        });
+      }
+      return chain;
     })
     .then(function () {
       window.dispatchEvent(new CustomEvent('siindex:public-boot-ready'));
