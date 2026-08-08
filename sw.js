@@ -1,6 +1,6 @@
 /* IN$DEX Service Worker — verified public information shell.
-   v6: network-first for HTML so restored app is not stuck behind stale cache. */
-const VERSION = 'indx-v6-restore-home';
+   v7: network-first for HTML after defect-fix pack. */
+const VERSION = 'indx-v7-defect-fix';
 const SHELL = 'indx-shell-' + VERSION;
 const PAGES = 'indx-pages-' + VERSION;
 
