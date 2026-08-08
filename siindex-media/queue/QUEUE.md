@@ -13,7 +13,7 @@
 
 | Priority | Job ID | Title | Status | Owner |
 |----------|--------|-------|--------|-------|
-| 1 | `intro-home-15s` | Home introduction 15s (voice + lip-sync target) | needs-aj | Grok (package drafted) |
+| 1 | `intro-home-15s` | Home introduction 15s (voice + lip-sync target) | approved | Grok (AJ approved production) |
 | 2 | `interview-open-15s` | Interview Mode open | draft | — |
 | 3 | `present-open-20s` | Presentation Mode open | draft | — |
 | 4 | `status-live-30s` | What is live today explainer | draft | — |
