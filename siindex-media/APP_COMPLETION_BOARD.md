@@ -1,40 +1,55 @@
 # IN$DEX app completion board
 
+**Updated:** 2026-08-09  
 **Rule:** Prefer shipping product surfaces over repair loops.
 
-## Done (use and extend — do not rebuild)
+## Pre-launch public app — FEATURE COMPLETE (visitor surfaces)
 
-- [x] Live public home (original app restored)
-- [x] Talk to SIINDEX (typed + mic path)
-- [x] Interview Mode page
-- [x] Presentation Mode page
-- [x] FAQ page
-- [x] Utility directory with status labels
-- [x] Public knowledge layer (brand-first IN$DEX, SI not AI)
-- [x] Media swarm + voice masters for intro / Q&A / present
+A visitor can now:
 
-## Build next (in order — completion, not polish)
+1. Understand IN$DEX from the home page  
+2. Talk to SIINDEX (home) with honest answers  
+3. Use **Interview Mode** including Cook Islands government/media pack  
+4. Use **Presentation Mode** (6 acts + ask)  
+5. Use **FAQ** (knowledge-wired)  
+6. Use **Guided Speak** path  
+7. See **Utility directory** Live / Testing / Planned / Paused  
+8. Never be told a live price, fake licence, or completed registration  
 
-1. **SIINDEX knowledge 1.2+** on every ask path (home, interview, FAQ) — DONE this commit
-2. **Presentation Mode** = real 6-act walkthrough with SIINDEX lines — DONE this commit
-3. **FAQ** = expandable answers wired to same knowledge — next if thin
-4. **Utility cards** → one honest screen each for top Live/Testing items
-5. **Wire Q&A video/audio** when Imagine files land (optional, not blocking app complete)
-6. **Cook Islands interview pack** = Interview Mode chips + answers only
+### Live URLs
 
-## Explicitly later (do not block “app complete” for pre-launch)
+| Surface | URL |
+|---------|-----|
+| Home | https://imagenationdex.com/ |
+| Interview | https://imagenationdex.com/siindex-interview.html |
+| Present | https://imagenationdex.com/siindex-present.html |
+| FAQ | https://imagenationdex.com/siindex-faq.html |
+| Guided Speak | https://imagenationdex.com/speak-to-siindex.html |
+| Utilities | https://imagenationdex.com/siindex-public/utility-directory.html |
+
+## Done checklist
+
+- [x] Live public home (original app)
+- [x] Talk to SIINDEX
+- [x] Interview + Cook Islands pack
+- [x] Presentation 6-act walkthrough
+- [x] FAQ knowledge-wired
+- [x] Guided Speak path
+- [x] Utility directory honest board
+- [x] Public knowledge 1.3 (brand-first, SI not AI)
+- [x] Media swarm + voice masters (assets ready; film optional)
+
+## Explicitly NOT required for pre-launch “app complete”
 
 - Lip-sync intro film
 - HeyGen / digital twin
 - Real accounts, wallets, payments
+- Token sale
 - Auto-publish media
 
-## Definition of pre-launch “app complete” for August
+## Optional next (enhancement, not blockers)
 
-A visitor can:
-
-1. Understand IN$DEX from the home page
-2. Talk to SIINDEX and get honest status answers
-3. Run Interview / Present / FAQ without dead ends
-4. See what is Live vs Planned without confusion
-5. Never be told a live price, fake licence, or completed registration
+1. Mux Imagine video + approved voice onto home player  
+2. Q&A short clips on FAQ chips  
+3. Deeper utility screens when a utility becomes Testing/Live  
+4. Internal ops / founder tools (not public)
