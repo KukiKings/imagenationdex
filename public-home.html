@@ -111,7 +111,7 @@
               <div class="video-shade"></div>
               <div class="video-copy">
                 <h3>SIINDEX</h3>
-                <p>Introduction for IN$DEX</p>
+                <p>Introduction for IN$DEX · spoken on this device until lip-synced media is published</p>
                 <button class="video-button" id="videoButton" type="button">▶ Play introduction</button>
               </div>
             </div>
@@ -245,18 +245,57 @@
     });
     const video = document.getElementById('introVideo');
     const videoButton = document.getElementById('videoButton');
-    videoButton.addEventListener('click', () => {
-      if (video.paused) {
-        video.currentTime = 0;
-        video.muted = false;
-        video.play();
-        videoButton.textContent = '❚❚ Pause introduction';
-      } else {
-        video.pause();
+    const introScript = (document.querySelector('#introTranscript p') || {}).textContent || '';
+    let introSpeaking = false;
+    let introUtterance = null;
+    function stopIntroSpeech() {
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      introSpeaking = false;
+      introUtterance = null;
+    }
+    function playIntroSpeech() {
+      stopIntroSpeech();
+      if (!window.speechSynthesis || !introScript.trim()) return false;
+      introUtterance = new SpeechSynthesisUtterance(introScript.trim());
+      introUtterance.rate = 0.95;
+      introUtterance.pitch = 1.05;
+      introUtterance.onend = () => {
+        introSpeaking = false;
         videoButton.textContent = '▶ Play introduction';
+      };
+      introUtterance.onerror = () => {
+        introSpeaking = false;
+        videoButton.textContent = '▶ Play introduction';
+      };
+      introSpeaking = true;
+      window.speechSynthesis.speak(introUtterance);
+      return true;
+    }
+    videoButton.addEventListener('click', () => {
+      if (introSpeaking || (video && !video.paused)) {
+        stopIntroSpeech();
+        if (video) video.pause();
+        videoButton.textContent = '▶ Play introduction';
+        return;
+      }
+      // Prefer device speech of the approved transcript so SIINDEX is heard
+      // even while the lip-synced media file is still being placed in the repo.
+      if (video) {
+        try { video.currentTime = 0; video.muted = true; video.play().catch(() => {}); } catch (e) {}
+      }
+      const spoke = playIntroSpeech();
+      videoButton.textContent = spoke ? '❚❚ Pause introduction' : '▶ Play introduction';
+      if (!spoke && video) {
+        video.muted = false;
+        video.play().catch(() => {});
+        videoButton.textContent = '❚❚ Pause introduction';
       }
     });
-    video.addEventListener('ended', () => { videoButton.textContent = '▶ Play introduction'; });
+    if (video) {
+      video.addEventListener('ended', () => {
+        if (!introSpeaking) videoButton.textContent = '▶ Play introduction';
+      });
+    }
     if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
   </script>
 </body>
