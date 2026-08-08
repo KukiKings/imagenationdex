@@ -1,38 +1,57 @@
 # SIINDEX Media Queue
 
-**How to pick a job:** Read this file → take top non-blocked job → update `packages/<id>/status.txt` → stop at `needs-aj` unless AJ already approved production.
+**Scope:** Not only intros. SIINDEX media covers **Q&A**, **interview**, **presentation**, and **function demos**.
 
-## Priority order (A–D programme)
+**How to pick a job:** Top non-blocked row → update package `status.txt` → Imagine visual + voice mux → `needs-aj` before publish.
 
-| Priority | Job ID | Title | Path | Status |
-|----------|--------|-------|------|--------|
-| 1 | `intro-home-15s` | **A** Home short intro | Public home player | approved + voice ready |
-| 2 | `present-pqsi-45s` | **B** Full PQSI introduction | Present / Interview | draft → voice ready |
-| 3 | `bundle-home-and-present` | **C** Both A+B wired | Home + Present | planned |
-| 4 | `transcript-only-refresh` | **D** Copy/transcript only | public-home text | ready anytime |
-| 5 | `interview-open-15s` | Interview open | Interview Mode | voice ready |
-| 6 | `onboarding-welcome-10s` | Function demo CLIP 1 | Pre-launch demo only | voice ready |
+## Programme map
 
-## Status meanings
+| Family | Purpose | Surfaces |
+|--------|---------|----------|
+| **Intro** | Open presence | Home player |
+| **Q&A** | Short answer clips for FAQ chips | FAQ, Talk panel, Interview |
+| **Interview** | Media / government open + deep answers | Interview Mode |
+| **Presentation** | Meeting walkthrough acts | Present Mode, Cook Islands |
+| **Demo** | Function screens (pre-launch labelled) | Future app journeys |
 
-draft · in-progress · needs-aj · approved · published · blocked
+## Priority order
 
-## Visual language (from Grok Imagine — locked for all jobs)
+| P | Job ID | Family | Status |
+|---|--------|--------|--------|
+| 1 | `intro-home-15s` | Intro | approved + voice |
+| 2 | `present-pqsi-45s` | Presentation | approved + voice |
+| 3 | `qa-what-is-index` | Q&A | voice ready |
+| 4 | `qa-are-you-ai` | Q&A | voice ready |
+| 5 | `qa-what-is-live` | Q&A | voice ready |
+| 6 | `qa-cook-islands` | Q&A | voice ready |
+| 7 | `qa-company-name` | Q&A | voice ready |
+| 8 | `interview-open-15s` | Interview | voice ready |
+| 9 | `present-act-status` | Presentation | draft |
+| 10 | `present-act-roadmap` | Presentation | draft |
+| 11 | `onboarding-welcome-10s` | Demo | draft (pre-launch only) |
 
-- Crimson / red-black hair, red hibiscus
-- Cyan bio-tattoos: **conveyor-belt** flow along skin paths, soft glow, no slide-off
-- Black SIINDEX suit, cyan hex details
-- Neon Pacific-futurist city backdrop
-- Light breathing, blinks, stable camera
-- Full-body or medium shot per job brief
+## Visual language (all families)
 
-## Audio masters (workspace)
+Imagine lock: crimson hair, hibiscus, cyan **conveyor-belt** tattoos, SIINDEX suit, neon Pacific city, breathing/blinks, stable camera.
 
-Produced under AJ approval for intro programme:
+- **Q&A:** Medium close-up, front-facing (best for lip-sync)
+- **Interview:** Medium shot, calm authority
+- **Presentation:** Medium or full-body; optional multi-act
 
-- `artifacts/siindex-media/A-home-intro-15s.mp3`
-- `artifacts/siindex-media/B-present-pqsi-45s.mp3`
-- `artifacts/siindex-media/C-interview-open-15s.mp3`
-- `artifacts/siindex-media/C-onboarding-welcome.mp3`
+## Audio masters (workspace `artifacts/siindex-media/`)
 
-Lip-sync video still requires Imagine motion take muxed with these tracks (or Imagine-native speech take). Do not claim lip-sync on site until published file has mouth sync.
+| File | Use |
+|------|-----|
+| `A-home-intro-15s.mp3` | Home open |
+| `B-present-pqsi-45s.mp3` | Full PQSI presentation open |
+| `C-interview-open-15s.mp3` | Interview open |
+| `C-onboarding-welcome.mp3` | Demo only |
+| `qa-what-is-index.mp3` | Q&A |
+| `qa-are-you-ai.mp3` | Q&A |
+| `qa-what-is-live.mp3` | Q&A |
+| `qa-cook-islands.mp3` | Q&A |
+| `qa-company-name.mp3` | Q&A |
+
+## Publish rule
+
+No auto-publish. AJ approves each family before `/videos/` replace. Never claim lip-sync until the file has mouth sync.
