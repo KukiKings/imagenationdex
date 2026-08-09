@@ -1,16 +1,12 @@
 /* IN$DEX Service Worker — verified public information shell.
-   v7: network-first for HTML after defect-fix pack. */
-const VERSION = 'indx-v7-defect-fix';
+   v8: network-first for /js and media so pronunciation/intro fixes are not stuck. */
+const VERSION = 'indx-v8-syndex-pronunciation';
 const SHELL = 'indx-shell-' + VERSION;
 const PAGES = 'indx-pages-' + VERSION;
 
-/* Precache assets only — never pin HTML shells (they change during pre-launch). */
+/* Precache static non-code assets only — JS must not be pinned across deploys. */
 const PRECACHE = [
   '/manifest.json',
-  '/js/siindex-public-boot.js',
-  '/js/siindex-public-knowledge.js',
-  '/js/siindex-public-bridge.js',
-  '/js/siindex-page-context.js',
   '/assets/icon-192.png',
   '/assets/siindex-hero.png'
 ];
@@ -33,6 +29,18 @@ function htmlWithBoot(response) {
       statusText: response.statusText,
       headers: headers
     });
+  });
+}
+
+function networkFirst(req) {
+  return fetch(req).then(function (res) {
+    if (res && res.ok) {
+      var copy = res.clone();
+      caches.open(PAGES).then(function (c) { c.put(req, copy); });
+    }
+    return res;
+  }).catch(function () {
+    return caches.match(req);
   });
 }
 
@@ -78,6 +86,18 @@ self.addEventListener('fetch', function (e) {
     return;
   }
 
+  /* JS + intro media: network-first so voice/pronunciation deploys apply immediately */
+  if (
+    path.indexOf('/js/') === 0 ||
+    path.indexOf('/videos/') === 0 ||
+    path.endsWith('.js') ||
+    path === '/siindex-speak-core.js' ||
+    path === '/sw.js'
+  ) {
+    e.respondWith(networkFirst(req));
+    return;
+  }
+
   if (PRECACHE.indexOf(path) !== -1) {
     e.respondWith(
       caches.match(path).then(function (hit) {
@@ -93,18 +113,7 @@ self.addEventListener('fetch', function (e) {
     return;
   }
 
-  e.respondWith(
-    caches.match(req).then(function (hit) {
-      var net = fetch(req).then(function (res) {
-        if (res && res.ok) {
-          var copy = res.clone();
-          caches.open(PAGES).then(function (c) { c.put(req, copy); });
-        }
-        return res;
-      }).catch(function () { return hit; });
-      return hit || net;
-    })
-  );
+  e.respondWith(networkFirst(req));
 });
 
 self.addEventListener('message', function (e) {
