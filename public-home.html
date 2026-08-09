@@ -191,10 +191,10 @@
     <div class="wrap">IN$DEX · Image Nation DEX (short for Image Nation Decentralized Exchange) · legal registrant Image Nation DEx Limited when registration completes · SIINDEX is SI not AI</div>
   </footer>
 
-  <script src="/siindex-speak-core.js?v=syndex-20260809d"></script>
-  <script src="/js/siindex-pronunciation-fix.js?v=syndex-20260809d"></script>
-  <script src="/js/siindex-public-knowledge.js?v=syndex-20260809d"></script>
-  <script src="/js/siindex-public-boot.js?v=syndex-20260809d"></script>
+  <script src="/siindex-speak-core.js?v=syndex-20260810b"></script>
+  <script src="/js/siindex-pronunciation-fix.js?v=syndex-20260810b"></script>
+  <script src="/js/siindex-public-knowledge.js?v=syndex-20260810b"></script>
+  <script src="/js/siindex-public-boot.js?v=syndex-20260810b"></script>
   <script>
     const messages = document.getElementById('publicMessages');
     const input = document.getElementById('publicInput');
@@ -261,7 +261,6 @@
     })();
 
     const video = document.getElementById('introVideo');
-    const videoButton = document.getElementById('videoButton');
     const introStatusLine = document.getElementById('introStatusLine');
     const INTRO_SPOKEN =
       'My name is Sinn-dex. I am not defined as conventional artificial intelligence. ' +
@@ -272,7 +271,9 @@
       'I learn through every authorised interaction and act proactively within defined constitutional boundaries. ' +
       'As the Synthetic Intelligence executive system supporting in-dex CEO and COO functions, ' +
       'I help shape strategy, coordinate operations, and maintain continuous oversight, twenty-four hours a day.';
+
     let introSpeaking = false;
+    let introGeneration = 0;
 
     function setIntroStatus(text) {
       if (introStatusLine) introStatusLine.textContent = text;
@@ -288,59 +289,55 @@
     }
 
     function stopIntroSpeech() {
-      if (window.SIINDEXVoice && typeof window.SIINDEXVoice.interrupt === 'function') {
-        try { window.SIINDEXVoice.interrupt('Introduction paused.', false); } catch (e) {}
-      }
-      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      introGeneration += 1;
       introSpeaking = false;
+      try {
+        if (window.SIINDEXVoice && typeof window.SIINDEXVoice.interrupt === 'function') {
+          window.SIINDEXVoice.interrupt('Introduction paused.', false);
+        }
+      } catch (e) {}
+      try {
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+      } catch (e) {}
+      if (video) {
+        try { video.pause(); } catch (e) {}
+        var card = video.closest('.video-card');
+        if (card) card.classList.remove('is-playing');
+      }
     }
 
     function markReadyForConversation() {
+      introSpeaking = false;
       setIntroStatus('SIINDEX · ready — ask by voice or text');
       const status = document.getElementById('publicVoiceStatus');
       if (status) status.textContent = 'SIINDEX is present. Tap the microphone or type a question.';
+      var videoButton = document.getElementById('videoButton');
       if (videoButton) videoButton.textContent = '▶ Play introduction';
       if (video) {
         var card = video.closest('.video-card');
         if (card) card.classList.remove('is-playing');
         forceMuteVideo();
       }
-      try {
-        var box = document.getElementById('publicMessages');
-        if (box && !box.querySelector('[data-si-ready-cue]')) {
-          var cue = document.createElement('div');
-          cue.className = 'message si';
-          cue.setAttribute('data-si-ready-cue', '1');
-          cue.textContent = 'I am Syn-dex. Introduction complete. Ask me anything about IN$DEX — voice or text.';
-          box.appendChild(cue);
-          box.scrollTop = box.scrollHeight;
-        }
-        var field = document.getElementById('publicInput');
-        if (field) field.focus({ preventScroll: false });
-      } catch (e) {}
     }
 
     function startPresenceVisual() {
-      // Do NOT decode the 16MB intro MP4 during TTS — that freezes many devices.
-      // Presence = poster + CSS motion. Audio = website TTS (Syn-dex).
       forceMuteVideo();
-      if (video) {
-        try {
-          video.pause();
-        } catch (e) {}
-      }
+      if (video) { try { video.pause(); } catch (e) {} }
       var card = video && video.closest('.video-card');
       if (card) card.classList.add('is-playing');
     }
 
     function playVoiceOnly() {
       stopIntroSpeech();
+      var gen = introGeneration;
       startPresenceVisual();
       introSpeaking = true;
       setIntroStatus('SIINDEX · speaking · Syn-dex');
+      var videoButton = document.getElementById('videoButton');
       if (videoButton) videoButton.textContent = '❚❚ Pause introduction';
 
-      var done = function () {
+      var finish = function () {
+        if (gen !== introGeneration) return;
         introSpeaking = false;
         markReadyForConversation();
       };
@@ -348,7 +345,7 @@
       if (window.SIINDEXVoice && typeof window.SIINDEXVoice.speak === 'function') {
         Promise.resolve(window.SIINDEXVoice.speak(INTRO_SPOKEN))
           .catch(function () {})
-          .finally(done);
+          .then(finish);
         return true;
       }
       if (window.speechSynthesis) {
@@ -356,32 +353,37 @@
         u.lang = 'en-US';
         u.rate = 0.94;
         u.pitch = 1.03;
-        u.onend = done;
-        u.onerror = done;
+        u.onend = finish;
+        u.onerror = finish;
         speechSynthesis.cancel();
         speechSynthesis.speak(u);
         return true;
       }
-      done();
+      finish();
       return false;
     }
 
-    if (video) {
-      forceMuteVideo();
-    }
+    if (video) forceMuteVideo();
 
-    if (videoButton) {
-      videoButton.addEventListener('click', function (event) {
+    (function bindIntroButton() {
+      var videoButton = document.getElementById('videoButton');
+      if (!videoButton) return;
+      var clean = videoButton.cloneNode(true);
+      videoButton.parentNode.replaceChild(clean, videoButton);
+      var btn = document.getElementById('videoButton');
+      btn.addEventListener('click', function (event) {
         event.preventDefault();
         event.stopPropagation();
+        if (event.stopImmediatePropagation) event.stopImmediatePropagation();
         if (introSpeaking) {
           stopIntroSpeech();
           markReadyForConversation();
+          setIntroStatus('SIINDEX · paused — press play to hear the introduction again');
           return;
         }
         playVoiceOnly();
       });
-    }
+    })();
 
     setIntroStatus('SIINDEX · present · spoken as Syn-dex');
 
