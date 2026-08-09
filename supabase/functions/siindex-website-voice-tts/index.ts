@@ -175,6 +175,12 @@ Deno.serve(async (req: Request) => {
     return json(req, 400, { error: "invalid_json" }, correlationId);
   }
   if (!text) return json(req, 400, { error: "text_required" }, correlationId);
+  // Canon pronunciation: Syn-dex (not Sign-dex / Sin-dex)
+  text = text
+    .replace(/SIINDEX/gi, "Syn-dex")
+    .replace(/\bSin-dex\b/gi, "Syn-dex")
+    .replace(/\bSign-dex\b/gi, "Syn-dex")
+    .replace(/\bSighn-dex\b/gi, "Syn-dex");
   if (text.length > 1400) {
     return json(
       req,
