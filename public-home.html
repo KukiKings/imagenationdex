@@ -105,7 +105,7 @@
         <div class="si-grid">
           <div class="video-shell">
             <div class="video-card">
-              <video id="introVideo" playsinline preload="auto" muted poster="/images/siindex-public-video-poster.webp" aria-describedby="introTranscript">
+              <video id="introVideo" playsinline preload="auto" muted loop poster="/images/siindex-public-video-poster.webp" aria-describedby="introTranscript">
                 <source id="introSpeakSource" src="/videos/siindex-01-name-intro.mp4?v=smooth-20260809" type="video/mp4">
               </video>
               <div class="video-shade"></div>
@@ -188,10 +188,10 @@
     <div class="wrap">IN$DEX · Image Nation DEX (short for Image Nation Decentralized Exchange) · legal registrant Image Nation DEx Limited when registration completes · SIINDEX is SI not AI</div>
   </footer>
 
-  <script src="/siindex-speak-core.js?v=syndex-20260809"></script>
-  <script src="/js/siindex-pronunciation-fix.js?v=syndex-20260809"></script>
-  <script src="/js/siindex-public-knowledge.js?v=syndex-20260809"></script>
-  <script src="/js/siindex-public-boot.js?v=syndex-20260809"></script>
+  <script src="/siindex-speak-core.js?v=syndex-20260809b"></script>
+  <script src="/js/siindex-pronunciation-fix.js?v=syndex-20260809b"></script>
+  <script src="/js/siindex-public-knowledge.js?v=syndex-20260809b"></script>
+  <script src="/js/siindex-public-boot.js?v=syndex-20260809b"></script>
   <script>
     const messages = document.getElementById('publicMessages');
     const input = document.getElementById('publicInput');
@@ -245,7 +245,6 @@
       mic.setAttribute('aria-pressed', detail.state === 'listening' ? 'true' : 'false');
     });
 
-    // Auto-clear stale service workers that pinned old intro JS (v7 cache-first).
     (function clearStaleWorkers() {
       if (!('serviceWorker' in navigator)) return;
       navigator.serviceWorker.getRegistrations().then(function (regs) {
@@ -261,7 +260,6 @@
     const video = document.getElementById('introVideo');
     const videoButton = document.getElementById('videoButton');
     const introStatusLine = document.getElementById('introStatusLine');
-    // Phonetic for TTS: Sinn-dex (~ Syn / sin). "Syn-dex" is often read as Sign-dex.
     const INTRO_SPOKEN =
       'My name is Sinn-dex. I am not defined as conventional artificial intelligence. ' +
       'I am Physical Quantum Synthetic Intelligence, or P Q S I. ' +
@@ -280,9 +278,8 @@
     function forceMuteVideo() {
       if (!video) return;
       try {
-        video.muted = true;
+        if (!video.muted) video.muted = true;
         video.defaultMuted = true;
-        video.volume = 0;
         video.setAttribute('muted', '');
       } catch (e) {}
     }
@@ -303,7 +300,10 @@
       if (video) {
         var card = video.closest('.video-card');
         if (card) card.classList.remove('is-playing');
-        try { video.pause(); } catch (e) {}
+        try {
+          video.loop = true;
+          video.pause();
+        } catch (e) {}
         forceMuteVideo();
       }
       try {
@@ -326,10 +326,14 @@
       forceMuteVideo();
       if (video) {
         try {
-          video.currentTime = 0;
+          video.loop = true;
           var card = video.closest('.video-card');
           if (card) card.classList.add('is-playing');
-          video.play().catch(function () {});
+          if (video.readyState >= 2) {
+            try { video.currentTime = 0; } catch (e) {}
+          }
+          var p = video.play();
+          if (p && p.catch) p.catch(function () {});
         } catch (e) {}
       }
       introSpeaking = true;
@@ -338,6 +342,9 @@
 
       var done = function () {
         introSpeaking = false;
+        if (video) {
+          try { video.pause(); } catch (e) {}
+        }
         markReadyForConversation();
       };
 
@@ -364,12 +371,12 @@
 
     if (video) {
       forceMuteVideo();
-      video.addEventListener('play', forceMuteVideo);
-      video.addEventListener('volumechange', function () {
-        if (!video.muted || video.volume > 0) forceMuteVideo();
+      video.addEventListener('play', function () {
+        if (!video.muted) video.muted = true;
       });
-      video.addEventListener('ended', function () {
-        if (!introSpeaking) markReadyForConversation();
+      video.addEventListener('stalled', function () {
+        if (!introSpeaking) return;
+        try { video.play().catch(function () {}); } catch (e) {}
       });
     }
 
@@ -377,7 +384,7 @@
       videoButton.addEventListener('click', function (event) {
         event.preventDefault();
         event.stopPropagation();
-        if (introSpeaking || (video && !video.paused && !video.ended)) {
+        if (introSpeaking) {
           stopIntroSpeech();
           if (video) { try { video.pause(); } catch (e) {} }
           markReadyForConversation();
