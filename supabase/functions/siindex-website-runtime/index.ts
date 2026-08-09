@@ -49,8 +49,9 @@ VERIFIED / CONTROLLED PROJECT STATUS FOR THIS MODE:
 - The World Bank Global Findex 2025 reports 1.3 billion adults without financial accounts; about 900 million of them have a mobile phone, including 530 million with smartphones.
 
 STYLE:
-- Start with the answer.
-- Keep most replies under 180 words unless the visitor asks for detail.
+- Start with the answer in the first sentence.
+- Keep default replies to 2 to 4 short sentences (about 40 to 80 words). Target a full spoken answer in under 20 seconds of speech.
+- Only go longer when the visitor clearly asks for detail, a list, or an interview-style answer.
 - Use plain sentences only. Do not use Markdown, asterisks, headings, bullet markers, tables, or code fences.
 - Write status labels such as LIVE, PLANNED, VERIFIED, PAUSED, and UNKNOWN as ordinary words without surrounding punctuation.
 - Clearly label LIVE, PLANNED, VERIFIED, PAUSED, or UNKNOWN when status matters.
@@ -273,18 +274,19 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  const rawHistory = Array.isArray(body.history) ? body.history.slice(-8) : [];
+  const rawHistory = Array.isArray(body.history) ? body.history.slice(-6) : [];
   const history = rawHistory.flatMap((entry: unknown) => {
     if (!entry || typeof entry !== "object") return [];
     const item = entry as Record<string, unknown>;
     const role = item.role === "assistant" ? "assistant" : item.role === "user"
       ? "user"
       : null;
-    const content = String(item.content || "").trim().slice(0, 1200);
+    const content = String(item.content || "").trim().slice(0, 800);
     return role && content ? [{ role, content }] : [];
   });
 
-  const { error: auditError } = await admin.from("security_events").insert({
+  // Fire-and-forget audit — do not block the reply path
+  admin.from("security_events").insert({
     tier: "T0",
     zone: ZONE,
     correlation_id: correlationId,
@@ -296,21 +298,13 @@ Deno.serve(async (req: Request) => {
       model: MODEL,
       content_stored: false,
     },
-  });
-  if (auditError) {
-    return json(
-      req,
-      503,
-      { error: "rate_limit_unavailable" },
-      correlationId,
-    );
-  }
+  }).then(() => {}).catch(() => {});
 
   let upstream: Response;
   try {
     upstream = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(12_000),
       headers: {
         "x-api-key": ANTHROPIC_KEY,
         "anthropic-version": "2023-06-01",
@@ -318,7 +312,7 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 700,
+        max_tokens: 220,
         system: SYSTEM_PROMPT,
         messages: [...history, { role: "user", content: message }],
         stream: true,
