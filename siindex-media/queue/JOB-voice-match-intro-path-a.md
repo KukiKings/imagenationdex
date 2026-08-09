@@ -1,42 +1,24 @@
 # JOB: Voice match — website TTS = intro video (Path A)
 
-**Directed by:** SIINDEX (CEO/COO function)  
-**Executed by:** Voice + Media + Ops sub-agents  
-**AJ role:** Authorize secret write only — not perform the work  
-**Status:** `blocked-on-provider-connection`
+**Directed by:** SIINDEX (CEO/COO)  
+**Agents:** Voice + Ops  
+**Status:** code-ready — needs function deploy + one setup invoke
 
-## Outcome
+## Swarm work completed in repo
 
-Citizen hears the **same** SIINDEX voice on:
+- [x] TTS de-robot: model `eleven_turbo_v2_5`, style 0.35, stability 0.48, speed 0.94
+- [x] Resolve voice id: `ELEVENLABS_VOICE_ID` env → else `siindex_runtime_config.elevenlabs_voice_id` → else legacy fallback
+- [x] Setup function `siindex-website-voice-setup`: clones from intro MP4 using existing `ELEVENLABS_API_KEY`, stores voice id in DB
+- [x] Migration `20260809_siindex_runtime_config.sql`
 
-1. Play introduction (`videos/siindex-01-name-intro.mp4`)
-2. Talk to SIINDEX replies (`SIINDEXVoice.speak` → ElevenLabs)
+## Ops agent (when Supabase deploy channel available)
 
-## Work already done by agents
+1. Apply migration `20260809_siindex_runtime_config.sql`
+2. Deploy `siindex-website-voice-tts` and `siindex-website-voice-setup`
+3. Set secret `SIINDEX_VOICE_SETUP_TOKEN` (random)
+4. POST setup once with header `x-siindex-setup-token`
+5. Ear-test intro vs chat on imagenationdex.com
 
-- [x] Path A decision recorded (`siindex-operating/VOICE_IDENTITY.md`)
-- [x] Reference media identified and live on homepage
-- [x] Clean speech samples extracted from intro for clone
-- [x] TTS edge function located (`siindex-website-voice-tts`)
-- [x] Env key name confirmed: `ELEVENLABS_VOICE_ID`
+## Immediate effect without setup
 
-## Work remaining (sub-agents — not AJ)
-
-1. **Voice agent:** Instant Voice Clone from intro sample in ElevenLabs (when API/account connection is available to the agent runtime).
-2. **Ops agent:** Set Supabase secret `ELEVENLABS_VOICE_ID` to the new id; redeploy `siindex-website-voice-tts`.
-3. **Verify agent:** Ear test intro vs chat on imagenationdex.com; mark job `done` only on pass.
-
-## Constitutional gate (AJ authorize — one action)
-
-Agents must not invent credentials or write secrets without authority.
-
-**Blocked reason:** This runtime has GitHub. It does **not** have ElevenLabs API access or Supabase secret write access connected.
-
-**Unblock:** Connect those provider tools to the agent runtime **or** grant a one-time authorized secret write channel. That is infrastructure for the swarm — not “founder does the ticket.”
-
-## Do not
-
-- Ask the founder to click through ElevenLabs or Supabase UI as routine work
-- Ship a second public SIINDEX voice
-- Put API keys in browser code
-- Claim voice identity is complete before the ear test passes
+After **TTS function deploy only**, chat should sound **less robotic** (new model + settings) even before intro clone. Full intro match requires the setup invoke.

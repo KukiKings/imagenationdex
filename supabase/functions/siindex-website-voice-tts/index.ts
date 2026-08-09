@@ -1,12 +1,15 @@
 // Public website SIINDEX voice endpoint. Generated audio is not stored.
+// Path A: prefer ELEVENLABS_VOICE_ID or runtime config voice cloned from intro.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2.95.0";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ELEVENLABS_KEY = Deno.env.get("ELEVENLABS_API_KEY");
-const VOICE_ID = Deno.env.get("ELEVENLABS_VOICE_ID") || "19STyYD15bswVz51nqLf";
-const MODEL_ID = "eleven_flash_v2_5";
+const ENV_VOICE_ID = Deno.env.get("ELEVENLABS_VOICE_ID") || "";
+const FALLBACK_VOICE_ID = "19STyYD15bswVz51nqLf";
+// Natural speech over ultra-low-latency flash (reduces "robot" character)
+const MODEL_ID = Deno.env.get("ELEVENLABS_MODEL_ID") || "eleven_turbo_v2_5";
 const OUTPUT_FORMAT = "pcm_24000";
 const ZONE = "siindex_website_voice_tts";
 
@@ -36,7 +39,7 @@ function cors(req: Request) {
     "Access-Control-Allow-Headers":
       "authorization, apikey, content-type, x-siindex-visitor-id, x-siindex-provider-consent",
     "Access-Control-Expose-Headers":
-      "X-Siindex-Correlation-Id, X-Siindex-Audio-Format, X-Siindex-Voice-Model",
+      "X-Siindex-Correlation-Id, X-Siindex-Audio-Format, X-Siindex-Voice-Model, X-Siindex-Voice-Id",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
   };
@@ -94,6 +97,26 @@ async function allowed(
   ]);
   if (minute.error || day.error) throw new Error("rate_limit_unavailable");
   return (minute.count || 0) < 6 && (day.count || 0) < 60;
+}
+
+/** Path A: env override, else DB config from intro clone, else legacy fallback */
+async function resolveVoiceId(
+  admin: ReturnType<typeof createClient>,
+): Promise<string> {
+  if (ENV_VOICE_ID.trim()) return ENV_VOICE_ID.trim();
+  try {
+    const { data } = await admin
+      .from("siindex_runtime_config")
+      .select("value")
+      .eq("key", "elevenlabs_voice_id")
+      .maybeSingle();
+    if (data?.value && String(data.value).trim()) {
+      return String(data.value).trim();
+    }
+  } catch (_) {
+    // Table may not exist yet — fall through
+  }
+  return FALLBACK_VOICE_ID;
 }
 
 Deno.serve(async (req: Request) => {
@@ -161,6 +184,8 @@ Deno.serve(async (req: Request) => {
     );
   }
 
+  const voiceId = await resolveVoiceId(admin);
+
   const { error: auditError } = await admin.from("security_events").insert({
     tier: "T0",
     zone: ZONE,
@@ -170,6 +195,7 @@ Deno.serve(async (req: Request) => {
       visitor_hash: hash,
       characters: text.length,
       model_id: MODEL_ID,
+      voice_id_suffix: voiceId.slice(-6),
       output_format: OUTPUT_FORMAT,
       text_stored: false,
       audio_stored: false,
@@ -184,13 +210,22 @@ Deno.serve(async (req: Request) => {
     );
   }
 
+  // Natural SIINDEX delivery — less flat than flash+style:0
+  const voice_settings = {
+    stability: 0.48,
+    similarity_boost: 0.8,
+    style: 0.35,
+    use_speaker_boost: true,
+    speed: 0.94,
+  };
+
   let provider: Response;
   try {
     provider = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}/stream?output_format=${OUTPUT_FORMAT}`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?output_format=${OUTPUT_FORMAT}`,
       {
         method: "POST",
-        signal: AbortSignal.timeout(20_000),
+        signal: AbortSignal.timeout(25_000),
         headers: {
           "xi-api-key": ELEVENLABS_KEY,
           "Content-Type": "application/json",
@@ -200,13 +235,7 @@ Deno.serve(async (req: Request) => {
           text,
           model_id: MODEL_ID,
           apply_text_normalization: "auto",
-          voice_settings: {
-            stability: 0.42,
-            similarity_boost: 0.83,
-            style: 0,
-            use_speaker_boost: true,
-            speed: 0.88,
-          },
+          voice_settings,
         }),
       },
     );
@@ -269,6 +298,7 @@ Deno.serve(async (req: Request) => {
       "X-Siindex-Correlation-Id": correlationId,
       "X-Siindex-Audio-Format": OUTPUT_FORMAT,
       "X-Siindex-Voice-Model": MODEL_ID,
+      "X-Siindex-Voice-Id": voiceId.slice(-6),
     },
   });
 });
