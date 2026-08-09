@@ -1,6 +1,6 @@
 /**
  * siindex-public-boot.js
- * Knowledge → context → bridge → home/presence/intro honesty fixes.
+ * Knowledge → context → bridge → intro sync (original video + TTS).
  */
 (function () {
   'use strict';
@@ -49,8 +49,12 @@
         chain = chain.then(function () {
           return tryLoad('/js/siindex-intro-player-honesty.js?v=2', 'js/siindex-intro-player-honesty.js');
         });
+        // Sync owns Play: original video + TTS aligned
         chain = chain.then(function () {
-          return tryLoad('/js/siindex-presence-feedback.js?v=2', 'js/siindex-presence-feedback.js');
+          return tryLoad('/js/siindex-intro-sync.js?v=1', 'js/siindex-intro-sync.js');
+        });
+        chain = chain.then(function () {
+          return tryLoad('/js/siindex-presence-feedback.js?v=3', 'js/siindex-presence-feedback.js');
         });
       }
       if (document.querySelector('.portrait-ring') || /siindex\.html/i.test(location.pathname)) {
