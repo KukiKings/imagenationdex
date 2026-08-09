@@ -1,1 +1,258 @@
-See artifacts - will use bash upload
+/**
+ * SIINDEX Website Voice Core v3.0.1 — restored
+ * Interrupt must not fall through to full speechSynthesis restart.
+ */
+(function () {
+  "use strict";
+  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.1") return;
+
+  const SUPABASE_URL = "https://zljgthfzbalsunuoohcd.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_rSl7P028UrBn8KCUSSbjAg_mT3FWoxV";
+  const ENDPOINTS = {
+    runtime: SUPABASE_URL + "/functions/v1/siindex-website-runtime",
+    transcribe: SUPABASE_URL + "/functions/v1/siindex-website-transcribe",
+    voice: SUPABASE_URL + "/functions/v1/siindex-website-voice-tts",
+  };
+  const HISTORY_KEY = "siindex_website_conversation_v3";
+  const VISITOR_KEY = "siindex_website_visitor_id";
+  const VOICE_KEY = "siindex_website_voice_enabled";
+  const PROVIDER_CONSENT_KEY = "siindex_website_provider_consent_v1";
+  const VOICE_REQUEST_TIMEOUT_MS = 30000;
+
+  let voiceAbort = null;
+  let runtimeAbort = null;
+  let transcriptionAbort = null;
+  let audioContext = null;
+  let playbackGeneration = 0;
+  const activeAudioSources = new Set();
+  let voiceEnabled = localStorage.getItem(VOICE_KEY) !== "false";
+  let busy = false;
+
+  function visitorId() {
+    let value = localStorage.getItem(VISITOR_KEY);
+    if (!value) {
+      value = (self.crypto && crypto.randomUUID) ? crypto.randomUUID() : "visitor-" + Date.now();
+      localStorage.setItem(VISITOR_KEY, value);
+    }
+    return value;
+  }
+
+  function headers(contentType) {
+    const result = {
+      apikey: SUPABASE_KEY,
+      "x-siindex-visitor-id": visitorId(),
+      "x-siindex-provider-consent":
+        localStorage.getItem(PROVIDER_CONSENT_KEY) === "accepted" ? "accepted" : "not-accepted",
+      Authorization: "Bearer " + SUPABASE_KEY,
+    };
+    if (contentType) result["Content-Type"] = contentType;
+    return result;
+  }
+
+  function pronunciation(text) {
+    if (window.SIINDEXPronunciation && typeof window.SIINDEXPronunciation.apply === "function") {
+      return window.SIINDEXPronunciation.apply(text);
+    }
+    return String(text || "")
+      .replace(/\bSIINDEX\b/gi, "Sinn-dex")
+      .replace(/\bSyn-dex\b/gi, "Sinn-dex")
+      .replace(/\bSign-dex\b/gi, "Sinn-dex");
+  }
+
+  function setStatus(state, text) {
+    try {
+      window.dispatchEvent(new CustomEvent("siindex:status", { detail: { state: state, text: text } }));
+    } catch (_) {}
+  }
+
+  function stopPcmPlayback() {
+    playbackGeneration += 1;
+    for (const source of activeAudioSources) {
+      try { source.stop(); } catch (_) {}
+    }
+    activeAudioSources.clear();
+  }
+
+  async function ensureAudioContext() {
+    if (!audioContext) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      audioContext = new Ctx();
+    }
+    if (audioContext.state === "suspended") {
+      try { await audioContext.resume(); } catch (_) {}
+    }
+    return audioContext;
+  }
+
+  async function playPcmStream(response) {
+    const context = await ensureAudioContext();
+    if (!context || !response.body) throw new Error("streaming_audio_unavailable");
+    const generation = ++playbackGeneration;
+    const reader = response.body.getReader();
+    const frameBytes = 8192;
+    let pending = new Uint8Array(0);
+    let nextStartAt = context.currentTime + 0.08;
+
+    function schedule(bytes) {
+      if (!bytes.length || generation !== playbackGeneration) return;
+      const sampleCount = Math.floor(bytes.length / 2);
+      if (!sampleCount) return;
+      const samples = new Float32Array(sampleCount);
+      const view = new DataView(bytes.buffer, bytes.byteOffset, sampleCount * 2);
+      for (let i = 0; i < sampleCount; i++) samples[i] = view.getInt16(i * 2, true) / 32768;
+      const buffer = context.createBuffer(1, sampleCount, 24000);
+      buffer.copyToChannel(samples, 0);
+      const source = context.createBufferSource();
+      source.buffer = buffer;
+      source.connect(context.destination);
+      const startAt = Math.max(context.currentTime + 0.02, nextStartAt);
+      source.start(startAt);
+      nextStartAt = startAt + buffer.duration;
+      activeAudioSources.add(source);
+      source.onended = function () { activeAudioSources.delete(source); };
+    }
+
+    while (true) {
+      if (generation !== playbackGeneration) {
+        try { await reader.cancel(); } catch (_) {}
+        return;
+      }
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value || !value.length) continue;
+      const merged = new Uint8Array(pending.length + value.length);
+      merged.set(pending, 0);
+      merged.set(value, pending.length);
+      let offset = 0;
+      while (merged.length - offset >= frameBytes) {
+        schedule(merged.subarray(offset, offset + frameBytes));
+        offset += frameBytes;
+      }
+      pending = merged.subarray(offset);
+    }
+    if (pending.length >= 2) schedule(pending);
+    const waitMs = Math.max(0, (nextStartAt - context.currentTime) * 1000) + 50;
+    await new Promise(function (r) { setTimeout(r, waitMs); });
+  }
+
+  async function speak(text) {
+    if (!voiceEnabled || !text) return;
+    const controller = new AbortController();
+    voiceAbort = controller;
+    let voiceTimedOut = false;
+    const voiceTimer = setTimeout(function () {
+      voiceTimedOut = true;
+      controller.abort();
+    }, VOICE_REQUEST_TIMEOUT_MS);
+    const spoken = pronunciation(text);
+    try {
+      setStatus("speaking", "SIINDEX is speaking…");
+      const response = await fetch(ENDPOINTS.voice, {
+        method: "POST",
+        signal: controller.signal,
+        headers: headers("application/json"),
+        body: JSON.stringify({ text: spoken }),
+      });
+      clearTimeout(voiceTimer);
+      if (!response.ok) throw new Error("voice_http_" + response.status);
+      await playPcmStream(response);
+      if (!controller.signal.aborted) setStatus("idle", "Ready.");
+    } catch (error) {
+      clearTimeout(voiceTimer);
+      // CRITICAL: on pause/interrupt, do NOT restart full text via speechSynthesis
+      if (controller.signal.aborted && !voiceTimedOut) {
+        setStatus("idle", "Paused.");
+        return;
+      }
+      if (error && error.name === "AbortError" && !voiceTimedOut) {
+        setStatus("idle", "Paused.");
+        return;
+      }
+      if (window.speechSynthesis) {
+        const utterance = new SpeechSynthesisUtterance(spoken);
+        utterance.lang = "en-US";
+        utterance.rate = 0.94;
+        utterance.pitch = 1.03;
+        utterance.onend = function () { setStatus("idle", "Ready."); };
+        speechSynthesis.cancel();
+        speechSynthesis.speak(utterance);
+      } else {
+        setStatus("error", "Voice unavailable.");
+      }
+    }
+  }
+
+  function interrupt(message, notify) {
+    if (runtimeAbort) runtimeAbort.abort();
+    if (transcriptionAbort) transcriptionAbort.abort();
+    if (voiceAbort) voiceAbort.abort();
+    stopPcmPlayback();
+    try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (_) {}
+    busy = false;
+    if (notify !== false) setStatus("idle", message || "Interrupted. Ready.");
+  }
+
+  async function ask(text, opts) {
+    if (!text) return;
+    opts = opts || {};
+    interrupt("…", false);
+    try {
+      window.dispatchEvent(new CustomEvent("siindex:message", {
+        detail: { role: "user", text: text, source: opts.source || "public-home", id: "u-" + Date.now() },
+      }));
+    } catch (_) {}
+    const local = window.SIINDEX_PUBLIC && typeof SIINDEX_PUBLIC.answer === "function"
+      ? SIINDEX_PUBLIC.answer(text) : null;
+    if (local) {
+      try {
+        window.dispatchEvent(new CustomEvent("siindex:message", {
+          detail: { role: "si", text: local, source: opts.source || "public-home", id: "s-" + Date.now() },
+        }));
+      } catch (_) {}
+      if (voiceEnabled) await speak(local);
+      return;
+    }
+    setStatus("thinking", "Thinking…");
+    const controller = new AbortController();
+    runtimeAbort = controller;
+    try {
+      const response = await fetch(ENDPOINTS.runtime, {
+        method: "POST",
+        signal: controller.signal,
+        headers: headers("application/json"),
+        body: JSON.stringify({ message: text, history: [] }),
+      });
+      if (!response.ok) throw new Error("runtime_" + response.status);
+      const data = await response.json();
+      const reply = (data && (data.reply || data.text || data.message)) || "I am Syn-dex. Please try again.";
+      try {
+        window.dispatchEvent(new CustomEvent("siindex:message", {
+          detail: { role: "si", text: reply, source: opts.source || "public-home", id: "s-" + Date.now() },
+        }));
+      } catch (_) {}
+      if (voiceEnabled) await speak(reply);
+    } catch (e) {
+      if (e && e.name === "AbortError") return;
+      setStatus("error", "Could not reach SIINDEX runtime.");
+    }
+  }
+
+  function listen(opts) {
+    setStatus("idle", "Voice input uses the microphone control when available.");
+  }
+
+  window.SIINDEXVoice = {
+    version: "3.0.1",
+    speak: speak,
+    interrupt: interrupt,
+    ask: ask,
+    listen: listen,
+    setVoiceEnabled: function (on) {
+      voiceEnabled = !!on;
+      localStorage.setItem(VOICE_KEY, voiceEnabled ? "true" : "false");
+    },
+  };
+
+  setStatus("ready", "Ready. Tap the microphone to speak or type below.");
+})();
