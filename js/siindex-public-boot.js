@@ -1,5 +1,5 @@
 /**
- * siindex-public-boot.js
+ * siindex-public-boot.js — intro overlay OFF (native video)
  */
 (function () {
   'use strict';
@@ -48,8 +48,9 @@
         chain = chain.then(function () {
           return tryLoad('/js/siindex-intro-player-honesty.js?v=2', 'js/siindex-intro-player-honesty.js');
         });
+        // v=4 = overlay OFF, native A/V
         chain = chain.then(function () {
-          return tryLoad('/js/siindex-intro-sync.js?v=3', 'js/siindex-intro-sync.js');
+          return tryLoad('/js/siindex-intro-sync.js?v=4', 'js/siindex-intro-sync.js');
         });
         chain = chain.then(function () {
           return tryLoad('/js/siindex-presence-feedback.js?v=3', 'js/siindex-presence-feedback.js');
