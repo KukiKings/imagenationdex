@@ -1,81 +1,134 @@
 /**
- * SIINDEX presence + feedback (AJ production 2026-08-10)
- * - Plays web-safe CDN loop for living visual (not the 16MB talk MP4)
- * - Thumbs feedback on SI replies → localStorage siindex_feedback_v1
+ * SIINDEX presence + feedback
+ * ORIGINAL intro only: /videos/siindex-01-name-intro.mp4
+ * Never swap to meditation/other clips.
+ * Freeze-safe: muted, no loop, no seeks, hold last frame if decode stalls.
+ * Audio = website TTS (Syn-dex / Sinn-dex), not baked track.
  */
 (function () {
   "use strict";
   if (window.__SIINDEX_PRESENCE_FB__) return;
   window.__SIINDEX_PRESENCE_FB__ = true;
 
-  var PRESENCE_SRC = "/videos/siindex-04-meditation-loop.mp4?v=presence-20260810";
+  var ORIGINAL_SRC = "/videos/siindex-01-name-intro.mp4?v=smooth-20260809";
+
+  function ensureOriginalSource(video, source) {
+    try {
+      var cur = (source && source.getAttribute("src")) || (video && video.currentSrc) || "";
+      if (cur.indexOf("siindex-01-name-intro") === -1) {
+        if (source) source.setAttribute("src", ORIGINAL_SRC);
+        else if (video) video.setAttribute("src", ORIGINAL_SRC);
+        video.load();
+      }
+    } catch (e) {}
+  }
+
+  function playOriginalMuted(video) {
+    if (!video) return;
+    try {
+      video.muted = true;
+      video.defaultMuted = true;
+      video.setAttribute("muted", "");
+      video.loop = false; // loop on 16MB causes freeze on many devices
+      video.playsInline = true;
+      video.setAttribute("playsinline", "");
+      video.setAttribute("webkit-playsinline", "");
+      // Do not seek repeatedly — that stalls H.264
+      if (video.readyState >= 2 && video.currentTime > 1 && video.paused) {
+        // resume from where we are if already partially played
+      } else if (video.currentTime > 0.5 && video.paused && video.ended) {
+        try {
+          video.currentTime = 0;
+        } catch (e) {}
+      }
+      var card = video.closest(".video-card");
+      if (card) card.classList.add("is-playing");
+      var p = video.play();
+      if (p && p.catch) {
+        p.catch(function () {
+          // Autoplay blocked or decode fail — keep poster/frame, TTS still runs
+        });
+      }
+    } catch (e) {}
+  }
+
+  function wireStallGuard(video) {
+    if (!video || video.getAttribute("data-stall-guard") === "1") return;
+    video.setAttribute("data-stall-guard", "1");
+    var stallTimer = null;
+    function onStall() {
+      // Hold frame instead of spinning forever
+      try {
+        video.pause();
+      } catch (e) {}
+    }
+    video.addEventListener("waiting", function () {
+      if (stallTimer) clearTimeout(stallTimer);
+      stallTimer = setTimeout(onStall, 2500);
+    });
+    video.addEventListener("playing", function () {
+      if (stallTimer) clearTimeout(stallTimer);
+    });
+    video.addEventListener("stalled", function () {
+      if (stallTimer) clearTimeout(stallTimer);
+      stallTimer = setTimeout(onStall, 1500);
+    });
+    // When video ends before TTS finishes, freeze last frame (expected)
+    video.addEventListener("ended", function () {
+      try {
+        video.pause();
+      } catch (e) {}
+    });
+  }
 
   function wireVideo() {
     var video = document.getElementById("introVideo");
     var source = document.getElementById("introSpeakSource");
     if (!video) return;
+
+    ensureOriginalSource(video, source);
     try {
-      if (source) source.setAttribute("src", PRESENCE_SRC);
       video.setAttribute("preload", "metadata");
       video.muted = true;
       video.defaultMuted = true;
-      video.loop = true;
+      video.loop = false;
       video.playsInline = true;
-      video.load();
     } catch (e) {}
 
-    // Hook presence: when speaking status, try play; on pause status, pause video
-    window.addEventListener("siindex:status", function (ev) {
-      var st = (ev.detail && ev.detail.state) || "";
-      if (st === "speaking") {
-        try {
-          video.muted = true;
-          video.loop = true;
-          var card = video.closest(".video-card");
-          if (card) card.classList.add("is-playing");
-          var p = video.play();
-          if (p && p.catch) p.catch(function () {});
-        } catch (e) {}
-      }
-      if (st === "idle" || st === "ready" || st === "Paused.") {
-        try {
-          video.pause();
-          var card2 = video.closest(".video-card");
-          if (card2 && !document.getElementById("introStatusLine")?.textContent?.includes("speaking"))
-            card2.classList.remove("is-playing");
-        } catch (e) {}
-      }
-    });
+    wireStallGuard(video);
 
-    // Also patch startPresenceVisual if homepage defines it later
+    // Intro button: play ORIGINAL muted under TTS
     var tries = 0;
     var t = setInterval(function () {
       tries += 1;
-      if (tries > 20) {
+      if (tries > 25) {
         clearInterval(t);
         return;
       }
-      // Force intro button path to play presence video
       var btn = document.getElementById("videoButton");
-      if (!btn || btn.getAttribute("data-presence-wired") === "1") return;
-      btn.setAttribute("data-presence-wired", "1");
+      if (!btn || btn.getAttribute("data-orig-presence") === "1") return;
+      btn.setAttribute("data-orig-presence", "1");
       btn.addEventListener(
         "click",
         function () {
+          ensureOriginalSource(video, source);
           setTimeout(function () {
-            try {
-              video.muted = true;
-              video.loop = true;
-              var card = video.closest(".video-card");
-              if (card) card.classList.add("is-playing");
-              video.play().catch(function () {});
-            } catch (e) {}
-          }, 50);
+            playOriginalMuted(video);
+          }, 30);
         },
         true,
       );
       clearInterval(t);
-    }, 200);
+    }, 150);
+
+    // Optional: if homepage already playing TTS, keep video in sync
+    window.addEventListener("siindex:status", function (ev) {
+      var st = (ev.detail && ev.detail.state) || "";
+      if (st === "speaking") {
+        ensureOriginalSource(video, source);
+        playOriginalMuted(video);
+      }
+    });
   }
 
   function wireFeedback() {
