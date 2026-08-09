@@ -5,24 +5,24 @@ export async function run(job) {
     agent: "voice",
     ok: true,
     summary:
-      "Path A ready. Clean speech sample extracted from intro (45s mono, highpass+loudnorm, 192kbps MP3 + WAV). IVC setup function prefers clean sample with MP4 fallback; TTS resolves env→DB→fallback with turbo_v2_5. Setup still 404 until Supabase deploy.",
+      "Path A live: IVC voice_id iBEZxKDWKDCs8WbjiLKK, TTS + runtime deployed. Pronunciation canon Syn-dex on TTS + client. Intro MP4 still had baked Sign-dex — interim fix mutes video audio and speaks Syn-dex via website TTS (js/siindex-intro-player-honesty.js). Full lip-sync re-export remains media package needs-aj.",
     artifacts: [
       "supabase/functions/siindex-website-voice-setup/index.ts",
       "supabase/functions/siindex-website-voice-tts/index.ts",
-      "siindex-operating/RESEARCH-voice-exact-match.md",
+      "js/siindex-pronunciation-fix.js",
+      "js/siindex-intro-player-honesty.js",
       "siindex-operating/VOICE_EXACT_MATCH_STATUS.md",
     ],
     payload_update: {
-      clean_sample_ready: true,
-      clean_sample_duration_s: 45.12,
-      preferred_sample:
-        "https://imagenationdex.com/videos/siindex-intro-speech-clean.mp3",
-      fallback_sample:
-        "https://imagenationdex.com/videos/siindex-01-name-intro.mp4",
+      pronunciation_canon: "Syn-dex",
+      intro_interim: "muted_visuals_plus_tts",
+      intro_lip_sync_reexport: "needs-aj",
+      elevenlabs_voice_id: "iBEZxKDWKDCs8WbjiLKK",
+      path_a_deployed: true,
     },
     next_hint: job.chain[job.step_index + 1] || null,
     blocked_reason: null,
-    needs_aj: false,
+    needs_aj: job.type === "publish" || job.id === "job-media-voice-lock-001",
     at: new Date().toISOString(),
   };
 }
