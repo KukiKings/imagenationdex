@@ -49,7 +49,7 @@
           return tryLoad('/js/siindex-intro-player-honesty.js?v=2', 'js/siindex-intro-player-honesty.js');
         });
         chain = chain.then(function () {
-          return tryLoad('/js/siindex-intro-sync.js?v=2', 'js/siindex-intro-sync.js');
+          return tryLoad('/js/siindex-intro-sync.js?v=3', 'js/siindex-intro-sync.js');
         });
         chain = chain.then(function () {
           return tryLoad('/js/siindex-presence-feedback.js?v=3', 'js/siindex-presence-feedback.js');

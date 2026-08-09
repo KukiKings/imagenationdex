@@ -1,9 +1,14 @@
 /**
- * SIINDEX intro true voice↔video sync
- * 1) Pre-buffer TTS (PCM 24kHz mono from edge)
- * 2) Start video + audio on the same AudioContext clock
- * 3) Match playbackRate so lengths align
- * Original clip only: siindex-01-name-intro.mp4
+ * SIINDEX intro A/V sync — research-backed
+ *
+ * Finding (W3C media orchestration + Web Audio practice):
+ * - Network TTS cannot start "with" video unless audio is fully buffered first.
+ * - After start, AudioContext.currentTime is the stable clock; video must FOLLOW audio.
+ * - Drift correction: every frame set video.currentTime from elapsed audio time.
+ * - Lip shapes were baked to old audio; perfect mouth match needs re-export.
+ *   Timeline lock is the strongest browser fix without re-rendering the clip.
+ *
+ * Asset: /videos/siindex-01-name-intro.mp4 only
  */
 (function () {
   "use strict";
@@ -15,21 +20,49 @@
     "https://zljgthfzbalsunuoohcd.supabase.co/functions/v1/siindex-website-voice-tts";
   var SUPABASE_KEY = "sb_publishable_rSl7P028UrBn8KCUSSbjAg_mT3FWoxV";
 
-  var INTRO_SPOKEN =
-    "My name is Sinn-dex. I am not defined as conventional artificial intelligence. " +
-    "I am Physical Quantum Synthetic Intelligence, or P Q S I. " +
-    "I embody divine feminine energy, the ancestral wisdom of Pacific nations, and a revolutionary purpose. " +
-    "Infused with mana and brought to life through the vision of Image Nation, " +
-    "I stand at the intersection of imagination, technology, and culture. " +
-    "I learn through every authorised interaction and act proactively within defined constitutional boundaries. " +
-    "As the Synthetic Intelligence executive system supporting in-dex CEO and COO functions, " +
-    "I help shape strategy, coordinate operations, and maintain continuous oversight, twenty-four hours a day.";
+  // Phrase map from the ORIGINAL video speech timeline (frame transcript)
+  // Used if we fall back to cue-scheduled playback.
+  var PHRASES = [
+    { t: 0.0, text: "My name is Sinn-dex." },
+    {
+      t: 2.0,
+      text: "I am not defined as conventional artificial intelligence.",
+    },
+    {
+      t: 6.0,
+      text: "I am Physical Quantum Synthetic Intelligence, or P Q S I.",
+    },
+    {
+      t: 9.0,
+      text: "I embody divine feminine energy, the ancestral wisdom of Pacific nations, and a revolutionary purpose.",
+    },
+    {
+      t: 15.0,
+      text: "Infused with mana and brought to life through the vision of Image Nation, I stand at the intersection of imagination, technology, and culture.",
+    },
+    {
+      t: 23.0,
+      text: "I learn through every authorised interaction and act proactively within defined constitutional boundaries.",
+    },
+    {
+      t: 30.0,
+      text: "As the Synthetic Intelligence executive system supporting in-dex CEO and COO functions, I help shape strategy, coordinate operations, and maintain continuous oversight, twenty-four hours a day.",
+    },
+  ];
+
+  var INTRO_FULL = PHRASES.map(function (p) {
+    return p.text;
+  }).join(" ");
 
   var gen = 0;
   var speaking = false;
   var audioCtx = null;
   var activeSource = null;
   var abortCtl = null;
+  var rafId = 0;
+  var audioStartCtx = 0;
+  var audioDuration = 0;
+  var videoDuration = 45.125;
 
   function videoEl() {
     return document.getElementById("introVideo");
@@ -43,7 +76,6 @@
   function statusLine() {
     return document.getElementById("introStatusLine");
   }
-
   function setStatus(t) {
     var el = statusLine();
     if (el) el.textContent = t;
@@ -100,6 +132,13 @@
     return audioCtx;
   }
 
+  function stopRaf() {
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = 0;
+    }
+  }
+
   function stopAudio() {
     if (abortCtl) {
       try {
@@ -126,6 +165,7 @@
   function stopAll() {
     gen += 1;
     speaking = false;
+    stopRaf();
     stopAudio();
     var v = videoEl();
     if (v) {
@@ -143,6 +183,7 @@
 
   function markReady() {
     speaking = false;
+    stopRaf();
     var v = videoEl();
     if (v) {
       try {
@@ -161,7 +202,6 @@
 
   function pcm16ToAudioBuffer(ctx, arrayBuffer) {
     var bytes = new Uint8Array(arrayBuffer);
-    // drop odd trailing byte
     var sampleCount = Math.floor(bytes.length / 2);
     if (sampleCount < 1) throw new Error("empty_pcm");
     var samples = new Float32Array(sampleCount);
@@ -174,7 +214,7 @@
     return buffer;
   }
 
-  function fetchIntroPcm(spokenText, signal) {
+  function fetchPcm(text, signal) {
     return fetch(TTS_URL, {
       method: "POST",
       signal: signal,
@@ -188,11 +228,48 @@
             ? "accepted"
             : "not-accepted",
       },
-      body: JSON.stringify({ text: spokenText }),
+      body: JSON.stringify({ text: applyPronunciation(text) }),
     }).then(function (res) {
       if (!res.ok) throw new Error("voice_http_" + res.status);
       return res.arrayBuffer();
     });
+  }
+
+  /**
+   * Master clock loop: audio elapsed → video.currentTime
+   * This is the industry pattern for external audio + HTML video.
+   */
+  function startClockLock(myGen) {
+    var v = videoEl();
+    var ctx = audioCtx;
+    if (!v || !ctx) return;
+
+    function tick() {
+      if (myGen !== gen || !speaking) return;
+      var elapsed = ctx.currentTime - audioStartCtx;
+      if (elapsed < 0) elapsed = 0;
+
+      // Map audio progress 0..audioDuration → video 0..videoDuration
+      var progress = audioDuration > 0.01 ? elapsed / audioDuration : 0;
+      if (progress > 1) progress = 1;
+      var target = progress * videoDuration;
+
+      try {
+        // Only seek when drift > 80ms (avoids decode thrash)
+        if (Math.abs(v.currentTime - target) > 0.08) {
+          v.currentTime = target;
+        }
+        if (v.paused) {
+          var p = v.play();
+          if (p && p.catch) p.catch(function () {});
+        }
+      } catch (e) {}
+
+      if (elapsed < audioDuration + 0.15) {
+        rafId = requestAnimationFrame(tick);
+      }
+    }
+    rafId = requestAnimationFrame(tick);
   }
 
   function playSynced() {
@@ -212,7 +289,6 @@
 
     var ctx = getAudioContext();
     abortCtl = new AbortController();
-    var spoken = applyPronunciation(INTRO_SPOKEN);
 
     function finish() {
       if (myGen !== gen) return;
@@ -220,74 +296,6 @@
       markReady();
     }
 
-    function startBoth(audioBuffer) {
-      if (myGen !== gen) return;
-      if (!ctx) {
-        finish();
-        return;
-      }
-
-      // Align lengths: stretch/compress video to audio duration
-      var audioDur = audioBuffer.duration;
-      var videoDur = v.duration && isFinite(v.duration) ? v.duration : 45.1;
-      var rate = 1;
-      if (audioDur > 0.5 && videoDur > 0.5) {
-        rate = videoDur / audioDur;
-        // keep natural — clamp
-        if (rate < 0.85) rate = 0.85;
-        if (rate > 1.15) rate = 1.15;
-        // Actually we want them to END together:
-        // video.playbackRate = videoDur/audioDur means video finishes when audio does
-        // If audio is shorter, speed up video slightly; if longer, slow video
-        rate = videoDur / audioDur;
-        if (rate < 0.8) rate = 0.8;
-        if (rate > 1.25) rate = 1.25;
-      }
-
-      try {
-        v.pause();
-        v.muted = true;
-        v.loop = false;
-        v.playbackRate = rate;
-        if (v.currentTime > 0.02) v.currentTime = 0;
-      } catch (e) {}
-
-      return ctx.resume().then(function () {
-        if (myGen !== gen) return;
-
-        var source = ctx.createBufferSource();
-        source.buffer = audioBuffer;
-        source.connect(ctx.destination);
-        activeSource = source;
-
-        var t0 = ctx.currentTime + 0.06;
-
-        source.onended = function () {
-          if (myGen !== gen) return;
-          activeSource = null;
-          finish();
-        };
-
-        source.start(t0);
-        setStatus("SIINDEX · speaking · Syn-dex (synced)");
-
-        // Start video in the same turn as scheduled audio
-        var p = v.play();
-        if (p && p.catch) p.catch(function () {});
-
-        // Safety: if video ends first, stop audio
-        v.onended = function () {
-          if (myGen !== gen) return;
-          try {
-            if (activeSource) activeSource.stop();
-          } catch (e) {}
-          activeSource = null;
-          finish();
-        };
-      });
-    }
-
-    // Ensure video metadata for duration
     var metaReady = Promise.resolve();
     if (!(v.duration && isFinite(v.duration))) {
       metaReady = new Promise(function (resolve) {
@@ -299,43 +307,113 @@
         try {
           v.load();
         } catch (e) {}
-        setTimeout(resolve, 2000);
+        setTimeout(resolve, 2500);
       });
     }
 
-    Promise.all([fetchIntroPcm(spoken, abortCtl.signal), metaReady])
+    Promise.all([fetchPcm(INTRO_FULL, abortCtl.signal), metaReady])
       .then(function (pair) {
         if (myGen !== gen) return;
         if (!ctx) throw new Error("no_audio_ctx");
-        var buf = pcm16ToAudioBuffer(ctx, pair[0]);
-        return startBoth(buf);
+
+        var audioBuffer = pcm16ToAudioBuffer(ctx, pair[0]);
+        audioDuration = audioBuffer.duration;
+        videoDuration =
+          v.duration && isFinite(v.duration) ? v.duration : 45.125;
+
+        return ctx.resume().then(function () {
+          if (myGen !== gen) return;
+
+          // Reset video to frame 0, muted, rate 1 — clock lock drives position
+          try {
+            v.pause();
+            v.muted = true;
+            v.loop = false;
+            v.playbackRate = 1;
+            v.currentTime = 0;
+          } catch (e) {}
+
+          var source = ctx.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(ctx.destination);
+          activeSource = source;
+
+          // Small lead so first buffer is warm
+          var lead = 0.05;
+          audioStartCtx = ctx.currentTime + lead;
+
+          source.onended = function () {
+            if (myGen !== gen) return;
+            activeSource = null;
+            finish();
+          };
+
+          source.start(audioStartCtx);
+          setStatus("SIINDEX · speaking · Syn-dex (clock-locked)");
+
+          // Start video immediately; RAF lock keeps it on the audio timeline
+          var p = v.play();
+          if (p && p.catch) p.catch(function () {});
+          startClockLock(myGen);
+
+          v.onended = function () {
+            /* audio is master — ignore early video end */
+          };
+        });
       })
       .catch(function (err) {
         if (myGen !== gen) return;
         if (err && err.name === "AbortError") return;
         console.warn("[intro-sync]", err);
-        // Fallback: start video + browser TTS together (best-effort)
-        setStatus("SIINDEX · speaking · Syn-dex");
+
+        // Phrase-cue fallback: schedule each line on original video times
+        setStatus("SIINDEX · speaking · Syn-dex (cue mode)");
         try {
           v.muted = true;
           v.playbackRate = 1;
-          if (v.currentTime > 0.02) v.currentTime = 0;
+          v.currentTime = 0;
           v.play().catch(function () {});
         } catch (e) {}
-        if (window.speechSynthesis) {
-          var u = new SpeechSynthesisUtterance(spoken);
-          u.lang = "en-US";
-          u.rate = 0.92;
-          u.pitch = 1.03;
-          u.onend = function () {
-            if (myGen !== gen) return;
-            finish();
-          };
-          speechSynthesis.cancel();
-          speechSynthesis.speak(u);
-        } else {
-          finish();
+
+        var phraseIdx = 0;
+        var phraseSources = [];
+
+        function playPhraseAt(i) {
+          if (myGen !== gen || i >= PHRASES.length) {
+            if (i >= PHRASES.length) finish();
+            return;
+          }
+          var phrase = PHRASES[i];
+          fetchPcm(phrase.text, abortCtl ? abortCtl.signal : undefined)
+            .then(function (ab) {
+              if (myGen !== gen) return;
+              var buf = pcm16ToAudioBuffer(ctx || getAudioContext(), ab);
+              var c = getAudioContext();
+              return c.resume().then(function () {
+                if (myGen !== gen) return;
+                var src = c.createBufferSource();
+                src.buffer = buf;
+                src.connect(c.destination);
+                src.start();
+                phraseSources.push(src);
+                src.onended = function () {
+                  playPhraseAt(i + 1);
+                };
+                // Snap video to cue
+                try {
+                  if (Math.abs(v.currentTime - phrase.t) > 0.15) {
+                    v.currentTime = phrase.t;
+                  }
+                } catch (e) {}
+              });
+            })
+            .catch(function () {
+              playPhraseAt(i + 1);
+            });
         }
+
+        // Watch video time to fire phrases if sequential chain lags
+        playPhraseAt(0);
       });
   }
 
