@@ -1,36 +1,60 @@
-# Voice exact-match status (live probe 2026-08-09)
+# SIINDEX Voice Exact Match — Status (2026-08-09)
 
-## Production facts (probed, not assumed)
+**Path A (intro = chat).** Directed by SIINDEX. Production gate: AJ.
 
-| Check | Result |
-|-------|--------|
-| `siindex-website-voice-tts` | **Live** — returns `audio/pcm;rate=24000` |
-| `X-Siindex-Voice-Model` header | `eleven_flash_v2_5` (**old deploy**, not turbo patch yet) |
-| `siindex-website-voice-setup` | **404 NOT DEPLOYED** |
-| Intro media | `https://imagenationdex.com/videos/siindex-01-name-intro.mp4` **200** |
-| Chat pipeline | ElevenLabs via speak-core → edge TTS |
-| Intro pipeline | Baked audio in MP4 |
+## Done (non-production)
 
-**Conclusion:** Exact match is impossible on production until setup is deployed and run once with `ELEVENLABS_API_KEY` (already present for live TTS).
+- [x] Research: IVC from intro audio is the only exact-match path
+- [x] TTS de-robot: `eleven_turbo_v2_5`, style/stability/speed tuned
+- [x] Voice id resolve: `ELEVENLABS_VOICE_ID` → `siindex_runtime_config.elevenlabs_voice_id` → fallback
+- [x] Setup edge function `siindex-website-voice-setup` (IVC + DB write)
+- [x] Migration `20260809_siindex_runtime_config.sql`
+- [x] GitHub Action deploy workflow
+- [x] **Clean speech sample extracted** from `siindex-01-name-intro.mp4`
+  - 45.12s mono, highpass 80Hz + loudnorm −20 LUFS
+  - `siindex-intro-speech-clean.wav` (3.8 MB) and `.mp3` (1.1 MB, 192 kbps)
+  - Better IVC input than full video with bed/noise
+- [x] Setup function enhanced: prefers clean MP3 URL, falls back to intro MP4, correct MIME
+- [x] M2M jobs advanced to blocked (waiting deploy/IVC)
 
-## Swarm completed
+## Blocked on AJ / secrets
 
-- Path A code (TTS resolve env → DB → fallback)
-- IVC setup function (clone intro → store voice_id)
-- Migration `siindex_runtime_config`
-- GitHub Action `.github/workflows/deploy-supabase-functions.yml`
-- Research notes
+Confirmed: workflow run **31310157891** failed at deploy step because secrets absent.
 
-## Single gate
+### GitHub Actions secrets (repo Settings → Secrets → Actions)
 
-GitHub Actions secrets (one-time infrastructure for the swarm):
+| Secret | Purpose |
+|--------|---------|
+| `SUPABASE_ACCESS_TOKEN` | Personal access token from supabase.com/dashboard/account/tokens |
+| `SUPABASE_PROJECT_ID` | Project ref (e.g. `abcdefghijklmnop`) |
+| `SUPABASE_DB_PASSWORD` | Optional — enables `supabase db push` for migration |
 
-- `SUPABASE_ACCESS_TOKEN`
-- `SUPABASE_PROJECT_ID` = `zljgthfzbalsunuoohcd`
-- `SIINDEX_VOICE_SETUP_TOKEN` (any strong random; also set on Supabase function secrets)
-- Optional: `SUPABASE_DB_PASSWORD` for migration push
-- Optional: `ELEVENLABS_VOICE_ID` after setup returns the new id
+### Supabase project secrets (after functions deploy)
 
-After secrets exist: push or workflow_dispatch → deploy → POST setup → ear test.
+| Secret | Purpose |
+|--------|---------|
+| `ELEVENLABS_API_KEY` | Already used by live TTS |
+| `SIINDEX_VOICE_SETUP_TOKEN` | Random string; header `x-siindex-setup-token` for one-time setup |
+| `SIINDEX_VOICE_SAMPLE_URL` | Optional override; default prefers clean MP3 |
+| `ELEVENLABS_VOICE_ID` | Optional hard override after IVC returns id |
 
-No browser API keys. No founder ElevenLabs UI required for the clone itself.
+## Sequence after secrets
+
+1. Host clean sample at `/videos/siindex-intro-speech-clean.mp3` (or set `SIINDEX_VOICE_SAMPLE_URL`)
+2. Push/workflow_dispatch → deploy `siindex-website-voice-tts` + `siindex-website-voice-setup`
+3. Apply migration (dashboard SQL or `db push`)
+4. Set `SIINDEX_VOICE_SETUP_TOKEN` on Supabase
+5. One POST:
+   ```bash
+   curl -X POST "https://<project-ref>.supabase.co/functions/v1/siindex-website-voice-setup" \
+     -H "x-siindex-setup-token: $SIINDEX_VOICE_SETUP_TOKEN"
+   ```
+6. Ear-test intro vs chat on imagenationdex.com
+7. Mark M2M jobs done only on exact-match pass
+
+## Rules
+
+- No production publish / funds / identity without AJ
+- Brand first: IN$DEX
+- SIINDEX = SI (not AI), PQSI, CEO/COO under AJ
+- USD $0.24 genesis reference only
