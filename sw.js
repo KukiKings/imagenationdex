@@ -1,10 +1,9 @@
 /* IN$DEX Service Worker — verified public information shell.
-   v8: network-first for /js and media so pronunciation/intro fixes are not stuck. */
-const VERSION = 'indx-v8-syndex-pronunciation';
+   v9: never intercept video/media or Range requests — SW cache breaks progressive video. */
+const VERSION = 'indx-v9-video-bypass';
 const SHELL = 'indx-shell-' + VERSION;
 const PAGES = 'indx-pages-' + VERSION;
 
-/* Precache static non-code assets only — JS must not be pinned across deploys. */
 const PRECACHE = [
   '/manifest.json',
   '/assets/icon-192.png',
@@ -34,9 +33,9 @@ function htmlWithBoot(response) {
 
 function networkFirst(req) {
   return fetch(req).then(function (res) {
-    if (res && res.ok) {
+    if (res && res.ok && res.status === 200) {
       var copy = res.clone();
-      caches.open(PAGES).then(function (c) { c.put(req, copy); });
+      caches.open(PAGES).then(function (c) { c.put(req, copy); }).catch(function () {});
     }
     return res;
   }).catch(function () {
@@ -69,7 +68,17 @@ self.addEventListener('fetch', function (e) {
 
   var path = url.pathname;
 
-  /* HTML and navigations: always network-first */
+  /* CRITICAL: never intercept video/audio or byte-range requests.
+     Caching full MP4 responses breaks Range streaming → decoder freeze. */
+  if (
+    path.indexOf('/videos/') === 0 ||
+    path.indexOf('/media/') === 0 ||
+    /\.(mp4|webm|mov|m4v|mp3|wav|ogg|m4a)$/i.test(path) ||
+    req.headers.get('range')
+  ) {
+    return; // browser native network — supports 206 Range
+  }
+
   if (req.mode === 'navigate' || path.endsWith('.html') || path === '/') {
     e.respondWith(
       fetch(req).then(function (res) {
@@ -86,14 +95,7 @@ self.addEventListener('fetch', function (e) {
     return;
   }
 
-  /* JS + intro media: network-first so voice/pronunciation deploys apply immediately */
-  if (
-    path.indexOf('/js/') === 0 ||
-    path.indexOf('/videos/') === 0 ||
-    path.endsWith('.js') ||
-    path === '/siindex-speak-core.js' ||
-    path === '/sw.js'
-  ) {
+  if (path.indexOf('/js/') === 0 || path.endsWith('.js') || path === '/siindex-speak-core.js' || path === '/sw.js') {
     e.respondWith(networkFirst(req));
     return;
   }
