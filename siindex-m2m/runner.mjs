@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 /**
  * SIINDEX M2M runner — dispatch, execute, bus, pickup, AJ gate
- * Usage:
  *   node runner.mjs status|seed|tick|run|authorize <jobId>
  */
 import { promises as fs } from "node:fs";
@@ -18,49 +17,82 @@ async function ensureDirs() {
   await fs.mkdir(BUS, { recursive: true });
 }
 
+async function atomicWrite(file, data) {
+  const tmp = `${file}.${process.pid}.tmp`;
+  await fs.writeFile(tmp, data);
+  await fs.rename(tmp, file);
+}
+
 async function listJobs() {
   await ensureDirs();
   const files = (await fs.readdir(QUEUE)).filter((f) => f.endsWith(".json"));
   const jobs = [];
   for (const f of files) {
-    jobs.push(JSON.parse(await fs.readFile(path.join(QUEUE, f), "utf8")));
+    try {
+      const raw = await fs.readFile(path.join(QUEUE, f), "utf8");
+      if (!raw.trim()) continue;
+      jobs.push(JSON.parse(raw));
+    } catch {
+      console.warn("skip corrupt queue file:", f);
+    }
   }
   return jobs.sort((a, b) => (a.priority || 99) - (b.priority || 99));
 }
 
 async function saveJob(job) {
-  await fs.writeFile(
+  await atomicWrite(
     path.join(QUEUE, `${job.id}.json`),
-    JSON.stringify(job, null, 2),
+    JSON.stringify(job, null, 2) + "\n",
   );
 }
 
 async function writeBus(result) {
   const name = `${result.job_id}__${result.agent}__${Date.now()}.json`;
-  await fs.writeFile(path.join(BUS, name), JSON.stringify(result, null, 2));
+  await atomicWrite(path.join(BUS, name), JSON.stringify(result, null, 2) + "\n");
   return name;
+}
+
+function baseJob(partial) {
+  return {
+    directed_by: "SIINDEX",
+    priority: 10,
+    status: "queued",
+    step_index: 0,
+    payload: {},
+    requires_aj_for: ["ops.deploy", "ops.secret_write", "publish"],
+    aj_authorized: false,
+    created_at: new Date().toISOString(),
+    ...partial,
+  };
 }
 
 async function seed() {
   await ensureDirs();
-  const job = {
-    id: "job-voice-match-001",
-    directed_by: "SIINDEX",
-    type: "voice-match-path-a",
-    priority: 1,
-    status: "queued",
-    chain: ["context", "voice", "ops", "verify"],
-    step_index: 0,
-    payload: {
-      goal: "Chat TTS voice exactly matches introduction video",
-      reference_media: "/videos/siindex-01-name-intro.mp4",
-    },
-    requires_aj_for: ["ops.deploy", "ops.secret_write", "publish"],
-    aj_authorized: false,
-    created_at: new Date().toISOString(),
-  };
-  await saveJob(job);
-  console.log("Seeded", job.id, "chain:", job.chain.join(" → "));
+  const jobs = [
+    baseJob({
+      id: "job-voice-match-001",
+      type: "voice-match-path-a",
+      priority: 1,
+      chain: ["context", "voice", "ops", "verify"],
+      payload: {
+        goal: "Chat TTS voice exactly matches introduction video",
+        reference_media: "/videos/siindex-01-name-intro.mp4",
+      },
+    }),
+    baseJob({
+      id: "job-media-voice-lock-001",
+      type: "media-voice-lock",
+      priority: 2,
+      chain: ["context", "media", "verify"],
+      payload: {
+        goal: "All public SIINDEX media locked to same voice identity as website TTS",
+      },
+    }),
+  ];
+  for (const job of jobs) {
+    await saveJob(job);
+    console.log("Seeded", job.id, "→", job.chain.join(" → "));
+  }
 }
 
 async function tick() {
@@ -69,12 +101,15 @@ async function tick() {
     ["queued", "awaiting_next", "running"].includes(j.status),
   );
   if (!job) {
-    console.log("Idle — no runnable jobs.");
-    return false;
-  }
-
-  if (job.status === "needs-aj" && !job.aj_authorized) {
-    console.log(job.id, "blocked at AJ gate.");
+    const gated = jobs.filter((j) => j.status === "needs-aj" || j.status === "blocked");
+    if (gated.length) {
+      console.log("Idle runnable. Gated/blocked:");
+      for (const g of gated) {
+        console.log(" ", g.id, g.status, g.blocked_reason || g.gate || "");
+      }
+    } else {
+      console.log("Idle — no runnable jobs.");
+    }
     return false;
   }
 
@@ -101,14 +136,31 @@ async function tick() {
     job.gate = "ops requires AJ authorize for deploy/secret path";
     await saveJob(job);
     console.log(job.id, "→ needs-aj (ops)");
-    return false;
+    // Still allow verify to record acceptance by skipping ops when unauthorized:
+    // advance past ops so verify can run with blocked_reason noted.
+    job.step_index += 1;
+    job.status = "awaiting_next";
+    job.skipped_ops = true;
+    await saveJob(job);
+    console.log(job.id, "skip ops → next", job.chain[job.step_index] || "end");
+    return true;
   }
 
   job.status = "running";
   job.current_agent = agentName;
   await saveJob(job);
 
-  const result = await fn(job);
+  let result;
+  try {
+    result = await fn(job);
+  } catch (err) {
+    job.status = "failed";
+    job.error = String(err);
+    await saveJob(job);
+    console.error(job.id, "agent failed", err);
+    return false;
+  }
+
   const busFile = await writeBus(result);
   console.log(`[${agentName}]`, result.summary);
   console.log("  bus:", busFile);
@@ -122,42 +174,33 @@ async function tick() {
     return false;
   }
 
-  if (result.blocked_reason && agentName === "ops") {
-    job.status = "blocked";
+  if (result.blocked_reason) {
     job.blocked_reason = result.blocked_reason;
-    job.last_result = result;
-    // still advance so verify can record acceptance criteria
-    job.step_index += 1;
-    if (job.step_index < job.chain.length) {
-      job.status = "awaiting_next";
-    }
-    await saveJob(job);
-    console.log("  blocked:", result.blocked_reason);
-    return true;
   }
 
   job.step_index += 1;
   job.last_result = result;
   if (job.step_index >= job.chain.length) {
-    job.status = result.blocked_reason ? "blocked" : "done";
+    job.status = job.blocked_reason || job.skipped_ops ? "blocked" : "done";
   } else {
     job.status = "awaiting_next";
   }
   await saveJob(job);
   console.log(
     job.id,
-    "step →",
+    "step",
     job.step_index,
-    "status",
+    "/",
+    job.chain.length,
     job.status,
-    job.chain[job.step_index] ? `(next ${job.chain[job.step_index]})` : "",
+    job.chain[job.step_index] ? `next=${job.chain[job.step_index]}` : "",
   );
   return true;
 }
 
 async function runAll() {
   let guard = 0;
-  while (guard++ < 20) {
+  while (guard++ < 30) {
     const progressed = await tick();
     if (!progressed) break;
   }
@@ -166,25 +209,25 @@ async function runAll() {
 async function status() {
   const jobs = await listJobs();
   if (!jobs.length) {
-    console.log("No jobs in queue. Run: node runner.mjs seed");
+    console.log("No jobs. Run: node runner.mjs seed");
     return;
   }
   for (const j of jobs) {
     console.log(
-      `${j.id}  [${j.status}]  step ${j.step_index}/${j.chain.length}  agent=${j.chain[j.step_index] || "—"}  aj=${j.aj_authorized ? "yes" : "no"}`,
+      `${j.id}  [${j.status}]  step ${j.step_index}/${j.chain.length}  next=${j.chain[j.step_index] || "—"}  aj=${j.aj_authorized ? "yes" : "no"}`,
     );
     if (j.blocked_reason) console.log("  blocked:", j.blocked_reason);
     if (j.gate) console.log("  gate:", j.gate);
   }
-  try {
-    const bus = await fs.readdir(BUS);
-    console.log("bus messages:", bus.length);
-  } catch {
-    console.log("bus messages: 0");
-  }
+  const bus = await fs.readdir(BUS).catch(() => []);
+  console.log("bus messages:", bus.filter((f) => f.endsWith(".json")).length);
 }
 
 async function authorize(jobId) {
+  if (!jobId) {
+    console.error("Usage: node runner.mjs authorize <jobId>");
+    process.exit(1);
+  }
   const jobs = await listJobs();
   const job = jobs.find((j) => j.id === jobId);
   if (!job) {
@@ -192,14 +235,23 @@ async function authorize(jobId) {
     process.exit(1);
   }
   job.aj_authorized = true;
-  if (job.status === "needs-aj") job.status = "awaiting_next";
+  if (job.status === "needs-aj" || job.status === "blocked") {
+    // Re-queue ops if it was skipped
+    const opsIdx = job.chain.indexOf("ops");
+    if (opsIdx >= 0 && job.skipped_ops) {
+      job.step_index = opsIdx;
+      job.skipped_ops = false;
+      job.blocked_reason = null;
+      job.gate = null;
+    }
+    job.status = "awaiting_next";
+  }
   await saveJob(job);
-  console.log("AJ authorized", jobId, "— production steps may proceed when infrastructure allows");
+  console.log("AJ authorized", jobId);
 }
 
 const cmd = process.argv[2] || "status";
 const arg = process.argv[3];
-
 await ensureDirs();
 if (cmd === "seed") await seed();
 else if (cmd === "tick") await tick();
