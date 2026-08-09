@@ -47,10 +47,10 @@
       }
       if (document.getElementById('introVideo') || document.querySelector('.video-copy')) {
         chain = chain.then(function () {
-          return tryLoad('/js/siindex-intro-player-honesty.js', 'js/siindex-intro-player-honesty.js');
+          return tryLoad('/js/siindex-intro-player-honesty.js?v=2', 'js/siindex-intro-player-honesty.js');
         });
         chain = chain.then(function () {
-          return tryLoad('/js/siindex-presence-feedback.js?v=1', 'js/siindex-presence-feedback.js');
+          return tryLoad('/js/siindex-presence-feedback.js?v=2', 'js/siindex-presence-feedback.js');
         });
       }
       if (document.querySelector('.portrait-ring') || /siindex\.html/i.test(location.pathname)) {
