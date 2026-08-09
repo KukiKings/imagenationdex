@@ -28,7 +28,11 @@
     });
   }
 
-  tryLoad('/js/siindex-public-knowledge.js', 'js/siindex-public-knowledge.js')
+  // Pronunciation canon first: SIINDEX is spoken as Syn-dex (never Sign-dex).
+  tryLoad('/js/siindex-pronunciation-fix.js', 'js/siindex-pronunciation-fix.js')
+    .then(function () {
+      return tryLoad('/js/siindex-public-knowledge.js', 'js/siindex-public-knowledge.js');
+    })
     .then(function () {
       return tryLoad('/js/siindex-page-context.js', 'js/siindex-page-context.js');
     })
