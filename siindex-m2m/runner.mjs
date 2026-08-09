@@ -18,7 +18,7 @@ async function ensureDirs() {
 }
 
 async function atomicWrite(file, data) {
-  const tmp = `${file}.${process.pid}.tmp`;
+  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
   await fs.writeFile(tmp, data);
   await fs.rename(tmp, file);
 }
@@ -101,11 +101,18 @@ async function tick() {
     ["queued", "awaiting_next", "running"].includes(j.status),
   );
   if (!job) {
-    const gated = jobs.filter((j) => j.status === "needs-aj" || j.status === "blocked");
+    const gated = jobs.filter((j) =>
+      ["needs-aj", "blocked", "done", "failed"].includes(j.status),
+    );
     if (gated.length) {
-      console.log("Idle runnable. Gated/blocked:");
+      console.log("Idle runnable. Queue:");
       for (const g of gated) {
-        console.log(" ", g.id, g.status, g.blocked_reason || g.gate || "");
+        console.log(
+          " ",
+          g.id,
+          g.status,
+          g.blocked_reason || g.gate || "",
+        );
       }
     } else {
       console.log("Idle — no runnable jobs.");
@@ -115,9 +122,9 @@ async function tick() {
 
   const agentName = job.chain[job.step_index];
   if (!agentName) {
-    job.status = "done";
+    job.status = job.blocked_reason || job.skipped_ops ? "blocked" : "done";
     await saveJob(job);
-    console.log(job.id, "DONE");
+    console.log(job.id, job.status.toUpperCase());
     return true;
   }
 
@@ -130,19 +137,32 @@ async function tick() {
     return false;
   }
 
-  // AJ gate before ops production steps
+  // Ops without AJ: record gate, skip agent, continue chain to verify
   if (agentName === "ops" && !job.aj_authorized) {
-    job.status = "needs-aj";
-    job.gate = "ops requires AJ authorize for deploy/secret path";
-    await saveJob(job);
-    console.log(job.id, "→ needs-aj (ops)");
-    // Still allow verify to record acceptance by skipping ops when unauthorized:
-    // advance past ops so verify can run with blocked_reason noted.
-    job.step_index += 1;
-    job.status = "awaiting_next";
+    const skipResult = {
+      job_id: job.id,
+      agent: "ops",
+      ok: true,
+      summary:
+        "Ops skipped — AJ authorize required for deploy/secret write. Chain continues to verify.",
+      artifacts: [".github/workflows/deploy-supabase-functions.yml"],
+      next_hint: job.chain[job.step_index + 1] || null,
+      blocked_reason:
+        "Supabase deploy credentials not in this runtime",
+      needs_aj: true,
+      at: new Date().toISOString(),
+    };
+    await writeBus(skipResult);
+    job.gate = skipResult.summary;
     job.skipped_ops = true;
+    job.blocked_reason = skipResult.blocked_reason;
+    job.step_index += 1;
+    job.status =
+      job.step_index >= job.chain.length ? "blocked" : "awaiting_next";
+    job.last_result = skipResult;
     await saveJob(job);
-    console.log(job.id, "skip ops → next", job.chain[job.step_index] || "end");
+    console.log(`[ops]`, skipResult.summary);
+    console.log(job.id, "→", job.status, "next=", job.chain[job.step_index] || "—");
     return true;
   }
 
@@ -165,7 +185,7 @@ async function tick() {
   console.log(`[${agentName}]`, result.summary);
   console.log("  bus:", busFile);
 
-  if (result.needs_aj && !job.aj_authorized) {
+  if (result.needs_aj && !job.aj_authorized && agentName !== "ops") {
     job.status = "needs-aj";
     job.gate = result.summary;
     job.last_result = result;
@@ -174,9 +194,7 @@ async function tick() {
     return false;
   }
 
-  if (result.blocked_reason) {
-    job.blocked_reason = result.blocked_reason;
-  }
+  if (result.blocked_reason) job.blocked_reason = result.blocked_reason;
 
   job.step_index += 1;
   job.last_result = result;
@@ -188,10 +206,7 @@ async function tick() {
   await saveJob(job);
   console.log(
     job.id,
-    "step",
-    job.step_index,
-    "/",
-    job.chain.length,
+    `step ${job.step_index}/${job.chain.length}`,
     job.status,
     job.chain[job.step_index] ? `next=${job.chain[job.step_index]}` : "",
   );
@@ -235,15 +250,14 @@ async function authorize(jobId) {
     process.exit(1);
   }
   job.aj_authorized = true;
-  if (job.status === "needs-aj" || job.status === "blocked") {
-    // Re-queue ops if it was skipped
-    const opsIdx = job.chain.indexOf("ops");
-    if (opsIdx >= 0 && job.skipped_ops) {
-      job.step_index = opsIdx;
-      job.skipped_ops = false;
-      job.blocked_reason = null;
-      job.gate = null;
-    }
+  const opsIdx = job.chain.indexOf("ops");
+  if (opsIdx >= 0 && job.skipped_ops) {
+    job.step_index = opsIdx;
+    job.skipped_ops = false;
+    job.blocked_reason = null;
+    job.gate = null;
+    job.status = "awaiting_next";
+  } else if (job.status === "needs-aj" || job.status === "blocked") {
     job.status = "awaiting_next";
   }
   await saveJob(job);
