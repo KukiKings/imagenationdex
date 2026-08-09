@@ -54,9 +54,9 @@
     .voice-status{min-height:20px;color:var(--muted);font-size:12px;margin-top:8px}
     .status-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:22px}.status-card{border:1px solid var(--line);border-radius:18px;background:rgba(16,20,38,.85);padding:16px}.status-card h3{margin:0 0 8px;font-size:1rem}.status-card p{margin:0;color:var(--muted);font-size:.92rem}
     footer{border-top:1px solid var(--line);padding:28px 0 40px;color:var(--muted);font-size:14px}
-    .video-card.is-playing video{animation:siindexPresence 12s ease-in-out infinite alternate}
+    .video-card.is-playing{animation:siindexPresence 12s ease-in-out infinite alternate}
     @keyframes siindexPresence{from{transform:scale(1)}to{transform:scale(1.04)}}
-    @media(prefers-reduced-motion:reduce){.video-card.is-playing video{animation:none}}
+    @media(prefers-reduced-motion:reduce){.video-card.is-playing{animation:none}}
     @media(max-width:900px){.navlinks a:not(.navcta){display:none}.hero{padding-top:54px}.hero-grid,.si-grid{grid-template-columns:1fr}.portrait{max-width:560px}.si-grid{gap:18px}.video-card,.chat-panel{min-height:480px}.status-grid{grid-template-columns:1fr}}
   </style>
 </head>
@@ -108,7 +108,7 @@
         <div class="si-grid">
           <div class="video-shell">
             <div class="video-card">
-              <video id="introVideo" playsinline webkit-playsinline preload="metadata" muted poster="/images/siindex-public-video-poster.webp" aria-describedby="introTranscript">
+              <video id="introVideo" playsinline webkit-playsinline preload="none" muted poster="/images/siindex-public-video-poster.webp" aria-describedby="introTranscript">
                 <source id="introSpeakSource" src="/videos/siindex-01-name-intro.mp4?v=smooth-20260809" type="video/mp4">
               </video>
               <div class="video-shade"></div>
@@ -191,10 +191,10 @@
     <div class="wrap">IN$DEX · Image Nation DEX (short for Image Nation Decentralized Exchange) · legal registrant Image Nation DEx Limited when registration completes · SIINDEX is SI not AI</div>
   </footer>
 
-  <script src="/siindex-speak-core.js?v=syndex-20260809c"></script>
-  <script src="/js/siindex-pronunciation-fix.js?v=syndex-20260809c"></script>
-  <script src="/js/siindex-public-knowledge.js?v=syndex-20260809c"></script>
-  <script src="/js/siindex-public-boot.js?v=syndex-20260809c"></script>
+  <script src="/siindex-speak-core.js?v=syndex-20260809d"></script>
+  <script src="/js/siindex-pronunciation-fix.js?v=syndex-20260809d"></script>
+  <script src="/js/siindex-public-knowledge.js?v=syndex-20260809d"></script>
+  <script src="/js/siindex-public-boot.js?v=syndex-20260809d"></script>
   <script>
     const messages = document.getElementById('publicMessages');
     const input = document.getElementById('publicInput');
@@ -303,10 +303,6 @@
       if (video) {
         var card = video.closest('.video-card');
         if (card) card.classList.remove('is-playing');
-        try {
-          video.loop = false;
-          video.pause();
-        } catch (e) {}
         forceMuteVideo();
       }
       try {
@@ -325,20 +321,16 @@
     }
 
     function startPresenceVisual() {
-      if (!video) return;
+      // Do NOT decode the 16MB intro MP4 during TTS — that freezes many devices.
+      // Presence = poster + CSS motion. Audio = website TTS (Syn-dex).
       forceMuteVideo();
-      try {
-        // No loop, no currentTime seeks — those freeze H.264 High+B-frames on many devices.
-        video.loop = false;
-        var card = video.closest('.video-card');
-        if (card) card.classList.add('is-playing');
-        var p = video.play();
-        if (p && p.catch) {
-          p.catch(function () {
-            // Autoplay/decode failure: CSS presence animation still runs on card
-          });
-        }
-      } catch (e) {}
+      if (video) {
+        try {
+          video.pause();
+        } catch (e) {}
+      }
+      var card = video && video.closest('.video-card');
+      if (card) card.classList.add('is-playing');
     }
 
     function playVoiceOnly() {
@@ -350,9 +342,6 @@
 
       var done = function () {
         introSpeaking = false;
-        if (video) {
-          try { video.pause(); } catch (e) {}
-        }
         markReadyForConversation();
       };
 
@@ -379,11 +368,6 @@
 
     if (video) {
       forceMuteVideo();
-      video.addEventListener('play', function () {
-        if (!video.muted) video.muted = true;
-      });
-      // When clip ends mid-speech, hold last frame — do NOT restart (restart seeks freeze)
-      video.addEventListener('ended', function () {});
     }
 
     if (videoButton) {
@@ -392,7 +376,6 @@
         event.stopPropagation();
         if (introSpeaking) {
           stopIntroSpeech();
-          if (video) { try { video.pause(); } catch (e) {} }
           markReadyForConversation();
           return;
         }
