@@ -80,6 +80,16 @@ async function seed() {
       },
     }),
     baseJob({
+      id: "job-intro-playback-freeze-001",
+      type: "media-playback-freeze",
+      priority: 1,
+      chain: ["context", "media", "verify"],
+      payload: {
+        goal: "Fix intro video freeze/stall while Syn-dex TTS speaks",
+        reference_media: "/videos/siindex-01-name-intro.mp4",
+      },
+    }),
+    baseJob({
       id: "job-media-voice-lock-001",
       type: "media-voice-lock",
       priority: 2,
@@ -137,7 +147,6 @@ async function tick() {
     return false;
   }
 
-  // Ops without AJ: record gate, skip agent, continue chain to verify
   if (agentName === "ops" && !job.aj_authorized) {
     const skipResult = {
       job_id: job.id,
