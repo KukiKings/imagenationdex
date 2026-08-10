@@ -1,19 +1,22 @@
-# SIINDEX agent filesystem
-
-Filesystem-first layout (EVE / OpenClaw-inspired). **SOUL.md is live doctrine.**
+# SIINDEX agent filesystem (EVE / OpenClaw-style)
 
 ```
 siindex/
-├── SOUL.md              # identity, voice, values, boundaries (PRODUCTION)
-├── AGENTS.md            # router + subagent rules
-├── instructions.md      # load order
-├── tools/               # planned tool modules (scaffold)
-├── skills/              # knowledge packs (scaffold)
-├── subagents/           # specialist definitions (scaffold)
-├── channels/            # web / voice (website is live channel)
-└── schedules/           # proactive jobs (not always-on yet)
+├── SOUL.md                 # PRODUCTION identity doctrine
+├── AGENTS.md               # God agent + swarm map
+├── instructions.md         # load order
+├── agent.ts                # config entry
+├── skills/                 # what she knows
+├── tools/                  # what she can do (scaffold)
+├── subagents/              # specialists
+├── channels/               # web-chat, voice
+├── schedules/              # proactive targets
+└── evals/                  # canon checks + feedback
 ```
 
-Companion runtime: `../siindex-m2m/`.
+**Runtime companions**
+- Website: https://imagenationdex.com
+- M2M: `../siindex-m2m/`
+- Heartbeat: GitHub Action `siindex-m2m-heartbeat.yml`
 
-Live public channel: https://imagenationdex.com
+**Not required for doctrine:** `npx eve init` — EVE is the pattern; files above are the source of truth.
