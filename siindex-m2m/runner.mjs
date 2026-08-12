@@ -127,7 +127,7 @@ async function tick() {
     } else {
       console.log("Idle — no runnable jobs.");
     }
-    return false;
+    return { progressed: false, ok: true };
   }
 
   const agentName = job.chain[job.step_index];
@@ -135,7 +135,7 @@ async function tick() {
     job.status = job.blocked_reason || job.skipped_ops ? "blocked" : "done";
     await saveJob(job);
     console.log(job.id, job.status.toUpperCase());
-    return true;
+    return { progressed: true, ok: true };
   }
 
   const fn = agents[agentName];
@@ -144,7 +144,7 @@ async function tick() {
     job.error = `unknown agent: ${agentName}`;
     await saveJob(job);
     console.error(job.error);
-    return false;
+    return { progressed: false, ok: false };
   }
 
   if (agentName === "ops" && !job.aj_authorized) {
@@ -172,7 +172,7 @@ async function tick() {
     await saveJob(job);
     console.log(`[ops]`, skipResult.summary);
     console.log(job.id, "→", job.status, "next=", job.chain[job.step_index] || "—");
-    return true;
+    return { progressed: true, ok: true };
   }
 
   job.status = "running";
@@ -187,7 +187,7 @@ async function tick() {
     job.error = String(err);
     await saveJob(job);
     console.error(job.id, "agent failed", err);
-    return false;
+    return { progressed: false, ok: false };
   }
 
   const busFile = await writeBus(result);
@@ -200,7 +200,8 @@ async function tick() {
     job.last_result = result;
     await saveJob(job);
     console.log(job.id, "→ needs-aj");
-    return false;
+    // Gated is healthy for Actions — not a process failure
+    return { progressed: false, ok: true };
   }
 
   if (result.blocked_reason) job.blocked_reason = result.blocked_reason;
@@ -219,13 +220,13 @@ async function tick() {
     job.status,
     job.chain[job.step_index] ? `next=${job.chain[job.step_index]}` : "",
   );
-  return true;
+  return { progressed: true, ok: true };
 }
 
 async function runAll() {
   let guard = 0;
   while (guard++ < 30) {
-    const progressed = await tick();
+    const { progressed } = await tick();
     if (!progressed) break;
   }
 }
@@ -276,8 +277,15 @@ async function authorize(jobId) {
 const cmd = process.argv[2] || "status";
 const arg = process.argv[3];
 await ensureDirs();
-if (cmd === "seed") await seed();
-else if (cmd === "tick") await tick();
-else if (cmd === "run") await runAll();
-else if (cmd === "authorize") await authorize(arg);
-else await status();
+try {
+  if (cmd === "seed") await seed();
+  else if (cmd === "tick") {
+    const { ok } = await tick();
+    process.exit(ok ? 0 : 1);
+  } else if (cmd === "run") await runAll();
+  else if (cmd === "authorize") await authorize(arg);
+  else await status();
+} catch (err) {
+  console.error("[runner]", err);
+  process.exit(1);
+}
