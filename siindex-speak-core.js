@@ -1,10 +1,11 @@
 /**
- * SIINDEX Website Voice Core v3.0.1 — restored
+ * SIINDEX Website Voice Core v3.0.2
  * Interrupt must not fall through to full speechSynthesis restart.
+ * Spoken name lock: Sinn-dex only (never Sign-dex).
  */
 (function () {
   "use strict";
-  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.1") return;
+  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.2") return;
 
   const SUPABASE_URL = "https://zljgthfzbalsunuoohcd.supabase.co";
   const SUPABASE_KEY = "sb_publishable_rSl7P028UrBn8KCUSSbjAg_mT3FWoxV";
@@ -53,10 +54,17 @@
     if (window.SIINDEXPronunciation && typeof window.SIINDEXPronunciation.apply === "function") {
       return window.SIINDEXPronunciation.apply(text);
     }
-    return String(text || "")
-      .replace(/\bSIINDEX\b/gi, "Sinn-dex")
-      .replace(/\bSyn-dex\b/gi, "Sinn-dex")
-      .replace(/\bSign-dex\b/gi, "Sinn-dex");
+    var t = String(text || "");
+    t = t.replace(/pronounced\s+Syn-?dex\s+or\s+Sin-?dex/gi, "pronounced Sinn-dex");
+    t = t.replace(/pronounced\s+Syn-?dex/gi, "pronounced Sinn-dex");
+    t = t.replace(/I['']?m\s+SIINDEX/gi, "I'm Sinn-dex");
+    t = t.replace(/I\s+am\s+SIINDEX/gi, "I am Sinn-dex");
+    t = t.replace(/\bSIINDEX\b/gi, "Sinn-dex");
+    t = t.replace(/\bSyn[\s-]?dex\b/gi, "Sinn-dex");
+    t = t.replace(/\bSin[\s-]?dex\b/gi, "Sinn-dex");
+    t = t.replace(/\bSign[\s-]?dex\b/gi, "Sinn-dex");
+    t = t.replace(/\bSighn[\s-]?dex\b/gi, "Sinn-dex");
+    return t;
   }
 
   function setStatus(state, text) {
@@ -160,7 +168,6 @@
       if (!controller.signal.aborted) setStatus("idle", "Ready.");
     } catch (error) {
       clearTimeout(voiceTimer);
-      // CRITICAL: on pause/interrupt, do NOT restart full text via speechSynthesis
       if (controller.signal.aborted && !voiceTimedOut) {
         setStatus("idle", "Paused.");
         return;
@@ -225,7 +232,7 @@
       });
       if (!response.ok) throw new Error("runtime_" + response.status);
       const data = await response.json();
-      const reply = (data && (data.reply || data.text || data.message)) || "I am Syn-dex. Please try again.";
+      const reply = (data && (data.reply || data.text || data.message)) || "I am Sinn-dex. Please try again.";
       try {
         window.dispatchEvent(new CustomEvent("siindex:message", {
           detail: { role: "si", text: reply, source: opts.source || "public-home", id: "s-" + Date.now() },
@@ -243,7 +250,7 @@
   }
 
   window.SIINDEXVoice = {
-    version: "3.0.1",
+    version: "3.0.2",
     speak: speak,
     interrupt: interrupt,
     ask: ask,
