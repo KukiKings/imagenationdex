@@ -1,23 +1,23 @@
-/** Voice agent — Path A (exact intro = chat) */
+/** Voice agent — Path A (chat TTS) + pronunciation lock */
 export async function run(job) {
   return {
     job_id: job.id,
     agent: "voice",
     ok: true,
     summary:
-      "Path A live: IVC voice_id iBEZxKDWKDCs8WbjiLKK, TTS + runtime deployed. Pronunciation canon Syn-dex on TTS + client. Intro MP4 still had baked Sign-dex — interim fix mutes video audio and speaks Syn-dex via website TTS (js/siindex-intro-player-honesty.js). Full lip-sync re-export remains media package needs-aj.",
+      "Chat TTS must speak Sinn-dex only (never Sign-dex). Client lock: js/siindex-pronunciation-fix.js + siindex-speak-core pronunciation(). Display label may remain Syn-dex. IVC voice_id iBEZxKDWKDCs8WbjiLKK. Intro MP4 native A/V only — baked audio not re-exported (needs AJ for true lip-sync).",
     artifacts: [
-      "supabase/functions/siindex-website-voice-setup/index.ts",
-      "supabase/functions/siindex-website-voice-tts/index.ts",
       "js/siindex-pronunciation-fix.js",
-      "js/siindex-intro-player-honesty.js",
+      "siindex-speak-core.js",
+      "supabase/functions/siindex-website-voice-tts/index.ts",
       "siindex-operating/VOICE_EXACT_MATCH_STATUS.md",
     ],
     payload_update: {
-      pronunciation_canon: "Syn-dex",
-      intro_interim: "muted_visuals_plus_tts",
-      intro_lip_sync_reexport: "needs-aj",
+      pronunciation_spoken: "Sinn-dex",
+      pronunciation_display: "Syn-dex",
+      never: "Sign-dex",
       elevenlabs_voice_id: "iBEZxKDWKDCs8WbjiLKK",
+      intro_lip_sync_reexport: "needs-aj",
       path_a_deployed: true,
     },
     next_hint: job.chain[job.step_index + 1] || null,
