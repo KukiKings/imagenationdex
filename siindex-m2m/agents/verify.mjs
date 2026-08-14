@@ -1,5 +1,32 @@
 /** Verify agent — acceptance / independent check */
 export async function run(job) {
+  const isStage2 =
+    job.type === "stage2-media-draft-chain" ||
+    (job.chain || []).includes("media_director");
+
+  if (isStage2) {
+    const hasPlan = !!job.payload?.media_plan;
+    const hasScript = !!(job.payload?.script_draft && job.payload.script_draft.body);
+    const factsOk = job.payload?.fact_report?.ok === true;
+    const qaOk = job.payload?.media_qa?.ok === true;
+    const noPublish = job.payload?.media_qa?.publication_allowed === false;
+    const hasEvidence = !!job.payload?.evidence;
+    const ok = hasPlan && hasScript && factsOk && qaOk && noPublish && hasEvidence;
+    return {
+      job_id: job.id,
+      agent: "verify",
+      ok,
+      summary: ok
+        ? "Stage 2 verify PASS: draft media package complete. Not published — AJ review only."
+        : "Stage 2 verify FAIL: incomplete media draft package or publish flag set.",
+      artifacts: ["siindex-m2m/STAGE2.md"],
+      next_hint: null,
+      blocked_reason: ok ? null : "Stage 2 media draft incomplete",
+      needs_aj: false,
+      at: new Date().toISOString(),
+    };
+  }
+
   const isStage1 =
     job.type === "stage1-demo-draft-chain" ||
     (job.chain || []).includes("policy_gate");
