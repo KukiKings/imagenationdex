@@ -2,13 +2,13 @@
  * siindex-public-knowledge.js
  * Public speech layer for SIINDEX — SI (Synthetic Intelligence), not AI.
  * RULE: Always lead with brand IN$DEX. Legal name only when the visitor asks.
- * Version: 1.4.0 | Live-status aligned 2026-08-14
+ * Version: 1.4.1 | Live-status aligned 2026-08-14
  */
 (function (global) {
   'use strict';
 
   var SIINDEX_PUBLIC = {
-    version: '1.4.0',
+    version: '1.4.1',
     kind: 'SI',
     full: 'Synthetic Intelligence',
     pqsi: 'Physical Quantum Synthetic Intelligence',
@@ -197,15 +197,11 @@
         return 'PQSI means Physical Quantum Synthetic Intelligence. I am SIINDEX for IN$DEX — Synthetic Intelligence, not artificial intelligence. Pronounced Sinn-dex. My sub-agents are SI sub-agents.';
       }
 
-      if (/mama noe|plain language|citizen/.test(q)) {
+      if (/mama noe|plain language|easy to understand|simple enough/.test(q)) {
         return 'IN$DEX uses the Mama Noe Test: if a normal citizen cannot understand it and use it, it is unfinished. That is how we judge whether a feature is ready.';
       }
 
-      return (
-        'I speak for IN$DEX from our public living knowledge. ' +
-        this.what_is_indx +
-        ' Ask about status, Cook Islands, registration, mission, founder, interviews, presentation, utilities, pronunciation, or what is live versus planned.'
-      );
+      return null;
     }
   };
 
