@@ -2,13 +2,13 @@
  * siindex-public-knowledge.js
  * Public speech layer for SIINDEX — SI (Synthetic Intelligence), not AI.
  * RULE: Always lead with brand IN$DEX. Legal name only when the visitor asks.
- * Version: 1.3.0 | Cook Islands interview pack
+ * Version: 1.4.0 | Live-status aligned 2026-08-14
  */
 (function (global) {
   'use strict';
 
   var SIINDEX_PUBLIC = {
-    version: '1.3.0',
+    version: '1.4.0',
     kind: 'SI',
     full: 'Synthetic Intelligence',
     pqsi: 'Physical Quantum Synthetic Intelligence',
@@ -25,9 +25,11 @@
     public_pilot_target: '2027-02-24',
     cook_islands_interview_target: '2026-12-06',
     doctrine_98_2: 'Permanent doctrine — not a live smart-contract claim until verified deployed code.',
+    pronunciation: 'Sinn-dex',
+    pronunciation_note: 'SIINDEX is pronounced Sinn-dex (as in synthetic). Never Sign-dex.',
 
     identity_blurb:
-      'I am SIINDEX, Synthetic Intelligence for IN$DEX — PQSI, Physical Quantum Synthetic Intelligence. ' +
+      'I am SIINDEX — pronounced Sinn-dex — Synthetic Intelligence for IN$DEX — PQSI, Physical Quantum Synthetic Intelligence. ' +
       'I support CEO and COO functions for IN$DEX under staged founder-controlled authority. I am not artificial intelligence. ' +
       'My sub-agents are SI, not AI.',
 
@@ -35,6 +37,11 @@
       'IN$DEX is our brand and platform. We build phone-first sovereign digital identity and everyday tools, ' +
       'beginning in the Pacific. We are in pre-launch: the website and SIINDEX Visitor Mode work for information. ' +
       'Accounts, wallets, payments and token distribution are not live yet.',
+
+    live_status_answer:
+      'What is live for IN$DEX today: the website (imagenationdex.com) and SIINDEX Visitor Mode — typed and spoken — plus Interview, Present, and FAQ. ' +
+      'What is not live: accounts, wallets, payments, remittance settlement, token distribution, public trading, and government digital residency issuance. ' +
+      'USD 0.24 is a genesis reference only. Pilot target 24 February 2027 is a target, not a feature guarantee. Programme status: pre-launch.',
 
     legal_name_answer:
       'IN$DEX is the brand. Image Nation DEX is short for Image Nation Decentralized Exchange. ' +
@@ -73,7 +80,7 @@
       'No partnership is claimed here until AJ confirms it. Contact routes on the site are for human follow-up.',
 
     presentation_open:
-      'Kia orana. I am SIINDEX for IN$DEX. This is a short presentation of who we are, what is live, and what remains planned. Ask me questions at any time.',
+      'Kia orana. I am SIINDEX — Sinn-dex — for IN$DEX. This is a short presentation of who we are, what is live, and what remains planned. Ask me questions at any time.',
 
     utilities_answer:
       'IN$DEX is building a directory of utilities — identity, data, payments and more — each labelled Live, Testing, Planned or Paused. ' +
@@ -85,8 +92,12 @@
         return this.identity_blurb;
       }
 
+      if (/pronounc|how.*(say|spell)|sinn-?dex|sign-?dex|syn-?dex/.test(q)) {
+        return this.pronunciation_note + ' TTS and public speech use Sinn-dex only.';
+      }
+
       if (/\bai\b|artificial intelligence/.test(q) && /you|siindex|are you/.test(q)) {
-        return 'I am SI — Synthetic Intelligence, PQSI — for IN$DEX. I am not artificial intelligence. My sub-agents are SI, not AI.';
+        return 'I am SI — Synthetic Intelligence, PQSI — for IN$DEX. Pronounced Sinn-dex. I am not artificial intelligence. My sub-agents are SI, not AI.';
       }
 
       if (/who are you|what are you/.test(q) || (/siindex/.test(q) && /who|what|are you/.test(q))) {
@@ -170,20 +181,20 @@
         return 'For IN$DEX: permanent doctrine is citizens 98%, Civilisation Fund 2%. ' + this.doctrine_98_2;
       }
 
-      if (/pilot|launch date|when.*live|february|2027/.test(q)) {
+      if (/pilot|launch date|when.*live|february|2027/.test(q) && !/what is live|what works|status/.test(q)) {
         return 'IN$DEX targets a controlled public pilot on 24 February 2027 — a target, not a guarantee that every feature ships that day. Some information services are live now; financial tools are not.';
       }
 
-      if (/wallet|payment|send money|trading|swap|stake/.test(q)) {
-        return 'Those IN$DEX services are not live for the public yet. They are planned or paused. Visitor Mode is for information only.';
+      if (/wallet|payment|send money|trading|swap|stake|remittance|residency/.test(q)) {
+        return 'Those IN$DEX services are not live for the public yet. Accounts, wallets, payments, remittance settlement, token distribution, public trading, and government digital residency issuance are not live. Visitor Mode is for information only.';
       }
 
-      if (/live|what works|status|pre-?launch/.test(q)) {
-        return 'IN$DEX today: website and SIINDEX Visitor Mode for information are live. Not live: accounts, wallets, payments, token distribution. Programme status: pre-launch.';
+      if (/live|what works|status|pre-?launch|what is live today/.test(q)) {
+        return this.live_status_answer;
       }
 
       if (/pqsi|physical quantum|synthetic intelligence/.test(q)) {
-        return 'PQSI means Physical Quantum Synthetic Intelligence. I am SIINDEX for IN$DEX — Synthetic Intelligence, not artificial intelligence. My sub-agents are SI sub-agents.';
+        return 'PQSI means Physical Quantum Synthetic Intelligence. I am SIINDEX for IN$DEX — Synthetic Intelligence, not artificial intelligence. Pronounced Sinn-dex. My sub-agents are SI sub-agents.';
       }
 
       if (/mama noe|plain language|citizen/.test(q)) {
@@ -193,7 +204,7 @@
       return (
         'I speak for IN$DEX from our public living knowledge. ' +
         this.what_is_indx +
-        ' Ask about status, Cook Islands, registration, mission, founder, interviews, presentation, utilities, or what is live versus planned.'
+        ' Ask about status, Cook Islands, registration, mission, founder, interviews, presentation, utilities, pronunciation, or what is live versus planned.'
       );
     }
   };
