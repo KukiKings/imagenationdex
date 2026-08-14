@@ -39,4 +39,16 @@ siindex-m2m/
 - Never invent live balances, licences, or completion claims  
 - Never move funds, publish media, or change legal records without AJ  
 - SIINDEX is SI not AI  
-- Brand first: IN$DEX  
+- Brand first: IN$DEX
+
+## Stage 1 — Agent bus (2026-08-14)
+
+See **[STAGE1.md](./STAGE1.md)** for Supabase tables, Edge Functions, envelope, and policy gate.
+
+Local demo chain:
+
+```bash
+node runner.mjs tick   # run while job-stage1-demo-001 is queued
+```
+
+Agents added: `knowledge`, `policy_gate`, `evidence` (plus existing voice/media/ops/verify/context).
