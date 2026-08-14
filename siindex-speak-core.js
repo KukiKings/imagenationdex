@@ -347,7 +347,6 @@
       if (!response.ok) throw new Error(data.error || "transcription_" + response.status);
       const transcript = String(data.transcript || "").trim();
       if (!transcript) throw new Error("no_speech_detected");
-      emitMessage("user", transcript, source);
       await ask(transcript, { source: source });
     } finally {
       clearTimeout(timer);
