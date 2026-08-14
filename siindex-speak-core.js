@@ -1,11 +1,11 @@
 /**
- * SIINDEX Website Voice Core v3.0.3
+ * SIINDEX Website Voice Core v3.0.4
  * Interrupt must not fall through to full speechSynthesis restart.
  * Spoken name lock: Sinn-dex only (never Sign-dex).
  */
 (function () {
   "use strict";
-  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.3") return;
+  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.4") return;
 
   const SUPABASE_URL = "https://zljgthfzbalsunuoohcd.supabase.co";
   const SUPABASE_KEY = "sb_publishable_rSl7P028UrBn8KCUSSbjAg_mT3FWoxV";
@@ -19,6 +19,8 @@
   const VOICE_KEY = "siindex_website_voice_enabled";
   const PROVIDER_CONSENT_KEY = "siindex_website_provider_consent_v1";
   const VOICE_REQUEST_TIMEOUT_MS = 30000;
+  const TRANSCRIPTION_REQUEST_TIMEOUT_MS = 30000;
+  const MAX_RECORDING_MS = 20000;
 
   let voiceAbort = null;
   let runtimeAbort = null;
@@ -28,6 +30,10 @@
   const activeAudioSources = new Set();
   let voiceEnabled = localStorage.getItem(VOICE_KEY) !== "false";
   let busy = false;
+  let microphoneStream = null;
+  let recorder = null;
+  let recordingChunks = [];
+  let recordingTimer = null;
 
   function visitorId() {
     let value = localStorage.getItem(VISITOR_KEY);
@@ -286,12 +292,167 @@
     }
   }
 
-  function listen(opts) {
-    setStatus("idle", "Voice input uses the microphone control when available.");
+  function preferredMimeType() {
+    if (!window.MediaRecorder) return "";
+    const candidates = [
+      "audio/webm;codecs=opus",
+      "audio/mp4",
+      "audio/webm",
+      "audio/ogg;codecs=opus",
+    ];
+    return candidates.find(function (type) {
+      return MediaRecorder.isTypeSupported(type);
+    }) || "";
+  }
+
+  function stopMicrophoneTracks() {
+    if (!microphoneStream) return;
+    microphoneStream.getTracks().forEach(function (track) {
+      try { track.stop(); } catch (_) {}
+    });
+    microphoneStream = null;
+  }
+
+  function requestProviderConsent() {
+    if (localStorage.getItem(PROVIDER_CONSENT_KEY) === "accepted") return true;
+    const accepted = window.confirm(
+      "Before SIINDEX listens: microphone audio is sent to ElevenLabs for transcription. " +
+      "The transcript is sent to Anthropic for an answer. IN$DEX does not store raw audio. Continue?"
+    );
+    if (accepted) localStorage.setItem(PROVIDER_CONSENT_KEY, "accepted");
+    return accepted;
+  }
+
+  async function transcribeRecording(blob, mimeType, source) {
+    setStatus("transcribing", "Turning your voice into text…");
+    const form = new FormData();
+    const extension = mimeType.indexOf("mp4") !== -1 ? "mp4"
+      : mimeType.indexOf("ogg") !== -1 ? "ogg" : "webm";
+    form.append("audio", blob, "siindex-question." + extension);
+
+    const controller = new AbortController();
+    transcriptionAbort = controller;
+    const timer = setTimeout(function () {
+      controller.abort();
+    }, TRANSCRIPTION_REQUEST_TIMEOUT_MS);
+
+    try {
+      const response = await fetch(ENDPOINTS.transcribe, {
+        method: "POST",
+        signal: controller.signal,
+        headers: headers(),
+        body: form,
+      });
+      const data = await response.json().catch(function () { return {}; });
+      if (!response.ok) throw new Error(data.error || "transcription_" + response.status);
+      const transcript = String(data.transcript || "").trim();
+      if (!transcript) throw new Error("no_speech_detected");
+      await ask(transcript, { source: source });
+    } finally {
+      clearTimeout(timer);
+      if (transcriptionAbort === controller) transcriptionAbort = null;
+    }
+  }
+
+  async function listen(opts) {
+    opts = opts || {};
+    const source = opts.source || "public-home";
+
+    if (recorder && recorder.state !== "inactive") {
+      clearTimeout(recordingTimer);
+      recordingTimer = null;
+      recorder.stop();
+      setStatus("transcribing", "Voice captured. Preparing your question…");
+      return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+      setStatus("error", "Microphone recording is unavailable here. Typing still works.");
+      emitMessage("si", "Microphone recording is unavailable in this browser. You can type your question below.", source);
+      return;
+    }
+    if (!requestProviderConsent()) {
+      setStatus("idle", "Microphone not started. Typing still works.");
+      return;
+    }
+
+    interrupt("Opening microphone…", false);
+    try {
+      microphoneStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+        },
+      });
+      const track = microphoneStream.getAudioTracks()[0];
+      if (!track || track.readyState !== "live") throw new Error("microphone_not_live");
+
+      const mimeType = preferredMimeType();
+      recorder = mimeType
+        ? new MediaRecorder(microphoneStream, { mimeType: mimeType })
+        : new MediaRecorder(microphoneStream);
+      recordingChunks = [];
+
+      recorder.ondataavailable = function (event) {
+        if (event.data && event.data.size) recordingChunks.push(event.data);
+      };
+      recorder.onerror = function () {
+        clearTimeout(recordingTimer);
+        recordingTimer = null;
+        stopMicrophoneTracks();
+        recorder = null;
+        setStatus("error", "Microphone recording failed. Typing still works.");
+      };
+      recorder.onstop = async function () {
+        clearTimeout(recordingTimer);
+        recordingTimer = null;
+        const recordedMime = recorder && recorder.mimeType || mimeType || "audio/webm";
+        const blob = new Blob(recordingChunks, { type: recordedMime });
+        recordingChunks = [];
+        recorder = null;
+        stopMicrophoneTracks();
+
+        if (blob.size < 500) {
+          setStatus("error", "I did not hear enough audio. Tap the microphone and try again.");
+          return;
+        }
+        try {
+          await transcribeRecording(blob, recordedMime, source);
+        } catch (error) {
+          if (error && error.name === "AbortError") {
+            setStatus("idle", "Transcription stopped. Typing still works.");
+          } else {
+            setStatus("error", "SIINDEX could not transcribe that recording. Typing still works.");
+            emitMessage("si", "I could not transcribe that recording. Please try the microphone again or type your question.", source);
+          }
+        }
+      };
+
+      recorder.start(250);
+      setStatus("listening", "Listening… Tap the microphone again when you finish.");
+      recordingTimer = setTimeout(function () {
+        if (recorder && recorder.state !== "inactive") recorder.stop();
+      }, MAX_RECORDING_MS);
+    } catch (error) {
+      stopMicrophoneTracks();
+      recorder = null;
+      const name = error && error.name;
+      const message = name === "NotAllowedError"
+        ? "Microphone permission was denied. Allow access in your browser settings or type your question."
+        : name === "NotFoundError"
+          ? "No microphone was found. You can type your question."
+          : name === "NotReadableError"
+            ? "The microphone is busy in another app. Close it there and try again."
+            : "SIINDEX could not open the microphone. Typing still works.";
+      setStatus("error", message);
+      emitMessage("si", message, source);
+    }
   }
 
   window.SIINDEXVoice = {
-    version: "3.0.3",
+    version: "3.0.4",
     speak: speak,
     interrupt: interrupt,
     ask: ask,
