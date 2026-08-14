@@ -98,6 +98,30 @@ async function seed() {
         goal: "All public SIINDEX media locked to same voice identity as website TTS",
       },
     }),
+    baseJob({
+      id: "job-stage1-demo-001",
+      type: "stage1-demo-draft-chain",
+      priority: 1,
+      chain: ["knowledge", "policy_gate", "evidence", "verify"],
+      payload: {
+        goal: "Stage 1 demo: knowledge → policy_gate → evidence → verify (draft only)",
+        note: "No publish. No citizen contact. Internal collaboration proof.",
+      },
+      envelope: {
+        allowed_actions: ["read_knowledge", "check_policy", "write_evidence", "verify_draft"],
+        prohibited_actions: [
+          "publish",
+          "contact_citizens",
+          "move_funds",
+          "issue_identity",
+          "legal_commit",
+          "ops.deploy",
+          "ops.secret_write",
+        ],
+        data_classification: "internal_draft",
+        evidence_required: true,
+      },
+    }),
   ];
   for (const job of jobs) {
     await saveJob(job);
@@ -194,13 +218,17 @@ async function tick() {
   console.log(`[${agentName}]`, result.summary);
   console.log("  bus:", busFile);
 
+  // Merge agent payload_update into durable job payload (Stage 1 evidence chain)
+  if (result.payload_update && typeof result.payload_update === "object") {
+    job.payload = { ...(job.payload || {}), ...result.payload_update };
+  }
+
   if (result.needs_aj && !job.aj_authorized && agentName !== "ops") {
     job.status = "needs-aj";
     job.gate = result.summary;
     job.last_result = result;
     await saveJob(job);
     console.log(job.id, "→ needs-aj");
-    // Gated is healthy for Actions — not a process failure
     return { progressed: false, ok: true };
   }
 
