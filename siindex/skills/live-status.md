@@ -16,7 +16,12 @@
 - Pilot target 24 Feb 2027 = target, not feature guarantee
 - Pronunciation: **Sinn-dex** (never Sign-dex)
 - Cook Islands registration: in progress — no invented licence
+- Voice: public SIINDEX voice under founder lock path (env / runtime / fallback)
 
-**Public source**
-- FAQ + answers: `js/siindex-public-knowledge.js` (v1.4.0+)
+**Public source (must stay aligned with SOUL.md)**
+- FAQ + answers: `js/siindex-public-knowledge.js` (v1.4.1+)
 - Utility board: `siindex-public/utility-directory.json`
+- Doctrine: `siindex/SOUL.md`
+
+**Regression**
+- Run `node siindex/evals/run-smoke.mjs` after knowledge or SOUL edits
