@@ -1,6 +1,6 @@
 /**
  * SIINDEX agent entry (filesystem-first scaffold)
- * Runtime today: website + siindex-m2m. This file is the canonical config map.
+ * Runtime today: website + siindex-m2m. This file is the config map.
  */
 export const siindexAgent = {
   id: "siindex",
@@ -13,8 +13,16 @@ export const siindexAgent = {
   phoneticTts: "Sinn-dex",
   knowledgePublic: "../js/siindex-public-knowledge.js",
   liveStatusSkill: "./skills/live-status.md",
+  liveStatusMap: "../siindex-public/live-status.json",
+  knowledgeMinVersion: "1.5.0",
   mode: "visitor", // accounts/payments not live
   model: process.env.SIINDEX_MODEL || "runtime-default",
+  authority: {
+    soul: 1,
+    liveStatus: 2,
+    publicKnowledge: 3,
+    bridgeGuard: 4,
+  },
   gates: {
     funds: false,
     keys: false,

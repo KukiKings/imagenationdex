@@ -1,5 +1,8 @@
 # Skill: Live status (always load for public answers)
 
+**Primary map:** `siindex-public/live-status.json` (v1.0.0+)  
+**Authority:** Trusted (rank 2 under SOUL)
+
 **Live**
 - imagenationdex.com
 - SIINDEX Visitor Mode (type + speak)
@@ -19,9 +22,15 @@
 - Voice: public SIINDEX voice under founder lock path (env / runtime / fallback)
 
 **Public source (must stay aligned with SOUL.md)**
-- FAQ + answers: `js/siindex-public-knowledge.js` (v1.4.1+)
+- Primary map: `siindex-public/live-status.json`
+- FAQ + answers: `js/siindex-public-knowledge.js` (v1.5.0+)
 - Utility board: `siindex-public/utility-directory.json`
 - Doctrine: `siindex/SOUL.md`
 
+**Harness**
+- Denylist + rewrite: `SIINDEX_PUBLIC.guard()` / `enforceBannedClaims()`
+- Audit: `answerWithAudit()` → version + fact_id
+
 **Regression**
 - Run `node siindex/evals/run-smoke.mjs` after knowledge or SOUL edits
+- Parity cases E7–E9 must pass
