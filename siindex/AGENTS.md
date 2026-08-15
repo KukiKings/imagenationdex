@@ -9,7 +9,7 @@
 ```
 Visitor asks → SIINDEX (router)
   → context  (facts, status, Cook Islands wording)
-  → voice    (TTS, Syn-dex, interrupt safety)
+  → voice    (TTS, Sinn-dex, interrupt safety)
   → media    (video/audio assets, encode rules)
   → ops      (deploy, secrets — AJ gated)
   → verify   (live URL checks, regressions)
@@ -20,7 +20,7 @@ Visitor asks → SIINDEX (router)
 
 | Agent | Responsibility | Live? |
 |-------|----------------|-------|
-| context | Canon facts, live-vs-not | Yes (knowledge packs) |
+| context | Public knowledge facts, live-vs-not | Yes (knowledge packs) |
 | voice | TTS / pronunciation | Yes (website) |
 | media | Intro/media assets | Partial |
 | ops | Deploy / secrets | AJ gate |
