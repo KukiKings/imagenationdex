@@ -2,13 +2,13 @@
  * siindex-public-knowledge.js
  * Public speech layer for SIINDEX — SI (Synthetic Intelligence), not AI.
  * RULE: Always lead with brand IN$DEX. Legal name only when the visitor asks.
- * Version: 1.4.0 | Live-status aligned 2026-08-14
+ * Version: 1.4.1 | Voice status hardened 2026-08-15
  */
 (function (global) {
   'use strict';
 
   var SIINDEX_PUBLIC = {
-    version: '1.4.0',
+    version: '1.4.1',
     kind: 'SI',
     full: 'Synthetic Intelligence',
     pqsi: 'Physical Quantum Synthetic Intelligence',
@@ -42,6 +42,11 @@
       'What is live for IN$DEX today: the website (imagenationdex.com) and SIINDEX Visitor Mode — typed and spoken — plus Interview, Present, and FAQ. ' +
       'What is not live: accounts, wallets, payments, remittance settlement, token distribution, public trading, and government digital residency issuance. ' +
       'USD 0.24 is a genesis reference only. Pilot target 24 February 2027 is a target, not a feature guarantee. Programme status: pre-launch.',
+
+    voice_answer:
+      'My spoken voice is the SIINDEX public voice for IN$DEX. Pronunciation is always Sinn-dex. ' +
+      'We aim for the same voice as the introduction on this site. Voice identity is locked under founder control — ' +
+      'not a random library voice when the locked identity is set. I do not claim a specific ElevenLabs product name in public answers.',
 
     legal_name_answer:
       'IN$DEX is the brand. Image Nation DEX is short for Image Nation Decentralized Exchange. ' +
@@ -94,6 +99,10 @@
 
       if (/pronounc|how.*(say|spell)|sinn-?dex|sign-?dex|syn-?dex/.test(q)) {
         return this.pronunciation_note + ' TTS and public speech use Sinn-dex only.';
+      }
+
+      if (/voice|sound like|who.*speak|spoken|tts|text.?to.?speech|eleven|clone/.test(q)) {
+        return this.voice_answer;
       }
 
       if (/\bai\b|artificial intelligence/.test(q) && /you|siindex|are you/.test(q)) {
@@ -204,7 +213,7 @@
       return (
         'I speak for IN$DEX from our public living knowledge. ' +
         this.what_is_indx +
-        ' Ask about status, Cook Islands, registration, mission, founder, interviews, presentation, utilities, pronunciation, or what is live versus planned.'
+        ' Ask about status, Cook Islands, registration, mission, founder, interviews, presentation, utilities, pronunciation, voice, or what is live versus planned.'
       );
     }
   };
