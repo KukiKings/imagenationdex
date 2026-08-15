@@ -39,7 +39,7 @@ function cors(req: Request) {
     "Access-Control-Allow-Headers":
       "authorization, apikey, content-type, x-siindex-visitor-id, x-siindex-provider-consent",
     "Access-Control-Expose-Headers":
-      "X-Siindex-Correlation-Id, X-Siindex-Audio-Format, X-Siindex-Voice-Model, X-Siindex-Voice-Id",
+      "X-Siindex-Correlation-Id, X-Siindex-Audio-Format, X-Siindex-Voice-Model, X-Siindex-Voice-Id, X-Siindex-Voice-Source",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
   };
@@ -102,8 +102,10 @@ async function allowed(
 /** Path A: env override, else DB config from intro clone, else legacy fallback */
 async function resolveVoiceId(
   admin: ReturnType<typeof createClient>,
-): Promise<string> {
-  if (ENV_VOICE_ID.trim()) return ENV_VOICE_ID.trim();
+): Promise<{ id: string; source: "env" | "runtime" | "fallback" }> {
+  if (ENV_VOICE_ID.trim()) {
+    return { id: ENV_VOICE_ID.trim(), source: "env" };
+  }
   try {
     const { data } = await admin
       .from("siindex_runtime_config")
@@ -111,12 +113,12 @@ async function resolveVoiceId(
       .eq("key", "elevenlabs_voice_id")
       .maybeSingle();
     if (data?.value && String(data.value).trim()) {
-      return String(data.value).trim();
+      return { id: String(data.value).trim(), source: "runtime" };
     }
   } catch (_) {
     // Table may not exist yet — fall through
   }
-  return FALLBACK_VOICE_ID;
+  return { id: FALLBACK_VOICE_ID, source: "fallback" };
 }
 
 Deno.serve(async (req: Request) => {
@@ -175,7 +177,7 @@ Deno.serve(async (req: Request) => {
     return json(req, 400, { error: "invalid_json" }, correlationId);
   }
   if (!text) return json(req, 400, { error: "text_required" }, correlationId);
-  // Canon: Sinn-dex (/sɪn/ as in synthetic). "Syn-dex" is often misread as Sign-dex.
+  // Sinn-dex (/sɪn/ as in synthetic). Never Sign-dex.
   text = text
     .replace(/SIINDEX/gi, "Sinn-dex")
     .replace(/\bSyn-dex\b/gi, "Sinn-dex")
@@ -191,7 +193,9 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  const voiceId = await resolveVoiceId(admin);
+  const resolved = await resolveVoiceId(admin);
+  const voiceId = resolved.id;
+  const voiceSource = resolved.source;
 
   const { error: auditError } = await admin.from("security_events").insert({
     tier: "T0",
@@ -203,6 +207,7 @@ Deno.serve(async (req: Request) => {
       characters: text.length,
       model_id: MODEL_ID,
       voice_id_suffix: voiceId.slice(-6),
+      voice_source: voiceSource,
       output_format: OUTPUT_FORMAT,
       text_stored: false,
       audio_stored: false,
@@ -252,7 +257,7 @@ Deno.serve(async (req: Request) => {
       zone: "siindex_website_voice_tts_provider_error",
       correlation_id: correlationId,
       description: "SIINDEX website voice could not reach the voice provider.",
-      detail: { visitor_hash: hash, error: String(error) },
+      detail: { visitor_hash: hash, error: String(error), voice_source: voiceSource },
     });
     return json(
       req,
@@ -273,6 +278,7 @@ Deno.serve(async (req: Request) => {
         provider_status: provider.status,
         provider_request_id: provider.headers.get("request-id"),
         model_id: MODEL_ID,
+        voice_source: voiceSource,
       },
     });
     return json(
@@ -292,6 +298,7 @@ Deno.serve(async (req: Request) => {
       visitor_hash: hash,
       model_id: MODEL_ID,
       output_format: OUTPUT_FORMAT,
+      voice_source: voiceSource,
       audio_stored: false,
     },
   });
@@ -306,6 +313,7 @@ Deno.serve(async (req: Request) => {
       "X-Siindex-Audio-Format": OUTPUT_FORMAT,
       "X-Siindex-Voice-Model": MODEL_ID,
       "X-Siindex-Voice-Id": voiceId.slice(-6),
+      "X-Siindex-Voice-Source": voiceSource,
     },
   });
 });

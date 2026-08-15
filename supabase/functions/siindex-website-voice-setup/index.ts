@@ -8,11 +8,11 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ELEVENLABS_KEY = Deno.env.get("ELEVENLABS_API_KEY");
 const SETUP_TOKEN = Deno.env.get("SIINDEX_VOICE_SETUP_TOKEN") || "";
-// Prefer clean speech-only sample (better IVC). Fall back to full intro MP4.
+// Primary: live intro MP4 (verified 200). Clean speech MP3 optional via env (currently 404 on site).
 const SAMPLE_URL = Deno.env.get("SIINDEX_VOICE_SAMPLE_URL") ||
-  "https://imagenationdex.com/videos/siindex-intro-speech-clean.mp3";
-const FALLBACK_SAMPLE_URL =
   "https://imagenationdex.com/videos/siindex-01-name-intro.mp4";
+const SECONDARY_SAMPLE_URL =
+  "https://imagenationdex.com/videos/siindex-intro-speech-clean.mp3";
 
 function sampleMeta(url: string) {
   const lower = url.toLowerCase();
@@ -53,14 +53,14 @@ Deno.serve(async (req: Request) => {
     sample = await fetchSample(sampleUrl);
   } catch (primaryError) {
     try {
-      sampleUrl = FALLBACK_SAMPLE_URL;
+      sampleUrl = SECONDARY_SAMPLE_URL;
       sample = await fetchSample(sampleUrl);
-    } catch (fallbackError) {
+    } catch (secondaryError) {
       return Response.json(
         {
           error: "sample_fetch_error",
           primary: String(primaryError),
-          fallback: String(fallbackError),
+          secondary: String(secondaryError),
         },
         { status: 502 },
       );
