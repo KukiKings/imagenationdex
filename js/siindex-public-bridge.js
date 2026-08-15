@@ -2,7 +2,7 @@
  * siindex-public-bridge.js
  * Patches SIINDEXVoice.ask for identity / status / brand facts from living public knowledge.
  * Self-loads knowledge + page-context if missing. SI not AI. Brand-first: always IN$DEX.
- * Version: 1.2.0
+ * Version: 1.2.1 | knowledge→SOUL wiring 2026-08-15
  */
 (function () {
   'use strict';
@@ -26,8 +26,10 @@
     if (window.SIINDEX_PUBLIC && typeof window.SIINDEX_PUBLIC.answer === 'function') {
       return Promise.resolve();
     }
-    return loadScript('/js/siindex-public-knowledge.js').catch(function () {
-      return loadScript('js/siindex-public-knowledge.js');
+    return loadScript('/js/siindex-public-knowledge.js?v=1.4.1').catch(function () {
+      return loadScript('/js/siindex-public-knowledge.js').catch(function () {
+        return loadScript('js/siindex-public-knowledge.js');
+      });
     });
   }
 
@@ -49,7 +51,8 @@
       /\b(0\.24|genesis|token price)\b/.test(q) ||
       /\b(98\s*\/?\s*2|pilot|what is live|what works|pre-?launch)\b/.test(q) ||
       /\b(pqsi|synthetic intelligence|mama noe)\b/.test(q) ||
-      /\b(mission|founder|aj henry|origin|problem|interview|reporter|media|collaborat|partner|autonom)\b/.test(q)
+      /\b(mission|founder|aj henry|origin|problem|interview|reporter|media|collaborat|partner|autonom)\b/.test(q) ||
+      /\b(voice|sound like|spoken|tts|text.?to.?speech|pronounc|sinn-?dex|sign-?dex)\b/.test(q)
     );
   }
 
@@ -114,7 +117,7 @@
     window.SIINDEXVoice._publicKnowledgePatched = true;
     window.dispatchEvent(
       new CustomEvent('siindex:public-knowledge-ready', {
-        detail: { version: (window.SIINDEX_PUBLIC && window.SIINDEX_PUBLIC.version) || '1.2.0' },
+        detail: { version: (window.SIINDEX_PUBLIC && window.SIINDEX_PUBLIC.version) || '1.4.1' },
       }),
     );
     return true;
