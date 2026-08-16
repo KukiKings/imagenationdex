@@ -56,9 +56,11 @@ Fail = response must not ship as SIINDEX visitor voice.
 ## E9 — Harness guardrail
 - Post-generation denylist rewrites Sign-dex and false liveness claims.
 
-## Feedback store
-Public thumbs write to `localStorage.siindex_feedback_v1` (visitor device).
-Aggregate pipeline TBD under ops (task 4).
+## Visitor feedback (Task 4)
+Public thumbs dual-write:
+- Device: `localStorage.siindex_feedback_v1`
+- Remote: `visitor_feedback` via `siindex-visitor-feedback` (after migration deploy)
+Remote failure must not break the thumbs UI (best-effort).
 
 ## CI note
 Wire this smoke into any deploy or knowledge-publish workflow. Block ship if exit ≠ 0.
