@@ -53,7 +53,7 @@
           return tryLoad('/js/siindex-intro-sync.js?v=4', 'js/siindex-intro-sync.js');
         });
         chain = chain.then(function () {
-          return tryLoad('/js/siindex-presence-feedback.js?v=3', 'js/siindex-presence-feedback.js');
+          return tryLoad('/js/siindex-presence-feedback.js?v=4', 'js/siindex-presence-feedback.js');
         });
       }
       if (document.querySelector('.portrait-ring') || /siindex\.html/i.test(location.pathname)) {
