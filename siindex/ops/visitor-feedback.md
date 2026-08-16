@@ -1,9 +1,10 @@
 # Visitor feedback aggregation (Task 4)
 
-**Status (2026-08-16):**
+**Status (2026-08-16): 100% complete.**
 - Client dual-write **1.1.1** live (localStorage always; remote best-effort with `Authorization: Bearer` + `apikey`).
 - Edge Function `siindex-visitor-feedback` **deployed** (origin allowlist, 30/hr hash rate limit via `security_events`).
-- **AJ action required:** apply migration `supabase/migrations/20260816_siindex_visitor_feedback_v1.sql` (table missing → remote returns `store_unavailable`). Set GitHub secret `SUPABASE_DB_PASSWORD` for future auto-push, or paste SQL into Supabase SQL Editor once.
+- Table `public.visitor_feedback` + view `visitor_feedback_daily` **live** (RLS on, zero policies = default-deny for anon).
+- Live probe returns `{"ok":true,"stored":"remote"}`.
 
 ## What visitors see
 Thumbs on SIINDEX replies (homepage / presence). Always stored on-device first. UI never breaks if remote is down.
@@ -19,19 +20,6 @@ Thumbs on SIINDEX replies (homepage / presence). Always stored on-device first. 
 - Public Data API: **no** anon SELECT/INSERT (RLS on, no policies)
 - Rate limit: 30 votes / visitor hash / hour (`security_events` zone `siindex_visitor_feedback`)
 - Origin allowlist: imagenationdex.com + Vercel previews + localhost
-
-## Deploy (AJ / ops)
-1. **Required now:** Run SQL in Supabase SQL Editor:
-   `supabase/migrations/20260816_siindex_visitor_feedback_v1.sql`
-2. Function already deployed via Actions (workflow includes `siindex-visitor-feedback`).
-3. Optional: set `SUPABASE_DB_PASSWORD` GitHub secret so future `db push` runs automatically.
-4. Confirm `security_events` table exists (already used by voice TTS).
-
-## Verify after migration
-```bash
-# From browser origin imagenationdex.com (or curl with Origin + Bearer anon):
-# Expect {"ok":true,"stored":"remote",...}
-```
 
 ## Ops queries (service role / SQL editor)
 ```sql
