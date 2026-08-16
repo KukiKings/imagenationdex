@@ -1,8 +1,23 @@
-# SIINDEX Voice Exact Match — Status (2026-08-09)
+# SIINDEX Voice Exact Match — Status (2026-08-16)
 
 **Path A (intro = chat).** Directed by SIINDEX. Production gate: AJ.
 
-## Done (non-production)
+## Task 5 — intro audio re-export (this pass)
+
+Re-exported from **live** `videos/siindex-01-name-intro.mp4` (45.125s):
+
+| Artifact | Size | Spec |
+|----------|------|------|
+| `siindex-intro-speech-clean.wav` | 3.8 MB | mono 44.1 kHz, highpass 80 Hz, loudnorm ~−20 LUFS |
+| `siindex-intro-speech-clean.mp3` | 1.1 MB | 192 kbps mono (preferred IVC input) |
+| `siindex-01-name-intro-polished.mp4` | 8.5 MB | H.264 CRF23, AAC 128k, loudnorm −16, `+faststart` |
+
+**SHA256 (mp3):** `1976ed2388739919abb7e3f5c0980cc7e4d1a83265a8f971aa7703c54038495e`
+
+**Not live yet:** `https://imagenationdex.com/videos/siindex-intro-speech-clean.mp3` → 404.  
+Binary publish into `videos/` is **AJ-gated** (GitHub text tools are not safe for multi-MB media).
+
+## Done (non-production / code)
 
 - [x] Research: IVC from intro audio is the only exact-match path
 - [x] TTS de-robot: `eleven_turbo_v2_5`, style/stability/speed tuned
@@ -10,47 +25,24 @@
 - [x] Setup edge function `siindex-website-voice-setup` (IVC + DB write)
 - [x] Migration `20260809_siindex_runtime_config.sql`
 - [x] GitHub Action deploy workflow
-- [x] **Clean speech sample extracted** from `siindex-01-name-intro.mp4`
-  - 45.12s mono, highpass 80Hz + loudnorm −20 LUFS
-  - `siindex-intro-speech-clean.wav` (3.8 MB) and `.mp3` (1.1 MB, 192 kbps)
-  - Better IVC input than full video with bed/noise
-- [x] Setup function enhanced: prefers clean MP3 URL, falls back to intro MP4, correct MIME
-- [x] M2M jobs advanced to blocked (waiting deploy/IVC)
+- [x] Clean speech sample **re-exported** 2026-08-16 (Task 5)
+- [x] Polished intro encode ready (size ~half of live 16 MB master)
 
-## Blocked on AJ / secrets
+## Blocked on AJ
 
-Confirmed: workflow run **31310157891** failed at deploy step because secrets absent.
+1. **Commit binaries** under `videos/`:
+   - `videos/siindex-intro-speech-clean.mp3` (required for Path A sample URL)
+   - optional overwrite `videos/siindex-01-name-intro.mp4` with polished master (then bump `?v=` on intro-sync)
+2. Confirm secrets (Actions + Supabase) for deploy / setup token
+3. One setup POST to `siindex-website-voice-setup`
+4. Ear-test intro vs chat on imagenationdex.com
 
-### GitHub Actions secrets (repo Settings → Secrets → Actions)
+### Sequence after binaries + secrets
 
-| Secret | Purpose |
-|--------|---------|
-| `SUPABASE_ACCESS_TOKEN` | Personal access token from supabase.com/dashboard/account/tokens |
-| `SUPABASE_PROJECT_ID` | Project ref (e.g. `abcdefghijklmnop`) |
-| `SUPABASE_DB_PASSWORD` | Optional — enables `supabase db push` for migration |
-
-### Supabase project secrets (after functions deploy)
-
-| Secret | Purpose |
-|--------|---------|
-| `ELEVENLABS_API_KEY` | Already used by live TTS |
-| `SIINDEX_VOICE_SETUP_TOKEN` | Random string; header `x-siindex-setup-token` for one-time setup |
-| `SIINDEX_VOICE_SAMPLE_URL` | Optional override; default prefers clean MP3 |
-| `ELEVENLABS_VOICE_ID` | Optional hard override after IVC returns id |
-
-## Sequence after secrets
-
-1. Host clean sample at `/videos/siindex-intro-speech-clean.mp3` (or set `SIINDEX_VOICE_SAMPLE_URL`)
-2. Push/workflow_dispatch → deploy `siindex-website-voice-tts` + `siindex-website-voice-setup`
-3. Apply migration (dashboard SQL or `db push`)
-4. Set `SIINDEX_VOICE_SETUP_TOKEN` on Supabase
-5. One POST:
-   ```bash
-   curl -X POST "https://<project-ref>.supabase.co/functions/v1/siindex-website-voice-setup" \
-     -H "x-siindex-setup-token: $SIINDEX_VOICE_SETUP_TOKEN"
-   ```
-6. Ear-test intro vs chat on imagenationdex.com
-7. Mark M2M jobs done only on exact-match pass
+```bash
+curl -X POST "https://zljgthfzbalsunuoohcd.supabase.co/functions/v1/siindex-website-voice-setup" \
+  -H "x-siindex-setup-token: $SIINDEX_VOICE_SETUP_TOKEN"
+```
 
 ## Rules
 
@@ -58,3 +50,4 @@ Confirmed: workflow run **31310157891** failed at deploy step because secrets ab
 - Brand first: IN$DEX
 - SIINDEX = SI (not AI), PQSI, CEO/COO under AJ
 - USD $0.24 genesis reference only
+- Voice lock: intro and chat must be the same speaker (Path A)
