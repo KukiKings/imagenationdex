@@ -1,6 +1,6 @@
 /**
  * siindex-public-boot.js — intro overlay OFF (native video)
- * Cache-bust: presence-feedback v=5 (Auth Bearer dual-write)
+ * Cache-bust: presence-feedback v=5; optional loads soft-fail
  */
 (function () {
   'use strict';
@@ -24,7 +24,10 @@
 
   function tryLoad(primary, fallback) {
     return load(primary).catch(function () {
-      return load(fallback);
+      return load(fallback).catch(function (err) {
+        console.warn('[SIINDEX public boot] optional skip', primary, err && err.message);
+        return null;
+      });
     });
   }
 
@@ -42,18 +45,16 @@
       var chain = Promise.resolve();
       if (document.getElementById('publicMessages') || document.getElementById('publicInput')) {
         chain = chain.then(function () {
-          return tryLoad('/js/siindex-home-ask-form.js', 'js/siindex-home-ask-form.js');
+          return tryLoad('/js/siindex-home-ask-form.js?v=1', 'js/siindex-home-ask-form.js');
         });
       }
       if (document.getElementById('introVideo') || document.querySelector('.video-copy')) {
         chain = chain.then(function () {
           return tryLoad('/js/siindex-intro-player-honesty.js?v=2', 'js/siindex-intro-player-honesty.js');
         });
-        // v=4 = overlay OFF, native A/V
         chain = chain.then(function () {
           return tryLoad('/js/siindex-intro-sync.js?v=4', 'js/siindex-intro-sync.js');
         });
-        // v=5 = dual-write + Authorization Bearer
         chain = chain.then(function () {
           return tryLoad('/js/siindex-presence-feedback.js?v=5', 'js/siindex-presence-feedback.js');
         });
