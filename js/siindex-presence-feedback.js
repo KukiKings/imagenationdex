@@ -1,11 +1,93 @@
 /**
- * Feedback thumbs only — video play owned by siindex-intro-sync.js
- * Does NOT change intro source.
+ * Feedback thumbs — local buffer + optional remote aggregate.
+ * Video play owned by siindex-intro-sync.js. Does NOT change intro source.
+ * Version: 1.1.0 | Task-4 remote aggregate 2026-08-16
+ *
+ * localStorage key: siindex_feedback_v1 (device buffer, last 100)
+ * Remote: POST /functions/v1/siindex-visitor-feedback (best-effort)
  */
 (function () {
   "use strict";
   if (window.__SIINDEX_PRESENCE_FB__) return;
   window.__SIINDEX_PRESENCE_FB__ = true;
+
+  var LOCAL_KEY = "siindex_feedback_v1";
+
+  function supabaseFunctionsBase() {
+    if (window.SIINDEX_SUPABASE_URL) {
+      return String(window.SIINDEX_SUPABASE_URL).replace(/\/$/, "") + "/functions/v1/siindex-visitor-feedback";
+    }
+    if (window.__SIINDEX_SUPABASE_URL) {
+      return String(window.__SIINDEX_SUPABASE_URL).replace(/\/$/, "") + "/functions/v1/siindex-visitor-feedback";
+    }
+    return "https://zljgthfzbalsunuoohcd.supabase.co/functions/v1/siindex-visitor-feedback";
+  }
+
+  function knowledgeVersion() {
+    try {
+      if (window.SIINDEX_PUBLIC && window.SIINDEX_PUBLIC.version) {
+        return String(window.SIINDEX_PUBLIC.version);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  function saveLocal(vote, text) {
+    try {
+      var arr = JSON.parse(localStorage.getItem(LOCAL_KEY) || "[]");
+      arr.push({
+        t: Date.now(),
+        vote: vote,
+        text: text,
+        page: location.pathname,
+        knowledge_version: knowledgeVersion(),
+        synced: false,
+      });
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(arr.slice(-100)));
+      return arr[arr.length - 1];
+    } catch (e) {
+      return { t: Date.now(), vote: vote, text: text, synced: false };
+    }
+  }
+
+  function markSynced(ts) {
+    try {
+      var arr = JSON.parse(localStorage.getItem(LOCAL_KEY) || "[]");
+      for (var i = 0; i < arr.length; i++) {
+        if (arr[i].t === ts) arr[i].synced = true;
+      }
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(arr));
+    } catch (_) {}
+  }
+
+  function postRemote(entry) {
+    var url = supabaseFunctionsBase();
+    var payload = {
+      vote: entry.vote,
+      text: entry.text || "",
+      page: entry.page || location.pathname,
+      knowledge_version: entry.knowledge_version || knowledgeVersion(),
+      source: "presence-thumbs",
+    };
+    return fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: window.SIINDEX_SUPABASE_ANON_KEY || window.__SIINDEX_SUPABASE_ANON_KEY || "",
+      },
+      body: JSON.stringify(payload),
+      mode: "cors",
+      credentials: "omit",
+      keepalive: true,
+    })
+      .then(function (res) {
+        if (res.ok) markSynced(entry.t);
+        return res.ok;
+      })
+      .catch(function () {
+        return false;
+      });
+  }
 
   function wireFeedback() {
     var box = document.getElementById("publicMessages");
@@ -37,12 +119,8 @@
             var b = ev.target.closest("button");
             if (!b || fb.getAttribute("data-done") === "1") return;
             var vote = b.getAttribute("data-v");
-            try {
-              var key = "siindex_feedback_v1";
-              var arr = JSON.parse(localStorage.getItem(key) || "[]");
-              arr.push({ t: Date.now(), vote: vote, text: text });
-              localStorage.setItem(key, JSON.stringify(arr.slice(-100)));
-            } catch (e) {}
+            var entry = saveLocal(vote, text);
+            postRemote(entry);
             fb.setAttribute("data-done", "1");
             fb.querySelector("span").textContent =
               vote === "up" ? "Thanks — noted." : "Thanks — we will improve.";
