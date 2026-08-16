@@ -1,11 +1,12 @@
 /**
- * SIINDEX Website Voice Core v3.0.3
+ * SIINDEX Website Voice Core v3.0.4
  * Interrupt must not fall through to full speechSynthesis restart.
  * Spoken name lock: Sinn-dex only (never Sign-dex).
+ * Mic: Web SpeechRecognition when available; otherwise prompt to type.
  */
 (function () {
   "use strict";
-  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.3") return;
+  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.4") return;
 
   const SUPABASE_URL = "https://zljgthfzbalsunuoohcd.supabase.co";
   const SUPABASE_KEY = "sb_publishable_rSl7P028UrBn8KCUSSbjAg_mT3FWoxV";
@@ -286,12 +287,69 @@
     }
   }
 
+  let recognition = null;
+  let listening = false;
+
   function listen(opts) {
-    setStatus("idle", "Voice input uses the microphone control when available.");
+    opts = opts || {};
+    var source = opts.source || "public-home";
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      setStatus("error", "This browser has no speech recognition. Type your question instead.");
+      return;
+    }
+    if (listening && recognition) {
+      try { recognition.stop(); } catch (_) {}
+      listening = false;
+      setStatus("idle", "Listening stopped. Type or tap the mic again.");
+      return;
+    }
+    try {
+      recognition = new SR();
+      recognition.lang = "en-US";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.onstart = function () {
+        listening = true;
+        setStatus("listening", "Listening… speak now");
+      };
+      recognition.onerror = function (ev) {
+        listening = false;
+        var err = (ev && ev.error) || "error";
+        if (err === "not-allowed" || err === "service-not-allowed") {
+          setStatus("error", "Microphone permission blocked. Allow mic or type instead.");
+        } else if (err === "no-speech") {
+          setStatus("idle", "No speech heard. Tap the mic and try again.");
+        } else {
+          setStatus("error", "Voice input failed (" + err + "). Type instead.");
+        }
+      };
+      recognition.onend = function () {
+        listening = false;
+      };
+      recognition.onresult = function (ev) {
+        listening = false;
+        var text = "";
+        try {
+          text = (ev.results && ev.results[0] && ev.results[0][0] && ev.results[0][0].transcript) || "";
+        } catch (_) {}
+        text = String(text).trim();
+        if (!text) {
+          setStatus("idle", "Could not understand. Type your question or try the mic again.");
+          return;
+        }
+        setStatus("idle", "Heard: " + text);
+        ask(text, { source: source });
+      };
+      recognition.start();
+    } catch (e) {
+      listening = false;
+      setStatus("error", "Could not start microphone. Type your question instead.");
+    }
   }
 
   window.SIINDEXVoice = {
-    version: "3.0.3",
+    version: "3.0.4",
     speak: speak,
     interrupt: interrupt,
     ask: ask,
