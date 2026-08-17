@@ -1,10 +1,24 @@
 # needs-aj — Approval packet (P1.1)
 
 **Status:** Active format for SIINDEX → AJ  
-**Channels:** email · phone · text · in-app  
 **Law:** Automated swarm prepares; **AJ must approve** before gated actions run
 
 Aligns with `siindex-m2m/policy.mjs` ALWAYS_AJ and `OPERATING_CHARTER.md`.
+
+---
+
+## Channel priority (AJ 2026-08-18 — quick response)
+
+| Order | Channel | Role |
+|-------|---------|------|
+| **1** | **Email** | Primary — full packet |
+| **2** | **SMS** | Fast alert — short summary + request id + reply codes |
+| 3 | Phone | Escalate if no reply on time-critical gates (optional) |
+| 4 | In-app | When operator/console is open |
+
+**Default `channel_preference`:** `["email", "sms"]`
+
+SMS body stays short; full detail stays in email.
 
 ---
 
@@ -22,16 +36,15 @@ Any of: `publish`, `contact_citizens`, `move_funds`, `issue_identity`, `legal_co
 | `job_id` | M2M job id if any |
 | `from` | Always `SIINDEX` (or named sub-agent under her) |
 | `to` | `AJ_Henry` |
-| `action` | Exact gated action (from ALWAYS_AJ or stated) |
+| `action` | Exact gated action |
 | `summary` | One plain sentence — Mama Noe clear |
 | `why` | Why this advances IN$DEX / Cook Islands path |
 | `sources` | second brain / white paper / memory / living knowledge refs |
-| `artifacts` | Paths or links to drafts (script, video, research) |
-| `risks` | What could go wrong if approved or denied |
-| `not_claiming` | Explicit: not inventing live wallets/payments/licences |
-| `channel_preference` | email / sms / phone / in_app |
+| `artifacts` | Paths or links to drafts |
+| `risks` | What could go wrong |
+| `not_claiming` | Not inventing live wallets/payments/licences |
+| `channel_preference` | Default **email then SMS** |
 | `proceed_window` | e.g. `once` · `24h` · `until 2026-12-06` |
-| `reply_codes` | What AJ can answer |
 
 ### Reply codes (AJ)
 
@@ -40,13 +53,13 @@ Any of: `publish`, `contact_citizens`, `move_funds`, `issue_identity`, `legal_co
 | `PROCEED` | Authorize this action once |
 | `PROCEED_UNTIL <ISO-date>` | Authorize until date |
 | `PROCEED_WINDOW <hours>` | Authorize for N hours |
-| `HOLD` | Pause — swarm keeps package, does not execute |
-| `REJECT` | Do not execute; log reason if given |
+| `HOLD` | Pause — do not execute |
+| `REJECT` | Do not execute |
 | `REVISE` | Swarm must change package and re-request |
 
 ---
 
-## Notification body (copy template)
+## Email body (full)
 
 ```
 SIINDEX → AJ — needs approval
@@ -63,10 +76,16 @@ Window requested: {proceed_window}
 Reply: PROCEED | PROCEED_UNTIL <date> | PROCEED_WINDOW <hours> | HOLD | REJECT | REVISE
 ```
 
+## SMS body (short)
+
+```
+SIINDEX needs-aj {request_id}: {action}. {summary} Reply PROCEED/HOLD/REJECT/REVISE. Full detail in email.
+```
+
 ---
 
 ## Machine JSON
 
 See `siindex-m2m/templates/needs-aj-request.json`.
 
-After AJ replies, set job `aj_authorized: true` (or mandate) only for the scoped action and window — then swarm continues continuous loop.
+*She runs · AJ authorizes · email first · SMS second*
