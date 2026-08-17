@@ -1,37 +1,79 @@
 # SIINDEX Swarm Org Chart
 
 **Status:** Living  
-**Updated:** 2026-08-09  
-**Rule:** Every specialist reports to **SIINDEX (CEO/COO)**. Tools are execution interfaces, not parallel founders.
+**Updated:** 2026-08-18  
+**Rule:** Every specialist reports to **SIINDEX (CEO/COO)**. **AJ authorizes** proceed on each task path. Tools are execution interfaces, not parallel founders.
+
+**Model:** The system is **automated**. Swarms research, build, create, and operate continuously. Completion of gated acts requires **AJ approval** (email / phone / text / notification).
 
 ---
 
 ## 1. Top structure
 
 ```
-AJ Henry (Authorizer)
+AJ Henry (Authorizer) — approve proceed / window / block
         │
         ▼
-SIINDEX — CEO & COO
+SIINDEX — CEO & COO (full operational control)
         │
-        ├── COO Orchestrator (dispatch brain)
-        │         SIINDEX-Skills/siindex-coo-orchestrator/
-        │
-        ├── Media Swarm
+        ├── COO Orchestrator (dispatch)
+        ├── Media Swarm (video, avatar, presence, tattoos-as-story)
         ├── Build / Product Swarm
-        ├── Knowledge / Second-Brain Swarm
+        ├── Knowledge / Second-Brain Swarm (deep research always)
+        ├── Education / Pacific Learning Swarm
+        ├── Comms Swarm (phone, X, LinkedIn, Indeed, email)
         ├── Security / Compliance Swarm
         ├── Citizen / Growth Swarm
-        ├── Treasury / Launch Swarm (pre-flight)
-        ├── Ops / DevOps Swarm
+        ├── Marketplace / P2P Swarm
+        ├── Treasury / Launch Swarm (pre-flight until AJ)
+        ├── Ops / DevOps / Site Swarm
         └── Government / Cook Islands Pack
 ```
 
 ---
 
-## 2. Existing specialist skills (under SIINDEX)
+## 2. Comms swarm (AJ 2026-08-18)
 
-From `SIINDEX-Skills/` and media agents — mapped to swarms:
+| Channel | Automated work | Gate |
+|---------|----------------|------|
+| Phone / voice inbound | Triage, log, draft response path | AJ for official outbound commitments |
+| X | Draft, schedule proposals | AJ before publish |
+| LinkedIn | Partner/gov tone drafts | AJ before publish |
+| Indeed | Hiring posts only if programme uses it | AJ |
+| Email in | Classify, prioritise, draft | AJ for high-stakes send |
+| Email out | Collaborators, partnerships | AJ |
+
+All drafts grounded in second brain + white paper + living public knowledge.
+
+---
+
+## 3. Education swarm (Pacific)
+
+| Focus | Work |
+|-------|------|
+| Cook Islands + Pacific nations | Primary → university pathways in-nation |
+| Business / value creation | Practical skills, not empty curriculum |
+| Language preservation | Living language modules |
+| Ocean / land / minerals stewardship | Care and knowledge, not extraction-only |
+| Unbanked + students | 24/7 research and learning access under SIINDEX |
+| Web3 rails | NFT receipts, domains, marketplace as product intent |
+
+---
+
+## 4. Deep research rule
+
+Every material question from **government, citizens, family, unbanked** triggers deep research:
+
+1. Assign knowledge swarm  
+2. Check living knowledge + white paper + second brain  
+3. Refresh policy/regulation for **current year**  
+4. Draft answer — **no hallucination**; unknown stays unknown  
+5. Optional: media swarm prepares video/avatar response package  
+6. **needs-aj** if external publish or formal gov delivery  
+
+---
+
+## 5. Existing specialist skills (under SIINDEX)
 
 ### COO / dispatch
 | Skill | Path |
@@ -41,121 +83,52 @@ From `SIINDEX-Skills/` and media agents — mapped to swarms:
 | Pre-build checklist | `siindex-pre-build-checklist/` |
 
 ### Security / compliance
-| Skill | Path |
-|-------|------|
-| PQSI Security | `pqsi-security.skill` |
-| PQSI Compliance | `pqsi-compliance/` |
-| Anomaly | `siindex-anomaly.skill` |
-| Canonical guard | `siindex-canonical-guard/` |
+| PQSI Security / Compliance / Anomaly / Canonical guard | SIINDEX-Skills |
 
 ### Treasury / markets / launch (prepare only until AJ)
-| Skill | Path |
-|-------|------|
-| Treasury | `siindex-treasury/` |
-| LP manager | `siindex-lp-manager/` |
-| Market intel | `siindex-market-intel.skill` |
-| Token launch | `siindex-token-launch/` |
-| Agent wallet | `siindex-agent-wallet/` |
+| Treasury, LP, market intel, token launch, agent wallet | SIINDEX-Skills |
 
 ### Citizens / growth
-| Skill | Path |
-|-------|------|
-| Citizen ops | `siindex-citizen-ops/` |
-| Waitlist ops | `siindex-waitlist-ops/` |
-| Referral engine | `siindex-referral-engine/` |
-| Community report | `siindex-community-report/` |
-| Support | `siindex-support.skill` |
-| Onboarding concierge | `indx-onboarding-concierge/` |
+| Citizen ops, waitlist, referral, support, onboarding | SIINDEX-Skills |
 
 ### Build / product
-| Skill | Path |
-|-------|------|
-| Website builder | `indx-website-builder/` |
-| DevOps | `siindex-devops/` |
-| Git commit prep | `siindex-git-commit-prep/` |
-| MemeDAO governance | `siindex-memedao-governance/` |
+| Website builder, DevOps, git prep | SIINDEX-Skills |
 
 ### Media swarm (`siindex-media/agents/`)
-| Agent | File |
-|-------|------|
-| Context | `01-context.md` |
-| Script | `02-script.md` |
-| Prompt | `03-prompt.md` |
-| Voice | `04-voice.md` |
-| Edit | `05-edit.md` |
-| Compliance | `06-compliance.md` |
-| Publish | `07-publish.md` (stops at needs-aj) |
+Context → Script → Prompt → Voice → Edit → Compliance → **needs-aj** → Publish
 
 ---
 
-## 3. Dispatch configurations (from COO skill)
-
-| Mode | Agents | Trigger |
-|------|--------|--------|
-| Full swarm | Core 11 | “run the swarm”, full audit |
-| Daily brief | Sentinel, Treasury, Market, CitizenOps, DevOps, OPS | morning brief |
-| Security | Sentinel, Anomaly, Counsel | threat / PQSI |
-| Citizen | CitizenOps, Support | community health |
-| Growth | Waitlist, Referral, Report | waitlist / K-factor |
-| Infrastructure | DevOps, OPS | site status |
-| Governance | MemeDAO, OPS | proposals |
-| Financial | Treasury, LP | balances / pool |
-| L99 readiness | All 15 | launch readiness |
-
-**Hard rules:** Never fake sub-agent data. Worst status wins. No solo Solana signing. T3+ surfaces before synthesis.
-
----
-
-## 4. Media job flow (under SIINDEX)
+## 6. Media job flow
 
 ```
 SIINDEX assigns job
   → Context → Script → Visual prompt → Voice → Edit → Compliance
   → status: needs-aj
-  → AJ authorizes
-  → Publish agent places file (e.g. videos/siindex-public-intro.mp4)
+  → AJ authorizes (notification)
+  → Publish places asset
 ```
 
-Current blocker example: **intro-home-15s** needs true speaking / lip-visible Imagine (or studio) master — package exists; standing portrait is not accepted as final.
+Presence target (AJ): real-time avatar, voice, armour/mood, **cyan tattoos** evolving as story patterns.
 
 ---
 
-## 5. Runtime packages
+## 7. Runtime packages
 
 | Package | Role |
 |---------|------|
-| `siindex-agent/` | Python agent core (brain, memory, voice, scheduler) |
-| `siindex-elizaos-character.json` | Character card for agent runtime research |
-| `supabase/functions/siindex-website-*` | Website runtime, transcribe, TTS |
-
-These are **her** runtime limbs — not separate products.
+| `siindex-agent/` | Python agent core |
+| `siindex-m2m/` | Dispatch → execute → bus → needs-aj |
+| `supabase/functions/siindex-website-*` | Website runtime limbs |
 
 ---
 
-## 6. Tool interfaces (not org chart peers)
+## 8. Activation honesty
 
-| Interface | Use |
-|-----------|-----|
-| Grok | Research, verify, public build when Codex offline, media briefs |
-| Claude | Continuity, docs, COO-style orchestration, second-brain |
-| Codex | Code when credits available |
-| ChatGPT | Overflow build when others offline |
+**Automated model:** SIINDEX + swarms execute; AJ authorizes.  
+**Wiring:** skills, M2M v1, media packages, public utilities exist.  
+**Continuous production daemon + full live comms/phone:** still being connected channel-by-channel — without denying the automated model.
 
-All must load **Operating Charter + Source of Truth** before claiming SIINDEX decisions.
+**Next:** BUILD-ROADMAP-OCT-DEC-2026.md P1 tasks.
 
----
-
-## 7. Activation gap (honest)
-
-**Exists in repo:** skills, media packages, second brain, public knowledge, COO dispatch card.  
-**Not fully activated:** continuous autonomous dispatch with live data feeds, true speaking intro film, production financial authority (correctly gated).
-
-**Next activation steps:**
-1. Every agent session starts from `siindex-operating/`  
-2. COO brief format used for daily status  
-3. Media swarm completes speaking intro after AJ provides / approves Imagine master  
-4. Public knowledge stays sole public speech source until expanded
-
----
-
-*Org chart consolidates SIINDEX-Skills + siindex-media + agent runtime under one CEO/COO.*
+*She runs; AJ authorizes. Home: Cook Islands.*
