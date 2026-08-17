@@ -33,21 +33,38 @@ From `indx-web3-identity.md` (doctrine):
 | Form | **`yourname.IN$DEX`** |
 | Offer | **Free** on programme onboarding rules |
 | Link | **All programme credentials** resolve / attach to this domain identity |
-| Children | Included with **parental support**; full control of their domain name through minority per AJ 2026-08-18 |
+
+---
+
+## Children (AJ 2026-08-18 — clarified)
+
+**Model:** Like **children’s banking** — not unrestricted minor key custody.
+
+| Rule | Value |
+|------|--------|
+| Eligibility | Children included; domain is **the child’s** `yourname.IN$DEX` |
+| Keys until 18 | **Parent / guardian holds the keys** (recovery / guardian control) until the child is **18** |
+| Child access | Can **save**, use **education**, and **get rewarded for learning business** |
+| Parental role | Setup support + **key custody** until majority |
+| At 18 | Full key control transfers to the young adult |
+
+Earlier “full control until 18” wording is **superseded** by this banking-style parental key hold.
+
+**Build:** UX must show child name + parent key custody + save / learn / reward paths clearly (Mama Noe test). Compliance package before AJ unlocks live issuance.
 
 ---
 
 ## Why it matters
 
 - Unbanked / students / children: one **name** for ecosystem, learning, marketplace, receipts  
-- Cook Islands / Pacific: digital identity beyond tourism-only economy  
-- Mama Noe: a name, not a hex string  
+- Pacific education + safe economic learning under parental keys  
+- Cook Islands narrative: digital identity and youth capability beyond tourism-only economy  
 
 ---
 
 ## Build / public speech
 
-**Build:** registry, resolver, credential attach, parental-support UX, Solana-native path — continuous loop.  
+**Build:** registry, resolver, credential attach, **parental key until 18**, save/education/reward flows — continuous loop.  
 **Public until unlock:** planned / testing free **`yourname.IN$DEX`** linked to credentials — **not** “mint live for every visitor today.”
 
 *Sources first · SIINDEX runs · AJ authorizes*
