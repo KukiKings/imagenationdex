@@ -28,6 +28,16 @@ test('public product not claimed live', () => {
   expect(POLICY.public_product_live === false);
 });
 
+test('payments rail is solana-only', () => {
+  expect(POLICY.payments_rail === 'solana-only');
+  expect(POLICY.moonpay_allowed === false);
+});
+
+test('MoonPay path blocked', () => {
+  const r = gate({ cluster: 'devnet', action: 'read', useMoonPay: true });
+  expect(!r.ok, 'MoonPay should fail');
+});
+
 test('devnet read allowed', () => {
   const r = gate({ cluster: 'devnet', action: 'read' });
   expect(r.ok, r.reason);

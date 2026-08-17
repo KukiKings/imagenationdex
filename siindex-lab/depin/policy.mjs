@@ -1,10 +1,11 @@
 /**
  * SIINDEX DEPIN / agent lab policy.
  * No secrets. Enforce before any Solana or compute call.
+ * Source doctrine: Solana stack (what-we-build-on.md, user.md) — MoonPay out.
  */
 
 export const POLICY = {
-  version: '1.0.0',
+  version: '1.1.0',
   public_product_live: false,
   allowed_clusters: ['devnet', 'localnet', 'test'],
   blocked_clusters: ['mainnet-beta', 'mainnet'],
@@ -13,10 +14,13 @@ export const POLICY = {
   max_lab_spend_usd_without_aj: 0,
   mesh_keys_in_frontend: false,
   community_skills_default: false,
+  /** Settlement: Solana-native only (AJ). */
+  payments_rail: 'solana-only',
+  moonpay_allowed: false,
 };
 
 /**
- * @param {{ cluster?: string, action?: string, ajAuthorized?: boolean, spendUsd?: number }} opts
+ * @param {{ cluster?: string, action?: string, ajAuthorized?: boolean, spendUsd?: number, meshInFrontend?: boolean, installCommunitySkills?: boolean, useMoonPay?: boolean }} opts
  * @returns {{ ok: boolean, reason?: string }}
  */
 export function gate(opts = {}) {
@@ -25,10 +29,11 @@ export function gate(opts = {}) {
   const aj = Boolean(opts.ajAuthorized);
   const spend = Number(opts.spendUsd || 0);
 
+  if (POLICY.moonpay_allowed === false && opts.useMoonPay === true) {
+    return { ok: false, reason: 'MoonPay not allowed — Solana-native payments only' };
+  }
+
   if (POLICY.blocked_clusters.includes(cluster)) {
-    if (!aj || !POLICY.require_aj_flag_for_mainnet) {
-      return { ok: false, reason: `cluster ${cluster} blocked without AJ mainnet authorization` };
-    }
     if (!aj) {
       return { ok: false, reason: `cluster ${cluster} requires ajAuthorized=true` };
     }
