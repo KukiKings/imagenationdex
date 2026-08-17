@@ -1,30 +1,40 @@
 # needs-aj — Approval packet (P1.1)
 
 **Status:** Active format for SIINDEX → AJ  
-**Law:** Automated swarm prepares; **AJ must approve** before gated actions run
+**Law:** Automated swarm prepares; **AJ must approve** before work proceeds
 
-Aligns with `siindex-m2m/policy.mjs` ALWAYS_AJ and `OPERATING_CHARTER.md`.
+Aligns with `siindex-m2m/policy.mjs` and `OPERATING_CHARTER.md`.
 
 ---
 
-## Channel priority (AJ 2026-08-18 — quick response)
+## Auto-approve window (AJ 2026-08-18)
+
+| Rule | Value |
+|------|--------|
+| Silent auto-approve classes | **None** |
+| Internal drafts only | **Still ask** |
+| Default | **Yes — ask. AJ approves.** |
+
+Every task path **asks** AJ. There is **no** class of work that runs without a per-task ask. Swarm may prepare continuously; **proceed only after AJ approval** (email / SMS primary).
+
+---
+
+## Channel priority (AJ — quick response)
 
 | Order | Channel | Role |
 |-------|---------|------|
 | **1** | **Email** | Primary — full packet |
 | **2** | **SMS** | Fast alert — short summary + request id + reply codes |
-| 3 | Phone | Escalate if no reply on time-critical gates (optional) |
+| 3 | Phone | Optional escalate |
 | 4 | In-app | When operator/console is open |
 
 **Default `channel_preference`:** `["email", "sms"]`
-
-SMS body stays short; full detail stays in email.
 
 ---
 
 ## When status becomes `needs-aj`
 
-Any of: `publish`, `contact_citizens`, `move_funds`, `issue_identity`, `legal_commit`, `ops.deploy`, `ops.secret_write`, plus any action AJ adds later (e.g. free domain live issuance, official gov outreach).
+**All tasks** that advance the operation request approval. Hard gates always include: `publish`, `contact_citizens`, `move_funds`, `issue_identity`, `legal_commit`, `ops.deploy`, `ops.secret_write`, free domain issuance, official outreach — and **any other task** under the every-task-asks rule.
 
 ---
 
@@ -32,19 +42,19 @@ Any of: `publish`, `contact_citizens`, `move_funds`, `issue_identity`, `legal_co
 
 | Field | Meaning |
 |-------|--------|
-| `request_id` | Unique id (e.g. `aj-req-20260818-001`) |
+| `request_id` | Unique id |
 | `job_id` | M2M job id if any |
-| `from` | Always `SIINDEX` (or named sub-agent under her) |
+| `from` | `SIINDEX` (or sub-agent under her) |
 | `to` | `AJ_Henry` |
-| `action` | Exact gated action |
-| `summary` | One plain sentence — Mama Noe clear |
+| `action` | What needs proceed |
+| `summary` | One plain sentence |
 | `why` | Why this advances IN$DEX / Cook Islands path |
-| `sources` | second brain / white paper / memory / living knowledge refs |
-| `artifacts` | Paths or links to drafts |
+| `sources` | second brain / white paper / memory / living knowledge |
+| `artifacts` | Draft paths |
 | `risks` | What could go wrong |
-| `not_claiming` | Not inventing live wallets/payments/licences |
-| `channel_preference` | Default **email then SMS** |
-| `proceed_window` | e.g. `once` · `24h` · `until 2026-12-06` |
+| `not_claiming` | No invented live wallets/payments/licences |
+| `channel_preference` | **email then SMS** |
+| `proceed_window` | only after AJ sets it via reply |
 
 ### Reply codes (AJ)
 
@@ -55,7 +65,7 @@ Any of: `publish`, `contact_citizens`, `move_funds`, `issue_identity`, `legal_co
 | `PROCEED_WINDOW <hours>` | Authorize for N hours |
 | `HOLD` | Pause — do not execute |
 | `REJECT` | Do not execute |
-| `REVISE` | Swarm must change package and re-request |
+| `REVISE` | Swarm changes package and asks again |
 
 ---
 
@@ -88,4 +98,4 @@ SIINDEX needs-aj {request_id}: {action}. {summary} Reply PROCEED/HOLD/REJECT/REV
 
 See `siindex-m2m/templates/needs-aj-request.json`.
 
-*She runs · AJ authorizes · email first · SMS second*
+*She runs · every task asks · AJ approves · email first · SMS second*
