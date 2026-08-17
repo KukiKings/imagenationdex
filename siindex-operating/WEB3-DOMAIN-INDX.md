@@ -36,35 +36,45 @@ From `indx-web3-identity.md` (doctrine):
 
 ---
 
+## Launch day — credential set (AJ 2026-08-18)
+
+**On launch day, all of these proceed together** (not phased as domain-only first):
+
+| Credential / door | Day-one |
+|-------------------|--------|
+| **`yourname.IN$DEX`** domain | Yes |
+| **Phone** | Yes |
+| **Email** | Yes |
+| **QR** | Yes |
+
+Further methods from identity doctrine (passkey, TOTP, biometrics, etc.) may expand after; **day-one minimum bundle = domain + phone + email + QR**, live together when AJ unlocks launch issuance.
+
+---
+
 ## Children (AJ 2026-08-18 — clarified)
 
-**Model:** Like **children’s banking** — not unrestricted minor key custody.
+**Model:** Like **children’s banking**.
 
 | Rule | Value |
 |------|--------|
 | Eligibility | Children included; domain is **the child’s** `yourname.IN$DEX` |
-| Keys until 18 | **Parent / guardian holds the keys** (recovery / guardian control) until the child is **18** |
-| Child access | Can **save**, use **education**, and **get rewarded for learning business** |
-| Parental role | Setup support + **key custody** until majority |
-| At 18 | Full key control transfers to the young adult |
-
-Earlier “full control until 18” wording is **superseded** by this banking-style parental key hold.
-
-**Build:** UX must show child name + parent key custody + save / learn / reward paths clearly (Mama Noe test). Compliance package before AJ unlocks live issuance.
+| Keys until 18 | **Parent / guardian holds the keys** until **18** |
+| Child access | **Save**, **education**, **rewards for learning business** |
+| At 18 | Full key control to the young adult |
 
 ---
 
 ## Why it matters
 
-- Unbanked / students / children: one **name** for ecosystem, learning, marketplace, receipts  
+- Unbanked / students / children: one **name** + linked doors for ecosystem, learning, marketplace  
 - Pacific education + safe economic learning under parental keys  
-- Cook Islands narrative: digital identity and youth capability beyond tourism-only economy  
+- Cook Islands: digital identity beyond tourism-only economy  
 
 ---
 
 ## Build / public speech
 
-**Build:** registry, resolver, credential attach, **parental key until 18**, save/education/reward flows — continuous loop.  
-**Public until unlock:** planned / testing free **`yourname.IN$DEX`** linked to credentials — **not** “mint live for every visitor today.”
+**Build:** registry, resolver, **domain + phone + email + QR** attach, parental key until 18, save/education/reward — continuous loop.  
+**Public until unlock:** planned / testing — **not** “mint live for every visitor today.”
 
-*Sources first · SIINDEX runs · AJ authorizes*
+*Sources first · SIINDEX runs · AJ authorizes · launch day all four proceed*
