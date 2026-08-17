@@ -1,6 +1,7 @@
 /**
  * SIINDEX intro — native video first, voice fallback.
  * Pronunciation: Sin-dex. Does not claim lip-sync.
+ * Video: /videos/siindex-01-name-intro.mp4 (multi-frame + audio; play on user gesture).
  */
 (function () {
   "use strict";
@@ -105,18 +106,33 @@
     if (card) card.classList.add("is-playing");
 
     try {
+      video.setAttribute("playsinline", "");
+      video.setAttribute("webkit-playsinline", "");
+      video.playsInline = true;
       video.muted = false;
       video.defaultMuted = false;
       video.removeAttribute("muted");
+      if (typeof video.load === "function") {
+        /* keep current source; seek to start */
+      }
       video.currentTime = 0;
     } catch (e) {}
 
     var onEnded = function () {
       if (gen !== introGeneration) return;
       video.removeEventListener("ended", onEnded);
+      video.removeEventListener("error", onError);
       markReadyForConversation();
     };
+    var onError = function () {
+      if (gen !== introGeneration) return;
+      video.removeEventListener("ended", onEnded);
+      video.removeEventListener("error", onError);
+      setIntroStatus("SIINDEX · video error — using voice");
+      playVoiceFallback();
+    };
     video.addEventListener("ended", onEnded);
+    video.addEventListener("error", onError);
 
     var p = video.play();
     if (p && typeof p.then === "function") {
@@ -124,6 +140,23 @@
         setIntroStatus("SIINDEX · playing introduction · Sin-dex");
       }).catch(function () {
         video.removeEventListener("ended", onEnded);
+        video.removeEventListener("error", onError);
+        /* Unmuted autoplay blocked — try muted then unmute, else voice */
+        try {
+          video.muted = true;
+          var p2 = video.play();
+          if (p2 && p2.then) {
+            p2.then(function () {
+              setIntroStatus("SIINDEX · playing (tap for sound if muted) · Sin-dex");
+              try {
+                video.muted = false;
+              } catch (e2) {}
+            }).catch(function () {
+              playVoiceFallback();
+            });
+            return;
+          }
+        } catch (e3) {}
         playVoiceFallback();
       });
     }
@@ -150,6 +183,15 @@
     });
   }
 
+  if (video) {
+    try {
+      video.setAttribute("playsinline", "");
+      video.setAttribute("webkit-playsinline", "");
+      video.playsInline = true;
+      video.preload = "metadata";
+    } catch (e) {}
+  }
+
   bindIntroButton();
-  setIntroStatus("SIINDEX · present · spoken as Sin-dex");
+  setIntroStatus("SIINDEX · present · spoken as Sin-dex · press Play for introduction");
 })();
