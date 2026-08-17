@@ -1,12 +1,12 @@
 /**
- * SIINDEX Website Voice Core v3.0.5
+ * SIINDEX Website Voice Core v3.0.6
  * Interrupt must not fall through to full speechSynthesis restart.
  * Spoken name lock: Sinn-dex only (never Sign-dex).
- * Mic: MediaRecorder + siindex-website-transcribe (browser STT often fails with network).
+ * Mic: MediaRecorder + siindex-website-transcribe; MIME/filename match for Safari mp4.
  */
 (function () {
   "use strict";
-  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.5") return;
+  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.6") return;
 
   const SUPABASE_URL = "https://zljgthfzbalsunuoohcd.supabase.co";
   const SUPABASE_KEY = "sb_publishable_rSl7P028UrBn8KCUSSbjAg_mT3FWoxV";
@@ -330,22 +330,37 @@
     } catch (_) {}
   }
 
+  function audioFileName(blob) {
+    var t = String((blob && blob.type) || "").toLowerCase();
+    if (t.indexOf("mp4") !== -1 || t.indexOf("m4a") !== -1 || t.indexOf("aac") !== -1) return "siindex-utterance.mp4";
+    if (t.indexOf("mpeg") !== -1 || t.indexOf("mp3") !== -1) return "siindex-utterance.mp3";
+    if (t.indexOf("wav") !== -1) return "siindex-utterance.wav";
+    if (t.indexOf("ogg") !== -1) return "siindex-utterance.ogg";
+    return "siindex-utterance.webm";
+  }
+
   async function transcribeBlob(blob) {
     ensureProviderConsent();
     var form = new FormData();
-    form.append("audio", blob, "siindex-utterance.webm");
+    var name = audioFileName(blob);
+    var file = new File([blob], name, { type: blob.type || "audio/webm" });
+    form.append("audio", file);
     var controller = new AbortController();
     transcriptionAbort = controller;
+    var h = headers(null);
+    delete h["Content-Type"];
     var response = await fetch(ENDPOINTS.transcribe, {
       method: "POST",
       signal: controller.signal,
-      headers: headers(null),
+      headers: h,
       body: form,
     });
     if (!response.ok) {
       var errBody = {};
       try { errBody = await response.json(); } catch (_) {}
-      throw new Error((errBody && errBody.error) || ("transcribe_" + response.status));
+      var code = (errBody && errBody.error) || ("transcribe_" + response.status);
+      if (errBody && errBody.provider_status) code = code + ":" + errBody.provider_status;
+      throw new Error(code);
     }
     var data = await response.json();
     return String((data && (data.transcript || data.text || data.result)) || "").trim();
@@ -373,21 +388,36 @@
       mediaChunks = [];
       var mime = "";
       if (window.MediaRecorder) {
-        if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) mime = "audio/webm;codecs=opus";
-        else if (MediaRecorder.isTypeSupported("audio/webm")) mime = "audio/webm";
+        var candidates = [
+          "audio/webm;codecs=opus",
+          "audio/webm",
+          "audio/mp4",
+          "audio/aac",
+          "audio/ogg;codecs=opus"
+        ];
+        for (var i = 0; i < candidates.length; i++) {
+          try {
+            if (MediaRecorder.isTypeSupported(candidates[i])) { mime = candidates[i]; break; }
+          } catch (_) {}
+        }
       }
-      mediaRecorder = mime ? new MediaRecorder(mediaStream, { mimeType: mime }) : new MediaRecorder(mediaStream);
+      try {
+        mediaRecorder = mime ? new MediaRecorder(mediaStream, { mimeType: mime }) : new MediaRecorder(mediaStream);
+      } catch (_) {
+        mediaRecorder = new MediaRecorder(mediaStream);
+      }
       listening = true;
       mediaRecorder.ondataavailable = function (ev) {
         if (ev.data && ev.data.size) mediaChunks.push(ev.data);
       };
       mediaRecorder.onstop = function () {
         listening = false;
-        var blob = new Blob(mediaChunks, { type: (mediaRecorder && mediaRecorder.mimeType) || "audio/webm" });
+        var blobType = (mediaRecorder && mediaRecorder.mimeType) || mime || "audio/webm";
+        var blob = new Blob(mediaChunks, { type: blobType });
         mediaChunks = [];
         stopMediaCapture();
-        if (!blob.size) {
-          setStatus("idle", "No audio captured. Type your question or try again.");
+        if (!blob.size || blob.size < 500) {
+          setStatus("idle", "Recording too short. Hold a second longer, or type.");
           focusTypeInput();
           return;
         }
@@ -406,11 +436,20 @@
             var msg = (err && err.message) || "transcribe_failed";
             if (msg === "provider_consent_required") {
               setStatus("error", "Voice needs consent. Type your question, or tap mic again.");
-            } else if (msg === "rate_limited") {
-              setStatus("error", "Voice rate limit. Type your question for now.");
-            } else {
-              setStatus("error", "Voice transcription failed. Type your question below.");
+              focusTypeInput();
+              return;
             }
+            if (msg === "rate_limited") {
+              setStatus("error", "Voice rate limit. Type your question for now.");
+              focusTypeInput();
+              return;
+            }
+            if (msg === "no_speech_detected") {
+              setStatus("idle", "No speech detected. Speak clearly or type below.");
+              focusTypeInput();
+              return;
+            }
+            setStatus("error", "Voice failed (" + msg + "). Type or use a chip.");
             focusTypeInput();
           });
       };
@@ -431,12 +470,11 @@
   function listen(opts) {
     opts = opts || {};
     var source = opts.source || "public-home";
-    // MediaRecorder + SIINDEX transcribe — avoids browser SpeechRecognition "network" errors.
     recordAndTranscribe(source);
   }
 
   window.SIINDEXVoice = {
-    version: "3.0.5",
+    version: "3.0.6",
     speak: speak,
     interrupt: interrupt,
     ask: ask,
