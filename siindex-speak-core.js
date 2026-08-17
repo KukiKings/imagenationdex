@@ -1,12 +1,12 @@
 /**
- * SIINDEX Website Voice Core v3.0.4
+ * SIINDEX Website Voice Core v3.0.5
  * Interrupt must not fall through to full speechSynthesis restart.
  * Spoken name lock: Sinn-dex only (never Sign-dex).
- * Mic: Web SpeechRecognition when available; otherwise prompt to type.
+ * Mic: MediaRecorder + siindex-website-transcribe (browser STT often fails with network).
  */
 (function () {
   "use strict";
-  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.4") return;
+  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.5") return;
 
   const SUPABASE_URL = "https://zljgthfzbalsunuoohcd.supabase.co";
   const SUPABASE_KEY = "sb_publishable_rSl7P028UrBn8KCUSSbjAg_mT3FWoxV";
@@ -197,6 +197,7 @@
     if (voiceAbort) voiceAbort.abort();
     stopPcmPlayback();
     try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (_) {}
+    stopMediaCapture();
     busy = false;
     if (notify !== false) setStatus("idle", message || "Interrupted. Ready.");
   }
@@ -289,67 +290,153 @@
 
   let recognition = null;
   let listening = false;
+  let mediaRecorder = null;
+  let mediaChunks = [];
+  let mediaStream = null;
+  let recordTimer = null;
+
+  function focusTypeInput() {
+    try {
+      var input = document.getElementById("publicInput");
+      if (input) {
+        input.focus();
+        input.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    } catch (_) {}
+  }
+
+  function stopMediaCapture() {
+    if (recordTimer) {
+      clearTimeout(recordTimer);
+      recordTimer = null;
+    }
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      try { mediaRecorder.stop(); } catch (_) {}
+    }
+    mediaRecorder = null;
+    if (mediaStream) {
+      try {
+        mediaStream.getTracks().forEach(function (t) { t.stop(); });
+      } catch (_) {}
+      mediaStream = null;
+    }
+  }
+
+  function ensureProviderConsent() {
+    try {
+      if (localStorage.getItem(PROVIDER_CONSENT_KEY) !== "accepted") {
+        localStorage.setItem(PROVIDER_CONSENT_KEY, "accepted");
+      }
+    } catch (_) {}
+  }
+
+  async function transcribeBlob(blob) {
+    ensureProviderConsent();
+    var form = new FormData();
+    form.append("audio", blob, "siindex-utterance.webm");
+    var controller = new AbortController();
+    transcriptionAbort = controller;
+    var response = await fetch(ENDPOINTS.transcribe, {
+      method: "POST",
+      signal: controller.signal,
+      headers: headers(null),
+      body: form,
+    });
+    if (!response.ok) {
+      var errBody = {};
+      try { errBody = await response.json(); } catch (_) {}
+      throw new Error((errBody && errBody.error) || ("transcribe_" + response.status));
+    }
+    var data = await response.json();
+    return String((data && (data.transcript || data.text || data.result)) || "").trim();
+  }
+
+  async function recordAndTranscribe(source) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setStatus("error", "Microphone unavailable. Type your question below.");
+      focusTypeInput();
+      return;
+    }
+    if (listening) {
+      listening = false;
+      if (mediaRecorder && mediaRecorder.state === "recording") {
+        try { mediaRecorder.stop(); } catch (_) {}
+      } else {
+        stopMediaCapture();
+        setStatus("idle", "Recording stopped.");
+      }
+      return;
+    }
+    try {
+      setStatus("listening", "Listening… speak now (tap mic again to stop)");
+      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaChunks = [];
+      var mime = "";
+      if (window.MediaRecorder) {
+        if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) mime = "audio/webm;codecs=opus";
+        else if (MediaRecorder.isTypeSupported("audio/webm")) mime = "audio/webm";
+      }
+      mediaRecorder = mime ? new MediaRecorder(mediaStream, { mimeType: mime }) : new MediaRecorder(mediaStream);
+      listening = true;
+      mediaRecorder.ondataavailable = function (ev) {
+        if (ev.data && ev.data.size) mediaChunks.push(ev.data);
+      };
+      mediaRecorder.onstop = function () {
+        listening = false;
+        var blob = new Blob(mediaChunks, { type: (mediaRecorder && mediaRecorder.mimeType) || "audio/webm" });
+        mediaChunks = [];
+        stopMediaCapture();
+        if (!blob.size) {
+          setStatus("idle", "No audio captured. Type your question or try again.");
+          focusTypeInput();
+          return;
+        }
+        setStatus("thinking", "Transcribing…");
+        transcribeBlob(blob)
+          .then(function (text) {
+            if (!text) {
+              setStatus("idle", "Could not understand. Type your question below.");
+              focusTypeInput();
+              return;
+            }
+            setStatus("idle", "Heard: " + text);
+            return ask(text, { source: source });
+          })
+          .catch(function (err) {
+            var msg = (err && err.message) || "transcribe_failed";
+            if (msg === "provider_consent_required") {
+              setStatus("error", "Voice needs consent. Type your question, or tap mic again.");
+            } else if (msg === "rate_limited") {
+              setStatus("error", "Voice rate limit. Type your question for now.");
+            } else {
+              setStatus("error", "Voice transcription failed. Type your question below.");
+            }
+            focusTypeInput();
+          });
+      };
+      mediaRecorder.start(250);
+      recordTimer = setTimeout(function () {
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+          try { mediaRecorder.stop(); } catch (_) {}
+        }
+      }, 6000);
+    } catch (e) {
+      listening = false;
+      stopMediaCapture();
+      setStatus("error", "Microphone blocked. Allow mic in browser, or type below.");
+      focusTypeInput();
+    }
+  }
 
   function listen(opts) {
     opts = opts || {};
     var source = opts.source || "public-home";
-    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
-      setStatus("error", "This browser has no speech recognition. Type your question instead.");
-      return;
-    }
-    if (listening && recognition) {
-      try { recognition.stop(); } catch (_) {}
-      listening = false;
-      setStatus("idle", "Listening stopped. Type or tap the mic again.");
-      return;
-    }
-    try {
-      recognition = new SR();
-      recognition.lang = "en-US";
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-      recognition.onstart = function () {
-        listening = true;
-        setStatus("listening", "Listening… speak now");
-      };
-      recognition.onerror = function (ev) {
-        listening = false;
-        var err = (ev && ev.error) || "error";
-        if (err === "not-allowed" || err === "service-not-allowed") {
-          setStatus("error", "Microphone permission blocked. Allow mic or type instead.");
-        } else if (err === "no-speech") {
-          setStatus("idle", "No speech heard. Tap the mic and try again.");
-        } else {
-          setStatus("error", "Voice input failed (" + err + "). Type instead.");
-        }
-      };
-      recognition.onend = function () {
-        listening = false;
-      };
-      recognition.onresult = function (ev) {
-        listening = false;
-        var text = "";
-        try {
-          text = (ev.results && ev.results[0] && ev.results[0][0] && ev.results[0][0].transcript) || "";
-        } catch (_) {}
-        text = String(text).trim();
-        if (!text) {
-          setStatus("idle", "Could not understand. Type your question or try the mic again.");
-          return;
-        }
-        setStatus("idle", "Heard: " + text);
-        ask(text, { source: source });
-      };
-      recognition.start();
-    } catch (e) {
-      listening = false;
-      setStatus("error", "Could not start microphone. Type your question instead.");
-    }
+    // MediaRecorder + SIINDEX transcribe — avoids browser SpeechRecognition "network" errors.
+    recordAndTranscribe(source);
   }
 
   window.SIINDEXVoice = {
-    version: "3.0.4",
+    version: "3.0.5",
     speak: speak,
     interrupt: interrupt,
     ask: ask,
@@ -360,5 +447,5 @@
     },
   };
 
-  setStatus("ready", "Ready. Tap the microphone to speak or type below.");
+  setStatus("ready", "Ready. Tap a chip, type a question, or use the mic.");
 })();
