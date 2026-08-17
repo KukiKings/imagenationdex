@@ -1,6 +1,6 @@
 /**
  * siindex-public-boot.js — intro overlay OFF (native video)
- * Cache-bust: presence-feedback v=5; optional loads soft-fail
+ * Cache-bust: presence-feedback v=5; talk-ready; optional loads soft-fail
  */
 (function () {
   'use strict';
@@ -46,6 +46,9 @@
       if (document.getElementById('publicMessages') || document.getElementById('publicInput')) {
         chain = chain.then(function () {
           return tryLoad('/js/siindex-home-ask-form.js?v=1', 'js/siindex-home-ask-form.js');
+        });
+        chain = chain.then(function () {
+          return tryLoad('/js/siindex-talk-ready.js?v=talk-20260817', 'js/siindex-talk-ready.js');
         });
       }
       if (document.getElementById('introVideo') || document.querySelector('.video-copy')) {
