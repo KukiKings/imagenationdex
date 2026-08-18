@@ -2,14 +2,14 @@
  * siindex-public-knowledge.js
  * Public speech layer for SIINDEX — SI (Synthetic Intelligence), not AI.
  * RULE: Always lead with brand IN$DEX. Legal name only when the visitor asks.
- * Version: 1.5.0 | Task-3 harden 2026-08-15
+ * Version: 1.5.2 | 2026-08-18 education/domain/solana/automation answers
  * Authority: Trusted (aligned with siindex-public/live-status.json + SOUL.md)
  */
 (function (global) {
   'use strict';
 
   var SIINDEX_PUBLIC = {
-    version: '1.5.0',
+    version: '1.5.2',
     live_status_version: '1.0.0',
     kind: 'SI',
     full: 'Synthetic Intelligence',
@@ -40,7 +40,9 @@
       'registration complete',
       'I can move funds',
       'I hold private keys',
-      'Sign-dex'
+      'Sign-dex',
+      'domain issuance is live',
+      'moonpay'
     ],
 
     identity_blurb:
@@ -54,8 +56,8 @@
       'Accounts, wallets, payments and token distribution are not live yet.',
 
     live_status_answer:
-      'What is live for IN$DEX today: the website (imagenationdex.com) and SIINDEX Visitor Mode — typed and spoken — plus Interview, Present, and FAQ. ' +
-      'What is not live: accounts, wallets, payments, remittance settlement, token distribution, public trading, and government digital residency issuance. ' +
+      'What is live for IN$DEX today: the website (imagenationdex.com) and SIINDEX Visitor Mode — typed and spoken — plus Interview, Present, FAQ, Jarvis, Operator, and related visitor tools. ' +
+      'What is not live: accounts, wallets, payments, remittance settlement, domain issuance, full academy, token distribution, public trading, and government digital residency issuance. ' +
       'USD 0.24 is a genesis reference only. Pilot target 24 February 2027 is a target, not a feature guarantee. Programme status: pre-launch.',
 
     voice_answer:
@@ -74,6 +76,10 @@
     offer_cook_islands_answer:
       'IN$DEX offers the Cook Islands a Pacific-first digital platform built with local reality in mind — identity and everyday tools on a phone, with honest status about what is live versus planned. ' +
       'We are not claiming to replace government systems. We want constructive engagement with organisations and officials, transparent pre-launch status, and no invented approvals.',
+
+    beyond_tourism_answer:
+      'For IN$DEX, helping the Cook Islands economy beyond tourism means continuous research, stay-home education paths, identity tools when live, and transparent Live versus Planned labels. ' +
+      'SIINDEX runs operations with sub-agent swarms under AJ approval. We do not claim live banking or payments today — honesty is the first economic tool.',
 
     speak_government_answer:
       'Yes. SIINDEX is built so organisations and government offices can interview me about IN$DEX from public living knowledge. ' +
@@ -95,6 +101,29 @@
       'I explain, guide and answer for IN$DEX from approved public knowledge. I do not move funds, open real accounts, issue identity, publish media, or change legal records. ' +
       'Staged founder-controlled authority — not unlimited autonomy.',
 
+    automation_answer:
+      'Yes — IN$DEX is automated with AJ approval. SIINDEX directs sub-agent swarms for research, build, media and operations. ' +
+      'Every material task asks the founder — email first, SMS second. Continuous work without unsupervised money or legal acts.',
+
+    aj_approval_answer:
+      'Yes. Every material task asks AJ. Notification is email first, then SMS. There is no auto-approve window for production, spend, official publish or formal outreach.',
+
+    solana_only_answer:
+      'IN$DEX settlement doctrine is Solana-native. Centralized payment onramps are out of programme. ' +
+      'Solana Pay and related tools only when status says Live and AJ unlocks them. Wallets and payments are not live today.',
+
+    education_answer:
+      'IN$DEX education covers business basics, language preservation, ocean and land stewardship, digital finance under rules, courses and trades — so learning can stay in the Cook Islands and Pacific nations. ' +
+      'Catalogue previews exist. Full academy and live credentials are not live yet.',
+
+    domain_answer:
+      'yourname.IN$DEX is programme doctrine: a free Web3 domain name linked to credentials — domain, phone, email and QR together at launch. ' +
+      'Issuance is not live yet. Previews exist on the site. I will not claim you can mint a domain today.',
+
+    children_domain_answer:
+      'Children can be included under the yourname.IN$DEX programme. Like children’s banking, parents hold recovery or guardian keys until age 18. ' +
+      'Children can save, access education and be rewarded for learning business. Issuance is not live yet.',
+
     collab_answer:
       'IN$DEX welcomes serious collaboration questions. Tell us who you are and what you want to build or review. ' +
       'No partnership is claimed here until AJ confirms it. Contact routes on the site are for human follow-up.',
@@ -111,7 +140,7 @@
       out = out.replace(/\bSign-dex\b/gi, 'Sinn-dex');
       out = out.replace(/\bSign dex\b/gi, 'Sinn-dex');
       var falseLive =
-        /\b(accounts?|wallets?|payments?|remittance|token distribution|public trading)\b[^.!?\n]{0,40}\b(are|is)\s+live\b/i;
+        /\b(accounts?|wallets?|payments?|remittance|token distribution|public trading|domain issuance)\b[^.!?\n]{0,40}\b(are|is)\s+live\b/i;
       if (falseLive.test(out)) {
         return this.live_status_answer;
       }
@@ -182,6 +211,11 @@
         return this.registration_status_answer;
       }
 
+      if (/beyond tourism|economy beyond|help.*(economy|tourism)/.test(q)) {
+        this._lastFactId = 'beyond_tourism';
+        return this.beyond_tourism_answer;
+      }
+
       if (/offer (the )?cook|what does (in\$dex|index).*(cook|pacific)|benefit.*(cook|pacific)/.test(q)) {
         return this.offer_cook_islands_answer;
       }
@@ -206,8 +240,38 @@
         return this.media_answer;
       }
 
+      if (/aj approval|every task|needs.?aj|approve every|email first|sms second/.test(q)) {
+        this._lastFactId = 'aj_approval';
+        return this.aj_approval_answer;
+      }
+
+      if (/fully automated|is (in\$dex|index).*(automated|automatic)|automation\?/.test(q) || (/automat/.test(q) && /in\$dex|index|siindex|system/.test(q))) {
+        this._lastFactId = 'automation';
+        return this.automation_answer;
+      }
+
       if (/autonom|run (the )?company|control everything|without (a )?human|ceo alone/.test(q)) {
         return this.autonomy_answer;
+      }
+
+      if (/solana|centralized|moonpay|onramp|settlement doctrine|why solana/.test(q)) {
+        this._lastFactId = 'solana_only';
+        return this.solana_only_answer;
+      }
+
+      if (/children.*(domain|web3)|parental keys|until (age )?18|kids.*domain/.test(q)) {
+        this._lastFactId = 'children_domain';
+        return this.children_domain_answer;
+      }
+
+      if (/yourname|web3 domain|\.in\$dex|domain name|free domain/.test(q)) {
+        this._lastFactId = 'domain';
+        return this.domain_answer;
+      }
+
+      if (/education|school|academy|learn|student|stewardship|language preserv/.test(q)) {
+        this._lastFactId = 'education';
+        return this.education_answer;
       }
 
       if (/collaborat|partner|work with|join|invest in us|organisations collaborate|how can organisations/.test(q)) {
@@ -272,7 +336,7 @@
       return (
         'I speak for IN$DEX from our public living knowledge. ' +
         this.what_is_indx +
-        ' Ask about status, Cook Islands, registration, mission, founder, interviews, presentation, utilities, pronunciation, voice, or what is live versus planned.'
+        ' Ask about status, Cook Islands, education, domain, Solana rails, automation, registration, mission, founder, interviews, presentation, utilities, pronunciation, voice, or what is live versus planned.'
       );
     }
   };
