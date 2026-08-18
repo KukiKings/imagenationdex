@@ -1,11 +1,11 @@
 /**
  * SIINDEX DEPIN / agent lab policy.
  * No secrets. Enforce before any Solana or compute call.
- * Source doctrine: Solana stack (what-we-build-on.md, user.md) — MoonPay out.
+ * Settlement: Solana-native only. Centralized rails (e.g. MoonPay) permanently out.
  */
 
 export const POLICY = {
-  version: '1.1.0',
+  version: '1.2.0',
   public_product_live: false,
   allowed_clusters: ['devnet', 'localnet', 'test'],
   blocked_clusters: ['mainnet-beta', 'mainnet'],
@@ -16,11 +16,13 @@ export const POLICY = {
   community_skills_default: false,
   /** Settlement: Solana-native only (AJ). */
   payments_rail: 'solana-only',
+  /** Permanently false — do not re-enable. */
+  centralized_onramp_allowed: false,
   moonpay_allowed: false,
 };
 
 /**
- * @param {{ cluster?: string, action?: string, ajAuthorized?: boolean, spendUsd?: number, meshInFrontend?: boolean, installCommunitySkills?: boolean, useMoonPay?: boolean }} opts
+ * @param {{ cluster?: string, action?: string, ajAuthorized?: boolean, spendUsd?: number, meshInFrontend?: boolean, installCommunitySkills?: boolean, useMoonPay?: boolean, useCentralizedOnramp?: boolean }} opts
  * @returns {{ ok: boolean, reason?: string }}
  */
 export function gate(opts = {}) {
@@ -29,8 +31,17 @@ export function gate(opts = {}) {
   const aj = Boolean(opts.ajAuthorized);
   const spend = Number(opts.spendUsd || 0);
 
-  if (POLICY.moonpay_allowed === false && opts.useMoonPay === true) {
-    return { ok: false, reason: 'MoonPay not allowed — Solana-native payments only' };
+  if (
+    opts.useMoonPay === true ||
+    opts.useCentralizedOnramp === true ||
+    POLICY.moonpay_allowed === true ||
+    POLICY.centralized_onramp_allowed === true
+  ) {
+    return {
+      ok: false,
+      reason:
+        'Centralized onramps (including MoonPay) permanently forbidden — Solana-native only',
+    };
   }
 
   if (POLICY.blocked_clusters.includes(cluster)) {
