@@ -4,18 +4,21 @@
  * Every task asks AJ; no auto-approve.
  *
  * Env (never commit secrets):
- *   AJ_NOTIFY_EMAIL   — primary inbox
- *   AJ_NOTIFY_SMS     — E.164 phone for Twilio
- *   TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM  — optional SMS
- *   NEEDS_AJ_DRY_RUN=1  — outbox only (default if no email/SMS configured)
+ *   AJ_NOTIFY_EMAIL      — primary (AJ personal: dadyboy73@gmail.com)
+ *   AJ_NOTIFY_EMAIL_CC   — ops trail (imagenationdex@gmail.com)
+ *   AJ_NOTIFY_SMS        — E.164 phone for Twilio
+ *   TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM
+ *   NEEDS_AJ_DRY_RUN=1   — outbox only
  */
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { randomUUID } from "node:crypto";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUTBOX = path.join(__dirname, "outbox");
+
+const DEFAULT_TO = "dadyboy73@gmail.com";
+const DEFAULT_CC = "imagenationdex@gmail.com";
 
 export function buildPacket(job, result = {}) {
   const request_id = `aj-req-${job.id || "job"}-${Date.now()}`;
@@ -130,24 +133,20 @@ async function sendSmsTwilio(to, body) {
   return { ok: true, provider: "twilio" };
 }
 
-/**
- * Deliver needs-aj: always outbox; email/SMS when configured.
- * Email transport in production: set AJ_NOTIFY_EMAIL and use external mailer,
- * or read outbox and send via Gmail/API. This module records the canonical packet.
- */
 export async function notifyNeedsAj(job, result = {}) {
   const packet = buildPacket(job, result);
   const email = formatEmail(packet);
   const sms = formatSms(packet);
-  const dry =
-    process.env.NEEDS_AJ_DRY_RUN === "1" ||
-    (!process.env.AJ_NOTIFY_EMAIL && !process.env.AJ_NOTIFY_SMS);
+  const to = process.env.AJ_NOTIFY_EMAIL || DEFAULT_TO;
+  const cc = process.env.AJ_NOTIFY_EMAIL_CC || DEFAULT_CC;
+  const dry = process.env.NEEDS_AJ_DRY_RUN === "1";
 
   const delivery = {
     dry_run: dry,
     email: {
-      to: process.env.AJ_NOTIFY_EMAIL || null,
-      status: dry || !process.env.AJ_NOTIFY_EMAIL ? "outbox_only" : "queued_for_transport",
+      to,
+      cc,
+      status: dry ? "outbox_only" : "queued_for_transport",
     },
     sms: { to: process.env.AJ_NOTIFY_SMS || null, status: "pending" },
   };
@@ -165,32 +164,33 @@ export async function notifyNeedsAj(job, result = {}) {
 
   const outboxFile = await writeOutbox(packet, email, sms, delivery);
   console.log("[notify] needs-aj", packet.request_id, "→", outboxFile);
-  console.log("[notify] email subject:", email.subject);
+  console.log("[notify] email to:", to, "cc:", cc);
+  console.log("[notify] subject:", email.subject);
   console.log("[notify] sms:", sms.slice(0, 120) + (sms.length > 120 ? "…" : ""));
   if (delivery.dry_run) {
-    console.log("[notify] dry-run / outbox only — set AJ_NOTIFY_EMAIL + transport for live email");
+    console.log("[notify] dry-run — outbox only");
   }
   return { packet, email, sms, delivery, outboxFile };
 }
 
-/** CLI: node notify.mjs test */
 const isMain =
   process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isMain && process.argv[2] === "test") {
-  const demoJob = {
-    id: "job-notify-test-001",
-    requires_aj_for: ["publish"],
-    payload: {
-      goal: "P2.1 notify path test — no production publish",
-      why: "Verify email/SMS packet format and outbox",
+  await notifyNeedsAj(
+    {
+      id: "job-notify-test-001",
+      requires_aj_for: ["publish"],
+      payload: {
+        goal: "P2.1 notify path test — no production publish",
+        why: "Verify email/SMS packet format and outbox",
+      },
     },
-  };
-  const demoResult = {
-    summary: "Test needs-aj packet for AJ channel priority email then SMS.",
-    artifacts: ["siindex-m2m/notify.mjs"],
-    action: "publish",
-  };
-  await notifyNeedsAj(demoJob, demoResult);
+    {
+      summary: "Test needs-aj packet for AJ channel priority email then SMS.",
+      artifacts: ["siindex-m2m/notify.mjs"],
+      action: "publish",
+    },
+  );
 }
