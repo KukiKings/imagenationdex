@@ -5,7 +5,8 @@ import { createClient } from "jsr:@supabase/supabase-js@2.95.0";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ELEVENLABS_KEY = Deno.env.get("ELEVENLABS_API_KEY");
-const MODEL = "scribe_v2";
+// scribe_v1 is the widely supported STT model; v2 if env overrides
+const MODEL = Deno.env.get("SIINDEX_STT_MODEL") || "scribe_v1";
 const ZONE = "siindex_website_voice_transcribe";
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -174,17 +175,22 @@ Deno.serve(async (req: Request) => {
   const outbound = new FormData();
   outbound.set(
     "file",
-    new File([audio], `siindex-utterance.${extensionFor(type)}`, { type }),
+    new File([await audio.arrayBuffer()], `siindex-utterance.${extensionFor(type)}`, {
+      type,
+    }),
   );
   outbound.set("model_id", MODEL);
+  // Only word|character are valid — "none" caused provider 400
+  outbound.set("timestamps_granularity", "word");
   outbound.set("tag_audio_events", "false");
-  outbound.set("timestamps_granularity", "none");
+  outbound.set("language_code", "en");
 
   const { error: auditError } = await admin.from("security_events").insert({
     tier: "T0",
     zone: ZONE,
     correlation_id: correlationId,
-    description: "SIINDEX website transcription request accepted; raw audio was not stored.",
+    description:
+      "SIINDEX website transcription request accepted; raw audio was not stored.",
     detail: {
       visitor_hash: hash,
       audio_bytes: audio.size,
@@ -218,7 +224,8 @@ Deno.serve(async (req: Request) => {
       tier: "T1",
       zone: "siindex_website_voice_transcribe_provider_error",
       correlation_id: correlationId,
-      description: "SIINDEX website microphone could not reach the transcription provider.",
+      description:
+        "SIINDEX website microphone could not reach the transcription provider.",
       detail: { visitor_hash: hash, error: String(error) },
     });
     return json(
@@ -230,12 +237,18 @@ Deno.serve(async (req: Request) => {
   }
 
   if (!provider.ok) {
+    const providerBody = await provider.text().catch(() => "");
     await admin.from("security_events").insert({
       tier: "T1",
       zone: "siindex_website_voice_transcribe_provider_error",
       correlation_id: correlationId,
       description: "SIINDEX website transcription provider returned an error.",
-      detail: { visitor_hash: hash, provider_status: provider.status, model: MODEL },
+      detail: {
+        visitor_hash: hash,
+        provider_status: provider.status,
+        model: MODEL,
+        provider_body: providerBody.slice(0, 500),
+      },
     });
     return json(
       req,
@@ -258,7 +271,8 @@ Deno.serve(async (req: Request) => {
     tier: "T0",
     zone: "siindex_website_voice_transcribe_success",
     correlation_id: correlationId,
-    description: "SIINDEX website utterance transcribed; raw audio was not stored.",
+    description:
+      "SIINDEX website utterance transcribed; raw audio was not stored.",
     detail: {
       visitor_hash: hash,
       transcript_characters: transcript.length,
