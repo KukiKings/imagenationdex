@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 /**
- * SIINDEX M2M runner — dispatch, execute, bus, pickup, AJ gate
- *   node runner.mjs status|seed|tick|run|authorize <jobId>
+ * SIINDEX M2M runner — dispatch, execute, bus, pickup, AJ gate, needs-aj notify
+ *   node runner.mjs status|seed|tick|run|authorize <jobId>|notify-test
  */
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { agents } from "./agents/index.mjs";
+import { notifyNeedsAj } from "./notify.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const QUEUE = path.join(__dirname, "queue");
@@ -15,6 +16,7 @@ const BUS = path.join(__dirname, "bus");
 async function ensureDirs() {
   await fs.mkdir(QUEUE, { recursive: true });
   await fs.mkdir(BUS, { recursive: true });
+  await fs.mkdir(path.join(__dirname, "outbox"), { recursive: true });
 }
 
 async function atomicWrite(file, data) {
@@ -183,6 +185,7 @@ async function tick() {
       blocked_reason:
         "Supabase deploy credentials not in this runtime",
       needs_aj: true,
+      action: "ops.deploy",
       at: new Date().toISOString(),
     };
     await writeBus(skipResult);
@@ -193,6 +196,12 @@ async function tick() {
     job.status =
       job.step_index >= job.chain.length ? "blocked" : "awaiting_next";
     job.last_result = skipResult;
+    try {
+      const n = await notifyNeedsAj(job, skipResult);
+      job.last_notify = n.packet.request_id;
+    } catch (err) {
+      console.warn("[notify] failed", err);
+    }
     await saveJob(job);
     console.log(`[ops]`, skipResult.summary);
     console.log(job.id, "→", job.status, "next=", job.chain[job.step_index] || "—");
@@ -218,7 +227,6 @@ async function tick() {
   console.log(`[${agentName}]`, result.summary);
   console.log("  bus:", busFile);
 
-  // Merge agent payload_update into durable job payload (Stage 1 evidence chain)
   if (result.payload_update && typeof result.payload_update === "object") {
     job.payload = { ...(job.payload || {}), ...result.payload_update };
   }
@@ -227,8 +235,14 @@ async function tick() {
     job.status = "needs-aj";
     job.gate = result.summary;
     job.last_result = result;
+    try {
+      const n = await notifyNeedsAj(job, result);
+      job.last_notify = n.packet.request_id;
+    } catch (err) {
+      console.warn("[notify] failed", err);
+    }
     await saveJob(job);
-    console.log(job.id, "→ needs-aj");
+    console.log(job.id, "→ needs-aj (notified)");
     return { progressed: false, ok: true };
   }
 
@@ -271,9 +285,12 @@ async function status() {
     );
     if (j.blocked_reason) console.log("  blocked:", j.blocked_reason);
     if (j.gate) console.log("  gate:", j.gate);
+    if (j.last_notify) console.log("  notify:", j.last_notify);
   }
   const bus = await fs.readdir(BUS).catch(() => []);
+  const outbox = await fs.readdir(path.join(__dirname, "outbox")).catch(() => []);
   console.log("bus messages:", bus.filter((f) => f.endsWith(".json")).length);
+  console.log("outbox packets:", outbox.filter((f) => f.endsWith(".json")).length);
 }
 
 async function authorize(jobId) {
@@ -312,7 +329,21 @@ try {
     process.exit(ok ? 0 : 1);
   } else if (cmd === "run") await runAll();
   else if (cmd === "authorize") await authorize(arg);
-  else await status();
+  else if (cmd === "notify-test") {
+    const { notifyNeedsAj: n } = await import("./notify.mjs");
+    await n(
+      {
+        id: "job-notify-test-001",
+        requires_aj_for: ["publish"],
+        payload: { goal: "P2.1 notify test", why: "Channel path check" },
+      },
+      {
+        summary: "Test needs-aj email then SMS packet.",
+        artifacts: ["siindex-m2m/notify.mjs"],
+        action: "publish",
+      },
+    );
+  } else await status();
 } catch (err) {
   console.error("[runner]", err);
   process.exit(1);
