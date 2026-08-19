@@ -1,12 +1,13 @@
 /**
- * SIINDEX Website Voice Core v3.0.7
+ * SIINDEX Website Voice Core v3.0.8
  * Interrupt must not fall through to full speechSynthesis restart.
  * Spoken name lock: Sinn-dex only (never Sign-dex).
  * Mic: MediaRecorder + siindex-website-transcribe; MIME/filename match for Safari mp4.
+ * v3.0.8: no timeslice — incomplete webm/mp4 containers caused ElevenLabs provider 400.
  */
 (function () {
   "use strict";
-  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.7") return;
+  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.8") return;
 
   const SUPABASE_URL = "https://zljgthfzbalsunuoohcd.supabase.co";
   const SUPABASE_KEY = "sb_publishable_rSl7P028UrBn8KCUSSbjAg_mT3FWoxV";
@@ -376,6 +377,9 @@
     if (listening) {
       listening = false;
       if (mediaRecorder && mediaRecorder.state === "recording") {
+        try {
+          if (typeof mediaRecorder.requestData === "function") mediaRecorder.requestData();
+        } catch (_) {}
         try { mediaRecorder.stop(); } catch (_) {}
       } else {
         stopMediaCapture();
@@ -385,15 +389,20 @@
     }
     try {
       setStatus("listening", "Listening… speak clearly 3–5 seconds (tap mic to stop)");
-      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          channelCount: 1
+        }
+      });
       mediaChunks = [];
       var mime = "";
       if (window.MediaRecorder) {
         var candidates = [
+          "audio/mp4",
           "audio/webm;codecs=opus",
           "audio/webm",
-          "audio/mp4",
-          "audio/aac",
           "audio/ogg;codecs=opus"
         ];
         for (var i = 0; i < candidates.length; i++) {
@@ -403,13 +412,25 @@
         }
       }
       try {
-        mediaRecorder = mime ? new MediaRecorder(mediaStream, { mimeType: mime }) : new MediaRecorder(mediaStream);
+        mediaRecorder = mime
+          ? new MediaRecorder(mediaStream, { mimeType: mime, audioBitsPerSecond: 64000 })
+          : new MediaRecorder(mediaStream);
       } catch (_) {
-        mediaRecorder = new MediaRecorder(mediaStream);
+        try {
+          mediaRecorder = mime ? new MediaRecorder(mediaStream, { mimeType: mime }) : new MediaRecorder(mediaStream);
+        } catch (_) {
+          mediaRecorder = new MediaRecorder(mediaStream);
+        }
       }
       listening = true;
       mediaRecorder.ondataavailable = function (ev) {
         if (ev.data && ev.data.size) mediaChunks.push(ev.data);
+      };
+      mediaRecorder.onerror = function () {
+        listening = false;
+        stopMediaCapture();
+        setStatus("error", "Mic recorder error. Type your question below.");
+        focusTypeInput();
       };
       mediaRecorder.onstop = function () {
         listening = false;
@@ -417,8 +438,8 @@
         var blob = new Blob(mediaChunks, { type: blobType });
         mediaChunks = [];
         stopMediaCapture();
-        if (!blob.size || blob.size < 1200) {
-          setStatus("idle", "Recording too short. Hold a second longer, or type.");
+        if (!blob.size || blob.size < 2500) {
+          setStatus("idle", "Recording too short or empty. Speak 3–5 seconds, or type.");
           focusTypeInput();
           return;
         }
@@ -450,13 +471,21 @@
               focusTypeInput();
               return;
             }
+            if (String(msg).indexOf("transcription_provider_error") !== -1) {
+              setStatus("error", "Voice audio rejected. Speak longer (3–5s) or type / use a chip.");
+              focusTypeInput();
+              return;
+            }
             setStatus("error", "Voice failed (" + msg + "). Type or use a chip.");
             focusTypeInput();
           });
       };
-      mediaRecorder.start(250);
+      mediaRecorder.start();
       recordTimer = setTimeout(function () {
         if (mediaRecorder && mediaRecorder.state === "recording") {
+          try {
+            if (typeof mediaRecorder.requestData === "function") mediaRecorder.requestData();
+          } catch (_) {}
           try { mediaRecorder.stop(); } catch (_) {}
         }
       }, 8000);
@@ -475,7 +504,7 @@
   }
 
   window.SIINDEXVoice = {
-    version: "3.0.7",
+    version: "3.0.8",
     speak: speak,
     interrupt: interrupt,
     ask: ask,
