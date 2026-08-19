@@ -1,13 +1,13 @@
 /**
- * SIINDEX Website Voice Core v3.0.13
+ * SIINDEX Website Voice Core v3.0.14
  * Interrupt must not fall through to full speechSynthesis restart.
  * Spoken name lock: Sinn-dex only (never Sign-dex).
  * Mic: MediaRecorder + siindex-website-transcribe; MIME/filename match for Safari mp4.
- * v3.0.13: no timeslice — incomplete webm/mp4 containers caused ElevenLabs provider 400.
+ * v3.0.14: no timeslice — incomplete webm/mp4 containers caused ElevenLabs provider 400.
  */
 (function () {
   "use strict";
-  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.13") return;
+  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.14") return;
 
   const SUPABASE_URL = "https://zljgthfzbalsunuoohcd.supabase.co";
   const SUPABASE_KEY = "sb_publishable_rSl7P028UrBn8KCUSSbjAg_mT3FWoxV";
@@ -283,6 +283,17 @@
     }
 
     const isFoundingGoalRequest = /my real goal is/i.test(text);
+    const isStartBusinessGoal = /my real goal is to start (a |my )?small business/i.test(text);
+    if (isStartBusinessGoal) {
+      const firstAction = "Your first action is to write one Founding Offer sentence: I will help [specific customer] solve [specific problem] by providing [product or service]. Do not choose a business name, logo, wallet, or payment system yet. Reply with the completed sentence.";
+      emitMessage("si", firstAction, source);
+      setStatus("idle", "Waiting for your Founding Offer.");
+      if (voiceEnabled) {
+        try { await speak(firstAction); } catch (_) {}
+      }
+      return;
+    }
+
     const hasPlaceholderGoal = /\[\s*goal\s*\]/i.test(text);
     if (isFoundingGoalRequest && hasPlaceholderGoal) {
       const clarification = "Please replace [goal] with one real result you want to complete. For example: find paid work, start a small business, learn a skill, sell a product, or find a collaborator.";
@@ -545,7 +556,7 @@
   }
 
   window.SIINDEXVoice = {
-    version: "3.0.13",
+    version: "3.0.14",
     speak: speak,
     interrupt: interrupt,
     ask: ask,
