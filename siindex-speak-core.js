@@ -1,13 +1,13 @@
 /**
- * SIINDEX Website Voice Core v3.0.8
+ * SIINDEX Website Voice Core v3.0.9
  * Interrupt must not fall through to full speechSynthesis restart.
  * Spoken name lock: Sinn-dex only (never Sign-dex).
  * Mic: MediaRecorder + siindex-website-transcribe; MIME/filename match for Safari mp4.
- * v3.0.8: no timeslice — incomplete webm/mp4 containers caused ElevenLabs provider 400.
+ * v3.0.9: no timeslice — incomplete webm/mp4 containers caused ElevenLabs provider 400.
  */
 (function () {
   "use strict";
-  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.8") return;
+  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.9") return;
 
   const SUPABASE_URL = "https://zljgthfzbalsunuoohcd.supabase.co";
   const SUPABASE_KEY = "sb_publishable_rSl7P028UrBn8KCUSSbjAg_mT3FWoxV";
@@ -146,6 +146,35 @@
     await new Promise(function (r) { setTimeout(r, waitMs); });
   }
 
+  async function playVoiceResponse(response) {
+    const format = (response.headers.get("X-Siindex-Audio-Format") || "").toLowerCase();
+    const contentType = (response.headers.get("Content-Type") || "").toLowerCase();
+    if (format.startsWith("pcm_") || contentType.indexOf("audio/pcm") !== -1) {
+      return playPcmStream(response);
+    }
+
+    const context = await ensureAudioContext();
+    if (!context) throw new Error("audio_context_unavailable");
+    const generation = ++playbackGeneration;
+    const encoded = await response.arrayBuffer();
+    const decoded = await context.decodeAudioData(encoded.slice(0));
+    if (generation !== playbackGeneration) return;
+    const source = context.createBufferSource();
+    source.buffer = decoded;
+    source.connect(context.destination);
+    activeAudioSources.add(source);
+    await new Promise(function (resolve, reject) {
+      source.onended = function () {
+        activeAudioSources.delete(source);
+        resolve();
+      };
+      try { source.start(); } catch (error) {
+        activeAudioSources.delete(source);
+        reject(error);
+      }
+    });
+  }
+
   async function speak(text) {
     if (!voiceEnabled || !text) return;
     const controller = new AbortController();
@@ -166,7 +195,7 @@
       });
       clearTimeout(voiceTimer);
       if (!response.ok) throw new Error("voice_http_" + response.status);
-      await playPcmStream(response);
+      await playVoiceResponse(response);
       if (!controller.signal.aborted) setStatus("idle", "Ready.");
     } catch (error) {
       clearTimeout(voiceTimer);
@@ -178,17 +207,7 @@
         setStatus("idle", "Paused.");
         return;
       }
-      if (window.speechSynthesis) {
-        const utterance = new SpeechSynthesisUtterance(spoken);
-        utterance.lang = "en-US";
-        utterance.rate = 0.94;
-        utterance.pitch = 1.03;
-        utterance.onend = function () { setStatus("idle", "Ready."); };
-        speechSynthesis.cancel();
-        speechSynthesis.speak(utterance);
-      } else {
-        setStatus("error", "Voice unavailable.");
-      }
+      setStatus("error", "SIINDEX voice unavailable. Response remains available as text.");
     }
   }
 
@@ -504,7 +523,7 @@
   }
 
   window.SIINDEXVoice = {
-    version: "3.0.8",
+    version: "3.0.9",
     speak: speak,
     interrupt: interrupt,
     ask: ask,
