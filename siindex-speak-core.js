@@ -1,13 +1,13 @@
 /**
- * SIINDEX Website Voice Core v3.0.10
+ * SIINDEX Website Voice Core v3.0.12
  * Interrupt must not fall through to full speechSynthesis restart.
  * Spoken name lock: Sinn-dex only (never Sign-dex).
  * Mic: MediaRecorder + siindex-website-transcribe; MIME/filename match for Safari mp4.
- * v3.0.10: no timeslice — incomplete webm/mp4 containers caused ElevenLabs provider 400.
+ * v3.0.12: no timeslice — incomplete webm/mp4 containers caused ElevenLabs provider 400.
  */
 (function () {
   "use strict";
-  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.10") return;
+  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.12") return;
 
   const SUPABASE_URL = "https://zljgthfzbalsunuoohcd.supabase.co";
   const SUPABASE_KEY = "sb_publishable_rSl7P028UrBn8KCUSSbjAg_mT3FWoxV";
@@ -271,7 +271,19 @@
     interrupt("…", false);
     emitMessage("user", text, source);
 
-    const local = window.SIINDEX_PUBLIC && typeof SIINDEX_PUBLIC.answer === "function"
+    const isFoundingGoalRequest = /founding citizen/i.test(text) && /real goal/i.test(text);
+    const hasPlaceholderGoal = /\[\s*goal\s*\]/i.test(text);
+    if (isFoundingGoalRequest && hasPlaceholderGoal) {
+      const clarification = "Please replace [goal] with one real result you want to complete. For example: find paid work, start a small business, learn a skill, sell a product, or find a collaborator.";
+      emitMessage("si", clarification, source);
+      setStatus("idle", "Waiting for your real goal.");
+      if (voiceEnabled) {
+        try { await speak(clarification); } catch (_) {}
+      }
+      return;
+    }
+
+    const local = !isFoundingGoalRequest && window.SIINDEX_PUBLIC && typeof SIINDEX_PUBLIC.answer === "function"
       ? SIINDEX_PUBLIC.answer(text) : null;
     if (local) {
       emitMessage("si", local, source);
@@ -522,7 +534,7 @@
   }
 
   window.SIINDEXVoice = {
-    version: "3.0.10",
+    version: "3.0.12",
     speak: speak,
     interrupt: interrupt,
     ask: ask,
