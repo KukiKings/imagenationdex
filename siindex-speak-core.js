@@ -1,13 +1,13 @@
 /**
- * SIINDEX Website Voice Core v3.0.12
+ * SIINDEX Website Voice Core v3.0.13
  * Interrupt must not fall through to full speechSynthesis restart.
  * Spoken name lock: Sinn-dex only (never Sign-dex).
  * Mic: MediaRecorder + siindex-website-transcribe; MIME/filename match for Safari mp4.
- * v3.0.12: no timeslice — incomplete webm/mp4 containers caused ElevenLabs provider 400.
+ * v3.0.13: no timeslice — incomplete webm/mp4 containers caused ElevenLabs provider 400.
  */
 (function () {
   "use strict";
-  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.12") return;
+  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.13") return;
 
   const SUPABASE_URL = "https://zljgthfzbalsunuoohcd.supabase.co";
   const SUPABASE_KEY = "sb_publishable_rSl7P028UrBn8KCUSSbjAg_mT3FWoxV";
@@ -271,7 +271,18 @@
     interrupt("…", false);
     emitMessage("user", text, source);
 
-    const isFoundingGoalRequest = /founding citizen/i.test(text) && /real goal/i.test(text);
+    const isGoalIntakeQuestion = /what is one real result.*help you complete/i.test(text);
+    if (isGoalIntakeQuestion) {
+      const prompt = "Tell me your answer in one sentence beginning: My real goal is to… For example: My real goal is to find paid work.";
+      emitMessage("si", prompt, source);
+      setStatus("idle", "Waiting for your real goal.");
+      if (voiceEnabled) {
+        try { await speak(prompt); } catch (_) {}
+      }
+      return;
+    }
+
+    const isFoundingGoalRequest = /my real goal is/i.test(text);
     const hasPlaceholderGoal = /\[\s*goal\s*\]/i.test(text);
     if (isFoundingGoalRequest && hasPlaceholderGoal) {
       const clarification = "Please replace [goal] with one real result you want to complete. For example: find paid work, start a small business, learn a skill, sell a product, or find a collaborator.";
@@ -534,7 +545,7 @@
   }
 
   window.SIINDEXVoice = {
-    version: "3.0.12",
+    version: "3.0.13",
     speak: speak,
     interrupt: interrupt,
     ask: ask,
