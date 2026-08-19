@@ -99,25 +99,10 @@ async function allowed(
   return (minute.count || 0) < 6 && (day.count || 0) < 60;
 }
 
-/** Approved voice only: env override, runtime intro clone, or canonical intro voice ID. */
+/** The website always speaks with the approved public-introduction voice. */
 async function resolveVoiceId(
-  admin: ReturnType<typeof createClient>,
-): Promise<{ id: string; source: "env" | "runtime" | "canonical" }> {
-  if (ENV_VOICE_ID.trim()) {
-    return { id: ENV_VOICE_ID.trim(), source: "env" };
-  }
-  try {
-    const { data } = await admin
-      .from("siindex_runtime_config")
-      .select("value")
-      .eq("key", "elevenlabs_voice_id")
-      .maybeSingle();
-    if (data?.value && String(data.value).trim()) {
-      return { id: String(data.value).trim(), source: "runtime" };
-    }
-  } catch (_) {
-    // Table may not exist yet — fall through
-  }
+  _admin: ReturnType<typeof createClient>,
+): Promise<{ id: string; source: "canonical" }> {
   return { id: APPROVED_INTRO_VOICE_ID, source: "canonical" };
 }
 
