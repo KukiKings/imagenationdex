@@ -1,13 +1,13 @@
 /**
- * SIINDEX Website Voice Core v3.0.14
+ * SIINDEX Website Voice Core v3.0.15
  * Interrupt must not fall through to full speechSynthesis restart.
  * Spoken name lock: Sinn-dex only (never Sign-dex).
  * Mic: MediaRecorder + siindex-website-transcribe; MIME/filename match for Safari mp4.
- * v3.0.14: no timeslice — incomplete webm/mp4 containers caused ElevenLabs provider 400.
+ * v3.0.15: no timeslice — incomplete webm/mp4 containers caused ElevenLabs provider 400.
  */
 (function () {
   "use strict";
-  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.14") return;
+  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.15") return;
 
   const SUPABASE_URL = "https://zljgthfzbalsunuoohcd.supabase.co";
   const SUPABASE_KEY = "sb_publishable_rSl7P028UrBn8KCUSSbjAg_mT3FWoxV";
@@ -278,6 +278,17 @@
       setStatus("idle", "Waiting for your real goal.");
       if (voiceEnabled) {
         try { await speak(prompt); } catch (_) {}
+      }
+      return;
+    }
+
+    const isFoundingOffer = /^\s*i will help .+ solve .+ by providing .+/i.test(text);
+    if (isFoundingOffer) {
+      const validationMission = "Founding Offer recorded. Your next action is to speak with five potential customers before choosing a name, logo, menu, or payment system. Ask each person: What do you do for dinner when you are busy? What meal and portion would you buy? What price would feel affordable? Pass this mission when at least two people agree to preorder one dinner for a specific day. Then report: people interviewed, preorder commitments, preferred meal, and acceptable price.";
+      emitMessage("si", validationMission, source);
+      setStatus("idle", "Waiting for customer evidence.");
+      if (voiceEnabled) {
+        try { await speak(validationMission); } catch (_) {}
       }
       return;
     }
@@ -556,7 +567,7 @@
   }
 
   window.SIINDEXVoice = {
-    version: "3.0.14",
+    version: "3.0.15",
     speak: speak,
     interrupt: interrupt,
     ask: ask,
