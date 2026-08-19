@@ -10,7 +10,7 @@ const ENV_VOICE_ID = Deno.env.get("ELEVENLABS_VOICE_ID") || "";
 const APPROVED_INTRO_VOICE_ID = "iBEZxKDWKDCs8WbjiLKK";
 // Natural speech over ultra-low-latency flash (reduces "robot" character)
 const MODEL_ID = Deno.env.get("ELEVENLABS_MODEL_ID") || "eleven_turbo_v2_5";
-const OUTPUT_FORMAT = "pcm_24000";
+const OUTPUT_FORMAT = "mp3_44100_128";
 const ZONE = "siindex_website_voice_tts";
 
 function isAllowedOrigin(origin: string | null) {
@@ -226,7 +226,7 @@ Deno.serve(async (req: Request) => {
         headers: {
           "xi-api-key": ELEVENLABS_KEY,
           "Content-Type": "application/json",
-          "Accept": "audio/pcm",
+          "Accept": "audio/mpeg",
         },
         body: JSON.stringify({
           text,
@@ -291,7 +291,7 @@ Deno.serve(async (req: Request) => {
   return new Response(provider.body, {
     headers: {
       ...cors(req),
-      "Content-Type": "audio/pcm;rate=24000",
+      "Content-Type": "audio/mpeg",
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
       "X-Siindex-Correlation-Id": correlationId,
