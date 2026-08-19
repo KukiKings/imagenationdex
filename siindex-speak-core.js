@@ -1,12 +1,12 @@
 /**
- * SIINDEX Website Voice Core v3.0.6
+ * SIINDEX Website Voice Core v3.0.7
  * Interrupt must not fall through to full speechSynthesis restart.
  * Spoken name lock: Sinn-dex only (never Sign-dex).
  * Mic: MediaRecorder + siindex-website-transcribe; MIME/filename match for Safari mp4.
  */
 (function () {
   "use strict";
-  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.6") return;
+  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.7") return;
 
   const SUPABASE_URL = "https://zljgthfzbalsunuoohcd.supabase.co";
   const SUPABASE_KEY = "sb_publishable_rSl7P028UrBn8KCUSSbjAg_mT3FWoxV";
@@ -367,6 +367,7 @@
   }
 
   async function recordAndTranscribe(source) {
+    ensureProviderConsent();
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       setStatus("error", "Microphone unavailable. Type your question below.");
       focusTypeInput();
@@ -383,7 +384,7 @@
       return;
     }
     try {
-      setStatus("listening", "Listening… speak now (tap mic again to stop)");
+      setStatus("listening", "Listening… speak clearly 3–5 seconds (tap mic to stop)");
       mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaChunks = [];
       var mime = "";
@@ -416,7 +417,7 @@
         var blob = new Blob(mediaChunks, { type: blobType });
         mediaChunks = [];
         stopMediaCapture();
-        if (!blob.size || blob.size < 500) {
+        if (!blob.size || blob.size < 1200) {
           setStatus("idle", "Recording too short. Hold a second longer, or type.");
           focusTypeInput();
           return;
@@ -458,7 +459,7 @@
         if (mediaRecorder && mediaRecorder.state === "recording") {
           try { mediaRecorder.stop(); } catch (_) {}
         }
-      }, 6000);
+      }, 8000);
     } catch (e) {
       listening = false;
       stopMediaCapture();
@@ -474,7 +475,7 @@
   }
 
   window.SIINDEXVoice = {
-    version: "3.0.6",
+    version: "3.0.7",
     speak: speak,
     interrupt: interrupt,
     ask: ask,
