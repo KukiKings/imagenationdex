@@ -7,7 +7,7 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ELEVENLABS_KEY = Deno.env.get("ELEVENLABS_API_KEY");
 const ENV_VOICE_ID = Deno.env.get("ELEVENLABS_VOICE_ID") || "";
-const FALLBACK_VOICE_ID = "19STyYD15bswVz51nqLf";
+const APPROVED_INTRO_VOICE_ID = "iBEZxKDWKDCs8WbjiLKK";
 // Natural speech over ultra-low-latency flash (reduces "robot" character)
 const MODEL_ID = Deno.env.get("ELEVENLABS_MODEL_ID") || "eleven_turbo_v2_5";
 const OUTPUT_FORMAT = "pcm_24000";
@@ -99,10 +99,10 @@ async function allowed(
   return (minute.count || 0) < 6 && (day.count || 0) < 60;
 }
 
-/** Path A: env override, else DB config from intro clone, else legacy fallback */
+/** Approved voice only: env override, runtime intro clone, or canonical intro voice ID. */
 async function resolveVoiceId(
   admin: ReturnType<typeof createClient>,
-): Promise<{ id: string; source: "env" | "runtime" | "fallback" }> {
+): Promise<{ id: string; source: "env" | "runtime" | "canonical" }> {
   if (ENV_VOICE_ID.trim()) {
     return { id: ENV_VOICE_ID.trim(), source: "env" };
   }
@@ -118,7 +118,7 @@ async function resolveVoiceId(
   } catch (_) {
     // Table may not exist yet — fall through
   }
-  return { id: FALLBACK_VOICE_ID, source: "fallback" };
+  return { id: APPROVED_INTRO_VOICE_ID, source: "canonical" };
 }
 
 Deno.serve(async (req: Request) => {
