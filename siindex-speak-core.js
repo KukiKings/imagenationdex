@@ -1,13 +1,13 @@
 /**
- * SIINDEX Website Voice Core v3.0.9
+ * SIINDEX Website Voice Core v3.0.10
  * Interrupt must not fall through to full speechSynthesis restart.
  * Spoken name lock: Sinn-dex only (never Sign-dex).
  * Mic: MediaRecorder + siindex-website-transcribe; MIME/filename match for Safari mp4.
- * v3.0.9: no timeslice — incomplete webm/mp4 containers caused ElevenLabs provider 400.
+ * v3.0.10: no timeslice — incomplete webm/mp4 containers caused ElevenLabs provider 400.
  */
 (function () {
   "use strict";
-  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.9") return;
+  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.10") return;
 
   const SUPABASE_URL = "https://zljgthfzbalsunuoohcd.supabase.co";
   const SUPABASE_KEY = "sb_publishable_rSl7P028UrBn8KCUSSbjAg_mT3FWoxV";
@@ -407,7 +407,7 @@
       return;
     }
     try {
-      setStatus("listening", "Listening… speak clearly 3–5 seconds (tap mic to stop)");
+      setStatus("listening", "Listening… speak clearly for 5–8 seconds (tap mic to stop)");
       mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -418,12 +418,11 @@
       mediaChunks = [];
       var mime = "";
       if (window.MediaRecorder) {
-        var candidates = [
-          "audio/mp4",
-          "audio/webm;codecs=opus",
-          "audio/webm",
-          "audio/ogg;codecs=opus"
-        ];
+        var isSafari = /Safari/i.test(navigator.userAgent) &&
+          !/Chrome|CriOS|Chromium|Android/i.test(navigator.userAgent);
+        var candidates = isSafari
+          ? ["audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"]
+          : ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"];
         for (var i = 0; i < candidates.length; i++) {
           try {
             if (MediaRecorder.isTypeSupported(candidates[i])) { mime = candidates[i]; break; }
@@ -458,7 +457,7 @@
         mediaChunks = [];
         stopMediaCapture();
         if (!blob.size || blob.size < 2500) {
-          setStatus("idle", "Recording too short or empty. Speak 3–5 seconds, or type.");
+          setStatus("idle", "No usable recording received. Tap the mic once, speak for 5–8 seconds, then tap again.");
           focusTypeInput();
           return;
         }
@@ -491,7 +490,7 @@
               return;
             }
             if (String(msg).indexOf("transcription_provider_error") !== -1) {
-              setStatus("error", "Voice audio rejected. Speak longer (3–5s) or type / use a chip.");
+              setStatus("error", "Voice audio rejected. Tap once, speak for 5–8 seconds, then tap again.");
               focusTypeInput();
               return;
             }
@@ -523,7 +522,7 @@
   }
 
   window.SIINDEXVoice = {
-    version: "3.0.9",
+    version: "3.0.10",
     speak: speak,
     interrupt: interrupt,
     ask: ask,
