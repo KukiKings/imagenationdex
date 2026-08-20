@@ -104,6 +104,14 @@
 
   .toast { position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(60px); background:var(--surface2); color:var(--text); padding:12px 20px; border-radius:12px; font-size:13px; font-weight:500; transition:transform 0.3s; z-index:200; white-space:nowrap; border:1px solid rgba(0,229,160,0.3); }
   .toast.show { transform:translateX(-50%) translateY(0); }
+
+  /* EMAIL OTP VERIFICATION — real Supabase Auth email code, same box pattern as account-recovery.html's phone OTP */
+  .otp-row { display:flex; gap:8px; justify-content:center; margin:16px 0; }
+  .otp-box { width:44px; height:52px; background:var(--surface2); border:1px solid var(--surface3); border-radius:12px; text-align:center; font-size:20px; font-weight:800; color:var(--text); outline:none; }
+  .otp-box:focus { border-color:var(--cyan); }
+  .otp-resend { text-align:center; font-size:13px; color:var(--text-muted); margin-bottom:16px; }
+  .otp-resend span { color:var(--cyan); cursor:pointer; }
+  .otp-back { width:100%; padding:12px; background:transparent; border:1px solid var(--surface3); border-radius:14px; color:var(--text-muted); font-size:14px; cursor:pointer; margin-top:10px; }
 </style>
 </head>
 <body>
@@ -145,6 +153,7 @@
     <div class="input-group">
       <label class="input-label">Phone or email</label>
       <input class="input-field" id="contactInput" type="text" placeholder="+63 917 123 4567 or maria@gmail.com" autocomplete="tel email">
+      <div style="font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.4;">Email addresses get a real verification code before your spot is confirmed. Phone-only signups aren't verified yet.</div>
     </div>
 
     <div class="input-group">
@@ -168,6 +177,24 @@
     </div>
 
     <button class="submit-btn" id="submitBtn" onclick="joinWaitlist()">Apply as a Founding Citizen</button>
+  </div>
+
+  <!-- EMAIL OTP VERIFICATION — shown only for email signups, real Supabase Auth code -->
+  <div class="form-card" id="otpCard" style="display:none;">
+    <div class="form-title">Verify your email</div>
+    <div class="form-sub" id="otpCardSub">We sent a 6-digit code to your email. Enter it below to confirm your spot.</div>
+    <div class="otp-row">
+      <input class="otp-box" maxlength="1" id="wob0" oninput="wlOtpMove(0)" onkeydown="wlOtpKeyDown(event,0)" onpaste="wlOtpPaste(event)" type="number">
+      <input class="otp-box" maxlength="1" id="wob1" oninput="wlOtpMove(1)" onkeydown="wlOtpKeyDown(event,1)" onpaste="wlOtpPaste(event)" type="number">
+      <input class="otp-box" maxlength="1" id="wob2" oninput="wlOtpMove(2)" onkeydown="wlOtpKeyDown(event,2)" onpaste="wlOtpPaste(event)" type="number">
+      <input class="otp-box" maxlength="1" id="wob3" oninput="wlOtpMove(3)" onkeydown="wlOtpKeyDown(event,3)" onpaste="wlOtpPaste(event)" type="number">
+      <input class="otp-box" maxlength="1" id="wob4" oninput="wlOtpMove(4)" onkeydown="wlOtpKeyDown(event,4)" onpaste="wlOtpPaste(event)" type="number">
+      <input class="otp-box" maxlength="1" id="wob5" oninput="wlOtpMove(5)" onkeydown="wlOtpKeyDown(event,5)" onpaste="wlOtpPaste(event)" type="number">
+    </div>
+    <div class="otp-resend">Didn't get it? <span id="wlResendLink" onclick="wlResendCode()">Resend</span></div>
+    <div id="otpError" style="color:var(--red);font-size:13px;text-align:center;margin-bottom:8px;"></div>
+    <button class="submit-btn" id="wlOtpBtn" onclick="wlVerifyOtp()" disabled>Verify &amp; join waitlist</button>
+    <button class="otp-back" onclick="wlOtpBack()">← Back</button>
   </div>
 
   <!-- PERKS -->
@@ -223,6 +250,9 @@
   // `base` is also read/written by joinWaitlist() further down (queue position = base + 1) — keep
   // it in this shared top-level scope, not local to this IIFE, or that line throws ReferenceError.
   let base = 0;
+  // Separate client instance (harmless — supabase-js allows multiple) used only for
+  // email OTP auth calls below, so the existing count IIFE above is left untouched.
+  const wlAuthClient = supabase.createClient(WL_SUPA_URL, WL_SUPA_KEY);
   (async () => {
     try {
       const sb = supabase.createClient(WL_SUPA_URL, WL_SUPA_KEY);
@@ -267,6 +297,10 @@
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   const PHONE_RE = /^\+?[\d\s\-().]{7,20}$/;
 
+  // Holds {name, contact, region, referredBy} while an email signup is waiting on
+  // its OTP code, so wlVerifyOtp() can finish the submission after a real code check.
+  let pendingSignup = null;
+
   async function joinWaitlist() {
     const name = document.getElementById('nameInput').value.trim();
     const contact = document.getElementById('contactInput').value.trim();
@@ -278,16 +312,59 @@
     const isPhone = PHONE_RE.test(contact);
     if (!isEmail && !isPhone) { showToast('Use a valid email or phone number (e.g. +679 123 4567).'); return; }
 
-    const btn = document.getElementById('submitBtn');
-    btn.textContent = 'Submitting application...';
-    btn.disabled = true;
-
     // Get selected region
     const regionBtn = document.querySelector('.region-btn.selected .region-name');
     const region = regionBtn ? regionBtn.textContent : null;
 
     // Get referral code if entered
     const referredBy = document.getElementById('refInput').value.trim() || null;
+
+    // ── REAL email OTP gate (God Mode) ──────────────────────────────────────
+    // Email signups get a real Supabase Auth code before join_waitlist ever runs,
+    // so a queue position/application number can't be claimed with an email nobody
+    // controls. Phone-only signups still submit directly below — same honest gap
+    // account-recovery.html already discloses for its own phone-only OTP ("Email-code
+    // recovery isn't built yet"), just the other direction. Not silently claiming
+    // phone signups are verified when they aren't.
+    if (isEmail) {
+      const btn = document.getElementById('submitBtn');
+      btn.textContent = 'Sending code...';
+      btn.disabled = true;
+      try {
+        const { error } = await wlAuthClient.auth.signInWithOtp({ email: contact });
+        if (error) {
+          showToast(error.message || 'Could not send code. Please try again.');
+          btn.textContent = 'Apply as a Founding Citizen';
+          btn.disabled = false;
+          return;
+        }
+      } catch (e) {
+        showToast('Could not send code. Please try again.');
+        btn.textContent = 'Apply as a Founding Citizen';
+        btn.disabled = false;
+        return;
+      }
+      pendingSignup = { name, contact, region, referredBy };
+      document.getElementById('otpCardSub').textContent = 'We sent a real 6-digit code to ' + contact + '.';
+      document.getElementById('signupForm').style.display = 'none';
+      document.getElementById('otpCard').style.display = 'block';
+      btn.textContent = 'Apply as a Founding Citizen';
+      btn.disabled = false;
+      [0,1,2,3,4,5].forEach(n => document.getElementById('wob'+n).value = '');
+      document.getElementById('wlOtpBtn').disabled = true;
+      setTimeout(() => document.getElementById('wob0').focus(), 100);
+      wlStartResendCooldown();
+      return;
+    }
+
+    await submitWaitlist(name, contact, region, referredBy);
+  }
+
+  async function submitWaitlist(name, contact, region, referredBy) {
+    const btn = document.getElementById('submitBtn');
+    const otpBtn = document.getElementById('wlOtpBtn');
+    btn.textContent = 'Submitting application...';
+    btn.disabled = true;
 
     try {
       // Calls the join_waitlist RPC instead of POSTing to the table directly.
@@ -319,6 +396,7 @@
         }
         btn.textContent = 'Apply as a Founding Citizen';
         btn.disabled = false;
+        if (otpBtn) { otpBtn.disabled = false; otpBtn.textContent = 'Verify & join waitlist'; }
         return;
       }
 
@@ -326,7 +404,15 @@
       const applicationNumber = result.queue_position;
       const cohortPosition = result.total;
 
+      // Mission Ledger identity link: lets the SIINDEX chat on this page (and
+      // public-home.html) know which real citizen it's talking to, so goal/offer
+      // capture writes to a persistent record instead of staying chat-only.
+      if (result.id) {
+        try { localStorage.setItem('siindex_citizen_waitlist_id', result.id); } catch (_) {}
+      }
+
       document.getElementById('signupForm').style.display = 'none';
+      document.getElementById('otpCard').style.display = 'none';
       document.getElementById('shareCard').style.display = 'none';
       document.getElementById('successState').classList.add('show');
       document.getElementById('applicationNumber').textContent = '#' + applicationNumber.toLocaleString();
@@ -340,6 +426,103 @@
       showToast('Something went wrong. Please try again.');
       btn.textContent = 'Apply as a Founding Citizen';
       btn.disabled = false;
+      if (otpBtn) { otpBtn.disabled = false; otpBtn.textContent = 'Verify & join waitlist'; }
+    }
+  }
+
+  // ── EMAIL OTP BOX HANDLERS — same interaction pattern as account-recovery.html's
+  // phone OTP boxes (prefixed wl/wob to avoid colliding with that screen's ids/fns
+  // if any script is ever shared between them) ──
+  function wlOtpMove(i) {
+    const v = document.getElementById('wob' + i).value;
+    if (v.length >= 1 && i < 5) document.getElementById('wob' + (i+1)).focus();
+    const filled = [0,1,2,3,4,5].every(n => document.getElementById('wob'+n).value.length > 0);
+    document.getElementById('wlOtpBtn').disabled = !filled;
+  }
+  function wlOtpKeyDown(e, i) {
+    if (e.key === 'Backspace' && !e.target.value && i > 0) {
+      document.getElementById('wob' + (i - 1)).focus();
+    }
+  }
+  function wlOtpPaste(e) {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+    if (!text) return;
+    for (let i = 0; i < 6; i++) document.getElementById('wob' + i).value = text[i] || '';
+    const last = Math.min(text.length, 6) - 1;
+    if (last >= 0) document.getElementById('wob' + last).focus();
+    const filled = [0,1,2,3,4,5].every(n => document.getElementById('wob'+n).value.length > 0);
+    document.getElementById('wlOtpBtn').disabled = !filled;
+  }
+
+  let wlResendCooldown = 0;
+  let wlResendTimer = null;
+  function wlStartResendCooldown() {
+    wlResendCooldown = 30;
+    wlUpdateResendLabel();
+    clearInterval(wlResendTimer);
+    wlResendTimer = setInterval(() => {
+      wlResendCooldown--;
+      wlUpdateResendLabel();
+      if (wlResendCooldown <= 0) clearInterval(wlResendTimer);
+    }, 1000);
+  }
+  function wlUpdateResendLabel() {
+    const el = document.getElementById('wlResendLink');
+    if (!el) return;
+    if (wlResendCooldown > 0) {
+      el.textContent = `Resend in ${wlResendCooldown}s`;
+      el.style.cursor = 'default';
+      el.style.color = 'var(--text-muted)';
+    } else {
+      el.textContent = 'Resend';
+      el.style.cursor = 'pointer';
+      el.style.color = 'var(--cyan)';
+    }
+  }
+  async function wlResendCode() {
+    if (wlResendCooldown > 0 || !pendingSignup) return;
+    try {
+      const { error } = await wlAuthClient.auth.signInWithOtp({ email: pendingSignup.contact });
+      if (error) { showToast(error.message || 'Could not resend'); return; }
+      showToast('New code sent ✓');
+      wlStartResendCooldown();
+    } catch (e) {
+      showToast('Could not resend — try again');
+    }
+  }
+
+  function wlOtpBack() {
+    document.getElementById('otpCard').style.display = 'none';
+    document.getElementById('signupForm').style.display = 'block';
+    pendingSignup = null;
+    clearInterval(wlResendTimer);
+    [0,1,2,3,4,5].forEach(n => document.getElementById('wob'+n).value = '');
+    document.getElementById('otpError').textContent = '';
+  }
+
+  // ── REAL verification: Supabase Auth email OTP check → finish the signup ──
+  async function wlVerifyOtp() {
+    if (!pendingSignup) return;
+    const code = [0,1,2,3,4,5].map(n => document.getElementById('wob'+n).value).join('');
+    const btn = document.getElementById('wlOtpBtn');
+    const errEl = document.getElementById('otpError');
+    errEl.textContent = '';
+    btn.disabled = true; btn.textContent = 'Verifying…';
+    try {
+      const { error } = await wlAuthClient.auth.verifyOtp({ email: pendingSignup.contact, token: code, type: 'email' });
+      if (error) {
+        errEl.textContent = error.message || 'Invalid code — try again';
+        btn.disabled = false; btn.textContent = 'Verify & join waitlist';
+        return;
+      }
+      const { name, contact, region, referredBy } = pendingSignup;
+      pendingSignup = null;
+      clearInterval(wlResendTimer);
+      await submitWaitlist(name, contact, region, referredBy);
+    } catch (e) {
+      errEl.textContent = 'Verification failed — try again';
+      btn.disabled = false; btn.textContent = 'Verify & join waitlist';
     }
   }
 
