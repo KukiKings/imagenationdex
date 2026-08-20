@@ -354,8 +354,11 @@ async function sendOtp(){
 
   // Try to look up existing citizen by phone
   try {
+    // FIXED: get_citizen_by_phone RETURNS json (a single object, or null),
+    // not an array — the old `data.length > 0` check was always false, so
+    // citizenRecord was never populated even for a real existing match.
     const { data } = await sb.rpc('get_citizen_by_phone', { p_phone: verifiedPhone });
-    if (data && data.length > 0) citizenRecord = data[0];
+    if (data && data.id) citizenRecord = data;
   } catch(e) { /* silent — new citizen */ }
 
   document.getElementById('otpSub').textContent = 'We sent a 6-digit code to ' + verifiedPhone + '. Check your messages.';
@@ -430,7 +433,14 @@ function autoScanDemo(){
       document.getElementById('camRing').classList.add('success');
       document.getElementById('scanIcon').textContent = '✅';
       document.getElementById('scanText').textContent = 'Verification complete!';
-      document.getElementById('scanSub').textContent = 'Your identity is confirmed. ZK-proof generated on device.';
+      // DEAD CODE WARNING: this whole scan sequence is scripted (setInterval
+      // timers, not a real camera/liveness check) and this line previously
+      // claimed a "ZK-proof generated on device" that never existed. Left
+      // orphaned/unreachable on purpose (see note above autoScanDemo) — if
+      // this is ever wired back into the live flow for a real Tier 1
+      // biometric step, this entire function must be replaced with actual
+      // capture + verification, not just this string.
+      document.getElementById('scanSub').textContent = 'Preview only — no real scan or proof was performed.';
       showToast('You\'re in. Welcome to IN$DEX 🎉');
       completeOnboarding();
     }
@@ -439,21 +449,32 @@ function autoScanDemo(){
 
 async function completeOnboarding() {
   try {
-    // Link auth or create citizen. p_zk_proof is a placeholder identifier for this
-    // Tier 0 phone-only flow (no biometric scan occurs) — kept as-is to match the
-    // existing link_citizen_auth RPC contract; not a claim of biometric verification.
-    const zkProof = 'zk_' + Array.from({length:16},()=>Math.floor(Math.random()*16).toString(16)).join('');
-    const { data, error } = await sb.rpc('link_citizen_auth', {
-      p_phone:    verifiedPhone,
-      p_zk_proof: zkProof
-    });
-    if (!error && data) {
-      citizenRecord = data;
-      sessionStorage.setItem('citizen_id',      data.id || data.citizen_id || '');
-      sessionStorage.setItem('citizen_name',     data.name || data.full_name || 'Sovereign');
-      sessionStorage.setItem('citizen_balance',  data.balance_indx || '0');
-      sessionStorage.setItem('citizen_wisdom',   data.wisdom_score || '0');
-      sessionStorage.setItem('citizen_domain',   data.sovereign_domain || '');
+    // FIXED: this called link_citizen_auth(p_phone, p_zk_proof) — that
+    // function's real signature is (p_phone, p_auth_id uuid); p_zk_proof
+    // isn't a parameter it accepts, so the call always failed. The "proof"
+    // itself was also fabricated (Math.random() hex, not a real ZK proof —
+    // this screen never runs a biometric check on the live Tier 0 path).
+    // There's also no real Supabase Auth session here to link (no sb.auth.*
+    // call happens on this screen), so link_citizen_auth doesn't apply.
+    // Correct behavior: reuse the existing citizen row if one was found by
+    // phone; otherwise actually create one via create_onboarding_citizen.
+    // No proof of any kind — this is an honestly-unverified phone account.
+    if (citizenRecord && citizenRecord.id) {
+      sessionStorage.setItem('citizen_id',      citizenRecord.id || '');
+      sessionStorage.setItem('citizen_name',     citizenRecord.citizen_name || 'Sovereign');
+      sessionStorage.setItem('citizen_balance',  citizenRecord.indx_balance || '0');
+      sessionStorage.setItem('citizen_wisdom',   citizenRecord.wisdom_score || '0');
+      sessionStorage.setItem('citizen_domain',   citizenRecord.web3_domain || '');
+    } else {
+      const { data, error } = await sb.rpc('create_onboarding_citizen', {
+        p_payload: { phone_number: verifiedPhone, citizen_name: 'Sovereign' }
+      });
+      if (!error && data && data.success && data.id) {
+        sessionStorage.setItem('citizen_id', data.id);
+        sessionStorage.setItem('citizen_name', 'Sovereign');
+        sessionStorage.setItem('citizen_balance', '0');
+        sessionStorage.setItem('citizen_wisdom', '0');
+      }
     }
   } catch(e) {
     // Demo mode — set placeholder session
