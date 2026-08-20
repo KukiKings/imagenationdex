@@ -390,16 +390,23 @@
   }
   const citizenId = sessionStorage.getItem('citizen_id');
 
-  async function awardLessonWisdom(lessonOutput) {
+  async function awardLessonWisdom(lessonOutput, lessonKey) {
     if (!citizenId) return { success:false, reason:'NO_SESSION' };
+    // FIXED: previously inserted straight into wisdom_actions with a fixed
+    // action_key ('academy_lesson_complete') shared by every lesson, and
+    // never touched citizens.wisdom_score at all — every lesson after the
+    // first would have collided on that key, and none of them ever moved
+    // the real score even when they succeeded. Routes through award_wisdom
+    // now, which actually updates the score and is keyed per-lesson.
     try {
-      const res = await fetch(SUPABASE_URL + '/rest/v1/wisdom_actions', {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/award_wisdom', {
         method:'POST',
-        headers: { ...rpcHeaders(), 'Prefer':'return=representation' },
-        body: JSON.stringify({ citizen_id: citizenId, action_key:'academy_lesson_complete', points:2, source: lessonOutput })
+        headers: rpcHeaders(),
+        body: JSON.stringify({ p_citizen_id: citizenId, p_points: 2, p_reason: 'academy_lesson_' + (lessonKey || lessonOutput) })
       });
       if (!res.ok) return { success:false, reason:'RLS_OR_ERROR' };
-      return { success:true };
+      const newScore = await res.json();
+      return { success:true, newScore: (typeof newScore === 'number') ? newScore : null };
     } catch (e) { return { success:false, reason:'NETWORK' }; }
   }
 
@@ -939,7 +946,7 @@
     // REAL: write a wisdom_actions row (RLS: citizen_id must match the authenticated
     // citizen). Previously this only updated localStorage and always claimed success —
     // now the toast reflects what actually happened on the server.
-    const result = await awardLessonWisdom(_currentLesson.output);
+    const result = await awardLessonWisdom(_currentLesson.output, _currentLessonKey);
     if (result.success) {
       showToast('✓ Lesson complete — ' + _currentLesson.output + ' added · +2 Wisdom Score');
     } else if (result.reason === 'NO_SESSION') {
