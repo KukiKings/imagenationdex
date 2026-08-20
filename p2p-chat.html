@@ -116,6 +116,26 @@
   .offer-input:focus{border-color:var(--cyan);}
   .offer-hint{font-size:12px;color:var(--text-muted);margin-bottom:16px;}
   .send-offer-btn{width:100%;padding:15px;border-radius:12px;background:var(--cyan);border:none;color:#000;font-size:16px;font-weight:700;cursor:pointer;}
+
+  /* GOD MODE: TYPING INDICATOR, OFFER HISTORY, CONFIRM ACCEPT, SHEET ACCESSIBILITY */
+  .typing-bubble{background:var(--surface2);border-radius:18px;border-bottom-left-radius:4px;padding:12px 16px;display:flex;gap:4px;align-items:center;}
+  .typing-bubble span{width:6px;height:6px;border-radius:50%;background:var(--text-muted);animation:indxTypingBounce 1.2s infinite ease-in-out;}
+  .typing-bubble span:nth-child(2){animation-delay:0.15s;}
+  .typing-bubble span:nth-child(3){animation-delay:0.3s;}
+  @keyframes indxTypingBounce{0%,60%,100%{transform:translateY(0);opacity:0.4;}30%{transform:translateY(-4px);opacity:1;}}
+
+  .history-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
+  .history-row:last-child{border-bottom:none;}
+  .history-label{font-size:13px;font-weight:600;color:var(--text);}
+  .history-diff{font-size:11px;margin-top:2px;}
+  .history-amount{font-size:13px;font-weight:700;color:var(--cyan);text-align:right;white-space:nowrap;}
+  .history-summary{margin-top:12px;padding:10px 12px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.3);border-radius:10px;font-size:12px;color:var(--cyan);font-weight:600;}
+
+  .confirm-accept-row{background:var(--surface2);border-radius:12px;padding:14px 16px;margin-bottom:12px;}
+  .confirm-accept-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;}
+  .confirm-accept-amount{font-size:20px;font-weight:900;color:var(--green);}
+
+  .offer-sheet :focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
 </style>
 </head>
 <body>
@@ -131,6 +151,8 @@
     </div>
     <div class="topbar-actions">
       <div class="tb-btn" onclick="window.location.href='listing-detail.html'" title="View listing">🛍️</div>
+      <!-- GOD MODE: offer negotiation history -->
+      <div class="tb-btn" onclick="openHistorySheet()" title="Offer history">🕘</div>
       <div class="tb-btn" onclick="showToast('Reporting coming soon')" title="Report">⋯</div>
     </div>
   </div>
@@ -219,13 +241,20 @@
           <div class="ob-label">💰 Counter Offer</div>
           <div><span class="ob-amount">$70</span> <span class="ob-ticker">· 140 INDX</span></div>
           <div class="ob-actions">
-            <div class="ob-btn ob-accept" onclick="acceptOffer()">Accept</div>
+            <!-- GOD MODE PATCH: require explicit confirm before locking INDX in escrow -->
+            <div class="ob-btn ob-accept" onclick="openAcceptConfirm(70,140)">Accept</div>
             <div class="ob-btn ob-counter" onclick="openOfferSheet('counter')">Counter</div>
             <div class="ob-btn ob-decline" onclick="declineOffer()">Decline</div>
           </div>
         </div>
         <div class="msg-time">9:24 AM</div>
       </div>
+    </div>
+
+    <!-- GOD MODE: typing indicator, shown while a simulated reply is pending -->
+    <div class="msg-row them" id="typingIndicator" style="display:none;">
+      <div class="msg-avatar" style="background:linear-gradient(135deg,var(--purple),var(--cyan))">KT</div>
+      <div class="typing-bubble"><span></span><span></span><span></span></div>
     </div>
 
     <div style="height:4px;"></div>
@@ -272,9 +301,39 @@
   </div>
 </div>
 
+<!-- GOD MODE: OFFER HISTORY SHEET -->
+<div class="sheet-overlay" id="historySheet" onclick="closeAnySheet(event,'historySheet')">
+  <div class="offer-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Offer History</div>
+    <div id="historyList"></div>
+    <div class="history-summary" id="historySummary"></div>
+    <button class="send-offer-btn" style="background:var(--surface2);color:var(--text);margin-top:14px;" onclick="closeSheetById('historySheet')">Close</button>
+  </div>
+</div>
+
+<!-- GOD MODE: CONFIRM ACCEPT SHEET -->
+<div class="sheet-overlay" id="confirmAcceptSheet" onclick="closeAnySheet(event,'confirmAcceptSheet')">
+  <div class="offer-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Confirm &amp; Accept Offer</div>
+    <div class="confirm-accept-row">
+      <div class="confirm-accept-label">You're accepting</div>
+      <div class="confirm-accept-amount" id="confirmAcceptAmount">$70.00 · 140 INDX</div>
+    </div>
+    <div class="offer-hint">INDX will be locked in escrow and released once you confirm delivery.</div>
+    <div style="display:flex;gap:10px;">
+      <button class="send-offer-btn" style="background:var(--surface2);color:var(--text);" onclick="closeSheetById('confirmAcceptSheet')">Cancel</button>
+      <button class="send-offer-btn" onclick="confirmAcceptFinal()">Confirm &amp; Accept</button>
+    </div>
+  </div>
+</div>
+
 <script>
   let offerType = 'aud';
   let messageCount = 0;
+  // GOD MODE: shared INDX price constant for any new conversions added below
+  const INDX_PRICE_USD = 0.24;
 
   function autoResize(el) {
     el.style.height = 'auto';
@@ -293,15 +352,20 @@
     input.value = '';
     input.style.height = 'auto';
     // Simulate reply
+    // GOD MODE PATCH: show typing indicator while the simulated reply is pending
     if (messageCount === 0) {
-      setTimeout(() => appendMessage("That works for me! I'm free for pickup this afternoon around 3pm in Newtown. Does that suit? 🤙", 'them'), 1800);
+      showTyping();
+      setTimeout(() => { hideTyping(); appendMessage("That works for me! I'm free for pickup this afternoon around 3pm in Newtown. Does that suit? 🤙", 'them'); }, 1800);
     }
     messageCount++;
   }
 
   function sendQuickReply(text) {
     appendMessage(text, 'me');
+    // GOD MODE PATCH: typing indicator around the simulated reply
+    showTyping();
     setTimeout(() => {
+      hideTyping();
       if (text.includes('Sounds good')) {
         appendMessage("Perfect! I'll have it wrapped and ready 📦 See you soon!", 'them');
       } else if (text.includes('pickup today')) {
@@ -355,10 +419,17 @@
   function openOfferSheet(type) {
     document.getElementById('sheetTitle').textContent = type === 'counter' ? 'Counter Offer' : 'Make an Offer';
     document.getElementById('offerSheet').classList.add('open');
+    // GOD MODE PATCH: remember trigger + trap focus for keyboard/screen-reader users
+    lastFocusedEl = document.activeElement;
+    trapFocus('offerSheet');
   }
 
   function closeSheet(e) {
-    if (e.target === document.getElementById('offerSheet')) document.getElementById('offerSheet').classList.remove('open');
+    // GOD MODE PATCH: restore focus to whatever opened the sheet
+    if (e.target === document.getElementById('offerSheet')) {
+      document.getElementById('offerSheet').classList.remove('open');
+      if (lastFocusedEl && lastFocusedEl.focus) lastFocusedEl.focus();
+    }
   }
 
   function selectOfferType(type) {
@@ -401,13 +472,138 @@
       </div>`;
     msgs.appendChild(div);
     msgs.scrollTop = msgs.scrollHeight;
-    setTimeout(() => appendMessage("Thanks for the offer! Let me think about it... 🤔", 'them'), 2000);
+    // GOD MODE PATCH: record this offer in the persisted negotiation history, then typing indicator before the reply
+    const offerUsd = offerType === 'aud' ? parseFloat(val) : parseFloat(val) * INDX_PRICE_USD;
+    const offerIndx = offerType === 'aud' ? Math.round(parseFloat(val) / INDX_PRICE_USD) : parseFloat(val);
+    addOfferToHistory('Your offer', offerUsd, offerIndx, 'buyer');
+    showTyping();
+    setTimeout(() => { hideTyping(); appendMessage("Thanks for the offer! Let me think about it... 🤔", 'them'); }, 2000);
+  }
+
+  // ================= GOD MODE: TYPING INDICATOR =================
+  function showTyping() {
+    const t = document.getElementById('typingIndicator');
+    if (!t) return;
+    t.style.display = 'flex';
+    const msgs = document.getElementById('messages');
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+  function hideTyping() {
+    const t = document.getElementById('typingIndicator');
+    if (t) t.style.display = 'none';
+  }
+
+  // ================= GOD MODE: OFFER HISTORY (persisted, running comparison) =================
+  const HISTORY_KEY = 'indx_p2pchat_offerHistory';
+  const ASKING_USD = 75.00;
+  let offerHistory = [];
+
+  function loadOfferHistory() {
+    const stored = JSON.parse(localStorage.getItem(HISTORY_KEY) || 'null');
+    if (stored && stored.length) {
+      offerHistory = stored;
+    } else {
+      offerHistory = [
+        { label: 'Asking price', usd: 75.00, indx: 150, type: 'listing' },
+        { label: 'Your offer', usd: 65.00, indx: 130, type: 'buyer' },
+        { label: "Kiri's counter", usd: 70.00, indx: 140, type: 'seller' }
+      ];
+      saveOfferHistory();
+    }
+  }
+  function saveOfferHistory() {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(offerHistory));
+  }
+  function addOfferToHistory(label, usd, indx, type) {
+    offerHistory.push({ label, usd, indx, type });
+    saveOfferHistory();
+  }
+  function renderOfferHistory() {
+    const list = document.getElementById('historyList');
+    const summary = document.getElementById('historySummary');
+    if (!list) return;
+    list.innerHTML = offerHistory.map(o => {
+      let diffHtml = '';
+      if (o.type !== 'listing') {
+        const diff = o.usd - ASKING_USD;
+        const diffColor = diff < 0 ? 'var(--green)' : (diff > 0 ? 'var(--red)' : 'var(--text-muted)');
+        const diffText = diff === 0 ? 'at asking price' : `${diff < 0 ? '-' : '+'}$${Math.abs(diff).toFixed(2)} vs asking`;
+        diffHtml = `<div class="history-diff" style="color:${diffColor}">${diffText}</div>`;
+      }
+      return `<div class="history-row">
+        <div><div class="history-label">${o.label}</div>${diffHtml}</div>
+        <div class="history-amount">$${o.usd.toFixed(2)}<br><span style="color:var(--text-muted);font-weight:500;">${o.indx} INDX</span></div>
+      </div>`;
+    }).join('');
+    const offers = offerHistory.filter(o => o.type !== 'listing');
+    if (offers.length) {
+      const best = offers.reduce((a, b) => a.usd < b.usd ? a : b);
+      const pct = Math.round(((ASKING_USD - best.usd) / ASKING_USD) * 100);
+      summary.textContent = pct > 0
+        ? `Best offer so far: $${best.usd.toFixed(2)} (${pct}% below asking)`
+        : `Best offer so far: $${best.usd.toFixed(2)}`;
+    } else {
+      summary.textContent = '';
+    }
+  }
+  function openHistorySheet() {
+    lastFocusedEl = document.activeElement;
+    renderOfferHistory();
+    document.getElementById('historySheet').classList.add('open');
+    trapFocus('historySheet');
+  }
+
+  // ================= GOD MODE: CONFIRM-BEFORE-ACCEPT ESCROW MODAL =================
+  let pendingAccept = null;
+  function openAcceptConfirm(usd, indx) {
+    lastFocusedEl = document.activeElement;
+    document.getElementById('confirmAcceptAmount').textContent = `$${usd.toFixed(2)} · ${indx} INDX`;
+    pendingAccept = { usd, indx };
+    document.getElementById('confirmAcceptSheet').classList.add('open');
+    trapFocus('confirmAcceptSheet');
+  }
+  function confirmAcceptFinal() {
+    closeSheetById('confirmAcceptSheet');
+    if (pendingAccept) {
+      addOfferToHistory('Offer accepted', pendingAccept.usd, pendingAccept.indx, 'accepted');
+      pendingAccept = null;
+    }
+    acceptOffer();
+  }
+
+  // ================= GOD MODE: SHEET ACCESSIBILITY (focus trap, Escape, focus restore) =================
+  let lastFocusedEl = null;
+  function closeSheetById(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('open');
+    if (lastFocusedEl && lastFocusedEl.focus) lastFocusedEl.focus();
+  }
+  function closeAnySheet(e, id) {
+    if (e.target === document.getElementById(id)) closeSheetById(id);
+  }
+  function trapFocus(id) {
+    const sheet = document.getElementById(id);
+    if (!sheet) return;
+    const focusables = sheet.querySelectorAll('button, [href], input, textarea, [tabindex]:not([tabindex="-1"])');
+    if (focusables.length) setTimeout(() => focusables[0].focus(), 50);
+    function handleKey(e) {
+      if (!sheet.classList.contains('open')) { document.removeEventListener('keydown', handleKey); return; }
+      if (e.key === 'Escape') { closeSheetById(id); document.removeEventListener('keydown', handleKey); return; }
+      if (e.key === 'Tab' && focusables.length) {
+        const first = focusables[0], last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    }
+    document.addEventListener('keydown', handleKey);
   }
 
   // Auto scroll to bottom on load
   window.addEventListener('load', () => {
     const msgs = document.getElementById('messages');
     msgs.scrollTop = msgs.scrollHeight;
+    // GOD MODE PATCH: initialize persisted offer history on load
+    loadOfferHistory();
   });
 
   let toastTimer;

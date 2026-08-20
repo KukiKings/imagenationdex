@@ -84,6 +84,26 @@ html,body{background:var(--black);color:var(--text);font-family:-apple-system,Bl
 .asc-meta{font-size:12px;color:var(--text2);margin-bottom:10px;}
 .withdraw-consent-btn{padding:8px 14px;border-radius:10px;background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.2);color:var(--red);font-size:12px;font-weight:700;cursor:pointer;}
 
+/* GOD MODE — persistent sales, filtering, favorites, sale-safety checklist */
+.request-card{position:relative;}
+.fav-btn{position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:50%;background:rgba(9,10,16,0.5);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;color:var(--text2);z-index:2;transition:color 0.2s,border-color 0.2s;}
+.fav-btn.active{color:var(--gold);border-color:var(--gold);}
+.sold-badge{display:inline-block;font-size:11px;font-weight:700;color:var(--muted);background:var(--surface3);border-radius:20px;padding:3px 10px;margin-bottom:8px;}
+.sell-btn.sold{background:var(--surface3);color:var(--muted);cursor:not-allowed;}
+.no-results{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;}
+.saved-item{display:flex;justify-content:space-between;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;}
+.saved-item-name{font-size:13px;font-weight:700;}
+.saved-item-price{font-size:12px;color:var(--gold);font-weight:800;}
+.saved-remove{font-size:11px;color:var(--muted);cursor:pointer;background:none;border:none;}
+.sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.85);z-index:205;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+.sheet-overlay.show{opacity:1;pointer-events:all;}
+.bottom-sheet{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-radius:24px 24px 0 0;padding:24px;width:100%;max-width:430px;margin:0 auto;max-height:75vh;overflow-y:auto;z-index:210;transform:translateY(100%);transition:transform 0.3s;}
+.bottom-sheet.show{transform:translateY(0);}
+.safety-check{display:flex;align-items:flex-start;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;margin:14px 0;cursor:pointer;}
+.safety-check input{width:18px;height:18px;flex-shrink:0;margin-top:1px;accent-color:var(--gold);}
+.safety-check-text{font-size:12px;color:var(--text2);line-height:1.5;}
+.confirm-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
 /* CONFIRM OVERLAY */
 .overlay{position:fixed;inset:0;background:rgba(9,10,16,0.92);z-index:200;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity 0.3s;}
 .overlay.show{opacity:1;pointer-events:all;}
@@ -150,19 +170,22 @@ html,body{background:var(--black);color:var(--text);font-family:-apple-system,Bl
     </div>
 
     <div class="filter-tabs">
-      <div class="ftab active">All Requests</div>
-      <div class="ftab">Best Match</div>
-      <div class="ftab">Health</div>
-      <div class="ftab">Financial</div>
-      <div class="ftab">Location</div>
+      <div class="ftab active" onclick="filterRequests('all',this)">All Requests</div>
+      <div class="ftab" onclick="filterRequests('best',this)">Best Match</div>
+      <div class="ftab" onclick="filterRequests('health',this)">Health</div>
+      <div class="ftab" onclick="filterRequests('financial',this)">Financial</div>
+      <div class="ftab" onclick="filterRequests('location',this)">Location</div>
+      <div class="ftab" onclick="openSavedSheet()">⭐ Saved (<span id="savedCount">0</span>)</div>
     </div>
 
     <div class="requests">
 
       <!-- REQUEST 1 — PERFECT MATCH -->
-      <div class="request-card perfect-match">
+      <div class="request-card perfect-match" data-req-id="req1" data-category="financial location" data-match="98">
+        <button class="fav-btn" data-id="req1" onclick="toggleFavorite('req1', this)">☆</button>
         <div class="rc-header">
           <div class="perfect-badge">⭐ Perfect Match — 98%</div>
+          <div class="sold-badge" id="req1SoldBadge" style="display:none;">✓ Data already sold to this buyer</div>
           <div class="rc-top">
             <div class="rc-buyer">
               <div class="rc-icon">🌏</div>
@@ -190,12 +213,14 @@ html,body{background:var(--black);color:var(--text);font-family:-apple-system,Bl
           <div class="rc-pct">98%</div>
         </div>
         <div class="rc-filled">56 / 200 respondents · 144 spots remaining</div>
-        <button class="sell-btn" onclick="openConfirm('Development Research Org (example)','Remittance Corridor Study',30,'Payment patterns, Pacific region','2 months')">Sell My Data — 30 INDX →</button>
+        <button class="sell-btn" id="req1SellBtn" onclick="openConfirm('req1','Development Research Org (example)','Remittance Corridor Study',30,'Payment patterns, Pacific region','2 months')">Sell My Data — 30 INDX →</button>
       </div>
 
       <!-- REQUEST 2 -->
-      <div class="request-card">
+      <div class="request-card" data-req-id="req2" data-category="financial location" data-match="94">
+        <button class="fav-btn" data-id="req2" onclick="toggleFavorite('req2', this)">☆</button>
         <div class="rc-header">
+          <div class="sold-badge" id="req2SoldBadge" style="display:none;">✓ Data already sold to this buyer</div>
           <div class="rc-top">
             <div class="rc-buyer">
               <div class="rc-icon">🔬</div>
@@ -222,12 +247,14 @@ html,body{background:var(--black);color:var(--text);font-family:-apple-system,Bl
           <div class="rc-pct">94%</div>
         </div>
         <div class="rc-filled">12 / 500 respondents · 488 spots remaining</div>
-        <button class="sell-btn" onclick="openConfirm('Regional University (example)','Pacific Island Consumer Research',40,'Spending patterns, location (Pacific)','3 months')">Sell My Data — 40 INDX →</button>
+        <button class="sell-btn" id="req2SellBtn" onclick="openConfirm('req2','Regional University (example)','Pacific Island Consumer Research',40,'Spending patterns, location (Pacific)','3 months')">Sell My Data — 40 INDX →</button>
       </div>
 
       <!-- REQUEST 3 -->
-      <div class="request-card">
+      <div class="request-card" data-req-id="req3" data-category="" data-match="87">
+        <button class="fav-btn" data-id="req3" onclick="toggleFavorite('req3', this)">☆</button>
         <div class="rc-header">
+          <div class="sold-badge" id="req3SoldBadge" style="display:none;">✓ Data already sold to this buyer</div>
           <div class="rc-top">
             <div class="rc-buyer">
               <div class="rc-icon">📱</div>
@@ -254,12 +281,14 @@ html,body{background:var(--black);color:var(--text);font-family:-apple-system,Bl
           <div class="rc-pct">87%</div>
         </div>
         <div class="rc-filled">234 / 1000 respondents · 766 spots remaining</div>
-        <button class="sell-btn" onclick="openConfirm('Mobile Industry Research Group (example)','Mobile Usage Study',15,'App usage, data consumption','1 month')">Sell My Data — 15 INDX →</button>
+        <button class="sell-btn" id="req3SellBtn" onclick="openConfirm('req3','Mobile Industry Research Group (example)','Mobile Usage Study',15,'App usage, data consumption','1 month')">Sell My Data — 15 INDX →</button>
       </div>
 
       <!-- REQUEST 4 — REQUIRES OPT IN -->
-      <div class="request-card">
+      <div class="request-card" data-req-id="req4" data-category="health location" data-match="71">
+        <button class="fav-btn" data-id="req4" onclick="toggleFavorite('req4', this)">☆</button>
         <div class="rc-header">
+          <div class="sold-badge" id="req4SoldBadge" style="display:none;">✓ Data already sold to this buyer</div>
           <div class="rc-top">
             <div class="rc-buyer">
               <div class="rc-icon">🏥</div>
@@ -287,7 +316,7 @@ html,body{background:var(--black);color:var(--text);font-family:-apple-system,Bl
           <div class="rc-pct">71%</div>
         </div>
         <div class="rc-filled">56 / 200 respondents · 144 spots remaining</div>
-        <button class="sell-btn optin" onclick="openConfirm('Public Health Research Office (example)','Pacific Health Baseline Study',120,'Health indicators (opt-in required)','6 months')">Opt In &amp; Sell — 120 INDX →</button>
+        <button class="sell-btn optin" id="req4SellBtn" onclick="openConfirm('req4','Public Health Research Office (example)','Pacific Health Baseline Study',120,'Health indicators (opt-in required)','6 months')">Opt In &amp; Sell — 120 INDX →</button>
       </div>
 
     </div>
@@ -346,9 +375,23 @@ html,body{background:var(--black);color:var(--text);font-family:-apple-system,Bl
       ✓ <strong>98/2 Law</strong>: 98% goes to you, 2% to the Civilisation Fund.<br>
       ✓ Sale is logged on-chain — <strong>immutable, auditable</strong>.
     </div>
-    <button class="confirm-btn" onclick="confirmSale()">Confirm Sale →</button>
+    <label class="safety-check" id="safetyCheckRow">
+      <input type="checkbox" id="safetyCheckbox" onchange="toggleSafetyCheck()">
+      <span class="safety-check-text">I understand my data is anonymised before transmission and I can withdraw consent at any time from "My Sales".</span>
+    </label>
+    <button class="confirm-btn" id="confirmSaleBtn" disabled onclick="confirmSale()">Confirm Sale →</button>
     <button class="cancel-btn" onclick="document.getElementById('confirmOverlay').classList.remove('show')">Cancel</button>
   </div>
+</div>
+
+<!-- SAVED REQUESTS SHEET -->
+<div class="sheet-overlay" id="savedSheetOverlay" onclick="closeSavedSheet()"></div>
+<div class="bottom-sheet" id="savedSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Saved Requests</div>
+  <div class="sheet-sub">Buy requests you've bookmarked for later. Saving doesn't sell anything.</div>
+  <div id="savedListContainer"></div>
+  <button class="cancel-btn" onclick="closeSavedSheet()">Close</button>
 </div>
 
 <nav class="bottom-nav">
@@ -366,6 +409,150 @@ let pendingSale = {};
 let totalEarned = 0;
 let activeSales = [];
 
+// GOD MODE — persisted sales/sold-state, category filtering, favorites, sale-safety checklist
+const MP_SALES_KEY = 'indx_data-marketplace_sales';
+const MP_EARNED_KEY = 'indx_data-marketplace_earnings';
+const MP_SOLD_KEY = 'indx_data-marketplace_sold_ids';
+const MP_FAV_KEY = 'indx_data-marketplace_favorites';
+
+function mpLoadSales(){
+  try{ return JSON.parse(localStorage.getItem(MP_SALES_KEY) || '[]'); }catch(e){ return []; }
+}
+function mpSaveSales(){
+  localStorage.setItem(MP_SALES_KEY, JSON.stringify(activeSales));
+  localStorage.setItem(MP_EARNED_KEY, String(totalEarned));
+}
+function mpLoadSoldIds(){
+  try{ return JSON.parse(localStorage.getItem(MP_SOLD_KEY) || '[]'); }catch(e){ return []; }
+}
+function mpApplySoldState(reqId){
+  const btn = document.getElementById(reqId + 'SellBtn');
+  const badge = document.getElementById(reqId + 'SoldBadge');
+  if(btn){
+    if(!btn.dataset.originalText) btn.dataset.originalText = btn.textContent;
+    btn.disabled = true;
+    btn.classList.add('sold');
+    btn.textContent = '✓ Data Already Sold';
+  }
+  if(badge){ badge.style.display = 'inline-block'; }
+}
+function mpMarkSold(reqId){
+  const sold = mpLoadSoldIds();
+  if(!sold.includes(reqId)){ sold.push(reqId); localStorage.setItem(MP_SOLD_KEY, JSON.stringify(sold)); }
+  mpApplySoldState(reqId);
+}
+function mpUnmarkSold(reqId){
+  const sold = mpLoadSoldIds().filter(id=>id!==reqId);
+  localStorage.setItem(MP_SOLD_KEY, JSON.stringify(sold));
+  const btn = document.getElementById(reqId + 'SellBtn');
+  const badge = document.getElementById(reqId + 'SoldBadge');
+  if(btn){
+    btn.disabled = false;
+    btn.classList.remove('sold');
+    if(btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
+  }
+  if(badge){ badge.style.display = 'none'; }
+}
+function mpRestoreSoldState(){
+  mpLoadSoldIds().forEach(mpApplySoldState);
+}
+
+function filterRequests(category, el){
+  document.querySelectorAll('.filter-tabs .ftab').forEach(t=>t.classList.remove('active'));
+  if(el) el.classList.add('active');
+  const cards = document.querySelectorAll('.request-card');
+  let visible = 0;
+  cards.forEach(card=>{
+    const cats = (card.getAttribute('data-category') || '').split(' ');
+    const match = parseInt(card.getAttribute('data-match') || '0', 10);
+    let show = false;
+    if(category === 'all') show = true;
+    else if(category === 'best') show = match >= 90;
+    else show = cats.includes(category);
+    card.style.display = show ? '' : 'none';
+    if(show) visible++;
+  });
+  const countEl = document.querySelector('.mini-stat .ms-val');
+  if(countEl) countEl.textContent = String(visible);
+  let noResults = document.getElementById('noResultsMsg');
+  if(visible === 0){
+    if(!noResults){
+      noResults = document.createElement('div');
+      noResults.id = 'noResultsMsg';
+      noResults.className = 'no-results';
+      noResults.textContent = 'No buy requests match this filter right now. Try "All Requests".';
+      document.querySelector('.requests').appendChild(noResults);
+    }
+  } else if(noResults){
+    noResults.remove();
+  }
+}
+
+function toggleFavorite(reqId, btn){
+  let favs = JSON.parse(localStorage.getItem(MP_FAV_KEY) || '[]');
+  if(favs.includes(reqId)){
+    favs = favs.filter(id=>id!==reqId);
+    btn.classList.remove('active');
+    btn.textContent = '☆';
+    showToast('Removed from Saved. Standing by.');
+  } else {
+    favs.push(reqId);
+    btn.classList.add('active');
+    btn.textContent = '★';
+    showToast('⭐ Saved for later. Standing by.');
+  }
+  localStorage.setItem(MP_FAV_KEY, JSON.stringify(favs));
+  mpUpdateSavedCount();
+}
+function mpUpdateSavedCount(){
+  const favs = JSON.parse(localStorage.getItem(MP_FAV_KEY) || '[]');
+  const el = document.getElementById('savedCount');
+  if(el) el.textContent = String(favs.length);
+}
+function mpRestoreFavorites(){
+  const favs = JSON.parse(localStorage.getItem(MP_FAV_KEY) || '[]');
+  favs.forEach(reqId=>{
+    const btn = document.querySelector('.fav-btn[data-id="'+reqId+'"]');
+    if(btn){ btn.classList.add('active'); btn.textContent = '★'; }
+  });
+  mpUpdateSavedCount();
+}
+function openSavedSheet(){
+  const favs = JSON.parse(localStorage.getItem(MP_FAV_KEY) || '[]');
+  const container = document.getElementById('savedListContainer');
+  if(favs.length === 0){
+    container.innerHTML = '<div class="empty-state"><div class="es-icon">⭐</div><div class="es-title">No saved requests yet</div><div class="es-sub">Tap the star on any buy request to save it for later.</div></div>';
+  } else {
+    container.innerHTML = favs.map(reqId=>{
+      const card = document.querySelector('.request-card[data-req-id="'+reqId+'"]');
+      const name = card ? card.querySelector('.rc-name').textContent : reqId;
+      const price = card ? card.querySelector('.rc-price-val').textContent : '';
+      return '<div class="saved-item"><div><div class="saved-item-name">'+name+'</div><div class="saved-item-price">'+price+'</div></div><button class="saved-remove" onclick="mpRemoveSaved(\''+reqId+'\')">Remove</button></div>';
+    }).join('');
+  }
+  document.getElementById('savedSheet').classList.add('show');
+  document.getElementById('savedSheetOverlay').classList.add('show');
+}
+function closeSavedSheet(){
+  document.getElementById('savedSheet').classList.remove('show');
+  document.getElementById('savedSheetOverlay').classList.remove('show');
+}
+function mpRemoveSaved(reqId){
+  let favs = JSON.parse(localStorage.getItem(MP_FAV_KEY) || '[]');
+  favs = favs.filter(id=>id!==reqId);
+  localStorage.setItem(MP_FAV_KEY, JSON.stringify(favs));
+  const btn = document.querySelector('.fav-btn[data-id="'+reqId+'"]');
+  if(btn){ btn.classList.remove('active'); btn.textContent = '☆'; }
+  mpUpdateSavedCount();
+  openSavedSheet();
+}
+
+function toggleSafetyCheck(){
+  const box = document.getElementById('safetyCheckbox');
+  const btn = document.getElementById('confirmSaleBtn');
+  if(btn) btn.disabled = !box.checked;
+}
+
 function showTab(tab, el) {
   document.querySelectorAll('.ttab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
@@ -373,8 +560,9 @@ function showTab(tab, el) {
   document.getElementById('mineTab').style.display = tab==='mine' ? 'block' : 'none';
 }
 
-function openConfirm(buyer, study, amount, data, duration) {
-  pendingSale = {buyer, study, amount, data, duration};
+// GOD MODE PATCH — accept reqId to track sold state, and reset the safety checklist each time the sheet opens
+function openConfirm(reqId, buyer, study, amount, data, duration) {
+  pendingSale = {reqId, buyer, study, amount, data, duration};
   const receive = (amount * 0.98).toFixed(2);
   const fund = (amount * 0.02).toFixed(2);
   document.getElementById('cBuyer').textContent = buyer;
@@ -383,11 +571,18 @@ function openConfirm(buyer, study, amount, data, duration) {
   document.getElementById('cDuration').textContent = duration;
   document.getElementById('cReceive').textContent = receive + ' INDX (~$' + (receive * INDX_PRICE).toFixed(2) + ' USD)';
   document.getElementById('cFund').textContent = fund + ' INDX';
+  const safetyBox = document.getElementById('safetyCheckbox');
+  const confirmBtn = document.getElementById('confirmSaleBtn');
+  if(safetyBox) safetyBox.checked = false;
+  if(confirmBtn) confirmBtn.disabled = true;
   document.getElementById('confirmOverlay').classList.add('show');
 }
 
+// GOD MODE PATCH — guard on the safety checklist, destructure reqId, persist to localStorage, mark the card sold
 function confirmSale() {
-  const {buyer, study, amount, data, duration} = pendingSale;
+  const confirmBtn = document.getElementById('confirmSaleBtn');
+  if(confirmBtn && confirmBtn.disabled) return;
+  const {reqId, buyer, study, amount, data, duration} = pendingSale;
   const receive = amount * 0.98;
   document.getElementById('confirmOverlay').classList.remove('show');
   // PREVIEW ONLY — no real buyer, no settlement backend. Do not credit
@@ -396,8 +591,10 @@ function confirmSale() {
   totalEarned += receive;
   document.getElementById('totalEarnings').textContent = totalEarned.toFixed(2) + ' INDX (preview)';
   document.getElementById('totalEarningsUsd').textContent = '~$' + (totalEarned * INDX_PRICE).toFixed(2) + ' USD — preview, not yet real';
-  activeSales.push({buyer, study, amount: receive, data, duration});
+  activeSales.push({reqId, buyer, study, amount: receive, data, duration});
   renderMySales();
+  mpSaveSales();
+  if(reqId) mpMarkSold(reqId);
 }
 
 function renderMySales() {
@@ -415,14 +612,32 @@ function renderMySales() {
   `).join('');
 }
 
+// GOD MODE PATCH — also clear the persisted preview sale and re-enable the request card for selling again
 function withdrawConsent(i) {
+  const removed = activeSales[i];
   activeSales.splice(i, 1);
   renderMySales();
+  mpSaveSales();
+  if(removed && removed.reqId) mpUnmarkSold(removed.reqId);
   showToast('✓ Consent withdrawn. Data access terminated immediately. Standing by.');
 }
 
 let toastTimer;
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),3200);}
+
+document.addEventListener('DOMContentLoaded', function(){
+  // restore persisted preview sales + earnings from earlier in this browser
+  activeSales = mpLoadSales();
+  totalEarned = parseFloat(localStorage.getItem(MP_EARNED_KEY) || '0');
+  if(activeSales.length > 0){
+    renderMySales();
+    document.getElementById('totalEarnings').textContent = totalEarned.toFixed(2) + ' INDX (preview)';
+    document.getElementById('totalEarningsUsd').textContent = '~$' + (totalEarned * INDX_PRICE).toFixed(2) + ' USD — preview, not yet real';
+  }
+  mpRestoreSoldState();
+  mpRestoreFavorites();
+  filterRequests('all', document.querySelector('.filter-tabs .ftab.active'));
+});
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

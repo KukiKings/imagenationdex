@@ -59,6 +59,35 @@
     .step-txt.active{color:var(--text);}
     .network-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;margin-bottom:8px;}
     #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+    /* GOD MODE: rate ticker, history, step progress, confirm sheet */
+    .rate-ticker{display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:var(--text-muted);margin-top:10px;}
+    .rate-ticker .rt-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:rtPulse 1.5s ease-in-out infinite;}
+    @keyframes rtPulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+    .rate-ticker .rt-time{color:var(--cyan);font-weight:700;}
+    .history-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-top:10px;}
+    .history-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+    .history-title{font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;}
+    .history-clear{font-size:11px;color:var(--red);background:none;border:none;cursor:pointer;font-weight:700;}
+    .history-empty{font-size:12px;color:var(--text-dim);padding:6px 0;}
+    .history-item{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+    .history-item:last-child{border-bottom:none;}
+    .hi-main{color:var(--text);font-weight:700;}
+    .hi-time{color:var(--text-dim);font-size:10.5px;}
+    .progress-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-top:12px;display:none;}
+    .progress-card.show{display:block;}
+    .sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.7);z-index:90;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+    .sheet-overlay.show{opacity:1;pointer-events:auto;}
+    .bottom-sheet{position:fixed;left:0;right:0;bottom:0;max-width:430px;margin:0 auto;background:var(--surface2);border:1px solid var(--border);border-radius:20px 20px 0 0;padding:20px;transform:translateY(100%);transition:transform 0.28s cubic-bezier(.32,.72,0,1);z-index:91;}
+    .bottom-sheet.show{transform:translateY(0);}
+    .bs-handle{width:36px;height:4px;border-radius:4px;background:var(--surface3);margin:0 auto 14px;}
+    .bs-title{font-size:16px;font-weight:800;margin-bottom:14px;}
+    .bs-row{display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+    .bs-row:last-of-type{border-bottom:none;}
+    .bs-lbl{color:var(--text-muted);}
+    .bs-actions{display:flex;gap:10px;margin-top:16px;}
+    .bs-btn{flex:1;padding:14px;border-radius:12px;border:none;font-size:14px;font-weight:800;cursor:pointer;}
+    .bs-btn.cancel{background:var(--surface3);color:var(--text);}
+    .bs-btn.confirm{background:linear-gradient(135deg,var(--blue),var(--purple));color:#fff;}
   </style>
 </head>
 <body>
@@ -77,6 +106,9 @@
         <div class="bh-time">~3 min</div>
         <div class="bh-sub">Not yet connected to Wormhole or LayerZero</div>
       </div>
+
+      <!-- GOD MODE: live rate ticker -->
+      <div class="rate-ticker" id="rateTicker"><span class="rt-dot"></span><span>Simulated rates refresh in <span class="rt-time" id="rateCountdown">15s</span></span></div>
 
       <!-- FROM / TO -->
       <div style="font-size:12px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;">From</div>
@@ -131,7 +163,17 @@
         <div class="fee-row"><div class="fee-lbl">You receive (est.)</div><div id="finalReceive" style="color:var(--green);font-weight:700;"></div></div>
       </div>
 
-      <button class="btn-bridge" id="bridgeBtn" onclick="doBridge()" disabled>Save Preview (not a real bridge)</button>
+      <button class="btn-bridge" id="bridgeBtn" onclick="openConfirmSheet()" disabled>Save Preview (not a real bridge)</button>
+
+      <!-- GOD MODE: animated step progress (simulated, no real bridge occurs) -->
+      <div class="progress-card" id="progressCard">
+        <div class="fee-title">Simulated bridge steps</div>
+        <div class="steps" id="progressSteps">
+          <div class="step" id="pStep1"><div class="step-dot dot-pending" id="pDot1">1</div><div class="step-txt" id="pTxt1">Lock on source chain (simulated)</div></div>
+          <div class="step" id="pStep2"><div class="step-dot dot-pending" id="pDot2">2</div><div class="step-txt" id="pTxt2">Relay via Wormhole/LayerZero (simulated)</div></div>
+          <div class="step" id="pStep3"><div class="step-dot dot-pending" id="pDot3">3</div><div class="step-txt" id="pTxt3">Save preview on IN$DEX</div></div>
+        </div>
+      </div>
 
       <!-- PENDING TX -->
       <div style="font-size:12px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.07em;margin-top:20px;margin-bottom:10px;">Recent bridge</div>
@@ -143,11 +185,129 @@
         </div>
         <div style="font-size:12px;color:var(--gold);margin-top:6px;">Saved as a preview — no real cross-chain transaction was sent, nothing was credited.</div>
       </div>
+
+      <!-- GOD MODE: bridge preview history -->
+      <div class="history-card">
+        <div class="history-head">
+          <div class="history-title">Preview history</div>
+          <button class="history-clear" onclick="clearBridgeHistory()">Clear</button>
+        </div>
+        <div id="historyList"><div class="history-empty">No saved previews yet.</div></div>
+      </div>
     </div>
   </div>
 </div>
+
+<!-- GOD MODE: confirm sheet -->
+<div class="sheet-overlay" id="confirmOverlay" onclick="closeConfirmSheet()"></div>
+<div class="bottom-sheet" id="confirmSheet" role="dialog" aria-modal="true" aria-labelledby="confirmSheetTitle">
+  <div class="bs-handle"></div>
+  <div class="bs-title" id="confirmSheetTitle">Confirm preview</div>
+  <div class="bs-row"><div class="bs-lbl">You send</div><div id="csSend"></div></div>
+  <div class="bs-row"><div class="bs-lbl">You receive (est.)</div><div id="csReceive" style="color:var(--green);font-weight:700;"></div></div>
+  <div class="bs-row"><div class="bs-lbl">Fee</div><div style="color:var(--gold);">0.1% + $2.80 gas</div></div>
+  <div style="font-size:11.5px;color:var(--text-muted);margin-top:6px;">This only saves a local preview. No real bridge protocol is connected — nothing moves or is credited.</div>
+  <div class="bs-actions">
+    <button class="bs-btn cancel" onclick="closeConfirmSheet()">Cancel</button>
+    <button class="bs-btn confirm" id="csConfirmBtn" onclick="confirmBridge()">Confirm</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 <script>
+// ── GOD MODE: rate ticker, preview history, step progress, confirm sheet ──
+const INDX_PRICE_USD = 0.24;
+let rateSeconds = 15;
+function tickRateCountdown(){
+  rateSeconds--;
+  if (rateSeconds <= 0) {
+    rateSeconds = 15;
+    assets.forEach(a=>{ a.usd = a.usd * (1 + (Math.random()*0.006-0.003)); });
+    updateEstimate();
+  }
+  const el = document.getElementById('rateCountdown');
+  if (el) el.textContent = rateSeconds + 's';
+}
+function loadBridgeHistory(){
+  try { return JSON.parse(localStorage.getItem('indx_bridge_history') || '[]'); } catch(e) { return []; }
+}
+function renderBridgeHistory(){
+  const list = document.getElementById('historyList');
+  if (!list) return;
+  const hist = loadBridgeHistory();
+  if (!hist.length) { list.innerHTML = '<div class="history-empty">No saved previews yet.</div>'; return; }
+  list.innerHTML = hist.slice(0,10).map(h=>{
+    const d = new Date(h.ts || Date.now());
+    return '<div class="history-item"><div class="hi-main">'+h.sendAmt+' '+h.sendSym+' → '+h.receiveAmt+' INDX</div><div class="hi-time">'+d.toLocaleDateString()+'</div></div>';
+  }).join('');
+}
+function saveBridgeHistoryEntry(entry){
+  const hist = loadBridgeHistory();
+  hist.unshift(entry);
+  localStorage.setItem('indx_bridge_history', JSON.stringify(hist.slice(0,20)));
+  renderBridgeHistory();
+}
+function clearBridgeHistory(){
+  localStorage.setItem('indx_bridge_history', '[]');
+  renderBridgeHistory();
+  showToast('Preview history cleared');
+}
+let bridgeLastFocused = null;
+function openConfirmSheet(){
+  const amt = parseFloat(document.getElementById('sendAmt').value) || 0;
+  if (amt <= 0) { showToast('Enter an amount first'); return; }
+  const a = assets[assetIdx];
+  const indxVal = (amt * a.usd * 0.95) / INDX_PRICE_USD;
+  document.getElementById('csSend').textContent = amt + ' ' + a.name;
+  document.getElementById('csReceive').textContent = indxVal.toFixed(2) + ' INDX';
+  bridgeLastFocused = document.activeElement;
+  document.getElementById('confirmOverlay').classList.add('show');
+  document.getElementById('confirmSheet').classList.add('show');
+  const confirmBtn = document.getElementById('csConfirmBtn');
+  if (confirmBtn) confirmBtn.focus();
+  document.addEventListener('keydown', confirmSheetKeyHandler);
+}
+function closeConfirmSheet(){
+  document.getElementById('confirmOverlay').classList.remove('show');
+  document.getElementById('confirmSheet').classList.remove('show');
+  document.removeEventListener('keydown', confirmSheetKeyHandler);
+  if (bridgeLastFocused && bridgeLastFocused.focus) bridgeLastFocused.focus();
+}
+function confirmSheetKeyHandler(e){
+  if (e.key === 'Escape') closeConfirmSheet();
+}
+function confirmBridge(){
+  closeConfirmSheet();
+  runBridgeProgress(function(){ doBridge(); });
+}
+function runBridgeProgress(onDone){
+  const card = document.getElementById('progressCard');
+  if (!card) { onDone(); return; }
+  card.classList.add('show');
+  for (let n=1;n<=3;n++){
+    const dot = document.getElementById('pDot'+n);
+    const txt = document.getElementById('pTxt'+n);
+    if (dot) dot.className = 'step-dot dot-pending';
+    if (txt) txt.classList.remove('active');
+    if (dot) dot.textContent = n;
+  }
+  let i = 0;
+  function advance(){
+    if (i > 0) {
+      const prevDot = document.getElementById('pDot'+i);
+      if (prevDot) { prevDot.className = 'step-dot dot-done'; prevDot.textContent = '✓'; }
+    }
+    if (i >= 3) { onDone(); return; }
+    i++;
+    const dot = document.getElementById('pDot'+i);
+    const txt = document.getElementById('pTxt'+i);
+    if (dot) dot.className = 'step-dot dot-active';
+    if (txt) txt.classList.add('active');
+    setTimeout(advance, 650);
+  }
+  advance();
+}
+// ── end GOD MODE block ──
 const chains = [{ico:'Ξ',name:'Ethereum',rate:6240},{ico:'B',name:'BNB Chain',rate:420},{ico:'₿',name:'Bitcoin',rate:98000},{ico:'P',name:'Polygon',rate:0.68}];
 const assets = [{ico:'Ξ',name:'ETH',usd:6240},{ico:'B',name:'BNB',usd:420},{ico:'₿',name:'wBTC',usd:98000},{ico:'U',name:'USDC',usd:1.00}];
 let assetIdx=0;
@@ -182,11 +342,16 @@ function doBridge(){
   const amt=parseFloat(document.getElementById('sendAmt').value)||0;
   const indxVal=(amt*a.usd*0.95)/0.24;
   if (amt<=0) { showToast('Enter an amount first'); return; }
-  localStorage.setItem('indx_bridge_preview', JSON.stringify({ sendAmt: amt, sendSym: a.name, receiveAmt: indxVal.toFixed(2), ts: Date.now() }));
+  const entry = { sendAmt: amt, sendSym: a.name, receiveAmt: indxVal.toFixed(2), ts: Date.now() };
+  localStorage.setItem('indx_bridge_preview', JSON.stringify(entry));
+  // GOD MODE PATCH
+  saveBridgeHistoryEntry(entry);
   showToast('Saved as a preview — no real bridge protocol is connected, nothing was sent or credited');
   renderBridgePreview();
 }
 renderBridgePreview();
+renderBridgeHistory();
+setInterval(tickRateCountdown, 1000);
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}
 </script>
 <script src="siindex-speak-core.js"></script>

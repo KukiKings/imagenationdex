@@ -76,6 +76,25 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 
 /* SUCCESS */
 .success-overlay{display:none;position:fixed;inset:0;background:rgba(9,10,16,0.97);z-index:200;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center;max-width:430px;margin:0 auto;}
+
+/* GOD MODE: PENDING PROPOSALS */
+.proposals-section{margin:0 16px 16px;background:var(--surface2);border:1px solid rgba(0,229,160,0.15);border-radius:16px;padding:14px 16px;display:none;}
+.proposals-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--green);margin-bottom:10px;}
+.proposal-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid rgba(255,255,255,0.05);}
+.proposal-item:first-of-type{border-top:none;}
+.proposal-info{display:flex;flex-direction:column;gap:2px;}
+.proposal-name{font-size:13px;font-weight:700;color:var(--text);}
+.proposal-split{font-size:11px;color:var(--muted);}
+.proposal-cancel{background:var(--surface3);border:1px solid rgba(255,77,109,0.2);color:var(--red);font-size:11px;font-weight:700;padding:6px 10px;border-radius:10px;cursor:pointer;flex-shrink:0;}
+
+/* GOD MODE: TOAST */
+.toast{position:fixed;left:16px;right:16px;bottom:24px;max-width:398px;margin:0 auto;background:var(--surface3);border:1px solid rgba(0,212,255,0.2);border-radius:14px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;z-index:300;opacity:0;transform:translateY(20px);pointer-events:none;transition:opacity 0.25s,transform 0.25s;}
+.toast.show{opacity:1;transform:translateY(0);pointer-events:auto;}
+.toast span{font-size:13px;color:var(--text2);}
+.toast-action{background:none;border:none;color:var(--cyan);font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0;}
+
+/* GOD MODE: ACCESSIBILITY */
+.split-opt:focus,.btn-accept:focus,.btn-decline:focus,.btn-confirm:focus,.btn-cancel:focus,.proposal-cancel:focus{outline:2px solid var(--cyan);outline-offset:2px;}
 </style>
 </head>
 <body>
@@ -97,10 +116,16 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
   </div>
 </div>
 
+<!-- GOD MODE: PENDING PROPOSALS TRACKER -->
+<div class="proposals-section" id="proposalsSection">
+  <div class="proposals-title">Pending Proposals</div>
+  <div id="proposalsList"></div>
+</div>
+
 <!-- MATCH 1 — FEATURED -->
 <div class="match-header">
   <div class="match-title">Your Top Match This Week</div>
-  <div class="match-refresh">↻ Refreshes Monday</div>
+  <div class="match-refresh" id="matchRefreshTimer">↻ Refreshes Monday</div>
 </div>
 
 <div class="match-card featured">
@@ -225,14 +250,14 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 
 <!-- COLLAB SETUP SHEET -->
 <div class="sheet-overlay" id="collabSheet" onclick="closeSheet(event)">
-  <div class="sheet">
-    <div class="sheet-title">Propose a Collab</div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet-title" id="sheetTitle">Propose a Collab</div>
     <div class="sheet-sub" id="sheetSub">Set the revenue split with your collaborator. Locked at publish — immutable on-chain.</div>
     <div class="split-label">Revenue Split</div>
     <div class="split-options">
-      <div class="split-opt active" onclick="setSplit(this,'50','50')">50 / 50</div>
-      <div class="split-opt" onclick="setSplit(this,'60','40')">60 / 40</div>
-      <div class="split-opt" onclick="setSplit(this,'70','30')">70 / 30</div>
+      <div class="split-opt active" tabindex="0" role="button" onclick="setSplit(this,'50','50')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setSplit(this,'50','50');}">50 / 50</div>
+      <div class="split-opt" tabindex="0" role="button" onclick="setSplit(this,'60','40')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setSplit(this,'60','40');}">60 / 40</div>
+      <div class="split-opt" tabindex="0" role="button" onclick="setSplit(this,'70','30')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setSplit(this,'70','30');}">70 / 30</div>
     </div>
     <div class="split-preview">
       <div class="split-row"><span class="split-row-label">Combined 98% to creators</span><span class="split-row-val">98 INDX per 100</span></div>
@@ -257,15 +282,150 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
   <a href="sovereign-social.html" style="display:block;width:100%;padding:14px;border-radius:14px;background:linear-gradient(135deg,var(--blue),var(--purple));color:#fff;font-size:15px;font-weight:700;text-decoration:none;text-align:center;">Back to Sovereign Social</a>
 </div>
 
+<!-- GOD MODE: TOAST -->
+<div class="toast" id="toast">
+  <span id="toastMsg"></span>
+  <button class="toast-action" id="toastAction" style="display:none;"></button>
+</div>
+
 <script>
 let currentTarget='';
 let currentSplitA=50, currentSplitB=50;
+const INDX_PRICE_USD = 0.24;
+
+// GOD MODE: TOAST
+function showToast(msg,type,actionLabel,actionFn){
+  const t=document.getElementById('toast');
+  const msgEl=document.getElementById('toastMsg');
+  const actionBtn=document.getElementById('toastAction');
+  if(!t||!msgEl||!actionBtn) return;
+  msgEl.textContent=msg;
+  if(actionLabel && actionFn){
+    actionBtn.textContent=actionLabel;
+    actionBtn.style.display='inline-block';
+    actionBtn.onclick=function(){ actionFn(); t.classList.remove('show'); };
+  } else {
+    actionBtn.style.display='none';
+    actionBtn.onclick=null;
+  }
+  t.classList.add('show');
+  clearTimeout(window._collabToastTimer);
+  window._collabToastTimer=setTimeout(function(){ t.classList.remove('show'); },4000);
+}
+
+// GOD MODE: LIVE MATCH-REFRESH COUNTDOWN
+function getNextMondayRefresh(){
+  const now=new Date();
+  const day=now.getDay();
+  let daysUntil=(8-day)%7;
+  if(daysUntil===0) daysUntil=7;
+  return new Date(now.getFullYear(),now.getMonth(),now.getDate()+daysUntil,0,0,0,0);
+}
+function updateRefreshCountdown(){
+  const el=document.getElementById('matchRefreshTimer');
+  if(!el) return;
+  const diff=Math.max(0, getNextMondayRefresh()-new Date());
+  const d=Math.floor(diff/86400000);
+  const h=Math.floor((diff%86400000)/3600000);
+  const m=Math.floor((diff%3600000)/60000);
+  el.textContent='↻ Refreshes in '+d+'d '+h+'h '+m+'m';
+}
+
+// GOD MODE: PENDING PROPOSALS TRACKER (localStorage-backed)
+const COLLAB_PROPOSALS_KEY='indx_collabmatch_proposals';
+function getProposals(){
+  try{ return JSON.parse(localStorage.getItem(COLLAB_PROPOSALS_KEY) || '[]'); }
+  catch(e){ return []; }
+}
+function saveProposals(list){
+  localStorage.setItem(COLLAB_PROPOSALS_KEY, JSON.stringify(list || []));
+}
+function addProposal(name,splitA,splitB){
+  const list=getProposals();
+  list.unshift({name:name, splitA:splitA, splitB:splitB, sentAt:Date.now(), expiresAt:Date.now()+48*3600000});
+  saveProposals(list);
+  renderProposals();
+}
+function cancelProposal(idx){
+  const list=getProposals();
+  list.splice(idx,1);
+  saveProposals(list);
+  renderProposals();
+  showToast('Proposal cancelled', 'info');
+}
+function renderProposals(){
+  const wrap=document.getElementById('proposalsSection');
+  const listEl=document.getElementById('proposalsList');
+  if(!wrap||!listEl) return;
+  let list=getProposals();
+  const now=Date.now();
+  const active=list.filter(function(p){ return p.expiresAt>now; });
+  if(active.length!==list.length){ saveProposals(active); list=active; }
+  if(list.length===0){ wrap.style.display='none'; listEl.innerHTML=''; return; }
+  wrap.style.display='block';
+  listEl.innerHTML=list.map(function(p,i){
+    const remain=p.expiresAt-now;
+    const h=Math.max(0, Math.floor(remain/3600000));
+    const m=Math.max(0, Math.floor((remain%3600000)/60000));
+    return '<div class="proposal-item"><div class="proposal-info"><span class="proposal-name">'+p.name+'</span><span class="proposal-split">'+p.splitA+'/'+p.splitB+' split · expires in '+h+'h '+m+'m</span></div><button class="proposal-cancel" onclick="cancelProposal('+i+')">Cancel</button></div>';
+  }).join('');
+}
+
+// GOD MODE: DECLINE PERSISTENCE + UNDO SAFETY NET
+const COLLAB_DECLINED_KEY='indx_collabmatch_declined';
+function getDeclined(){
+  try{ return JSON.parse(localStorage.getItem(COLLAB_DECLINED_KEY) || '[]'); }
+  catch(e){ return []; }
+}
+function persistDecline(name){
+  const list=getDeclined();
+  if(list.indexOf(name)===-1){ list.push(name); localStorage.setItem(COLLAB_DECLINED_KEY, JSON.stringify(list)); }
+}
+function undoDecline(name,card){
+  const list=getDeclined().filter(function(n){ return n!==name; });
+  localStorage.setItem(COLLAB_DECLINED_KEY, JSON.stringify(list));
+  if(card){ card.style.opacity='1'; card.style.pointerEvents='auto'; }
+  showToast(name+' restored', 'success');
+}
+function applyStoredDeclines(){
+  const list=getDeclined();
+  if(list.length===0) return;
+  document.querySelectorAll('.match-card').forEach(function(card){
+    const nameEl=card.querySelector('.match-name');
+    if(nameEl && list.indexOf(nameEl.textContent)!==-1){
+      card.style.opacity='0.3';
+      card.style.pointerEvents='none';
+    }
+  });
+}
+
+// GOD MODE: BOTTOM SHEET ACCESSIBILITY (focus trap + Escape-to-close)
+function trapSheetFocus(e){
+  const sheet=document.getElementById('collabSheet');
+  if(!sheet || sheet.style.display!=='flex') return;
+  if(e.key==='Escape'){
+    sheet.style.display='none';
+    return;
+  }
+  if(e.key!=='Tab') return;
+  const focusable=sheet.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+  if(focusable.length===0) return;
+  const first=focusable[0], last=focusable[focusable.length-1];
+  if(e.shiftKey && document.activeElement===first){
+    e.preventDefault(); last.focus();
+  } else if(!e.shiftKey && document.activeElement===last){
+    e.preventDefault(); first.focus();
+  }
+}
 
 function openCollabSheet(name){
   currentTarget=name;
   document.getElementById('sheetSub').textContent='Set your revenue split with '+name+'. Locked at publish — immutable on-chain.';
   document.getElementById('collabTarget').textContent=name;
   document.getElementById('collabSheet').style.display='flex';
+  // GOD MODE PATCH
+  const firstFocusable=document.querySelector('#collabSheet .split-opt');
+  if(firstFocusable) setTimeout(function(){ firstFocusable.focus(); }, 60);
 }
 
 function closeSheet(e){
@@ -288,13 +448,30 @@ function confirmCollab(){
   document.getElementById('successMsg').textContent=
     '"Done. Proposal sent to '+currentTarget+'. I\'ve introduced you both. If they accept, I\'ll set up the revenue split on-chain. Standing by."';
   document.getElementById('successOverlay').style.display='flex';
+  // GOD MODE PATCH
+  addProposal(currentTarget, currentSplitA, currentSplitB);
 }
 
 function declineMatch(btn){
   const card=btn.closest('.match-card');
+  const nameEl=card.querySelector('.match-name');
+  const name=nameEl ? nameEl.textContent : '';
   card.style.opacity='0.3';
   card.style.pointerEvents='none';
+  // GOD MODE PATCH
+  persistDecline(name);
+  showToast(name+' declined', 'info', 'Undo', function(){ undoDecline(name,card); });
 }
+
+// GOD MODE: initial render + live updates
+document.addEventListener('DOMContentLoaded', function(){
+  renderProposals();
+  applyStoredDeclines();
+  updateRefreshCountdown();
+  setInterval(updateRefreshCountdown, 60000);
+  setInterval(renderProposals, 60000);
+  document.addEventListener('keydown', trapSheetFocus);
+});
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

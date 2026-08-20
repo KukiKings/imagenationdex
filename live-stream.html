@@ -83,6 +83,36 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 .stat-item:last-child{border-right:none;}
 .stat-val{font-size:14px;font-weight:800;color:var(--text);}
 .stat-label{font-size:10px;color:var(--muted);}
+
+/* GOD MODE ADDITIONS — live USD, history sheet, smart default, confirm safety */
+.history-btn{width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,0.5);border:none;color:var(--text);display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex-shrink:0;}
+.usd-pulse{animation:usd-flash 0.6s ease-out;}
+@keyframes usd-flash{0%{color:var(--green);transform:scale(1.18);}100%{color:var(--text);transform:scale(1);}}
+
+.sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.7);backdrop-filter:blur(4px);z-index:200;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+.sheet-overlay.active{opacity:1;pointer-events:auto;}
+.bottom-sheet{position:fixed;left:0;right:0;bottom:0;max-width:430px;margin:0 auto;background:var(--surface2);border-radius:20px 20px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom));transform:translateY(100%);transition:transform 0.3s cubic-bezier(.32,.72,0,1);z-index:201;max-height:70vh;overflow-y:auto;}
+.bottom-sheet.active{transform:translateY(0);}
+.sheet-handle{width:36px;height:4px;background:var(--surface3);border-radius:2px;margin:0 auto 14px;}
+.sheet-title{font-size:15px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+.sheet-close{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1;}
+
+.history-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.06);font-size:12px;}
+.history-empty{text-align:center;color:var(--muted);font-size:12px;padding:24px 0;}
+.history-clear-btn{width:100%;margin-top:12px;padding:10px;border-radius:10px;background:var(--surface3);border:1px solid rgba(255,77,109,0.3);color:var(--red);font-weight:700;font-size:12px;cursor:pointer;}
+
+.confirm-amount{font-size:26px;font-weight:800;text-align:center;margin:12px 0 4px;background:linear-gradient(135deg,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.confirm-sub{text-align:center;font-size:11px;color:var(--muted);}
+.confirm-actions{display:flex;gap:10px;margin-top:18px;}
+.confirm-btn{flex:1;padding:12px;border-radius:12px;border:none;font-weight:700;font-size:13px;cursor:pointer;}
+.confirm-cancel{background:var(--surface3);color:var(--text2);}
+.confirm-send{background:linear-gradient(135deg,var(--cyan),var(--blue));color:#000;}
+
+.sov-btn.last-used{border-color:var(--gold);box-shadow:0 0 0 1px rgba(255,184,0,0.35);}
+.last-sent-tag{display:block;font-size:8px;color:var(--gold);font-weight:700;margin-top:2px;}
+
+.god-toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);background:var(--surface3);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:10px 16px;font-size:12px;color:var(--text);opacity:0;transition:all 0.25s;z-index:300;max-width:380px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.4);pointer-events:none;}
+.god-toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
 </style>
 </head>
 <body>
@@ -101,7 +131,10 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
     <a href="pacific-first.html" class="back-btn">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
     </a>
-    <div class="viewer-count"><div class="viewer-dot"></div><span id="viewerCount">1,284</span> watching</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="viewer-count"><div class="viewer-dot"></div><span id="viewerCount">1,284</span> watching</div>
+      <button class="history-btn" onclick="openHistorySheet()" aria-label="My SovToken history">🕐</button>
+    </div>
   </div>
 
   <!-- PINNED MESSAGE -->
@@ -129,7 +162,7 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
     <div class="stat-label">SovTokens</div>
   </div>
   <div class="stat-item">
-    <div class="stat-val">≈ $2.98</div>
+    <div class="stat-val" id="usdValue">≈ $2.98</div>
     <div class="stat-label">USD value</div>
   </div>
   <div class="stat-item">
@@ -173,12 +206,12 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
       <span class="sov-name">Aloha</span>
       <span class="sov-indx">10 INDX</span>
     </div>
-    <div class="sov-btn" onclick="sendSovToken('Sovereign','👑',50,'rgba(255,184,0,0.2)','sovereign')">
+    <div class="sov-btn" onclick="requestSovTokenSend('Sovereign','👑',50,'rgba(255,184,0,0.2)','sovereign')">
       <span class="sov-emoji">👑</span>
       <span class="sov-name">Sovereign</span>
       <span class="sov-indx">50 INDX</span>
     </div>
-    <div class="sov-btn" onclick="sendSovToken('Elder','🌟',200,'rgba(255,184,0,0.3)','elder')">
+    <div class="sov-btn" onclick="requestSovTokenSend('Elder','🌟',200,'rgba(255,184,0,0.3)','elder')">
       <span class="sov-emoji">🌟</span>
       <span class="sov-name">Elder</span>
       <span class="sov-indx">200 INDX</span>
@@ -192,10 +225,154 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
   <div class="pqsi-text">PQSI · T0 · All SovTokens pre-flight clear · 98/2 Law active</div>
 </div>
 
+<!-- GOD MODE: SOVTOKEN HISTORY SHEET -->
+<div class="sheet-overlay" id="historyOverlay" onclick="closeHistorySheet()"></div>
+<div class="bottom-sheet" id="historySheet" role="dialog" aria-modal="true" aria-labelledby="historySheetTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="historySheetTitle">My SovTokens This Stream <button class="sheet-close" onclick="closeHistorySheet()" aria-label="Close history">✕</button></div>
+  <div id="historyList"></div>
+  <button class="history-clear-btn" onclick="clearSovHistory()">Clear history</button>
+</div>
+
+<!-- GOD MODE: CONFIRM SEND SHEET (large SovTokens) -->
+<div class="sheet-overlay" id="confirmOverlay" onclick="cancelSovTokenSend()"></div>
+<div class="bottom-sheet" id="confirmSendSheet" role="dialog" aria-modal="true" aria-labelledby="confirmSheetTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="confirmSheetTitle">Confirm SovToken <button class="sheet-close" onclick="cancelSovTokenSend()" aria-label="Cancel">✕</button></div>
+  <div class="confirm-amount" id="confirmAmountText">—</div>
+  <div class="confirm-sub">Preview only — no real INDX moves yet</div>
+  <div class="confirm-actions">
+    <button class="confirm-btn confirm-cancel" onclick="cancelSovTokenSend()">Cancel</button>
+    <button class="confirm-btn confirm-send" onclick="confirmSovTokenSend()">Send</button>
+  </div>
+</div>
+
+<div class="god-toast" id="godToast"></div>
+
 <script>
 let totalEarned = 12.4;
 let sovCount = 7;
 let viewerCount = 1284;
+
+// GOD MODE: live USD conversion, SovToken history, smart defaults, send confirmation
+const INDX_PRICE_USD = 0.24;
+const HISTORY_KEY = 'indx_livestream_history';
+const LASTSOV_KEY = 'indx_livestream_lastsov';
+let pendingSend = null;
+
+function updateUsdValue(){
+  const el = document.getElementById('usdValue');
+  if(!el) return;
+  const usd = (totalEarned * INDX_PRICE_USD).toFixed(2);
+  el.textContent = '≈ $'+usd;
+  el.classList.remove('usd-pulse');
+  void el.offsetWidth;
+  el.classList.add('usd-pulse');
+}
+
+function loadSovHistory(){
+  try{ return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }catch(e){ return []; }
+}
+
+function pushSovHistory(entry){
+  const hist = loadSovHistory();
+  hist.unshift(entry);
+  while(hist.length>20) hist.pop();
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
+}
+
+function renderHistory(){
+  const list = document.getElementById('historyList');
+  if(!list) return;
+  const hist = loadSovHistory();
+  if(hist.length===0){
+    list.innerHTML = '<div class="history-empty">No SovTokens sent yet this session. Send one from the tray below.</div>';
+    return;
+  }
+  list.innerHTML = hist.map(h=>'<div class="history-item"><span>'+h.emoji+' '+h.name+' · '+h.indx+' INDX</span><span style="color:var(--muted);">'+h.time+'</span></div>').join('');
+}
+
+function openHistorySheet(){
+  renderHistory();
+  document.getElementById('historySheet').classList.add('active');
+  document.getElementById('historyOverlay').classList.add('active');
+  trapFocus(document.getElementById('historySheet'));
+}
+function closeHistorySheet(){
+  document.getElementById('historySheet').classList.remove('active');
+  document.getElementById('historyOverlay').classList.remove('active');
+}
+function clearSovHistory(){
+  localStorage.setItem(HISTORY_KEY, '[]');
+  renderHistory();
+  showToast('History cleared');
+}
+
+// Smart default: highlight the last SovToken type sent
+function applyLastUsedHighlight(){
+  const last = localStorage.getItem(LASTSOV_KEY);
+  document.querySelectorAll('.sov-btn').forEach(btn=>{
+    btn.classList.remove('last-used');
+    const existingTag = btn.querySelector('.last-sent-tag');
+    if(existingTag) existingTag.remove();
+  });
+  if(!last) return;
+  document.querySelectorAll('.sov-btn').forEach(btn=>{
+    const nameEl = btn.querySelector('.sov-name');
+    if(nameEl && nameEl.textContent === last){
+      btn.classList.add('last-used');
+      const tag = document.createElement('span');
+      tag.className = 'last-sent-tag';
+      tag.textContent = '★ last sent';
+      btn.appendChild(tag);
+    }
+  });
+}
+
+// Confirmation safety for large sends (Sovereign / Elder tiers)
+function requestSovTokenSend(name, emoji, indx, color, type){
+  pendingSend = {name, emoji, indx, color, type};
+  document.getElementById('confirmAmountText').textContent = emoji+' '+indx+' INDX · '+name;
+  document.getElementById('confirmSendSheet').classList.add('active');
+  document.getElementById('confirmOverlay').classList.add('active');
+  trapFocus(document.getElementById('confirmSendSheet'));
+}
+function cancelSovTokenSend(){
+  pendingSend = null;
+  document.getElementById('confirmSendSheet').classList.remove('active');
+  document.getElementById('confirmOverlay').classList.remove('active');
+}
+function confirmSovTokenSend(){
+  if(!pendingSend) return;
+  const p = pendingSend;
+  document.getElementById('confirmSendSheet').classList.remove('active');
+  document.getElementById('confirmOverlay').classList.remove('active');
+  pendingSend = null;
+  sendSovToken(p.name, p.emoji, p.indx, p.color, p.type);
+}
+
+function showToast(msg){
+  const t = document.getElementById('godToast');
+  if(!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+// Accessibility: basic focus trap + Escape-to-close for sheets
+function trapFocus(sheet){
+  const focusables = sheet.querySelectorAll('button, [tabindex]');
+  if(focusables.length) focusables[0].focus();
+}
+document.addEventListener('keydown', function(e){
+  if(e.key==='Escape'){
+    closeHistorySheet();
+    cancelSovTokenSend();
+  }
+});
+
+updateUsdValue();
+applyLastUsedHighlight();
 
 // Animate viewer count
 setInterval(()=>{
@@ -210,6 +387,12 @@ function sendSovToken(name, emoji, indx, color, type){
   sovCount++;
   document.getElementById('totalEarned').textContent = totalEarned;
   document.getElementById('sovCount').textContent = sovCount;
+
+  // GOD MODE PATCH — live USD conversion, history persistence, last-used smart default
+  updateUsdValue();
+  pushSovHistory({name:name, emoji:emoji, indx:indx, time:new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})});
+  localStorage.setItem(LASTSOV_KEY, name);
+  applyLastUsedHighlight();
 
   // Add to chat feed (preview only — no real INDX moves, see banner above)
   addChatEvent(`${emoji} <strong>You</strong> sent ${name} · ${indx} INDX (preview) → Lupe would earn ${creatorShare} INDX`);

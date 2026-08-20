@@ -154,6 +154,36 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .btn-save-primary:active{opacity:0.8;}
 .btn-save-secondary{padding:13px;background:transparent;border:1.5px solid var(--border2);border-radius:14px;font-size:14px;font-weight:700;color:var(--text2);cursor:pointer;width:100%;transition:border-color 0.2s;}
 .btn-save-secondary:active{border-color:var(--cyan);}
+
+/* GOD MODE: IDEA STRENGTH METER */
+.idea-meter-wrap{margin-top:8px;}
+.idea-meter-track{width:100%;height:5px;background:var(--surface3);border-radius:3px;overflow:hidden;}
+.idea-meter-fill{height:100%;width:0%;border-radius:3px;transition:width 0.3s ease,background-color 0.3s ease;background:var(--red);}
+.idea-meter-label{font-size:11px;font-weight:600;margin-top:5px;color:var(--text2);transition:color 0.3s;}
+
+/* GOD MODE: FAVORITES / SESSION STAR */
+.ss-star{font-size:14px;color:var(--muted);flex-shrink:0;padding:2px 4px;margin-left:6px;cursor:pointer;transition:color 0.15s,transform 0.15s;}
+.ss-star.active{color:var(--gold);}
+.ss-star:active{transform:scale(1.25);}
+
+/* GOD MODE: INCOME TOTAL CARD */
+.income-total-card{background:linear-gradient(135deg,rgba(0,229,160,0.08),rgba(0,212,255,0.05));border:1px solid rgba(0,229,160,0.2);border-radius:14px;padding:14px 16px;margin-bottom:12px;}
+.income-total-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:4px;}
+.income-total-value{font-size:22px;font-weight:900;color:var(--green);margin-bottom:4px;}
+.income-total-indx{font-size:11px;color:var(--text2);line-height:1.5;}
+
+/* GOD MODE: CONFIRM SHEET / OVERLAY */
+.sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.7);z-index:290;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+.sheet-overlay.show{opacity:1;pointer-events:all;}
+.bottom-sheet{position:fixed;left:0;right:0;bottom:0;max-width:430px;margin:0 auto;background:var(--surface2);border:1px solid var(--border2);border-top-left-radius:20px;border-top-right-radius:20px;padding:22px 20px calc(22px + env(safe-area-inset-bottom));z-index:300;transform:translateY(100%);transition:transform 0.3s cubic-bezier(.32,.72,0,1);}
+.bottom-sheet.show{transform:translateY(0);}
+.sheet-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px;}
+.sheet-title{font-size:16px;font-weight:900;margin-bottom:6px;text-align:center;}
+.sheet-sub{font-size:13px;color:var(--text2);text-align:center;margin-bottom:18px;line-height:1.5;}
+.sheet-btns{display:flex;flex-direction:column;gap:8px;}
+.btn-sheet-primary{padding:14px;background:var(--green);border:none;border-radius:14px;font-size:15px;font-weight:800;color:#000;cursor:pointer;width:100%;}
+.btn-sheet-secondary{padding:13px;background:transparent;border:1.5px solid var(--border2);border-radius:14px;font-size:14px;font-weight:700;color:var(--text2);cursor:pointer;width:100%;}
+.btn-sheet-cancel{padding:11px;background:transparent;border:none;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;width:100%;}
 </style>
 </head>
 <body>
@@ -196,11 +226,21 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
   <div style="margin-bottom:16px;">
     <label class="ib-label">Your idea — in your own words</label>
-    <textarea id="ideaInput" class="ib-textarea" rows="3"
+    <textarea id="ideaInput" class="ib-textarea" rows="3" oninput="updateIdeaMeter()"
       placeholder="e.g. I want to sell traditional Vanuatu prints and teach people about Pacific art..."></textarea>
+    <div class="idea-meter-wrap" id="ideaMeterWrap" style="display:none;">
+      <div class="idea-meter-track"><div class="idea-meter-fill" id="ideaMeterFill"></div></div>
+      <div class="idea-meter-label" id="ideaMeterLabel">Keep typing your idea...</div>
+    </div>
   </div>
 
   <button class="ib-build-btn" onclick="startBuild()">✨ Build My Opportunity</button>
+</div>
+
+<!-- FAVORITES -->
+<div class="session-strip" id="favStrip">
+  <div class="ss-label">⭐ Favorite ideas</div>
+  <div class="ss-list" id="favList"></div>
 </div>
 
 <!-- PAST SESSIONS -->
@@ -242,11 +282,14 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 <div class="ib-results" id="ibResults">
   <div class="result-header">
     <h2>Your Opportunity</h2>
-    <div class="result-rebuild" onclick="resetBuilder()">← New idea</div>
+    <div class="result-rebuild" onclick="requestReset()">← New idea</div>
   </div>
 
   <!-- Idea summary -->
   <div id="ideaSummaryChip" style="background:linear-gradient(135deg,rgba(139,63,232,0.08),rgba(43,53,216,0.05));border:1px solid rgba(139,63,232,0.18);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--text2);line-height:1.5;"></div>
+
+  <!-- Combined Income Potential -->
+  <div class="income-total-card" id="incomeTotalCard"></div>
 
   <!-- Business Name -->
   <div class="rc open" id="rcName">
@@ -337,18 +380,170 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div class="save-btns">
     <button class="btn-save-primary" id="savePrimaryBtn" onclick="saveSession()">💾 Save to My Profile</button>
     <button class="btn-save-secondary" onclick="window.location='marketplace.html'">🏪 List on Marketplace →</button>
-    <button class="btn-save-secondary" onclick="resetBuilder()">✨ Build Another Idea</button>
+    <button class="btn-save-secondary" onclick="requestReset()">✨ Build Another Idea</button>
+  </div>
+</div>
+
+<!-- GOD MODE: DISCARD CONFIRM SHEET -->
+<div class="sheet-overlay" id="discardConfirmOverlay" onclick="closeDiscardConfirm()"></div>
+<div class="bottom-sheet" id="discardConfirmSheet" role="dialog" aria-modal="true" aria-labelledby="discardSheetTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="discardSheetTitle">Save this opportunity first?</div>
+  <div class="sheet-sub">You haven't saved this idea to your profile yet. Starting a new idea will clear these results.</div>
+  <div class="sheet-btns">
+    <button class="btn-sheet-primary" id="discardSaveBtn" onclick="confirmDiscardSave()">💾 Save &amp; Continue</button>
+    <button class="btn-sheet-secondary" id="discardDiscardBtn" onclick="confirmDiscardDiscard()">Discard &amp; Start New</button>
+    <button class="btn-sheet-cancel" id="discardCancelBtn" onclick="closeDiscardConfirm()">Cancel</button>
   </div>
 </div>
 
 <script>
 const INDX_PRICE_USD = 0.24;
 const IB_SESSIONS_KEY = 'indx_imagenation_sessions';
+const IB_FAVORITES_KEY = 'indx_imagenation-builder_favorites';
 
 // Read citizen context
 const citizenName = sessionStorage.getItem('citizen_name') || '';
 
 let selectedCat = 'Art & Culture';
+let ibResultsDirty = false;
+
+// ── GOD MODE: IDEA STRENGTH METER ───────────────────────────────────────
+function updateIdeaMeter() {
+  const val = document.getElementById('ideaInput').value.trim();
+  const wrap = document.getElementById('ideaMeterWrap');
+  const fill = document.getElementById('ideaMeterFill');
+  const label = document.getElementById('ideaMeterLabel');
+  if (!val) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  const words = val.split(/\s+/).filter(Boolean).length;
+  let pct, text, color;
+  if (words < 6) { pct = 25; text = '✏️ Add a bit more detail for a stronger plan'; color = 'var(--red)'; }
+  else if (words < 14) { pct = 60; text = '👍 Good — SIINDEX can build a solid plan'; color = 'var(--gold)'; }
+  else { pct = 100; text = '🔥 Great detail — SIINDEX will build a sharp plan'; color = 'var(--green)'; }
+  fill.style.width = pct + '%';
+  fill.style.background = color;
+  label.textContent = text;
+  label.style.color = color;
+}
+
+// ── GOD MODE: FAVORITES ──────────────────────────────────────────────────
+function getFavorites() {
+  try { return JSON.parse(localStorage.getItem(IB_FAVORITES_KEY) || '[]'); } catch(e) { return []; }
+}
+function saveFavoritesArr(arr) {
+  localStorage.setItem(IB_FAVORITES_KEY, JSON.stringify(arr));
+}
+function toggleFavoriteFromSession(idx) {
+  const s = getSessions()[idx];
+  if (!s) return;
+  let favs = getFavorites();
+  const existing = favs.findIndex(f => f.idea === s.idea);
+  if (existing > -1) { favs.splice(existing, 1); }
+  else { favs.unshift({ idea: s.idea, cat: s.cat, ts: Date.now() }); favs = favs.slice(0, 8); }
+  saveFavoritesArr(favs);
+  renderSessions();
+  renderFavorites();
+}
+function removeFavorite(idx) {
+  let favs = getFavorites();
+  favs.splice(idx, 1);
+  saveFavoritesArr(favs);
+  renderFavorites();
+  renderSessions();
+}
+function loadFavorite(idx) {
+  const f = getFavorites()[idx];
+  if (!f) return;
+  document.getElementById('ideaInput').value = f.idea;
+  selectedCat = f.cat;
+  document.querySelectorAll('.cat-chip').forEach(c => {
+    c.classList.toggle('active', c.dataset.cat === f.cat);
+  });
+  document.getElementById('ideaInput').focus();
+  updateIdeaMeter();
+}
+function renderFavorites() {
+  const favs = getFavorites();
+  const strip = document.getElementById('favStrip');
+  if (!favs.length) { strip.classList.remove('show'); return; }
+  strip.classList.add('show');
+  document.getElementById('favList').innerHTML = favs.map((f, i) =>
+    `<div class="ss-item" onclick="loadFavorite(${i})">
+      <div class="ss-idea">${f.idea}</div>
+      <div class="ss-cat">${f.cat}</div>
+      <div class="ss-star active" onclick="event.stopPropagation();removeFavorite(${i})">★</div>
+    </div>`
+  ).join('');
+}
+
+// ── GOD MODE: COMBINED INCOME POTENTIAL ──────────────────────────────────
+function formatUSD(n) {
+  return '$' + n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+function computeIncomeTotal(paths) {
+  let lowSum = 0, highSum = 0, countedPaths = 0, skipped = 0;
+  paths.forEach(p => {
+    const matches = [...p.est.matchAll(/\$([\d,]+(?:\.\d+)?)/g)].map(m => parseFloat(m[1].replace(/,/g, '')));
+    if (matches.length >= 2) {
+      lowSum += matches[0];
+      highSum += matches[matches.length - 1];
+      countedPaths++;
+    } else if (matches.length === 1) {
+      lowSum += matches[0];
+      highSum += matches[0];
+      countedPaths++;
+    } else {
+      skipped++;
+    }
+  });
+  return { lowSum, highSum, countedPaths, skipped };
+}
+function renderIncomeTotal(paths) {
+  const totals = computeIncomeTotal(paths);
+  const card = document.getElementById('incomeTotalCard');
+  if (!totals.countedPaths) { card.innerHTML = ''; return; }
+  const indxLow = Math.round(totals.lowSum / INDX_PRICE_USD);
+  const indxHigh = Math.round(totals.highSum / INDX_PRICE_USD);
+  card.innerHTML = `
+    <div class="income-total-label">Illustrative Combined Range (${totals.countedPaths} of ${paths.length} paths, not guaranteed)</div>
+    <div class="income-total-value">${formatUSD(totals.lowSum)} – ${formatUSD(totals.highSum)}</div>
+    <div class="income-total-indx">≈ ${indxLow.toLocaleString()} – ${indxHigh.toLocaleString()} INDX at $${INDX_PRICE_USD.toFixed(2)}/INDX${totals.skipped ? ' · ' + totals.skipped + ' path(s) variable, not included' : ''}</div>`;
+}
+
+// ── GOD MODE: DISCARD CONFIRM SAFETY ─────────────────────────────────────
+function requestReset() {
+  const resultsVisible = document.getElementById('ibResults').classList.contains('show');
+  if (resultsVisible && ibResultsDirty) {
+    openDiscardConfirm();
+  } else {
+    resetBuilder();
+  }
+}
+function openDiscardConfirm() {
+  document.getElementById('discardConfirmSheet').classList.add('show');
+  document.getElementById('discardConfirmOverlay').classList.add('show');
+  const btn = document.getElementById('discardSaveBtn');
+  if (btn) btn.focus();
+}
+function closeDiscardConfirm() {
+  document.getElementById('discardConfirmSheet').classList.remove('show');
+  document.getElementById('discardConfirmOverlay').classList.remove('show');
+}
+function confirmDiscardSave() {
+  saveSession();
+  closeDiscardConfirm();
+  resetBuilder();
+}
+function confirmDiscardDiscard() {
+  closeDiscardConfirm();
+  resetBuilder();
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('discardConfirmSheet').classList.contains('show')) {
+    closeDiscardConfirm();
+  }
+});
 
 // ── CATEGORY TEMPLATES ───────────────────────────────────────────────
 const TEMPLATES = {
@@ -540,15 +735,18 @@ function saveSessions(arr) {
   localStorage.setItem(IB_SESSIONS_KEY, JSON.stringify(arr));
 }
 
+// GOD MODE PATCH: render star toggle per item, filled if idea is already a favorite
 function renderSessions() {
   const sessions = getSessions();
   const strip = document.getElementById('sessionStrip');
   if (!sessions.length) { strip.classList.remove('show'); return; }
   strip.classList.add('show');
+  const favIdeas = getFavorites().map(f => f.idea);
   document.getElementById('sessionList').innerHTML = sessions.slice(0,4).map((s,i) =>
     `<div class="ss-item" onclick="loadSession(${i})">
       <div class="ss-idea">${s.idea}</div>
       <div class="ss-cat">${s.cat}</div>
+      <div class="ss-star ${favIdeas.includes(s.idea) ? 'active' : ''}" onclick="event.stopPropagation();toggleFavoriteFromSession(${i})">★</div>
     </div>`
   ).join('');
 }
@@ -562,8 +760,11 @@ function loadSession(idx) {
     c.classList.toggle('active', c.dataset.cat === s.cat);
   });
   document.getElementById('ideaInput').focus();
+  // GOD MODE PATCH: refresh idea strength meter for pre-filled text
+  updateIdeaMeter();
 }
 
+// GOD MODE PATCH: clear the unsaved-results flag once a session is saved
 function saveSession() {
   const idea = document.getElementById('ideaInput').value.trim();
   if (!idea) return;
@@ -573,6 +774,7 @@ function saveSession() {
   filtered.unshift({ idea: idea.slice(0,80), cat: selectedCat, ts: Date.now() });
   saveSessions(filtered.slice(0,10));
   renderSessions();
+  ibResultsDirty = false;
   const btn = document.getElementById('savePrimaryBtn');
   const orig = btn.textContent;
   btn.textContent = '✅ Saved to Profile!';
@@ -634,6 +836,8 @@ function startBuild() {
       populateResults(idea, selectedCat);
       document.getElementById('ibResults').classList.add('show');
       document.getElementById('ibSave').classList.add('show');
+      // GOD MODE PATCH: fresh results are unsaved until saveSession() runs
+      ibResultsDirty = true;
       window.scrollTo(0, 0);
     }, 400);
   }
@@ -678,6 +882,9 @@ function populateResults(idea, cat) {
       </div>
     </div>`
   ).join('');
+
+  // GOD MODE PATCH: combined income potential summary card
+  renderIncomeTotal(t.incomePaths);
 
   // Cultural check
   const cult = t.cultural;
@@ -725,11 +932,17 @@ function resetBuilder() {
   });
   document.getElementById('ideaInput').value = '';
   renderSessions();
+  // GOD MODE PATCH: refresh favorites strip, hide the idea meter, clear dirty flag
+  renderFavorites();
+  document.getElementById('ideaMeterWrap').style.display = 'none';
+  ibResultsDirty = false;
   window.scrollTo(0, 0);
 }
 
 // ── INIT ───────────────────────────────────────────────────────────────
 renderSessions();
+// GOD MODE PATCH: populate favorites strip on load
+renderFavorites();
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

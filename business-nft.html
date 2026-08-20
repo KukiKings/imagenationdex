@@ -109,6 +109,42 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
 .nav-center:active .nav-center-btn{transform:scale(0.93);}
 .nav-center .nav-label{font-size:10px;font-weight:600;color:var(--text-muted);}
 
+/* GOD MODE: FIELD VALIDATION, DRAFT, CONFIRM SHEET, HISTORY */
+.fi-hint{font-size:11px;margin-top:2px;color:var(--text-muted);min-height:14px;}
+.fi-hint.valid{color:var(--green);}
+.fi-hint.invalid{color:var(--red);}
+
+.draft-banner{display:none;margin:12px 20px 0;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.25);border-radius:12px;padding:10px 14px;align-items:center;justify-content:space-between;gap:10px;font-size:12px;color:var(--green);}
+.draft-banner.show{display:flex;}
+.draft-banner button{background:none;border:none;color:var(--text-muted);font-size:11px;text-decoration:underline;cursor:pointer;padding:0;flex-shrink:0;}
+
+.history-btn{display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px 10px;font-size:11px;font-weight:700;color:var(--text-muted);cursor:pointer;flex-shrink:0;}
+.history-badge{background:var(--gold);color:#000;font-size:10px;font-weight:800;border-radius:8px;padding:1px 6px;min-width:14px;text-align:center;}
+
+.sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.7);z-index:250;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+.sheet-overlay.show{opacity:1;pointer-events:all;}
+.bottom-sheet{position:fixed;left:50%;bottom:0;transform:translate(-50%,100%);width:100%;max-width:430px;background:var(--surface2);border:1px solid var(--border);border-radius:24px 24px 0 0;padding:14px 20px calc(20px + env(safe-area-inset-bottom));z-index:260;transition:transform 0.3s cubic-bezier(0.16,1,0.3,1);max-height:80vh;overflow-y:auto;}
+.bottom-sheet.show{transform:translate(-50%,0);}
+.sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px;}
+.sheet-title{font-size:16px;font-weight:800;margin-bottom:14px;}
+
+.confirm-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.confirm-row:last-child{border-bottom:none;}
+.confirm-key{color:var(--text-muted);flex-shrink:0;}
+.confirm-val{font-weight:700;text-align:right;overflow-wrap:anywhere;}
+.confirm-actions{display:flex;gap:10px;margin-top:16px;}
+.confirm-actions button{flex:1;border-radius:14px;padding:14px;font-size:14px;font-weight:800;border:none;cursor:pointer;}
+.confirm-cancel{background:var(--surface3);color:var(--text);}
+.confirm-confirm{background:linear-gradient(135deg,var(--gold),#FF8C00);color:#000;}
+
+.hist-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;}
+.hist-item:last-child{border-bottom:none;}
+.hist-name{font-size:13px;font-weight:700;}
+.hist-domain{font-size:11px;color:var(--cyan);font-family:'SF Mono',monospace;}
+.hist-date{font-size:10px;color:var(--text-muted);flex-shrink:0;}
+.hist-empty{text-align:center;padding:24px 0;font-size:12px;color:var(--text-muted);}
+.hist-clear{width:100%;background:var(--surface3);border:none;border-radius:12px;padding:12px;font-size:13px;font-weight:700;color:var(--red);cursor:pointer;margin-top:12px;}
+
 /* TOAST */
 .toast{position:fixed;bottom:calc(var(--nav-h)+12px);left:50%;transform:translateX(-50%) translateY(20px);max-width:320px;width:calc(100% - 40px);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:13px;color:var(--text);text-align:center;opacity:0;transition:opacity 0.3s,transform 0.3s;z-index:400;pointer-events:none;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -122,10 +158,16 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
     <div class="topbar">
       <div class="back-btn" onclick="window.location.href='tokenize.html'">←</div>
       <div class="topbar-title">Tokenize <span>My Business</span></div>
+      <div class="history-btn" onclick="openHistorySheet()">🕒 Previews <span class="history-badge" id="historyBadge">0</span></div>
     </div>
 
     <div style="margin:12px 20px 0;background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.25);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--text-muted);line-height:1.5;">
       ⚠️ <strong>Not connected yet.</strong> No real business NFT minting, domain registration, marketplace listing, or QR-to-pay exists — "Tokenize" saves a local preview certificate only. If you want a real business account today, use <strong>business-onboarding.html</strong>, which is wired to a real account.
+    </div>
+
+    <div class="draft-banner" id="draftBanner">
+      <span>📝 Draft restored from your last visit</span>
+      <button onclick="clearDraft()">Clear draft</button>
     </div>
 
     <!-- HERO -->
@@ -166,7 +208,8 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
       <div class="field-group">
         <div class="field-item">
           <div class="fi-label">Business name</div>
-          <input class="fi-input" id="bizName" placeholder="e.g. Mama Noe's Kitchen">
+          <input class="fi-input" id="bizName" placeholder="e.g. Mama Noe's Kitchen" oninput="checkBizName();saveDraft()">
+          <div class="fi-hint" id="bizNameHint"></div>
         </div>
         <div class="field-item">
           <div class="fi-label">Your IN$DEX domain (owner)</div>
@@ -178,21 +221,22 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
         <div class="field-item">
           <div class="fi-label">Business web3 domain</div>
           <div class="fi-input-row">
-            <input class="fi-input" id="bizDomain" placeholder="mamanoes">
+            <input class="fi-input" id="bizDomain" placeholder="mamanoes" oninput="checkBizDomain();saveDraft()">
             <div class="fi-prefix" style="color:var(--cyan)">.IN$DEX</div>
           </div>
+          <div class="fi-hint" id="bizDomainHint"></div>
         </div>
         <div class="field-item">
           <div class="fi-label">Website (optional)</div>
-          <input class="fi-input" id="bizWebsite" placeholder="https://yourwebsite.com">
+          <input class="fi-input" id="bizWebsite" placeholder="https://yourwebsite.com" oninput="saveDraft()">
         </div>
         <div class="field-item">
           <div class="fi-label">Location</div>
-          <input class="fi-input" id="bizLocation" placeholder="e.g. Mele Village, Vanuatu">
+          <input class="fi-input" id="bizLocation" placeholder="e.g. Mele Village, Vanuatu" oninput="saveDraft()">
         </div>
         <div class="field-item">
           <div class="fi-label">What do you offer?</div>
-          <input class="fi-input" id="bizDesc" placeholder="e.g. Home-cooked meals, tuluk, coconut products">
+          <input class="fi-input" id="bizDesc" placeholder="e.g. Home-cooked meals, tuluk, coconut products" oninput="saveDraft()">
         </div>
       </div>
     </div>
@@ -281,6 +325,32 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
   </div>
 </div><!-- /shell -->
 
+<!-- REVIEW & CONFIRM SHEET -->
+<div class="sheet-overlay" id="confirmOverlay" onclick="closeConfirmSheet()"></div>
+<div class="bottom-sheet" id="confirmSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Review before you generate</div>
+  <div class="confirm-row"><div class="confirm-key">Business name</div><div class="confirm-val" id="cfName">—</div></div>
+  <div class="confirm-row"><div class="confirm-key">Domain</div><div class="confirm-val" id="cfDomain">—</div></div>
+  <div class="confirm-row"><div class="confirm-key">Category</div><div class="confirm-val" id="cfCat">—</div></div>
+  <div class="confirm-row"><div class="confirm-key">Location</div><div class="confirm-val" id="cfLocation">—</div></div>
+  <div class="confirm-row"><div class="confirm-key">Website</div><div class="confirm-val" id="cfWebsite">—</div></div>
+  <div style="font-size:11px;color:var(--text-muted);margin-top:12px;line-height:1.5;">This only generates a local preview certificate — nothing is minted, registered, or listed.</div>
+  <div class="confirm-actions">
+    <button class="confirm-cancel" onclick="closeConfirmSheet()">Edit details</button>
+    <button class="confirm-confirm" onclick="confirmTokenize()">Confirm & Generate</button>
+  </div>
+</div>
+
+<!-- PREVIEW HISTORY SHEET -->
+<div class="sheet-overlay" id="historyOverlay" onclick="closeHistorySheet()"></div>
+<div class="bottom-sheet" id="historySheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Your saved previews</div>
+  <div id="historyList"><div class="hist-empty">No previews generated yet</div></div>
+  <button class="hist-clear" id="historyClearBtn" style="display:none;" onclick="clearHistory()">Clear history</button>
+</div>
+
 <!-- CERTIFICATE OVERLAY -->
 <div class="cert-overlay" id="certOverlay">
   <div style="font-size:14px;color:var(--text-muted);text-align:center;margin-bottom:4px;">IN$DEX Business NFT Certificate</div>
@@ -319,31 +389,196 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
 <div class="toast" id="toast"></div>
 
 <script>
+const INDX_PRICE_USD = 0.24;
+const DRAFT_KEY = 'indx_business-nft_draft';
+const HISTORY_KEY = 'indx_business-nft_history';
+
+// ── GOD MODE: live field validation ──
+function checkBizName() {
+  const val = document.getElementById('bizName').value.trim();
+  const hint = document.getElementById('bizNameHint');
+  if (!val) { hint.textContent = ''; hint.className = 'fi-hint'; return; }
+  if (val.length < 2 || val.length > 40) {
+    hint.textContent = 'Use 2–40 characters'; hint.className = 'fi-hint invalid';
+  } else {
+    hint.textContent = '✓ Looks good'; hint.className = 'fi-hint valid';
+  }
+}
+
+function checkBizDomain() {
+  const raw = document.getElementById('bizDomain').value.trim().toLowerCase();
+  const hint = document.getElementById('bizDomainHint');
+  if (!raw) { hint.textContent = ''; hint.className = 'fi-hint'; return; }
+  const valid = /^[a-z0-9-]{3,20}$/.test(raw);
+  if (!valid) {
+    hint.textContent = '3–20 chars, lowercase letters/numbers/hyphens only'; hint.className = 'fi-hint invalid';
+  } else {
+    hint.textContent = '✓ ' + raw + '.IN$DEX — format OK (not reserved yet)'; hint.className = 'fi-hint valid';
+  }
+}
+
+// ── GOD MODE: draft autosave / restore ──
+function saveDraft() {
+  const draft = {
+    bizName: document.getElementById('bizName').value,
+    bizDomain: document.getElementById('bizDomain').value,
+    bizWebsite: document.getElementById('bizWebsite').value,
+    bizLocation: document.getElementById('bizLocation').value,
+    bizDesc: document.getElementById('bizDesc').value,
+    selectedCat: selectedCat
+  };
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+}
+
+function loadDraft() {
+  let draft;
+  try { draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch (e) { draft = null; }
+  if (!draft) return;
+  const hasContent = draft.bizName || draft.bizDomain || draft.bizWebsite || draft.bizLocation || draft.bizDesc || draft.selectedCat;
+  if (!hasContent) return;
+  if (draft.bizName) document.getElementById('bizName').value = draft.bizName;
+  if (draft.bizDomain) document.getElementById('bizDomain').value = draft.bizDomain;
+  if (draft.bizWebsite) document.getElementById('bizWebsite').value = draft.bizWebsite;
+  if (draft.bizLocation) document.getElementById('bizLocation').value = draft.bizLocation;
+  if (draft.bizDesc) document.getElementById('bizDesc').value = draft.bizDesc;
+  if (draft.selectedCat) {
+    const chip = Array.from(document.querySelectorAll('.cat-chip')).find(c => c.getAttribute('onclick') && c.getAttribute('onclick').includes("'" + draft.selectedCat + "'"));
+    if (chip) selectCat(chip, draft.selectedCat);
+  }
+  checkBizName();
+  checkBizDomain();
+  document.getElementById('draftBanner').classList.add('show');
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+  document.getElementById('draftBanner').classList.remove('show');
+  showToast('Draft cleared');
+}
+
+// ── GOD MODE: review & confirm sheet ──
+function openConfirmSheet() {
+  const bizName = document.getElementById('bizName').value.trim();
+  const bizDomain = document.getElementById('bizDomain').value.trim().toLowerCase();
+  const bizLocation = document.getElementById('bizLocation').value.trim();
+  const bizWebsite = document.getElementById('bizWebsite').value.trim();
+
+  document.getElementById('cfName').textContent = bizName;
+  document.getElementById('cfDomain').textContent = bizDomain + '.IN$DEX';
+  document.getElementById('cfCat').textContent = catNames[selectedCat] || selectedCat;
+  document.getElementById('cfLocation').textContent = bizLocation || 'On IN$DEX Network';
+  document.getElementById('cfWebsite').textContent = bizWebsite || 'Not provided';
+
+  document.getElementById('confirmOverlay').classList.add('show');
+  document.getElementById('confirmSheet').classList.add('show');
+}
+
+function closeConfirmSheet() {
+  document.getElementById('confirmOverlay').classList.remove('show');
+  document.getElementById('confirmSheet').classList.remove('show');
+}
+
+// ── GOD MODE: saved preview history ──
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch (e) { return []; }
+}
+
+function updateHistoryBadge() {
+  document.getElementById('historyBadge').textContent = getHistory().length;
+}
+
+function renderHistory() {
+  const list = getHistory();
+  const el = document.getElementById('historyList');
+  const clearBtn = document.getElementById('historyClearBtn');
+  if (!list.length) {
+    el.innerHTML = '<div class="hist-empty">No previews generated yet</div>';
+    clearBtn.style.display = 'none';
+    return;
+  }
+  clearBtn.style.display = 'block';
+  el.innerHTML = list.map((h, i) => `
+    <div class="hist-item" onclick="viewHistoryItem(${i})">
+      <div>
+        <div class="hist-name">${h.bizName}</div>
+        <div class="hist-domain">${h.bizDomain}.IN$DEX</div>
+      </div>
+      <div class="hist-date">${h.date}</div>
+    </div>
+  `).join('');
+}
+
+function openHistorySheet() {
+  renderHistory();
+  document.getElementById('historyOverlay').classList.add('show');
+  document.getElementById('historySheet').classList.add('show');
+}
+
+function closeHistorySheet() {
+  document.getElementById('historyOverlay').classList.remove('show');
+  document.getElementById('historySheet').classList.remove('show');
+}
+
+function viewHistoryItem(i) {
+  const h = getHistory()[i];
+  if (!h) return;
+  document.getElementById('certBizName').textContent = h.bizName;
+  document.getElementById('certBizDomain').textContent = h.bizDomain + '.IN$DEX (not reserved — preview only)';
+  document.getElementById('certOwner').textContent = h.ownerDomain;
+  document.getElementById('certCat').textContent = catNames[h.cat] || h.cat;
+  document.getElementById('certLocation').textContent = h.location || 'On IN$DEX Network';
+  document.getElementById('certDate').textContent = h.date;
+  closeHistorySheet();
+  document.getElementById('certOverlay').classList.add('show');
+}
+
+function clearHistory() {
+  localStorage.removeItem(HISTORY_KEY);
+  renderHistory();
+  updateHistoryBadge();
+  showToast('Preview history cleared');
+}
+
 let selectedCat = '';
 
 // Pre-fill owner domain from sessionStorage
 (function init() {
   const domain = sessionStorage.getItem('citizen_web3_domain') || '';
   if (domain) document.getElementById('bizOwnerDomain').value = domain;
+  // GOD MODE PATCH
+  loadDraft();
+  updateHistoryBadge();
 })();
 
 function selectCat(el, cat) {
   document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
   selectedCat = cat;
+  // GOD MODE PATCH
+  saveDraft();
 }
 
 const catNames = {food:'Food & Drink',art:'Art & Music',services:'Services',retail:'Retail / Products',transport:'Transport',other:'Other'};
 
+// GOD MODE PATCH — now validates then opens the Review & Confirm sheet instead of generating directly
 function tokenizeBusiness() {
+  const bizName = document.getElementById('bizName').value.trim();
+  const bizDomain = document.getElementById('bizDomain').value.trim().toLowerCase();
+
+  if (!bizName) { showToast('Add your business name first'); return; }
+  if (!bizDomain) { showToast('Add a business domain (e.g. mamanoes)'); return; }
+  if (!/^[a-z0-9-]{3,20}$/.test(bizDomain)) { showToast('Domain must be 3–20 lowercase letters, numbers or hyphens'); return; }
+  if (!selectedCat) { showToast('Select a business category'); return; }
+
+  openConfirmSheet();
+}
+
+// GOD MODE: actually builds the certificate once the user confirms, and saves it to history
+function confirmTokenize() {
   const bizName = document.getElementById('bizName').value.trim();
   const bizDomain = document.getElementById('bizDomain').value.trim().toLowerCase();
   const bizLocation = document.getElementById('bizLocation').value.trim();
   const ownerDomain = document.getElementById('bizOwnerDomain').value.trim() || sessionStorage.getItem('citizen_web3_domain') || 'yourname.IN$DEX';
-
-  if (!bizName) { showToast('Add your business name first'); return; }
-  if (!bizDomain) { showToast('Add a business domain (e.g. mamanoes)'); return; }
-  if (!selectedCat) { showToast('Select a business category'); return; }
 
   const today = new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'});
 
@@ -359,6 +594,15 @@ function tokenizeBusiness() {
   // gate real privileges on wisdom thresholds, so a fake bump here would be a
   // genuine privilege-escalation bug, not just fake UI.
 
+  // GOD MODE: save this preview to local history
+  const history = getHistory();
+  history.unshift({ bizName, bizDomain, cat: selectedCat, location: bizLocation, ownerDomain, date: today });
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 20)));
+  updateHistoryBadge();
+  localStorage.removeItem(DRAFT_KEY);
+  document.getElementById('draftBanner').classList.remove('show');
+
+  closeConfirmSheet();
   document.getElementById('certOverlay').classList.add('show');
 }
 

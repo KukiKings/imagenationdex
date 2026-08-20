@@ -145,6 +145,41 @@
 
   .toast { position:fixed; bottom:130px; left:50%; transform:translateX(-50%) translateY(60px); background:var(--surface2); color:var(--text); padding:12px 20px; border-radius:12px; font-size:13px; font-weight:500; transition:transform 0.3s; z-index:200; white-space:nowrap; border:1px solid rgba(0,229,160,0.3); }
   .toast.show { transform:translateX(-50%) translateY(0); }
+
+  /* GOD MODE: ratio auto-match, smart-default restore note, review sheet, history sheet */
+  .ratio-toggle-row { display:flex; justify-content:space-between; align-items:center; gap:10px; background:var(--surface2); border:1px solid var(--surface3); border-radius:10px; padding:10px 14px; margin-top:10px; }
+  .ratio-toggle-label { font-size:12px; color:var(--text2); line-height:1.4; }
+  .ratio-toggle-hint { font-size:10.5px; color:var(--text-muted); margin-top:2px; }
+  .toggle-switch { width:40px; height:22px; background:var(--surface3); border-radius:11px; position:relative; cursor:pointer; flex-shrink:0; transition:background 0.2s; }
+  .toggle-switch.on { background:var(--cyan); }
+  .toggle-knob { width:18px; height:18px; background:#fff; border-radius:50%; position:absolute; top:2px; left:2px; transition:left 0.2s; }
+  .toggle-switch.on .toggle-knob { left:20px; }
+  .restore-note { font-size:11px; color:var(--cyan); margin-top:8px; display:none; align-items:center; gap:6px; }
+  .restore-note.show { display:flex; }
+
+  .history-btn { width:100%; display:flex; align-items:center; justify-content:space-between; background:var(--surface); border:1px solid var(--surface3); border-radius:12px; padding:12px 14px; margin-bottom:14px; color:var(--text2); font-size:12.5px; cursor:pointer; }
+  .history-count-badge { background:rgba(0,212,255,0.15); color:var(--cyan); font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; }
+  .history-item { background:var(--surface3); border-radius:12px; padding:12px 14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:background 0.15s; }
+  .history-item:active, .history-item:focus { background:var(--surface2); outline:1px solid var(--cyan); }
+  .history-item-meta { font-size:10.5px; color:var(--text-muted); margin-top:2px; }
+  .history-empty { text-align:center; color:var(--text-muted); font-size:12px; padding:24px 0; }
+
+  .sheet-overlay { position:fixed; inset:0; background:rgba(9,10,16,0.72); z-index:300; opacity:0; pointer-events:none; transition:opacity 0.25s; }
+  .sheet-overlay.show { opacity:1; pointer-events:auto; }
+  .bottom-sheet { position:fixed; left:50%; bottom:0; transform:translate(-50%,100%); width:100%; max-width:430px; background:var(--surface2); border-radius:20px 20px 0 0; z-index:301; padding:10px 16px 24px; max-height:82vh; overflow-y:auto; transition:transform 0.3s cubic-bezier(0.22,1,0.36,1); box-shadow:0 -8px 30px rgba(9,10,16,0.45); }
+  .bottom-sheet.show { transform:translate(-50%,0); }
+  .sheet-grabber { width:36px; height:4px; background:var(--surface3); border-radius:2px; margin:6px auto 14px; }
+  .sheet-heading { font-size:16px; font-weight:800; margin-bottom:4px; }
+  .sheet-subheading { font-size:12px; color:var(--text-muted); margin-bottom:16px; line-height:1.4; }
+  .review-row { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:13px; }
+  .review-row:last-child { border-bottom:none; }
+  .review-row span:first-child { color:var(--text2); }
+  .review-row span:last-child { font-weight:600; color:var(--text); }
+  .review-ack { display:flex; gap:10px; align-items:flex-start; background:var(--surface3); border-radius:12px; padding:12px 14px; margin:16px 0; font-size:12px; color:var(--text2); line-height:1.5; }
+  .review-ack input[type=checkbox] { width:18px; height:18px; flex-shrink:0; margin-top:1px; accent-color:var(--cyan); }
+  .sheet-confirm-btn { width:100%; padding:15px; background:linear-gradient(135deg,var(--blue),var(--purple)); border:none; border-radius:14px; color:#fff; font-size:15px; font-weight:700; cursor:pointer; transition:opacity 0.2s; }
+  .sheet-confirm-btn:disabled { opacity:0.35; cursor:not-allowed; }
+  .sheet-cancel-btn { width:100%; padding:13px; background:transparent; border:1px solid var(--surface3); border-radius:14px; color:var(--text2); font-size:14px; cursor:pointer; margin-top:8px; }
 </style>
 </head>
 <body>
@@ -215,6 +250,11 @@
       </div>
     </div>
 
+    <button class="history-btn" id="historyBtn" onclick="openHistorySheet()">
+      <span>🕓 Recent pool previews (this device)</span>
+      <span class="history-count-badge" id="historyCountBadge">0</span>
+    </button>
+
     <div class="pool-pair">
       <div class="pool-pair-title">Pool Pair</div>
       <div class="pair-display">
@@ -233,7 +273,7 @@
         <div class="token-input-wrap">
           <div class="token-input-label">INDX Amount</div>
           <div class="token-input-row">
-            <input class="token-input-field" type="number" placeholder="0" id="indxAmount" oninput="updateCalc()">
+            <input class="token-input-field" type="number" placeholder="0" id="indxAmount" oninput="updateCalc('indx')">
             <span class="token-input-sym">INDX</span>
           </div>
           <div class="token-input-usd" id="indxUSD">≈ $0.00 USD</div>
@@ -241,7 +281,7 @@
         <div class="token-input-wrap">
           <div class="token-input-label">SOL Amount</div>
           <div class="token-input-row">
-            <input class="token-input-field" type="number" placeholder="0" id="solAmount" oninput="updateCalc()">
+            <input class="token-input-field" type="number" placeholder="0" id="solAmount" oninput="updateCalc('sol')">
             <span class="token-input-sym">SOL</span>
           </div>
           <div class="token-input-usd" id="solUSD">≈ $0.00 USD</div>
@@ -252,6 +292,15 @@
         <span>💡</span>
         <span>For launch at $0.24 INDX and SOL at ~$155: 1,000 INDX requires approximately 1.55 SOL to maintain the initial price ratio.</span>
       </div>
+
+      <div class="ratio-toggle-row">
+        <div>
+          <div class="ratio-toggle-label">Auto-match ratio</div>
+          <div class="ratio-toggle-hint">Fill the other field automatically at the genesis price ratio</div>
+        </div>
+        <div class="toggle-switch" id="ratioToggle" role="switch" aria-checked="false" tabindex="0" onclick="toggleRatioLock(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleRatioLock(this);}"><div class="toggle-knob"></div></div>
+      </div>
+      <div class="restore-note" id="restoreNote">↺ <span>Restored your last saved draft on this device</span></div>
     </div>
 
     <div class="section-label">Fee Tier</div>
@@ -370,6 +419,33 @@
   <button class="main-btn" id="mainBtn" onclick="nextStep()">Connect Phantom Wallet</button>
 </div>
 
+<div class="sheet-overlay" id="reviewOverlay" onclick="closeReviewSheet()"></div>
+<div class="bottom-sheet" id="reviewSheet" role="dialog" aria-modal="true" aria-labelledby="reviewHeading">
+  <div class="sheet-grabber"></div>
+  <div class="sheet-heading" id="reviewHeading">Final Review (preview)</div>
+  <div class="sheet-subheading">Check the numbers before continuing the walkthrough. Nothing here executes for real.</div>
+  <div class="review-row"><span>INDX amount</span><span id="reviewINDX">0 INDX</span></div>
+  <div class="review-row"><span>SOL amount</span><span id="reviewSOL">0 SOL</span></div>
+  <div class="review-row"><span>Total value</span><span id="reviewTotal">$0.00</span></div>
+  <div class="review-row"><span>Fee tier</span><span id="reviewFeeTier">0.25%</span></div>
+  <div class="review-row"><span>Price range</span><span>Full range</span></div>
+  <div class="review-ack">
+    <input type="checkbox" id="reviewAckCheck" onchange="toggleReviewConfirm()">
+    <label for="reviewAckCheck">I understand this is a preview walkthrough only — no wallet, transaction, or pool is real yet.</label>
+  </div>
+  <button class="sheet-confirm-btn" id="reviewConfirmBtn" disabled onclick="confirmAndExecute()">Confirm & Continue (preview)</button>
+  <button class="sheet-cancel-btn" onclick="closeReviewSheet()">Cancel</button>
+</div>
+
+<div class="sheet-overlay" id="historyOverlay" onclick="closeHistorySheet()"></div>
+<div class="bottom-sheet" id="historySheet" role="dialog" aria-modal="true" aria-labelledby="historyHeading">
+  <div class="sheet-grabber"></div>
+  <div class="sheet-heading" id="historyHeading">Recent Pool Previews</div>
+  <div class="sheet-subheading">Your last few previewed configs, saved on this device only.</div>
+  <div id="historyList"></div>
+  <button class="sheet-cancel-btn" onclick="closeHistorySheet()">Close</button>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -422,7 +498,8 @@ function nextStep() {
   }
   if (currentStep === 3) {
     if (!bioApproved) { showToast('Biometric approval required before proceeding.'); return; }
-    executeTxn();
+    // GOD MODE PATCH: show a final review sheet before running the preview "execute" step
+    openReviewSheet();
   }
 }
 
@@ -447,6 +524,8 @@ function executeTxn() {
   const sol = parseFloat(document.getElementById('solAmount').value) || 0;
   const total = (indx * INDX_PRICE) + (sol * SOL_PRICE);
   showToast('Preview only — no transaction is being submitted anywhere.');
+  // GOD MODE PATCH: record this completed preview walkthrough to local history
+  saveHistoryEntry(indx, sol, selectedTier, total);
   setTimeout(() => {
     document.getElementById('txINDX').textContent = indx.toLocaleString() + ' INDX (planned, not real)';
     document.getElementById('txSOL').textContent = sol + ' SOL (planned, not real)';
@@ -459,13 +538,30 @@ function selectTier(el, tier) {
   document.querySelectorAll('.tier-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
   selectedTier = tier;
-}
-
-function updateCalc() {
+  // GOD MODE PATCH: keep the persisted draft config in sync with the chosen fee tier
   const indx = parseFloat(document.getElementById('indxAmount').value) || 0;
   const sol = parseFloat(document.getElementById('solAmount').value) || 0;
+  saveLastConfig(indx, sol, selectedTier);
+}
+
+// GOD MODE PATCH: accept a source param so the ratio auto-match knows which field the user edited, and persist the draft
+function updateCalc(source) {
+  const indxEl = document.getElementById('indxAmount');
+  const solEl = document.getElementById('solAmount');
+  let indx = parseFloat(indxEl.value) || 0;
+  let sol = parseFloat(solEl.value) || 0;
+
+  if (ratioLocked && source === 'indx' && indx > 0) {
+    sol = +(indx * INDX_PRICE / SOL_PRICE).toFixed(4);
+    solEl.value = sol;
+  } else if (ratioLocked && source === 'sol' && sol > 0) {
+    indx = +(sol * SOL_PRICE / INDX_PRICE).toFixed(2);
+    indxEl.value = indx;
+  }
+
   document.getElementById('indxUSD').textContent = '≈ $' + (indx * INDX_PRICE).toFixed(2) + ' USD';
   document.getElementById('solUSD').textContent = '≈ $' + (sol * SOL_PRICE).toFixed(2) + ' USD';
+  saveLastConfig(indx, sol, selectedTier);
 }
 
 function togglePreflight() {
@@ -482,6 +578,171 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 3500);
 }
 
+// ── GOD MODE: smart-default restore, ratio auto-match, review sheet, history sheet ──
+let ratioLocked = false;
+let lastFocusedEl = null;
+const LP_CONFIG_KEY = 'indx_lp_last_config';
+const LP_HISTORY_KEY = 'indx_lp_history';
+
+function saveLastConfig(indx, sol, tier) {
+  if (!indx && !sol) return;
+  try {
+    localStorage.setItem(LP_CONFIG_KEY, JSON.stringify({ indx: indx || 0, sol: sol || 0, tier: tier || selectedTier }));
+  } catch (e) {}
+}
+
+function restoreLastConfig() {
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(LP_CONFIG_KEY) || 'null'); } catch (e) { saved = null; }
+  if (!saved || (!saved.indx && !saved.sol)) return;
+  if (saved.indx) document.getElementById('indxAmount').value = saved.indx;
+  if (saved.sol) document.getElementById('solAmount').value = saved.sol;
+  if (saved.tier) {
+    selectedTier = saved.tier;
+    document.querySelectorAll('.tier-card').forEach(c => {
+      c.classList.toggle('selected', c.querySelector('.tier-pct').textContent === saved.tier);
+    });
+  }
+  updateCalc();
+  const note = document.getElementById('restoreNote');
+  if (note) note.classList.add('show');
+  const name = sessionStorage.getItem('citizen_name');
+  showToast((name ? name + ', your' : 'Your') + ' last preview config was restored.');
+}
+
+function toggleRatioLock(el) {
+  ratioLocked = !ratioLocked;
+  el.classList.toggle('on', ratioLocked);
+  el.setAttribute('aria-checked', ratioLocked ? 'true' : 'false');
+  if (ratioLocked) {
+    const indx = parseFloat(document.getElementById('indxAmount').value) || 0;
+    if (indx > 0) updateCalc('indx');
+  }
+}
+
+// Final review sheet before the preview "execute" step — includes a Tab focus trap + Escape close
+function openReviewSheet() {
+  const indx = parseFloat(document.getElementById('indxAmount').value) || 0;
+  const sol = parseFloat(document.getElementById('solAmount').value) || 0;
+  const total = (indx * INDX_PRICE) + (sol * SOL_PRICE);
+  document.getElementById('reviewINDX').textContent = indx.toLocaleString() + ' INDX';
+  document.getElementById('reviewSOL').textContent = sol + ' SOL';
+  document.getElementById('reviewTotal').textContent = '$' + total.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2});
+  document.getElementById('reviewFeeTier').textContent = selectedTier;
+  document.getElementById('reviewAckCheck').checked = false;
+  toggleReviewConfirm();
+  lastFocusedEl = document.activeElement;
+  document.getElementById('reviewOverlay').classList.add('show');
+  document.getElementById('reviewSheet').classList.add('show');
+  document.addEventListener('keydown', reviewKeyHandler);
+  setTimeout(() => document.getElementById('reviewAckCheck').focus(), 250);
+}
+
+function closeReviewSheet() {
+  document.getElementById('reviewOverlay').classList.remove('show');
+  document.getElementById('reviewSheet').classList.remove('show');
+  document.removeEventListener('keydown', reviewKeyHandler);
+  if (lastFocusedEl) lastFocusedEl.focus();
+}
+
+function reviewKeyHandler(e) {
+  if (e.key === 'Escape') { closeReviewSheet(); return; }
+  if (e.key !== 'Tab') return;
+  const sheet = document.getElementById('reviewSheet');
+  const focusable = sheet.querySelectorAll('input, button');
+  if (!focusable.length) return;
+  const first = focusable[0], last = focusable[focusable.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+}
+
+function toggleReviewConfirm() {
+  document.getElementById('reviewConfirmBtn').disabled = !document.getElementById('reviewAckCheck').checked;
+}
+
+function confirmAndExecute() {
+  if (!document.getElementById('reviewAckCheck').checked) return;
+  closeReviewSheet();
+  executeTxn();
+}
+
+// History of completed preview walkthroughs (this device only — real user-entered data, nothing fabricated)
+function saveHistoryEntry(indx, sol, tier, total) {
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem(LP_HISTORY_KEY) || '[]'); } catch (e) { history = []; }
+  history.unshift({ ts: Date.now(), indx, sol, tier, total });
+  history = history.slice(0, 5);
+  try { localStorage.setItem(LP_HISTORY_KEY, JSON.stringify(history)); } catch (e) {}
+  updateHistoryBadge();
+}
+
+function updateHistoryBadge() {
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem(LP_HISTORY_KEY) || '[]'); } catch (e) { history = []; }
+  const badge = document.getElementById('historyCountBadge');
+  if (badge) badge.textContent = history.length;
+}
+
+function openHistorySheet() {
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem(LP_HISTORY_KEY) || '[]'); } catch (e) { history = []; }
+  const list = document.getElementById('historyList');
+  if (!history.length) {
+    list.innerHTML = '<div class="history-empty">No previous previews yet on this device.</div>';
+  } else {
+    list.innerHTML = history.map((h, i) => {
+      const d = new Date(h.ts);
+      const when = d.toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ' ' + d.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
+      return '<div class="history-item" tabindex="0" role="button" onkeydown="if(event.key===\'Enter\')this.click()" onclick="loadHistoryEntry(' + i + ')">' +
+        '<div><div>' + h.indx.toLocaleString() + ' INDX / ' + h.sol + ' SOL</div>' +
+        '<div class="history-item-meta">' + when + ' · ' + h.tier + ' tier · $' + h.total.toFixed(2) + '</div></div>' +
+        '<span style="color:var(--cyan);font-size:12px;">Reload →</span></div>';
+    }).join('');
+  }
+  lastFocusedEl = document.activeElement;
+  document.getElementById('historyOverlay').classList.add('show');
+  document.getElementById('historySheet').classList.add('show');
+  document.addEventListener('keydown', historyKeyHandler);
+}
+
+function closeHistorySheet() {
+  document.getElementById('historyOverlay').classList.remove('show');
+  document.getElementById('historySheet').classList.remove('show');
+  document.removeEventListener('keydown', historyKeyHandler);
+  if (lastFocusedEl) lastFocusedEl.focus();
+}
+
+function historyKeyHandler(e) {
+  if (e.key === 'Escape') { closeHistorySheet(); return; }
+  if (e.key !== 'Tab') return;
+  const sheet = document.getElementById('historySheet');
+  const focusable = sheet.querySelectorAll('button, [tabindex]');
+  if (!focusable.length) return;
+  const first = focusable[0], last = focusable[focusable.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+}
+
+function loadHistoryEntry(i) {
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem(LP_HISTORY_KEY) || '[]'); } catch (e) { history = []; }
+  const h = history[i];
+  if (!h) return;
+  document.getElementById('indxAmount').value = h.indx;
+  document.getElementById('solAmount').value = h.sol;
+  selectedTier = h.tier;
+  document.querySelectorAll('.tier-card').forEach(c => {
+    c.classList.toggle('selected', c.querySelector('.tier-pct').textContent === h.tier);
+  });
+  updateCalc();
+  closeHistorySheet();
+  setStep(2);
+  showToast('Reloaded that preview config.');
+}
+
+// GOD MODE PATCH: restore draft + refresh history badge on load, in addition to the existing updateCTA() init call
+restoreLastConfig();
+updateHistoryBadge();
 updateCTA();
 </script>
 <script src="siindex-speak-core.js"></script>

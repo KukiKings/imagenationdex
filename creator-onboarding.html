@@ -88,6 +88,40 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 .format-pill{background:var(--surface2);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 8px;text-align:center;}
 .format-pill-icon{font-size:20px;margin-bottom:4px;}
 .format-pill-label{font-size:11px;color:var(--muted);}
+
+/* GOD MODE: live handle preview, draft resume, review sheet, reward value */
+.handle-preview{display:none;font-size:12px;color:var(--cyan);background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.18);border-radius:10px;padding:8px 12px;margin:-8px 0 16px;line-height:1.4;}
+.handle-preview strong{color:var(--text);font-weight:700;}
+
+.rewards-total{display:flex;justify-content:space-between;align-items:center;background:rgba(0,229,160,0.06);border:1px solid rgba(0,229,160,0.18);border-radius:14px;padding:14px 16px;width:100%;margin-top:14px;}
+.rewards-total-label{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
+.rewards-total-val{font-size:16px;font-weight:900;color:var(--green);}
+.claim-val-usd{font-size:11px;color:var(--muted);margin-left:6px;font-weight:500;}
+
+/* Review & confirm bottom sheet */
+.sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.7);opacity:0;pointer-events:none;transition:opacity 0.2s;z-index:90;}
+.sheet-overlay.open{opacity:1;pointer-events:auto;}
+.bottom-sheet{position:fixed;left:0;right:0;bottom:0;max-width:430px;margin:0 auto;background:var(--surface2);border-radius:24px 24px 0 0;padding:22px 24px calc(24px + env(safe-area-inset-bottom));transform:translateY(100%);transition:transform 0.25s ease;z-index:91;box-shadow:0 -8px 30px rgba(0,0,0,0.4);}
+.bottom-sheet.open{transform:translateY(0);}
+.sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--surface3);margin:0 auto 18px;}
+.sheet-title{font-size:17px;font-weight:900;margin-bottom:4px;}
+.sheet-sub{font-size:12px;color:var(--muted);margin-bottom:18px;line-height:1.5;}
+.review-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.06);}
+.review-row:last-of-type{border-bottom:none;}
+.review-label{font-size:12px;color:var(--muted);flex-shrink:0;}
+.review-val{font-size:13px;color:var(--text);font-weight:700;text-align:right;word-break:break-word;}
+.sheet-actions{display:flex;gap:10px;margin-top:20px;}
+.sheet-actions .btn-primary{margin:0;}
+.sheet-actions .btn-ghost{margin:0;}
+
+/* GOD MODE: draft-saved indicator + accessible keyboard focus states for form + review sheet */
+.draft-saved-tick{display:inline-block;margin-left:8px;color:var(--green);font-weight:700;opacity:0;transition:opacity 0.3s ease;}
+.draft-saved-tick.show{opacity:1;}
+.field-input:focus-visible,.nation-select:focus-visible,.btn-primary:focus-visible,.btn-ghost:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+
+/* Toast */
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);background:var(--surface3);color:var(--text);font-size:13px;font-weight:600;padding:12px 18px;border-radius:14px;border:1px solid rgba(255,255,255,0.08);box-shadow:0 8px 24px rgba(0,0,0,0.4);opacity:0;pointer-events:none;transition:opacity 0.25s,transform 0.25s;z-index:120;max-width:360px;text-align:center;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style>
 </head>
 <body>
@@ -158,10 +192,12 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
     <div class="welcome-eyebrow" style="text-align:center;margin-bottom:20px;">Your Creator Profile</div>
     <div class="avatar-picker" id="avatarPicker">🌺<div class="avatar-edit">✏️</div></div>
     <div class="field-label">Creator Name</div>
-    <input class="field-input" id="creatorName" type="text" placeholder="How your audience will know you" maxlength="30" oninput="updateCount(this,'nameCount')">
-    <div class="char-count"><span id="nameCount">0</span>/30</div>
+    <!-- GOD MODE PATCH: wired live handle preview + draft autosave into existing input -->
+    <input class="field-input" id="creatorName" type="text" placeholder="How your audience will know you" maxlength="30" oninput="updateCount(this,'nameCount');updateHandlePreview();saveDraft();">
+    <div class="char-count"><span id="nameCount">0</span>/30<span class="draft-saved-tick" id="draftSavedTick">Saved ✓</span></div>
+    <div class="handle-preview" id="handlePreview">Your handle will be <strong id="handlePreviewText">—</strong></div>
     <div class="field-label">Your Nation</div>
-    <select class="nation-select" id="creatorNation">
+    <select class="nation-select" id="creatorNation" onchange="saveDraft()">
       <option value="">Select your nation</option>
       <option value="🇼🇸">🇼🇸 Samoa</option>
       <option value="🇫🇯">🇫🇯 Fiji</option>
@@ -175,11 +211,13 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
       <option value="other">🌏 Other</option>
     </select>
     <div class="field-label">Your Story (optional)</div>
-    <input class="field-input" id="creatorBio" type="text" placeholder="One line — what you create" maxlength="80" oninput="updateCount(this,'bioCount')">
+    <!-- GOD MODE PATCH: wired draft autosave into existing input -->
+    <input class="field-input" id="creatorBio" type="text" placeholder="One line — what you create" maxlength="80" oninput="updateCount(this,'bioCount');saveDraft();">
     <div class="char-count"><span id="bioCount">0</span>/80</div>
     <div class="claim-error" id="claimError"></div>
     <div style="flex:1;"></div>
-    <button class="btn-primary" id="claimBtn" onclick="claimGenesis()">Claim Genesis Spot →</button>
+    <!-- GOD MODE PATCH: claim now opens a review/confirm sheet before the on-chain call fires -->
+    <button class="btn-primary" id="claimBtn" onclick="openReviewSheet()">Claim Genesis Spot →</button>
     <button class="btn-ghost" onclick="nextStep(2)">← Back</button>
   </div>
 </div>
@@ -193,7 +231,8 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
     <div class="claim-rewards">
       <div class="claim-row">
         <span class="claim-label">INDX Bonus</span>
-        <span class="claim-val">+10 INDX deposited ✓</span>
+        <!-- GOD MODE PATCH: live USD value of the INDX bonus, computed from INDX_PRICE_USD -->
+        <span class="claim-val">+10 INDX deposited ✓<span class="claim-val-usd" id="indxBonusUsd"></span></span>
       </div>
       <div class="claim-row">
         <span class="claim-label">Genesis Badge</span>
@@ -211,6 +250,11 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
         <span class="claim-label">Platform Fee</span>
         <span class="claim-val" style="color:var(--cyan);">0% — always</span>
       </div>
+    </div>
+    <!-- GOD MODE: running total value of Genesis rewards received -->
+    <div class="rewards-total">
+      <span class="rewards-total-label">Total Value Today</span>
+      <span class="rewards-total-val" id="rewardsTotalUsd">≈ $2.40 USD</span>
     </div>
     <div class="si-quote">
       <div class="si-name">SIINDEX</div>
@@ -258,10 +302,155 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
   </div>
 </div>
 
+<!-- GOD MODE: review & confirm sheet before the irreversible Genesis claim -->
+<div class="sheet-overlay" id="reviewOverlay" onclick="closeReviewSheet()"></div>
+<div class="bottom-sheet" id="reviewSheet" role="dialog" aria-modal="true" aria-labelledby="reviewSheetTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="reviewSheetTitle">Review before you claim</div>
+  <div class="sheet-sub">This creates your Creator address on-chain. Check the details below, then confirm.</div>
+  <div class="review-row">
+    <span class="review-label">Creator Name</span>
+    <span class="review-val" id="reviewName">—</span>
+  </div>
+  <div class="review-row">
+    <span class="review-label">Nation</span>
+    <span class="review-val" id="reviewNation">—</span>
+  </div>
+  <div class="review-row">
+    <span class="review-label">Story</span>
+    <span class="review-val" id="reviewBio">—</span>
+  </div>
+  <div class="sheet-actions">
+    <button class="btn-ghost" style="flex:1;" onclick="closeReviewSheet()">Edit</button>
+    <button class="btn-primary" style="flex:1.4;" id="reviewConfirmBtn" onclick="confirmClaim()">Confirm & Claim →</button>
+  </div>
+</div>
+
+<!-- GOD MODE: toast for draft-restore notifications -->
+<div class="toast" id="toast"></div>
+
 <script>
 const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// GOD MODE: live INDX→USD conversion price. Never hardcode a USD figure elsewhere — derive it from this.
+const INDX_PRICE_USD = 0.24;
+const DRAFT_KEY = 'indx_creator-onboarding_draft';
+
+// GOD MODE: live creator handle preview — shows the on-chain domain as they type
+function updateHandlePreview(){
+  var nameEl = document.getElementById('creatorName');
+  var preview = document.getElementById('handlePreview');
+  var previewText = document.getElementById('handlePreviewText');
+  if(!nameEl || !preview || !previewText) return;
+  var name = nameEl.value.trim();
+  if(!name){ preview.style.display = 'none'; return; }
+  previewText.textContent = slugify(name) + '.IN$DEX';
+  preview.style.display = 'block';
+}
+
+// GOD MODE: autosave the in-progress profile to localStorage so a refresh or closed tab
+// doesn't lose it, and restore it (with a toast) the next time this screen loads.
+function saveDraft(){
+  var draft = {
+    name: document.getElementById('creatorName').value,
+    nation: document.getElementById('creatorNation').value,
+    bio: document.getElementById('creatorBio').value,
+    ts: Date.now()
+  };
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  var tick = document.getElementById('draftSavedTick');
+  if(tick){
+    tick.classList.add('show');
+    clearTimeout(window._draftTickTimer);
+    window._draftTickTimer = setTimeout(function(){ tick.classList.remove('show'); }, 1200);
+  }
+}
+
+function restoreDraft(){
+  var raw = localStorage.getItem(DRAFT_KEY) || 'null';
+  var draft = null;
+  try{ draft = JSON.parse(raw); }catch(e){ draft = null; }
+  if(!draft || !draft.name) return;
+  // Don't resurrect a draft for someone who already has a live claimed account this session.
+  if(sessionStorage.getItem('citizen_id')) return;
+  document.getElementById('creatorName').value = draft.name || '';
+  document.getElementById('creatorNation').value = draft.nation || '';
+  document.getElementById('creatorBio').value = draft.bio || '';
+  updateCount(document.getElementById('creatorName'), 'nameCount');
+  updateCount(document.getElementById('creatorBio'), 'bioCount');
+  updateHandlePreview();
+  showToast('Welcome back — your draft profile was restored.');
+}
+
+// GOD MODE: shared toast helper backing the existing #toast element.
+var _toastTimer = null;
+function showToast(msg){
+  var el = document.getElementById('toast');
+  if(!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 2600);
+}
+
+// GOD MODE: review & confirm bottom sheet — a safety checkpoint before the irreversible
+// on-chain claim, with a focus trap for keyboard/screen-reader users.
+var _reviewFocusTrapHandler = null;
+function openReviewSheet(){
+  var name = document.getElementById('creatorName').value.trim();
+  if(!name){
+    showClaimError('Enter a creator name first.');
+    document.getElementById('creatorName').focus();
+    return;
+  }
+  document.getElementById('claimError').classList.remove('show');
+  document.getElementById('reviewName').textContent = name;
+  var nationSel = document.getElementById('creatorNation');
+  var nationText = nationSel.selectedIndex >= 0 ? nationSel.options[nationSel.selectedIndex].text : '';
+  document.getElementById('reviewNation').textContent = (nationSel.value && nationText) ? nationText : 'Not set';
+  var bio = document.getElementById('creatorBio').value.trim();
+  document.getElementById('reviewBio').textContent = bio || 'Not set';
+
+  document.getElementById('reviewOverlay').classList.add('open');
+  var sheet = document.getElementById('reviewSheet');
+  sheet.classList.add('open');
+
+  var focusable = sheet.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+  if(focusable.length){ focusable[0].focus(); }
+  _reviewFocusTrapHandler = function(e){
+    if(e.key === 'Escape'){ closeReviewSheet(); return; }
+    if(e.key !== 'Tab' || !focusable.length) return;
+    var first = focusable[0], last = focusable[focusable.length - 1];
+    if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+  };
+  document.addEventListener('keydown', _reviewFocusTrapHandler);
+}
+
+function closeReviewSheet(){
+  document.getElementById('reviewOverlay').classList.remove('open');
+  document.getElementById('reviewSheet').classList.remove('open');
+  if(_reviewFocusTrapHandler){
+    document.removeEventListener('keydown', _reviewFocusTrapHandler);
+    _reviewFocusTrapHandler = null;
+  }
+}
+
+function confirmClaim(){
+  closeReviewSheet();
+  claimGenesis();
+}
+
+// GOD MODE: live INDX→USD conversion for the Genesis bonus, always derived from INDX_PRICE_USD.
+function renderRewardsUsd(){
+  var bonusUsd = (CREATOR_BONUS_INDX * INDX_PRICE_USD).toFixed(2);
+  var bonusEl = document.getElementById('indxBonusUsd');
+  if(bonusEl) bonusEl.textContent = ' (≈ $' + bonusUsd + ' USD)';
+  var totalEl = document.getElementById('rewardsTotalUsd');
+  if(totalEl) totalEl.textContent = '≈ $' + bonusUsd + ' USD';
+}
 
 // Genesis Creator program constants — must match what step 4's copy actually promises.
 const CREATOR_BONUS_INDX = 10;
@@ -300,6 +489,8 @@ async function claimGenesis(){
 
   // Resuming this session with an account already created — don't double-claim.
   if (sessionStorage.getItem('citizen_id')) {
+    // GOD MODE PATCH: refresh the live USD conversion before showing the reward screen
+    renderRewardsUsd();
     nextStep(4);
     return;
   }
@@ -362,6 +553,10 @@ async function claimGenesis(){
 
       btn.disabled = false;
       btn.textContent = 'Claim Genesis Spot →';
+      // GOD MODE PATCH: compute the live USD value of the bonus before showing the reward screen
+      renderRewardsUsd();
+      // GOD MODE PATCH: clear the autosaved draft now that the real account exists
+      localStorage.removeItem(DRAFT_KEY);
       nextStep(4);
       return;
     } catch (e) {
@@ -383,6 +578,11 @@ async function claimGenesis(){
 // AUDIT 2026-07-30: this read sessionStorage key 'genesis_slots', which nothing in the repo ever
 // writes — so the hardcoded 153 always rendered. Removed rather than repointed: there is no real
 // creator count to show until the waitlist has rows.
+
+// GOD MODE: restore any autosaved draft profile once the DOM is ready.
+document.addEventListener('DOMContentLoaded', function(){
+  restoreDraft();
+});
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

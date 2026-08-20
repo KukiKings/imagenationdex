@@ -59,6 +59,34 @@
     .pb-fill{height:100%;border-radius:4px;background:var(--green);}
     .btn-borrow{width:100%;padding:16px;border-radius:14px;background:var(--gold);border:none;color:#000;font-size:16px;font-weight:900;cursor:pointer;}
     #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+    /* GOD MODE: countdown / history / compare / confirm */
+    .gm-countdown{display:flex;justify-content:space-between;align-items:center;background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.18);border-radius:10px;padding:8px 12px;margin-top:10px;font-size:12px;color:var(--text-muted);}
+    .gm-countdown b{color:var(--cyan);font-size:13px;}
+    .gm-link-row{display:flex;gap:10px;margin-bottom:14px;}
+    .gm-link-btn{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:12px;font-weight:700;color:var(--text-muted);text-align:center;cursor:pointer;}
+    .gm-link-btn:active{background:var(--surface3);}
+    .sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:80;opacity:0;pointer-events:none;transition:opacity 0.2s;}
+    .sheet-overlay.open{opacity:1;pointer-events:auto;}
+    .bottom-sheet{position:fixed;left:0;right:0;bottom:0;max-width:430px;margin:0 auto;background:var(--surface2);border:1px solid var(--border);border-radius:20px 20px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom));z-index:90;transform:translateY(100%);transition:transform 0.25s ease;max-height:78vh;overflow-y:auto;}
+    .bottom-sheet.open{transform:translateY(0);}
+    .sheet-handle{width:36px;height:4px;border-radius:4px;background:var(--surface3);margin:0 auto 14px;}
+    .sheet-title{font-size:15px;font-weight:800;margin-bottom:14px;}
+    .gm-compare-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px;}
+    .gm-compare-card.best{border-color:rgba(0,229,160,0.35);background:rgba(0,229,160,0.05);}
+    .gm-cc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+    .gm-cc-amt{font-size:15px;font-weight:900;color:var(--cyan);}
+    .gm-cc-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(0,229,160,0.12);color:var(--green);}
+    .gm-cc-row{display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);padding:2px 0;}
+    .gm-history-item{display:flex;justify-content:space-between;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:12px;}
+    .gm-history-amt{font-weight:800;color:var(--text);}
+    .gm-history-meta{color:var(--text-muted);font-size:11px;}
+    .gm-history-empty{font-size:12px;color:var(--text-muted);text-align:center;padding:20px 0;}
+    .gm-confirm-row{display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+    .gm-confirm-row:last-child{border-bottom:none;}
+    .gm-confirm-lbl{color:var(--text-muted);}
+    .gm-sheet-btn{width:100%;padding:14px;border-radius:12px;background:var(--gold);border:none;color:#000;font-size:15px;font-weight:900;cursor:pointer;margin-top:14px;}
+    .gm-sheet-btn.secondary{background:var(--surface3);color:var(--text);margin-top:8px;}
+    .gm-clear-btn{width:100%;padding:10px;border-radius:10px;background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.2);color:var(--red);font-size:13px;font-weight:700;cursor:pointer;margin-top:6px;}
   </style>
 </head>
 <body>
@@ -82,7 +110,14 @@
         </div>
         <div class="al-row"><div class="al-lbl">Borrowed (preview)</div><div style="font-weight:700;" id="alBorrowed">$0.00</div></div>
         <div class="al-row"><div class="al-lbl">Status</div><div style="font-weight:700;color:var(--gold);">Not a real loan — nothing disbursed</div></div>
+        <div class="gm-countdown" id="gmCountdown"><span>Preview term (not a real due date)</span><b id="gmCountdownVal">—</b></div>
         <button style="width:100%;padding:10px;border-radius:10px;background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.2);color:var(--red);font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;" onclick="clearLoanPreview()">Remove preview</button>
+      </div>
+
+      <!-- GOD MODE: quick links -->
+      <div class="gm-link-row">
+        <div class="gm-link-btn" onclick="openCompareSheet()">📊 Compare tiers</div>
+        <div class="gm-link-btn" onclick="openHistorySheet()">🕘 Preview history</div>
       </div>
       <div id="noLoanNote" style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">No active loan — Sovereign Lending isn't live yet.</div>
 
@@ -161,17 +196,56 @@
         ⚠️ <strong style="color:var(--gold);">Never borrow more than you can repay.</strong> If INDX price falls 50%, your collateral is automatically sold to repay the loan. Your Wisdom Score decreases on liquidation.
       </div>
 
-      <button class="btn-borrow" onclick="previewBorrow()">Save Preview (not a real loan)</button>
+      <!-- GOD MODE PATCH: route through confirmation sheet instead of saving directly -->
+      <button class="btn-borrow" onclick="openConfirmSheet()">Save Preview (not a real loan)</button>
     </div>
   </div>
 </div>
+
+<!-- GOD MODE: Compare Tiers sheet -->
+<div class="sheet-overlay" id="compareOverlay" onclick="closeCompareSheet()"></div>
+<div class="bottom-sheet" id="compareSheet" role="dialog" aria-modal="true" aria-labelledby="compareSheetTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="compareSheetTitle">Compare all tiers (illustrative)</div>
+  <div id="compareList"></div>
+  <button class="gm-sheet-btn secondary" onclick="closeCompareSheet()">Close</button>
+</div>
+
+<!-- GOD MODE: Preview History sheet -->
+<div class="sheet-overlay" id="historyOverlay" onclick="closeHistorySheet()"></div>
+<div class="bottom-sheet" id="historySheet" role="dialog" aria-modal="true" aria-labelledby="historySheetTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="historySheetTitle">Your saved previews</div>
+  <div id="historyList"></div>
+  <button class="gm-clear-btn" onclick="clearPreviewHistory()">Clear history</button>
+  <button class="gm-sheet-btn secondary" onclick="closeHistorySheet()">Close</button>
+</div>
+
+<!-- GOD MODE: Confirm Preview sheet -->
+<div class="sheet-overlay" id="confirmOverlay" onclick="closeConfirmSheet()"></div>
+<div class="bottom-sheet" id="confirmSheet" role="dialog" aria-modal="true" aria-labelledby="confirmSheetTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="confirmSheetTitle">Review before saving</div>
+  <div class="gm-confirm-row"><div class="gm-confirm-lbl">Loan amount</div><div id="cfAmt" style="font-weight:700;">$0.00</div></div>
+  <div class="gm-confirm-row"><div class="gm-confirm-lbl">Rate</div><div id="cfRate">—</div></div>
+  <div class="gm-confirm-row"><div class="gm-confirm-lbl">Term</div><div id="cfTerm">—</div></div>
+  <div class="gm-confirm-row"><div class="gm-confirm-lbl">Total repayable (illustrative)</div><div id="cfTotal" style="font-weight:700;color:var(--gold);">$0.00</div></div>
+  <div style="font-size:11.5px;color:var(--text-muted);line-height:1.5;margin-top:10px;">This only saves a local preview on this device. No loan is issued and no funds move.</div>
+  <button class="gm-sheet-btn" onclick="confirmAndSavePreview()">Confirm & Save Preview</button>
+  <button class="gm-sheet-btn secondary" onclick="closeConfirmSheet()">Cancel</button>
+</div>
+
 <div id="toast"></div>
 <script>
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
   const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
   const citizenId = sessionStorage.getItem('citizen_id');
+  const INDX_PRICE_USD = 0.24;
   let selectedAmt = 150;
+  // GOD MODE PATCH: track rate/term alongside amount so previews/confirm/countdown can use them
+  let selectedRate = 1.5;
+  let selectedDays = 60;
 
   async function rpc(name, body) {
     const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + name, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(body) });
@@ -196,10 +270,12 @@
     let p; try { p = JSON.parse(localStorage.getItem('indx_loan_preview')||'null'); } catch(e) { p = null; }
     const card = document.getElementById('activeLoanCard');
     const note = document.getElementById('noLoanNote');
-    if (!p) { card.style.display='none'; note.style.display='block'; return; }
+    if (!p) { card.style.display='none'; note.style.display='block'; stopCountdown(); return; }
     note.style.display='none';
     card.style.display='block';
     document.getElementById('alBorrowed').textContent = '$' + p.amt.toFixed(2);
+    // GOD MODE PATCH: kick off the live countdown once a preview is on screen
+    startCountdown(p);
   }
   function clearLoanPreview() {
     localStorage.removeItem('indx_loan_preview');
@@ -212,24 +288,152 @@
     document.querySelectorAll('.tier-card').forEach(c=>c.classList.remove('active'));
     el.classList.add('active');
     selectedAmt = amt;
-    const monthly=(amt*rate/100);const total=amt+monthly*(days/30);const coll=(amt/0.24)*2;
+    // GOD MODE PATCH: remember rate/term for countdown + confirm sheet + history
+    selectedRate = rate;
+    selectedDays = days;
+    const monthly=(amt*rate/100);const total=amt+monthly*(days/30);const coll=(amt/INDX_PRICE_USD)*2;
     document.getElementById('rsAmt').textContent='$'+amt.toFixed(2);
     document.getElementById('rsRate').textContent=rate+'% / month';
     document.getElementById('rsTerm').textContent=days+' days';
     document.getElementById('rsMonthly').textContent='$'+(total/(days/30)).toFixed(2);
     document.getElementById('rsTotal').textContent='$'+total.toFixed(2);
     document.getElementById('rsColl').textContent=coll.toFixed(0)+' INDX';
-    document.getElementById('liqPrice').textContent=(0.24*0.5).toFixed(3);
+    document.getElementById('liqPrice').textContent=(INDX_PRICE_USD*0.5).toFixed(3);
     document.querySelector('.btn-borrow').textContent='Save Preview — $'+amt+' (not real)';
   }
 
+  function calcTierTotal(amt,rate,days){
+    const monthly = amt*rate/100;
+    const total = amt + monthly*(days/30);
+    return { monthly: total/(days/30), total };
+  }
+
   function previewBorrow() {
-    localStorage.setItem('indx_loan_preview', JSON.stringify({ amt: selectedAmt, ts: Date.now() }));
+    const record = { amt: selectedAmt, rate: selectedRate, days: selectedDays, ts: Date.now() };
+    localStorage.setItem('indx_loan_preview', JSON.stringify(record));
+    // GOD MODE PATCH: append to persistent preview history (namespaced, capped at 10)
+    let hist; try { hist = JSON.parse(localStorage.getItem('indx_microloan_history')||'[]'); } catch(e) { hist = []; }
+    if (!Array.isArray(hist)) hist = [];
+    hist.unshift(record);
+    hist = hist.slice(0,10);
+    localStorage.setItem('indx_microloan_history', JSON.stringify(hist));
     showToast('Saved as a preview — no real loan issued, no money added to your balance');
     renderLoanPreview();
   }
 
   function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}
+
+  /* ===== GOD MODE FEATURES: live countdown, preview history, tier comparison, confirm-before-save ===== */
+
+  // -- Live countdown on the active preview card --
+  let gmCountdownTimer = null;
+  function startCountdown(p) {
+    stopCountdown();
+    const days = p.days || 60;
+    const endTs = p.ts + days*24*60*60*1000;
+    const tick = () => {
+      const remainMs = endTs - Date.now();
+      const el = document.getElementById('gmCountdownVal');
+      if (!el) { stopCountdown(); return; }
+      if (remainMs <= 0) { el.textContent = 'Term elapsed'; return; }
+      const d = Math.floor(remainMs/(24*60*60*1000));
+      const h = Math.floor((remainMs%(24*60*60*1000))/(60*60*1000));
+      el.textContent = d+'d '+h+'h left';
+    };
+    tick();
+    gmCountdownTimer = setInterval(tick, 60000);
+  }
+  function stopCountdown() { if (gmCountdownTimer) { clearInterval(gmCountdownTimer); gmCountdownTimer = null; } }
+
+  // -- Tier comparison sheet --
+  const GM_TIERS = [
+    { amt:50, rate:1.2, days:30, badge:'Starter' },
+    { amt:150, rate:1.5, days:60, badge:'Popular' },
+    { amt:300, rate:1.8, days:90, badge:'Standard' },
+    { amt:500, rate:2.0, days:120, badge:'Advanced' }
+  ];
+  function openCompareSheet() {
+    const list = document.getElementById('compareList');
+    let bestRatio = Infinity, bestIdx = -1;
+    const rows = GM_TIERS.map((t,i)=>{
+      const { total } = calcTierTotal(t.amt, t.rate, t.days);
+      const ratio = (total - t.amt) / t.amt;
+      if (ratio < bestRatio) { bestRatio = ratio; bestIdx = i; }
+      return { t, total };
+    });
+    list.innerHTML = rows.map((r,i)=>`
+      <div class="gm-compare-card ${i===bestIdx?'best':''}">
+        <div class="gm-cc-head">
+          <div class="gm-cc-amt">$${r.t.amt}</div>
+          ${i===bestIdx?'<div class="gm-cc-badge">Lowest cost %</div>':''}
+        </div>
+        <div class="gm-cc-row"><span>Rate</span><span>${r.t.rate}% / month</span></div>
+        <div class="gm-cc-row"><span>Term</span><span>${r.t.days} days</span></div>
+        <div class="gm-cc-row"><span>Total repayable</span><span style="color:var(--gold);font-weight:700;">$${r.total.toFixed(2)}</span></div>
+      </div>`).join('');
+    document.getElementById('compareOverlay').classList.add('open');
+    document.getElementById('compareSheet').classList.add('open');
+  }
+  function closeCompareSheet() {
+    document.getElementById('compareOverlay').classList.remove('open');
+    document.getElementById('compareSheet').classList.remove('open');
+  }
+
+  // -- Preview history sheet --
+  function openHistorySheet() {
+    let hist; try { hist = JSON.parse(localStorage.getItem('indx_microloan_history')||'[]'); } catch(e) { hist = []; }
+    if (!Array.isArray(hist)) hist = [];
+    const list = document.getElementById('historyList');
+    if (!hist.length) {
+      list.innerHTML = '<div class="gm-history-empty">No saved previews yet on this device.</div>';
+    } else {
+      list.innerHTML = hist.map(h=>{
+        const d = new Date(h.ts);
+        return `<div class="gm-history-item">
+          <div><div class="gm-history-amt">$${(h.amt||0).toFixed(2)}</div><div class="gm-history-meta">${h.rate||'—'}% / mo · ${h.days||'—'}d</div></div>
+          <div class="gm-history-meta">${d.toLocaleDateString()} ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+        </div>`;
+      }).join('');
+    }
+    document.getElementById('historyOverlay').classList.add('open');
+    document.getElementById('historySheet').classList.add('open');
+  }
+  function closeHistorySheet() {
+    document.getElementById('historyOverlay').classList.remove('open');
+    document.getElementById('historySheet').classList.remove('open');
+  }
+  function clearPreviewHistory() {
+    localStorage.removeItem('indx_microloan_history');
+    openHistorySheet();
+    showToast('Preview history cleared');
+  }
+
+  // -- Confirm-before-save sheet --
+  function openConfirmSheet() {
+    const { total } = calcTierTotal(selectedAmt, selectedRate, selectedDays);
+    document.getElementById('cfAmt').textContent = '$'+selectedAmt.toFixed(2);
+    document.getElementById('cfRate').textContent = selectedRate+'% / month';
+    document.getElementById('cfTerm').textContent = selectedDays+' days';
+    document.getElementById('cfTotal').textContent = '$'+total.toFixed(2);
+    document.getElementById('confirmOverlay').classList.add('open');
+    document.getElementById('confirmSheet').classList.add('open');
+  }
+  function closeConfirmSheet() {
+    document.getElementById('confirmOverlay').classList.remove('open');
+    document.getElementById('confirmSheet').classList.remove('open');
+  }
+  function confirmAndSavePreview() {
+    previewBorrow();
+    closeConfirmSheet();
+  }
+
+  // -- Keyboard accessibility: Esc closes whichever sheet is open --
+  document.addEventListener('keydown', (e)=>{
+    if (e.key !== 'Escape') return;
+    if (document.getElementById('compareSheet').classList.contains('open')) closeCompareSheet();
+    if (document.getElementById('historySheet').classList.contains('open')) closeHistorySheet();
+    if (document.getElementById('confirmSheet').classList.contains('open')) closeConfirmSheet();
+  });
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

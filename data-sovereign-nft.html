@@ -124,6 +124,22 @@ select.form-input{appearance:none;cursor:pointer;}
 
 .toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(20px);max-width:320px;width:calc(100% - 40px);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:13px;color:var(--text);text-align:center;opacity:0;transition:opacity 0.3s,transform 0.3s;z-index:400;pointer-events:none;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* GOD MODE: license list, USD conversion, mint preview, accessibility */
+.lc-expiry{font-size:11px;color:var(--gold);margin-bottom:8px;}
+.tc-usd{font-size:11px;color:var(--text2);font-weight:600;margin-left:4px;}
+.empty-licenses{text-align:center;padding:12px 4px;color:var(--text2);font-size:13px;}
+.lic-price-preview{background:var(--surface3);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--text2);margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.lic-price-preview strong{color:var(--cyan);font-size:13px;}
+.sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.92);z-index:250;opacity:0;pointer-events:none;transition:opacity 0.3s;}
+.sheet-overlay.show{opacity:1;pointer-events:all;}
+.bottom-sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(100%);width:100%;max-width:430px;background:var(--surface);border-radius:24px 24px 0 0;padding:24px;z-index:260;transition:transform 0.3s;max-height:80vh;overflow-y:auto;}
+.bottom-sheet.show{transform:translateX(-50%) translateY(0);}
+.mp-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text2);}
+.mp-row:last-of-type{border-bottom:none;}
+.mp-row span:last-child{color:var(--text);font-weight:700;}
+.mp-total{margin-top:14px;padding:12px 14px;border-radius:12px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);font-size:13px;color:var(--cyan);font-weight:700;text-align:center;}
+.form-input:focus-visible,.sheet-btn:focus-visible,.mint-btn:focus-visible,.revoke-license-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
 </style>
 </head>
 <body>
@@ -178,7 +194,7 @@ select.form-input{appearance:none;cursor:pointer;}
       </div>
     </div>
 
-    <button class="mint-btn" onclick="startMint()">Mint My Sovereign NFT →</button>
+    <button class="mint-btn" onclick="openMintPreview()">Mint My Sovereign NFT →</button>
   </div>
 
   <!-- ACCESS TIERS -->
@@ -190,24 +206,26 @@ select.form-input{appearance:none;cursor:pointer;}
       <div class="tc-badge">Instant · Public verification</div>
     </div>
     <div class="tier-card use">
-      <div class="tc-header"><div class="tc-title">📋 Use</div><div class="tc-price">5 INDX / month</div></div>
+      <div class="tc-header"><div class="tc-title">📋 Use</div><div class="tc-price">5 INDX / month<span class="tc-usd" id="tcUsdUse"></span></div></div>
       <div class="tc-desc">Verified organisations can use your anonymised data for research. Max 3 months per license. You can revoke anytime.</div>
       <div class="tc-badge">Anonymised · Revocable · GDPR compliant</div>
     </div>
     <div class="tier-card resell">
-      <div class="tc-header"><div class="tc-title">🔄 Resell</div><div class="tc-price">25 INDX / month</div></div>
+      <div class="tc-header"><div class="tc-title">🔄 Resell</div><div class="tc-price">25 INDX / month<span class="tc-usd" id="tcUsdResell"></span></div></div>
       <div class="tc-desc">Partner organisations can include your profile in data packages they sell. You receive 20% royalty on every resale — automatically, on-chain.</div>
       <div class="tc-badge">20% royalty on resales · 98/2 Law applies</div>
     </div>
   </div>
 
   <!-- ACTIVE LICENSES -->
-  <div class="section-title">Active Licenses (0)</div>
-  <div class="license-card" style="border-color:var(--border);">
-    <div style="text-align:center;padding:12px 4px;color:var(--text2);font-size:13px;">No active licenses yet. Licensing partners can request access once IN$DEX launches — you decide who gets in.</div>
+  <div class="section-title" id="licenseSectionTitle">Active Licenses (0)</div>
+  <div id="licensesList">
+    <div class="license-card" style="border-color:var(--border);" id="noLicensesCard">
+      <div class="empty-licenses">No active licenses yet. Licensing partners can request access once IN$DEX launches — you decide who gets in.</div>
+    </div>
   </div>
 
-  <button onclick="document.getElementById('addLicenseOverlay').classList.add('show')" style="margin:0 24px 20px;padding:14px;border-radius:14px;background:var(--surface2);border:1.5px dashed rgba(0,212,255,0.2);color:var(--cyan);font-size:14px;font-weight:700;cursor:pointer;width:calc(100%-48px);display:block;">+ Add New License</button>
+  <button onclick="openAddLicenseSheet()" style="margin:0 24px 20px;padding:14px;border-radius:14px;background:var(--surface2);border:1.5px dashed rgba(0,212,255,0.2);color:var(--cyan);font-size:14px;font-weight:700;cursor:pointer;width:calc(100%-48px);display:block;">+ Add New License</button>
 
   <!-- EARNINGS SUMMARY -->
   <div class="section-title">NFT Earnings</div>
@@ -215,7 +233,7 @@ select.form-input{appearance:none;cursor:pointer;}
     <div class="ec-row"><div class="ec-label">Total earned (all time)</div><div class="ec-val">0 INDX</div></div>
     <div class="ec-row"><div class="ec-label">This month</div><div class="ec-val">0 INDX</div></div>
     <div class="ec-row"><div class="ec-label">Resale royalties</div><div class="ec-val">0 INDX</div></div>
-    <div class="ec-row"><div class="ec-label">Active licenses</div><div class="ec-val">0</div></div>
+    <div class="ec-row"><div class="ec-label">Active licenses</div><div class="ec-val" id="earningsActiveCount">0</div></div>
   </div>
 
   <div class="siindex-bar">
@@ -234,19 +252,32 @@ select.form-input{appearance:none;cursor:pointer;}
     <label class="form-label">Organisation name</label>
     <input type="text" class="form-input" id="licOrg" placeholder="e.g. Auckland University">
     <label class="form-label">Access tier</label>
-    <select class="form-input" id="licTier">
+    <select class="form-input" id="licTier" onchange="updateLicPreview()">
       <option value="view">👁 View — Free</option>
       <option value="use">📋 Use — 5 INDX / month</option>
       <option value="resell">🔄 Resell — 25 INDX / month + 20% royalty</option>
     </select>
     <label class="form-label">Duration</label>
-    <select class="form-input" id="licDuration">
+    <select class="form-input" id="licDuration" onchange="updateLicPreview()">
       <option>1 month</option>
       <option>2 months</option>
       <option>3 months (max)</option>
     </select>
+    <div class="lic-price-preview" id="licPricePreview">Estimated cost: <strong>Free</strong></div>
     <button class="sheet-btn" onclick="addLicense()">Activate License →</button>
   </div>
+</div>
+
+<!-- MINT PREVIEW SHEET -->
+<div class="sheet-overlay" id="mintPreviewOverlay" onclick="if(event.target.id==='mintPreviewOverlay')closeMintPreview()"></div>
+<div class="bottom-sheet" id="mintPreviewSheet" role="dialog" aria-modal="true" aria-labelledby="mintPreviewTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="mintPreviewTitle">Review before minting</div>
+  <div class="sheet-sub">Confirm what's included in your Sovereign Data NFT.</div>
+  <div id="mintPreviewList"></div>
+  <div class="mp-total" id="mintPreviewTotal"></div>
+  <button class="sheet-btn" onclick="confirmMint()">Confirm & Mint →</button>
+  <button onclick="closeMintPreview()" style="width:100%;padding:12px;margin-top:10px;border-radius:12px;background:transparent;border:1px solid var(--border);color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;">Cancel</button>
 </div>
 
 <!-- MINTING OVERLAY -->
@@ -282,6 +313,134 @@ const wisdom = sessionStorage.getItem('citizen_wisdom') || '87';
 document.getElementById('nftName').textContent = citizenDomain.toUpperCase();
 document.getElementById('nftWisdom').textContent = wisdom + ' / 200';
 
+// GOD MODE: license persistence, USD conversion, mint preview, accessibility
+const INDX_PRICE_USD = 0.24;
+const LICENSES_KEY = 'indx_data-sovereign-nft_licenses';
+const TIER_PRICES = {view:0, use:5, resell:25};
+const TIER_LABELS = {view:'👁 View', use:'📋 Use', resell:'🔄 Resell'};
+
+function getLicenses(){ try{ return JSON.parse(localStorage.getItem(LICENSES_KEY) || '[]'); }catch(e){ return []; } }
+function saveLicenses(list){ localStorage.setItem(LICENSES_KEY, JSON.stringify(list || [])); }
+
+function renderTierUSD(){
+  const useUSD = (TIER_PRICES.use * INDX_PRICE_USD).toFixed(2);
+  const resellUSD = (TIER_PRICES.resell * INDX_PRICE_USD).toFixed(2);
+  const useEl = document.getElementById('tcUsdUse');
+  const resellEl = document.getElementById('tcUsdResell');
+  if(useEl) useEl.textContent = ' (≈$' + useUSD + ')';
+  if(resellEl) resellEl.textContent = ' (≈$' + resellUSD + ')';
+}
+
+function updateLicPreview(){
+  const tierEl = document.getElementById('licTier');
+  const durationSel = document.getElementById('licDuration');
+  if(!tierEl || !durationSel) return;
+  const tier = tierEl.value;
+  const months = durationSel.selectedIndex + 1;
+  const monthly = TIER_PRICES[tier] || 0;
+  const total = monthly * months;
+  const usd = (total * INDX_PRICE_USD).toFixed(2);
+  const preview = document.getElementById('licPricePreview');
+  if(!preview) return;
+  if(monthly === 0){
+    preview.innerHTML = 'Estimated cost: <strong>Free</strong>';
+  } else {
+    preview.innerHTML = 'Estimated cost for ' + months + ' month' + (months>1?'s':'') + ': <strong>' + total + ' INDX (≈$' + usd + ')</strong>';
+  }
+}
+
+function renderLicenses(){
+  const list = getLicenses();
+  const container = document.getElementById('licensesList');
+  const titleEl = document.getElementById('licenseSectionTitle');
+  if(titleEl) titleEl.textContent = 'Active Licenses (' + list.length + ')';
+  if(container){
+    if(list.length === 0){
+      container.innerHTML = '<div class="license-card" style="border-color:var(--border);"><div class="empty-licenses">No active licenses yet. Licensing partners can request access once IN$DEX launches — you decide who gets in.</div></div>';
+    } else {
+      container.innerHTML = list.map(function(lic){
+        const daysLeft = Math.max(0, Math.ceil(((lic.expiresAt || 0) - Date.now()) / 86400000));
+        return '<div class="license-card"><div class="lc-top"><div class="lc-company">' + lic.org + '</div><div class="lc-tier">' + (TIER_LABELS[lic.tier] || lic.tier) + '</div></div>' +
+          '<div class="lc-dates">Added ' + new Date(lic.addedAt || Date.now()).toLocaleDateString() + '</div>' +
+          '<div class="lc-expiry">⏳ ' + daysLeft + ' day' + (daysLeft===1?'':'s') + ' remaining</div>' +
+          '<button class="revoke-license-btn" onclick="revokeLicense(\'' + lic.id + '\')">Revoke Access</button></div>';
+      }).join('');
+    }
+  }
+  const activeCountEl = document.getElementById('earningsActiveCount');
+  if(activeCountEl) activeCountEl.textContent = list.length;
+}
+
+function revokeLicense(id){
+  const list = getLicenses().filter(function(l){ return l.id !== id; });
+  saveLicenses(list);
+  renderLicenses();
+  showToast('License revoked. Standing by.');
+}
+
+function openMintPreview(){
+  const locOn = document.getElementById('locToggle').classList.contains('on');
+  const spendOn = document.getElementById('spendToggle').classList.contains('on');
+  const items = [
+    ['Phone number', 'Verified ✓'],
+    ['Phone verification', 'Passed ✓'],
+    ['Wisdom Score', document.getElementById('nftWisdom').textContent],
+    ['Location (region)', locOn ? 'Included' : 'Excluded'],
+    ['Spending patterns', spendOn ? 'Included (anonymised)' : 'Excluded']
+  ];
+  const listEl = document.getElementById('mintPreviewList');
+  listEl.innerHTML = items.map(function(row){
+    return '<div class="mp-row"><span>' + row[0] + '</span><span>' + row[1] + '</span></div>';
+  }).join('');
+  const maxMonthly = TIER_PRICES.use + TIER_PRICES.resell;
+  const maxUSD = (maxMonthly * INDX_PRICE_USD).toFixed(2);
+  document.getElementById('mintPreviewTotal').textContent = 'Up to ' + maxMonthly + ' INDX/month (≈$' + maxUSD + ') if fully licensed';
+  document.getElementById('mintPreviewOverlay').classList.add('show');
+  document.getElementById('mintPreviewSheet').classList.add('show');
+  enableFocusTrap(document.getElementById('mintPreviewSheet'));
+}
+
+function closeMintPreview(){
+  document.getElementById('mintPreviewOverlay').classList.remove('show');
+  document.getElementById('mintPreviewSheet').classList.remove('show');
+}
+
+function confirmMint(){
+  closeMintPreview();
+  startMint();
+}
+
+function openAddLicenseSheet(){
+  const overlay = document.getElementById('addLicenseOverlay');
+  overlay.classList.add('show');
+  updateLicPreview();
+  enableFocusTrap(overlay.querySelector('.sheet'));
+}
+
+function enableFocusTrap(container){
+  if(!container) return;
+  const focusable = container.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+  if(!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  function handler(e){
+    if(e.key === 'Escape'){
+      closeMintPreview();
+      document.getElementById('addLicenseOverlay').classList.remove('show');
+    } else if(e.key === 'Tab'){
+      if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+      else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+    }
+  }
+  if(container._godModeTrapHandler){ container.removeEventListener('keydown', container._godModeTrapHandler); }
+  container._godModeTrapHandler = handler;
+  container.addEventListener('keydown', handler);
+  setTimeout(function(){ first.focus(); }, 150);
+}
+
+renderTierUSD();
+renderLicenses();
+
 function toggleSwitch(el){el.classList.toggle('on');}
 
 function startMint(){
@@ -303,7 +462,14 @@ function addLicense(){
   const org=document.getElementById('licOrg').value.trim();
   if(!org){showToast('Enter organisation name');return;}
   const tier=document.getElementById('licTier').value;
+  const durationSel=document.getElementById('licDuration');
+  const months=durationSel.selectedIndex+1;
   const prices={view:'Free',use:'5 INDX/month',resell:'25 INDX/month'};
+  // GOD MODE PATCH: persist the new license to localStorage and refresh the dynamic list
+  const list=getLicenses();
+  list.push({id:'lic_'+Date.now(),org:org,tier:tier,addedAt:Date.now(),expiresAt:Date.now()+months*30*86400000});
+  saveLicenses(list);
+  renderLicenses();
   showToast(`⚡ License activated for ${org}. ${prices[tier]}. Standing by.`);
   setTimeout(()=>document.getElementById('addLicenseOverlay').classList.remove('show'),1500);
 }

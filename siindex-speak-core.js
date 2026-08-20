@@ -15,9 +15,26 @@
     runtime: SUPABASE_URL + "/functions/v1/siindex-website-runtime",
     transcribe: SUPABASE_URL + "/functions/v1/siindex-website-transcribe",
     voice: SUPABASE_URL + "/functions/v1/siindex-website-voice-tts",
+    missionLedger: SUPABASE_URL + "/functions/v1/siindex-mission-ledger",
   };
   const HISTORY_KEY = "siindex_website_conversation_v3";
   const VISITOR_KEY = "siindex_website_visitor_id";
+  const CITIZEN_WAITLIST_ID_KEY = "siindex_citizen_waitlist_id";
+
+  // Best-effort, non-blocking write to the Mission Ledger. Only fires for a citizen
+  // who has completed the Founding Citizen application (waitlist.html stores the id).
+  // Never throws into the conversation flow — a failed write must not break chat.
+  function writeMissionLedger(eventName, text) {
+    try {
+      var waitlistId = localStorage.getItem(CITIZEN_WAITLIST_ID_KEY);
+      if (!waitlistId) return;
+      fetch(ENDPOINTS.missionLedger, {
+        method: "POST",
+        headers: headers("application/json"),
+        body: JSON.stringify({ waitlist_id: waitlistId, event: eventName, text: text }),
+      }).catch(function () {});
+    } catch (_) {}
+  }
   const VOICE_KEY = "siindex_website_voice_enabled";
   const PROVIDER_CONSENT_KEY = "siindex_website_provider_consent_v1";
   const VOICE_REQUEST_TIMEOUT_MS = 30000;
@@ -284,6 +301,7 @@
 
     const isFoundingOffer = /^\s*i will help .+ solve .+ by providing .+/i.test(text);
     if (isFoundingOffer) {
+      writeMissionLedger("offer_recorded", text);
       const validationMission = "Founding Offer recorded. Your next action is to speak with five potential customers before choosing a name, logo, menu, or payment system. Ask each person: What do you do for dinner when you are busy? What meal and portion would you buy? What price would feel affordable? Pass this mission when at least two people agree to preorder one dinner for a specific day. Then report: people interviewed, preorder commitments, preferred meal, and acceptable price.";
       emitMessage("si", validationMission, source);
       setStatus("idle", "Waiting for customer evidence.");
@@ -296,6 +314,7 @@
     const isFoundingGoalRequest = /my real goal is/i.test(text);
     const isStartBusinessGoal = /my real goal is to start (a |my )?small business/i.test(text);
     if (isStartBusinessGoal) {
+      writeMissionLedger("goal_captured", text);
       const firstAction = "Your first action is to write one Founding Offer sentence: I will help [specific customer] solve [specific problem] by providing [product or service]. Do not choose a business name, logo, wallet, or payment system yet. Reply with the completed sentence.";
       emitMessage("si", firstAction, source);
       setStatus("idle", "Waiting for your Founding Offer.");

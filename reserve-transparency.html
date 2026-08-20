@@ -60,13 +60,31 @@
     .cl-copy{font-size:11px;color:var(--text-muted);}
     .section-title{font-size:12px;font-weight:800;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px;}
     #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+    /* GOD MODE ADDITIONS */
+    .reg-item{cursor:pointer;}
+    .audit-row{cursor:pointer;}
+    .reg-item:focus-visible,.audit-row:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;border-radius:8px;}
+    .notify-btn{margin-top:10px;background:var(--surface3);border:1px solid var(--border);color:var(--text);font-size:11px;font-weight:700;padding:8px 12px;border-radius:20px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:background .2s,color .2s,border-color .2s;}
+    .last-checked-badge{font-size:10px;color:var(--text-muted);font-weight:600;margin-top:2px;}
+    .readiness-row+.readiness-row{margin-top:12px;}
+    .readiness-label{display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:6px;}
+    .readiness-count{color:var(--text-muted);font-weight:700;}
+    .sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.7);opacity:0;pointer-events:none;transition:opacity .25s;z-index:80;}
+    .sheet-overlay.active{opacity:1;pointer-events:auto;}
+    .bottom-sheet{position:fixed;left:0;right:0;bottom:0;max-width:430px;margin:0 auto;background:var(--surface2);border:1px solid var(--border);border-bottom:none;border-radius:20px 20px 0 0;padding:20px;transform:translateY(100%);transition:transform .3s;z-index:81;max-height:70vh;overflow-y:auto;}
+    .bottom-sheet.active{transform:translateY(0);}
+    .sheet-grabber{width:36px;height:4px;background:var(--surface3);border-radius:2px;margin:0 auto 16px;}
+    .sheet-close-btn{width:100%;padding:14px;border-radius:12px;border:none;background:var(--surface3);color:var(--text);font-weight:700;font-size:14px;cursor:pointer;}
   </style>
 </head>
 <body>
 <div class="phone">
   <div class="topbar">
     <button class="tb-back" onclick="history.back()">←</button>
-    <div class="tb-title">🏦 Proof of Reserves</div>
+    <div style="flex:1;">
+      <div class="tb-title">🏦 Proof of Reserves</div>
+      <div id="lastCheckedBadge" class="last-checked-badge"></div>
+    </div>
   </div>
   <div class="scroll-body">
     <div class="section">
@@ -77,6 +95,7 @@
         <div>
           <div class="vb-title" style="color:var(--gold);">Pre-launch — no live reserves yet</div>
           <div class="vb-sub">IN$DEX has not launched. There is no token generation event, no citizen deposits, and no treasury yet. This screen will show real, verifiable figures once the platform is live.</div>
+          <button id="notifyBtn" class="notify-btn" onclick="toggleNotify()">🔖 Track this page</button>
         </div>
       </div>
 
@@ -137,6 +156,12 @@
         </div>
       </div>
 
+      <!-- READINESS CHECKLIST -->
+      <div class="section-title">Readiness at a glance</div>
+      <div class="ratio-card" id="readinessCard" style="margin-bottom:14px;">
+        <div id="readinessStats"></div>
+      </div>
+
       <!-- REGULATORY STATUS -->
       <!-- Corrected 2026-07-22: this grid previously showed false claims for MiCA (EU), MAS (Singapore), FinCEN (US), CBN (Nigeria), and BSP (Philippines) — AJ confirmed none of these are real. Only AUSTRAC (sole trader enrolment) and Cook Islands (planned) are genuine. -->
       <div class="section-title">Regulatory compliance</div>
@@ -162,10 +187,156 @@
     </div>
   </div>
 </div>
+<div class="sheet-overlay" id="detailOverlay" onclick="closeDetailSheet()"></div>
+<div class="bottom-sheet" id="detailSheet" role="dialog" aria-modal="true" aria-labelledby="detailSheetTitle">
+  <div class="sheet-grabber"></div>
+  <div id="detailSheetTitle" style="font-size:16px;font-weight:900;margin-bottom:8px;"></div>
+  <div id="detailSheetBody" style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:16px;"></div>
+  <button class="sheet-close-btn" onclick="closeDetailSheet()">Close</button>
+</div>
 <div id="toast"></div>
 <script>
 function copyAddr(a){navigator.clipboard&&navigator.clipboard.writeText(a);showToast('Address copied to clipboard');}
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}
+
+// GOD MODE ADDITIONS — track/reminder, last-checked badge, readiness checklist, accessible detail sheet
+const INDX_PRICE_USD = 0.24; // not displayed on this screen — reserved constant, no live price feed here yet
+
+const REG_DETAILS = {
+  'AUSTRAC': 'IN$DEX is enrolled with AUSTRAC as a digital currency exchange (sole trader). Enrolment is on record, but formal assessment is still pending — enrolment is not a licence or endorsement.',
+  'Cook Islands': 'A Cook Islands filing is planned as part of the regulatory roadmap. Nothing has been filed yet.',
+  'MiCA (EU)': 'No application has been filed under the EU Markets in Crypto-Assets (MiCA) framework.',
+  'MAS (Singapore)': 'IN$DEX is not registered with the Monetary Authority of Singapore.',
+  'FinCEN (US)': 'IN$DEX is not registered with FinCEN in the United States.',
+  'CBN (Nigeria)': 'IN$DEX is not registered with the Central Bank of Nigeria.',
+  'BSP (Philippines)': 'IN$DEX is not licensed by the Bangko Sentral ng Pilipinas.',
+  'Third-Party Smart Contract Audit': 'No smart contract audit has been engaged yet. One will be commissioned from an independent firm before any funds are held.',
+  'Independent Reserve Attestation': 'No reserve attestation has been engaged yet. An independent attestor will be brought on once a treasury actually exists to attest to.',
+  'SIINDEX Self-Monitoring': 'Planned automated self-monitoring by SIINDEX once a treasury exists. This is a planned feature — it is not running today.'
+};
+
+let lastFocusedEl = null;
+function openDetailSheet(title){
+  const detail = REG_DETAILS[title] || 'More detail will be published here once available.';
+  document.getElementById('detailSheetTitle').textContent = title;
+  document.getElementById('detailSheetBody').textContent = detail;
+  document.getElementById('detailSheet').classList.add('active');
+  document.getElementById('detailOverlay').classList.add('active');
+  lastFocusedEl = document.activeElement;
+  const closeBtn = document.getElementById('detailSheet').querySelector('.sheet-close-btn');
+  closeBtn && closeBtn.focus();
+  document.addEventListener('keydown', detailSheetKeyHandler);
+}
+function closeDetailSheet(){
+  document.getElementById('detailSheet').classList.remove('active');
+  document.getElementById('detailOverlay').classList.remove('active');
+  document.removeEventListener('keydown', detailSheetKeyHandler);
+  if(lastFocusedEl && lastFocusedEl.focus) lastFocusedEl.focus();
+}
+function detailSheetKeyHandler(e){
+  const sheet = document.getElementById('detailSheet');
+  if(e.key === 'Escape'){ closeDetailSheet(); return; }
+  if(e.key === 'Tab'){
+    const focusables = sheet.querySelectorAll('button, [tabindex]:not([tabindex="-1"])');
+    if(!focusables.length) return;
+    const first = focusables[0], last = focusables[focusables.length-1];
+    if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+  }
+}
+
+function toggleNotify(){
+  const isOn = localStorage.getItem('indx_reserve_track_enabled') === 'true';
+  const next = !isOn;
+  localStorage.setItem('indx_reserve_track_enabled', String(next));
+  updateNotifyBtn();
+  showToast(next ? 'Tracking this page — flagged for you next time you check' : 'Stopped tracking this page');
+}
+function updateNotifyBtn(){
+  const btn = document.getElementById('notifyBtn');
+  if(!btn) return;
+  const isOn = localStorage.getItem('indx_reserve_track_enabled') === 'true';
+  btn.textContent = isOn ? '✅ Tracking this page' : '🔖 Track this page';
+  btn.style.background = isOn ? 'rgba(0,229,160,0.12)' : 'var(--surface3)';
+  btn.style.color = isOn ? 'var(--green)' : 'var(--text)';
+  btn.style.borderColor = isOn ? 'rgba(0,229,160,0.3)' : 'var(--border)';
+}
+
+function formatRelativeTime(ms){
+  const diff = Date.now() - ms;
+  const sec = Math.floor(diff/1000);
+  if(sec < 60) return 'just now';
+  const min = Math.floor(sec/60);
+  if(min < 60) return min + (min===1?' minute ago':' minutes ago');
+  const hr = Math.floor(min/60);
+  if(hr < 24) return hr + (hr===1?' hour ago':' hours ago');
+  const day = Math.floor(hr/24);
+  return day + (day===1?' day ago':' days ago');
+}
+let referenceCheckedTime = null;
+function updateLastChecked(){
+  const badge = document.getElementById('lastCheckedBadge');
+  if(!badge) return;
+  badge.textContent = referenceCheckedTime ? ('You last checked ' + formatRelativeTime(referenceCheckedTime)) : 'First time checking this page';
+}
+
+function computeReadiness(){
+  const container = document.getElementById('readinessStats');
+  if(!container) return;
+  const auditRows = document.querySelectorAll('.audit-row');
+  let auditDone = 0;
+  auditRows.forEach(r=>{ if(r.querySelector('.status-green')) auditDone++; });
+  const regItems = document.querySelectorAll('.reg-item');
+  let regEngaged = 0;
+  regItems.forEach(r=>{
+    const status = r.querySelector('.reg-status');
+    if(status && (status.textContent.indexOf('Enrolled') !== -1 || status.textContent.indexOf('Planned') !== -1)) regEngaged++;
+  });
+  const auditPct = auditRows.length ? Math.round((auditDone/auditRows.length)*100) : 0;
+  const regPct = regItems.length ? Math.round((regEngaged/regItems.length)*100) : 0;
+  container.innerHTML =
+    '<div class="readiness-row"><div class="readiness-label"><span>Audits complete</span><span class="readiness-count">'+auditDone+'/'+auditRows.length+'</span></div>'+
+    '<div class="ratio-bar" style="margin-bottom:0;"><div class="rb-fill" style="width:'+auditPct+'%;background:linear-gradient(90deg,var(--gold),var(--green));"></div></div></div>'+
+    '<div class="readiness-row"><div class="readiness-label"><span>Jurisdictions engaged</span><span class="readiness-count">'+regEngaged+'/'+regItems.length+'</span></div>'+
+    '<div class="ratio-bar" style="margin-bottom:0;"><div class="rb-fill" style="width:'+regPct+'%;background:linear-gradient(90deg,var(--gold),var(--cyan));"></div></div></div>';
+}
+
+// GOD MODE PATCH: reg-item / audit-row elements had no keyboard access — wiring tabindex, role, and click/keydown handlers here
+function wireAccessibleRows(){
+  document.querySelectorAll('.reg-item').forEach(el=>{
+    const name = el.querySelector('.reg-name');
+    if(!name) return;
+    el.setAttribute('tabindex','0');
+    el.setAttribute('role','button');
+    el.setAttribute('aria-label', 'View detail: ' + name.textContent);
+    const open = ()=>openDetailSheet(name.textContent);
+    el.addEventListener('click', open);
+    el.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } });
+  });
+  document.querySelectorAll('.audit-row').forEach(el=>{
+    const name = el.querySelector('.ar-name');
+    if(!name) return;
+    el.setAttribute('tabindex','0');
+    el.setAttribute('role','button');
+    el.setAttribute('aria-label', 'View detail: ' + name.textContent);
+    const open = ()=>openDetailSheet(name.textContent);
+    el.addEventListener('click', open);
+    el.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); } });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  updateNotifyBtn();
+  const prevChecked = localStorage.getItem('indx_reserve_last_checked');
+  referenceCheckedTime = prevChecked ? parseInt(prevChecked,10) : null;
+  updateLastChecked();
+  setInterval(updateLastChecked, 30000);
+  window.addEventListener('beforeunload', function(){
+    localStorage.setItem('indx_reserve_last_checked', String(Date.now()));
+  });
+  computeReadiness();
+  wireAccessibleRows();
+});
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

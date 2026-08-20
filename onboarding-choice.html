@@ -61,6 +61,37 @@
   .cta-btn.ready:active{transform:scale(0.97);}
 
   .fine-print{text-align:center;padding:12px 20px 0;font-size:11px;color:var(--text-muted);line-height:1.5;}
+
+  /* ── GOD MODE: A11Y FOCUS ── */
+  .choice-card:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;}
+
+  /* ── GOD MODE: WELCOME BANNER ── */
+  .welcome-banner{margin:0 20px 4px;padding:10px 14px;border-radius:12px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);font-size:12px;color:var(--cyan);text-align:center;display:none;}
+  .welcome-banner.show{display:block;}
+
+  /* ── GOD MODE: COMPARE LINK ── */
+  .compare-link{display:block;text-align:center;margin:14px auto 0;font-size:12px;font-weight:700;color:var(--cyan);background:none;border:none;cursor:pointer;padding:8px;text-decoration:underline;text-underline-offset:3px;}
+  .compare-link:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;border-radius:6px;}
+
+  /* ── GOD MODE: SHEET ── */
+  .sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.72);opacity:0;pointer-events:none;transition:opacity 0.25s;z-index:300;}
+  .sheet-overlay.open{opacity:1;pointer-events:auto;}
+  .bottom-sheet{position:fixed;left:50%;bottom:0;transform:translate(-50%,100%);width:100%;max-width:430px;background:var(--surface2);border:1px solid var(--border);border-bottom:none;border-radius:20px 20px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));z-index:301;transition:transform 0.3s cubic-bezier(.32,.72,0,1);max-height:80vh;overflow-y:auto;}
+  .bottom-sheet.open{transform:translate(-50%,0);}
+  .sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 16px;}
+  .sheet-title{font-size:17px;font-weight:900;margin-bottom:14px;text-align:center;}
+  .compare-table{width:100%;border-collapse:collapse;margin-bottom:18px;}
+  .compare-table th{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.03em;padding:8px 6px;text-align:center;border-bottom:1px solid var(--border);}
+  .compare-table th:first-child{text-align:left;}
+  .compare-table td{font-size:12px;padding:10px 6px;text-align:center;border-bottom:1px solid var(--border);vertical-align:middle;}
+  .compare-table td:first-child{text-align:left;color:var(--text-muted);}
+  .compare-check{color:var(--green);font-weight:900;font-size:14px;}
+  .compare-dash{color:var(--text-muted);}
+  .sheet-close-btn{width:100%;padding:14px;border-radius:12px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:14px;font-weight:800;cursor:pointer;}
+
+  /* ── GOD MODE: TOAST ── */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);max-width:320px;width:calc(100% - 40px);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:13px;color:var(--text);text-align:center;opacity:0;transition:opacity 0.3s,transform 0.3s;z-index:400;pointer-events:none;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style>
 </head>
 <body>
@@ -82,11 +113,14 @@
     <div class="hero-sub">You can change this any time from your home screen.</div>
   </div>
 
+  <!-- GOD MODE: returning-visitor recall banner (populated from real localStorage history) -->
+  <div class="welcome-banner" id="welcomeBanner"></div>
+
   <!-- Choice cards -->
-  <div class="cards">
+  <div class="cards" role="radiogroup" aria-label="Choose your experience mode">
 
     <!-- Simple Mode -->
-    <div class="choice-card simple-card" id="cardSimple" onclick="select('simple')">
+    <div class="choice-card simple-card" id="cardSimple" role="radio" aria-checked="false" tabindex="0" onclick="select('simple')">
       <span class="recommend-badge">✨ Recommended for beginners</span>
       <span class="card-icon">🌱</span>
       <div class="card-title">Keep it simple</div>
@@ -100,7 +134,7 @@
     </div>
 
     <!-- Full Mode -->
-    <div class="choice-card full-card" id="cardFull" onclick="select('full')">
+    <div class="choice-card full-card" id="cardFull" role="radio" aria-checked="false" tabindex="0" onclick="select('full')">
       <span class="card-icon">⚡</span>
       <div class="card-title">Give me everything</div>
       <div class="card-desc">Full features, real-time charts, staking yields, DEX swaps, governance. All controls visible.</div>
@@ -114,6 +148,9 @@
 
   </div>
 
+  <!-- GOD MODE: compare modes trigger -->
+  <button class="compare-link" onclick="openCompareSheet()">See full side-by-side comparison</button>
+
   <!-- CTA -->
   <div class="cta-wrap">
     <button class="cta-btn" id="ctaBtn" onclick="proceed()">Continue →</button>
@@ -122,8 +159,83 @@
 
 </div>
 
+<!-- GOD MODE: compare modes bottom sheet -->
+<div class="sheet-overlay" id="compareOverlay" onclick="closeCompareSheet()"></div>
+<div class="bottom-sheet" id="compareSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Simple vs. Full — what changes</div>
+  <table class="compare-table">
+    <thead>
+      <tr><th>Feature</th><th>🌱 Simple</th><th>⚡ Full</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Plain-language labels</td><td class="compare-check">✓</td><td class="compare-dash">—</td></tr>
+      <tr><td>Step-by-step guidance</td><td class="compare-check">✓</td><td class="compare-dash">—</td></tr>
+      <tr><td>Live price charts</td><td class="compare-dash">—</td><td class="compare-check">✓</td></tr>
+      <tr><td>Wisdom Score &amp; Sovereign Yield</td><td class="compare-dash">—</td><td class="compare-check">✓</td></tr>
+      <tr><td>Governance voting</td><td class="compare-dash">—</td><td class="compare-check">✓</td></tr>
+      <tr><td>DEX swap &amp; NFT gallery</td><td class="compare-dash">—</td><td class="compare-check">✓</td></tr>
+      <tr><td>Switch any time</td><td class="compare-check">✓</td><td class="compare-check">✓</td></tr>
+    </tbody>
+  </table>
+  <button class="sheet-close-btn" onclick="closeCompareSheet()">Got it</button>
+</div>
+
+<!-- GOD MODE: toast -->
+<div class="toast" id="toast"></div>
+
 <script>
   let chosen = null;
+
+  // ── GOD MODE: CONSTANTS & STORAGE ──
+  const HISTORY_KEY = 'indx_onboardingchoice_history';
+  const VISITS_KEY = 'indx_onboardingchoice_visits';
+
+  // ── GOD MODE: HAPTIC-STYLE FEEDBACK ──
+  function hapticPulse(ms) {
+    if (navigator.vibrate) { navigator.vibrate(ms || 10); }
+  }
+
+  // ── GOD MODE: TOAST ──
+  let toastTimer;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+  }
+
+  // ── GOD MODE: COMPARE MODES SHEET ──
+  function openCompareSheet() {
+    hapticPulse(8);
+    document.getElementById('compareSheet').classList.add('open');
+    document.getElementById('compareOverlay').classList.add('open');
+  }
+  function closeCompareSheet() {
+    document.getElementById('compareSheet').classList.remove('open');
+    document.getElementById('compareOverlay').classList.remove('open');
+  }
+
+  // ── GOD MODE: KEYBOARD NAVIGATION FOR CHOICE CARDS ──
+  function handleCardKeydown(e) {
+    const cards = ['cardSimple', 'cardFull'];
+    const idx = cards.indexOf(e.target.id);
+    if (idx === -1) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      document.getElementById(cards[(idx + 1) % cards.length]).focus();
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      document.getElementById(cards[(idx + cards.length - 1) % cards.length]).focus();
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      select(e.target.id === 'cardSimple' ? 'simple' : 'full');
+    }
+  }
+  document.getElementById('cardSimple').addEventListener('keydown', handleCardKeydown);
+  document.getElementById('cardFull').addEventListener('keydown', handleCardKeydown);
 
   // Auto-select Simple for first visit
   window.addEventListener('DOMContentLoaded', () => {
@@ -133,6 +245,20 @@
     } else {
       select(saved !== '0' ? 'simple' : 'full');
     }
+
+    // GOD MODE PATCH: returning-visitor recall banner + toast (real localStorage data only)
+    const visits = parseInt(localStorage.getItem(VISITS_KEY) || '0', 10) + 1;
+    localStorage.setItem(VISITS_KEY, String(visits));
+    const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || 'null');
+    if (history && history.mode) {
+      const banner = document.getElementById('welcomeBanner');
+      const modeLabel = history.mode === 'simple' ? 'Keep it simple' : 'Give me everything';
+      if (banner) {
+        banner.textContent = `Welcome back — last time you picked "${modeLabel}"`;
+        banner.classList.add('show');
+      }
+      showToast(`Picking up where you left off: ${modeLabel}`);
+    }
   });
 
   function select(mode) {
@@ -140,11 +266,18 @@
     document.getElementById('cardSimple').classList.toggle('selected', mode === 'simple');
     document.getElementById('cardFull').classList.toggle('selected', mode === 'full');
     document.getElementById('ctaBtn').classList.add('ready');
+    // GOD MODE PATCH: ARIA state + tactile feedback on selection
+    document.getElementById('cardSimple').setAttribute('aria-checked', mode === 'simple');
+    document.getElementById('cardFull').setAttribute('aria-checked', mode === 'full');
+    hapticPulse(10);
   }
 
   function proceed() {
     if (!chosen) return;
     localStorage.setItem('simpleMode', chosen === 'simple' ? '1' : '0');
+    // GOD MODE PATCH: persist choice history for returning-visitor recall + tactile confirm
+    localStorage.setItem(HISTORY_KEY, JSON.stringify({ mode: chosen, ts: Date.now() }));
+    hapticPulse(15);
 
     // Animate button
     const btn = document.getElementById('ctaBtn');

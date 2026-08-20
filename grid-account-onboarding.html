@@ -116,6 +116,24 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--surface3);color:var(--text);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;pointer-events:none;transition:transform 0.3s,opacity 0.3s;opacity:0;z-index:999;max-width:320px;text-align:center;white-space:nowrap;}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+/* GOD MODE: ACTIVITY TICKER + RESUME BANNER + REVIEW SHEET + KEYBOARD NAV */
+.activity-ticker{display:none;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:700;color:var(--gold);background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.18);border-radius:10px;padding:8px 12px;margin-bottom:18px;}
+.resume-banner{background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);border-radius:14px;padding:12px 14px;margin-bottom:18px;display:none;flex-direction:column;gap:8px;align-items:center;text-align:center;}
+.resume-text{font-size:12px;font-weight:700;color:var(--text2);}
+.resume-btn{background:var(--cyan);color:#000;border:none;border-radius:10px;padding:9px 16px;font-size:12px;font-weight:800;cursor:pointer;}
+.sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.7);opacity:0;pointer-events:none;transition:opacity 0.25s;z-index:998;}
+.sheet-overlay.show{opacity:1;pointer-events:auto;}
+.bottom-sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(100%);width:100%;max-width:430px;background:var(--surface);border-radius:20px 20px 0 0;border:1px solid var(--border);padding:12px 16px 24px;z-index:999;transition:transform 0.3s ease;max-height:80vh;overflow-y:auto;}
+.bottom-sheet.show{transform:translateX(-50%) translateY(0);}
+.sheet-handle{width:36px;height:4px;background:var(--surface3);border-radius:4px;margin:0 auto 14px;}
+.sheet-title{font-size:16px;font-weight:800;margin-bottom:14px;}
+.review-row{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.review-row:last-of-type{border-bottom:none;}
+.review-key{color:var(--text-muted);flex-shrink:0;}
+.review-val{font-weight:700;text-align:right;}
+.review-hint{font-size:11px;color:var(--text-muted);margin:10px 0 4px;line-height:1.5;}
+.purpose-card:focus-visible,.loc-chip:focus-visible,.next-card:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
 </style>
 <meta name="theme-color" content="#090A10">
 <link rel="manifest" href="/manifest.json">
@@ -134,6 +152,11 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
     <div class="welcome-orb"></div>
     <div class="welcome-title">Open your Grid Account</div>
     <div class="welcome-sub">No bank needed. Start in 90 seconds. SIINDEX asks only what is needed for your use level.</div>
+    <div class="activity-ticker" id="activityTicker">🔥 <span id="activityCount">—</span> citizens have opened a Grid Account</div>
+    <div class="resume-banner" id="resumeBanner">
+      <div class="resume-text" id="resumeText">👋 Welcome back — pick up where you left off</div>
+      <button class="resume-btn" onclick="resumeDraft()">Continue setup →</button>
+    </div>
     <div class="promise-cards">
       <div class="promise-card"><div class="promise-icon">🔐</div><div class="promise-text"><div class="promise-bold">Progressive verification</div>Start simple. We ask for more only when safety, limits, or the law require it.</div></div>
       <div class="promise-card"><div class="promise-icon">💸</div><div class="promise-text"><div class="promise-bold">Send, receive, sell</div>Move value safely. Build opportunity. No crypto knowledge needed.</div></div>
@@ -180,7 +203,8 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
   <div class="sc-body">
     <div class="field-group">
       <div class="field-label">Phone number</div>
-      <input class="field-input" id="phone" type="tel" placeholder="+61 4XX XXX XXX" autocomplete="tel">
+      <!-- GOD MODE PATCH -->
+      <input class="field-input" id="phone" type="tel" placeholder="+61 4XX XXX XXX" autocomplete="tel" oninput="saveDraftState()">
       <div class="field-hint">Used for account verification. SIINDEX sends a code to confirm this is you. Not shared with third parties.</div>
     </div>
     <div class="field-group">
@@ -222,7 +246,7 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
       <div class="purpose-card" onclick="selPurpose(this,'all')"><div class="purpose-icon">🌏</div><div class="purpose-label">All of the above</div></div>
     </div>
     <div class="field-hint">SIINDEX uses your purpose to show the most relevant opportunities and missions first.</div>
-    <button class="btn-primary" onclick="goTo(5)">Create my Grid Account →</button>
+    <button class="btn-primary" onclick="openReviewSheet()">Create my Grid Account →</button>
     <button class="btn-secondary" onclick="goTo(3)">Back</button>
   </div>
 </div>
@@ -303,6 +327,21 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 
 <div class="toast" id="toast"></div>
 
+<!-- GOD MODE: REVIEW & CONFIRM SHEET -->
+<div class="sheet-overlay" id="reviewOverlay" onclick="closeReviewSheet()"></div>
+<div class="bottom-sheet" id="reviewSheet" role="dialog" aria-modal="true" aria-labelledby="reviewSheetTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="reviewSheetTitle">Review your details</div>
+  <div class="review-row"><div class="review-key">Name</div><div class="review-val" id="revName">—</div></div>
+  <div class="review-row"><div class="review-key">Domain</div><div class="review-val" id="revDomain">—</div></div>
+  <div class="review-row"><div class="review-key">Phone</div><div class="review-val" id="revPhone">—</div></div>
+  <div class="review-row"><div class="review-key">Location</div><div class="review-val" id="revLocation">—</div></div>
+  <div class="review-row"><div class="review-key">Purpose</div><div class="review-val" id="revPurpose">—</div></div>
+  <div class="review-hint">Check this looks right — you can close this and edit any step before confirming.</div>
+  <button class="btn-primary" onclick="confirmReviewAndCreate()">Confirm & create account →</button>
+  <button class="btn-secondary" id="reviewCloseBtn" onclick="closeReviewSheet()">Edit details</button>
+</div>
+
 <script>
 const INDX_PRICE_USD = 0.24;
 const _GAO_KEY = 'indx_gao_state';
@@ -317,6 +356,121 @@ var domainCheckTimer = null;
 
 var PURPOSE_LABELS = {send:'Sender',receive:'Receiver',sell:'Merchant',build:'Builder',learn:'Learner',culture:'Cultural Steward',govern:'Governance Citizen',all:'Sovereign Citizen'};
 var PURPOSE_BP = {send:'Payment pioneer',receive:'Recipient ready',sell:'Market maker',build:'Income builder',learn:'Knowledge seeker',culture:'Cultural protector',govern:'Governance voice',all:'Sovereign citizen'};
+var LOCATION_LABELS = {AU:'🇦🇺 Australia',WS:'🇼🇸 Samoa',FJ:'🇫🇯 Fiji',VU:'🇻🇺 Vanuatu',TO:'🇹🇴 Tonga',PG:'🇵🇬 PNG',NZ:'🇳🇿 New Zealand',OTHER:'🌏 Other'};
+var _reviewLastFocus = null;
+var _activityTickTimer = null;
+
+// ── GOD MODE: activity ticker (social proof), draft autosave + resume
+// (data persistence), review & confirm sheet (confirmation safety),
+// keyboard navigation (accessibility) ──
+
+async function updateActivityTicker() {
+  var el = document.getElementById('activityCount');
+  var wrap = document.getElementById('activityTicker');
+  if (!el || !wrap) return;
+  var key = 'indx_grid-account-onboarding_activity';
+  var cached = JSON.parse(localStorage.getItem(key) || 'null');
+  var now = Date.now();
+  if (cached && cached.count != null && (now - cached.ts) < 300000) {
+    el.textContent = Number(cached.count || 0).toLocaleString();
+    wrap.style.display = 'flex';
+    return;
+  }
+  try {
+    const { count, error } = await sb.from('citizens').select('id', { count: 'exact', head: true });
+    if (error) throw error;
+    localStorage.setItem(key, JSON.stringify({ count: count || 0, ts: now }));
+    el.textContent = Number(count || 0).toLocaleString();
+    wrap.style.display = 'flex';
+  } catch (e) {
+    // No live count available — hide the ticker rather than show a fabricated number
+    wrap.style.display = 'none';
+  }
+}
+
+function saveDraftState() {
+  var fnameEl = document.getElementById('fname');
+  var domainEl = document.getElementById('domain');
+  var phoneEl = document.getElementById('phone');
+  var state = {
+    name: fnameEl ? fnameEl.value.trim() : '',
+    domain: domainEl ? domainEl.value.trim() : '',
+    phone: phoneEl ? phoneEl.value.trim() : '',
+    purpose: selectedPurpose,
+    loc: selectedLoc,
+    ts: Date.now()
+  };
+  localStorage.setItem(_GAO_KEY, JSON.stringify(state));
+}
+
+function resumeDraft() {
+  var saved = JSON.parse(localStorage.getItem(_GAO_KEY) || 'null');
+  if (!saved) { goTo(2); return; }
+  if (saved.purpose) { goTo(4); }
+  else if (saved.phone || saved.loc) { goTo(3); }
+  else { goTo(2); }
+}
+
+function openReviewSheet() {
+  var fname = document.getElementById('fname').value.trim() || 'Citizen';
+  var domain = document.getElementById('domain').value.trim().toLowerCase() || 'citizen';
+  document.getElementById('revName').textContent = fname;
+  document.getElementById('revDomain').textContent = domain + '.IN$DEX';
+  document.getElementById('revPhone').textContent = document.getElementById('phone').value.trim() || 'Not provided';
+  document.getElementById('revLocation').textContent = LOCATION_LABELS[selectedLoc] || 'Not selected';
+  document.getElementById('revPurpose').textContent = PURPOSE_LABELS[selectedPurpose] || 'Not selected';
+  saveDraftState();
+  _reviewLastFocus = document.activeElement;
+  document.getElementById('reviewOverlay').classList.add('show');
+  document.getElementById('reviewSheet').classList.add('show');
+  document.addEventListener('keydown', reviewSheetKeydown);
+  setTimeout(function(){ var b = document.getElementById('reviewCloseBtn'); if (b) b.focus(); }, 300);
+}
+
+function closeReviewSheet() {
+  document.getElementById('reviewOverlay').classList.remove('show');
+  document.getElementById('reviewSheet').classList.remove('show');
+  document.removeEventListener('keydown', reviewSheetKeydown);
+  if (_reviewLastFocus && typeof _reviewLastFocus.focus === 'function') _reviewLastFocus.focus();
+}
+
+function confirmReviewAndCreate() {
+  closeReviewSheet();
+  goTo(5);
+}
+
+function reviewSheetKeydown(e) {
+  if (e.key === 'Escape') { closeReviewSheet(); return; }
+  if (e.key !== 'Tab') return;
+  var sheet = document.getElementById('reviewSheet');
+  var focusable = sheet.querySelectorAll('button, [tabindex="0"]');
+  if (!focusable.length) return;
+  var first = focusable[0], last = focusable[focusable.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+}
+
+function enableKeyboardNav(containerId, selector) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  var items = container.querySelectorAll(selector);
+  items.forEach(function(item, idx) {
+    item.setAttribute('tabindex', '0');
+    item.setAttribute('role', 'button');
+    item.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        item.click();
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        items[(idx + 1) % items.length].focus();
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        items[(idx - 1 + items.length) % items.length].focus();
+      }
+    });
+  });
+}
 
 function goTo(step) {
   document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
@@ -365,12 +519,16 @@ function selLoc(el, code) {
   document.querySelectorAll('.loc-chip').forEach(function(c){ c.classList.remove('active'); });
   el.classList.add('active');
   selectedLoc = code;
+  // GOD MODE PATCH
+  saveDraftState();
 }
 
 function selPurpose(el, id) {
   document.querySelectorAll('.purpose-card').forEach(function(c){ c.classList.remove('active'); });
   el.classList.add('active');
   selectedPurpose = id;
+  // GOD MODE PATCH
+  saveDraftState();
 }
 
 async function buildAccountScreen() {
@@ -383,8 +541,8 @@ async function buildAccountScreen() {
   document.getElementById('bpPurpose').textContent = bpLabel;
 
   // Keep a local draft so the form can restore on return visit
-  var state = {name:fname, domain:domain, purpose:selectedPurpose, loc:selectedLoc, ts:Date.now()};
-  localStorage.setItem(_GAO_KEY, JSON.stringify(state));
+  // GOD MODE PATCH — extended to also persist phone via saveDraftState()
+  saveDraftState();
 
   // Already have a live citizen this session (e.g. resumed) — don't create a duplicate
   if (sessionStorage.getItem('citizen_id')) {
@@ -479,6 +637,30 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('domain').value = saved.domain || '';
     checkDomain();
   }
+
+  // GOD MODE PATCH — restore phone/location/purpose and show resume banner
+  if (saved) {
+    if (saved.phone) document.getElementById('phone').value = saved.phone;
+    if (saved.loc) {
+      var chip = document.querySelector('.loc-chip[onclick*="\'' + saved.loc + '\'"]');
+      if (chip) { document.querySelectorAll('.loc-chip').forEach(function(c){ c.classList.remove('active'); }); chip.classList.add('active'); selectedLoc = saved.loc; }
+    }
+    if (saved.purpose) {
+      var card = document.querySelector('.purpose-card[onclick*="\'' + saved.purpose + '\'"]');
+      if (card) { document.querySelectorAll('.purpose-card').forEach(function(c){ c.classList.remove('active'); }); card.classList.add('active'); selectedPurpose = saved.purpose; }
+    }
+    if (saved.domain || saved.phone || saved.purpose || saved.loc) {
+      var resumeText = document.getElementById('resumeText');
+      if (resumeText && saved.name) resumeText.textContent = '👋 Welcome back, ' + saved.name + ' — pick up where you left off';
+      var banner = document.getElementById('resumeBanner');
+      if (banner) banner.style.display = 'flex';
+    }
+  }
+
+  // GOD MODE PATCH — activity ticker + keyboard nav for purpose/location grids
+  updateActivityTicker();
+  enableKeyboardNav('purposeGrid', '.purpose-card');
+  enableKeyboardNav('locationChips', '.loc-chip');
 });
 </script>
 </body>

@@ -476,6 +476,30 @@
     .sheet-title { font-size: 17px; font-weight: 800; margin-bottom: 6px; }
     .sheet-sub { font-size: 13px; color: var(--muted); margin-bottom: 16px; line-height: 1.4; }
 
+    /* ── GOD MODE: CONFIDENCE METER ── */
+    .confidence-meter { display: none; margin: -4px 0 14px; padding: 12px 14px; background: var(--surface2); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; }
+    .confidence-meter.show { display: block; }
+    .confidence-label { display: flex; align-items: center; justify-content: space-between; font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
+    .confidence-label span { font-size: 11px; font-weight: 800; letter-spacing: 0; text-transform: none; color: var(--gold); }
+    .confidence-track { width: 100%; height: 6px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow: hidden; }
+    .confidence-fill { height: 100%; width: 0%; border-radius: 4px; background: linear-gradient(90deg, var(--gold), var(--green)); transition: width 0.3s ease, background 0.3s ease; }
+
+    /* ── GOD MODE: ELDER TRACKER ── */
+    .elder-tracker-link { display: flex; align-items: center; gap: 6px; margin-left: auto; background: rgba(139,63,232,0.12); border: 1px solid rgba(139,63,232,0.3); color: var(--purple); font-size: 11px; font-weight: 700; padding: 6px 10px; border-radius: 20px; cursor: pointer; white-space: nowrap; }
+    .tracker-item { padding: 12px 14px; background: var(--surface2); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; margin-bottom: 8px; }
+    .tracker-item-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+    .tracker-item-name { font-size: 13px; font-weight: 700; }
+    .tracker-status { font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 8px; background: rgba(255,184,0,0.15); color: var(--gold); text-transform: uppercase; letter-spacing: 0.3px; }
+    .tracker-item-meta { font-size: 11px; color: var(--muted); line-height: 1.4; }
+
+    /* ── GOD MODE: ARCHIVE STATS/FILTER ── */
+    .archive-stats { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .archive-chip { padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; background: var(--surface); border: 1px solid rgba(255,255,255,0.08); color: var(--muted); cursor: pointer; transition: all 0.2s; }
+    .archive-chip.active { border-color: rgba(255,184,0,0.4); background: rgba(255,184,0,0.1); color: var(--gold); }
+
+    /* ── GOD MODE: DELETE ── */
+    .saved-asset-del { flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px; border: 1px solid rgba(255,77,109,0.25); background: rgba(255,77,109,0.08); color: var(--red); font-size: 13px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
     /* ── TOAST ── */
     .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--surface3); color: var(--text); padding: 12px 20px; border-radius: 24px; font-size: 13px; font-weight: 600; z-index: 999; border: 1px solid rgba(255,255,255,0.1); opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
     .toast.show { opacity: 1; }
@@ -516,7 +540,12 @@
 
     <div class="classify-card">
       <div class="cl-label">Describe your cultural asset</div>
-      <textarea class="cl-input" id="assetDesc" rows="3" placeholder="e.g. A traditional fishing song passed down from my grandfather. Used in ceremonies before going out to sea. Lyrics in our language, not yet recorded publicly."></textarea>
+      <textarea class="cl-input" id="assetDesc" rows="3" placeholder="e.g. A traditional fishing song passed down from my grandfather. Used in ceremonies before going out to sea. Lyrics in our language, not yet recorded publicly." oninput="updateConfidence()"></textarea>
+
+      <div class="confidence-meter" id="confidenceMeter">
+        <div class="confidence-label">Live Signal <span id="confidenceGuess">—</span></div>
+        <div class="confidence-track"><div class="confidence-fill" id="confidenceFill"></div></div>
+      </div>
 
       <div class="cl-label">Asset type</div>
       <div class="asset-type-grid">
@@ -529,7 +558,7 @@
       </div>
 
       <div class="cl-label">Who owns or holds this knowledge?</div>
-      <textarea class="cl-input" id="ownerDesc" rows="2" placeholder="e.g. My family / My community / My tribe / Me personally / Unknown origin"></textarea>
+      <textarea class="cl-input" id="ownerDesc" rows="2" placeholder="e.g. My family / My community / My tribe / Me personally / Unknown origin" oninput="updateConfidence()"></textarea>
 
       <button class="cl-btn" onclick="classifyAsset()">✦ Classify with SIINDEX</button>
 
@@ -544,6 +573,7 @@
           <div class="elder-title">Request Elder Review</div>
           <div class="elder-sub">For Community-Owned, Restricted, or Sacred assets</div>
         </div>
+        <button class="elder-tracker-link" onclick="openElderTracker()">🔔 My Requests <span id="elderReviewBadge">0</span></button>
       </div>
       <div class="elder-field">
         <label>Asset Name</label>
@@ -807,6 +837,7 @@ This is culturally safe to purchase, share, and gift.</div>
   <!-- TAB: ARCHIVE -->
   <div class="tab-panel" id="tab-archive">
     <div style="margin-bottom:14px;font-size:13px;color:var(--muted);line-height:1.5;">Your classified cultural assets. Each asset is stored locally with its classification level and elder review status.</div>
+    <div class="archive-stats" id="archiveStats"></div>
     <div id="archiveList">
       <div style="text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;">
         No assets classified yet.<br>Use the Classify tab to register your first cultural asset.
@@ -827,6 +858,28 @@ This is culturally safe to purchase, share, and gift.</div>
     <button onclick="closeElder()" style="width:100%;padding:13px;border-radius:10px;border:none;background:var(--surface3);color:var(--text);font-size:14px;font-weight:700;cursor:pointer;">Done</button>
   </div>
 
+  <!-- GOD MODE: ELDER REVIEW TRACKER SHEET -->
+  <div class="sheet-overlay" id="trackerOverlay" onclick="if(event.target===this)closeElderTracker()"></div>
+  <div class="bottom-sheet" id="trackerSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">My Elder Review Requests</div>
+    <div class="sheet-sub">Status of every review request you've submitted, stored on this device.</div>
+    <div id="elderTrackerList"></div>
+    <button onclick="closeElderTracker()" style="width:100%;padding:13px;border-radius:10px;border:none;background:var(--surface3);color:var(--text);font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;">Close</button>
+  </div>
+
+  <!-- GOD MODE: DELETE CONFIRM SHEET -->
+  <div class="sheet-overlay" id="deleteConfirmOverlay" onclick="if(event.target===this)cancelDeleteAsset()"></div>
+  <div class="bottom-sheet" id="deleteConfirmSheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Remove from Archive?</div>
+    <div class="sheet-sub" id="deleteConfirmText">This will remove the asset from your local Cultural Archive. This cannot be undone.</div>
+    <div style="display:flex;gap:10px;">
+      <button onclick="cancelDeleteAsset()" style="flex:1;padding:13px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);background:var(--surface3);color:var(--text);font-size:14px;font-weight:700;cursor:pointer;">Cancel</button>
+      <button onclick="confirmDeleteAsset()" style="flex:1;padding:13px;border-radius:10px;border:none;background:var(--red);color:var(--black);font-size:14px;font-weight:800;cursor:pointer;">Remove</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script>
@@ -835,6 +888,113 @@ This is culturally safe to purchase, share, and gift.</div>
     const ELDER_KEY = 'indx_elder_reviews';
 
     let selectedAssetType = 'Song / Music';
+
+    // ── GOD MODE: LIVE CONFIDENCE METER ──
+    const CONFIDENCE_SIGNALS = {
+      sacred: { words: ['sacred','spiritual','secret','ceremony only','initiation'], label: 'Sacred', color: 'var(--red)' },
+      elder: { words: ['ancestor','grandfather','grandmother','tribe','community','village','council'], label: 'Elder Review', color: 'var(--purple)' },
+      family: { words: ['family','passed down','inherited','relative'], label: 'Family-Owned', color: 'var(--cyan)' },
+      restricted: { words: ['restricted','not public','private','closed'], label: 'Restricted', color: 'var(--red)' }
+    };
+
+    function updateConfidence() {
+      const desc = (document.getElementById('assetDesc').value || '').toLowerCase();
+      const owner = (document.getElementById('ownerDesc').value || '').toLowerCase();
+      const combined = desc + ' ' + owner;
+      const meter = document.getElementById('confidenceMeter');
+      const guessEl = document.getElementById('confidenceGuess');
+      const fillEl = document.getElementById('confidenceFill');
+
+      if (!combined.trim()) { meter.classList.remove('show'); return; }
+
+      let bestKey = null, bestHits = 0;
+      Object.keys(CONFIDENCE_SIGNALS).forEach(key => {
+        const hits = CONFIDENCE_SIGNALS[key].words.filter(w => combined.includes(w)).length;
+        if (hits > bestHits) { bestHits = hits; bestKey = key; }
+      });
+
+      meter.classList.add('show');
+      if (!bestKey) {
+        guessEl.textContent = 'Likely Public';
+        fillEl.style.width = '20%';
+        fillEl.style.background = 'linear-gradient(90deg, var(--gold), var(--green))';
+      } else {
+        const sig = CONFIDENCE_SIGNALS[bestKey];
+        const pct = Math.min(100, 30 + bestHits * 25);
+        guessEl.textContent = 'Likely ' + sig.label;
+        fillEl.style.width = pct + '%';
+        fillEl.style.background = sig.color;
+      }
+    }
+
+    // ── GOD MODE: ELDER REVIEW TRACKER ──
+    function getElderReviews() {
+      try { return JSON.parse(localStorage.getItem(ELDER_KEY) || '[]'); } catch(e) { return []; }
+    }
+
+    function refreshElderBadge() {
+      const badge = document.getElementById('elderReviewBadge');
+      if (badge) badge.textContent = String(getElderReviews().length);
+    }
+
+    function renderElderTracker() {
+      const reviews = getElderReviews();
+      const list = document.getElementById('elderTrackerList');
+      if (!reviews.length) {
+        list.innerHTML = '<div style="text-align:center;padding:24px 10px;color:var(--muted);font-size:13px;">No elder review requests submitted yet.</div>';
+        return;
+      }
+      list.innerHTML = reviews.map(r => `
+        <div class="tracker-item">
+          <div class="tracker-item-top">
+            <span class="tracker-item-name">${r.name}</span>
+            <span class="tracker-status">${(r.status || 'submitted').replace('_',' ')}</span>
+          </div>
+          <div class="tracker-item-meta">${r.intent ? r.intent.substring(0,80) : ''}${r.intent && r.intent.length > 80 ? '…' : ''} · Submitted ${new Date(r.ts).toLocaleDateString()}</div>
+        </div>
+      `).join('');
+    }
+
+    function openElderTracker() {
+      renderElderTracker();
+      document.getElementById('trackerOverlay').classList.add('open');
+      document.getElementById('trackerSheet').classList.add('open');
+    }
+
+    function closeElderTracker() {
+      document.getElementById('trackerOverlay').classList.remove('open');
+      document.getElementById('trackerSheet').classList.remove('open');
+    }
+
+    // ── GOD MODE: ARCHIVE DELETE ──
+    let pendingDeleteIndex = null;
+
+    function requestDeleteAsset(index) {
+      pendingDeleteIndex = index;
+      const archive = getArchive();
+      const asset = archive[index];
+      document.getElementById('deleteConfirmText').textContent = asset
+        ? `Remove "${asset.desc.substring(0,60)}" from your local Cultural Archive? This cannot be undone.`
+        : 'This will remove the asset from your local Cultural Archive. This cannot be undone.';
+      document.getElementById('deleteConfirmOverlay').classList.add('open');
+      document.getElementById('deleteConfirmSheet').classList.add('open');
+    }
+
+    function cancelDeleteAsset() {
+      pendingDeleteIndex = null;
+      document.getElementById('deleteConfirmOverlay').classList.remove('open');
+      document.getElementById('deleteConfirmSheet').classList.remove('open');
+    }
+
+    function confirmDeleteAsset() {
+      if (pendingDeleteIndex === null) { cancelDeleteAsset(); return; }
+      const archive = getArchive();
+      archive.splice(pendingDeleteIndex, 1);
+      localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archive));
+      cancelDeleteAsset();
+      renderArchive();
+      showToast('Removed from Cultural Archive');
+    }
 
     // ── TABS ──
     function switchTab(id) {
@@ -948,17 +1108,45 @@ This is culturally safe to purchase, share, and gift.</div>
       showToast('Saved to Cultural Archive ✓');
     }
 
+    // GOD MODE PATCH
+    let archiveFilter = 'all';
+
+    // GOD MODE PATCH
+    function setArchiveFilter(cls) {
+      archiveFilter = cls;
+      renderArchive();
+    }
+
+    // GOD MODE PATCH
     function renderArchive() {
       const archive = getArchive();
       const list = document.getElementById('archiveList');
+      const statsEl = document.getElementById('archiveStats');
+      refreshElderBadge();
       if (!archive.length) {
+        if (statsEl) statsEl.innerHTML = '';
         list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;">No assets classified yet.<br>Use the Classify tab to register your first cultural asset.</div>';
         return;
       }
       const icons = { 'Song / Music':'🎵', 'Visual Art':'🎨', 'Story / Oral':'📖', 'Dance / Ceremony':'💃', 'Plant / Remedy':'🌿', 'Craft / Object':'🏺' };
       const colors = { public:'rgba(0,229,160,0.12)', community:'rgba(255,184,0,0.12)', elder:'rgba(139,63,232,0.12)', restricted:'rgba(255,77,109,0.12)', sacred:'rgba(255,255,255,0.06)' };
       const textColors = { public:'var(--green)', community:'var(--gold)', elder:'var(--purple)', restricted:'var(--red)', sacred:'var(--text)' };
-      list.innerHTML = archive.map(a => `
+
+      if (statsEl) {
+        const counts = archive.reduce((acc, a) => { acc[a.cls] = (acc[a.cls] || 0) + 1; return acc; }, {});
+        const chips = [{ key:'all', label:`All (${archive.length})` }]
+          .concat(Object.keys(counts).map(k => ({ key:k, label:`${k[0].toUpperCase()+k.slice(1)} (${counts[k]})` })));
+        statsEl.innerHTML = chips.map(c => `<button class="archive-chip${archiveFilter===c.key?' active':''}" onclick="setArchiveFilter('${c.key}')">${c.label}</button>`).join('');
+      }
+
+      const filtered = archiveFilter === 'all' ? archive : archive.filter(a => a.cls === archiveFilter);
+      if (!filtered.length) {
+        list.innerHTML = '<div style="text-align:center;padding:30px 20px;color:var(--muted);font-size:13px;">No assets match this filter.</div>';
+        return;
+      }
+      list.innerHTML = filtered.map(a => {
+        const realIndex = archive.indexOf(a);
+        return `
         <div class="saved-asset">
           <span class="saved-asset-icon">${icons[a.type] || '🌺'}</span>
           <div class="saved-asset-info">
@@ -966,8 +1154,10 @@ This is culturally safe to purchase, share, and gift.</div>
             <div class="saved-asset-meta">${a.type} · ${new Date(a.ts).toLocaleDateString()}${a.elderStatus === 'pending' ? ' · Elder review pending' : ''}</div>
           </div>
           <span class="saved-asset-level" style="background:${colors[a.cls]||colors.public};color:${textColors[a.cls]||textColors.public}">${a.title.split(' ')[0]}</span>
+          <button class="saved-asset-del" onclick="event.stopPropagation();requestDeleteAsset(${realIndex})" aria-label="Remove asset">🗑</button>
         </div>
-      `).join('');
+      `;
+      }).join('');
     }
 
     // ── ELDER REVIEW ──
@@ -1016,6 +1206,8 @@ This is culturally safe to purchase, share, and gift.</div>
 
     document.addEventListener('DOMContentLoaded', () => {
       renderArchive();
+      // GOD MODE PATCH
+      refreshElderBadge();
     });
   </script>
 

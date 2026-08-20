@@ -108,6 +108,22 @@
   .nav-label{font-size:10px;font-weight:600;color:var(--text-muted);}
   .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1E2130;border:1px solid var(--border);border-radius:12px;padding:11px 20px;font-size:13px;font-weight:600;white-space:nowrap;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;}
   .toast.show{opacity:1;}
+
+  /* GOD MODE: stake confirm sheet, premium calculator, live earnings, activity feed */
+  .sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.7);z-index:300;display:none;}
+  .sheet-overlay.show{display:block;}
+  .bottom-sheet{position:fixed;left:50%;bottom:0;transform:translate(-50%,110%);width:100%;max-width:430px;background:var(--surface2);border:1px solid var(--border);border-radius:20px 20px 0 0;padding:12px 20px 24px;z-index:301;transition:transform 0.28s cubic-bezier(0.16,1,0.3,1);max-height:80vh;overflow-y:auto;}
+  .bottom-sheet.show{transform:translate(-50%,0);}
+  .sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:4px auto 14px;}
+  .sheet-title{font-size:16px;font-weight:800;margin-bottom:14px;}
+  .sheet-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:9px 0;border-bottom:1px solid rgba(42,45,56,0.5);color:var(--text-muted);}
+  .sheet-row span:last-child{color:var(--text);font-weight:700;}
+  .live-earnings-card{margin:0 20px 14px;padding:14px 16px;background:rgba(0,229,160,0.06);border:1px solid rgba(0,229,160,0.2);border-radius:14px;}
+  .live-earnings-val{font-size:20px;font-weight:900;color:var(--green);letter-spacing:-0.5px;font-variant-numeric:tabular-nums;}
+  .live-earnings-sub{font-size:11px;color:var(--text-muted);margin-top:2px;}
+  .activity-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;text-transform:uppercase;letter-spacing:0.03em;}
+  .activity-badge.stake{background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.2);color:var(--green);}
+  .activity-badge.unstake{background:rgba(255,184,0,0.1);border:1px solid rgba(255,184,0,0.2);color:var(--gold);}
 </style>
 </head>
 <body>
@@ -198,6 +214,26 @@
         <div class="cov-premium">Auto-covered for all citizens · No premium required</div>
       </div>
 
+      <!-- GOD MODE: premium calculator -->
+      <div class="coverage-card" style="margin-top:8px;" id="premiumCalcCard">
+        <div class="cov-top">
+          <div class="cov-icon">🧮</div>
+          <div>
+            <div class="cov-title">Premium Calculator</div>
+            <div class="cov-sub">Estimate your annual premium cost</div>
+          </div>
+        </div>
+        <div class="form-label" style="margin-top:2px;">Covered balance</div>
+        <div class="amount-input-row" style="margin-bottom:10px;">
+          <input class="amount-input" type="number" id="premiumCalcAmt" placeholder="0" oninput="calcPremium()">
+          <span class="amount-denom">INDX</span>
+        </div>
+        <div class="apy-row"><span class="apy-label">Smart Contract Exploit (0.1%)</span><span class="apy-val" id="premSc">0.00 INDX</span></div>
+        <div class="apy-row"><span class="apy-label">Oracle Failure (0.05%)</span><span class="apy-val" id="premOracle">0.00 INDX</span></div>
+        <div class="apy-row" style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px;"><span class="apy-label" style="font-weight:700;color:var(--text);">Total annual premium</span><span class="apy-val" id="premTotal" style="color:var(--gold);">0.00 INDX</span></div>
+        <div class="apy-row" style="margin-bottom:0;"><span class="apy-label">≈ USD</span><span class="apy-val" id="premUsd">$0.00</span></div>
+      </div>
+
       <div style="margin:14px 20px;padding:13px;background:rgba(255,184,0,0.06);border:1px solid rgba(255,184,0,0.2);border-radius:12px;">
         <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:4px;">⚠️ Not real coverage yet</div>
         <div style="font-size:12px;color:var(--text-muted);">This is a design preview, not an active insurance policy — no real fund exists to pay out a claim yet. Don't rely on this for real protection today.</div>
@@ -221,13 +257,27 @@
           <div class="apy-row"><span class="apy-label">Your est. annual</span><span class="apy-val" id="annualEst">0 INDX</span></div>
           <div class="apy-row" style="margin-bottom:0;"><span class="apy-label">Pool share</span><span class="apy-val" id="poolShare">0.00%</span></div>
         </div>
-        <button class="stake-btn" onclick="stakeToPool()">Stake to Insurance Pool</button>
+        <!-- GOD MODE PATCH: opens confirmation sheet instead of staking immediately -->
+        <button class="stake-btn" onclick="openStakeConfirm()">Stake to Insurance Pool</button>
         <div style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:10px;line-height:1.6;">Unstake anytime below — no lock-up yet. Premium distribution and claims payout are still preview.</div>
+      </div>
+
+      <!-- GOD MODE: live earnings ticker -->
+      <div class="live-earnings-card" id="liveEarningsCard" style="display:none;">
+        <div class="ph-label" style="margin-bottom:6px;">Live Earnings (your active stakes)</div>
+        <div class="live-earnings-val" id="liveEarningsVal">0.000000 INDX</div>
+        <div class="live-earnings-sub" id="liveEarningsSub">≈ $0.00 · est. accrual since page opened (not yet credited)</div>
       </div>
 
       <div style="padding:0 20px 4px;">
         <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Your Active Stakes</div>
         <div id="myStakesList"><div style="font-size:12px;color:var(--text-muted);padding:8px 0;">Log in to see your stakes.</div></div>
+      </div>
+
+      <!-- GOD MODE: recent activity feed (local device history) -->
+      <div style="padding:0 20px 4px;">
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Recent Activity (this device)</div>
+        <div id="recentActivityList"><div style="font-size:12px;color:var(--text-muted);padding:8px 0;">No activity yet.</div></div>
       </div>
 
       <div style="padding:0 20px;">
@@ -328,6 +378,20 @@
     <button class="done-btn" onclick="document.getElementById('overlay').classList.remove('show')">Done</button>
   </div>
 </div>
+
+<!-- GOD MODE: stake confirmation sheet -->
+<div class="sheet-overlay" id="stakeConfirmOverlay" onclick="closeStakeConfirm()"></div>
+<div class="bottom-sheet" id="stakeConfirmSheet" role="dialog" aria-modal="true" aria-labelledby="stakeConfirmTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="stakeConfirmTitle">Confirm Stake</div>
+  <div class="sheet-row"><span>Amount</span><span id="confAmt">0 INDX</span></div>
+  <div class="sheet-row"><span>≈ USD</span><span id="confUsd">$0.00</span></div>
+  <div class="sheet-row"><span>Pool APY</span><span id="confApy">0%</span></div>
+  <div class="sheet-row"><span>Est. annual earnings</span><span id="confAnnual">0 INDX</span></div>
+  <div class="sheet-row" style="border-bottom:none;"><span>New pool share</span><span id="confShare">0.00%</span></div>
+  <button class="stake-btn" id="confirmStakeBtn" onclick="confirmStake()">Confirm &amp; Stake</button>
+  <div class="max-btn" style="width:100%;text-align:center;margin-top:10px;" onclick="closeStakeConfirm()">Cancel</div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -359,6 +423,116 @@
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.message || 'Request failed');
     return data;
+  }
+
+  // GOD MODE: stake confirmation sheet, premium calculator, live earnings ticker, recent activity feed
+  const INSURANCE_HISTORY_KEY = 'indx_insurance-fund_history';
+  let liveEarningsTimer = null;
+  let sheetPrevFocus = null;
+
+  function getActivityHistory() {
+    try { return JSON.parse(localStorage.getItem(INSURANCE_HISTORY_KEY) || '[]'); }
+    catch (e) { return []; }
+  }
+
+  function recordActivity(type, amount) {
+    const history = getActivityHistory();
+    history.unshift({ type: type, amount: amount, ts: Date.now() });
+    localStorage.setItem(INSURANCE_HISTORY_KEY, JSON.stringify(history.slice(0, 10)));
+    renderRecentActivity();
+  }
+
+  function renderRecentActivity() {
+    const el = document.getElementById('recentActivityList');
+    if (!el) return;
+    const history = getActivityHistory();
+    if (history.length === 0) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0;">No activity yet.</div>';
+      return;
+    }
+    el.innerHTML = history.map(h => `<div class="claim-row" style="padding:10px 0;">
+      <div class="cr-icon">${h.type === 'stake' ? '🔒' : '↩️'}</div>
+      <div class="cr-title">${h.type === 'stake' ? 'Staked' : 'Unstaked'} on this device <span class="activity-badge ${h.type}" style="margin-left:6px;">${h.type}</span></div>
+      <div class="cr-amount">${Number(h.amount || 0).toLocaleString(undefined,{maximumFractionDigits:2})} INDX</div>
+    </div>`).join('') + '<div style="font-size:10px;color:var(--text-dim);padding:6px 0 0;">Local to this device only · not synced</div>';
+  }
+
+  function calcPremium() {
+    const inp = document.getElementById('premiumCalcAmt');
+    if (!inp) return;
+    const amt = parseFloat(inp.value) || 0;
+    const scPrem = amt * 0.001;
+    const oraclePrem = amt * 0.0005;
+    const total = scPrem + oraclePrem;
+    document.getElementById('premSc').textContent = scPrem.toLocaleString(undefined,{maximumFractionDigits:2}) + ' INDX';
+    document.getElementById('premOracle').textContent = oraclePrem.toLocaleString(undefined,{maximumFractionDigits:2}) + ' INDX';
+    document.getElementById('premTotal').textContent = total.toLocaleString(undefined,{maximumFractionDigits:2}) + ' INDX';
+    document.getElementById('premUsd').textContent = '$' + (total * INDX_PRICE_USD).toFixed(2);
+  }
+
+  function handleSheetKeydown(e) {
+    const sheet = document.getElementById('stakeConfirmSheet');
+    if (!sheet || !sheet.classList.contains('show')) return;
+    if (e.key === 'Escape') { closeStakeConfirm(); return; }
+    if (e.key === 'Tab') {
+      const focusables = sheet.querySelectorAll('button, [href], input, [tabindex]:not([tabindex="-1"])');
+      if (focusables.length === 0) return;
+      const first = focusables[0], last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }
+
+  function openStakeConfirm() {
+    const amt = parseFloat(document.getElementById('stakeAmt').value) || 0;
+    if (!amt) { showToast('Enter an amount to stake'); return; }
+    if (!citizenId) { showToast('Log in to stake to the Insurance Pool'); return; }
+    const apy = poolStats.apy_rate || 0.04;
+    const projectedTotal = (poolStats.total_staked || 0) + amt;
+    document.getElementById('confAmt').textContent = amt.toLocaleString(undefined,{maximumFractionDigits:2}) + ' INDX';
+    document.getElementById('confUsd').textContent = '$' + (amt * INDX_PRICE_USD).toFixed(2);
+    document.getElementById('confApy').textContent = (apy * 100).toFixed(1) + '%';
+    document.getElementById('confAnnual').textContent = (amt * apy).toFixed(2) + ' INDX';
+    document.getElementById('confShare').textContent = (projectedTotal > 0 ? (amt / projectedTotal) * 100 : 0).toFixed(3) + '%';
+    sheetPrevFocus = document.activeElement;
+    document.getElementById('stakeConfirmOverlay').classList.add('show');
+    document.getElementById('stakeConfirmSheet').classList.add('show');
+    const confirmBtn = document.getElementById('confirmStakeBtn');
+    if (confirmBtn) confirmBtn.focus();
+    document.addEventListener('keydown', handleSheetKeydown);
+  }
+
+  function closeStakeConfirm() {
+    document.getElementById('stakeConfirmOverlay').classList.remove('show');
+    document.getElementById('stakeConfirmSheet').classList.remove('show');
+    document.removeEventListener('keydown', handleSheetKeydown);
+    if (sheetPrevFocus && sheetPrevFocus.focus) sheetPrevFocus.focus();
+  }
+
+  async function confirmStake() {
+    closeStakeConfirm();
+    await stakeToPool();
+  }
+
+  function updateLiveEarnings() {
+    const card = document.getElementById('liveEarningsCard');
+    if (!card) return;
+    if (liveEarningsTimer) { clearInterval(liveEarningsTimer); liveEarningsTimer = null; }
+    const totalStaked = myStakes.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0);
+    if (!totalStaked) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
+    const apy = poolStats.apy_rate || 0.04;
+    const perSecond = (totalStaked * apy) / (365 * 24 * 3600);
+    let accrued = 0;
+    const valEl = document.getElementById('liveEarningsVal');
+    const subEl = document.getElementById('liveEarningsSub');
+    const render = () => {
+      accrued += perSecond;
+      valEl.textContent = accrued.toFixed(6) + ' INDX';
+      subEl.textContent = '≈ $' + (accrued * INDX_PRICE_USD).toFixed(4) + ' · est. accrual since page opened (not yet credited)';
+    };
+    render();
+    liveEarningsTimer = setInterval(render, 1000);
   }
 
   function switchTab(name) {
@@ -404,6 +578,7 @@
     } catch (e) { myStakes = []; }
     if (myStakes.length === 0) {
       el.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:8px 0;">No active stakes yet.</div>';
+      updateLiveEarnings();
       return;
     }
     el.innerHTML = myStakes.map(s => `<div class="claim-row" style="padding:10px 0;">
@@ -412,6 +587,8 @@
       <div class="cr-amount" style="color:var(--green)">${Number(s.amount).toLocaleString(undefined,{maximumFractionDigits:2})} INDX</div>
       <div class="max-btn" style="margin-left:8px;" onclick="unstake('${s.id}')">Unstake</div>
     </div>`).join('');
+    // GOD MODE PATCH: refresh live earnings ticker whenever stakes reload
+    updateLiveEarnings();
   }
 
   function updateAPY() {
@@ -445,6 +622,8 @@
       document.getElementById('stakeMsg').textContent = `${amt} INDX moved from your balance into the real Insurance Pool. You can unstake anytime from "Your Active Stakes."`;
       document.getElementById('overlay').classList.add('show');
       document.getElementById('stakeAmt').value = '';
+      // GOD MODE PATCH: record this stake in the local activity history
+      recordActivity('stake', amt);
       await Promise.all([loadPoolStats(), loadTopStakers(), loadMyStakes()]);
     } catch (e) {
       showToast('Could not stake: ' + e.message);
@@ -454,11 +633,14 @@
   async function unstake(stakeId) {
     if (!citizenId) return;
     try {
+      const stakeBeingRemoved = myStakes.find(s => String(s.id) === String(stakeId));
       await rpc('unstake_from_pool', { p_citizen_id: citizenId, p_stake_id: stakeId });
       document.getElementById('scIcon').textContent = '✅';
       document.getElementById('scTitle').textContent = 'Unstaked';
       document.getElementById('stakeMsg').textContent = 'Your INDX has been returned to your balance.';
       document.getElementById('overlay').classList.add('show');
+      // GOD MODE PATCH: record this unstake in the local activity history
+      recordActivity('unstake', stakeBeingRemoved ? stakeBeingRemoved.amount : 0);
       await Promise.all([loadPoolStats(), loadTopStakers(), loadMyStakes()]);
     } catch (e) {
       showToast('Could not unstake: ' + e.message);
@@ -477,6 +659,13 @@
     loadPoolStats();
     loadTopStakers();
     loadMyStakes();
+    // GOD MODE PATCH: render local activity history and prefill premium calculator with known balance
+    renderRecentActivity();
+    const knownBalance = parseFloat(sessionStorage.getItem('citizen_balance') || '0');
+    if (knownBalance > 0) {
+      const premInput = document.getElementById('premiumCalcAmt');
+      if (premInput) { premInput.value = knownBalance; calcPremium(); }
+    }
   });
 </script>
 <script src="siindex-speak-core.js"></script>

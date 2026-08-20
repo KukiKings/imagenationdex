@@ -71,6 +71,41 @@
 
   .toast { position:fixed; bottom:130px; left:50%; transform:translateX(-50%) translateY(60px); background:var(--surface2); color:var(--text); padding:12px 20px; border-radius:12px; font-size:13px; font-weight:500; transition:transform 0.3s; z-index:200; border:1px solid rgba(0,229,160,0.3); white-space:nowrap; }
   .toast.show { transform:translateX(-50%) translateY(0); }
+
+  /* GOD MODE: topbar history button */
+  .topbar-actions { margin-left:auto; display:flex; gap:8px; }
+  .icon-btn { width:36px; height:36px; border:none; background:var(--surface2); border-radius:10px; color:var(--text2); font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .icon-btn:focus-visible { outline:2px solid var(--cyan); outline-offset:2px; }
+
+  /* GOD MODE: bottom sheet (error history) */
+  .sheet-overlay { position:fixed; inset:0; background:rgba(9,10,16,0.7); z-index:300; opacity:0; pointer-events:none; transition:opacity 0.25s; }
+  .sheet-overlay.show { opacity:1; pointer-events:auto; }
+  .bottom-sheet { position:fixed; left:50%; bottom:0; transform:translate(-50%,100%); width:100%; max-width:430px; background:var(--surface); border-radius:20px 20px 0 0; z-index:301; transition:transform 0.3s cubic-bezier(0.32,0.72,0,1); max-height:75vh; display:flex; flex-direction:column; }
+  .bottom-sheet.show { transform:translate(-50%,0); }
+  .sheet-handle { width:36px; height:4px; background:var(--surface3); border-radius:2px; margin:10px auto 4px; }
+  .sheet-header { display:flex; align-items:center; justify-content:space-between; padding:10px 18px 14px; border-bottom:1px solid rgba(255,255,255,0.06); }
+  .sheet-title { font-size:15px; font-weight:700; }
+  .sheet-clear { font-size:12px; color:var(--red); background:none; border:none; cursor:pointer; padding:6px; }
+  .sheet-clear:focus-visible { outline:2px solid var(--cyan); outline-offset:2px; }
+  .sheet-body { padding:6px 18px 24px; overflow-y:auto; }
+  .history-item { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+  .history-icon { width:32px; height:32px; border-radius:9px; background:rgba(255,77,109,0.1); display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+  .history-info { flex:1; }
+  .history-title { font-size:13px; font-weight:600; }
+  .history-time { font-size:11px; color:var(--text-muted); margin-top:2px; }
+  .history-empty { text-align:center; padding:30px 10px; color:var(--text-muted); font-size:13px; }
+
+  /* GOD MODE: live retry countdown */
+  .retry-countdown { background:var(--surface2); border-radius:12px; padding:14px 16px; margin:16px 0; }
+  .rc-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .rc-label { font-size:12px; color:var(--text2); }
+  .rc-time { font-size:13px; font-weight:700; color:var(--gold); font-variant-numeric:tabular-nums; }
+  .rc-track { height:6px; background:var(--surface3); border-radius:3px; overflow:hidden; }
+  .rc-fill { height:100%; background:linear-gradient(90deg,var(--cyan),var(--purple)); border-radius:3px; transition:width 1s linear; }
+  .rc-ready .rc-time { color:var(--green); }
+
+  /* GOD MODE: diagnostic report action icon */
+  .action-icon.gold { background:rgba(255,184,0,0.1); }
 </style>
 </head>
 <body>
@@ -78,6 +113,9 @@
 <div class="topbar">
   <button class="back-btn" onclick="history.back()">←</button>
   <span class="topbar-title">Transaction Issue</span>
+  <div class="topbar-actions">
+    <button class="icon-btn" id="historyBtn" onclick="openHistorySheet()" aria-label="View recent issues" aria-haspopup="dialog">🕘</button>
+  </div>
 </div>
 
 <div class="error-types">
@@ -97,6 +135,16 @@
 
 <div class="toast" id="toast"></div>
 
+<div class="sheet-overlay" id="historyOverlay" onclick="closeHistorySheet()"></div>
+<div class="bottom-sheet" id="historySheet" role="dialog" aria-modal="true" aria-label="Recent issues">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <span class="sheet-title">Recent Issues</span>
+    <button class="sheet-clear" onclick="clearErrorHistory()">Clear</button>
+  </div>
+  <div class="sheet-body" id="historyBody"></div>
+</div>
+
 <script>
 const ERRORS = {
   network: {
@@ -111,7 +159,8 @@ const ERRORS = {
       ['Time', '2:47 PM, 15 June 2026'],
     ],
     actions: ['retry','home','support'],
-    retryLabel: 'Try Again Network is Clear'
+    retryLabel: 'Try Again Network is Clear',
+    retryWait: 0
   },
   funds: {
     icon: '💳',
@@ -125,7 +174,8 @@ const ERRORS = {
       ['Status', 'Not submitted no funds moved'],
     ],
     actions: ['topup','reduce','support'],
-    retryLabel: 'Top Up Wallet'
+    retryLabel: 'Top Up Wallet',
+    retryWait: 0
   },
   compliance: {
     icon: '🛡️',
@@ -139,7 +189,8 @@ const ERRORS = {
       ['Estimated time', '30 seconds to resolve'],
     ],
     actions: ['verify','support'],
-    retryLabel: 'Complete Verification (30 sec)'
+    retryLabel: 'Complete Verification (30 sec)',
+    retryWait: 30
   },
   timeout: {
     icon: '⏱️',
@@ -153,7 +204,8 @@ const ERRORS = {
       ['Action needed', 'Check status, then retry if unconfirmed'],
     ],
     actions: ['status','retry','support'],
-    retryLabel: 'Check Status & Retry'
+    retryLabel: 'Check Status & Retry',
+    retryWait: 0
   },
   slippage: {
     icon: '📉',
@@ -167,7 +219,8 @@ const ERRORS = {
       ['Slippage', '2.3% exceeded 1% tolerance'],
     ],
     actions: ['adjust','retry','support'],
-    retryLabel: 'Retry with Higher Tolerance'
+    retryLabel: 'Retry with Higher Tolerance',
+    retryWait: 0
   }
 };
 
@@ -176,8 +229,14 @@ function setError(type, el) {
   el.classList.add('active');
   const err = ERRORS[type];
   document.getElementById('retryBtn').textContent = err.retryLabel;
+  // GOD MODE PATCH: cancel any running countdown and reset the retry button when switching error types
+  clearInterval(countdownTimer);
+  document.getElementById('retryBtn').disabled = false;
+  document.getElementById('retryBtn').style.opacity = '1';
 
-  let detailRows = err.details.map(([l,v]) =>
+  // GOD MODE PATCH: use the citizen's real balance (if known) for the funds error, instead of static copy
+  let detailsToRender = type === 'funds' ? buildFundsDetails(err.details) : err.details;
+  let detailRows = detailsToRender.map(([l,v]) =>
     `<div class="detail-row"><span class="detail-label">${l}</span><span class="detail-value">${v}</span></div>`
   ).join('');
 
@@ -193,11 +252,13 @@ function setError(type, el) {
       <div class="safe-text">Your funds are safe. Nothing was moved.</div>
     </div>
 
+    ${renderRetryCountdown(err)}
+
     <div class="si-card">
       <div class="si-avatar">⚡</div>
       <div>
         <div class="si-name">SIINDEX</div>
-        <div class="si-text">${err.siindex}</div>
+        <div class="si-text">${personalizeGreeting(err.siindex)}</div>
       </div>
     </div>
 
@@ -224,6 +285,14 @@ function setError(type, el) {
         </div>
         <span class="action-arrow">›</span>
       </div>
+      <div class="action-card" onclick="copyDiagnostics('${type}')">
+        <div class="action-icon gold">📄</div>
+        <div class="action-info">
+          <div class="action-name">Copy Diagnostic Report</div>
+          <div class="action-desc">Copy details to share with support</div>
+        </div>
+        <span class="action-arrow">›</span>
+      </div>
       <div class="action-card" onclick="window.location.href='sovereign-support.html'">
         <div class="action-icon green">👤</div>
         <div class="action-info">
@@ -234,6 +303,10 @@ function setError(type, el) {
       </div>
     </div>
   `;
+
+  // GOD MODE PATCH: record this error view in the local history log and start a live countdown when applicable
+  logErrorView(type, err);
+  if (err.retryWait > 0) startRetryCountdown(err.retryWait);
 }
 
 function retryTxn() {
@@ -246,6 +319,142 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// GOD MODE: live retry countdown, error history log, smart defaults, diagnostic report
+const INDX_PRICE_USD = 0.24;
+let countdownTimer = null;
+
+function personalizeGreeting(text) {
+  const name = sessionStorage.getItem('citizen_name');
+  if (!name) return text;
+  return `Hey ${name}, ` + text.charAt(0).toLowerCase() + text.slice(1);
+}
+
+function buildFundsDetails(defaultDetails) {
+  const rawBalance = sessionStorage.getItem('citizen_balance');
+  const balance = rawBalance !== null ? parseFloat(rawBalance) : NaN;
+  if (isNaN(balance)) return defaultDetails;
+  const attempted = 150;
+  const shortfall = Math.max(attempted - balance, 0);
+  return [
+    ['Attempted', `${attempted} INDX ($${(attempted * INDX_PRICE_USD).toFixed(2)})`],
+    ['Your balance', `${balance.toFixed(2)} INDX ($${(balance * INDX_PRICE_USD).toFixed(2)})`],
+    ['Shortfall', `${shortfall.toFixed(2)} INDX ($${(shortfall * INDX_PRICE_USD).toFixed(2)})`],
+    ['Status', 'Not submitted no funds moved'],
+  ];
+}
+
+function renderRetryCountdown(err) {
+  if (!err.retryWait || err.retryWait <= 0) return '';
+  return `
+    <div class="retry-countdown" id="retryCountdown">
+      <div class="rc-row">
+        <span class="rc-label">Verification in progress</span>
+        <span class="rc-time" id="rcTime">${err.retryWait}s</span>
+      </div>
+      <div class="rc-track"><div class="rc-fill" id="rcFill" style="width:100%"></div></div>
+    </div>
+  `;
+}
+
+function startRetryCountdown(seconds) {
+  clearInterval(countdownTimer);
+  const wrap = document.getElementById('retryCountdown');
+  const timeEl = document.getElementById('rcTime');
+  const fillEl = document.getElementById('rcFill');
+  const btn = document.getElementById('retryBtn');
+  if (!wrap || !timeEl || !fillEl || !btn) return;
+  let remaining = seconds;
+  btn.disabled = true;
+  btn.style.opacity = '0.5';
+  countdownTimer = setInterval(() => {
+    remaining--;
+    if (remaining <= 0) {
+      clearInterval(countdownTimer);
+      timeEl.textContent = 'Ready';
+      fillEl.style.width = '0%';
+      wrap.classList.add('rc-ready');
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      return;
+    }
+    timeEl.textContent = remaining + 's';
+    fillEl.style.width = (remaining / seconds * 100) + '%';
+  }, 1000);
+}
+
+function logErrorView(type, err) {
+  const history = JSON.parse(localStorage.getItem('indx_txnerror_history') || '[]');
+  history.unshift({ type, title: err.title, code: err.code, icon: err.icon, time: new Date().toLocaleString() });
+  localStorage.setItem('indx_txnerror_history', JSON.stringify(history.slice(0, 10)));
+}
+
+function openHistorySheet() {
+  const history = JSON.parse(localStorage.getItem('indx_txnerror_history') || '[]');
+  const body = document.getElementById('historyBody');
+  body.innerHTML = history.length
+    ? history.map(h => `
+      <div class="history-item">
+        <div class="history-icon">${h.icon}</div>
+        <div class="history-info">
+          <div class="history-title">${h.title}</div>
+          <div class="history-time">${h.code} · ${h.time}</div>
+        </div>
+      </div>
+    `).join('')
+    : `<div class="history-empty">No issues viewed yet this session.</div>`;
+  document.getElementById('historySheet').classList.add('show');
+  document.getElementById('historyOverlay').classList.add('show');
+  document.addEventListener('keydown', historyEscHandler);
+  const firstFocusable = document.getElementById('historySheet').querySelector('button');
+  if (firstFocusable) firstFocusable.focus();
+}
+
+function closeHistorySheet() {
+  document.getElementById('historySheet').classList.remove('show');
+  document.getElementById('historyOverlay').classList.remove('show');
+  document.removeEventListener('keydown', historyEscHandler);
+  document.getElementById('historyBtn').focus();
+}
+
+function historyEscHandler(e) {
+  if (e.key === 'Escape') { closeHistorySheet(); return; }
+  if (e.key === 'Tab') {
+    const sheet = document.getElementById('historySheet');
+    const focusables = sheet.querySelectorAll('button');
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+}
+
+function clearErrorHistory() {
+  localStorage.setItem('indx_txnerror_history', '[]');
+  openHistorySheet();
+  showToast('History cleared. Standing by.');
+}
+
+function copyDiagnostics(type) {
+  const err = ERRORS[type];
+  const citizenId = sessionStorage.getItem('citizen_id') || 'unknown';
+  const report = [
+    `IN$DEX Diagnostic Report`,
+    `Error: ${err.title} (${err.code})`,
+    `Citizen ID: ${citizenId}`,
+    `Time: ${new Date().toLocaleString()}`
+  ].join('\n');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(report).then(() => {
+      showToast('Diagnostic report copied. Standing by.');
+    }).catch(() => {
+      showToast('Could not copy. Standing by.');
+    });
+  } else {
+    showToast('Copy not supported on this device.');
+  }
 }
 
 // Init

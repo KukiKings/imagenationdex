@@ -263,6 +263,66 @@
     color: white; font-size: 15px; font-weight: 700; cursor: pointer;
   }
 
+  /* GOD MODE: PROGRESS SNAPSHOT */
+  .progress-card {
+    margin: 0 20px 20px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 18px 20px;
+  }
+  .progress-card-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .progress-card-title { font-size:12px; font-weight:700; color: var(--text-dim); text-transform:uppercase; letter-spacing:0.04em; }
+  .progress-wisdom { font-size:13px; font-weight:700; color: var(--cyan); }
+  .progress-dots { display:flex; align-items:center; gap:6px; }
+  .progress-dot { flex:1; height:6px; border-radius:4px; background: var(--surface3); transition: background 0.3s; }
+  .progress-dot.done { background: var(--green); }
+  .progress-dot.current { background: var(--cyan); }
+  .progress-labels { display:flex; justify-content:space-between; margin-top:8px; }
+  .progress-label { font-size:10px; color: var(--text-dim); font-weight:600; }
+
+  /* GOD MODE: INFO BUTTON */
+  .info-btn {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.25);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: var(--cyan); cursor: pointer; flex-shrink: 0;
+    margin: 14px auto 0;
+  }
+
+  /* GOD MODE: SMART DEFAULTS BADGE + OTP COOLDOWN */
+  .remembered-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px; font-weight: 700; color: var(--green);
+    background: rgba(0,229,160,0.1); border: 1px solid rgba(0,229,160,0.25);
+    padding: 2px 8px; border-radius: 10px; margin-left: 8px;
+  }
+  .otp-cooldown-text { font-size: 11px; color: var(--text-dim); margin-top: 4px; min-height: 14px; }
+  .send-otp-btn.disabled { opacity: 0.45; pointer-events: none; }
+
+  /* GOD MODE: BOTTOM SHEET */
+  .sheet-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px); z-index: 150;
+  }
+  .sheet-overlay.open { display: block; }
+  .bottom-sheet {
+    position: fixed; left: 50%; bottom: 0; transform: translateX(-50%) translateY(100%);
+    width: 100%; max-width: 430px; background: var(--surface2);
+    border-radius: 24px 24px 0 0; border: 1px solid var(--border); border-bottom: none;
+    padding: 10px 20px 28px; z-index: 151; transition: transform 0.3s cubic-bezier(0.16,1,0.3,1);
+    max-height: 80vh; overflow-y: auto;
+  }
+  .bottom-sheet.open { transform: translateX(-50%) translateY(0); }
+  .sheet-handle { width: 36px; height: 4px; border-radius: 4px; background: var(--surface3); margin: 6px auto 16px; }
+  .sheet-title { font-size: 17px; font-weight: 800; margin-bottom: 12px; }
+  .sheet-body { font-size: 13px; color: var(--text-dim); line-height: 1.7; margin-bottom: 20px; }
+  .sheet-body strong { color: var(--text); }
+  .sheet-close-btn {
+    width: 100%; padding: 13px; border-radius: 12px; border: 1px solid var(--border);
+    background: var(--surface3); color: var(--text); font-size: 14px; font-weight: 700; cursor: pointer;
+  }
+
   /* TOAST */
   .toast {
     position: fixed; bottom: 90px; left: 50%;
@@ -298,6 +358,25 @@
   <div class="hero-icon">🏛️</div>
   <div class="hero-title">Your sovereignty, your pace</div>
   <div class="hero-desc">IN$DEX works from day one with just your email or phone. Verification <strong>unlocks higher limits</strong> it never blocks access. No ID required to earn, trade, or get paid.</div>
+  <div class="info-btn" id="whyVerifyBtn" onclick="openWhySheet()" onkeydown="if(event.key==='Enter')openWhySheet()" role="button" tabindex="0" aria-label="Why verify?">ⓘ</div>
+</div>
+
+<!-- GOD MODE: VERIFICATION PROGRESS SNAPSHOT -->
+<div class="progress-card" id="progressSnapshot">
+  <div class="progress-card-head">
+    <div class="progress-card-title">Your Progress</div>
+    <div class="progress-wisdom" id="progressWisdomText">Wisdom Score —</div>
+  </div>
+  <div class="progress-dots">
+    <div class="progress-dot done" id="progressDotT1"></div>
+    <div class="progress-dot" id="progressDotT2"></div>
+    <div class="progress-dot" id="progressDotT3"></div>
+  </div>
+  <div class="progress-labels">
+    <div class="progress-label">Citizen</div>
+    <div class="progress-label">Verified</div>
+    <div class="progress-label">Sovereign</div>
+  </div>
 </div>
 
 <!-- TIER 1: CITIZEN (already done) -->
@@ -350,15 +429,16 @@
       <div style="font-size:13px; color:var(--text-dim); margin-bottom:4px;" id="tier2Intro">Link your phone number no bank account number needed. (Email PayID isn't wired up yet — use phone for now.)</div>
       <div id="tier2FormFields">
         <div class="form-group">
-          <div class="form-label">PayID (phone number)</div>
+          <div class="form-label">PayID (phone number) <span class="remembered-badge" id="payidRememberedBadge" style="display:none;">↺ Remembered</span></div>
           <input class="form-input" id="payidInput" type="text" placeholder="+61 400 000 000">
         </div>
         <div class="form-group">
           <div class="form-label">Verify with OTP</div>
           <div class="otp-row">
             <input class="form-input" id="otpInput" type="text" placeholder="6-digit code" maxlength="6" inputmode="numeric">
-            <div class="send-otp-btn" onclick="sendOTP()">Send Code</div>
+            <div class="send-otp-btn" id="sendOtpBtn" onclick="sendOTP()">Send Code</div>
           </div>
+          <div class="otp-cooldown-text" id="otpCooldownText"></div>
         </div>
         <div id="tier2Error" style="color:var(--red);font-size:12px;margin-bottom:4px;"></div>
         <button class="verify-btn" id="tier2VerifyBtn" onclick="verifyTier2()">✓ Verify PayID</button>
@@ -397,11 +477,11 @@
     </div>
 
     <div class="doc-options">
-      <div class="doc-chip" onclick="selectDoc(this,'passport')">🛂 Passport</div>
-      <div class="doc-chip active" onclick="selectDoc(this,'licence')">🪪 Driver's Licence</div>
-      <div class="doc-chip" onclick="selectDoc(this,'medicare')">🏥 Medicare Card</div>
-      <div class="doc-chip" onclick="selectDoc(this,'utility')">📄 Utility Bill</div>
-      <div class="doc-chip" onclick="selectDoc(this,'other')">📋 Other</div>
+      <div class="doc-chip" data-doc="passport" onclick="selectDoc(this,'passport')">🛂 Passport</div>
+      <div class="doc-chip active" data-doc="licence" onclick="selectDoc(this,'licence')">🪪 Driver's Licence</div>
+      <div class="doc-chip" data-doc="medicare" onclick="selectDoc(this,'medicare')">🏥 Medicare Card</div>
+      <div class="doc-chip" data-doc="utility" onclick="selectDoc(this,'utility')">📄 Utility Bill</div>
+      <div class="doc-chip" data-doc="other" onclick="selectDoc(this,'other')">📋 Other</div>
     </div>
 
     <div class="upload-area" onclick="showToast('📸 Camera/upload coming Wave 1')">
@@ -439,6 +519,19 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- GOD MODE: WHY VERIFY SHEET -->
+<div class="sheet-overlay" id="whySheetOverlay" onclick="closeWhySheet()"></div>
+<div class="bottom-sheet" id="whySheet" role="dialog" aria-modal="true" aria-labelledby="whySheetTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="whySheetTitle">Why verify at all?</div>
+  <div class="sheet-body">
+    Every tier on this screen is <strong>optional</strong>. IN$DEX works fully at Tier 1 with just your email or phone no ID, no gate.<br><br>
+    Verifying a higher tier simply raises your monthly fiat deposit/withdraw limit and adds a Wisdom Score bonus. It never affects what you can earn, hold, or trade.<br><br>
+    Your data stays private: only what's needed for the tier you choose, encrypted, and never sold.
+  </div>
+  <button class="sheet-close-btn" id="whySheetCloseBtn" onclick="closeWhySheet()">Got it</button>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
@@ -447,6 +540,99 @@
   const { createClient } = supabase;
   const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const citizenId = sessionStorage.getItem('citizen_id');
+
+  // ── GOD MODE: Verification Progress Snapshot — real Wisdom Score from sessionStorage + tier dots ──
+  function renderProgressSnapshot(tier) {
+    const wisdom = sessionStorage.getItem('citizen_wisdom') || '0';
+    const wisdomEl = document.getElementById('progressWisdomText');
+    if (wisdomEl) wisdomEl.textContent = 'Wisdom Score ' + wisdom;
+    const dotT2 = document.getElementById('progressDotT2');
+    const dotT3 = document.getElementById('progressDotT3');
+    if (dotT2) {
+      if (tier >= 1) { dotT2.classList.add('done'); dotT2.classList.remove('current'); }
+      else { dotT2.classList.add('current'); dotT2.classList.remove('done'); }
+    }
+    if (dotT3) {
+      if (tier >= 2) { dotT3.classList.add('done'); dotT3.classList.remove('current'); }
+      else { dotT3.classList.remove('done'); dotT3.classList.remove('current'); }
+    }
+  }
+
+  // ── GOD MODE: Smart Defaults — remember last-used PayID and document choice locally, never transmitted ──
+  const LS_PAYID_KEY = 'indx_sovereignverify_last_payid';
+  const LS_DOC_KEY = 'indx_sovereignverify_last_doc';
+  function initSmartDefaults() {
+    const savedPayid = localStorage.getItem(LS_PAYID_KEY) || '';
+    const payidInput = document.getElementById('payidInput');
+    const badge = document.getElementById('payidRememberedBadge');
+    if (savedPayid && payidInput && !payidInput.value) {
+      payidInput.value = savedPayid;
+      if (badge) badge.style.display = 'inline-flex';
+    }
+    const savedDoc = localStorage.getItem(LS_DOC_KEY) || '';
+    if (savedDoc) {
+      const chip = document.querySelector('.doc-chip[data-doc="' + savedDoc + '"]');
+      if (chip) selectDoc(chip, savedDoc);
+    }
+  }
+
+  // ── GOD MODE: OTP Resend Cooldown Timer — live countdown, persists across reloads ──
+  const LS_OTP_COOLDOWN_KEY = 'indx_sovereignverify_otp_cooldown_until';
+  const OTP_COOLDOWN_MS = 60000;
+  let otpCooldownInterval = null;
+  function startOtpCooldown(untilTs) {
+    localStorage.setItem(LS_OTP_COOLDOWN_KEY, String(untilTs));
+    const btn = document.getElementById('sendOtpBtn');
+    const text = document.getElementById('otpCooldownText');
+    if (otpCooldownInterval) clearInterval(otpCooldownInterval);
+    function tick() {
+      const remaining = Math.ceil((untilTs - Date.now()) / 1000);
+      if (remaining <= 0) {
+        clearInterval(otpCooldownInterval);
+        if (btn) btn.classList.remove('disabled');
+        if (text) text.textContent = '';
+        return;
+      }
+      if (btn) btn.classList.add('disabled');
+      if (text) text.textContent = 'Resend available in ' + remaining + 's';
+    }
+    tick();
+    otpCooldownInterval = setInterval(tick, 1000);
+  }
+  function initOtpCooldown() {
+    const until = parseInt(localStorage.getItem(LS_OTP_COOLDOWN_KEY) || '0', 10);
+    if (until && until > Date.now()) startOtpCooldown(until);
+  }
+
+  // ── GOD MODE: Accessible "Why Verify" bottom sheet — focus trap + Escape to close + focus restore ──
+  let whySheetLastFocused = null;
+  function openWhySheet() {
+    whySheetLastFocused = document.activeElement;
+    document.getElementById('whySheetOverlay').classList.add('open');
+    document.getElementById('whySheet').classList.add('open');
+    document.addEventListener('keydown', whySheetKeyHandler);
+    const closeBtn = document.getElementById('whySheetCloseBtn');
+    if (closeBtn) closeBtn.focus();
+  }
+  function closeWhySheet() {
+    document.getElementById('whySheetOverlay').classList.remove('open');
+    document.getElementById('whySheet').classList.remove('open');
+    document.removeEventListener('keydown', whySheetKeyHandler);
+    if (whySheetLastFocused && whySheetLastFocused.focus) whySheetLastFocused.focus();
+  }
+  function whySheetKeyHandler(e) {
+    const sheet = document.getElementById('whySheet');
+    if (!sheet.classList.contains('open')) return;
+    if (e.key === 'Escape') { closeWhySheet(); return; }
+    if (e.key === 'Tab') {
+      const focusable = sheet.querySelectorAll('button, [tabindex]');
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }
 
   // ── Real-session-JWT fix (gotchas: anon key 403s silently on RLS/EXECUTE-gated calls) ──
   let _realAccessToken = null;
@@ -468,6 +654,8 @@
       const res = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + citizenId + '&select=kyc_tier', { headers: rpcHeaders() });
       const rows = await res.json();
       const tier = (rows[0] && rows[0].kyc_tier) || 0;
+      // GOD MODE PATCH — refresh progress snapshot once the real tier is known
+      renderProgressSnapshot(tier);
       if (tier >= 1) {
         document.getElementById('tier2FormFields').style.display = 'none';
         document.getElementById('tier2AlreadyDone').style.display = 'block';
@@ -481,6 +669,10 @@
   document.addEventListener('DOMContentLoaded', async () => {
     await initRealSession();
     loadRealTierState();
+    // GOD MODE PATCH — initialize progress snapshot, smart defaults, and OTP cooldown state
+    renderProgressSnapshot(0);
+    initSmartDefaults();
+    initOtpCooldown();
   });
 
   function toggleTier(id) {
@@ -505,6 +697,8 @@
   function selectDoc(el, type) {
     document.querySelectorAll('.doc-chip').forEach(c => c.classList.remove('active'));
     el.classList.add('active');
+    // GOD MODE PATCH — remember the citizen's last document choice locally
+    localStorage.setItem(LS_DOC_KEY, type);
   }
 
   // ── REAL OTP send — same Supabase Auth phone mechanism proven in login.html ──
@@ -513,6 +707,9 @@
     const payid = document.getElementById('payidInput').value.trim();
     const errEl = document.getElementById('tier2Error');
     errEl.textContent = '';
+    // GOD MODE PATCH — block resend while the cooldown is active
+    const sendBtn = document.getElementById('sendOtpBtn');
+    if (sendBtn && sendBtn.classList.contains('disabled')) { showToast('⏳ Please wait before requesting another code'); return; }
     if (!payid) { showToast('⚠️ Enter your PayID first'); return; }
     if (payid.includes('@')) {
       errEl.textContent = 'Email PayID verification isn\'t built yet — use your phone number for now.';
@@ -524,6 +721,9 @@
       if (error) { errEl.textContent = error.message; return; }
       otpSent = true;
       showToast('📨 Real code sent to ' + payid);
+      // GOD MODE PATCH — remember PayID locally and start the resend cooldown
+      localStorage.setItem(LS_PAYID_KEY, payid);
+      startOtpCooldown(Date.now() + OTP_COOLDOWN_MS);
     } catch (e) {
       errEl.textContent = 'Could not send code — try again';
     }

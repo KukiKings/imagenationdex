@@ -90,6 +90,42 @@
 
   .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1E2130;border:1px solid var(--border);border-radius:12px;padding:11px 20px;font-size:13px;font-weight:600;white-space:nowrap;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;}
   .toast.show{opacity:1;}
+
+  /* GOD MODE: TIER COMPARE + CHECKLIST + EXPORT HISTORY */
+  .compare-tiers-btn{width:100%;padding:12px;border-radius:10px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.25);color:var(--cyan);font-size:13px;font-weight:700;cursor:pointer;margin:4px 20px 0;}
+  .compare-tiers-btn:active{background:rgba(0,212,255,0.15);}
+
+  .checklist-card{margin:12px 20px 8px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:14px;}
+  .checklist-title{font-size:13px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:6px;}
+  .checklist-sub{font-size:11px;color:var(--text-muted);margin-bottom:12px;line-height:1.55;}
+  .checklist-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--border);}
+  .checklist-item:first-of-type{border-top:none;}
+  .checklist-check{width:22px;height:22px;border-radius:6px;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;transition:background 0.15s,border-color 0.15s;background:var(--surface2);}
+  .checklist-check.checked{background:var(--green);border-color:var(--green);color:var(--black);}
+  .checklist-label{font-size:12px;color:var(--text);flex:1;line-height:1.4;}
+  .checklist-progress{font-size:10px;color:var(--text-muted);margin-top:10px;text-align:right;}
+
+  .export-history{margin-top:12px;}
+  .eh-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;}
+  .eh-item{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-bottom:6px;font-size:11px;}
+  .eh-meta{color:var(--text-muted);}
+  .eh-empty{font-size:11px;color:var(--text-dim);padding:2px 0 8px;}
+
+  .sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.7);z-index:200;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+  .sheet-overlay.show{opacity:1;pointer-events:auto;}
+  .bottom-sheet{position:fixed;left:50%;bottom:0;transform:translate(-50%,100%);width:100%;max-width:430px;background:var(--surface2);border:1px solid var(--border);border-bottom:none;border-radius:20px 20px 0 0;z-index:201;max-height:80vh;overflow-y:auto;transition:transform 0.3s cubic-bezier(0.22,1,0.36,1);padding:18px 20px calc(18px + env(safe-area-inset-bottom));}
+  .bottom-sheet.show{transform:translate(-50%,0);}
+  .sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 14px;}
+  .sheet-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .sheet-title{font-size:15px;font-weight:800;}
+  .sheet-close{width:30px;height:30px;border-radius:50%;background:var(--surface3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex-shrink:0;}
+
+  .compare-table{width:100%;border-collapse:collapse;font-size:10.5px;}
+  .compare-table th,.compare-table td{padding:8px 4px;text-align:center;border-bottom:1px solid var(--border);vertical-align:middle;}
+  .compare-table th:first-child,.compare-table td:first-child{text-align:left;color:var(--text-muted);font-weight:600;padding-left:0;}
+  .compare-table th{font-size:9.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.03em;}
+  .compare-table td{font-weight:700;}
+  .compare-note{font-size:11px;color:var(--text-dim);line-height:1.5;margin-top:12px;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 </head>
@@ -204,6 +240,17 @@
         </div>
         <button class="upgrade-btn btn-gold" onclick="startKYC(2)">Apply for Institutional Access → <span style="font-weight:400;opacity:0.7;">(not connected yet)</span></button>
       </div>
+
+      <!-- GOD MODE: TIER COMPARE -->
+      <button class="compare-tiers-btn" onclick="openTierCompare()">⇄ Compare all 3 tiers side-by-side</button>
+
+      <!-- GOD MODE: KYC PREP CHECKLIST -->
+      <div class="checklist-card">
+        <div class="checklist-title">📋 Personal Prep Checklist</div>
+        <div class="checklist-sub">A private, self-tracked list to help you get organised before Tier 1/2 verification goes live. Saved only on this device — nothing here is submitted to IN$DEX or anyone else.</div>
+        <div id="kycChecklistList"></div>
+        <div class="checklist-progress" id="kycChecklistProgress">0 of 0 checked</div>
+      </div>
     </div>
 
     <!-- TAX REPORTS -->
@@ -246,6 +293,12 @@
         <div style="padding:12px;background:var(--purple-bg);border:1px solid rgba(139,63,232,0.2);border-radius:10px;font-size:12px;color:var(--text-muted);line-height:1.6;margin-top:4px;">
           This export is a plain, real record of your IN$DEX transactions — it is not validated against any specific tax authority's official format (NZIR/ATO/IRS). Give it to your accountant or tax software as a starting point, not a finished filing.
         </div>
+
+        <!-- GOD MODE: EXPORT HISTORY -->
+        <div class="export-history">
+          <div class="eh-title">Your Export History (this device)</div>
+          <div id="taxExportHistoryList"><div class="eh-empty">No exports yet on this device.</div></div>
+        </div>
       </div>
     </div>
 
@@ -275,7 +328,7 @@
           </div>
           <div class="lc-status" style="background:rgba(255,184,0,0.1);color:var(--gold);border:1px solid rgba(255,184,0,0.2);">Pending</div>
         </div>
-        <div class="lc-desc">Wyoming was the first US state to legally recognise DAOs as LLCs (2021). This wrapper enables the Treasury to hold US-regulated assets, open bank accounts, and enter contracts while governance remains fully on-chain.</div>
+        <div class="lc-desc">Wyoming was the first US state to legally recognise DAOs as LLCs (2021). A Wyoming DAO LLC wrapper is one option being considered for future Treasury operations — it would be intended to let the Treasury hold US-regulated assets, open bank accounts, and enter contracts while governance remained fully on-chain. No such entity has been formed, no application is in progress, and none of this is in force today.</div>
         <button class="lc-btn" onclick="showToast('No Wyoming entity exists or is in progress')">Formation Status: never formed →</button>
       </div>
 
@@ -319,11 +372,118 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- GOD MODE: TIER COMPARE SHEET -->
+<div class="sheet-overlay" id="tierCompareOverlay" onclick="closeTierCompare()"></div>
+<div class="bottom-sheet" id="tierCompareSheet" role="dialog" aria-modal="true" aria-labelledby="tierCompareTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title-row">
+    <div class="sheet-title" id="tierCompareTitle">Compare KYC Tiers</div>
+    <div class="sheet-close" id="tierCompareCloseBtn" onclick="closeTierCompare()" role="button" tabindex="0" aria-label="Close">✕</div>
+  </div>
+  <table class="compare-table">
+    <thead>
+      <tr><th>&nbsp;</th><th style="color:var(--green)">Tier 0</th><th style="color:var(--cyan)">Tier 1</th><th style="color:var(--gold)">Tier 2</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Status</td><td style="color:var(--green)">Active</td><td>Not connected yet</td><td>Not connected yet</td></tr>
+      <tr><td>P2P trades</td><td>Unlimited</td><td>Unlimited</td><td>Unlimited</td></tr>
+      <tr><td>INDX staking</td><td>Unlimited</td><td>Unlimited</td><td>Unlimited</td></tr>
+      <tr><td>Fiat on-ramp</td><td>$3.2K/day</td><td>$32K/day</td><td>Unlimited</td></tr>
+      <tr><td>RWA access</td><td>None</td><td>Up to $160K</td><td>Unlimited</td></tr>
+      <tr><td>Tax reports</td><td>—</td><td>✅</td><td>Multi-jurisdiction</td></tr>
+    </tbody>
+  </table>
+  <div class="compare-note">Tier 1 and Tier 2 figures describe the planned design and are not live — no Fractal ID verification or institutional onboarding is connected today.</div>
+</div>
+
 <script>
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const citizenId = sessionStorage.getItem('citizen_id');
+
+  // GOD MODE: KYC prep checklist, tier compare sheet, tax export history, smart defaults
+  const KYC_CHECKLIST_ITEMS = [
+    { id: 'photo_id', label: "Government-issued photo ID (passport or driver's license)" },
+    { id: 'proof_address', label: 'Proof of address dated within the last 3 months' },
+    { id: 'selfie_ready', label: 'A well-lit space ready for a selfie / liveness check' },
+    { id: 'source_funds', label: 'Notes on source of funds (useful for Tier 2 / institutional)' },
+    { id: 'entity_docs', label: 'Entity formation documents, if applying as an organisation' }
+  ];
+
+  function loadKycChecklist() {
+    try { return JSON.parse(localStorage.getItem('indx_kyc_checklist') || '{}'); } catch (e) { return {}; }
+  }
+  function renderKycChecklist() {
+    const state = loadKycChecklist();
+    const list = document.getElementById('kycChecklistList');
+    if (!list) return;
+    list.innerHTML = KYC_CHECKLIST_ITEMS.map(item => {
+      const checked = !!state[item.id];
+      return '<div class="checklist-item"><div class="checklist-check' + (checked ? ' checked' : '') +
+        '" onclick="toggleKycChecklistItem(\'' + item.id + '\')" role="checkbox" aria-checked="' + checked +
+        '" tabindex="0">' + (checked ? '✓' : '') + '</div><div class="checklist-label">' + item.label + '</div></div>';
+    }).join('');
+    const checkedCount = KYC_CHECKLIST_ITEMS.filter(i => state[i.id]).length;
+    document.getElementById('kycChecklistProgress').textContent = checkedCount + ' of ' + KYC_CHECKLIST_ITEMS.length + ' checked';
+  }
+  function toggleKycChecklistItem(id) {
+    const state = loadKycChecklist();
+    state[id] = !state[id];
+    localStorage.setItem('indx_kyc_checklist', JSON.stringify(state));
+    renderKycChecklist();
+  }
+
+  let _tierCompareLastFocus = null;
+  function openTierCompare() {
+    _tierCompareLastFocus = document.activeElement;
+    document.getElementById('tierCompareOverlay').classList.add('show');
+    document.getElementById('tierCompareSheet').classList.add('show');
+    document.addEventListener('keydown', handleTierCompareKeydown);
+    const closeBtn = document.getElementById('tierCompareCloseBtn');
+    if (closeBtn) closeBtn.focus();
+  }
+  function closeTierCompare() {
+    document.getElementById('tierCompareOverlay').classList.remove('show');
+    document.getElementById('tierCompareSheet').classList.remove('show');
+    document.removeEventListener('keydown', handleTierCompareKeydown);
+    if (_tierCompareLastFocus && typeof _tierCompareLastFocus.focus === 'function') _tierCompareLastFocus.focus();
+  }
+  function handleTierCompareKeydown(e) {
+    if (e.key === 'Escape') { closeTierCompare(); return; }
+    if (e.key === 'Tab') {
+      const sheet = document.getElementById('tierCompareSheet');
+      const focusable = sheet.querySelectorAll('[tabindex], button, a');
+      if (!focusable.length) return;
+      const first = focusable[0], last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }
+
+  function loadTaxExportHistory() {
+    try { return JSON.parse(localStorage.getItem('indx_kyc_export_history') || '[]'); } catch (e) { return []; }
+  }
+  function renderTaxExportHistory() {
+    const list = document.getElementById('taxExportHistoryList');
+    if (!list) return;
+    const history = loadTaxExportHistory();
+    if (!history.length) { list.innerHTML = '<div class="eh-empty">No exports yet on this device.</div>'; return; }
+    list.innerHTML = history.slice(0, 5).map(h => {
+      const d = new Date(h.ts);
+      const dateStr = isNaN(d.getTime()) ? '' : d.toLocaleDateString();
+      return '<div class="eh-item"><span>FY' + h.year + ' · ' + h.count + ' transactions</span><span class="eh-meta">' + dateStr + '</span></div>';
+    }).join('');
+  }
+  function logTaxExport(year, count) {
+    const history = loadTaxExportHistory();
+    history.unshift({ year: year, count: count, ts: Date.now() });
+    localStorage.setItem('indx_kyc_export_history', JSON.stringify(history.slice(0, 10)));
+    renderTaxExportHistory();
+  }
+
+  function saveLastTab(name) { localStorage.setItem('indx_kyc_last_tab', name); }
+  function saveLastTaxYear(year) { localStorage.setItem('indx_kyc_last_tax_year', String(year)); }
 
   // Real-session auth: RPCs get_tax_summary/get_tax_transactions only have EXECUTE
   // granted to 'authenticated', not 'anon' — sending the anon key alone as the
@@ -348,6 +508,8 @@
       document.getElementById('tab-'+t).classList.toggle('active', t===name);
       document.getElementById('panel-'+t).style.display = t===name ? 'block' : 'none';
     });
+    // GOD MODE PATCH: remember the last viewed tab so a return visit restores it
+    saveLastTab(name);
     if (name === 'tax') loadTaxData(currentTaxYear);
   }
 
@@ -387,6 +549,8 @@
   function setYear(el, year) {
     document.querySelectorAll('.ty-btn').forEach(b => b.classList.remove('active'));
     el.classList.add('active');
+    // GOD MODE PATCH: remember the last selected tax year so a return visit restores it
+    saveLastTaxYear(year);
     loadTaxData(year);
   }
 
@@ -411,6 +575,8 @@
     a.remove();
     URL.revokeObjectURL(url);
     showToast('Downloaded ' + currentTaxTransactions.length + ' real transactions');
+    // GOD MODE PATCH: log this export locally so the citizen can see their export history
+    logTaxExport(currentTaxYear, currentTaxTransactions.length);
   }
 
   function startKYC(tier) {
@@ -427,6 +593,20 @@
   document.addEventListener('DOMContentLoaded', async () => {
     await initRealSession();
     if (document.getElementById('panel-tax').style.display !== 'none') loadTaxData(currentTaxYear);
+
+    // GOD MODE: restore last viewed tab & tax year, render checklist + export history
+    renderKycChecklist();
+    renderTaxExportHistory();
+    const savedYear = parseInt(localStorage.getItem('indx_kyc_last_tax_year') || '0', 10);
+    if (savedYear) {
+      const yearBtn = Array.from(document.querySelectorAll('.ty-btn')).find(b => b.textContent.trim() === 'FY' + savedYear);
+      if (yearBtn) { document.querySelectorAll('.ty-btn').forEach(b => b.classList.remove('active')); yearBtn.classList.add('active'); }
+      currentTaxYear = savedYear;
+    }
+    const savedTab = localStorage.getItem('indx_kyc_last_tab') || '';
+    if (savedTab && ['kyc','tax','legal'].includes(savedTab) && savedTab !== 'kyc') {
+      switchTab(savedTab);
+    }
   });
 </script>
 <script src="siindex-speak-core.js"></script>

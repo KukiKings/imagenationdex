@@ -81,6 +81,40 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 .nav-item-icon{font-size:20px;}
 .nav-item-label{font-size:10px;color:var(--muted);}
 .nav-item.active .nav-item-label{color:var(--cyan);}
+
+/* GOD MODE: live search/filter, follow persistence, send-confirm sheet, feed stats */
+.empty-state{display:none;padding:40px 20px;text-align:center;color:var(--muted);font-size:13px;}
+.empty-state-icon{font-size:32px;margin-bottom:8px;}
+.feed-summary{margin:0 16px 4px;font-size:11px;color:var(--text2);min-height:14px;}
+.stat-pill.clickable{cursor:pointer;}
+.sheet-overlay{display:none;position:fixed;inset:0;background:rgba(9,10,16,0.7);z-index:200;}
+.sheet-overlay.open{display:block;}
+.bottom-sheet{display:none;position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:100%;max-width:430px;background:var(--surface2);border-radius:20px 20px 0 0;padding:10px 18px 24px;z-index:201;max-height:75vh;overflow-y:auto;}
+.bottom-sheet.open{display:block;}
+.sheet-handle{width:36px;height:4px;border-radius:4px;background:rgba(255,255,255,0.15);margin:0 auto 14px;}
+.sheet-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.sheet-title{font-size:16px;font-weight:800;}
+.sheet-close{width:28px;height:28px;border-radius:8px;background:var(--surface3);border:none;color:var(--text2);cursor:pointer;font-size:13px;}
+.follows-list{display:flex;flex-direction:column;gap:8px;}
+.follow-list-item{display:flex;align-items:center;justify-content:space-between;background:var(--surface3);border-radius:12px;padding:10px 12px;font-size:13px;}
+.follow-list-empty{padding:20px 0;text-align:center;color:var(--muted);font-size:12px;}
+.unfollow-btn{background:none;border:1px solid rgba(255,77,109,0.3);color:var(--red);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;}
+.send-sheet-recipient{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.send-sheet-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--purple));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.send-sheet-name{font-size:14px;font-weight:700;}
+.send-sheet-nation{font-size:11px;color:var(--muted);}
+.send-sheet-balance{font-size:12px;color:var(--text2);margin-bottom:14px;}
+.send-sheet-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:6px;}
+.send-sheet-input{width:100%;background:var(--surface3);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 12px;color:var(--text);font-size:16px;outline:none;margin-bottom:6px;}
+.send-sheet-usd{font-size:12px;color:var(--cyan);font-weight:700;margin-bottom:12px;}
+.send-sheet-note{font-size:10px;color:var(--muted);line-height:1.5;margin-bottom:16px;}
+.send-sheet-actions{display:flex;gap:10px;}
+.sheet-btn{flex:1;padding:11px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:none;}
+.sheet-btn-secondary{background:var(--surface3);color:var(--text2);}
+.sheet-btn-primary{background:linear-gradient(135deg,var(--blue),var(--purple));color:#fff;}
+.toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface3);border:1px solid rgba(255,255,255,0.1);color:var(--text);font-size:12px;font-weight:600;padding:10px 18px;border-radius:12px;z-index:300;opacity:0;pointer-events:none;transition:opacity 0.25s,transform 0.25s;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.action-follow.following{background:rgba(0,229,160,0.12);color:var(--green);border:1px solid rgba(0,229,160,0.3);}
 </style>
 </head>
 <body>
@@ -99,7 +133,7 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 <div class="search-bar">
   <div class="search-input-wrap">
     <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    <input type="text" class="search-input" placeholder="Search Pacific nations creators...">
+    <input type="text" class="search-input" id="searchInput" placeholder="Search Pacific nations creators..." oninput="filterFeed()">
   </div>
 </div>
 
@@ -133,15 +167,17 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
   <div class="stat-pill"><span class="stat-pill-val">—</span><div class="stat-pill-label">Creators</div></div>
   <div class="stat-pill"><span class="stat-pill-val">—</span><div class="stat-pill-label">Live Now</div></div>
   <div class="stat-pill"><span class="stat-pill-val">$0.24</span><div class="stat-pill-label">INDX Price</div></div>
+  <div class="stat-pill clickable" id="followCountPill" onclick="openFollowsSheet()"><span class="stat-pill-val" id="followCountVal">0</span><div class="stat-pill-label">Following</div></div>
 </div>
 <div style="margin:0 16px 16px;background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.25);border-radius:10px;padding:10px 12px;font-size:11px;color:var(--muted);line-height:1.5;">
   ⚠️ <strong style="color:var(--gold);">Preview.</strong> The creators and activity below are illustrative examples — not real live streams or posts yet.
 </div>
+<div class="feed-summary" id="feedSummary"></div>
 
 <div class="section-divider">🔴 Live Now</div>
 <div class="feed">
 
-  <div class="creator-card">
+  <div class="creator-card" data-format="Live Now" data-nation="Tonga">
     <div class="card-media">🥁
       <div class="card-live-badge">🔴 LIVE · 847 watching</div>
       <div class="card-earning-badge">+1.2 INDX/min</div>
@@ -162,8 +198,8 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
         <span class="card-stat-earn">+38.4 INDX today</span>
       </div>
       <div class="card-actions">
-        <button class="action-btn action-sovtoken" onclick="location.href='sovtokens.html'">🌊 Send SovToken</button>
-        <button class="action-btn action-follow">+ Follow</button>
+        <button class="action-btn action-sovtoken" onclick="openSendSheet('Lupe_Tonga','🇹🇴 Tonga','🌺')">🌊 Send SovToken</button>
+        <button class="action-btn action-follow" data-creator="Lupe_Tonga" onclick="toggleFollow(this,'Lupe_Tonga')">+ Follow</button>
       </div>
     </div>
   </div>
@@ -173,7 +209,7 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 <div class="section-divider">⚡ Short Videos</div>
 <div class="feed">
 
-  <div class="creator-card">
+  <div class="creator-card" data-format="Short Video" data-nation="Samoa">
     <div class="card-media">🌺
       <div class="card-format-badge">⚡ Short Video</div>
       <div class="card-earning-badge">+2.4 INDX</div>
@@ -194,13 +230,13 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
         <span class="card-stat-earn">+2.4 INDX earned</span>
       </div>
       <div class="card-actions">
-        <button class="action-btn action-sovtoken" onclick="location.href='sovtokens.html'">🌊 Send SovToken</button>
-        <button class="action-btn action-follow">+ Follow</button>
+        <button class="action-btn action-sovtoken" onclick="openSendSheet('Mere_Samoa','🇼🇸 Samoa','💃')">🌊 Send SovToken</button>
+        <button class="action-btn action-follow" data-creator="Mere_Samoa" onclick="toggleFollow(this,'Mere_Samoa')">+ Follow</button>
       </div>
     </div>
   </div>
 
-  <div class="creator-card">
+  <div class="creator-card" data-format="Short Video" data-nation="PNG">
     <div class="card-media">🎨
       <div class="card-format-badge">⚡ Short Video</div>
       <div class="card-earning-badge">+1.6 INDX</div>
@@ -221,8 +257,8 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
         <span class="card-stat-earn">+1.6 INDX earned</span>
       </div>
       <div class="card-actions">
-        <button class="action-btn action-sovtoken" onclick="location.href='sovtokens.html'">🌊 Send SovToken</button>
-        <button class="action-btn action-follow">+ Follow</button>
+        <button class="action-btn action-sovtoken" onclick="openSendSheet('Kila_PNG','🇵🇬 Papua New Guinea','🖌️')">🌊 Send SovToken</button>
+        <button class="action-btn action-follow" data-creator="Kila_PNG" onclick="toggleFollow(this,'Kila_PNG')">+ Follow</button>
       </div>
     </div>
   </div>
@@ -232,7 +268,7 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 <div class="section-divider">🍲 Long Videos</div>
 <div class="feed">
 
-  <div class="creator-card">
+  <div class="creator-card" data-format="Long Video" data-nation="Cook Islands">
     <div class="card-media">🍲
       <div class="card-format-badge">🎬 Long Video · 18 min</div>
       <div class="card-earning-badge">+3.6 INDX</div>
@@ -253,13 +289,13 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
         <span class="card-stat-earn">+3.6 INDX earned</span>
       </div>
       <div class="card-actions">
-        <button class="action-btn action-sovtoken" onclick="location.href='sovtokens.html'">🌊 Send SovToken</button>
-        <button class="action-btn action-follow">+ Follow</button>
+        <button class="action-btn action-sovtoken" onclick="openSendSheet('Sione_Cooks','🇨🇰 Cook Islands','👨‍🍳')">🌊 Send SovToken</button>
+        <button class="action-btn action-follow" data-creator="Sione_Cooks" onclick="toggleFollow(this,'Sione_Cooks')">+ Follow</button>
       </div>
     </div>
   </div>
 
-  <div class="creator-card">
+  <div class="creator-card" data-format="Long Video" data-nation="Fiji">
     <div class="card-media">🌊
       <div class="card-format-badge">🎬 Long Video · 24 min</div>
       <div class="card-earning-badge">+2.8 INDX</div>
@@ -280,18 +316,60 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
         <span class="card-stat-earn">+2.8 INDX earned</span>
       </div>
       <div class="card-actions">
-        <button class="action-btn action-sovtoken" onclick="location.href='sovtokens.html'">🌊 Send SovToken</button>
-        <button class="action-btn action-follow">+ Follow</button>
+        <button class="action-btn action-sovtoken" onclick="openSendSheet('Viti_Fj','🇫🇯 Fiji','🏄')">🌊 Send SovToken</button>
+        <button class="action-btn action-follow" data-creator="Viti_Fj" onclick="toggleFollow(this,'Viti_Fj')">+ Follow</button>
       </div>
     </div>
   </div>
 
 </div>
 
+<div class="empty-state" id="emptyState">
+  <div class="empty-state-icon">🔍</div>
+  No creators match your search or filters yet.
+</div>
+
 <div style="padding:24px 16px;text-align:center;">
   <div style="font-size:13px;color:var(--muted);margin-bottom:12px;">Pacific nations cultural heritage is sacred. SIINDEX protects it.</div>
   <a href="content-upload.html" style="display:inline-block;padding:12px 28px;border-radius:14px;background:linear-gradient(135deg,var(--blue),var(--purple));color:#fff;font-size:14px;font-weight:700;text-decoration:none;">🎬 Add Your Voice</a>
 </div>
+
+<div class="sheet-overlay" id="followsSheetOverlay" onclick="closeFollowsSheet()"></div>
+<div class="bottom-sheet" id="followsSheet" role="dialog" aria-modal="true" aria-labelledby="followsSheetTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title" id="followsSheetTitle">❤️ My Follows</div>
+    <button class="sheet-close" onclick="closeFollowsSheet()" aria-label="Close">✕</button>
+  </div>
+  <div class="follows-list" id="followsList"></div>
+</div>
+
+<div class="sheet-overlay" id="sendSheetOverlay" onclick="closeSendSheet()"></div>
+<div class="bottom-sheet" id="sendSheet" role="dialog" aria-modal="true" aria-labelledby="sendSheetTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title" id="sendSheetTitle">🌊 Send SovToken</div>
+    <button class="sheet-close" onclick="closeSendSheet()" aria-label="Close">✕</button>
+  </div>
+  <div class="send-sheet-recipient">
+    <div class="send-sheet-avatar" id="sendSheetAvatar">🌺</div>
+    <div>
+      <div class="send-sheet-name" id="sendSheetName">—</div>
+      <div class="send-sheet-nation" id="sendSheetNation">—</div>
+    </div>
+  </div>
+  <div class="send-sheet-balance" id="sendSheetBalance">Your balance: — INDX</div>
+  <label class="send-sheet-label" for="sendSheetAmount">Amount to send (INDX)</label>
+  <input type="number" min="0" step="0.1" id="sendSheetAmount" class="send-sheet-input" placeholder="0.0" oninput="updateSendConversion()">
+  <div class="send-sheet-usd" id="sendSheetUsd">≈ $0.00 USD</div>
+  <div class="send-sheet-note">This opens SovTokens with this creator pre-filled at IN$DEX / INDX = $0.24. Nothing is sent from this screen.</div>
+  <div class="send-sheet-actions">
+    <button class="sheet-btn sheet-btn-secondary" onclick="closeSendSheet()">Cancel</button>
+    <button class="sheet-btn sheet-btn-primary" onclick="confirmSendSovToken()">Continue →</button>
+  </div>
+</div>
+
+<div class="toast" id="godModeToast"></div>
 
 <nav class="bottom-nav">
   <a href="citizen-dashboard.html" class="nav-item"><span class="nav-item-icon">🏠</span><span class="nav-item-label">Home</span></a>
@@ -302,8 +380,193 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 </nav>
 
 <script>
-function setFilter(el){document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');}
-function setNation(el){document.querySelectorAll('.nation-pill').forEach(p=>p.classList.remove('active'));el.classList.add('active');}
+// GOD MODE: live search/filter, follow persistence, send-confirm sheet, feed stats
+const INDX_PRICE_USD = 0.24;
+const FOLLOWS_KEY = 'indx_pacificfirst_follows';
+let lastFocusedEl = null;
+let sendSheetContext = null;
+
+function getFollows(){
+  try{ return JSON.parse(localStorage.getItem(FOLLOWS_KEY) || '[]'); }catch(e){ return []; }
+}
+function saveFollows(list){ localStorage.setItem(FOLLOWS_KEY, JSON.stringify(list)); }
+
+function toggleFollow(btn, name){
+  let follows = getFollows();
+  const idx = follows.indexOf(name);
+  if(idx===-1){
+    follows.push(name);
+    showToast(name+' followed');
+  } else {
+    follows.splice(idx,1);
+    showToast(name+' unfollowed');
+  }
+  saveFollows(follows);
+  renderFollowState();
+}
+
+function toggleFollowByName(name){
+  const btn = document.querySelector('.action-follow[data-creator="'+name+'"]');
+  if(btn){ toggleFollow(btn, name); return; }
+  const follows = getFollows().filter(n=>n!==name);
+  saveFollows(follows);
+  renderFollowState();
+}
+
+function renderFollowState(){
+  const follows = getFollows();
+  const valEl = document.getElementById('followCountVal');
+  if(valEl) valEl.textContent = follows.length;
+  document.querySelectorAll('.action-follow').forEach(btn=>{
+    const name = btn.dataset.creator;
+    if(!name) return;
+    const isFollowing = follows.includes(name);
+    btn.textContent = isFollowing ? '✓ Following' : '+ Follow';
+    btn.classList.toggle('following', isFollowing);
+  });
+  const listEl = document.getElementById('followsList');
+  if(listEl){
+    listEl.innerHTML = follows.length===0
+      ? '<div class="follow-list-empty">You haven\'t followed any creators yet.</div>'
+      : follows.map(n=>'<div class="follow-list-item"><span>'+n+'</span><button class="unfollow-btn" onclick="toggleFollowByName(\''+n+'\')">Unfollow</button></div>').join('');
+  }
+}
+
+function trapFocus(sheet){
+  const focusable = sheet.querySelectorAll('button, [href], input, [tabindex]:not([tabindex="-1"])');
+  if(focusable.length) focusable[0].focus();
+  function handler(e){
+    if(e.key==='Escape'){
+      document.querySelectorAll('.bottom-sheet.open').forEach(s=>s.classList.remove('open'));
+      document.querySelectorAll('.sheet-overlay.open').forEach(o=>o.classList.remove('open'));
+      document.removeEventListener('keydown', handler);
+      if(lastFocusedEl) lastFocusedEl.focus();
+      return;
+    }
+    if(e.key!=='Tab' || !focusable.length) return;
+    const first=focusable[0], last=focusable[focusable.length-1];
+    if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+  }
+  document.addEventListener('keydown', handler);
+}
+
+function openFollowsSheet(){
+  lastFocusedEl = document.activeElement;
+  renderFollowState();
+  document.getElementById('followsSheet').classList.add('open');
+  document.getElementById('followsSheetOverlay').classList.add('open');
+  trapFocus(document.getElementById('followsSheet'));
+}
+function closeFollowsSheet(){
+  document.getElementById('followsSheet').classList.remove('open');
+  document.getElementById('followsSheetOverlay').classList.remove('open');
+  if(lastFocusedEl) lastFocusedEl.focus();
+}
+
+function openSendSheet(name, nation, avatar){
+  lastFocusedEl = document.activeElement;
+  sendSheetContext = {name:name, nation:nation};
+  document.getElementById('sendSheetName').textContent = name;
+  document.getElementById('sendSheetNation').textContent = nation;
+  document.getElementById('sendSheetAvatar').textContent = avatar || '🌊';
+  const balance = parseFloat(sessionStorage.getItem('citizen_balance') || '0') || 0;
+  document.getElementById('sendSheetBalance').textContent = 'Your balance: '+balance.toLocaleString()+' INDX';
+  document.getElementById('sendSheetAmount').value = '';
+  document.getElementById('sendSheetUsd').textContent = '≈ $0.00 USD';
+  document.getElementById('sendSheet').classList.add('open');
+  document.getElementById('sendSheetOverlay').classList.add('open');
+  trapFocus(document.getElementById('sendSheet'));
+}
+function closeSendSheet(){
+  document.getElementById('sendSheet').classList.remove('open');
+  document.getElementById('sendSheetOverlay').classList.remove('open');
+  if(lastFocusedEl) lastFocusedEl.focus();
+}
+function updateSendConversion(){
+  const amt = parseFloat(document.getElementById('sendSheetAmount').value) || 0;
+  const usd = amt * INDX_PRICE_USD;
+  document.getElementById('sendSheetUsd').textContent = '≈ $'+usd.toFixed(2)+' USD';
+}
+function confirmSendSovToken(){
+  if(!sendSheetContext) return;
+  sessionStorage.setItem('sovtoken_recipient_name', sendSheetContext.name);
+  sessionStorage.setItem('sovtoken_recipient_nation', sendSheetContext.nation);
+  const amt = document.getElementById('sendSheetAmount').value;
+  if(amt) sessionStorage.setItem('sovtoken_recipient_amount', amt);
+  location.href='sovtokens.html';
+}
+
+function showToast(msg){
+  const t = document.getElementById('godModeToast');
+  if(!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._timer);
+  showToast._timer = setTimeout(function(){ t.classList.remove('show'); }, 2200);
+}
+
+function getCleanLabel(el){
+  const clone = el.cloneNode(true);
+  const flag = clone.querySelector('.nation-flag');
+  if(flag) flag.remove();
+  return clone.textContent.replace(/^[^\w]+/,'').trim();
+}
+
+function filterFeed(){
+  const searchInputEl = document.getElementById('searchInput');
+  const searchTerm = (searchInputEl ? searchInputEl.value : '').toLowerCase().trim();
+  const activeFilterEl = document.querySelector('.filter-chip.active');
+  const activeNationEl = document.querySelector('.nation-pill.active');
+  const filterLabel = activeFilterEl ? getCleanLabel(activeFilterEl) : 'All';
+  const nationLabel = activeNationEl ? getCleanLabel(activeNationEl) : 'All Nations';
+  const cards = document.querySelectorAll('.creator-card');
+  let visibleCount = 0;
+  let totalIndx = 0;
+  cards.forEach(function(card){
+    const cardFormat = card.dataset.format || '';
+    const cardNation = card.dataset.nation || '';
+    const cardText = card.textContent.toLowerCase();
+    const matchesFilter = filterLabel==='All' || cardFormat===filterLabel;
+    const matchesNation = nationLabel==='All Nations' || cardNation===nationLabel;
+    const matchesSearch = !searchTerm || cardText.includes(searchTerm);
+    const visible = matchesFilter && matchesNation && matchesSearch;
+    card.style.display = visible ? '' : 'none';
+    if(visible){
+      visibleCount++;
+      const earnEl = card.querySelector('.card-stat-earn');
+      if(earnEl){
+        const m = earnEl.textContent.match(/[\d.]+/);
+        if(m) totalIndx += parseFloat(m[0]);
+      }
+    }
+  });
+  document.querySelectorAll('.feed').forEach(function(feedEl){
+    const anyVisible = Array.prototype.some.call(feedEl.querySelectorAll('.creator-card'), function(c){ return c.style.display!=='none'; });
+    feedEl.style.display = anyVisible ? '' : 'none';
+    const divider = feedEl.previousElementSibling;
+    if(divider && divider.classList.contains('section-divider')) divider.style.display = anyVisible ? '' : 'none';
+  });
+  const emptyState = document.getElementById('emptyState');
+  if(emptyState) emptyState.style.display = visibleCount===0 ? 'block' : 'none';
+  updateFeedSummary(visibleCount, totalIndx);
+}
+
+function updateFeedSummary(count, total){
+  const el = document.getElementById('feedSummary');
+  if(!el) return;
+  el.textContent = count===0 ? '' : ('📊 '+count+' creator'+(count===1?'':'s')+' shown · '+total.toFixed(1)+' INDX earned today (visible, example data)');
+}
+
+// GOD MODE PATCH: now also re-filters the feed after switching the active chip
+function setFilter(el){document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');filterFeed();}
+// GOD MODE PATCH: now also re-filters the feed after switching the active nation pill
+function setNation(el){document.querySelectorAll('.nation-pill').forEach(p=>p.classList.remove('active'));el.classList.add('active');filterFeed();}
+
+document.addEventListener('DOMContentLoaded', function(){
+  renderFollowState();
+  filterFeed();
+});
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

@@ -126,6 +126,31 @@
   .nav-item.active{opacity:1;}
   .nav-icon{font-size:20px;}
   .nav-label{font-size:10px;font-weight:600;}
+
+  /* GOD MODE: DRAFT BANNER */
+  .draft-banner{margin:0 0 14px;background:linear-gradient(135deg,rgba(255,184,0,0.1),rgba(255,184,0,0.03));border:1px solid rgba(255,184,0,0.25);border-radius:12px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .draft-banner-text{font-size:12px;color:var(--text2);line-height:1.4;flex:1;}
+  .draft-btn{border:none;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .draft-btn.resume{background:var(--gold);color:var(--black);}
+  .draft-btn.discard{background:var(--surface3);color:var(--text2);margin-left:6px;}
+
+  /* GOD MODE: REVIEW SHEET (reuses .sheet-overlay) */
+  .bottom-sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:430px;background:var(--surface);border-radius:24px 24px 0 0;z-index:101;transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);max-height:88vh;overflow-y:auto;}
+  .bottom-sheet.open{transform:translateX(-50%) translateY(0);}
+  .review-row{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--surface3);}
+  .review-row:last-of-type{border-bottom:none;}
+  .review-label{font-size:12px;color:var(--text-muted);flex-shrink:0;}
+  .review-value{font-size:13px;color:var(--text);text-align:right;font-weight:600;max-width:70%;}
+
+  /* GOD MODE: DISPUTE STATS */
+  .dispute-stats{display:flex;gap:8px;padding:0 16px 12px;}
+  .stat-box{flex:1;background:var(--surface);border:1px solid var(--surface3);border-radius:12px;padding:12px 8px;text-align:center;}
+  .stat-num{font-size:18px;font-weight:800;color:var(--cyan);}
+  .stat-lbl{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;}
+
+  /* GOD MODE: DISPUTE FILTER CHIPS */
+  .dispute-filter-bar{display:flex;gap:8px;padding:0 16px 12px;overflow-x:auto;scrollbar-width:none;}
+  .dispute-filter-bar::-webkit-scrollbar{display:none;}
 </style>
 </head>
 <body>
@@ -156,6 +181,13 @@
 <!-- OPEN DISPUTE PANEL -->
 <div id="panelOpen">
   <div class="open-dispute-section">
+    <div class="draft-banner" id="draftBanner" style="display:none;">
+      <div class="draft-banner-text">📝 <span id="draftBannerText">You have an unfinished dispute draft.</span></div>
+      <div style="display:flex;flex-shrink:0;">
+        <button class="draft-btn resume" onclick="restoreDraft()">Resume</button>
+        <button class="draft-btn discard" onclick="discardDraft()">Discard</button>
+      </div>
+    </div>
     <div class="order-picker-label">Which order?</div>
     <select class="order-select" id="orderSelect" onchange="onOrderChange()">
       <option value=""> Loading your orders… </option>
@@ -205,7 +237,18 @@
 
 <!-- ACTIVE DISPUTES PANEL -->
 <div id="panelActive" style="display:none;">
-  <div style="padding:0 16px;font-size:11px;color:var(--text-muted);">Your real disputes, loaded from IN$DEX's live records.</div>
+  <div style="padding:0 16px 12px;font-size:11px;color:var(--text-muted);">Your real disputes, loaded from IN$DEX's live records.</div>
+  <div class="dispute-stats" id="disputeStats" style="display:none;">
+    <div class="stat-box"><div class="stat-num" id="statTotal">0</div><div class="stat-lbl">Total</div></div>
+    <div class="stat-box"><div class="stat-num" id="statOpen">0</div><div class="stat-lbl">Open</div></div>
+    <div class="stat-box"><div class="stat-num" id="statResolved">0</div><div class="stat-lbl">Resolved</div></div>
+  </div>
+  <div class="dispute-filter-bar" id="disputeFilterBar" style="display:none;">
+    <div class="tab active" onclick="filterDisputes('all',this)">All</div>
+    <div class="tab" onclick="filterDisputes('open',this)">Open</div>
+    <div class="tab" onclick="filterDisputes('review',this)">In Review</div>
+    <div class="tab" onclick="filterDisputes('resolved',this)">Resolved</div>
+  </div>
   <div class="disputes-list" id="disputesList">
     <div style="padding:24px;text-align:center;color:var(--text-muted);font-size:13px;">Loading…</div>
   </div>
@@ -253,6 +296,29 @@
       ✅ <strong>Resolved:</strong> <span id="dsResolutionNote"></span>
     </div>
     <button class="btn-primary" style="background:none;color:var(--red);border:1px solid rgba(255,77,109,0.3);" onclick="closeDetailSheet()">Close</button>
+  </div>
+</div>
+
+<!-- REVIEW & CONFIRM SHEET -->
+<div class="sheet-overlay" id="reviewOverlay" onclick="closeReviewSheet()"></div>
+<div class="bottom-sheet" id="reviewSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title">Review your dispute</div>
+    <button class="sheet-close" onclick="closeReviewSheet()">✕</button>
+  </div>
+  <div style="padding:20px;">
+    <div style="background:var(--surface2);border-radius:14px;padding:6px 14px;margin-bottom:16px;">
+      <div class="review-row"><span class="review-label">Order</span><span class="review-value" id="revOrder">—</span></div>
+      <div class="review-row"><span class="review-label">Reason</span><span class="review-value" id="revReason">—</span></div>
+      <div class="review-row"><span class="review-label">Resolution</span><span class="review-value" id="revResolution">—</span></div>
+      <div class="review-row"><span class="review-label">Evidence</span><span class="review-value" id="revEvidence">—</span></div>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">Description</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.6;background:var(--surface2);border-radius:12px;padding:12px;margin-bottom:16px;max-height:120px;overflow-y:auto;" id="revDesc"></div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px;line-height:1.5;">This creates a real, permanent record visible to IN$DEX and the seller. Make sure the details above are accurate before confirming.</div>
+    <button class="btn-primary" id="reviewConfirmBtn" onclick="confirmSubmitDispute()">Confirm & Open Dispute</button>
+    <button class="btn-secondary" onclick="closeReviewSheet()">← Back to Edit</button>
   </div>
 </div>
 
@@ -309,6 +375,142 @@ let selectedResolution = null;
 let evidenceItems = [];
 let myOrders = [];
 let myDisputes = [];
+let disputeFilterState = 'all';
+let _pendingDisputeOrder = null;
+let _pendingDisputeDesc = '';
+
+// ── GOD MODE: draft autosave, review/confirm step, dispute stats, status filters ──
+function saveDraft() {
+  const orderId = document.getElementById('orderSelect')?.value || '';
+  const desc = document.getElementById('descInput')?.value.trim() || '';
+  if (!orderId || orderId === 'demo' || (!selectedReason && !desc && !selectedResolution)) return;
+  const draft = { orderId, reason: selectedReason, resolution: selectedResolution, desc, evidenceCount: evidenceItems.length || 0, ts: Date.now() };
+  localStorage.setItem('indx_dispute_draft', JSON.stringify(draft));
+}
+
+function checkForDraft() {
+  let draft = null;
+  try { draft = JSON.parse(localStorage.getItem('indx_dispute_draft') || 'null'); } catch (e) {}
+  if (!draft || !draft.orderId) return;
+  const order = (myOrders || []).find(o => o.id === draft.orderId);
+  if (!order) { localStorage.removeItem('indx_dispute_draft'); return; }
+  document.getElementById('draftBannerText').textContent = `You have an unfinished dispute draft for "${order.title}".`;
+  document.getElementById('draftBanner').style.display = 'flex';
+}
+
+function restoreDraft() {
+  let draft = null;
+  try { draft = JSON.parse(localStorage.getItem('indx_dispute_draft') || 'null'); } catch (e) {}
+  if (!draft) return;
+  const sel = document.getElementById('orderSelect');
+  sel.value = draft.orderId;
+  onOrderChange();
+  for (let i = 0; i < (draft.evidenceCount || 0); i++) addEvidence();
+  if (draft.reason) {
+    document.querySelectorAll('#reasonChips .reason-chip').forEach(c => { if (c.textContent === draft.reason) selectReason(c); });
+  }
+  if (draft.resolution) {
+    document.querySelectorAll('#resolutionChips .reason-chip').forEach(c => { if (c.textContent === draft.resolution) selectResolution(c); });
+  }
+  document.getElementById('descInput').value = draft.desc || '';
+  validateForm();
+  document.getElementById('draftBanner').style.display = 'none';
+  showToast('Draft restored');
+}
+
+function discardDraft() {
+  localStorage.removeItem('indx_dispute_draft');
+  document.getElementById('draftBanner').style.display = 'none';
+}
+
+function openReviewSheet(order, desc) {
+  _pendingDisputeOrder = order;
+  _pendingDisputeDesc = desc;
+  document.getElementById('revOrder').textContent = order.title || '—';
+  document.getElementById('revReason').textContent = selectedReason || 'Other';
+  document.getElementById('revResolution').textContent = selectedResolution || 'Not specified';
+  document.getElementById('revEvidence').textContent = evidenceItems.length + (evidenceItems.length === 1 ? ' item' : ' items');
+  document.getElementById('revDesc').textContent = desc || '';
+  document.getElementById('reviewOverlay').classList.add('open');
+  document.getElementById('reviewSheet').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeReviewSheet() {
+  document.getElementById('reviewOverlay').classList.remove('open');
+  document.getElementById('reviewSheet').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function confirmSubmitDispute() {
+  if (!_pendingDisputeOrder) return;
+  doSubmitDispute(_pendingDisputeOrder, _pendingDisputeDesc);
+}
+
+function updateDisputeStats(disputes) {
+  const STATUS_CATEGORY = { open: 'open', evidence: 'review', mediation: 'review',
+    resolved_buyer: 'resolved', resolved_seller: 'resolved', withdrawn: 'resolved' };
+  let openCount = 0, resolvedCount = 0;
+  (disputes || []).forEach(d => {
+    const cat = STATUS_CATEGORY[d.status] || 'open';
+    if (cat === 'open' || cat === 'review') openCount++;
+    if (cat === 'resolved') resolvedCount++;
+  });
+  const total = (disputes || []).length;
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statOpen').textContent = openCount;
+  document.getElementById('statResolved').textContent = resolvedCount;
+  localStorage.setItem('indx_dispute_stats_cache', JSON.stringify({ total, open: openCount, resolved: resolvedCount }));
+}
+
+function paintCachedDisputeStats() {
+  try {
+    const cached = JSON.parse(localStorage.getItem('indx_dispute_stats_cache') || 'null');
+    if (cached && cached.total > 0) {
+      document.getElementById('statTotal').textContent = cached.total;
+      document.getElementById('statOpen').textContent = cached.open || 0;
+      document.getElementById('statResolved').textContent = cached.resolved || 0;
+      document.getElementById('disputeStats').style.display = 'flex';
+      document.getElementById('disputeFilterBar').style.display = 'flex';
+    }
+  } catch (e) {}
+}
+
+function renderDisputesList() {
+  const list = document.getElementById('disputesList');
+  const STATUS_LABEL = { open: ['OPEN','open'], evidence: ['EVIDENCE ADDED','review'], mediation: ['IN MEDIATION','review'],
+    resolved_buyer: ['RESOLVED (BUYER)','resolved'], resolved_seller: ['RESOLVED (SELLER)','resolved'], withdrawn: ['WITHDRAWN','resolved'] };
+  const filtered = (myDisputes || []).filter(d => {
+    if (disputeFilterState === 'all') return true;
+    const cls = (STATUS_LABEL[d.status] || [d.status.toUpperCase(), 'open'])[1];
+    return cls === disputeFilterState;
+  });
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No matching disputes</div><div class="empty-desc">Try a different filter.</div></div>';
+    return;
+  }
+  list.innerHTML = filtered.map(d => {
+    const [label, cls] = STATUS_LABEL[d.status] || [d.status.toUpperCase(), 'open'];
+    const opened = new Date(d.opened_at).toLocaleDateString();
+    return `<div class="dispute-card" onclick="openDetailSheet('${d.id}')">
+      <div class="dispute-top">
+        <span class="d-status ${cls}">${label}</span>
+        <div class="d-body">
+          <div class="d-title">${(d.reason || '').split(':')[0]}</div>
+          <div class="d-meta">Opened ${opened}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterDisputes(cat, el) {
+  disputeFilterState = cat;
+  document.querySelectorAll('#disputeFilterBar .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderDisputesList();
+}
+// ── END GOD MODE ──
 
 function switchTab(el, tab) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -335,6 +537,8 @@ async function loadOrders() {
     ).join('');
   }
   onOrderChange();
+  // GOD MODE PATCH: surface any saved draft once orders are loaded
+  checkForDraft();
 }
 
 function onOrderChange() {
@@ -385,15 +589,21 @@ function validateForm() {
   const order = document.getElementById('orderSelect').value;
   const desc = document.getElementById('descInput').value.trim();
   document.getElementById('submitBtn').disabled = !(order && order !== 'demo' && selectedReason && desc.length > 10);
+  // GOD MODE PATCH: persist the in-progress dispute as a recoverable draft
+  saveDraft();
 }
 
-async function submitDispute() {
+// GOD MODE PATCH: submitDispute now opens a review/confirm sheet instead of submitting immediately
+function submitDispute() {
   const orderId = document.getElementById('orderSelect').value;
   const order = myOrders.find(o => o.id === orderId);
   const desc = document.getElementById('descInput').value.trim();
   if (!citizenId || !order) { showToast('Could not identify the order — try again.'); return; }
+  openReviewSheet(order, desc);
+}
 
-  const btn = document.getElementById('submitBtn');
+async function doSubmitDispute(order, desc) {
+  const btn = document.getElementById('reviewConfirmBtn');
   btn.disabled = true; btn.textContent = 'Opening…';
   try {
     const reasonText = (selectedReason || 'Other') + ': ' + desc + (selectedResolution ? ' [Preferred resolution: ' + selectedResolution + ']' : '');
@@ -403,12 +613,14 @@ async function submitDispute() {
     if (evidenceItems.length > 0) {
       await rpc('add_dispute_evidence', { p_dispute_id: dispute.id, p_actor_id: citizenId, p_detail: { items: evidenceItems.length } });
     }
+    localStorage.removeItem('indx_dispute_draft');
+    closeReviewSheet();
     document.getElementById('successDetail').textContent = `Dispute #${dispute.id.slice(0,8)} opened for "${order.title}". Your evidence and reason are saved to the record.`;
     document.getElementById('successOverlay').classList.add('show');
   } catch (e) {
     showToast('Could not open dispute: ' + e.message);
   } finally {
-    btn.disabled = false; btn.textContent = 'Open Dispute →';
+    btn.disabled = false; btn.textContent = 'Confirm & Open Dispute';
   }
 }
 
@@ -428,25 +640,17 @@ async function loadDisputes() {
 
   if (!myDisputes || myDisputes.length === 0) {
     list.innerHTML = '<div class="empty-state"><div class="empty-icon">🛡️</div><div class="empty-title">No disputes</div><div class="empty-desc">Any dispute you open will show up here with its real status.</div></div>';
+    document.getElementById('disputeStats').style.display = 'none';
+    document.getElementById('disputeFilterBar').style.display = 'none';
+    localStorage.setItem('indx_dispute_stats_cache', JSON.stringify({ total: 0, open: 0, resolved: 0 }));
     return;
   }
 
-  const STATUS_LABEL = { open: ['OPEN','open'], evidence: ['EVIDENCE ADDED','review'], mediation: ['IN MEDIATION','review'],
-    resolved_buyer: ['RESOLVED (BUYER)','resolved'], resolved_seller: ['RESOLVED (SELLER)','resolved'], withdrawn: ['WITHDRAWN','resolved'] };
-
-  list.innerHTML = myDisputes.map(d => {
-    const [label, cls] = STATUS_LABEL[d.status] || [d.status.toUpperCase(), 'open'];
-    const opened = new Date(d.opened_at).toLocaleDateString();
-    return `<div class="dispute-card" onclick="openDetailSheet('${d.id}')">
-      <div class="dispute-top">
-        <span class="d-status ${cls}">${label}</span>
-        <div class="d-body">
-          <div class="d-title">${(d.reason || '').split(':')[0]}</div>
-          <div class="d-meta">Opened ${opened}</div>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
+  // GOD MODE PATCH: paint the stats bar + filter bar and render through the filterable renderer
+  updateDisputeStats(myDisputes);
+  document.getElementById('disputeStats').style.display = 'flex';
+  document.getElementById('disputeFilterBar').style.display = 'flex';
+  renderDisputesList();
 }
 
 function openDetailSheet(disputeId) {
@@ -490,6 +694,8 @@ function showToast(msg) {
   await initRealSession();
   loadOrders();
   loadDisputes();
+  // GOD MODE PATCH: paint cached dispute stats instantly while the live fetch is in flight
+  paintCachedDisputeStats();
 })();
 </script>
 <script src="siindex-speak-core.js"></script>

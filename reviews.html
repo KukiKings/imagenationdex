@@ -86,6 +86,36 @@
   .sc-sub{font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:20px;}
   .ws-earned{display:inline-flex;align-items:center;gap:6px;background:rgba(255,184,0,0.1);border:1px solid rgba(255,184,0,0.2);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;color:var(--gold);margin-bottom:20px;}
   .done-btn{width:100%;padding:14px;border-radius:12px;background:var(--cyan);color:var(--black);font-size:15px;font-weight:800;border:none;cursor:pointer;}
+
+  /* GOD MODE: draft banner */
+  .draft-banner{margin:12px 20px 0;padding:10px 14px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.25);border-radius:10px;font-size:12px;color:var(--cyan);display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .draft-banner .db-close{cursor:pointer;color:var(--text-muted);font-size:14px;padding:0 2px;flex-shrink:0;}
+
+  /* GOD MODE: live usd conversion */
+  .oc-usd{color:var(--text-muted);}
+
+  /* GOD MODE: personal review activity stat */
+  .history-stat{margin:16px 20px 0;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;align-items:center;gap:10px;display:none;}
+  .history-stat.show{display:flex;}
+  .hs-icon{font-size:20px;flex-shrink:0;}
+  .hs-text{font-size:12px;color:var(--text-muted);line-height:1.5;}
+  .hs-text b{color:var(--gold);font-weight:700;}
+
+  /* GOD MODE: confirm preview sheet */
+  .sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.65);z-index:300;display:none;}
+  .sheet-overlay.show{display:block;}
+  .bottom-sheet{position:fixed;left:50%;bottom:0;transform:translate(-50%,100%);width:100%;max-width:430px;max-height:82vh;overflow-y:auto;background:var(--surface2);border:1px solid var(--border);border-top-left-radius:20px;border-top-right-radius:20px;z-index:301;padding:20px 20px 24px;transition:transform 0.32s cubic-bezier(0.22,1,0.36,1);}
+  .bottom-sheet.show{transform:translate(-50%,0);}
+  .sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 16px;}
+  .sheet-title{font-size:17px;font-weight:800;margin-bottom:14px;}
+  .preview-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;}
+  .preview-row:last-of-type{border-bottom:none;}
+  .preview-label{color:var(--text-muted);flex-shrink:0;}
+  .preview-value{text-align:right;color:var(--text);font-weight:600;}
+  .preview-stars{color:var(--gold);}
+  .sheet-actions{display:flex;gap:10px;margin-top:16px;}
+  .sheet-btn-edit{flex:1;padding:14px;border-radius:12px;background:var(--surface3);color:var(--text);font-size:14px;font-weight:700;border:1px solid var(--border);cursor:pointer;}
+  .sheet-btn-confirm{flex:1.4;padding:14px;border-radius:12px;background:var(--gold);color:var(--black);font-size:14px;font-weight:800;border:none;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -104,8 +134,14 @@
       <div>
         <div class="oc-title">Handmade Ceramic Coffee Set</div>
         <div class="oc-seller">from kiri.IN$DEX</div>
-        <div class="oc-price">150 INDX · Delivered 3 days ago</div>
+        <div class="oc-price">150 INDX <span class="oc-usd" id="ocUsd"></span> · Delivered 3 days ago</div>
       </div>
+    </div>
+
+    <!-- GOD MODE: draft restore banner -->
+    <div class="draft-banner" id="draftBanner" style="display:none;">
+      <span>📝 Draft restored from your last visit</span>
+      <span class="db-close" onclick="dismissDraftBanner()">✕</span>
     </div>
 
     <!-- STAR RATING -->
@@ -167,6 +203,12 @@
       <div class="ws-up">+3 WS<br><span style="font-size:10px;color:var(--text-muted);">they earn</span></div>
     </div>
 
+    <!-- GOD MODE: personal review activity stat (real localStorage data, this device only) -->
+    <div class="history-stat" id="historyStat">
+      <div class="hs-icon">🌟</div>
+      <div class="hs-text"><b id="hsCount">0</b> reviews written on this device · avg <b id="hsAvg">0.0</b>★ given</div>
+    </div>
+
     <div style="height:20px;"></div>
   </div>
 
@@ -187,7 +229,28 @@
   </div>
 </div>
 
+<!-- GOD MODE: submit confirmation preview sheet -->
+<div class="sheet-overlay" id="confirmSheetOverlay" onclick="closeConfirmSheet()"></div>
+<div class="bottom-sheet" id="confirmSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Review Preview</div>
+  <div class="preview-row"><div class="preview-label">Rating</div><div class="preview-value preview-stars" id="pvStars">—</div></div>
+  <div class="preview-row"><div class="preview-label">Highlights</div><div class="preview-value" id="pvTags">None selected</div></div>
+  <div class="preview-row"><div class="preview-label">Review</div><div class="preview-value" id="pvText">—</div></div>
+  <div class="preview-row"><div class="preview-label">Photos</div><div class="preview-value" id="pvPhotos">0 attached</div></div>
+  <div class="preview-row"><div class="preview-label">Posting as</div><div class="preview-value" id="pvCitizen">—</div></div>
+  <div class="sheet-actions">
+    <button class="sheet-btn-edit" onclick="closeConfirmSheet()">Edit</button>
+    <button class="sheet-btn-confirm" id="confirmSubmitBtn" onclick="confirmSubmit()">Confirm & Submit</button>
+  </div>
+</div>
+
 <script>
+  // GOD MODE: constants & namespaced localStorage keys
+  const INDX_PRICE_USD = 0.24;
+  const DRAFT_KEY = 'indx_reviews_draft';
+  const HISTORY_KEY = 'indx_reviews_history';
+
   let currentRating = 0;
   const labels = ['', 'Needs improvement', 'It was okay', 'Good experience', 'Great seller!', 'Outstanding! ⭐'];
 
@@ -197,16 +260,22 @@
     stars.forEach((s, i) => s.classList.toggle('active', i < n));
     document.getElementById('ratingLabel').textContent = labels[n];
     checkSubmit();
+    // GOD MODE PATCH
+    saveDraft();
   }
 
   function toggleTag(el) {
     el.classList.toggle('selected');
+    // GOD MODE PATCH
+    saveDraft();
   }
 
   function updateCount() {
     const len = document.getElementById('reviewText').value.length;
     document.getElementById('charCount').textContent = len;
     checkSubmit();
+    // GOD MODE PATCH
+    saveDraft();
   }
 
   function checkSubmit() {
@@ -222,16 +291,111 @@
     el.classList.add('photo-added');
     el.onclick = null;
     photoCount++;
+    // GOD MODE PATCH
+    saveDraft();
   }
 
+  // GOD MODE PATCH: submit now opens a confirmation preview sheet instead of submitting directly
   function submitReview() {
     if (currentRating === 0) return;
+    openConfirmSheet();
+  }
+
+  // GOD MODE: draft auto-save & restore
+  function saveDraft() {
+    const tags = Array.from(document.querySelectorAll('.tag-pill.selected')).map(t => t.textContent);
+    const draft = {
+      rating: currentRating,
+      tags: tags,
+      text: document.getElementById('reviewText').value,
+      photos: photoCount
+    };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  }
+
+  function restoreDraft() {
+    const raw = localStorage.getItem(DRAFT_KEY) || '';
+    if (!raw) return;
+    try {
+      const draft = JSON.parse(raw);
+      if (!draft || (!draft.rating && !draft.text && (!draft.tags || draft.tags.length === 0))) return;
+      if (draft.rating) setRating(draft.rating);
+      if (draft.text) {
+        document.getElementById('reviewText').value = draft.text;
+        updateCount();
+      }
+      if (draft.tags && draft.tags.length) {
+        document.querySelectorAll('.tag-pill').forEach(p => {
+          if (draft.tags.includes(p.textContent)) p.classList.add('selected');
+        });
+      }
+      document.getElementById('draftBanner').style.display = 'flex';
+    } catch (e) {}
+  }
+
+  function dismissDraftBanner() {
+    document.getElementById('draftBanner').style.display = 'none';
+  }
+
+  function clearDraft() {
+    localStorage.removeItem(DRAFT_KEY);
+  }
+
+  // GOD MODE: live USD conversion of the order price
+  function updateOrderUsd() {
+    const indxAmount = 150;
+    const usd = (indxAmount * INDX_PRICE_USD).toFixed(2);
+    const el = document.getElementById('ocUsd');
+    if (el) el.textContent = `(~$${usd} USD)`;
+  }
+
+  // GOD MODE: personal review activity stat (real data from this device's localStorage only)
+  function renderHistoryStat() {
+    const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    if (!history.length) return;
+    const avg = (history.reduce((sum, r) => sum + r.rating, 0) / history.length).toFixed(1);
+    document.getElementById('hsCount').textContent = history.length;
+    document.getElementById('hsAvg').textContent = avg;
+    document.getElementById('historyStat').classList.add('show');
+  }
+
+  // GOD MODE: submit confirmation preview sheet
+  function openConfirmSheet() {
+    document.getElementById('pvStars').textContent = '⭐'.repeat(currentRating) + ' (' + currentRating + '/5)';
+    const tags = Array.from(document.querySelectorAll('.tag-pill.selected')).map(t => t.textContent);
+    document.getElementById('pvTags').textContent = tags.length ? tags.join(', ') : 'None selected';
+    const text = document.getElementById('reviewText').value.trim();
+    document.getElementById('pvText').textContent = text ? (text.length > 80 ? text.slice(0, 80) + '…' : text) : 'No written review';
+    document.getElementById('pvPhotos').textContent = photoCount + ' attached';
+    const citizenName = sessionStorage.getItem('citizen_name') || 'You';
+    document.getElementById('pvCitizen').textContent = citizenName;
+    document.getElementById('confirmSheet').classList.add('show');
+    document.getElementById('confirmSheetOverlay').classList.add('show');
+  }
+
+  function closeConfirmSheet() {
+    document.getElementById('confirmSheet').classList.remove('show');
+    document.getElementById('confirmSheetOverlay').classList.remove('show');
+  }
+
+  function confirmSubmit() {
+    closeConfirmSheet();
     document.getElementById('submitBtn').disabled = true;
     document.getElementById('submitBtn').textContent = 'Submitting…';
     setTimeout(() => {
+      const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+      history.push({ rating: currentRating, date: Date.now() });
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+      clearDraft();
       document.getElementById('overlay').classList.add('show');
     }, 1400);
   }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    updateOrderUsd();
+    restoreDraft();
+    renderHistoryStat();
+  });
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

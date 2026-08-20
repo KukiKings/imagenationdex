@@ -157,6 +157,22 @@
 
     .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--gold);color:var(--black);padding:11px 20px;border-radius:24px;font-size:13px;font-weight:800;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap;}
     .toast.show{opacity:1;}
+
+    /* GOD MODE: Add-to-Calendar, Notify Me, My Pledge Recognition, Keyboard A11y */
+    .gm-actions-row{display:flex;gap:8px;margin-top:12px;}
+    .gm-action-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,184,0,0.2);background:var(--surface2);color:var(--gold);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:border-color 0.2s,background 0.2s;}
+    .gm-action-btn:hover{border-color:rgba(255,184,0,0.4);}
+    .gm-action-btn.active{background:rgba(0,229,160,0.12);border-color:rgba(0,229,160,0.35);color:var(--green);}
+    .gm-action-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+
+    .my-pledge-banner{display:none;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.25);margin-bottom:10px;font-size:12px;font-weight:700;color:var(--green);}
+    .my-pledge-banner.show{display:flex;}
+    .my-pledge-num{font-size:15px;font-weight:900;}
+
+    .pledge-item.mine{background:rgba(255,184,0,0.06);border-radius:8px;padding-left:6px;padding-right:6px;margin-left:-6px;margin-right:-6px;}
+    .pledge-item.mine .pledge-name::after{content:' (you)';color:var(--gold);font-weight:600;font-size:10px;}
+
+    .pledge-hdr:focus-visible,.check-hdr:focus-visible{outline:2px solid var(--cyan);outline-offset:-2px;border-radius:8px;}
   </style>
 </head>
 <body>
@@ -199,6 +215,10 @@
       <div class="cd-cell" id="cellS"><span class="cd-num" id="cdS">--</span><div class="cd-unit-lbl">Secs</div></div>
     </div>
     <div class="cd-sub" id="cdSub">Calculating…</div>
+    <div class="gm-actions-row">
+      <button class="gm-action-btn" id="calBtn" onclick="addToCalendar()">📅 Add to Calendar</button>
+      <button class="gm-action-btn" id="notifyBtn" onclick="toggleNotify()">🔔 Notify Me</button>
+    </div>
   </div>
 
   <div class="sect">
@@ -230,12 +250,13 @@
 
   <div class="sect">
     <div class="pledge-card">
-      <div class="pledge-hdr" onclick="togglePledges()">
+      <div class="pledge-hdr" onclick="togglePledges()" tabindex="0" role="button" aria-expanded="false" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();togglePledges();}">
         <span class="pledge-hdr-icon">🤝</span>
         <span class="pledge-hdr-title">Founding Citizens</span>
         <span class="pledge-count-badge" id="pledgeBadge">0</span>
       </div>
       <div class="pledge-body" id="pledgeBody" style="display:none;">
+        <div class="my-pledge-banner" id="myPledgeBanner"><span>✦</span><span>You are Founding Citizen <span class="my-pledge-num" id="myPledgeNum">#—</span></span></div>
         <div class="pledge-row">
           <input class="pledge-input" id="pledgeName" type="text" maxlength="30" placeholder="Your name or handle" />
           <button class="pledge-btn" onclick="addPledge()">✦ Pledge</button>
@@ -271,7 +292,7 @@
 
   <div class="sect">
     <div class="check-card" id="checkCard">
-      <div class="check-hdr" onclick="toggleChecklist()">
+      <div class="check-hdr" onclick="toggleChecklist()" tabindex="0" role="button" aria-expanded="false" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleChecklist();}">
         <span class="check-hdr-icon">✅</span>
         <span class="check-hdr-title">Pre-Launch Checklist</span>
         <span class="check-prog" id="checkProg">0 / 8</span>
@@ -319,6 +340,77 @@
       'LP Burn confirmed — no reversal after graduation',
       'Graduation announcement assets ready to post',
     ];
+
+    // GOD MODE: Add-to-Calendar, Notify Me, My Pledge Recognition, Keyboard A11y
+    const KEY_MY_PLEDGE = 'indx_gs_my_pledge';
+    const KEY_NOTIFY     = 'indx_gs_notify_enabled';
+
+    function addToCalendar(){
+      const dt='20270124T000000Z';
+      const ics=[
+        'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//IN$DEX//Grand Synchronicity//EN',
+        'BEGIN:VEVENT','UID:indx-grand-synchronicity-'+Date.now()+'@indxapp.io',
+        'DTSTAMP:'+dt,'DTSTART:'+dt,
+        'SUMMARY:Grand Synchronicity — IN$DEX Civilization Opens',
+        'DESCRIPTION:January 24, 2027 — the planned IN$DEX launch date. IN\\$DEX has not launched yet.',
+        'END:VEVENT','END:VCALENDAR'
+      ].join('\r\n');
+      const blob=new Blob([ics],{type:'text/calendar'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;a.download='grand-synchronicity.ics';document.body.appendChild(a);a.click();document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url),2000);
+      showToast('📅 Calendar event downloaded');
+    }
+
+    function getNotifyEnabled(){return (localStorage.getItem(KEY_NOTIFY)||'0')==='1';}
+    function toggleNotify(){
+      const btn=document.getElementById('notifyBtn');
+      if(getNotifyEnabled()){
+        localStorage.setItem(KEY_NOTIFY,'0');
+        btn.classList.remove('active');btn.textContent='🔔 Notify Me';
+        showToast('Reminders turned off');
+        return;
+      }
+      const enable=(msg)=>{
+        localStorage.setItem(KEY_NOTIFY,'1');
+        btn.classList.add('active');btn.textContent='🔔 Reminders On';
+        showToast(msg||'✦ You will be reminded as Grand Synchronicity nears');
+      };
+      if(typeof Notification!=='undefined'&&Notification.permission!=='granted'&&Notification.permission!=='denied'){
+        Notification.requestPermission().then(p=>{
+          if(p==='granted')enable();else enable('Notifications blocked by browser — reminder saved locally');
+        });
+      } else {
+        enable();
+      }
+    }
+    function renderNotifyState(){
+      const btn=document.getElementById('notifyBtn');
+      if(!btn)return;
+      if(getNotifyEnabled()){btn.classList.add('active');btn.textContent='🔔 Reminders On';}
+    }
+
+    function prefillPledgeName(){
+      const input=document.getElementById('pledgeName');
+      if(!input||input.value)return;
+      const stored=sessionStorage.getItem('citizen_name')||'';
+      if(stored)input.value=stored;
+    }
+
+    function renderMyPledgeBanner(){
+      const banner=document.getElementById('myPledgeBanner');
+      if(!banner)return;
+      const mine=(localStorage.getItem(KEY_MY_PLEDGE)||'').toLowerCase();
+      if(!mine){banner.classList.remove('show');return;}
+      const pl=getPledges();
+      const idx=pl.findIndex(p=>p.name.toLowerCase()===mine);
+      if(idx===-1){banner.classList.remove('show');return;}
+      const rank=pl.length-idx;
+      const numEl=document.getElementById('myPledgeNum');
+      if(numEl)numEl.textContent='#'+rank;
+      banner.classList.add('show');
+    }
 
     // STARS
     (function(){
@@ -382,7 +474,8 @@
 
     // PLEDGES
     function getPledges(){try{return JSON.parse(localStorage.getItem(KEY_PLEDGES)||'[]');}catch(e){return[];}}
-    function togglePledges(){const b=document.getElementById('pledgeBody');b.style.display=b.style.display==='none'?'block':'none';}
+    // GOD MODE PATCH: keep header aria-expanded in sync for keyboard/screen-reader users
+    function togglePledges(){const b=document.getElementById('pledgeBody');const open=b.style.display==='none';b.style.display=open?'block':'none';const h=document.querySelector('.pledge-hdr');if(h)h.setAttribute('aria-expanded',open?'true':'false');}
     function addPledge(){
       const name=document.getElementById('pledgeName').value.trim();
       if(!name){showToast('Enter your name first.');return;}
@@ -393,17 +486,23 @@
       localStorage.setItem(KEY_PLEDGES,JSON.stringify(pl));
       document.getElementById('pledgeName').value='';
       const v=getVault();v.citizens=pl.length;localStorage.setItem(KEY_VAULT,JSON.stringify(v));
-      renderPledges();showToast('✦ Welcome, Founding Citizen.');
+      // GOD MODE PATCH: remember this citizen's own pledge for rank recognition
+      localStorage.setItem(KEY_MY_PLEDGE,name);
+      renderPledges();renderMyPledgeBanner();showToast('✦ Welcome, Founding Citizen.');
     }
     function renderPledges(){
       const pl=getPledges();
       document.getElementById('pledgeBadge').textContent=pl.length;
       const feed=document.getElementById('pledgeFeed');
-      if(!pl.length){feed.innerHTML='<div class="pledge-empty">Be the first Founding Citizen.</div>';return;}
+      if(!pl.length){feed.innerHTML='<div class="pledge-empty">Be the first Founding Citizen.</div>';renderMyPledgeBanner();return;}
+      // GOD MODE PATCH: highlight the citizen's own pledge row in the feed
+      const mine=(localStorage.getItem(KEY_MY_PLEDGE)||'').toLowerCase();
       feed.innerHTML=pl.map(p=>{
         const init=p.name.trim().split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
-        return`<div class="pledge-item"><div class="pledge-avatar">${init}</div><div><div class="pledge-name">${esc(p.name)}</div><div class="pledge-time">${ago(p.ts)}</div></div></div>`;
+        const isMine=p.name.toLowerCase()===mine;
+        return`<div class="pledge-item${isMine?' mine':''}"><div class="pledge-avatar">${init}</div><div><div class="pledge-name">${esc(p.name)}</div><div class="pledge-time">${ago(p.ts)}</div></div></div>`;
       }).join('');
+      renderMyPledgeBanner();
     }
 
     // SHARES
@@ -425,7 +524,8 @@
 
     // CHECKLIST
     function getChecks(){try{return JSON.parse(localStorage.getItem(KEY_CHECKS)||'[]');}catch(e){return[];}}
-    function toggleChecklist(){document.getElementById('checkCard').classList.toggle('open');}
+    // GOD MODE PATCH: keep header aria-expanded in sync for keyboard/screen-reader users
+    function toggleChecklist(){const card=document.getElementById('checkCard');const open=card.classList.toggle('open');const h=document.querySelector('.check-hdr');if(h)h.setAttribute('aria-expanded',open?'true':'false');}
     function toggleCheck(i){const d=getChecks(),idx=d.indexOf(i);if(idx===-1)d.push(i);else d.splice(idx,1);localStorage.setItem(KEY_CHECKS,JSON.stringify(d));renderChecklist();}
     function renderChecklist(){
       const done=getChecks();
@@ -441,7 +541,8 @@
     function ago(ts){const d=Date.now()-ts;if(d<60000)return'Just now';if(d<3600000)return Math.floor(d/60000)+'m ago';if(d<86400000)return Math.floor(d/3600000)+'h ago';return Math.floor(d/86400000)+'d ago';}
     function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000);}
 
-    document.addEventListener('DOMContentLoaded',()=>{tick();renderMs();renderPledges();renderShares();renderChecklist();});
+    // GOD MODE PATCH: init calendar/notify UI state + pledge name prefill
+    document.addEventListener('DOMContentLoaded',()=>{tick();renderMs();renderPledges();renderShares();renderChecklist();prefillPledgeName();renderNotifyState();});
   </script>
 <script src="siindex-speak-core.js"></script>
 </body>

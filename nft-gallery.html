@@ -115,6 +115,31 @@
   .nav-item.active{opacity:1;}
   .nav-icon{font-size:20px;}
   .nav-label{font-size:10px;font-weight:600;}
+
+  /* GOD MODE: USD VALUE, FAVORITES, RECENTLY VIEWED, BURN CONFIRM */
+  .stat-usd{font-size:10px;color:var(--text-muted);margin-top:2px;min-height:12px;}
+
+  .fav-btn{position:absolute;top:8px;left:8px;width:26px;height:26px;border-radius:50%;background:rgba(9,10,16,0.55);border:1px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;z-index:2;transition:transform 0.15s,background 0.2s,border-color 0.2s;color:var(--text);}
+  .fav-btn.active{background:rgba(255,77,109,0.25);border-color:var(--red);}
+  .fav-btn:active{transform:scale(0.85);}
+  .nft-list-fav{width:28px;height:28px;border-radius:50%;background:var(--surface3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;flex-shrink:0;transition:background 0.2s,border-color 0.2s;color:var(--text);}
+  .nft-list-fav.active{background:rgba(255,77,109,0.2);border-color:var(--red);}
+  .detail-fav-btn{width:36px;height:36px;border-radius:10px;background:var(--surface2);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;transition:background 0.2s,border-color 0.2s;color:var(--text);}
+  .detail-fav-btn.active{background:rgba(255,77,109,0.2);border-color:var(--red);}
+
+  .recent-strip{display:none;gap:10px;padding:0 16px 12px;overflow-x:auto;scrollbar-width:none;}
+  .recent-strip::-webkit-scrollbar{display:none;}
+  .recent-chip{flex-shrink:0;width:64px;text-align:center;cursor:pointer;}
+  .recent-chip:active{opacity:0.7;}
+  .recent-chip-art{width:56px;height:56px;border-radius:14px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 4px;}
+  .recent-chip-label{font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+  .bottom-sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:430px;background:var(--surface);border-radius:24px 24px 0 0;z-index:101;transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);max-height:80vh;overflow-y:auto;padding-bottom:28px;}
+  .bottom-sheet.open{transform:translateX(-50%) translateY(0);}
+  .burn-confirm-icon{font-size:40px;text-align:center;padding:20px 0 8px;}
+  .burn-confirm-title{font-size:17px;font-weight:800;text-align:center;padding:0 24px;}
+  .burn-confirm-desc{font-size:13px;color:var(--text2);text-align:center;padding:8px 24px 20px;line-height:1.5;}
+  .burn-confirm-actions{padding:0 20px;display:flex;flex-direction:column;gap:8px;}
 </style>
 </head>
 <body>
@@ -144,6 +169,7 @@
   <div class="stat-card">
     <div class="stat-val" id="statValue"></div>
     <div class="stat-label">Est. Value</div>
+    <div class="stat-usd" id="statValueUsd"></div>
   </div>
   <div class="stat-card">
     <div class="stat-val" id="statRoyalty"></div>
@@ -156,6 +182,9 @@
   <div class="vt-btn active" id="vtGrid" onclick="setView('grid')">⊞</div>
   <div class="vt-btn" id="vtList" onclick="setView('list')">☰</div>
 </div>
+
+<!-- RECENTLY VIEWED -->
+<div class="recent-strip" id="recentStrip"></div>
 
 <!-- GRID VIEW -->
 <div id="gridView">
@@ -170,6 +199,7 @@
     <!-- GENESIS RECEIPT NFT (hidden until confirmed real) -->
     <div class="nft-card glow" id="genesisCard" style="display:none;" onclick="openDetail('genesis')">
       <div class="nft-art" style="background:linear-gradient(135deg,rgba(43,53,216,0.3),rgba(139,63,232,0.3));">
+        <button class="fav-btn" data-nft-key="genesis" onclick="toggleFavorite('genesis', this, event)" aria-label="Toggle favorite">♡</button>
         🏛️
         <span class="nft-badge receipt">RECEIPT</span>
       </div>
@@ -230,6 +260,7 @@
         <div class="nft-list-name">Genesis Mint Receipt</div>
         <div class="nft-list-meta">RECEIPT · IN$DEX</div>
       </div>
+      <button class="nft-list-fav" data-nft-key="genesis" onclick="toggleFavorite('genesis', this, event)" aria-label="Toggle favorite">♡</button>
       <div class="nft-list-right">
         <div class="nft-list-price">50 INDX</div>
         <div class="nft-list-date">Today</div>
@@ -289,7 +320,10 @@
   <div class="sheet-handle"></div>
   <div class="sheet-header">
     <div class="sheet-title" id="dsTitle">NFT Details</div>
-    <button class="sheet-close" onclick="closeDetail()">✕</button>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="detail-fav-btn" id="dsFavBtn" onclick="toggleFavorite(currentNFT, this, event)" aria-label="Toggle favorite">♡</button>
+      <button class="sheet-close" onclick="closeDetail()">✕</button>
+    </div>
   </div>
   <div class="detail-art" id="dsArt">🏛️</div>
   <div class="detail-name" id="dsName">Genesis Mint Receipt</div>
@@ -325,6 +359,19 @@
   </div>
 </div>
 
+<!-- BURN CONFIRM SHEET -->
+<div class="sheet-overlay" id="burnConfirmOverlay" onclick="closeBurnConfirm()"></div>
+<div class="bottom-sheet" id="burnConfirmSheet">
+  <div class="sheet-handle"></div>
+  <div class="burn-confirm-icon">🔥</div>
+  <div class="burn-confirm-title">Burn <span id="burnConfirmName">this NFT</span>?</div>
+  <div class="burn-confirm-desc">This permanently destroys the NFT on-chain. It cannot be undone or recovered.</div>
+  <div class="burn-confirm-actions">
+    <button class="act-btn danger" onclick="executeBurn()">Yes, Burn Permanently</button>
+    <button class="act-btn secondary" onclick="closeBurnConfirm()">Cancel</button>
+  </div>
+</div>
+
 <!-- COMING SOON TOAST -->
 <div id="toast" style="position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface2);border:1px solid var(--border2);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;opacity:0;transition:all 0.3s;z-index:200;white-space:nowrap;pointer-events:none;"></div>
 
@@ -339,6 +386,108 @@
 </nav>
 
 <script>
+// GOD MODE: favorites, recently viewed, live USD conversion, burn confirm sheet
+const INDX_PRICE_USD = 0.24;
+const FAV_KEY = 'indx_nftgallery_favorites';
+const RECENT_KEY = 'indx_nftgallery_recent';
+
+function getFavorites() {
+  try { return JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); } catch (e) { return []; }
+}
+function saveFavorites(arr) { localStorage.setItem(FAV_KEY, JSON.stringify(arr)); }
+function isFavorite(key) { return getFavorites().includes(key); }
+
+function toggleFavorite(key, btnEl, event) {
+  if (!key) return;
+  if (event) event.stopPropagation();
+  const favs = getFavorites();
+  const idx = favs.indexOf(key);
+  const nowActive = idx === -1;
+  if (nowActive) { favs.push(key); showToast('❤️ Added to favorites'); }
+  else { favs.splice(idx, 1); showToast('💔 Removed from favorites'); }
+  saveFavorites(favs);
+  document.querySelectorAll('.fav-btn[data-nft-key="' + key + '"], .nft-list-fav[data-nft-key="' + key + '"]').forEach(b => {
+    b.classList.toggle('active', nowActive);
+    b.textContent = nowActive ? '❤' : '♡';
+  });
+  if (btnEl && btnEl.id === 'dsFavBtn') {
+    btnEl.classList.toggle('active', nowActive);
+    btnEl.textContent = nowActive ? '❤' : '♡';
+  }
+}
+
+function applyFavoriteStates() {
+  const favs = getFavorites();
+  document.querySelectorAll('.fav-btn[data-nft-key], .nft-list-fav[data-nft-key]').forEach(btn => {
+    const active = favs.includes(btn.getAttribute('data-nft-key'));
+    btn.classList.toggle('active', active);
+    btn.textContent = active ? '❤' : '♡';
+  });
+}
+
+function getRecent() {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch (e) { return []; }
+}
+
+function addToRecent(key) {
+  if (!key) return;
+  let recent = getRecent().filter(k => k !== key);
+  recent.unshift(key);
+  recent = recent.slice(0, 8);
+  localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
+  renderRecentStrip();
+}
+
+function renderRecentStrip() {
+  const strip = document.getElementById('recentStrip');
+  if (!strip) return;
+  const recent = getRecent().filter(k => NFT_STORE[k]); // only real NFTs still in the store
+  if (recent.length === 0) { strip.style.display = 'none'; strip.innerHTML = ''; return; }
+  strip.style.display = 'flex';
+  strip.innerHTML = recent.map(key => {
+    const nft = NFT_STORE[key];
+    return '<div class="recent-chip" onclick="openDetail(\'' + key + '\')">'
+      + '<div class="recent-chip-art">' + nft.emoji + '</div>'
+      + '<div class="recent-chip-label">' + nft.name + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function updateStatsUsd() {
+  const usdEl = document.getElementById('statValueUsd');
+  if (!usdEl) return;
+  const total = Object.keys(NFT_STORE).length;
+  const indxTotal = total * 50; // same basis as statValue
+  usdEl.textContent = total > 0 ? '≈ $' + (indxTotal * INDX_PRICE_USD).toFixed(2) + ' USD' : '';
+}
+
+function openBurnConfirm() {
+  const nft = NFT_STORE[currentNFT];
+  if (!nft) return;
+  document.getElementById('burnConfirmName').textContent = nft.name;
+  document.getElementById('burnConfirmOverlay').classList.add('open');
+  document.getElementById('burnConfirmSheet').classList.add('open');
+}
+
+function closeBurnConfirm() {
+  document.getElementById('burnConfirmOverlay').classList.remove('open');
+  document.getElementById('burnConfirmSheet').classList.remove('open');
+}
+
+function executeBurn() {
+  if (!currentNFT) { closeBurnConfirm(); return; }
+  const favs = getFavorites().filter(k => k !== currentNFT);
+  saveFavorites(favs);
+  const recent = getRecent().filter(k => k !== currentNFT);
+  localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
+  delete NFT_STORE[currentNFT];
+  closeBurnConfirm();
+  closeDetail();
+  updateStats();
+  renderRecentStrip();
+  showToast('🔥 NFT burned');
+}
+
 // NFT data store in real app this comes from Solana/Metaplex API
 // FIXED 2026-07-25: no longer hardcodes a fake "genesis" entry for every visitor —
 // the real entry (if any) is added by checkRealGenesisStatus() below after a real
@@ -406,21 +555,28 @@ async function checkRealGenesisStatus() {
     if (gc) gc.style.display = '';
     if (gl) gl.style.display = '';
     updateStats();
+    // GOD MODE PATCH: refresh recently-viewed strip now that this NFT is known
+    renderRecentStrip();
   } catch (e) { /* no real data available — card stays hidden */ }
 }
 
+// GOD MODE PATCH: initialize favorites + recently viewed after initial render
 window.addEventListener('DOMContentLoaded', () => {
   loadSessionNFTs();
   updateStats();
   renderGrid();
   checkRealGenesisStatus();
+  applyFavoriteStates();
+  renderRecentStrip();
 });
 
+// GOD MODE PATCH: also refresh live USD estimate whenever stats update
 function updateStats() {
   const total = Object.keys(NFT_STORE).length;
   document.getElementById('statTotal').textContent = total;
   document.getElementById('statValue').textContent = total > 0 ? total * 50 + ' INDX' : '';
   document.getElementById('statRoyalty').textContent = '0 INDX';
+  updateStatsUsd();
 }
 
 function switchTab(el, tab) {
@@ -465,6 +621,14 @@ function openDetail(key) {
   document.getElementById('overlay').classList.add('open');
   document.getElementById('detailSheet').classList.add('open');
   document.body.style.overflow = 'hidden';
+  // GOD MODE PATCH: sync favorite button + log this view to recently viewed
+  const favBtn = document.getElementById('dsFavBtn');
+  if (favBtn) {
+    const active = isFavorite(key);
+    favBtn.classList.toggle('active', active);
+    favBtn.textContent = active ? '❤' : '♡';
+  }
+  addToRecent(key);
 }
 
 function closeDetail() {
@@ -494,13 +658,9 @@ function viewOnChain() {
   showToast('🔗 Explorer link: solscan.io/token/' + (nft?.id || ''));
 }
 
+// GOD MODE PATCH: replaced native confirm() dialog with a custom two-step bottom-sheet confirmation
 function burnNFT() {
-  if (confirm('Burn this NFT permanently? This cannot be undone.')) {
-    delete NFT_STORE[currentNFT];
-    closeDetail();
-    updateStats();
-    showToast('🔥 NFT burned');
-  }
+  openBurnConfirm();
 }
 
 function showComingSoon() {

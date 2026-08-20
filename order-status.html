@@ -105,6 +105,24 @@
   .btn-dispute{width:100%;padding:13px;border-radius:14px;background:transparent;border:1px solid rgba(255,77,109,0.3);color:var(--red);font-size:14px;font-weight:600;cursor:pointer;}
   .btn-dispute:active{background:var(--red-bg);}
 
+  /* GOD MODE ADDITIONS */
+  .tracking-row{display:flex;align-items:center;gap:8px;margin-top:5px;}
+  .copy-track-btn{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;font-size:11px;flex-shrink:0;}
+  .copy-track-btn:active{background:var(--surface3);border-color:var(--cyan);}
+
+  .eta-live{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:6px 10px;border-radius:8px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);font-size:12px;font-weight:700;color:var(--cyan);}
+
+  .checklist-box{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:16px;text-align:left;}
+  .checklist-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;}
+  .checklist-item{display:flex;align-items:flex-start;gap:10px;padding:6px 0;cursor:pointer;}
+  .checklist-item input[type="checkbox"]{width:18px;height:18px;flex-shrink:0;accent-color:var(--green);margin-top:1px;cursor:pointer;}
+  .checklist-item span{font-size:13px;color:var(--text);line-height:1.4;}
+
+  #releaseBtn:disabled{opacity:0.35;cursor:not-allowed;}
+  #releaseBtn:disabled:active{opacity:0.35;}
+
+  .overlay :focus-visible,.confirm-card :focus-visible{outline:2px solid var(--cyan);outline-offset:2px;border-radius:8px;}
+
   /* CONFIRM OVERLAY */
   .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s;}
   .overlay.show{opacity:1;pointer-events:all;}
@@ -151,7 +169,7 @@
       <div class="eb-amount">153 INDX</div>
       <div class="eb-desc">Your payment is locked on Solana. It will only be released to Kiri once you confirm you've received the item safely. If anything is wrong, you have 7 days to raise a dispute.</div>
       <div class="eb-timer">⏱ Auto-release in <span id="autoRelease">6 days 14 hrs</span> if no action taken</div>
-      <button class="confirm-receipt-btn" onclick="openConfirmReceipt()">✓ I've Received My Order</button>
+      <button class="confirm-receipt-btn" onclick="openConfirmReceipt(this)">✓ I've Received My Order</button>
     </div>
 
     <!-- TIMELINE -->
@@ -186,7 +204,10 @@
             <div class="tl-event">Item Dispatched</div>
             <div class="tl-time">Today · 2:15 PM</div>
             <div class="tl-detail">Kiri marked item as dispatched via Sovereign Delivery network.</div>
-            <div class="tl-chip">Tracking: SDN-44821</div>
+            <div class="tracking-row">
+              <div class="tl-chip">Tracking: SDN-44821</div>
+              <div class="copy-track-btn" onclick="copyTracking()" role="button" tabindex="0" aria-label="Copy tracking number" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();copyTracking();}">📋</div>
+            </div>
           </div>
         </div>
 
@@ -196,6 +217,7 @@
             <div class="tl-event" style="color:var(--cyan);">In Transit</div>
             <div class="tl-time">Expected: Tomorrow</div>
             <div class="tl-detail">Your order is with a sovereign courier in your area. Estimated arrival: <strong>tomorrow between 10am–2pm.</strong></div>
+            <div class="eta-live" id="etaCountdown">⏳ Calculating arrival window…</div>
           </div>
         </div>
 
@@ -263,16 +285,16 @@
 
   <!-- BOTTOM BAR -->
   <div class="bottom-bar">
-    <button class="btn-confirm" onclick="openConfirmReceipt()">✓ Confirm I've Received My Order</button>
+    <button class="btn-confirm" onclick="openConfirmReceipt(this)">✓ Confirm I've Received My Order</button>
     <button class="btn-dispute" onclick="window.location.href='dispute.html'">🚩 Something's Wrong Open Dispute</button>
   </div>
 </div>
 
 <!-- CONFIRM RECEIPT OVERLAY -->
-<div class="overlay" id="confirmOverlay">
+<div class="overlay" id="confirmOverlay" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
   <div class="confirm-card" id="confirmCard">
     <div style="font-size:44px;margin-bottom:14px;">📦</div>
-    <div style="font-size:20px;font-weight:800;margin-bottom:8px;">Confirm Receipt?</div>
+    <div id="confirmTitle" style="font-size:20px;font-weight:800;margin-bottom:8px;">Confirm Receipt?</div>
     <div style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:20px;">
       This will release <strong style="color:var(--cyan)">150 INDX</strong> to Kiri immediately. Only confirm if you're happy with your order.
     </div>
@@ -281,12 +303,94 @@
       <div style="font-size:14px;font-weight:700;">kiri.IN$DEX</div>
       <div style="font-size:13px;color:var(--cyan);margin-top:2px;">150 INDX · $36.00</div>
     </div>
-    <button style="width:100%;padding:15px;border-radius:12px;background:var(--green);border:none;color:#000;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px;" onclick="executeRelease()">Yes, Release Funds</button>
-    <button style="width:100%;padding:13px;border-radius:12px;background:transparent;border:1px solid var(--border);color:var(--text);font-size:14px;cursor:pointer;" onclick="document.getElementById('confirmOverlay').classList.remove('show')">Not Yet</button>
+    <div class="checklist-box">
+      <div class="checklist-title">Before you release funds</div>
+      <label class="checklist-item">
+        <input type="checkbox" id="checkMatch" onchange="updateChecklist()">
+        <span>Item matches the description</span>
+      </label>
+      <label class="checklist-item">
+        <input type="checkbox" id="checkDamage" onchange="updateChecklist()">
+        <span>No damage or defects</span>
+      </label>
+    </div>
+    <button id="releaseBtn" disabled style="width:100%;padding:15px;border-radius:12px;background:var(--green);border:none;color:#000;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px;" onclick="executeRelease()">Yes, Release Funds</button>
+    <button style="width:100%;padding:13px;border-radius:12px;background:transparent;border:1px solid var(--border);color:var(--text);font-size:14px;cursor:pointer;" onclick="closeConfirmOverlay()">Not Yet</button>
   </div>
 </div>
 
 <script>
+  // GOD MODE: copy tracking number to clipboard
+  function copyTracking() {
+    const code = 'SDN-44821';
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(() => showToast('Tracking number copied')).catch(() => showToast('Copy failed — long-press to select'));
+    } else {
+      showToast('Copy not supported on this browser');
+    }
+  }
+
+  // GOD MODE: live delivery ETA countdown
+  function updateEtaCountdown() {
+    const el = document.getElementById('etaCountdown');
+    if (!el) return;
+    const now = new Date();
+    const windowStart = new Date();
+    windowStart.setHours(10, 0, 0, 0);
+    if (windowStart <= now) windowStart.setDate(windowStart.getDate() + 1);
+    const diffMs = windowStart - now;
+    const diffH = Math.floor(diffMs / 3600000);
+    const diffM = Math.floor((diffMs % 3600000) / 60000);
+    el.textContent = `⏳ Arrival window opens in ${diffH}h ${diffM}m`;
+  }
+  updateEtaCountdown();
+  setInterval(updateEtaCountdown, 60000);
+
+  // GOD MODE: pre-receipt inspection checklist, persisted per order
+  const CHECKLIST_KEY = 'indx_orderstatus_checklist';
+  function loadChecklist() {
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(CHECKLIST_KEY) || '{}'); } catch (e) { saved = {}; }
+    const matchEl = document.getElementById('checkMatch');
+    const damageEl = document.getElementById('checkDamage');
+    if (matchEl && saved.match) matchEl.checked = true;
+    if (damageEl && saved.damage) damageEl.checked = true;
+    updateChecklist();
+  }
+  function updateChecklist() {
+    const matchEl = document.getElementById('checkMatch');
+    const damageEl = document.getElementById('checkDamage');
+    const btn = document.getElementById('releaseBtn');
+    if (!matchEl || !damageEl || !btn) return;
+    localStorage.setItem(CHECKLIST_KEY, JSON.stringify({ match: matchEl.checked, damage: damageEl.checked }));
+    btn.disabled = !(matchEl.checked && damageEl.checked);
+  }
+
+  // GOD MODE: keyboard focus trap for the confirm-receipt dialog
+  let lastFocusedEl = null;
+  function trapOverlayFocus(e) {
+    const overlay = document.getElementById('confirmOverlay');
+    if (!overlay || !overlay.classList.contains('show')) return;
+    if (e.key === 'Escape') { closeConfirmOverlay(); return; }
+    if (e.key !== 'Tab') return;
+    const focusables = overlay.querySelectorAll('button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])');
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault(); first.focus();
+    }
+  }
+  function closeConfirmOverlay() {
+    const overlay = document.getElementById('confirmOverlay');
+    if (overlay) overlay.classList.remove('show');
+    if (lastFocusedEl) lastFocusedEl.focus();
+  }
+  document.addEventListener('keydown', trapOverlayFocus);
+  loadChecklist();
+
   // Animate timeline fill on load
   window.addEventListener('load', () => {
     setTimeout(() => {
@@ -306,11 +410,16 @@
   updateTimer();
   setInterval(updateTimer, 1000);
 
-  function openConfirmReceipt() {
+  // GOD MODE PATCH: capture trigger element for focus-return, and focus the checklist on open
+  function openConfirmReceipt(triggerEl) {
+    lastFocusedEl = triggerEl || document.activeElement;
     document.getElementById('confirmOverlay').classList.add('show');
+    setTimeout(() => { const first = document.getElementById('checkMatch'); if (first) first.focus(); }, 50);
   }
 
   function executeRelease() {
+    // GOD MODE PATCH: clear persisted checklist now that receipt is confirmed
+    localStorage.removeItem(CHECKLIST_KEY);
     const card = document.getElementById('confirmCard');
     card.innerHTML = `
       <div style="padding:10px 0;">

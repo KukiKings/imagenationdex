@@ -134,6 +134,19 @@
   .send-offer-btn{width:100%;padding:15px;border-radius:12px;background:var(--cyan);border:none;color:#000;font-size:16px;font-weight:700;cursor:pointer;}
   .send-offer-btn:active{opacity:0.85;}
 
+  /* ── GOD MODE: SAVED ITEMS, PRICE INSIGHT, OFFER HISTORY, A11Y ── */
+  .price-compare-banner{display:none;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:7px 12px;border-radius:10px;margin-bottom:12px;}
+  .price-compare-banner.below{background:rgba(0,229,160,0.1);color:var(--green);border:1px solid rgba(0,229,160,0.25);}
+  .price-compare-banner.above{background:rgba(255,184,0,0.1);color:var(--gold);border:1px solid rgba(255,184,0,0.25);}
+  .saved-count-pill{display:none;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--cyan);background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.25);padding:3px 9px;border-radius:20px;margin-bottom:14px;width:fit-content;}
+  .offer-history-wrap{display:none;margin:-4px 0 16px;}
+  .offer-history-label{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;}
+  .offer-history-item{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-muted);padding:6px 0;border-bottom:1px solid var(--border);}
+  .offer-history-item:last-child{border-bottom:none;}
+  .offer-history-item span:first-child{color:var(--text);font-weight:600;}
+  .offer-warn-box{display:none;align-items:flex-start;gap:6px;background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.25);color:var(--gold);font-size:11px;font-weight:600;padding:8px 10px;border-radius:10px;margin-bottom:14px;line-height:1.5;}
+  .offer-sheet :focus-visible,.confirm-card :focus-visible{outline:2px solid var(--cyan);outline-offset:2px;border-radius:6px;}
+
   /* ── BUY CONFIRM OVERLAY ── */
   .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s;}
   .overlay.show{opacity:1;pointer-events:all;}
@@ -218,6 +231,8 @@
         <div class="price-indx" id="priceIndxLabel">150 INDX</div>
         <div class="price-neg" onclick="openOffer()">Make Offer</div>
       </div>
+      <div class="price-compare-banner" id="priceCompareBanner"></div>
+      <div class="saved-count-pill" id="savedCountPill"></div>
       <div class="listing-title">Handmade Ceramic Coffee Set 2 Cups & Pour-Over</div>
       <div class="listing-meta">
         <div class="meta-tag">📦 <span>Crafts</span></div>
@@ -345,6 +360,11 @@
       <input class="offer-input" type="number" id="offerInput" placeholder="65" oninput="updateOfferIndx()">
     </div>
     <div class="offer-indx">≈ <span id="offerIndx">0</span> INDX</div>
+    <div class="offer-warn-box" id="offerWarnBox"></div>
+    <div class="offer-history-wrap" id="offerHistoryWrap">
+      <div class="offer-history-label">Your Previous Offers</div>
+      <div class="offer-history-items" id="offerHistoryItems"></div>
+    </div>
     <button class="send-offer-btn" onclick="sendOffer()">Send Offer</button>
   </div>
 </div>
@@ -421,9 +441,15 @@
   }
 
   let wishlisted = false;
+  // GOD MODE PATCH: persist wishlist state to localStorage instead of only in-memory
   function toggleWishlist() {
     wishlisted = !wishlisted;
     document.getElementById('wishlistBtn').textContent = wishlisted ? '❤️' : '🤍';
+    let saved = godLoadSavedItems();
+    if (wishlisted) { if (!saved.includes(LISTING_ID)) saved.push(LISTING_ID); }
+    else { saved = saved.filter(id => id !== LISTING_ID); }
+    godSaveItems(saved);
+    godUpdateSavedPill();
     showToast(wishlisted ? 'Added to wishlist' : 'Removed from wishlist');
   }
 
@@ -434,19 +460,43 @@
     document.querySelector('.desc-more').style.display = 'none';
   }
 
-  function openOffer() { document.getElementById('offerSheet').classList.add('open'); }
-  function closeOffer(e) {
-    if (e.target === document.getElementById('offerSheet')) document.getElementById('offerSheet').classList.remove('open');
+  // GOD MODE PATCH: capture trigger for focus return, render offer history, focus input, trap focus
+  function openOffer() {
+    godLastFocused = document.activeElement;
+    document.getElementById('offerSheet').classList.add('open');
+    godRenderOfferHistory();
+    document.getElementById('offerWarnBox').style.display = 'none';
+    setTimeout(() => { const inp = document.getElementById('offerInput'); if (inp) inp.focus(); }, 300);
+    godTrapFocus(document.querySelector('.offer-sheet'));
   }
+  function closeOffer(e) {
+    if (e.target === document.getElementById('offerSheet')) {
+      document.getElementById('offerSheet').classList.remove('open');
+      // GOD MODE PATCH: return focus to the element that opened the sheet
+      if (godLastFocused) { godLastFocused.focus(); godLastFocused = null; }
+    }
+  }
+  // GOD MODE PATCH: also check for a duplicate/non-improved offer and show an inline warning
   function updateOfferIndx() {
     const aud = parseFloat(document.getElementById('offerInput').value) || 0;
-    document.getElementById('offerIndx').textContent = Math.round(aud / 0.24).toLocaleString();
+    document.getElementById('offerIndx').textContent = Math.round(aud / INDX_PRICE_USD).toLocaleString();
+    const warnBox = document.getElementById('offerWarnBox');
+    if (!warnBox) return;
+    const dup = aud > 0 ? godCheckDuplicateOffer(aud) : null;
+    if (dup) { warnBox.style.display = 'flex'; warnBox.textContent = `⚠️ ${dup}This won't beat your last offer.`; }
+    else { warnBox.style.display = 'none'; }
   }
+  // GOD MODE PATCH: persist the offer to this listing's offer history
   function sendOffer() {
     const aud = document.getElementById('offerInput').value;
     if (!aud) { showToast('Enter an offer amount'); return; }
+    const amount = parseFloat(aud);
+    const list = godLoadOfferHistory();
+    list.push({ amount: amount, date: new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) });
+    godSaveOfferHistory(list);
     document.getElementById('offerSheet').classList.remove('open');
-    showToast(`Offer of $${parseFloat(aud).toFixed(2)} sent to Kiri ✓`);
+    if (godLastFocused) { godLastFocused.focus(); godLastFocused = null; }
+    showToast(`Offer of $${amount.toFixed(2)} sent to Kiri ✓`);
   }
 
   function messageSellerDirect() {
@@ -454,7 +504,12 @@
     setTimeout(() => window.location.href = 'p2p-chat.html', 800);
   }
 
-  function openBuyConfirm() { document.getElementById('buyOverlay').classList.add('show'); }
+  // GOD MODE PATCH: capture trigger for focus return, trap focus within the confirm card
+  function openBuyConfirm() {
+    godLastFocused = document.activeElement;
+    document.getElementById('buyOverlay').classList.add('show');
+    godTrapFocus(document.getElementById('confirmCard'));
+  }
 
   function processPurchase() {
     const card = document.getElementById('confirmCard');
@@ -478,6 +533,116 @@
         </div>`;
     }, 2200);
   }
+
+  // ── GOD MODE: SAVED ITEMS, PRICE INSIGHT, OFFER HISTORY, ACCESSIBILITY ──
+  const LISTING_ID = new URLSearchParams(location.search).get('listing') || 'ceramic-coffee-set';
+  const LISTING_PRICE_AUD = 75.00;
+  const INDX_PRICE_USD = 0.24;
+  let godLastFocused = null;
+
+  // Saved items persistence (data persistence)
+  function godLoadSavedItems() {
+    return JSON.parse(localStorage.getItem('indx_listingdetail_saved') || '[]');
+  }
+  function godSaveItems(list) {
+    localStorage.setItem('indx_listingdetail_saved', JSON.stringify(list));
+  }
+  function godUpdateSavedPill() {
+    const saved = godLoadSavedItems();
+    const pill = document.getElementById('savedCountPill');
+    if (!pill) return;
+    if (saved.length > 0) {
+      pill.style.display = 'inline-flex';
+      pill.textContent = `❤️ ${saved.length} saved item${saved.length === 1 ? '' : 's'}`;
+    } else {
+      pill.style.display = 'none';
+    }
+  }
+  function godSyncWishlistState() {
+    const saved = godLoadSavedItems();
+    wishlisted = saved.includes(LISTING_ID);
+    const btn = document.getElementById('wishlistBtn');
+    if (btn) btn.textContent = wishlisted ? '❤️' : '🤍';
+    godUpdateSavedPill();
+  }
+
+  // Price comparison insight (information density) — computed from real prices already in the DOM
+  function godShowPriceComparison() {
+    const banner = document.getElementById('priceCompareBanner');
+    if (!banner) return;
+    const simPrices = Array.from(document.querySelectorAll('.sim-price'))
+      .map(el => parseFloat(el.textContent.replace(/[^0-9.]/g, '')))
+      .filter(n => !isNaN(n));
+    if (simPrices.length === 0) return;
+    const avg = simPrices.reduce((a, b) => a + b, 0) / simPrices.length;
+    const diffPct = Math.round(((LISTING_PRICE_AUD - avg) / avg) * 100);
+    banner.style.display = 'flex';
+    if (diffPct <= 0) {
+      banner.classList.add('below');
+      banner.textContent = `📉 ${Math.abs(diffPct)}% below similar listings avg $${avg.toFixed(2)}`;
+    } else {
+      banner.classList.add('above');
+      banner.textContent = `📈 ${diffPct}% above similar listings avg $${avg.toFixed(2)}`;
+    }
+  }
+
+  // Offer history + duplicate-offer safety (data persistence + confirmation safety)
+  function godLoadOfferHistory() {
+    const all = JSON.parse(localStorage.getItem('indx_listingdetail_offers') || '{}');
+    return all[LISTING_ID] || [];
+  }
+  function godSaveOfferHistory(list) {
+    const all = JSON.parse(localStorage.getItem('indx_listingdetail_offers') || '{}');
+    all[LISTING_ID] = list;
+    localStorage.setItem('indx_listingdetail_offers', JSON.stringify(all));
+  }
+  function godRenderOfferHistory() {
+    const wrap = document.getElementById('offerHistoryWrap');
+    const itemsEl = document.getElementById('offerHistoryItems');
+    const list = godLoadOfferHistory();
+    if (!wrap || !itemsEl) return;
+    if (list.length === 0) { wrap.style.display = 'none'; return; }
+    wrap.style.display = 'block';
+    itemsEl.innerHTML = list.slice(-3).reverse().map(o =>
+      `<div class="offer-history-item"><span>$${o.amount.toFixed(2)}</span><span>${o.date}</span></div>`
+    ).join('');
+  }
+  function godCheckDuplicateOffer(amount) {
+    const list = godLoadOfferHistory();
+    if (list.length === 0) return null;
+    const last = list[list.length - 1];
+    if (amount <= last.amount) return `You already offered $${last.amount.toFixed(2)}. `;
+    return null;
+  }
+
+  // Accessibility: focus trap + Escape-to-close for sheets/overlays
+  function godTrapFocus(container) {
+    if (!container) return;
+    const focusables = container.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (focusables.length === 0) return;
+    const first = focusables[0], last = focusables[focusables.length - 1];
+    container.addEventListener('keydown', function godFocusTrapHandler(e) {
+      if (e.key !== 'Tab') return;
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+  }
+  document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Escape') return;
+    const offerSheet = document.getElementById('offerSheet');
+    const buyOverlay = document.getElementById('buyOverlay');
+    if (offerSheet && offerSheet.classList.contains('open')) {
+      offerSheet.classList.remove('open');
+      if (godLastFocused) { godLastFocused.focus(); godLastFocused = null; }
+    } else if (buyOverlay && buyOverlay.classList.contains('show')) {
+      buyOverlay.classList.remove('show');
+      if (godLastFocused) { godLastFocused.focus(); godLastFocused = null; }
+    }
+  });
+
+  // Init — runs after all declarations above have executed (script tag is last in body)
+  godSyncWishlistState();
+  godShowPriceComparison();
 
   let toastTimer;
   function showToast(msg) {

@@ -109,6 +109,34 @@
 
   @keyframes popIn{0%{transform:scale(0.7);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
   .pop{animation:popIn 0.5s ease forwards;}
+
+  /* GOD MODE: CATEGORY FILTER CHIPS */
+  .filter-chips{display:flex;gap:8px;overflow-x:auto;padding:0 0 4px;margin-bottom:2px;-webkit-overflow-scrolling:touch;}
+  .filter-chips::-webkit-scrollbar{display:none;}
+  .filter-chip{flex-shrink:0;font-size:11px;font-weight:700;padding:7px 14px;border-radius:20px;background:var(--surface2);border:1px solid rgba(255,255,255,0.08);color:var(--text2);cursor:pointer;white-space:nowrap;transition:background 0.2s,border-color 0.2s,color 0.2s;}
+  .filter-chip.active{background:rgba(0,212,255,0.14);border-color:var(--cyan);color:var(--cyan);}
+  .nft-card.filtered-out,.mint-banner.filtered-out{display:none;}
+
+  /* GOD MODE: EXPLORED PROGRESS TRACKER */
+  .mint-banner{position:relative;}
+  .explored-dot{position:absolute;top:6px;left:6px;width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px rgba(0,229,160,0.6);}
+  .explored-progress{font-size:10px;color:var(--muted);font-weight:700;}
+  .explored-progress span{color:var(--cyan);}
+
+  /* GOD MODE: LIVE CONTEXT PANEL */
+  .context-panel{margin:0 16px 10px;background:var(--surface2);border:1px solid rgba(0,212,255,0.15);border-radius:16px;padding:16px;}
+  .context-title{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;}
+  .context-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .context-row:last-of-type{margin-bottom:0;}
+  .context-label{font-size:12px;color:var(--text2);}
+  .context-value{font-size:15px;font-weight:800;}
+  .context-value.real{color:var(--green);}
+  .context-value.example{color:var(--gold);}
+  .context-note{font-size:10px;color:var(--muted);margin-top:10px;line-height:1.4;}
+
+  /* GOD MODE: KEYBOARD FOCUS */
+  .sheet:focus{outline:none;}
+  .sheet-btn:focus-visible,.filter-chip:focus-visible,.mint-btn:focus-visible,.back-btn:focus-visible,.nft-card:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
 </style>
 </head>
 <body>
@@ -143,11 +171,41 @@
       </div>
     </div>
 
+    <!-- GOD MODE: LIVE CONTEXT PANEL (real session data) -->
+    <div class="context-panel">
+      <div class="context-title">Your real status right now</div>
+      <div class="context-row">
+        <div class="context-label">Citizen</div>
+        <div class="context-value" id="ctxCitizenName">Citizen</div>
+      </div>
+      <div class="context-row">
+        <div class="context-label">Your real Wisdom Score</div>
+        <div class="context-value real" id="ctxRealWisdom">0</div>
+      </div>
+      <div class="context-row">
+        <div class="context-label">If pending examples were real mints</div>
+        <div class="context-value example" id="ctxPendingTotal">+0</div>
+      </div>
+      <div class="context-note">"Real Wisdom Score" is read from your current session. The pending total below it is illustrative only — nothing here changes your real score.</div>
+    </div>
+
     <!-- SIINDEX TIP -->
     <div class="section">
       <div class="si-tip">
         <div class="si-avatar">SI</div>
         <div class="si-text">This feature isn't connected yet — I can't mint real NFTs or verify real achievements here. What's below is an example of the design. Standing by.</div>
+      </div>
+    </div>
+
+    <!-- GOD MODE: SKILL CATEGORY FILTER -->
+    <div class="section" style="padding-bottom:0;">
+      <div class="filter-chips" id="categoryFilterChips">
+        <div class="filter-chip active" data-cat="all" onclick="filterByCategory('all')" tabindex="0" role="button">All</div>
+        <div class="filter-chip" data-cat="Finance" onclick="filterByCategory('Finance')" tabindex="0" role="button">💰 Finance</div>
+        <div class="filter-chip" data-cat="Social" onclick="filterByCategory('Social')" tabindex="0" role="button">🌊 Social</div>
+        <div class="filter-chip" data-cat="Commerce" onclick="filterByCategory('Commerce')" tabindex="0" role="button">🛒 Commerce</div>
+        <div class="filter-chip" data-cat="Governance" onclick="filterByCategory('Governance')" tabindex="0" role="button">🏛️ Governance</div>
+        <div class="filter-chip" data-cat="Data" onclick="filterByCategory('Data')" tabindex="0" role="button">🔐 Data</div>
       </div>
     </div>
 
@@ -235,7 +293,10 @@
 
     <!-- MINTED SP-NFTS -->
     <div class="section">
-      <div class="section-label">✅ Example Collection (illustrative)</div>
+      <div class="section-label" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>✅ Example Collection (illustrative)</span>
+        <span class="explored-progress"><span id="exploredCount">0</span>/<span id="exploredTotal">0</span> explored</span>
+      </div>
       <div class="nft-grid">
 
         <div class="nft-card" onclick="openSheet('first-transaction')">
@@ -354,7 +415,7 @@
 
 <!-- NFT DETAIL SHEET -->
 <div class="overlay" id="overlay" onclick="closeSheet(event)">
-  <div class="sheet">
+  <div class="sheet" tabindex="-1">
     <div class="sheet-handle"></div>
     <div class="sheet-icon" id="sheetIcon">🏆</div>
     <div class="sheet-title" id="sheetTitle">SP-NFT</div>
@@ -395,6 +456,9 @@ const NFT_DATA = {
 function openSheet(key) {
   const d = NFT_DATA[key];
   if (!d) return;
+  // GOD MODE PATCH: track exploration + remember trigger for focus return
+  skillNftLastFocused = document.activeElement;
+  markNftViewed(key);
   document.getElementById('sheetIcon').textContent = d.icon;
   document.getElementById('sheetTitle').textContent = d.title;
   document.getElementById('sheetSub').textContent = d.minted
@@ -417,11 +481,18 @@ function openSheet(key) {
     btn.onclick = () => closeSheet({target:document.getElementById('overlay')});
   }
   document.getElementById('overlay').classList.add('open');
+  // GOD MODE PATCH: move focus into the sheet for keyboard users
+  setTimeout(() => { document.getElementById('sheetBtn').focus(); }, 260);
 }
 
 function closeSheet(e) {
   if (e.target === document.getElementById('overlay')) {
     document.getElementById('overlay').classList.remove('open');
+    // GOD MODE PATCH: return focus to whatever opened the sheet
+    if (skillNftLastFocused && typeof skillNftLastFocused.focus === 'function') {
+      skillNftLastFocused.focus();
+    }
+    skillNftLastFocused = null;
   }
 }
 
@@ -439,6 +510,114 @@ function mintNFT(name, icon, cat, wisdomPts) {
   document.getElementById('successOverlay').classList.add('show');
 }
 
+// GOD MODE: category filter, explored-progress tracker, live context panel, sheet keyboard/focus trap
+const SKILLNFT_VIEWED_KEY = 'indx_skillnft_viewed';
+const SKILLNFT_FILTER_KEY = 'indx_skillnft_lastFilter';
+let skillNftLastFocused = null;
+
+function getViewedNfts() {
+  try { return JSON.parse(localStorage.getItem(SKILLNFT_VIEWED_KEY) || '[]'); }
+  catch (e) { return []; }
+}
+
+function markNftViewed(key) {
+  const viewed = getViewedNfts();
+  if (!viewed.includes(key)) {
+    viewed.push(key);
+    localStorage.setItem(SKILLNFT_VIEWED_KEY, JSON.stringify(viewed));
+  }
+  updateExploredProgress();
+}
+
+function updateExploredProgress() {
+  const viewed = getViewedNfts();
+  const total = Object.keys(NFT_DATA).length;
+  const countEl = document.getElementById('exploredCount');
+  const totalEl = document.getElementById('exploredTotal');
+  if (countEl) countEl.textContent = viewed.length;
+  if (totalEl) totalEl.textContent = total;
+  document.querySelectorAll('.nft-card, .mint-banner').forEach(card => {
+    const match = (card.getAttribute('onclick') || '').match(/openSheet\('([^']+)'\)/);
+    if (!match) return;
+    const key = match[1];
+    const existingDot = card.querySelector('.explored-dot');
+    if (viewed.includes(key)) {
+      if (!existingDot) {
+        const dot = document.createElement('div');
+        dot.className = 'explored-dot';
+        card.appendChild(dot);
+      }
+    } else if (existingDot) {
+      existingDot.remove();
+    }
+  });
+}
+
+function getNftCategory(el) {
+  const match = (el.getAttribute('onclick') || '').match(/openSheet\('([^']+)'\)/);
+  if (!match) return null;
+  const d = NFT_DATA[match[1]];
+  return d ? d.cat : null;
+}
+
+function filterByCategory(cat) {
+  document.querySelectorAll('#categoryFilterChips .filter-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.cat === cat);
+  });
+  document.querySelectorAll('.nft-card, .mint-banner').forEach(el => {
+    const elCat = getNftCategory(el);
+    const show = cat === 'all' || elCat === cat;
+    el.classList.toggle('filtered-out', !show);
+  });
+  localStorage.setItem(SKILLNFT_FILTER_KEY, cat);
+}
+
+function renderContextPanel() {
+  const realWisdom = sessionStorage.getItem('citizen_wisdom') || '0';
+  const name = sessionStorage.getItem('citizen_name') || 'Citizen';
+  const realEl = document.getElementById('ctxRealWisdom');
+  const nameEl = document.getElementById('ctxCitizenName');
+  if (realEl) realEl.textContent = realWisdom;
+  if (nameEl) nameEl.textContent = name;
+  const pendingTotal = Object.values(NFT_DATA)
+    .filter(d => !d.minted)
+    .reduce((sum, d) => sum + (parseInt(d.wisdom, 10) || 0), 0);
+  const pendingEl = document.getElementById('ctxPendingTotal');
+  if (pendingEl) pendingEl.textContent = '+' + pendingTotal;
+}
+
+// Escape-to-close + focus trap while the NFT detail sheet is open
+function skillNftHandleKeydown(e) {
+  const overlay = document.getElementById('overlay');
+  if (!overlay || !overlay.classList.contains('open')) return;
+  if (e.key === 'Escape') {
+    closeSheet({ target: overlay });
+    return;
+  }
+  if (e.key !== 'Tab') return;
+  const sheet = overlay.querySelector('.sheet');
+  const focusable = sheet.querySelectorAll('button, [tabindex]:not([tabindex="-1"])');
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
+document.addEventListener('keydown', skillNftHandleKeydown);
+
+// Allow Enter/Space to activate keyboard-focused filter chips
+document.addEventListener('keydown', (e) => {
+  if ((e.key === 'Enter' || e.key === ' ') && document.activeElement && document.activeElement.classList.contains('filter-chip')) {
+    e.preventDefault();
+    document.activeElement.click();
+  }
+});
+
 // Animate skill graph bars on load
 window.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
@@ -446,6 +625,12 @@ window.addEventListener('DOMContentLoaded', () => {
       bar.style.width = bar.dataset.width + '%';
     });
   }, 400);
+
+  // GOD MODE: initialize context panel, explored progress, and last-used filter
+  renderContextPanel();
+  updateExploredProgress();
+  const savedFilter = localStorage.getItem(SKILLNFT_FILTER_KEY) || 'all';
+  filterByCategory(savedFilter);
 });
 </script>
 <script src="siindex-speak-core.js"></script>

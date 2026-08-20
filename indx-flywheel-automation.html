@@ -142,6 +142,41 @@
   .infra-check-item .check-done{color:var(--green);}
   .infra-check-item .check-todo{color:var(--surface3);}
 
+  /* ── GOD MODE: LIVE PREVIEW, LP PROGRESS, DELETE CONFIRM, OPERATOR TAG ── */
+  .operator-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(139,63,232,.12);border:1px solid rgba(139,63,232,.3);border-radius:8px;padding:3px 10px;font-size:11px;color:var(--purple);font-weight:600;margin-top:8px;margin-left:6px;}
+
+  .ev-preview{max-height:0;overflow:hidden;opacity:0;transition:max-height .25s ease,opacity .25s ease,margin .25s ease;background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;margin-bottom:0;}
+  .ev-preview.show{max-height:160px;opacity:1;margin-bottom:12px;}
+  .ev-preview-inner{padding:11px 12px;}
+  .ev-preview-title{font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
+  .ev-preview-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;}
+  .ev-preview-item{background:var(--surface3);border-radius:8px;padding:6px 4px;text-align:center;}
+  .ev-preview-amt{font-size:11px;font-weight:700;}
+  .ev-preview-lbl{font-size:8px;color:var(--muted);text-transform:uppercase;margin-top:1px;}
+  .ev-preview-indx{font-size:11px;color:var(--cyan);text-align:center;font-weight:600;}
+
+  .lp-progress-wrap{background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:12px 14px;margin-bottom:14px;}
+  .lp-progress-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+  .lp-progress-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+  .lp-progress-pct{font-size:13px;font-weight:800;color:var(--green);}
+  .lp-progress-track{height:10px;border-radius:6px;background:var(--surface3);overflow:hidden;}
+  .lp-progress-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--cyan),var(--green));width:0%;transition:width .6s cubic-bezier(.34,1.56,.64,1);}
+  .lp-progress-sub{font-size:10px;color:var(--muted);margin-top:6px;}
+
+  .event-operator-tag{display:inline-block;font-size:9px;color:var(--purple);background:rgba(139,63,232,.1);border-radius:5px;padding:2px 6px;margin-top:4px;}
+
+  .sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,.7);z-index:200;opacity:0;pointer-events:none;transition:opacity .25s ease;}
+  .sheet-overlay.show{opacity:1;pointer-events:auto;}
+  .bottom-sheet{position:fixed;left:0;right:0;bottom:0;max-width:430px;margin:0 auto;background:var(--surface);border:1px solid var(--surface3);border-radius:20px 20px 0 0;padding:20px;transform:translateY(100%);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:201;}
+  .bottom-sheet.show{transform:translateY(0);}
+  .sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--surface3);margin:0 auto 16px;}
+  .sheet-title{font-size:15px;font-weight:800;margin-bottom:8px;}
+  .sheet-text{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:18px;}
+  .sheet-btn-row{display:flex;gap:10px;}
+  .sheet-btn{flex:1;border:none;border-radius:11px;padding:13px;font-size:13px;font-weight:700;cursor:pointer;}
+  .sheet-btn.cancel{background:var(--surface3);color:var(--text);}
+  .sheet-btn.confirm-delete{background:var(--red);color:#fff;}
+
   /* ── TOAST ── */
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;color:var(--text);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:99;white-space:nowrap;pointer-events:none;}
   .toast.show{transform:translateX(-50%) translateY(0);}
@@ -154,7 +189,7 @@
   <div class="screen-eyebrow">IN$DEX Economic Layer</div>
   <div class="screen-title">Flywheel Automation Engine</div>
   <div class="screen-sub">SIINDEX monitors revenue, applies covenants, routes liquidity — automatically.</div>
-  <div class="live-badge"><div class="live-dot"></div>SIINDEX MONITORING</div>
+  <div class="live-badge"><div class="live-dot"></div>SIINDEX MONITORING</div><span class="operator-badge" id="operatorBadge" style="display:none;"></span>
 </div>
 
 <!-- TABS -->
@@ -167,6 +202,15 @@
 
 <!-- TAB: EVENTS -->
 <div class="tab-content active" id="tab-events">
+  <div class="lp-progress-wrap">
+    <div class="lp-progress-top">
+      <div class="lp-progress-title">LP Pool Target Progress</div>
+      <div class="lp-progress-pct" id="lpProgressPct">0%</div>
+    </div>
+    <div class="lp-progress-track"><div class="lp-progress-fill" id="lpProgressFill"></div></div>
+    <div class="lp-progress-sub" id="lpProgressSub">$0 of $100K target</div>
+  </div>
+
   <div class="event-totals">
     <div class="event-total-card">
       <div class="event-total-val" style="color:var(--cyan);" id="evTotalRevenue">$0</div>
@@ -184,7 +228,7 @@
 
   <div class="sect-label">Log Revenue Event</div>
   <div class="event-add-row">
-    <select class="event-source-select" id="evSource">
+    <select class="event-source-select" id="evSource" onchange="updateEventPreview()">
       <option value="marketplace">🛒 Marketplace Sale (2%)</option>
       <option value="siindex">🤖 SIINDEX Credits</option>
       <option value="mission">🚪 Mission Room Sub</option>
@@ -194,8 +238,16 @@
       <option value="grant">🌱 Grant / Impact Fee</option>
       <option value="cultural">🎨 Cultural Licensing</option>
     </select>
-    <input class="event-amount-input" id="evAmount" type="number" placeholder="$">
+    <input class="event-amount-input" id="evAmount" type="number" placeholder="$" oninput="updateEventPreview()">
     <button class="event-log-btn" onclick="logEvent()">Log</button>
+  </div>
+
+  <div class="ev-preview" id="evPreview">
+    <div class="ev-preview-inner">
+      <div class="ev-preview-title">Live Preview — Covenant Split</div>
+      <div class="ev-preview-grid" id="evPreviewGrid"></div>
+      <div class="ev-preview-indx" id="evPreviewIndx"></div>
+    </div>
   </div>
 
   <div class="sect-label">Live Revenue Feed</div>
@@ -289,6 +341,17 @@
   <div id="infraCards"></div>
 </div>
 
+<div class="sheet-overlay" id="deleteRuleOverlay" onclick="closeDeleteRuleSheet()"></div>
+<div class="bottom-sheet" id="deleteRuleSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Remove this rule?</div>
+  <div class="sheet-text" id="deleteRuleText">SIINDEX will stop watching this condition. This can't be undone.</div>
+  <div class="sheet-btn-row">
+    <button class="sheet-btn cancel" onclick="closeDeleteRuleSheet()">Cancel</button>
+    <button class="sheet-btn confirm-delete" onclick="confirmDeleteRule()">Remove Rule</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -312,6 +375,90 @@ const SOURCE_META = {
   grant:       { label:'Grant / Impact', color:'rgba(0,229,160,.1)', textColor:'var(--green)', covenant:'standard', feeRate:1 },
   cultural:    { label:'Cultural Licensing', color:'rgba(0,229,160,.08)', textColor:'var(--green)', covenant:'cultural', feeRate:1 },
 };
+
+// ── GOD MODE: LIVE PREVIEW, LP PROGRESS, DELETE CONFIRM, OPERATOR ATTRIBUTION ──
+const LAST_SOURCE_KEY = 'indx_flywheel-automation_lastsource';
+let pendingDeleteRuleId = null;
+
+function getOperatorName(){
+  return sessionStorage.getItem('citizen_name') || '';
+}
+
+function renderOperatorBadge(){
+  const name = getOperatorName();
+  const badge = document.getElementById('operatorBadge');
+  if (!badge) return;
+  if (name) {
+    badge.textContent = '👤 '+name;
+    badge.style.display = 'inline-flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function applyLastSourceDefault(){
+  const last = localStorage.getItem(LAST_SOURCE_KEY) || '';
+  const sel = document.getElementById('evSource');
+  if (last && sel && SOURCE_META[last]) sel.value = last;
+}
+
+function updateEventPreview(){
+  const source = document.getElementById('evSource').value;
+  const rawAmt = parseFloat(document.getElementById('evAmount').value);
+  const preview = document.getElementById('evPreview');
+  if (!rawAmt || rawAmt <= 0) {
+    preview.classList.remove('show');
+    return;
+  }
+  const meta = SOURCE_META[source];
+  const revenue = source==='marketplace' ? rawAmt * meta.feeRate : rawAmt;
+  const cov = COVENANTS[meta.covenant];
+  const lp = revenue * cov.lp;
+  const ops = revenue * cov.ops;
+  const vault = revenue * cov.vault;
+  const sec = cov.creator ? revenue * cov.creator : revenue * cov.sec;
+  const secLabel = cov.creator ? 'Creator' : 'Security';
+  const indxEquiv = revenue / INDX_PRICE_USD;
+  document.getElementById('evPreviewGrid').innerHTML = `
+    <div class="ev-preview-item"><div class="ev-preview-amt" style="color:var(--cyan)">${fmt(lp)}</div><div class="ev-preview-lbl">LP</div></div>
+    <div class="ev-preview-item"><div class="ev-preview-amt" style="color:#7B8FFF">${fmt(ops)}</div><div class="ev-preview-lbl">Ops</div></div>
+    <div class="ev-preview-item"><div class="ev-preview-amt" style="color:var(--gold)">${fmt(vault)}</div><div class="ev-preview-lbl">Vault</div></div>
+    <div class="ev-preview-item"><div class="ev-preview-amt" style="color:var(--red)">${fmt(sec)}</div><div class="ev-preview-lbl">${secLabel}</div></div>`;
+  document.getElementById('evPreviewIndx').textContent = '≈ '+indxEquiv.toLocaleString('en-AU',{maximumFractionDigits:0})+' INDX equivalent at $'+INDX_PRICE_USD.toFixed(2)+'/token';
+  preview.classList.add('show');
+}
+
+function renderLpProgress(){
+  const fill = document.getElementById('lpProgressFill');
+  if (!fill) return;
+  const members = JSON.parse(localStorage.getItem('indx_founders_pool_members') || '[]');
+  const total = members.reduce((s,x)=>s+(x.amount||0), 0);
+  const pct = Math.min(100, Math.round((total / POOL_TARGET) * 100));
+  fill.style.width = pct + '%';
+  document.getElementById('lpProgressPct').textContent = pct + '%';
+  document.getElementById('lpProgressSub').textContent = fmt(total) + ' of $100K target';
+}
+
+function requestDeleteRule(id){
+  const rules = getRules();
+  const r = rules.find(x=>x.id===id);
+  if (!r) return;
+  pendingDeleteRuleId = id;
+  document.getElementById('deleteRuleText').textContent = 'SIINDEX will stop watching: '+(CONDITION_LABELS[r.condition]||r.condition)+' '+r.threshold+'. This can\'t be undone.';
+  document.getElementById('deleteRuleOverlay').classList.add('show');
+  document.getElementById('deleteRuleSheet').classList.add('show');
+}
+
+function closeDeleteRuleSheet(){
+  pendingDeleteRuleId = null;
+  document.getElementById('deleteRuleOverlay').classList.remove('show');
+  document.getElementById('deleteRuleSheet').classList.remove('show');
+}
+
+function confirmDeleteRule(){
+  if (pendingDeleteRuleId) deleteRule(pendingDeleteRuleId);
+  closeDeleteRuleSheet();
+}
 
 // ── TAB NAV ──
 function switchTab(id) {
@@ -353,6 +500,7 @@ function logEvent() {
     covenantName: cov.name,
   };
   const events = getEvents();
+  // GOD MODE PATCH: attach operator attribution and remember last-used source
   events.unshift({
     id: Date.now(),
     source, revenue, splits,
@@ -361,10 +509,14 @@ function logEvent() {
     label: meta.label,
     color: meta.color,
     textColor: meta.textColor,
+    operator: getOperatorName(),
   });
   saveEvents(events.slice(0,100));
+  localStorage.setItem(LAST_SOURCE_KEY, source);
   document.getElementById('evAmount').value='';
+  document.getElementById('evPreview').classList.remove('show');
   renderEventFeed();
+  renderLpProgress();
   logAgentAction('💹 Revenue event logged: '+meta.label+' — '+fmt(revenue)+' → LP '+fmt(splits.lp));
   showToast('✅ Event logged — '+fmt(revenue)+' routed by covenant');
 }
@@ -390,6 +542,7 @@ function renderEventFeed() {
           <span class="event-source-badge" style="background:${e.color};color:${e.textColor}">${e.label}</span>
           <div class="event-gross" style="margin-top:5px">${fmt(e.revenue)} <span style="color:var(--muted);font-size:11px;font-weight:400">protocol revenue</span></div>
           <div class="event-covenant-tag">Covenant: ${e.splits.covenantName}</div>
+          ${e.operator ? `<div class="event-operator-tag">👤 Logged by ${e.operator}</div>` : ''}
         </div>
         <div class="event-time">${ts}</div>
       </div>
@@ -476,7 +629,7 @@ function renderRules(){
       <div class="rule-item-desc">→ ${ACTION_LABELS[r.action]||r.action}<br>Covenant: ${COVENANTS[r.covenant]?.name||r.covenant}</div>
       <div class="rule-item-actions">
         <button class="rule-action-btn" onclick="cycleRuleStatus('${r.id}')">Toggle Status</button>
-        <button class="rule-action-btn delete" onclick="deleteRule('${r.id}')">Remove</button>
+        <button class="rule-action-btn delete" onclick="requestDeleteRule('${r.id}')">Remove</button>
       </div>
     </div>`).join('');
 }
@@ -661,6 +814,10 @@ document.addEventListener('DOMContentLoaded',()=>{
   renderRules();
   renderAgent();
   renderInfra();
+  // GOD MODE PATCH: operator badge, last-used source default, LP progress bar
+  renderOperatorBadge();
+  applyLastSourceDefault();
+  renderLpProgress();
 });
 </script>
 <script src="siindex-speak-core.js"></script>

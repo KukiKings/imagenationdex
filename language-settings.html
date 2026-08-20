@@ -48,6 +48,22 @@
 
   .toast { position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(60px); background:var(--surface2); color:var(--text); padding:12px 20px; border-radius:12px; font-size:13px; font-weight:500; transition:transform 0.3s; z-index:200; white-space:nowrap; border:1px solid rgba(0,229,160,0.3); }
   .toast.show { transform:translateX(-50%) translateY(0); }
+
+  /* GOD MODE: recently used chips, live search count, empty state, keyboard nav focus */
+  .recent-section { margin-bottom:20px; }
+  .recent-chips { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .recent-chips::-webkit-scrollbar { display:none; }
+  .recent-chip { display:flex; align-items:center; gap:6px; background:var(--surface2); border:1px solid var(--surface3); border-radius:20px; padding:8px 14px; color:var(--text); font-size:13px; font-weight:500; white-space:nowrap; cursor:pointer; flex-shrink:0; transition:border-color 0.15s, background 0.15s; }
+  .recent-chip:hover, .recent-chip:focus-visible { border-color:rgba(0,212,255,0.4); background:rgba(0,212,255,0.06); outline:none; }
+
+  .search-count { font-size:12px; color:var(--text-muted); margin:-12px 0 16px 4px; min-height:16px; }
+
+  .empty-state { display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px 20px; gap:6px; }
+  .empty-state-icon { font-size:32px; opacity:0.5; margin-bottom:6px; }
+  .empty-state-text { font-size:15px; font-weight:600; color:var(--text); }
+  .empty-state-sub { font-size:13px; color:var(--text-muted); }
+
+  .lang-item:focus-visible { outline:2px solid var(--cyan); outline-offset:2px; }
 </style>
 </head>
 <body>
@@ -63,12 +79,24 @@
     <span class="search-icon">🔍</span>
     <input class="search-input" type="text" placeholder="Search languages..." oninput="filterLanguages(this.value)">
   </div>
+  <div class="search-count" id="searchCount" style="display:none;"></div>
+
+  <div class="recent-section" id="recentSection" style="display:none;">
+    <div class="section-label">Recently Used</div>
+    <div class="recent-chips" id="recentChips"></div>
+  </div>
 
   <div class="section-label" id="primaryLabel">Pacific First</div>
   <div class="lang-list" id="primaryList"></div>
 
   <div class="section-label" id="globalLabel">Global Languages</div>
   <div class="lang-list" id="globalList"></div>
+
+  <div class="empty-state" id="emptyState">
+    <div class="empty-state-icon">🔍</div>
+    <div class="empty-state-text">No languages found</div>
+    <div class="empty-state-sub">Try a different search term</div>
+  </div>
 
   <div class="beta-note" id="betaNote">Languages marked BETA are community-translated and may have some missing phrases. Help us improve them by tapping the flag icon in any screen.</div>
 
@@ -108,7 +136,7 @@ let selected = 'en-au';
 function renderList(items, containerId) {
   const container = document.getElementById(containerId);
   container.innerHTML = items.map(lang => `
-    <div class="lang-item ${lang.code === selected ? 'selected' : ''}" onclick="selectLang('${lang.code}', '${lang.name}')">
+    <div class="lang-item ${lang.code === selected ? 'selected' : ''}" onclick="selectLang('${lang.code}', '${lang.name}')" tabindex="-1" role="button" aria-pressed="${lang.code === selected}">
       <span class="lang-flag">${lang.flag}</span>
       <div class="lang-info">
         <div class="lang-name">${lang.name}</div>
@@ -118,12 +146,18 @@ function renderList(items, containerId) {
       <div class="lang-check"><span class="lang-check-inner">✓</span></div>
     </div>
   `).join('');
+  // GOD MODE PATCH: keep roving tabindex in sync after every re-render
+  applyRovingTabindex();
 }
 
 function selectLang(code, name) {
   selected = code;
+  // GOD MODE PATCH: persist selection and update recently-used chips
+  localStorage.setItem('indx_language_settings_selected', code);
+  updateRecentLanguages(code);
   renderList(PRIMARY, 'primaryList');
   renderList(GLOBAL, 'globalList');
+  renderRecentChips();
   showToast(`Language set to ${name}. Standing by.`);
 }
 
@@ -136,6 +170,19 @@ function filterLanguages(query) {
   document.getElementById('primaryLabel').style.display = filteredPrimary.length ? 'block' : 'none';
   document.getElementById('globalLabel').style.display = filteredGlobal.length ? 'block' : 'none';
   document.getElementById('betaNote').style.display = query ? 'none' : 'block';
+  // GOD MODE PATCH: live result count, empty state, and recent-chips visibility
+  const total = filteredPrimary.length + filteredGlobal.length;
+  const countEl = document.getElementById('searchCount');
+  const emptyEl = document.getElementById('emptyState');
+  if (query) {
+    countEl.style.display = 'block';
+    countEl.textContent = total === 0 ? 'No matches' : `${total} language${total === 1 ? '' : 's'} found`;
+    document.getElementById('recentSection').style.display = 'none';
+  } else {
+    countEl.style.display = 'none';
+    renderRecentChips();
+  }
+  emptyEl.style.display = total === 0 ? 'flex' : 'none';
 }
 
 function showToast(msg) {
@@ -145,9 +192,84 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
+// GOD MODE: persisted last-used language, recently-used chips, keyboard nav, live search feedback
+function getRecentLanguages() {
+  try {
+    return JSON.parse(localStorage.getItem('indx_language_settings_recent') || '[]');
+  } catch (e) {
+    return [];
+  }
+}
+
+function updateRecentLanguages(code) {
+  let recent = getRecentLanguages().filter(c => c !== code);
+  recent.unshift(code);
+  recent = recent.slice(0, 4);
+  localStorage.setItem('indx_language_settings_recent', JSON.stringify(recent));
+}
+
+function findLangByCode(code) {
+  return [...PRIMARY, ...GLOBAL].find(l => l.code === code);
+}
+
+function renderRecentChips() {
+  const section = document.getElementById('recentSection');
+  const chips = document.getElementById('recentChips');
+  const langs = getRecentLanguages().filter(code => code !== selected).map(findLangByCode).filter(Boolean);
+  if (!langs.length) {
+    section.style.display = 'none';
+    chips.innerHTML = '';
+    return;
+  }
+  chips.innerHTML = langs.map(l => `
+    <button class="recent-chip" onclick="selectLang('${l.code}', '${l.name}')">
+      <span>${l.flag}</span><span>${l.name}</span>
+    </button>
+  `).join('');
+  section.style.display = 'block';
+}
+
+function applyRovingTabindex() {
+  const items = document.querySelectorAll('.lang-item');
+  if (!items.length) return;
+  items.forEach(item => item.setAttribute('tabindex', '-1'));
+  const activeItem = Array.from(items).find(item => item.classList.contains('selected')) || items[0];
+  activeItem.setAttribute('tabindex', '0');
+}
+
+function handleLangListKeydown(e) {
+  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Enter' && e.key !== ' ') return;
+  const active = document.activeElement;
+  if (!active || !active.classList || !active.classList.contains('lang-item')) return;
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    active.click();
+    return;
+  }
+  const items = Array.from(document.querySelectorAll('.lang-item'));
+  const currentIndex = items.indexOf(active);
+  if (currentIndex === -1) return;
+  e.preventDefault();
+  const nextIndex = e.key === 'ArrowDown'
+    ? Math.min(currentIndex + 1, items.length - 1)
+    : Math.max(currentIndex - 1, 0);
+  items.forEach(it => it.setAttribute('tabindex', '-1'));
+  items[nextIndex].setAttribute('tabindex', '0');
+  items[nextIndex].focus();
+}
+
+document.addEventListener('keydown', handleLangListKeydown);
+
+// GOD MODE PATCH: load persisted language selection (falls back to default on first run)
+const storedSelected = localStorage.getItem('indx_language_settings_selected') || '';
+if (storedSelected && findLangByCode(storedSelected)) {
+  selected = storedSelected;
+}
+
 // Init
 renderList(PRIMARY, 'primaryList');
 renderList(GLOBAL, 'globalList');
+renderRecentChips();
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

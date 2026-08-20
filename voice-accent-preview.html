@@ -71,6 +71,41 @@
   .foot{font-size:10.5px;color:var(--muted);line-height:1.6;margin-top:26px;
     padding-top:14px;border-top:1px solid rgba(255,255,255,0.06)}
   code{background:var(--surface3);padding:1px 5px;border-radius:4px;font-size:10.5px;color:var(--cyan)}
+
+  /* GOD MODE — playbar, shortlist, heard-tracking, accessibility */
+  .playbar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:var(--surface2);border:1px solid rgba(0,212,255,0.20);border-radius:12px;
+    padding:10px 12px;margin-bottom:14px}
+  .playbar-status{font-size:11px;color:var(--muted);flex:1;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .playbar-status.active{color:var(--cyan);font-weight:700}
+  .stopall-btn{flex-shrink:0;background:rgba(255,77,109,0.15);color:var(--red);
+    border:1px solid rgba(255,77,109,0.35);border-radius:8px;padding:7px 12px;
+    font-size:11px;font-weight:700;font-family:inherit;cursor:pointer}
+  .stopall-btn:active{opacity:0.8}
+  .shortlist-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:var(--surface);border:1px solid rgba(139,63,232,0.30);border-radius:12px;
+    padding:10px 12px;margin-bottom:6px;font-size:11px}
+  .shortlist-summary{display:flex;flex-direction:column;gap:5px}
+  .shortlist-count{color:var(--purple);font-weight:700;font-size:11px}
+  .shortlist-filter{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:10.5px}
+  .shortlist-copy{flex-shrink:0;background:var(--surface3);color:var(--text);
+    border:1px solid rgba(255,255,255,0.10);border-radius:8px;padding:7px 10px;
+    font-size:10.5px;font-weight:700;font-family:inherit;cursor:pointer}
+  .shortlist-copy:active{opacity:0.8}
+  .audit-count{font-size:9.5px;font-weight:700;color:var(--muted);text-transform:none;
+    letter-spacing:0;margin-left:4px}
+  .row.speaking{border-color:rgba(0,212,255,0.5);box-shadow:0 0 0 1px rgba(0,212,255,0.25) inset}
+  .star-btn{flex-shrink:0;background:transparent;border:1px solid rgba(255,184,0,0.35);
+    color:var(--muted);border-radius:8px;width:30px;height:30px;font-size:14px;
+    line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+  .star-btn.on{background:rgba(255,184,0,0.18);color:var(--gold);border-color:rgba(255,184,0,0.5)}
+  .heard-badge{font-size:8.5px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;
+    color:var(--green);opacity:0;margin-left:6px}
+  .heard-badge.on{opacity:1}
+  .row.hidden-by-filter{display:none}
+  .play:focus-visible,.stopall-btn:focus-visible,.shortlist-copy:focus-visible,
+  .star-btn:focus-visible,.line-pick:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
 </style>
 </head>
 <body>
@@ -81,6 +116,11 @@
     <h1>SIINDEX Voice &amp; Accent Preview</h1>
   </div>
 
+  <div class="playbar" id="playBar">
+    <span class="playbar-status" id="playStatus" role="status" aria-live="polite">Nothing playing</span>
+    <button type="button" class="stopall-btn" onclick="gmStopAll()">Stop All</button>
+  </div>
+
   <div class="note">
     <b>Read this first.</b> Panel A is your Mac's own voices speaking real SIINDEX lines —
     that's the offline fallback citizens hear when ElevenLabs is down. Panel B is
@@ -89,7 +129,15 @@
     change anything live — the switch is a Supabase secret, and that stays your call.
   </div>
 
-  <h2>Panel A — your device, real SIINDEX lines</h2>
+  <div class="shortlist-bar">
+    <div class="shortlist-summary">
+      <span class="shortlist-count" id="shortlistCount">No voices shortlisted yet</span>
+      <label class="shortlist-filter"><input type="checkbox" id="shortlistFilter" onchange="gmToggleFilter()"> Shortlisted only</label>
+    </div>
+    <button type="button" class="shortlist-copy" onclick="gmCopyShortlist()">Copy names</button>
+  </div>
+
+  <h2>Panel A — your device, real SIINDEX lines <span class="audit-count" id="panelACount"></span></h2>
   <p class="sub">Filtered to <code>en-US</code> only, matching the accent fix applied across
   the app today. If this list is empty, your Mac has no American voice installed — that is
   itself the finding.</p>
@@ -97,7 +145,7 @@
   <select class="line-pick" id="linePick"></select>
   <div id="localVoices"></div>
 
-  <h2>Panel B — ElevenLabs sample clips</h2>
+  <h2>Panel B — ElevenLabs sample clips <span class="audit-count" id="panelBCount"></span></h2>
   <p class="sub">Verified American female voices from ElevenLabs' documented premade set.
   Stock sample sentences, not SIINDEX lines. Accent and timbre only.</p>
   <div id="elevenVoices"></div>
@@ -114,6 +162,92 @@
 <script>
 (function () {
   'use strict';
+
+  // GOD MODE — session persistence, shortlist, now-playing status, keyboard access
+  var GM_LASTLINE_KEY = 'indx_voicepreview_lastline';
+  var GM_PLAYED_KEY = 'indx_voicepreview_played';
+  var GM_SHORTLIST_KEY = 'indx_voicepreview_shortlist';
+  var gmPlayed = JSON.parse(localStorage.getItem(GM_PLAYED_KEY) || '{}');
+  var gmShortlist = JSON.parse(localStorage.getItem(GM_SHORTLIST_KEY) || '{}');
+  var gmFilterOn = false;
+
+  function gmSetStatus(text) {
+    var s = document.getElementById('playStatus');
+    if (!s) return;
+    s.textContent = text;
+    s.classList.toggle('active', text !== 'Nothing playing');
+  }
+
+  function gmStopAllAudioOnly() {
+    document.querySelectorAll('audio').forEach(function (a) { a.pause(); });
+  }
+
+  window.gmStopAll = function () {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    gmStopAllAudioOnly();
+    document.querySelectorAll('.row.speaking').forEach(function (r) { r.classList.remove('speaking'); });
+    gmSetStatus('Nothing playing');
+  };
+
+  function gmMarkPlayed(name) {
+    if (gmPlayed[name]) return;
+    gmPlayed[name] = true;
+    localStorage.setItem(GM_PLAYED_KEY, JSON.stringify(gmPlayed));
+    document.querySelectorAll('.heard-badge[data-voice="' + name + '"]').forEach(function (b) { b.classList.add('on'); });
+    gmUpdateCounts();
+  }
+
+  function gmToggleStar(name, btn) {
+    if (gmShortlist[name]) { delete gmShortlist[name]; }
+    else { gmShortlist[name] = true; }
+    localStorage.setItem(GM_SHORTLIST_KEY, JSON.stringify(gmShortlist));
+    if (btn) btn.classList.toggle('on', !!gmShortlist[name]);
+    gmUpdateCounts();
+    gmApplyFilter();
+  }
+
+  function gmUpdateCounts() {
+    var localTotal = document.querySelectorAll('#localVoices .row').length;
+    var localHeard = document.querySelectorAll('#localVoices .heard-badge.on').length;
+    var elTotal = document.querySelectorAll('#elevenVoices .row').length;
+    var elHeard = document.querySelectorAll('#elevenVoices .heard-badge.on').length;
+    var pa = document.getElementById('panelACount');
+    var pb = document.getElementById('panelBCount');
+    if (pa) pa.textContent = localTotal ? '(' + localHeard + '/' + localTotal + ' heard)' : '';
+    if (pb) pb.textContent = elTotal ? '(' + elHeard + '/' + elTotal + ' heard)' : '';
+    var names = Object.keys(gmShortlist);
+    var sc = document.getElementById('shortlistCount');
+    if (sc) sc.textContent = names.length ? names.length + ' shortlisted' : 'No voices shortlisted yet';
+  }
+
+  window.gmToggleFilter = function () {
+    var cb = document.getElementById('shortlistFilter');
+    gmFilterOn = !!(cb && cb.checked);
+    gmApplyFilter();
+  };
+
+  function gmApplyFilter() {
+    document.querySelectorAll('#localVoices .row, #elevenVoices .row').forEach(function (row) {
+      var name = row.dataset.voice;
+      var show = !gmFilterOn || !!gmShortlist[name];
+      row.classList.toggle('hidden-by-filter', !show);
+    });
+  }
+
+  window.gmCopyShortlist = function () {
+    var names = Object.keys(gmShortlist);
+    var text = names.length ? names.join(', ') : 'No voices shortlisted yet';
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        gmSetStatus('Copied: ' + text);
+        setTimeout(function () { gmSetStatus('Nothing playing'); }, 2000);
+      });
+    }
+  };
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') window.gmStopAll();
+  });
 
   // Real SIINDEX copy, canon-compliant (siindex-voice.md). Pronunciation swaps match
   // the ones the app already applies before speaking.
@@ -141,6 +275,11 @@
     o.textContent = l.length > 52 ? l.slice(0, 52) + '…' : l;
     pick.appendChild(o);
   });
+
+  // GOD MODE PATCH: restore last-selected line across visits, remember future changes
+  var gmSavedLine = localStorage.getItem(GM_LASTLINE_KEY) || '0';
+  if (pick.querySelector('option[value="' + gmSavedLine + '"]')) pick.value = gmSavedLine;
+  pick.addEventListener('change', function () { localStorage.setItem(GM_LASTLINE_KEY, pick.value); });
 
   var localBox = document.getElementById('localVoices');
 
@@ -170,27 +309,53 @@
       var preferred = AMERICAN.test(v.name);
       var row = document.createElement('div');
       row.className = 'row' + (preferred ? ' best' : '');
+      // GOD MODE PATCH: dataset key for shortlist filter, heard-badge markup
+      row.dataset.voice = v.name;
       row.innerHTML =
         '<div class="meta"><div class="nm">' + v.name +
         (preferred ? ' <span class="tag">app picks this</span>' : '') +
+        ' <span class="heard-badge' + (gmPlayed[v.name] ? ' on' : '') + '" data-voice="' + v.name + '">Heard</span>' +
         '</div><div class="dsc">' + v.lang + (v.localService ? ' · on-device' : ' · network') +
         '</div></div>';
+      // GOD MODE PATCH: shortlist star, persisted per voice name
+      var star = document.createElement('button');
+      star.type = 'button';
+      star.className = 'star-btn' + (gmShortlist[v.name] ? ' on' : '');
+      star.setAttribute('aria-label', 'Shortlist ' + v.name);
+      star.textContent = '★';
+      star.addEventListener('click', function () { gmToggleStar(v.name, star); });
+      row.appendChild(star);
       var b = document.createElement('button');
       b.className = 'play';
       b.type = 'button';
       b.textContent = 'Speak';
       b.addEventListener('click', function () {
+        // GOD MODE PATCH: stop other audio, highlight active row, announce status, track heard
+        gmStopAllAudioOnly();
         synth.cancel();
+        document.querySelectorAll('.row.speaking').forEach(function (r) { r.classList.remove('speaking'); });
         var u = new SpeechSynthesisUtterance(spoken(LINES[+pick.value]));
         u.voice = v;
         u.lang = 'en-US';
         u.rate = 0.92;
         u.pitch = 1.06;
+        u.onstart = function () {
+          row.classList.add('speaking');
+          gmSetStatus('Speaking: ' + v.name);
+        };
+        u.onend = u.onerror = function () {
+          row.classList.remove('speaking');
+          gmSetStatus('Nothing playing');
+          gmMarkPlayed(v.name);
+        };
         synth.speak(u);
       });
       row.appendChild(b);
       localBox.appendChild(row);
     });
+    // GOD MODE PATCH: re-apply shortlist filter and refresh counts after (re)render
+    gmApplyFilter();
+    gmUpdateCounts();
   }
 
   renderLocal();
@@ -215,13 +380,38 @@
     var wrap = document.createElement('div');
     wrap.className = 'row' + (v.best ? ' best' : '');
     wrap.style.display = 'block';
+    // GOD MODE PATCH: dataset key for shortlist filter, heard-badge + star markup
+    wrap.dataset.voice = v.n;
     wrap.innerHTML =
-      '<div class="nm">' + v.n + (v.best ? ' <span class="tag">strong fit</span>' : '') + '</div>' +
+      '<div class="nm">' + v.n + (v.best ? ' <span class="tag">strong fit</span>' : '') +
+      ' <span class="heard-badge' + (gmPlayed[v.n] ? ' on' : '') + '" data-voice="' + v.n + '">Heard</span>' +
+      ' <button type="button" class="star-btn' + (gmShortlist[v.n] ? ' on' : '') +
+      '" aria-label="Shortlist ' + v.n + '" style="margin-left:6px">★</button></div>' +
       '<div class="dsc">' + v.d + '</div>' +
       '<div class="dsc" style="margin-top:4px"><code>' + v.id + '</code></div>' +
       '<audio controls preload="none" src="' + v.u + '"></audio>';
+    // GOD MODE PATCH: single-audio focus, status announce, heard tracking, shortlist toggle
+    var audioEl = wrap.querySelector('audio');
+    audioEl.addEventListener('play', function () {
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      document.querySelectorAll('audio').forEach(function (a) { if (a !== audioEl) a.pause(); });
+      document.querySelectorAll('.row.speaking').forEach(function (r) { r.classList.remove('speaking'); });
+      wrap.classList.add('speaking');
+      gmSetStatus('Playing: ' + v.n);
+    });
+    audioEl.addEventListener('pause', function () {
+      wrap.classList.remove('speaking');
+      gmSetStatus('Nothing playing');
+    });
+    audioEl.addEventListener('ended', function () { gmMarkPlayed(v.n); });
+    wrap.querySelector('.star-btn').addEventListener('click', function () {
+      gmToggleStar(v.n, wrap.querySelector('.star-btn'));
+    });
     elBox.appendChild(wrap);
   });
+  // GOD MODE PATCH: apply shortlist filter and refresh counts after Panel B renders
+  gmApplyFilter();
+  gmUpdateCounts();
 })();
 </script>
 </body>
