@@ -4,7 +4,8 @@
 <link rel="icon" type="image/png" href="assets/favicon.png">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>AI Oversight IN$DEX</title>
+  <title>SIINDEX Oversight IN$DEX</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
   <style>
     :root{--cyan:#00D4FF;--blue:#2B35D8;--purple:#8B3FE8;--black:#090A10;--green:#00E5A0;--gold:#FFB800;--red:#FF4D6D;--surface:#12141F;--surface2:#1A1D2E;--surface3:#22263A;--border:rgba(255,255,255,0.07);--text:#F0F2FF;--text-muted:rgba(240,242,255,0.45);--text-dim:rgba(240,242,255,0.2);}
     *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -122,7 +123,7 @@
 <div class="phone">
   <div class="topbar">
     <button class="tb-back" onclick="history.back()">←</button>
-    <div class="tb-title">🤖 AI Oversight</div>
+    <div class="tb-title">🤖 SIINDEX Oversight</div>
   </div>
   <div class="scroll-body">
     <div class="section">
@@ -182,6 +183,7 @@
       <div class="pause-banner" id="pauseActiveBanner" style="display:none;">
         <div class="pab-ico">🔕</div>
         <div class="pab-text">Manual review mode active</div>
+        <button class="btn-override" style="margin-left:auto;" onclick="endPauseNow()">End pause</button>
       </div>
       <div class="override-card">
         <div class="oc-title">🧑 You're always in charge</div>
@@ -199,7 +201,7 @@
           <div class="or-item">
             <div class="or-ico">↩️</div>
             <div class="or-body">
-              <div class="or-name">Reverse an AI decision</div>
+              <div class="or-name">Reverse a SIINDEX decision</div>
               <div class="or-desc">Challenge any automated block or rejection</div>
             </div>
             <!-- GOD MODE PATCH: now logs to override activity + live countdown, in addition to the toast -->
@@ -352,8 +354,33 @@
 
 // GOD MODE: override request activity, live SLA countdowns, pause confirm sheet with focus trap
 const OVERRIDE_HISTORY_KEY = 'indx_ai-oversight_overrides';
-const PAUSE_ACTIVE_KEY = 'indx_ai-oversight_pause_active';
 let pauseSheetTriggerEl = null;
+
+// ── REAL personal pause (God Mode) ──────────────────────────────────────
+// Was: confirmPauseSiindex() wrote a timestamp to localStorage and nothing else —
+// no backend call anywhere, so "Pause SIINDEX on my account" paused nothing outside
+// this one browser tab. Now backed by citizens.siindex_paused_until + two new RPCs
+// (set_siindex_personal_pause / clear_siindex_personal_pause), both SECURITY DEFINER
+// and scoped to auth_user_id = auth.uid() — a citizen can only pause their own row.
+// Deliberately NOT wired to siindex_kill_switch (the real platform-wide halt used by
+// siindex-console.html/AJ) — this screen is citizen-facing, so a global switch here
+// would let any citizen halt SIINDEX for everyone.
+const OV_SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const OV_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const ovSb = supabase.createClient(OV_SUPABASE_URL, OV_SUPABASE_ANON_KEY);
+let ovHasSession = false;
+async function ovInitSession(){
+  try {
+    const { data } = await ovSb.auth.getSession();
+    ovHasSession = !!(data && data.session);
+  } catch (e) { ovHasSession = false; }
+  const btn = document.querySelector('.or-item .btn-override[onclick="openPauseSheet()"]');
+  if (btn && !ovHasSession) {
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    btn.title = 'Sign in to pause SIINDEX on your account';
+  }
+}
 
 function getOverrideHistory(){
   try{ return JSON.parse(localStorage.getItem(OVERRIDE_HISTORY_KEY) || '[]'); }catch(e){ return []; }
@@ -449,18 +476,43 @@ function pauseSheetKeyHandler(e){
     else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
   }
 }
-function confirmPauseSiindex(){
-  const until = Date.now() + 48*60*60*1000;
-  localStorage.setItem(PAUSE_ACTIVE_KEY, String(until));
-  logOverrideRequest('pause','SIINDEX paused — manual review mode',2880);
-  showToast('SIINDEX paused — manual mode for 48h');
-  closePauseSheet();
-  renderPauseBanner();
+async function confirmPauseSiindex(){
+  if (!ovHasSession) {
+    showToast('Sign in to pause SIINDEX on your account');
+    closePauseSheet();
+    return;
+  }
+  try {
+    const { error } = await ovSb.rpc('set_siindex_personal_pause', { p_hours: 48 });
+    if (error) { showToast(error.message || 'Could not pause — try again'); return; }
+    logOverrideRequest('pause','SIINDEX paused — manual review mode',2880);
+    showToast('SIINDEX paused — manual mode for 48h');
+    closePauseSheet();
+    await renderPauseBanner();
+  } catch (e) {
+    showToast('Could not pause — try again');
+  }
 }
-function renderPauseBanner(){
+async function endPauseNow(){
+  if (!ovHasSession) return;
+  try {
+    const { error } = await ovSb.rpc('clear_siindex_personal_pause');
+    if (error) { showToast(error.message || 'Could not end pause — try again'); return; }
+    showToast('Pause ended');
+    await renderPauseBanner();
+  } catch (e) {
+    showToast('Could not end pause — try again');
+  }
+}
+async function renderPauseBanner(){
   const banner = document.getElementById('pauseActiveBanner');
   if(!banner) return;
-  const until = parseInt(localStorage.getItem(PAUSE_ACTIVE_KEY) || '0', 10);
+  if (!ovHasSession) { banner.style.display = 'none'; return; }
+  let until = null;
+  try {
+    const { data, error } = await ovSb.from('citizens').select('siindex_paused_until').single();
+    if (!error && data && data.siindex_paused_until) until = new Date(data.siindex_paused_until).getTime();
+  } catch (e) { /* leave banner hidden on read failure */ }
   if(until && until > Date.now()){
     const remaining = until - Date.now();
     const h = Math.floor(remaining/3600000);
