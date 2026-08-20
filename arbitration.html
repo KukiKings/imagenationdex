@@ -107,6 +107,42 @@
 
   .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#1E2130;border:1px solid var(--border);border-radius:12px;padding:11px 20px;font-size:13px;font-weight:600;white-space:nowrap;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;}
   .toast.show{opacity:1;}
+
+  /* GOD MODE ADDITIONS */
+  .countdown-urgent{color:var(--red) !important;animation:pulseUrgent 1.4s ease-in-out infinite;}
+  @keyframes pulseUrgent{0%,100%{opacity:1;}50%{opacity:0.5;}}
+
+  .my-cases-toggle{display:flex;align-items:center;justify-content:space-between;margin:14px 20px 0;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;cursor:pointer;}
+  .my-cases-toggle-label{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;}
+  .my-cases-count{font-size:11px;font-weight:700;background:rgba(0,212,255,0.1);color:var(--cyan);border:1px solid rgba(0,212,255,0.2);border-radius:20px;padding:2px 9px;}
+  .my-cases-chevron{font-size:12px;color:var(--text-muted);transition:transform 0.25s ease;}
+  .my-cases-chevron.open{transform:rotate(180deg);}
+  .my-cases-list{margin:0 20px;overflow:hidden;max-height:0;transition:max-height 0.3s ease;}
+  .my-cases-list.open{max-height:600px;}
+  .my-case-row{padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-top:8px;}
+  .my-case-row-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+  .my-case-type{font-size:12px;font-weight:700;}
+  .my-case-status{font-size:9px;font-weight:700;padding:2px 7px;border-radius:5px;background:rgba(255,184,0,0.1);color:var(--gold);border:1px solid rgba(255,184,0,0.2);}
+  .my-case-meta{font-size:11px;color:var(--text-muted);line-height:1.5;}
+  .my-cases-empty{font-size:12px;color:var(--text-muted);padding:14px;text-align:center;}
+
+  .sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.75);z-index:290;display:none;}
+  .sheet-overlay.show{display:block;}
+  .bottom-sheet{position:fixed;left:50%;bottom:0;transform:translate(-50%,100%);width:100%;max-width:430px;background:var(--surface);border:1px solid var(--border);border-bottom:none;border-radius:20px 20px 0 0;z-index:300;padding:18px 20px calc(20px + env(safe-area-inset-bottom));transition:transform 0.3s ease;max-height:82vh;overflow-y:auto;}
+  .bottom-sheet.show{transform:translate(-50%,0);}
+  .sheet-handle{width:36px;height:4px;background:var(--surface3);border-radius:2px;margin:0 auto 16px;}
+  .sheet-title{font-size:16px;font-weight:800;margin-bottom:4px;}
+  .sheet-sub{font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.5;}
+  .confirm-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:10px 0;border-bottom:1px solid rgba(42,45,56,0.5);}
+  .confirm-row:last-of-type{border-bottom:none;}
+  .confirm-label{color:var(--text-muted);}
+  .confirm-val{font-weight:700;text-align:right;}
+  .confirm-usd{font-size:10px;color:var(--text-muted);font-weight:500;margin-top:2px;}
+  .confirm-warn{margin-top:12px;padding:10px 12px;background:rgba(255,77,109,0.08);border:1px solid rgba(255,77,109,0.2);border-radius:10px;font-size:11px;color:var(--red);line-height:1.5;display:none;}
+  .confirm-warn.show{display:block;}
+
+  .juror-progress-track{height:8px;border-radius:4px;background:var(--surface3);overflow:hidden;margin:10px 0;}
+  .juror-progress-fill{height:100%;background:linear-gradient(90deg,var(--cyan),var(--green));width:0%;transition:width 0.9s ease;}
 </style>
 </head>
 <body>
@@ -152,6 +188,14 @@
     <!-- CASES -->
     <div id="panel-cases">
 
+      <div class="my-cases-toggle" onclick="toggleMyCases()">
+        <div class="my-cases-toggle-label">📁 My Filed Cases <span class="my-cases-count" id="myCasesCount">0</span></div>
+        <div class="my-cases-chevron" id="myCasesChevron">▾</div>
+      </div>
+      <div class="my-cases-list" id="myCasesList">
+        <div class="my-cases-empty" id="myCasesEmpty">You haven't filed a case yet. Use the File Case tab to open a dispute.</div>
+      </div>
+
       <div class="case-card" onclick="openVerdict()">
         <div class="cc-top">
           <div class="cc-id">CASE-2024-0047</div>
@@ -164,7 +208,7 @@
           <div class="cc-vs">vs</div>
           <div class="party-chip">🎨 kiri.IN$DEX (Respondent)</div>
         </div>
-        <div class="cc-escrow">🔒 5,400 INDX in escrow · Decision in <strong style="color:var(--gold)">18h 22m</strong></div>
+        <div class="cc-escrow">🔒 5,400 INDX in escrow · Decision in <strong style="color:var(--gold)" id="verdictCountdown">18h 22m</strong></div>
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <div class="cc-jury-row">
             <div class="juror-av" style="background:linear-gradient(135deg,#8B3FE8,#00D4FF)">AT</div>
@@ -246,7 +290,8 @@
       </div>
       <div style="padding:16px 20px;background:rgba(0,212,255,0.05);margin:12px 20px;border-radius:12px;border:1px solid rgba(0,212,255,0.1);">
         <div style="font-size:13px;font-weight:700;margin-bottom:4px;">Your Juror Status</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">WS 62 / 100 needed to join jury pool. <strong style="color:var(--cyan)">38 points to go.</strong></div>
+        <div style="font-size:12px;color:var(--text-muted);" id="jurorWsText">WS 62 / 100 needed to join jury pool. <strong style="color:var(--cyan)" id="jurorWsRemaining">38 points to go.</strong></div>
+        <div class="juror-progress-track"><div class="juror-progress-fill" id="jurorWsFill"></div></div>
         <div onclick="window.location.href='wisdom-score.html'" style="font-size:13px;font-weight:700;color:var(--cyan);cursor:pointer;">Earn Wisdom Score →</div>
       </div>
     </div>
@@ -255,8 +300,8 @@
     <div id="panel-file" style="display:none;">
       <div class="file-form">
         <div class="form-label">Case Type</div>
-        <select class="form-select">
-          <option>Select dispute type…</option>
+        <select class="form-select" id="caseTypeInput">
+          <option value="">Select dispute type…</option>
           <option>Escrow / Non-delivery</option>
           <option>Item not as described</option>
           <option>Royalty / IP dispute</option>
@@ -265,9 +310,9 @@
           <option>Other</option>
         </select>
         <div class="form-label">Respondent</div>
-        <input class="form-input" placeholder="e.g. kiri.IN$DEX" type="text">
+        <input class="form-input" id="respondentInput" placeholder="e.g. kiri.IN$DEX" type="text">
         <div class="form-label">Case Summary</div>
-        <textarea class="form-textarea" placeholder="Describe the dispute clearly. Include dates, amounts, and what resolution you seek…"></textarea>
+        <textarea class="form-textarea" id="caseSummaryInput" placeholder="Describe the dispute clearly. Include dates, amounts, and what resolution you seek…"></textarea>
         <div class="form-label">Evidence (optional)</div>
         <div class="evidence-row">
           <div class="evi-slot" onclick="showToast('Attach screenshot')">📸</div>
@@ -278,7 +323,7 @@
         <div class="stake-notice">
           <strong>⚠️ Filing Bond:</strong> A 50 INDX bond is staked when filing. If your case is dismissed as frivolous, you forfeit the bond. Winning cases receive the bond back plus respondent costs.
         </div>
-        <button class="file-btn" onclick="fileCase()">File Case · 50 INDX Bond</button>
+        <button class="file-btn" onclick="openFileConfirm()">File Case · 50 INDX Bond</button>
       </div>
     </div>
 
@@ -317,9 +362,149 @@
   </div>
 </div>
 
+<div class="sheet-overlay" id="fileConfirmOverlay" onclick="closeFileConfirm()"></div>
+<div class="bottom-sheet" id="fileConfirmSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">⚖️ Confirm Case Filing</div>
+  <div class="sheet-sub">Review your case before it's submitted to the Sovereign Court. Filing is final once confirmed.</div>
+  <div class="confirm-row">
+    <div class="confirm-label">Case Type</div>
+    <div class="confirm-val" id="confirmType">—</div>
+  </div>
+  <div class="confirm-row">
+    <div class="confirm-label">Respondent</div>
+    <div class="confirm-val" id="confirmRespondent">—</div>
+  </div>
+  <div class="confirm-row">
+    <div class="confirm-label">Filing Bond</div>
+    <div>
+      <div class="confirm-val">50 INDX</div>
+      <div class="confirm-usd" id="confirmBondUsd">≈ $12.00 USD</div>
+    </div>
+  </div>
+  <div class="confirm-row">
+    <div class="confirm-label">Your Balance</div>
+    <div class="confirm-val" id="confirmBalance">0 INDX</div>
+  </div>
+  <div class="confirm-warn" id="confirmWarn">⚠️ Insufficient balance for the 50 INDX filing bond.</div>
+  <div class="modal-btn-row" style="margin-top:16px;">
+    <button class="modal-btn mbtn-cancel" onclick="closeFileConfirm()">Cancel</button>
+    <button class="modal-btn mbtn-primary" id="confirmFileBtn" onclick="fileCase()">Confirm &amp; File</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
+  // GOD MODE ADDITIONS
+  const INDX_PRICE_USD = 0.24;
+  const LS_DEADLINE_KEY = 'indx_arbitration_verdict_deadline';
+  const LS_FILED_CASES_KEY = 'indx_arbitration_filed_cases';
+  let countdownTimer = null;
+
+  function initVerdictCountdown() {
+    let deadline = parseInt(localStorage.getItem(LS_DEADLINE_KEY) || '0', 10);
+    if (!deadline || deadline < Date.now()) {
+      deadline = Date.now() + (18 * 60 * 60 * 1000) + (22 * 60 * 1000);
+      localStorage.setItem(LS_DEADLINE_KEY, String(deadline));
+    }
+    const tick = () => {
+      const el = document.getElementById('verdictCountdown');
+      if (!el) return;
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) {
+        el.textContent = 'Verdict pending';
+        el.classList.add('countdown-urgent');
+        clearInterval(countdownTimer);
+        return;
+      }
+      const h = Math.floor(remaining / 3600000);
+      const m = Math.floor((remaining % 3600000) / 60000);
+      el.textContent = h + 'h ' + m + 'm';
+      el.classList.toggle('countdown-urgent', remaining < 3600000);
+    };
+    tick();
+    countdownTimer = setInterval(tick, 30000);
+  }
+
+  function getFiledCases() {
+    try { return JSON.parse(localStorage.getItem(LS_FILED_CASES_KEY) || '[]'); }
+    catch (e) { return []; }
+  }
+
+  function renderMyCases() {
+    const cases = getFiledCases();
+    const countEl = document.getElementById('myCasesCount');
+    const listEl = document.getElementById('myCasesList');
+    if (countEl) countEl.textContent = String(cases.length);
+    if (!listEl) return;
+    if (!cases.length) {
+      listEl.innerHTML = '<div class="my-cases-empty" id="myCasesEmpty">You haven\'t filed a case yet. Use the File Case tab to open a dispute.</div>';
+      return;
+    }
+    listEl.innerHTML = cases.slice().reverse().map(c => (
+      '<div class="my-case-row">' +
+        '<div class="my-case-row-top"><div class="my-case-type">' + escapeHtml(c.type || 'Dispute') + '</div><div class="my-case-status">' + escapeHtml(c.status || 'Filed') + '</div></div>' +
+        '<div class="my-case-meta">vs ' + escapeHtml(c.respondent || 'Unknown') + ' · ' + escapeHtml(c.date || '') + ' · 50 INDX bond staked</div>' +
+      '</div>'
+    )).join('');
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+  }
+
+  function toggleMyCases() {
+    const listEl = document.getElementById('myCasesList');
+    const chevEl = document.getElementById('myCasesChevron');
+    if (!listEl) return;
+    listEl.classList.toggle('open');
+    if (chevEl) chevEl.classList.toggle('open');
+  }
+
+  function openFileConfirm() {
+    const type = document.getElementById('caseTypeInput');
+    const respondent = document.getElementById('respondentInput');
+    const summary = document.getElementById('caseSummaryInput');
+    if (!type.value) { showToast('Select a case type first'); return; }
+    if (!respondent.value.trim()) { showToast('Enter a respondent handle first'); return; }
+    if (!summary.value.trim()) { showToast('Add a case summary first'); return; }
+
+    document.getElementById('confirmType').textContent = type.value;
+    document.getElementById('confirmRespondent').textContent = respondent.value.trim();
+    document.getElementById('confirmBondUsd').textContent = '≈ $' + (50 * INDX_PRICE_USD).toFixed(2) + ' USD';
+
+    const balance = parseFloat(sessionStorage.getItem('citizen_balance') || '0');
+    document.getElementById('confirmBalance').textContent = balance.toLocaleString() + ' INDX';
+    const warnEl = document.getElementById('confirmWarn');
+    const btnEl = document.getElementById('confirmFileBtn');
+    const insufficient = balance < 50;
+    warnEl.classList.toggle('show', insufficient);
+    btnEl.disabled = insufficient;
+    btnEl.style.opacity = insufficient ? '0.5' : '1';
+
+    document.getElementById('fileConfirmOverlay').classList.add('show');
+    document.getElementById('fileConfirmSheet').classList.add('show');
+  }
+
+  function closeFileConfirm() {
+    document.getElementById('fileConfirmOverlay').classList.remove('show');
+    document.getElementById('fileConfirmSheet').classList.remove('show');
+  }
+
+  function updateJurorEligibility() {
+    const ws = parseInt(sessionStorage.getItem('citizen_wisdom') || '62', 10);
+    const need = Math.max(0, 100 - ws);
+    const textEl = document.getElementById('jurorWsText');
+    const remainingEl = document.getElementById('jurorWsRemaining');
+    const fillEl = document.getElementById('jurorWsFill');
+    if (textEl && remainingEl) {
+      textEl.childNodes[0].nodeValue = 'WS ' + ws + ' / 100 needed to join jury pool. ';
+      remainingEl.textContent = need > 0 ? (need + ' points to go.') : 'Eligible for jury duty!';
+    }
+    if (fillEl) fillEl.style.width = Math.min(100, ws) + '%';
+  }
+
   function switchTab(name) {
     ['cases','jury','file'].forEach(t => {
       document.getElementById('tab-'+t).classList.toggle('active', t===name);
@@ -331,13 +516,44 @@
     document.getElementById('overlay').classList.remove('show');
     showToast(side === 'claimant' ? '✓ Voted: Claimant wins · +5 INDX earned' : '✓ Voted: Respondent wins · +5 INDX earned');
   }
-  function fileCase() { showToast('Filing case… 50 INDX bond required'); }
+  // GOD MODE PATCH — now finalises filing from the confirmation sheet, persists to localStorage, and checks bond balance
+  function fileCase() {
+    const balance = parseFloat(sessionStorage.getItem('citizen_balance') || '0');
+    if (balance < 50) { showToast('Insufficient balance for the 50 INDX bond'); return; }
+
+    const type = document.getElementById('caseTypeInput').value || 'Dispute';
+    const respondent = document.getElementById('respondentInput').value.trim() || 'Unknown';
+    const cases = getFiledCases();
+    cases.push({
+      id: 'CASE-' + new Date().getFullYear() + '-' + String(1000 + cases.length),
+      type: type,
+      respondent: respondent,
+      status: 'Filed',
+      date: new Date().toLocaleDateString()
+    });
+    localStorage.setItem(LS_FILED_CASES_KEY, JSON.stringify(cases));
+    renderMyCases();
+    closeFileConfirm();
+
+    document.getElementById('caseTypeInput').value = '';
+    document.getElementById('respondentInput').value = '';
+    document.getElementById('caseSummaryInput').value = '';
+
+    showToast('✓ Case filed · 50 INDX bond staked');
+    switchTab('cases');
+  }
   function showToast(msg) {
     const t = document.getElementById('toast');
     t.textContent = msg;
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2400);
   }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    initVerdictCountdown();
+    renderMyCases();
+    updateJurorEligibility();
+  });
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>
