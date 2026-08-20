@@ -403,6 +403,16 @@
     withdraw:{ icon:'⬆️',cat:'with',  cls:'with',  label:'Withdraw', sign:'-' },
     swap:   { icon:'🔄', cat:'swap',  cls:'swap',  label:'Swap',     sign:'' },
   };
+  // FIXED: the real-data render path used to hardcode every transaction's
+  // status badge to "Complete" regardless of its actual status column. That
+  // silently contradicted screens like buy-indx.html, which honestly tell a
+  // citizen "nothing was charged yet" while inserting a status:'pending' row
+  // for record-keeping — this page then showed that same row as ✅ Complete.
+  const STATUS_META = {
+    complete: { cls: 'complete', label: 'Complete' },
+    pending:  { cls: 'pending',  label: 'Pending'  },
+    failed:   { cls: 'failed',   label: 'Failed'   },
+  };
 
   function fmtDate(iso) {
     const d = new Date(iso);
@@ -450,9 +460,13 @@
         return;
       }
 
-      // Summary counts
+      // Summary counts — FIXED: was summing every row regardless of status,
+      // so a never-reconciled 'pending' row (e.g. a PayID/USDC reference the
+      // citizen was told "nothing was charged" for) inflated the real
+      // Total In figure with money that was never actually received.
       let totalIn = 0, totalOut = 0;
       txs.forEach(tx => {
+        if ((tx.status || '').toLowerCase() !== 'complete') return;
         const m = DIR_META[tx.direction] || {};
         if (m.sign === '+') totalIn += (tx.amount_indx || 0);
         if (m.sign === '-') totalOut += (tx.amount_indx || 0);
@@ -479,6 +493,7 @@
           const amtCls = m.sign === '+' ? 'pos' : m.sign === '-' ? 'neg' : 'neutral';
           const counterpart = tx.counterparty_address ? `· ${tx.counterparty_address}` : '';
           const time = fmtTime(tx.created_at || new Date().toISOString());
+          const sMeta = STATUS_META[(tx.status || '').toLowerCase()] || { cls: 'pending', label: tx.status || 'Pending' };
           html += `
 <div class="tx-item" data-cat="${m.cat}">
   <div class="tx-icon ${m.cls}">${m.icon}</div>
@@ -489,7 +504,7 @@
   <div class="tx-right">
     <div class="tx-amount ${amtCls}">${display}</div>
     <div class="tx-time">${time}</div>
-    <div class="tx-status complete">Complete</div>
+    <div class="tx-status ${sMeta.cls}">${sMeta.label}</div>
   </div>
 </div>`;
         });
