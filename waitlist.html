@@ -411,6 +411,20 @@
         try { localStorage.setItem('siindex_citizen_waitlist_id', result.id); } catch (_) {}
       }
 
+      // Link this waitlist row to the real auth session, if one exists (email
+      // OTP path only — phone-only signups have no session to link, per the
+      // honesty comment above). Best-effort, non-blocking: the row is already
+      // saved either way, this just makes it re-readable later by the citizen
+      // who owns it, via link_waitlist_to_session (see waitlist_auth_link_v1
+      // migration, 2026-08-20). Without this, founding-citizen.html has no
+      // safe way to look up a citizen's own application after signup.
+      if (result.id) {
+        try {
+          const { data: { session } } = await wlAuthClient.auth.getSession();
+          if (session) await wlAuthClient.rpc('link_waitlist_to_session', { p_waitlist_id: result.id });
+        } catch (_) { /* best-effort — signup already succeeded regardless */ }
+      }
+
       document.getElementById('signupForm').style.display = 'none';
       document.getElementById('otpCard').style.display = 'none';
       document.getElementById('shareCard').style.display = 'none';

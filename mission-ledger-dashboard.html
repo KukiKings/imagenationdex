@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Mission Ledger IN$DEX</title>
+<meta name="description" content="Your founding-citizen business validation record — real, read-only, from your actual mission_ledger row.">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --cyan: #00D4FF; --blue: #2B35D8; --purple: #8B3FE8;
+    --black: #090A10; --green: #00E5A0; --gold: #FFB800;
+    --red: #FF4D6D; --surface: #12141F; --surface2: #1A1D2E;
+    --surface3: #22263A; --text: #F0F2FF; --text2: #A0A8C8;
+    --text-muted: #5A6080;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { background:var(--black); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; max-width:430px; margin:0 auto; min-height:100vh; }
+  .topbar { background:var(--surface); border-bottom:1px solid rgba(255,255,255,0.06); padding:14px 16px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:100; }
+  .back-btn { width:36px; height:36px; border:none; background:var(--surface2); border-radius:10px; color:var(--text); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; text-decoration:none; }
+  .topbar-title { font-size:16px; font-weight:600; flex:1; }
+  .content { padding:16px; padding-bottom:40px; }
+
+  .status-banner { background:var(--surface); border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:14px 16px; margin-bottom:16px; font-size:12px; color:var(--text-muted); line-height:1.5; }
+  .status-banner strong { color:var(--text2); }
+
+  .card { background:var(--surface); border-radius:14px; padding:18px; margin-bottom:16px; }
+  .card-title { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+  .card-value { font-size:20px; font-weight:800; }
+  .card-sub { font-size:12px; color:var(--text2); margin-top:4px; }
+
+  .status-pill { display:inline-block; font-size:11px; font-weight:700; padding:4px 10px; border-radius:8px; text-transform:capitalize; }
+  .status-pill.active, .status-pill.in_progress { background:#00D4FF18; color:var(--cyan); }
+  .status-pill.completed { background:#00E5A018; color:var(--green); }
+  .status-pill.paused, .status-pill.stalled { background:#FFB80018; color:var(--gold); }
+  .status-pill.default { background:var(--surface2); color:var(--text-muted); }
+
+  .row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+  .row:last-child { border-bottom:none; }
+  .row-label { font-size:13px; color:var(--text-muted); }
+  .row-value { font-size:13px; font-weight:600; text-align:right; max-width:60%; }
+
+  .section-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin:20px 0 10px; }
+
+  .reflection-block { font-size:13px; color:var(--text2); line-height:1.6; background:var(--surface2); border-radius:10px; padding:14px; margin-top:8px; }
+
+  .empty-state { text-align:center; padding:60px 20px; }
+  .empty-icon { font-size:40px; margin-bottom:12px; }
+  .empty-title { font-size:16px; font-weight:700; margin-bottom:8px; }
+  .empty-desc { font-size:13px; color:var(--text-muted); line-height:1.6; }
+  .empty-cta { display:inline-block; margin-top:16px; padding:12px 20px; background:linear-gradient(135deg,var(--blue),var(--purple)); border-radius:10px; color:#fff; font-size:13px; font-weight:600; text-decoration:none; }
+
+  .skeleton { background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%); background-size:200% 100%; animation:shimmer 1.2s infinite; border-radius:8px; height:60px; margin-bottom:16px; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html" class="back-btn">←</a>
+  <div class="topbar-title">Mission Ledger</div>
+</div>
+
+<div class="content">
+
+  <!--
+    Built 2026-08-20. Read-only by design: mission_ledger has SELECT-only
+    RLS policies (mission_ledger_citizen_select scoped to auth.uid() =
+    citizen_user_id; mission_ledger_founder_select for founders). There is
+    no INSERT/UPDATE policy for citizens and no record_mission_event RPC —
+    a prior draft of this screen assumed both existed. They don't. This
+    screen only displays what's already recorded against your account;
+    it does not let you create or edit a mission from here.
+  -->
+  <div class="status-banner">
+    <strong>What this is:</strong> your founding-citizen business validation record — application status, cohort position, and outcomes, exactly as recorded on your account. This is a live view, not an editable form; missions are recorded by the IN$DEX team, not self-reported here.
+  </div>
+
+  <div id="loadingState">
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+  </div>
+
+  <div id="emptyState" style="display:none;" class="empty-state">
+    <div class="empty-icon">📋</div>
+    <div class="empty-title" id="emptyTitle">No mission on record yet</div>
+    <div class="empty-desc" id="emptyDesc">Nothing has been recorded against your account yet. If you're expecting a founding-citizen mission here, check back after your application is reviewed.</div>
+    <a href="waitlist.html" class="empty-cta" id="emptyCta">Join the waitlist</a>
+  </div>
+
+  <div id="ledgerContent" style="display:none;">
+
+    <div class="card">
+      <div class="card-title">Application</div>
+      <div class="card-value" id="appNumber">—</div>
+      <div class="card-sub" id="cohortPosition"></div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <div class="row-label">Status</div>
+        <div class="row-value"><span class="status-pill default" id="statusPill">—</span></div>
+      </div>
+      <div class="row">
+        <div class="row-label">Goal</div>
+        <div class="row-value" id="goalValue">—</div>
+      </div>
+      <div class="row">
+        <div class="row-label">Founding offer</div>
+        <div class="row-value" id="offerValue">—</div>
+      </div>
+    </div>
+
+    <div class="section-label">Validation Evidence</div>
+    <div class="card">
+      <div class="row">
+        <div class="row-label">Revenue collected</div>
+        <div class="row-value" id="revenueValue">—</div>
+      </div>
+      <div class="row">
+        <div class="row-label">Deposits collected</div>
+        <div class="row-value" id="depositsValue">—</div>
+      </div>
+      <div class="row">
+        <div class="row-label">Gross profit</div>
+        <div class="row-value" id="profitValue">—</div>
+      </div>
+      <div class="row">
+        <div class="row-label">Fulfillment status</div>
+        <div class="row-value" id="fulfillmentValue">—</div>
+      </div>
+    </div>
+
+    <div class="section-label" id="reflectionLabel" style="display:none;">Reflection</div>
+    <div class="reflection-block" id="reflectionBlock" style="display:none;"></div>
+
+    <div class="section-label" id="nextLabel" style="display:none;">Next Opportunity</div>
+    <div class="reflection-block" id="nextBlock" style="display:none;"></div>
+
+  </div>
+
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc3NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  function fmtMoney(amount, currency) {
+    if (amount === null || amount === undefined) return '—';
+    const n = Number(amount);
+    const code = currency || 'AUD';
+    try {
+      return new Intl.NumberFormat('en-AU', { style: 'currency', currency: code }).format(n);
+    } catch (e) {
+      return code + ' ' + n.toFixed(2);
+    }
+  }
+
+  function setStatusPill(status) {
+    const el = document.getElementById('statusPill');
+    const clean = (status || '').toLowerCase().replace(/\s+/g, '_');
+    el.textContent = status || 'Unrecorded';
+    el.className = 'status-pill ' + (clean || 'default');
+  }
+
+  async function loadMissionLedger() {
+    const loading = document.getElementById('loadingState');
+    const empty = document.getElementById('emptyState');
+    const content = document.getElementById('ledgerContent');
+
+    const { data: { user }, error: userErr } = await sb.auth.getUser();
+    if (userErr || !user) {
+      loading.style.display = 'none';
+      empty.style.display = '';
+      document.getElementById('emptyTitle').textContent = 'Sign in to view your mission';
+      document.getElementById('emptyDesc').textContent = 'Mission Ledger records are tied to your signed-in account. Sign in to see what\'s recorded against yours.';
+      document.getElementById('emptyCta').textContent = 'Sign in';
+      document.getElementById('emptyCta').href = 'login.html';
+      return;
+    }
+
+    // RLS scopes this to auth.uid() = citizen_user_id automatically —
+    // no need to filter client-side, but the .eq() also makes the intent
+    // explicit and keeps this working if RLS is ever loosened for admins.
+    const { data, error } = await sb
+      .from('mission_ledger')
+      .select('application_number, cohort_position, goal, founding_offer, status, revenue_amount, currency_code, deposits_collected, gross_profit, fulfillment_status, citizen_reflection, next_opportunity')
+      .eq('citizen_user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    loading.style.display = 'none';
+
+    if (error || !data) {
+      empty.style.display = '';
+      return;
+    }
+
+    content.style.display = '';
+
+    document.getElementById('appNumber').textContent = data.application_number
+      ? 'Founding Application #' + data.application_number
+      : 'Application on record';
+    document.getElementById('cohortPosition').textContent = data.cohort_position
+      ? 'Cohort position ' + data.cohort_position
+      : '';
+
+    setStatusPill(data.status);
+    document.getElementById('goalValue').textContent = data.goal || 'Not set';
+    document.getElementById('offerValue').textContent = data.founding_offer || 'Not set';
+
+    document.getElementById('revenueValue').textContent = fmtMoney(data.revenue_amount, data.currency_code);
+    document.getElementById('depositsValue').textContent = fmtMoney(data.deposits_collected, data.currency_code);
+    document.getElementById('profitValue').textContent = fmtMoney(data.gross_profit, data.currency_code);
+    document.getElementById('fulfillmentValue').textContent = data.fulfillment_status || 'Not started';
+
+    if (data.citizen_reflection) {
+      document.getElementById('reflectionLabel').style.display = '';
+      document.getElementById('reflectionBlock').style.display = '';
+      document.getElementById('reflectionBlock').textContent = data.citizen_reflection;
+    }
+    if (data.next_opportunity) {
+      document.getElementById('nextLabel').style.display = '';
+      document.getElementById('nextBlock').style.display = '';
+      document.getElementById('nextBlock').textContent = data.next_opportunity;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', loadMissionLedger);
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

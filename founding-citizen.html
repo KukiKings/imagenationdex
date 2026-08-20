@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Founding Citizen Status IN$DEX</title>
+<meta name="description" content="Your real Founding Citizen application status — application number, cohort position, and which benefits are live today versus planned.">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --cyan: #00D4FF; --blue: #2B35D8; --purple: #8B3FE8;
+    --black: #090A10; --green: #00E5A0; --gold: #FFB800;
+    --red: #FF4D6D; --surface: #12141F; --surface2: #1A1D2E;
+    --surface3: #22263A; --text: #F0F2FF; --text2: #A0A8C8;
+    --text-muted: #5A6080;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { background:var(--black); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; max-width:430px; margin:0 auto; min-height:100vh; }
+  .topbar { background:var(--surface); border-bottom:1px solid rgba(255,255,255,0.06); padding:14px 16px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:100; }
+  .back-btn { width:36px; height:36px; border:none; background:var(--surface2); border-radius:10px; color:var(--text); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; text-decoration:none; }
+  .topbar-title { font-size:16px; font-weight:600; flex:1; }
+  .content { padding:16px; padding-bottom:40px; }
+
+  .hero-card { background:linear-gradient(135deg,rgba(43,53,216,0.2),rgba(139,63,232,0.2)); border:1px solid rgba(139,63,232,0.3); border-radius:16px; padding:22px; text-align:center; margin-bottom:16px; }
+  .hero-num { font-size:32px; font-weight:900; background:linear-gradient(135deg,var(--cyan),var(--purple)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .hero-sub { font-size:13px; color:var(--text2); margin-top:6px; }
+
+  .card { background:var(--surface); border-radius:14px; padding:16px; margin-bottom:16px; }
+  .section-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin:20px 0 10px; }
+
+  .benefit-row { display:flex; align-items:flex-start; gap:12px; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+  .benefit-row:last-child { border-bottom:none; }
+  .benefit-icon { font-size:20px; flex-shrink:0; width:28px; text-align:center; }
+  .benefit-info { flex:1; }
+  .benefit-title { font-size:13px; font-weight:600; margin-bottom:2px; }
+  .benefit-desc { font-size:12px; color:var(--text-muted); line-height:1.4; }
+  .benefit-status { font-size:10px; font-weight:700; padding:3px 8px; border-radius:6px; white-space:nowrap; margin-top:2px; display:inline-block; }
+  .benefit-status.live { background:#00E5A018; color:var(--green); }
+  .benefit-status.planned { background:#FFB80018; color:var(--gold); }
+
+  .status-banner { background:var(--surface); border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:14px 16px; margin-bottom:16px; font-size:12px; color:var(--text-muted); line-height:1.5; }
+
+  .empty-state { text-align:center; padding:60px 20px; }
+  .empty-icon { font-size:40px; margin-bottom:12px; }
+  .empty-title { font-size:16px; font-weight:700; margin-bottom:8px; }
+  .empty-desc { font-size:13px; color:var(--text-muted); line-height:1.6; }
+  .empty-cta { display:inline-block; margin-top:16px; padding:12px 20px; background:linear-gradient(135deg,var(--blue),var(--purple)); border-radius:10px; color:#fff; font-size:13px; font-weight:600; text-decoration:none; }
+
+  .skeleton { background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%); background-size:200% 100%; animation:shimmer 1.2s infinite; border-radius:8px; height:80px; margin-bottom:16px; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html" class="back-btn">←</a>
+  <div class="topbar-title">Founding Citizen Status</div>
+</div>
+
+<div class="content">
+
+  <div id="loadingState">
+    <div class="skeleton"></div>
+  </div>
+
+  <div id="emptyState" style="display:none;" class="empty-state">
+    <div class="empty-icon">🌺</div>
+    <div class="empty-title" id="emptyTitle">Not on the waitlist yet</div>
+    <div class="empty-desc" id="emptyDesc">Founding Citizen status is simply being on the waitlist before the public pilot launches. You're not signed in with an application linked to this account yet.</div>
+    <a href="waitlist.html" class="empty-cta" id="emptyCta">Apply as a Founding Citizen</a>
+  </div>
+
+  <div id="statusContent" style="display:none;">
+    <div class="hero-card">
+      <div class="hero-num" id="appNumber">#—</div>
+      <div class="hero-sub" id="cohortSub">Founding Citizen application</div>
+    </div>
+
+    <div class="status-banner">
+      <strong>What "Founding Citizen" means:</strong> anyone who joins the waitlist before the controlled public pilot (target: 24 February 2027) is a Founding Citizen. There's no separate tier or cutoff number — this is your real application record, not a promotional label.
+    </div>
+
+    <div class="section-label">Benefits — real status, not a promise list</div>
+    <div class="card">
+      <div class="benefit-row">
+        <div class="benefit-icon">🏷️</div>
+        <div class="benefit-info">
+          <div class="benefit-title">Priority domain claim</div>
+          <div class="benefit-desc">Reserve your .IN$DEX name before public launch — real, backend-persisted reservation.</div>
+        </div>
+        <div class="benefit-status live">Live now</div>
+      </div>
+      <div class="benefit-row">
+        <div class="benefit-icon">🆔</div>
+        <div class="benefit-info">
+          <div class="benefit-title">Sovereign digital identity</div>
+          <div class="benefit-desc">Full Tier 0 identity and Grid Account onboarding.</div>
+        </div>
+        <div class="benefit-status planned">Planned</div>
+      </div>
+      <div class="benefit-row">
+        <div class="benefit-icon">🗳️</div>
+        <div class="benefit-info">
+          <div class="benefit-title">Governance participation</div>
+          <div class="benefit-desc">Wisdom-weighted voting requires full citizen onboarding, not just a waitlist spot.</div>
+        </div>
+        <div class="benefit-status planned">Requires onboarding</div>
+      </div>
+      <div class="benefit-row">
+        <div class="benefit-icon">🪙</div>
+        <div class="benefit-info">
+          <div class="benefit-title">INDX token access</div>
+          <div class="benefit-desc">Distribution is paused platform-wide — this isn't specific to Founding Citizens, nobody has live access yet.</div>
+        </div>
+        <div class="benefit-status planned">Paused</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc3NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // Built 2026-08-20, alongside the waitlist_auth_link_v1 migration. Before
+  // that migration, waitlist had no citizen-facing SELECT policy and no
+  // auth_user_id column — there was no safe way to write this page at all.
+  // Only works for citizens who signed up via the email OTP path (the only
+  // path that creates a real Supabase Auth session right now).
+  async function loadStatus() {
+    const loading = document.getElementById('loadingState');
+    const empty = document.getElementById('emptyState');
+    const content = document.getElementById('statusContent');
+
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) {
+      loading.style.display = 'none';
+      empty.style.display = '';
+      document.getElementById('emptyTitle').textContent = 'Sign in to see your status';
+      document.getElementById('emptyDesc').textContent = 'Your Founding Citizen record is tied to your signed-in account. Sign in with the email you used to join the waitlist.';
+      return;
+    }
+
+    const { data, error } = await sb
+      .from('waitlist')
+      .select('queue_position, created_at')
+      .eq('auth_user_id', user.id)
+      .maybeSingle();
+
+    loading.style.display = 'none';
+
+    if (error || !data) {
+      empty.style.display = '';
+      // Distinguish "no application" from "applied via phone, no session link yet"
+      // isn't possible from here (both look the same — no readable row) —
+      // stay honest rather than guess which one it is.
+      return;
+    }
+
+    content.style.display = '';
+    document.getElementById('appNumber').textContent = data.queue_position
+      ? '#' + data.queue_position.toLocaleString()
+      : 'Application on record';
+    document.getElementById('cohortSub').textContent = data.created_at
+      ? 'Applied ' + new Date(data.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+      : 'Founding Citizen application';
+  }
+
+  document.addEventListener('DOMContentLoaded', loadStatus);
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>
