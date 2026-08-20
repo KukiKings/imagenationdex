@@ -289,9 +289,12 @@
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const citizenId = sessionStorage.getItem('citizen_id');
 
-  const TAKEN = ['admin','index','sol','indx','sovereign','test','john','james','maria','alice','sam','support','help'];
+  // Built 2026-08-20: real availability check + reservation, replacing the
+  // hardcoded TAKEN list and the sessionStorage-only fake claim below.
+  // See supabase/migrations/20260820_domain_reservations_v1.sql.
   let currentDomain = '';
   let checkTimer = null;
+  let checkSeq = 0;
 
   function onDomainInput() {
     const raw = document.getElementById('domainInput').value.toLowerCase().replace(/[^a-z0-9-]/g,'');
@@ -316,7 +319,7 @@
     claimBtn.className = 'claim-btn';
 
     clearTimeout(checkTimer);
-    checkTimer = setTimeout(() => {
+    checkTimer = setTimeout(async () => {
       if (raw.length < 3) {
         feedback.textContent = '⚠ Must be at least 3 characters';
         feedback.className = 'domain-feedback feedback-short';
@@ -324,11 +327,25 @@
       }
       // GOD MODE PATCH: persist searched name to recent-searches history
       saveRecentSearch(raw);
-      const taken = TAKEN.includes(raw);
-      if (taken) {
+
+      const mySeq = ++checkSeq;
+      let available = false;
+      try {
+        const { data, error } = await sb.rpc('check_domain_available', { p_domain: raw });
+        if (error) throw error;
+        available = !!data;
+      } catch (e) {
+        if (mySeq === checkSeq) {
+          feedback.textContent = '⚠ Could not check availability — try again';
+          feedback.className = 'domain-feedback feedback-short';
+        }
+        return;
+      }
+      if (mySeq !== checkSeq) return; // a newer keystroke superseded this check
+
+      if (!available) {
         feedback.textContent = '✗ ' + raw + '.IN$DEX is taken try another';
         feedback.className = 'domain-feedback feedback-taken';
-        // Show alternatives
         showAlternatives(raw);
       } else {
         feedback.textContent = '✓ ' + raw + '.IN$DEX is available!';
@@ -365,16 +382,30 @@
     btn.disabled = true;
     btn.textContent = '⏳ Reserving your domain…';
 
-    // God Mode fix: claim_sovereign_domain does not exist in the live database (checked
-    // 2026-08-20) — every real citizen hit a guaranteed failure here, while anyone
-    // without a citizenId got a fake instant "success" via the old demo-mode branch.
-    // Neither is honest. Domains are issued at launch (24 Jan 2027, see head comment);
-    // until the real RPC exists, this records interest instead of claiming to mint.
-    setTimeout(() => {
-      sessionStorage.setItem('citizen_domain_reserved', currentDomain + '.IN$DEX');
-      document.getElementById('successDomain').textContent = currentDomain + '.IN$DEX';
-      document.getElementById('successOverlay').classList.add('show');
-    }, 1400);
+    // Built 2026-08-20: real RPC, replacing the sessionStorage-only stub.
+    // reserve_domain() requires a real signed-in session (auth.uid()) — the
+    // same requirement as the SIINDEX pause feature, because anon-created
+    // citizens (phone flow, no OTP yet) have no session to scope this to.
+    // This records a reservation, not a mint — issuance is still Planned.
+    const { data, error } = await sb.rpc('reserve_domain', { p_domain: currentDomain });
+
+    if (error || !data || data.ok !== true) {
+      btn.disabled = false;
+      btn.textContent = '🎁 Claim ' + currentDomain + '.IN$DEX FREE';
+      const reason = data && data.error;
+      const msg = reason === 'sign_in_required' || reason === 'no_citizen_record'
+        ? 'Sign in to your IN$DEX account first, then reserve your name.'
+        : reason === 'taken'
+        ? 'Someone just took that name — try another.'
+        : 'Could not reserve right now — try again.';
+      showToast(msg);
+      return;
+    }
+
+    sessionStorage.setItem('citizen_domain_reserved', currentDomain + '.IN$DEX');
+    document.getElementById('successDomain').textContent = currentDomain + '.IN$DEX';
+    document.getElementById('successOverlay').classList.add('show');
+    refreshReservationCount();
   }
 
   function goToDashboard() {
@@ -393,17 +424,8 @@
     toastTimer = setTimeout(() => t.style.opacity = '0', 2600);
   }
 
-  // ── GOD MODE: confirm sheet, recent searches, activity ticker, focus trap ──
+  // ── GOD MODE: confirm sheet, recent searches, focus trap ──
   const RECENT_KEY = 'indx_claim-domain_recentSearches';
-  const ACTIVITY_FEED = [
-    'sam88.IN$DEX just claimed',
-    'nova_x.IN$DEX just claimed',
-    'kaicitizen.IN$DEX just claimed',
-    'lunapay.IN$DEX just claimed',
-    'ren_sol.IN$DEX just claimed',
-    'zoe2027.IN$DEX just claimed'
-  ];
-  let activityIdx = 0;
   let lastFocusedEl = null;
 
   function saveRecentSearch(name) {
@@ -426,18 +448,23 @@
     wrap.classList.add('show');
   }
 
-  function startActivityTicker() {
+  // God Mode fix: this ticker invented named people claiming domains on a
+  // fake timer — same fabricated-social-proof pattern already removed from
+  // claim-gift.html. Replaced with the real, live count from
+  // get_domain_reservation_count(). No names, no invented baseline.
+  async function refreshReservationCount() {
     const el = document.getElementById('activityText');
     if (!el) return;
-    el.textContent = '🔥 ' + ACTIVITY_FEED[0];
-    setInterval(() => {
-      activityIdx = (activityIdx + 1) % ACTIVITY_FEED.length;
-      el.style.opacity = '0';
-      setTimeout(() => {
-        el.textContent = '🔥 ' + ACTIVITY_FEED[activityIdx];
-        el.style.opacity = '1';
-      }, 300);
-    }, 3200);
+    try {
+      const { data, error } = await sb.rpc('get_domain_reservation_count');
+      if (error) throw error;
+      const n = data || 0;
+      el.textContent = n > 0
+        ? '🔥 ' + n.toLocaleString() + ' name' + (n === 1 ? '' : 's') + ' reserved so far'
+        : 'Be the first to reserve your name';
+    } catch (e) {
+      el.textContent = '';
+    }
   }
 
   function openConfirmSheet() {
@@ -482,9 +509,9 @@
       }
     }
 
-    // GOD MODE: render recent search history + start live activity ticker
+    // GOD MODE: render recent search history + show real reservation count
     renderRecentSearches();
-    startActivityTicker();
+    refreshReservationCount();
   });
 </script>
 <script src="siindex-speak-core.js"></script>
