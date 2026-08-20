@@ -87,6 +87,35 @@
     .eu-status{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;flex-shrink:0;}
 
     #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+
+    /* GOD MODE: OVERRIDE ACTIVITY, PAUSE BANNER, CONFIRM SHEET */
+    .pause-banner{display:flex;align-items:center;gap:10px;background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.25);border-radius:12px;padding:10px 14px;margin-bottom:12px;}
+    .pab-ico{font-size:16px;flex-shrink:0;}
+    .pab-text{font-size:12px;font-weight:700;color:var(--gold);}
+
+    .activity-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:4px 14px;margin-bottom:12px;}
+    .activity-empty{padding:16px 4px;text-align:center;color:var(--text-muted);font-size:12px;line-height:1.5;}
+    .activity-item{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border);}
+    .activity-item:last-child{border-bottom:none;}
+    .ai-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+    .ai-dot-pending{background:var(--gold);box-shadow:0 0 0 3px rgba(255,184,0,0.15);animation:aiPulse 1.6s ease-in-out infinite;}
+    .ai-dot-done{background:var(--green);box-shadow:0 0 0 3px rgba(0,229,160,0.15);}
+    @keyframes aiPulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+    .ai-body{flex:1;min-width:0;}
+    .ai-label{font-size:12px;font-weight:700;}
+    .ai-time{font-size:10px;color:var(--text-muted);margin-top:1px;}
+    .ai-countdown{font-size:11px;font-weight:800;color:var(--cyan);flex-shrink:0;text-align:right;white-space:nowrap;}
+
+    .sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.6);opacity:0;pointer-events:none;transition:opacity 0.25s;z-index:98;}
+    .sheet-overlay.show{opacity:1;pointer-events:auto;}
+    .bottom-sheet{position:fixed;left:50%;bottom:0;transform:translate(-50%,100%);width:100%;max-width:430px;background:var(--surface2);border:1px solid var(--border);border-radius:20px 20px 0 0;padding:10px 20px 24px;z-index:99;transition:transform 0.28s cubic-bezier(.2,.9,.3,1);}
+    .bottom-sheet.show{transform:translate(-50%,0);}
+    .sheet-handle{width:36px;height:4px;background:var(--surface3);border-radius:3px;margin:6px auto 16px;}
+    .sheet-title{font-size:16px;font-weight:900;margin-bottom:8px;}
+    .sheet-body{font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:18px;}
+    .sheet-actions{display:flex;gap:10px;}
+    .btn-cancel{flex:1;padding:13px;border-radius:12px;background:var(--surface3);border:1px solid var(--border);color:var(--text);font-size:13px;font-weight:800;cursor:pointer;}
+    .btn-confirm{flex:1;padding:13px;border-radius:12px;background:rgba(255,184,0,0.12);border:1px solid rgba(255,184,0,0.35);color:var(--gold);font-size:13px;font-weight:800;cursor:pointer;}
   </style>
 </head>
 <body>
@@ -149,6 +178,11 @@
 
       <!-- HUMAN OVERRIDE CONTROLS -->
       <div class="section-title">Human override controls</div>
+      <!-- GOD MODE: pause status banner -->
+      <div class="pause-banner" id="pauseActiveBanner" style="display:none;">
+        <div class="pab-ico">🔕</div>
+        <div class="pab-text">Manual review mode active</div>
+      </div>
       <div class="override-card">
         <div class="oc-title">🧑 You're always in charge</div>
         <div class="oc-sub">Any SIINDEX automated action can be challenged or overridden. These buttons are always available they can't be disabled.</div>
@@ -159,7 +193,8 @@
               <div class="or-name">Override account freeze</div>
               <div class="or-desc">Triggers immediate human review within 4 hours</div>
             </div>
-            <button class="btn-override" onclick="showToast('Human review requested 4-hour SLA')">Request</button>
+            <!-- GOD MODE PATCH: now logs to override activity + live countdown, in addition to the toast -->
+            <button class="btn-override" onclick="requestFreezeOverride()">Request</button>
           </div>
           <div class="or-item">
             <div class="or-ico">↩️</div>
@@ -167,7 +202,8 @@
               <div class="or-name">Reverse an AI decision</div>
               <div class="or-desc">Challenge any automated block or rejection</div>
             </div>
-            <button class="btn-override" onclick="showToast('Challenge submitted to review team')">Challenge</button>
+            <!-- GOD MODE PATCH: now logs to override activity + live countdown, in addition to the toast -->
+            <button class="btn-override" onclick="requestChallenge()">Challenge</button>
           </div>
           <div class="or-item">
             <div class="or-ico">🔕</div>
@@ -175,7 +211,8 @@
               <div class="or-name">Pause SIINDEX on my account</div>
               <div class="or-desc">Switch to full manual review for 48 hours</div>
             </div>
-            <button class="btn-override" onclick="showToast('SIINDEX paused manual mode for 48h')">Pause</button>
+            <!-- GOD MODE PATCH: now opens a confirm sheet before pausing (48h change to account protection) -->
+            <button class="btn-override" onclick="openPauseSheet()">Pause</button>
           </div>
           <div class="or-item">
             <div class="or-ico">📞</div>
@@ -183,8 +220,17 @@
               <div class="or-name">Talk to a human right now</div>
               <div class="or-desc">Live support response within 15 minutes</div>
             </div>
-            <button class="btn-override" onclick="showToast('Opening live support chat…')">Connect</button>
+            <!-- GOD MODE PATCH: now logs to override activity + live countdown, in addition to the toast -->
+            <button class="btn-override" onclick="requestLiveSupport()">Connect</button>
           </div>
+        </div>
+      </div>
+
+      <!-- GOD MODE: OVERRIDE REQUEST ACTIVITY -->
+      <div class="section-title">Your override activity</div>
+      <div class="activity-card">
+        <div id="overrideHistoryList">
+          <div class="activity-empty">No requests yet. Actions you take above will appear here with live status.</div>
         </div>
       </div>
 
@@ -285,12 +331,157 @@
     </div>
   </div>
 </div>
+
+<!-- GOD MODE: pause confirmation sheet -->
+<div class="sheet-overlay" id="pauseOverlay" onclick="closePauseSheet()"></div>
+<div class="bottom-sheet" id="pauseSheet" role="dialog" aria-modal="true" aria-labelledby="pauseSheetTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="pauseSheetTitle">Pause SIINDEX for 48 hours?</div>
+  <div class="sheet-body">While paused, every transaction on your account switches to full manual review — nothing is auto-approved or auto-blocked. This can slow down transfers. You can end the pause early at any time from this screen.</div>
+  <div class="sheet-actions">
+    <button class="btn-cancel" onclick="closePauseSheet()">Cancel</button>
+    <button class="btn-confirm" onclick="confirmPauseSiindex()">Confirm 48h pause</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 <script>
 // FIXED 2026-07-25: removed the setInterval that fabricated an ever-climbing
 // "Decisions today" counter (started at 1,284, +1-3 every 4s) — no real SIINDEX
 // decision volume exists pre-launch, so the stat now stays at its honest 0 state.
+
+// GOD MODE: override request activity, live SLA countdowns, pause confirm sheet with focus trap
+const OVERRIDE_HISTORY_KEY = 'indx_ai-oversight_overrides';
+const PAUSE_ACTIVE_KEY = 'indx_ai-oversight_pause_active';
+let pauseSheetTriggerEl = null;
+
+function getOverrideHistory(){
+  try{ return JSON.parse(localStorage.getItem(OVERRIDE_HISTORY_KEY) || '[]'); }catch(e){ return []; }
+}
+function saveOverrideHistory(list){
+  localStorage.setItem(OVERRIDE_HISTORY_KEY, JSON.stringify(list || []));
+}
+function logOverrideRequest(type, label, minutesSLA){
+  const list = getOverrideHistory();
+  const citizenName = sessionStorage.getItem('citizen_name') || 'Citizen';
+  list.unshift({
+    id: Date.now() + '-' + Math.random().toString(36).slice(2,7),
+    type: type,
+    label: label,
+    requestedAt: Date.now(),
+    slaMs: (minutesSLA || 0) * 60000,
+    citizen: citizenName
+  });
+  saveOverrideHistory(list.slice(0,10));
+  renderOverrideHistory();
+}
+function formatCountdown(ms){
+  if(ms<=0) return 'Resolved';
+  const totalMin = Math.ceil(ms/60000);
+  const h = Math.floor(totalMin/60);
+  const m = totalMin%60;
+  if(h>0) return h+'h '+m+'m left';
+  return m+'m left';
+}
+function renderOverrideHistory(){
+  const wrap = document.getElementById('overrideHistoryList');
+  if(!wrap) return;
+  const list = getOverrideHistory();
+  if(list.length===0){
+    wrap.innerHTML = '<div class="activity-empty">No requests yet. Actions you take above will appear here with live status.</div>';
+    return;
+  }
+  wrap.innerHTML = list.map(function(item){
+    const remaining = (item.slaMs||0) - (Date.now() - item.requestedAt);
+    const done = remaining<=0;
+    return '<div class="activity-item" data-requested="'+item.requestedAt+'" data-sla="'+item.slaMs+'">'
+      + '<div class="ai-dot '+(done?'ai-dot-done':'ai-dot-pending')+'"></div>'
+      + '<div class="ai-body"><div class="ai-label">'+item.label+'</div><div class="ai-time">'+new Date(item.requestedAt).toLocaleString()+'</div></div>'
+      + '<div class="ai-countdown">'+(done?'Resolved':formatCountdown(remaining))+'</div>'
+      + '</div>';
+  }).join('');
+}
+function tickOverrideCountdowns(){
+  document.querySelectorAll('.activity-item').forEach(function(row){
+    const requested = parseInt(row.getAttribute('data-requested'),10) || 0;
+    const sla = parseInt(row.getAttribute('data-sla'),10) || 0;
+    const remaining = sla - (Date.now() - requested);
+    const cd = row.querySelector('.ai-countdown');
+    const dot = row.querySelector('.ai-dot');
+    if(cd) cd.textContent = remaining<=0 ? 'Resolved' : formatCountdown(remaining);
+    if(dot) dot.className = 'ai-dot ' + (remaining<=0 ? 'ai-dot-done' : 'ai-dot-pending');
+  });
+}
+function requestFreezeOverride(){
+  logOverrideRequest('freeze','Override account freeze requested',240);
+  showToast('Human review requested — 4-hour SLA');
+}
+function requestChallenge(){
+  logOverrideRequest('challenge','Challenge submitted to review team',1440);
+  showToast('Challenge submitted to review team');
+}
+function requestLiveSupport(){
+  logOverrideRequest('support','Live support requested',15);
+  showToast('Opening live support chat…');
+}
+function openPauseSheet(){
+  pauseSheetTriggerEl = document.activeElement;
+  document.getElementById('pauseOverlay').classList.add('show');
+  document.getElementById('pauseSheet').classList.add('show');
+  const focusable = document.getElementById('pauseSheet').querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+  if(focusable.length) focusable[0].focus();
+  document.addEventListener('keydown', pauseSheetKeyHandler);
+}
+function closePauseSheet(){
+  document.getElementById('pauseOverlay').classList.remove('show');
+  document.getElementById('pauseSheet').classList.remove('show');
+  document.removeEventListener('keydown', pauseSheetKeyHandler);
+  if(pauseSheetTriggerEl && pauseSheetTriggerEl.focus) pauseSheetTriggerEl.focus();
+}
+function pauseSheetKeyHandler(e){
+  const sheet = document.getElementById('pauseSheet');
+  if(e.key==='Escape'){ closePauseSheet(); return; }
+  if(e.key==='Tab'){
+    const focusable = Array.from(sheet.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'));
+    if(!focusable.length) return;
+    const first = focusable[0], last = focusable[focusable.length-1];
+    if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+  }
+}
+function confirmPauseSiindex(){
+  const until = Date.now() + 48*60*60*1000;
+  localStorage.setItem(PAUSE_ACTIVE_KEY, String(until));
+  logOverrideRequest('pause','SIINDEX paused — manual review mode',2880);
+  showToast('SIINDEX paused — manual mode for 48h');
+  closePauseSheet();
+  renderPauseBanner();
+}
+function renderPauseBanner(){
+  const banner = document.getElementById('pauseActiveBanner');
+  if(!banner) return;
+  const until = parseInt(localStorage.getItem(PAUSE_ACTIVE_KEY) || '0', 10);
+  if(until && until > Date.now()){
+    const remaining = until - Date.now();
+    const h = Math.floor(remaining/3600000);
+    const m = Math.floor((remaining%3600000)/60000);
+    banner.querySelector('.pab-text').textContent = 'Manual review mode active — '+h+'h '+m+'m remaining';
+    banner.style.display = 'flex';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2800);}
+
+// GOD MODE: initialize override activity, pause banner, and live countdown ticking
+document.addEventListener('DOMContentLoaded', async function(){
+  renderOverrideHistory();
+  await ovInitSession();
+  await renderPauseBanner();
+  setInterval(tickOverrideCountdowns, 1000);
+  setInterval(renderPauseBanner, 30000);
+});
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>
