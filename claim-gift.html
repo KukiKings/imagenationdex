@@ -92,6 +92,35 @@
 
   .toast { position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(60px); background:var(--surface2); color:var(--text); padding:12px 20px; border-radius:12px; font-size:13px; font-weight:500; transition:transform 0.3s; z-index:200; white-space:nowrap; border:1px solid rgba(0,229,160,0.3); }
   .toast.show { transform:translateX(-50%) translateY(0); }
+
+  /* ── GOD MODE: live countdown, returning-citizen banner, confirm sheet, activity ticker ── */
+  .countdown-wrap { margin-bottom:20px; display:flex; gap:8px; justify-content:center; }
+  .countdown-unit { background:var(--surface2); border:1px solid rgba(0,212,255,0.15); border-radius:10px; padding:8px 10px; min-width:52px; text-align:center; }
+  .countdown-num { font-size:18px; font-weight:800; color:var(--cyan); display:block; line-height:1; }
+  .countdown-num.urgent { color:var(--red); }
+  .countdown-label { font-size:9px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px; display:block; }
+
+  .returning-banner { background:rgba(0,229,160,0.08); border:1px solid rgba(0,229,160,0.3); border-radius:12px; padding:10px 14px; font-size:13px; color:var(--green); margin-bottom:16px; align-items:center; gap:8px; text-align:left; max-width:320px; }
+
+  .activity-ticker { display:flex; align-items:center; gap:8px; background:var(--surface2); border-radius:10px; padding:8px 14px; margin-top:16px; font-size:12px; color:var(--text2); max-width:320px; overflow:hidden; }
+  .activity-dot { width:6px; height:6px; border-radius:50%; background:var(--green); flex-shrink:0; animation:pulse-dot 1.5s ease-in-out infinite; }
+  @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .activity-text { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  .sheet-overlay { position:fixed; inset:0; background:rgba(9,10,16,0.7); z-index:300; opacity:0; pointer-events:none; transition:opacity 0.25s; }
+  .sheet-overlay.show { opacity:1; pointer-events:auto; }
+  .bottom-sheet { position:fixed; left:50%; bottom:0; transform:translateX(-50%) translateY(100%); width:100%; max-width:430px; background:var(--surface); border-radius:24px 24px 0 0; padding:24px 20px 28px; z-index:301; transition:transform 0.3s cubic-bezier(0.2,0.8,0.2,1); border-top:1px solid rgba(255,255,255,0.08); }
+  .bottom-sheet.show { transform:translateX(-50%) translateY(0); }
+  .sheet-handle { width:36px; height:4px; background:var(--surface3); border-radius:2px; margin:0 auto 18px; }
+  .sheet-title { font-size:18px; font-weight:800; margin-bottom:16px; text-align:center; }
+  .confirm-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:14px; }
+  .confirm-row:last-of-type { border-bottom:none; }
+  .confirm-row .cl { color:var(--text-muted); }
+  .confirm-row .cv { color:var(--text); font-weight:600; }
+  .sheet-btn-row { display:flex; gap:10px; margin-top:20px; }
+  .sheet-btn { flex:1; padding:14px; border-radius:14px; font-size:15px; font-weight:700; cursor:pointer; border:none; }
+  .sheet-btn.primary { background:linear-gradient(135deg,var(--blue),var(--purple)); color:#fff; }
+  .sheet-btn.secondary { background:var(--surface2); color:var(--text2); }
 </style>
 </head>
 <body>
@@ -107,6 +136,8 @@
     <div class="from-label">You received a gift from</div>
     <div class="from-name" id="senderName">AJ Henry</div>
 
+    <div class="returning-banner" id="returningBanner" style="display:none;">✅ <span id="returningText">Welcome back</span></div>
+
     <div class="amount-card">
       <span class="amount-num" id="giftAmount">50</span>
       <span class="amount-sym">INDX</span>
@@ -118,9 +149,12 @@
     </div>
 
     <div class="expiry-note">This gift expires in <span id="expiryDays">29 days</span></div>
+    <div class="countdown-wrap" id="countdownWrap"></div>
 
     <button class="claim-btn" onclick="claimGift()">Claim My INDX</button>
     <div class="claim-sub">Takes 90 seconds. No bank needed.</div>
+
+    <div class="activity-ticker" id="activityTicker"><span class="activity-dot"></span><span class="activity-text" id="activityText">Loading recent activity…</span></div>
   </div>
 
   <div class="logo-strip">
@@ -198,7 +232,132 @@
 
 <div class="toast" id="toast"></div>
 
+<div class="sheet-overlay" id="confirmOverlay" onclick="closeConfirmSheet()"></div>
+<div class="bottom-sheet" id="confirmSheet" role="dialog" aria-modal="true" aria-labelledby="confirmSheetTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="confirmSheetTitle">Confirm your gift</div>
+  <div class="confirm-row"><span class="cl">From</span><span class="cv" id="confirmFrom">—</span></div>
+  <div class="confirm-row"><span class="cl">Amount</span><span class="cv" id="confirmAmount">—</span></div>
+  <div class="confirm-row"><span class="cl">USD value</span><span class="cv" id="confirmUSD">—</span></div>
+  <div class="confirm-row"><span class="cl">Expires</span><span class="cv" id="confirmExpiry">—</span></div>
+  <div class="sheet-btn-row">
+    <button class="sheet-btn secondary" onclick="closeConfirmSheet()">Cancel</button>
+    <button class="sheet-btn primary" onclick="confirmClaim()">Confirm &amp; Continue</button>
+  </div>
+</div>
+
 <script>
+  // ── GOD MODE: live countdown, returning-citizen detection, claim confirmation, activity ticker ──
+  const INDX_PRICE_USD = 0.24;
+  let countdownTimer = null;
+  let tickerTimer = null;
+  let sheetKeydownHandler = null;
+
+  function giftSignature(s, a, e) {
+    return (s + '-' + a + '-' + e).replace(/\s+/g, '_').toLowerCase();
+  }
+
+  function getExpiryTarget(sig, expiryDaysVal) {
+    const key = 'indx_claimgift_expiry_' + sig;
+    let target = parseInt(localStorage.getItem(key) || '0');
+    if (!target) {
+      target = Date.now() + expiryDaysVal * 24 * 60 * 60 * 1000;
+      localStorage.setItem(key, String(target));
+    }
+    return target;
+  }
+
+  function renderCountdown(sig, expiryDaysVal) {
+    const wrap = document.getElementById('countdownWrap');
+    if (!wrap) return;
+    const target = getExpiryTarget(sig, expiryDaysVal);
+    const diff = Math.max(0, target - Date.now());
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    const urgent = diff < 24 * 3600000;
+    wrap.innerHTML = [['Days', d], ['Hrs', h], ['Min', m], ['Sec', s]].map(function(pair) {
+      return '<div class="countdown-unit"><span class="countdown-num' + (urgent ? ' urgent' : '') + '">' + String(pair[1]).padStart(2, '0') + '</span><span class="countdown-label">' + pair[0] + '</span></div>';
+    }).join('');
+    if (diff <= 0 && countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+  }
+
+  function startCountdown(sig, expiryDaysVal) {
+    renderCountdown(sig, expiryDaysVal);
+    countdownTimer = setInterval(function() { renderCountdown(sig, expiryDaysVal); }, 1000);
+  }
+
+  function checkReturningCitizen() {
+    const cId = sessionStorage.getItem('citizen_id') || '';
+    const cName = sessionStorage.getItem('citizen_name') || '';
+    const banner = document.getElementById('returningBanner');
+    const textEl = document.getElementById('returningText');
+    if (cId && banner && textEl) {
+      textEl.textContent = 'Welcome back, ' + (cName || 'citizen') + ' — your gift will land straight in your wallet.';
+      banner.style.display = 'flex';
+    }
+  }
+
+  function openConfirmSheet() {
+    document.getElementById('confirmFrom').textContent = sender;
+    document.getElementById('confirmAmount').textContent = amount + ' INDX';
+    document.getElementById('confirmUSD').textContent = '≈ $' + (amount * INDX_PRICE_USD).toFixed(2) + ' USD';
+    document.getElementById('confirmExpiry').textContent = expiry + ' day' + (expiry === 1 ? '' : 's');
+    document.getElementById('confirmOverlay').classList.add('show');
+    const sheet = document.getElementById('confirmSheet');
+    sheet.classList.add('show');
+    sheetKeydownHandler = function(e) {
+      if (e.key === 'Escape') { closeConfirmSheet(); return; }
+      if (e.key === 'Tab') {
+        const focusable = sheet.querySelectorAll('button');
+        if (!focusable.length) return;
+        const first = focusable[0], last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    };
+    document.addEventListener('keydown', sheetKeydownHandler);
+    const firstBtn = sheet.querySelector('.sheet-btn.primary');
+    if (firstBtn) firstBtn.focus();
+  }
+
+  function closeConfirmSheet() {
+    document.getElementById('confirmOverlay').classList.remove('show');
+    document.getElementById('confirmSheet').classList.remove('show');
+    if (sheetKeydownHandler) { document.removeEventListener('keydown', sheetKeydownHandler); sheetKeydownHandler = null; }
+  }
+
+  function confirmClaim() {
+    closeConfirmSheet();
+    const sig = giftSignature(sender, amount, expiry);
+    const history = JSON.parse(localStorage.getItem('indx_claimgift_history') || '[]');
+    if (!history.includes(sig)) {
+      history.push(sig);
+      localStorage.setItem('indx_claimgift_history', JSON.stringify(history));
+      const total = parseInt(localStorage.getItem('indx_claimgift_totalclaims') || '0') + 1;
+      localStorage.setItem('indx_claimgift_totalclaims', String(total));
+    }
+    showToast('Gift confirmed. Setting up your claim. Standing by.');
+    const cId = sessionStorage.getItem('citizen_id') || '';
+    setTimeout(function() { showState(cId ? 3 : 2); }, 900);
+  }
+
+  // God Mode fix: this ticker invented named people ("Priya claimed a gift 23m ago")
+  // on a random timer, plus a fabricated baseline of 1180 claims with the real
+  // per-device count added on top. None of the names, times, or baseline were real —
+  // same fake-social-proof pattern already flagged elsewhere in this codebase's audit
+  // history. Now shows only the real, locally-tracked claim count for this device,
+  // clearly labeled as such, with no invented people or numbers.
+  function renderActivityTicker() {
+    const el = document.getElementById('activityText');
+    if (!el) return;
+    const total = parseInt(localStorage.getItem('indx_claimgift_totalclaims') || '0');
+    el.textContent = total > 0
+      ? total.toLocaleString() + ' gift' + (total === 1 ? '' : 's') + ' claimed on this device'
+      : 'Claim your gift below';
+  }
+
   // Read URL params (in real app, server populates these from the gift link)
   const params = new URLSearchParams(window.location.search);
   const sender = params.get('from') || 'AJ Henry';
@@ -209,20 +368,21 @@
   // Populate
   document.getElementById('senderName').textContent = sender;
   document.getElementById('giftAmount').textContent = amount;
-  document.getElementById('giftUSD').textContent = '≈ $' + (amount * 0.24).toFixed(2) + ' USD';
+  // GOD MODE PATCH: use INDX_PRICE_USD constant instead of a hardcoded literal
+  document.getElementById('giftUSD').textContent = '≈ $' + (amount * INDX_PRICE_USD).toFixed(2) + ' USD';
   document.getElementById('giftMessage').textContent = message;
   document.getElementById('expiryDays').textContent = expiry + ' day' + (expiry === 1 ? '' : 's');
-  document.getElementById('reminderAmount').textContent = amount + ' INDX · $' + (amount * 0.24).toFixed(2);
+  // GOD MODE PATCH: use INDX_PRICE_USD constant instead of a hardcoded literal
+  document.getElementById('reminderAmount').textContent = amount + ' INDX · $' + (amount * INDX_PRICE_USD).toFixed(2);
 
   function showState(n) {
     document.querySelectorAll('.state').forEach(s => s.classList.remove('active'));
     document.getElementById('state' + n).classList.add('active');
   }
 
+  // GOD MODE PATCH: open the claim confirmation sheet instead of navigating straight through
   function claimGift() {
-    // Check if existing citizen (demo: always show choice)
-    // In production, check if device has an existing session
-    showState(2);
+    openConfirmSheet();
   }
 
   function startSetup() {
@@ -236,6 +396,11 @@
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 3500);
   }
+
+  // GOD MODE: initialize live countdown, returning-citizen banner, and activity ticker
+  checkReturningCitizen();
+  startCountdown(giftSignature(sender, amount, expiry), expiry);
+  renderActivityTicker();
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>
