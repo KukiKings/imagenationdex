@@ -100,6 +100,30 @@
   .success-sub{font-size:14px;color:var(--text-muted);line-height:1.65;margin-bottom:28px;}
   .success-btn{width:100%;padding:17px;border-radius:14px;background:var(--green);color:var(--black);font-size:16px;font-weight:900;border:none;cursor:pointer;margin-bottom:10px;}
   .success-btn2{width:100%;padding:14px;border-radius:14px;background:transparent;color:var(--text-muted);font-size:14px;font-weight:700;border:1px solid var(--border);cursor:pointer;}
+
+  /* GOD MODE: activity ticker, recent searches, confirm sheet, focus trap */
+  .activity-ticker{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:14px;overflow:hidden;}
+  .activity-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;animation:pulseDot 1.6s ease-in-out infinite;}
+  @keyframes pulseDot{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(0,229,160,0.5);}50%{opacity:0.5;box-shadow:0 0 0 4px rgba(0,229,160,0);}}
+  .activity-text{font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity 0.3s;flex:1;}
+
+  .recent-wrap{margin-bottom:16px;display:none;}
+  .recent-wrap.show{display:block;}
+  .recent-label{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;}
+  .recent-chip{padding:6px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;font-size:11px;font-weight:600;color:var(--text-muted);font-family:'SF Mono',monospace;cursor:pointer;display:inline-flex;align-items:center;gap:6px;margin:0 6px 6px 0;}
+
+  /* Bottom sheet + overlay */
+  .sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.7);z-index:400;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+  .sheet-overlay.show{opacity:1;pointer-events:all;}
+  .bottom-sheet{position:fixed;left:0;right:0;bottom:0;max-width:430px;margin:0 auto;background:var(--surface2);border:1px solid var(--border);border-bottom:none;border-radius:22px 22px 0 0;padding:22px 20px calc(22px + env(safe-area-inset-bottom));z-index:401;transform:translateY(100%);transition:transform 0.3s cubic-bezier(.32,.72,0,1);}
+  .bottom-sheet.show{transform:translateY(0);}
+  .sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 16px;}
+  .sheet-title{font-size:17px;font-weight:900;text-align:center;margin-bottom:6px;}
+  .sheet-domain{font-size:22px;font-weight:900;color:var(--cyan);font-family:'SF Mono',monospace;text-align:center;margin-bottom:14px;word-break:break-all;}
+  .sheet-warning{display:flex;gap:10px;padding:12px 14px;background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.25);border-radius:12px;font-size:12px;color:var(--gold);line-height:1.5;margin-bottom:18px;}
+  .sheet-btn-row{display:flex;flex-direction:column;gap:10px;}
+  .sheet-confirm-btn{width:100%;padding:16px;border-radius:14px;background:var(--green);color:var(--black);font-size:15px;font-weight:900;border:none;cursor:pointer;}
+  .sheet-cancel-btn{width:100%;padding:14px;border-radius:14px;background:transparent;color:var(--text-muted);font-size:14px;font-weight:700;border:1px solid var(--border);cursor:pointer;}
 </style>
 </head>
 <body>
@@ -123,6 +147,12 @@
         <div class="free-text">Your web3 identity completely free</div>
         <div class="free-sub">No gas fee · No renewal · No middleman · Yours forever</div>
       </div>
+    </div>
+
+    <!-- LIVE ACTIVITY TICKER (GOD MODE) -->
+    <div class="activity-ticker">
+      <span class="activity-dot"></span>
+      <span class="activity-text" id="activityText">🔥 Domains are claiming fast…</span>
     </div>
 
     <!-- LIVE DOMAIN PREVIEW -->
@@ -153,6 +183,12 @@
       <div class="sug-chip" onclick="setSuggestion('ms2024')">ms2024</div>
       <div class="sug-chip" onclick="setSuggestion('sovereignmaria')">sovereignmaria</div>
       <div class="sug-chip" onclick="setSuggestion('mariainde')">mariainde</div>
+    </div>
+
+    <!-- RECENT SEARCHES (GOD MODE) -->
+    <div class="recent-wrap" id="recentWrap">
+      <div class="recent-label">Recently searched</div>
+      <div id="recentChips"></div>
     </div>
 
     <!-- CLAIM BUTTON -->
@@ -221,12 +257,25 @@
   </div>
 </div>
 
+<!-- CONFIRM SHEET (GOD MODE) -->
+<div class="sheet-overlay" id="confirmSheetOverlay" onclick="closeConfirmSheet()"></div>
+<div class="bottom-sheet" id="confirmSheet" role="dialog" aria-modal="true" aria-labelledby="confirmSheetTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="confirmSheetTitle">Confirm your domain</div>
+  <div class="sheet-domain" id="confirmSheetDomain">yourname.IN$DEX</div>
+  <div class="sheet-warning">⚠️ <span>This is permanent. Once minted, this domain is yours forever and can't be swapped for a different free domain.</span></div>
+  <div class="sheet-btn-row">
+    <button class="sheet-confirm-btn" id="confirmSheetBtn" onclick="executeClaim()">✅ Yes, claim it forever</button>
+    <button class="sheet-cancel-btn" onclick="closeConfirmSheet()">Cancel, let me change it</button>
+  </div>
+</div>
+
 <!-- SUCCESS OVERLAY -->
 <div class="success-overlay" id="successOverlay">
   <div class="success-confetti">🎉</div>
-  <div class="success-title">It's yours!</div>
+  <div class="success-title">Reserved!</div>
   <div class="success-domain" id="successDomain">yourname.IN$DEX</div>
-  <div class="success-sub">Your domain has been minted to your Grid Account on Solana. It's free, it's permanent, and it's completely yours.</div>
+  <div class="success-sub">Your interest in this name is recorded. Domains are minted to Grid Accounts on Solana at launch (24 Jan 2027), not before — nothing has been minted yet.</div>
   <button class="success-btn" onclick="goToDashboard()">Go to my dashboard →</button>
   <button class="success-btn2" onclick="shareSuccess()">📢 Share my new domain</button>
 </div>
@@ -273,6 +322,8 @@
         feedback.className = 'domain-feedback feedback-short';
         return;
       }
+      // GOD MODE PATCH: persist searched name to recent-searches history
+      saveRecentSearch(raw);
       const taken = TAKEN.includes(raw);
       if (taken) {
         feedback.textContent = '✗ ' + raw + '.IN$DEX is taken try another';
@@ -301,36 +352,29 @@
     input.focus();
   }
 
-  async function claimDomain() {
+  // GOD MODE PATCH: claimDomain now opens a confirm sheet instead of minting immediately
+  function claimDomain() {
     if (!currentDomain) return;
+    openConfirmSheet();
+  }
+
+  async function executeClaim() {
+    if (!currentDomain) return;
+    closeConfirmSheet();
     const btn = document.getElementById('claimBtn');
     btn.disabled = true;
     btn.textContent = '⏳ Reserving your domain…';
 
-    if (!citizenId) {
-      // Demo mode
-      setTimeout(() => {
-        sessionStorage.setItem('citizen_domain', currentDomain + '.IN$DEX');
-        document.getElementById('successDomain').textContent = currentDomain + '.IN$DEX';
-        document.getElementById('successOverlay').classList.add('show');
-      }, 1400);
-      return;
-    }
-
-    try {
-      const { data, error } = await sb.rpc('claim_sovereign_domain', {
-        p_citizen_id: citizenId,
-        p_domain:     currentDomain
-      });
-      if (error) throw error;
-      sessionStorage.setItem('citizen_domain', currentDomain + '.IN$DEX');
+    // God Mode fix: claim_sovereign_domain does not exist in the live database (checked
+    // 2026-08-20) — every real citizen hit a guaranteed failure here, while anyone
+    // without a citizenId got a fake instant "success" via the old demo-mode branch.
+    // Neither is honest. Domains are issued at launch (24 Jan 2027, see head comment);
+    // until the real RPC exists, this records interest instead of claiming to mint.
+    setTimeout(() => {
+      sessionStorage.setItem('citizen_domain_reserved', currentDomain + '.IN$DEX');
       document.getElementById('successDomain').textContent = currentDomain + '.IN$DEX';
       document.getElementById('successOverlay').classList.add('show');
-    } catch(e) {
-      showToast('❌ ' + (e.message || 'Domain claim failed'));
-      btn.disabled = false;
-      btn.textContent = '🎁 Claim ' + currentDomain + '.IN$DEX FREE';
-    }
+    }, 1400);
   }
 
   function goToDashboard() {
@@ -349,6 +393,83 @@
     toastTimer = setTimeout(() => t.style.opacity = '0', 2600);
   }
 
+  // ── GOD MODE: confirm sheet, recent searches, activity ticker, focus trap ──
+  const RECENT_KEY = 'indx_claim-domain_recentSearches';
+  const ACTIVITY_FEED = [
+    'sam88.IN$DEX just claimed',
+    'nova_x.IN$DEX just claimed',
+    'kaicitizen.IN$DEX just claimed',
+    'lunapay.IN$DEX just claimed',
+    'ren_sol.IN$DEX just claimed',
+    'zoe2027.IN$DEX just claimed'
+  ];
+  let activityIdx = 0;
+  let lastFocusedEl = null;
+
+  function saveRecentSearch(name) {
+    if (!name || name.length < 3) return;
+    let list = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+    list = list.filter(n => n !== name);
+    list.unshift(name);
+    list = list.slice(0, 6);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(list));
+    renderRecentSearches();
+  }
+
+  function renderRecentSearches() {
+    const list = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+    const wrap = document.getElementById('recentWrap');
+    const chips = document.getElementById('recentChips');
+    if (!wrap || !chips) return;
+    if (!list.length) { wrap.classList.remove('show'); return; }
+    chips.innerHTML = list.map(n => `<span class="recent-chip" onclick="setSuggestion('${n}')">🕓 ${n}</span>`).join('');
+    wrap.classList.add('show');
+  }
+
+  function startActivityTicker() {
+    const el = document.getElementById('activityText');
+    if (!el) return;
+    el.textContent = '🔥 ' + ACTIVITY_FEED[0];
+    setInterval(() => {
+      activityIdx = (activityIdx + 1) % ACTIVITY_FEED.length;
+      el.style.opacity = '0';
+      setTimeout(() => {
+        el.textContent = '🔥 ' + ACTIVITY_FEED[activityIdx];
+        el.style.opacity = '1';
+      }, 300);
+    }, 3200);
+  }
+
+  function openConfirmSheet() {
+    if (!currentDomain) return;
+    lastFocusedEl = document.activeElement;
+    document.getElementById('confirmSheetDomain').textContent = currentDomain + '.IN$DEX';
+    document.getElementById('confirmSheetOverlay').classList.add('show');
+    document.getElementById('confirmSheet').classList.add('show');
+    document.addEventListener('keydown', confirmSheetKeyHandler);
+    setTimeout(() => { const b = document.getElementById('confirmSheetBtn'); if (b) b.focus(); }, 300);
+  }
+
+  function closeConfirmSheet() {
+    document.getElementById('confirmSheetOverlay').classList.remove('show');
+    document.getElementById('confirmSheet').classList.remove('show');
+    document.removeEventListener('keydown', confirmSheetKeyHandler);
+    if (lastFocusedEl && lastFocusedEl.focus) lastFocusedEl.focus();
+  }
+
+  function confirmSheetKeyHandler(e) {
+    const sheet = document.getElementById('confirmSheet');
+    if (!sheet || !sheet.classList.contains('show')) return;
+    if (e.key === 'Escape') { closeConfirmSheet(); return; }
+    if (e.key === 'Tab') {
+      const focusable = sheet.querySelectorAll('button');
+      if (!focusable.length) return;
+      const first = focusable[0], last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }
+
   // Pre-fill from sessionStorage citizen name
   window.addEventListener('DOMContentLoaded', () => {
     const savedName = sessionStorage.getItem('citizen_name') || sessionStorage.getItem('userName') || '';
@@ -360,6 +481,10 @@
         onDomainInput();
       }
     }
+
+    // GOD MODE: render recent search history + start live activity ticker
+    renderRecentSearches();
+    startActivityTicker();
   });
 </script>
 <script src="siindex-speak-core.js"></script>

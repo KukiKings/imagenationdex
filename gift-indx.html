@@ -67,6 +67,39 @@
 
   .toast { position:fixed; bottom:120px; left:50%; transform:translateX(-50%) translateY(60px); background:var(--surface2); color:var(--text); padding:12px 20px; border-radius:12px; font-size:13px; font-weight:500; transition:transform 0.3s; z-index:200; border:1px solid rgba(0,229,160,0.3); max-width:340px; text-align:center; white-space:normal; }
   .toast.show { transform:translateX(-50%) translateY(0); }
+
+  /* GOD MODE: shared bottom sheet + overlay */
+  .sheet-overlay { position:fixed; inset:0; background:rgba(9,10,16,0.7); opacity:0; pointer-events:none; transition:opacity 0.2s; z-index:300; }
+  .sheet-overlay.show { opacity:1; pointer-events:auto; }
+  .bottom-sheet { position:fixed; left:50%; bottom:0; transform:translateX(-50%) translateY(100%); width:100%; max-width:430px; background:var(--surface); border-radius:20px 20px 0 0; padding:14px 18px 24px; z-index:301; transition:transform 0.25s ease; max-height:80vh; overflow-y:auto; }
+  .bottom-sheet.show { transform:translateX(-50%) translateY(0); }
+  .sheet-handle { width:36px; height:4px; background:var(--surface3); border-radius:2px; margin:0 auto 16px; }
+
+  /* GOD MODE: history button in topbar */
+  .history-btn { margin-left:auto; }
+
+  /* GOD MODE: live countdown timer on gift preview */
+  .countdown-row { display:none; align-items:center; justify-content:space-between; background:var(--surface2); border-radius:10px; padding:10px 12px; margin-top:10px; }
+  .countdown-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; }
+  .countdown-timer { font-size:15px; font-weight:700; color:var(--green); font-variant-numeric:tabular-nums; }
+  .countdown-timer.urgent { color:var(--red); }
+
+  /* GOD MODE: gift message draft + char counter */
+  .msg-counter { font-size:11px; color:var(--text-muted); text-align:right; margin:-8px 0 14px; }
+
+  /* GOD MODE: recent gifts history sheet */
+  .history-list { display:flex; flex-direction:column; gap:10px; }
+  .history-item { display:flex; align-items:center; justify-content:space-between; gap:10px; background:var(--surface2); border-radius:12px; padding:12px 14px; }
+  .history-item-amount { font-size:14px; font-weight:700; color:var(--text); }
+  .history-item-meta { font-size:11px; color:var(--text-muted); margin-top:2px; }
+  .history-empty { font-size:13px; color:var(--text-muted); text-align:center; padding:24px 0; }
+
+  /* GOD MODE: confirm-before-send sheet */
+  .confirm-title { font-size:17px; font-weight:800; margin-bottom:14px; }
+  .confirm-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.06); font-size:14px; }
+  .confirm-row span:first-child { color:var(--text-muted); }
+  .confirm-row span:last-child { font-weight:700; }
+  .confirm-warning { font-size:12px; color:var(--gold); background:rgba(255,184,0,0.08); border:1px solid rgba(255,184,0,0.25); border-radius:12px; padding:12px 14px; line-height:1.5; margin:14px 0; }
 </style>
 </head>
 <body>
@@ -74,6 +107,7 @@
 <div class="topbar">
   <button class="back-btn" onclick="history.back()">←</button>
   <span class="topbar-title">Gift INDX</span>
+  <button class="back-btn history-btn" onclick="openHistorySheet()" id="historyBtn" aria-label="View your recent gifts">🕐</button>
 </div>
 
 <div class="content">
@@ -107,29 +141,57 @@
   <div class="field-label">Who's this for? (label only — not sent anywhere)</div>
   <input class="field-input" type="text" placeholder="Phone number or name, just for your reference" id="recipientInput">
 
+  <div class="field-label">Add a message (optional, saved as you type)</div>
+  <textarea class="message-input" id="giftMessageInput" placeholder="Say something nice…" maxlength="140" oninput="onGiftMessageInput()"></textarea>
+  <div class="msg-counter" id="msgCharCount">0/140</div>
+
   <div style="margin:0 0 14px;background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.25);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--text2);line-height:1.5;">
     ⚠️ There's no SMS/text integration yet — this doesn't message your recipient. Once the link is created below, you'll need to share it yourself (text, WhatsApp, in person).
   </div>
 
   <div class="no-wallet">
     <div class="no-wallet-icon">✅</div>
-    <div class="no-wallet-text"><strong>No wallet needed to receive.</strong> Your recipient gets a link. They tap it, scan their face, and their wallet is created in 90 seconds. If your balance still covers the amount when they claim, the INDX moves to them for real.</div>
+    <div class="no-wallet-text"><strong>No wallet needed to receive.</strong> Your recipient gets a link. They tap it, enter their phone number and a one-time code, and their wallet is created in 90 seconds — no face scan, no documents. If your balance still covers the amount when they claim, the INDX moves to them for real.</div>
   </div>
 
   <div class="preview-card" id="previewCard" style="display:none">
     <div class="preview-label">Your Gift Link</div>
     <div class="preview-link" id="previewLink">—</div>
     <div class="preview-exp" id="previewExp">Expires in 24 hours · One-time claim</div>
+    <div class="countdown-row" id="countdownRow">
+      <span class="countdown-label">Time left to claim</span>
+      <span class="countdown-timer" id="countdownTimer">24:00:00</span>
+    </div>
     <button class="qa-btn" style="width:100%;margin-top:10px;" onclick="shareGiftLink()">Share Link →</button>
   </div>
 
 </div>
 
 <div class="cta-bar">
-  <button class="send-btn" onclick="createGift()" id="createBtn">Create Gift Link</button>
+  <!-- GOD MODE PATCH: send button now opens a confirm-before-send sheet instead of creating the gift directly -->
+  <button class="send-btn" onclick="openConfirmSheet()" id="createBtn">Create Gift Link</button>
 </div>
 
 <div class="toast" id="toast"></div>
+
+<div class="sheet-overlay" id="confirmOverlay" onclick="closeConfirmSheet()"></div>
+<div class="bottom-sheet" id="confirmSheet" role="dialog" aria-modal="true" aria-labelledby="confirmSheetTitle">
+  <div class="sheet-handle"></div>
+  <div class="confirm-title" id="confirmSheetTitle">Confirm Your Gift</div>
+  <div class="confirm-row"><span>Amount</span><span id="confirmAmount">50 INDX</span></div>
+  <div class="confirm-row"><span>USD Value</span><span id="confirmUSD">≈ $12.00</span></div>
+  <div class="confirm-row"><span>For</span><span id="confirmRecipient">—</span></div>
+  <div class="confirm-warning">This moves real INDX from your balance the moment your recipient claims it. Double-check the amount — once claimed, it can't be reversed.</div>
+  <button class="send-btn" onclick="confirmAndCreateGift()">Confirm & Send</button>
+  <button class="qa-btn" style="width:100%;margin-top:8px;" onclick="closeConfirmSheet()">Cancel</button>
+</div>
+
+<div class="sheet-overlay" id="historyOverlay" onclick="closeHistorySheet()"></div>
+<div class="bottom-sheet" id="historySheet" role="dialog" aria-modal="true" aria-labelledby="historySheetTitle">
+  <div class="sheet-handle"></div>
+  <div class="confirm-title" id="historySheetTitle">Your Recent Gifts</div>
+  <div class="history-list" id="historyList"></div>
+</div>
 
 <script>
   let amount = 50;
@@ -138,6 +200,119 @@
   const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
   let currentInviteCode = null;
   let pollTimer = null;
+  const INDX_PRICE_USD = 0.24;
+
+  // GOD MODE: gift message draft persistence
+  function onGiftMessageInput() {
+    const el = document.getElementById('giftMessageInput');
+    localStorage.setItem('indx_gift-indx_message_draft', el.value);
+    updateMsgCounter();
+  }
+  function loadGiftMessageDraft() {
+    const el = document.getElementById('giftMessageInput');
+    if (!el) return;
+    el.value = localStorage.getItem('indx_gift-indx_message_draft') || '';
+    updateMsgCounter();
+  }
+  function updateMsgCounter() {
+    const el = document.getElementById('giftMessageInput');
+    const c = document.getElementById('msgCharCount');
+    if (el && c) c.textContent = el.value.length + '/140';
+  }
+
+  // GOD MODE: recent gifts history (localStorage, this device only)
+  function getGiftHistory() {
+    try { return JSON.parse(localStorage.getItem('indx_gift-indx_history') || '[]'); }
+    catch (e) { return []; }
+  }
+  function saveGiftToHistory(record) {
+    const h = getGiftHistory();
+    h.unshift(record);
+    localStorage.setItem('indx_gift-indx_history', JSON.stringify(h.slice(0, 20)));
+  }
+  function renderHistory() {
+    const list = document.getElementById('historyList');
+    const h = getGiftHistory();
+    if (!h.length) {
+      list.innerHTML = '<div class="history-empty">No gifts sent yet from this device.</div>';
+      return;
+    }
+    list.innerHTML = h.map(g => `
+      <div class="history-item">
+        <div>
+          <div class="history-item-amount">${g.amount} INDX <span style="color:var(--text-muted);font-weight:400;">(≈ $${(g.amount * INDX_PRICE_USD).toFixed(2)})</span></div>
+          <div class="history-item-meta">${g.recipient || 'No label'} · ${new Date(g.createdAt).toLocaleString()}</div>
+        </div>
+        <button class="qa-btn" onclick="copyHistoryLink('${g.code}')">Copy</button>
+      </div>`).join('');
+  }
+  function openHistorySheet() {
+    renderHistory();
+    document.getElementById('historySheet').classList.add('show');
+    document.getElementById('historyOverlay').classList.add('show');
+  }
+  function closeHistorySheet() {
+    document.getElementById('historySheet').classList.remove('show');
+    document.getElementById('historyOverlay').classList.remove('show');
+  }
+  async function copyHistoryLink(code) {
+    const url = inviteUrl(code);
+    try { await navigator.clipboard.writeText(url); showToast('Link copied — paste it to your recipient.'); }
+    catch (e) { showToast('Copy this link: ' + url); }
+  }
+
+  // GOD MODE: confirm-before-send sheet (this screen moves real balance)
+  function openConfirmSheet() {
+    const citizenId = sessionStorage.getItem('citizen_id');
+    if (!citizenId) {
+      showToast('You need an IN$DEX account first — this creates a real invite from your balance.');
+      return;
+    }
+    document.getElementById('confirmAmount').textContent = amount + ' INDX';
+    document.getElementById('confirmUSD').textContent = '≈ $' + (amount * INDX_PRICE_USD).toFixed(2);
+    document.getElementById('confirmRecipient').textContent = document.getElementById('recipientInput').value.trim() || '—';
+    document.getElementById('confirmSheet').classList.add('show');
+    document.getElementById('confirmOverlay').classList.add('show');
+  }
+  function closeConfirmSheet() {
+    document.getElementById('confirmSheet').classList.remove('show');
+    document.getElementById('confirmOverlay').classList.remove('show');
+  }
+  async function confirmAndCreateGift() {
+    closeConfirmSheet();
+    await createGift();
+  }
+
+  // GOD MODE: live countdown timer until the gift link expires
+  let countdownInterval = null;
+  function startCountdown(expiresAt) {
+    if (countdownInterval) clearInterval(countdownInterval);
+    const row = document.getElementById('countdownRow');
+    const timerEl = document.getElementById('countdownTimer');
+    row.style.display = 'flex';
+    function tick() {
+      const remaining = expiresAt - Date.now();
+      if (remaining <= 0) {
+        timerEl.textContent = '00:00:00';
+        clearInterval(countdownInterval);
+        return;
+      }
+      const h = Math.floor(remaining / 3600000);
+      const m = Math.floor((remaining % 3600000) / 60000);
+      const s = Math.floor((remaining % 60000) / 1000);
+      timerEl.textContent = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+      timerEl.classList.toggle('urgent', remaining < 3600000);
+    }
+    tick();
+    countdownInterval = setInterval(tick, 1000);
+  }
+
+  // GOD MODE: close sheets on Escape for keyboard accessibility
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    closeConfirmSheet();
+    closeHistorySheet();
+  });
 
   async function rpc(name, body) {
     const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + name, { method: 'POST', headers: SB_HEADERS, body: JSON.stringify(body) });
@@ -177,6 +352,9 @@
       document.getElementById('previewExp').textContent = `Expires in 24 hours · One-time claim · $${(amount*0.24).toFixed(2)} USD value`;
       showToast('Real gift link created. Share it below — the INDX moves when they claim it, if your balance still covers it.');
       startPolling();
+      // GOD MODE PATCH: record this gift locally and start the live countdown to expiry
+      saveGiftToHistory({ code: currentInviteCode, amount, recipient: document.getElementById('recipientInput').value.trim(), createdAt: Date.now() });
+      startCountdown(Date.now() + 24 * 60 * 60 * 1000);
     } catch (e) {
       showToast('Could not create the gift link — check your connection and try again.');
     } finally {
@@ -224,6 +402,11 @@
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 4000);
   }
+
+  // GOD MODE: restore the saved message draft once the DOM is ready
+  document.addEventListener('DOMContentLoaded', () => {
+    loadGiftMessageDraft();
+  });
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>
