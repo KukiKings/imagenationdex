@@ -114,6 +114,36 @@ select.form-input{appearance:none;cursor:pointer;}
 
 .toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%) translateY(20px);max-width:320px;width:calc(100% - 40px);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:13px;color:var(--text);text-align:center;opacity:0;transition:opacity 0.3s,transform 0.3s;z-index:400;pointer-events:none;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* GOD MODE: RECENT COMPANIES */
+.recent-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+.recent-chip{padding:7px 13px;border-radius:20px;font-size:12px;font-weight:700;background:rgba(0,212,255,0.08);border:1.5px solid rgba(0,212,255,0.25);color:var(--cyan);cursor:pointer;transition:all 0.15s;}
+.recent-chip:active{background:rgba(0,212,255,0.18);}
+
+/* GOD MODE: BOTTOM SHEET (confirm before save) */
+.sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.7);z-index:290;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+.sheet-overlay.show{opacity:1;pointer-events:auto;}
+.bottom-sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(100%);width:100%;max-width:430px;background:var(--surface2);border:1px solid var(--border);border-radius:20px 20px 0 0;padding:12px 24px 28px;z-index:295;transition:transform 0.3s ease;}
+.bottom-sheet.show{transform:translateX(-50%) translateY(0);}
+.sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--surface3);margin:0 auto 16px;}
+.sheet-title{font-size:16px;font-weight:800;margin-bottom:14px;}
+.confirm-summary-row{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.confirm-summary-label{color:var(--muted);font-weight:700;}
+.confirm-summary-val{color:var(--text);font-weight:700;text-align:right;}
+.confirm-ack{display:flex;align-items:flex-start;gap:10px;margin:16px 0 4px;font-size:12px;color:var(--text2);line-height:1.5;cursor:pointer;}
+.confirm-ack input{margin-top:2px;accent-color:var(--cyan);width:16px;height:16px;flex-shrink:0;}
+#confirmSaveBtn:disabled{opacity:0.4;cursor:not-allowed;}
+
+/* GOD MODE: TRACKING STATS */
+.stats-bar{display:none;gap:8px;padding:0 24px 14px;}
+.stat-card{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:10px 8px;text-align:center;}
+.stat-num{font-size:16px;font-weight:900;color:var(--cyan);}
+.stat-lbl{font-size:9.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-top:2px;}
+
+/* GOD MODE: TRACK CARD DELETE */
+.track-card{position:relative;}
+.track-delete{position:absolute;top:10px;right:10px;width:22px;height:22px;border-radius:50%;background:var(--surface3);border:1px solid var(--border);color:var(--text2);font-size:13px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.track-delete:active{background:rgba(255,77,109,0.15);color:var(--red);}
 </style>
 </head>
 <body>
@@ -154,6 +184,10 @@ select.form-input{appearance:none;cursor:pointer;}
 
     <!-- STEP 1 -->
     <div class="screen active" id="step1">
+      <div id="recentCompaniesWrap" style="display:none;">
+        <label class="form-label" style="margin-top:0;">Recently revoked — tap to reuse</label>
+        <div class="recent-chips" id="recentCompaniesList"></div>
+      </div>
       <label class="form-label">Select company</label>
       <div class="company-list-select">
         <div class="company-option" onclick="selectCompany(this,'Telstra','📱','high')">
@@ -235,7 +269,7 @@ select.form-input{appearance:none;cursor:pointer;}
         <div class="cert-body-text">This is a preview of what a revocation notice could look like. It is <strong>not sent to the company</strong>, not cryptographically signed, and not anchored to any blockchain — it has no legal effect today. The named laws are real; this certificate is not yet a real way to exercise your rights under them.</div>
       </div>
 
-      <button class="primary-btn" onclick="sendRevocation()">Save Preview (not sent anywhere)</button>
+      <button class="primary-btn" onclick="openConfirmSheet()">Save Preview (not sent anywhere)</button>
       <button class="secondary-btn" onclick="goStep(2)">← Edit</button>
     </div>
 
@@ -243,6 +277,11 @@ select.form-input{appearance:none;cursor:pointer;}
 
   <!-- TRACKING VIEW -->
   <div id="trackingView" style="display:none;">
+    <div class="stats-bar" id="trackingStatsBar">
+      <div class="stat-card"><div class="stat-num" id="statTotal">0</div><div class="stat-lbl">Previews saved</div></div>
+      <div class="stat-card"><div class="stat-num" id="statCompanies">0</div><div class="stat-lbl">Companies</div></div>
+      <div class="stat-card"><div class="stat-num" id="statTopCategory">—</div><div class="stat-lbl">Most revoked</div></div>
+    </div>
     <div class="tracking-list" style="padding-top:16px;">
       <div id="trackingEmpty" style="text-align:center;color:var(--muted);font-size:13px;padding:24px 0;">No revocations sent — this feature isn't connected to any company compliance system yet, so nothing here is ever real.</div>
       <div id="trackingPreviewList"></div>
@@ -253,6 +292,21 @@ select.form-input{appearance:none;cursor:pointer;}
     </div>
   </div>
 
+</div>
+
+<!-- GOD MODE: CONFIRM SHEET -->
+<div class="sheet-overlay" id="confirmSheetOverlay" onclick="closeConfirmSheet()"></div>
+<div class="bottom-sheet" id="confirmSheet" role="dialog" aria-modal="true" aria-labelledby="confirmSheetTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="confirmSheetTitle">Confirm preview save</div>
+  <div class="confirm-summary-row"><span class="confirm-summary-label">Company</span><span class="confirm-summary-val" id="confirmSummaryCompany">—</span></div>
+  <div class="confirm-summary-row"><span class="confirm-summary-label">Scope</span><span class="confirm-summary-val" id="confirmSummaryScope">—</span></div>
+  <label class="confirm-ack">
+    <input type="checkbox" id="confirmAckCheckbox" onchange="updateConfirmBtn()">
+    <span>I understand this is a local preview only — nothing is sent to the company.</span>
+  </label>
+  <button class="primary-btn" id="confirmSaveBtn" disabled onclick="confirmAndSend()">Confirm & Save Preview</button>
+  <button class="secondary-btn" onclick="closeConfirmSheet()">Cancel</button>
 </div>
 
 <!-- SENDING OVERLAY -->
@@ -288,6 +342,84 @@ select.form-input{appearance:none;cursor:pointer;}
 let selectedCompany = '';
 let selectedCategories = [];
 let currentStep = 1;
+
+// ── GOD MODE ADDITIONS ──
+let confirmSheetTrigger = null;
+
+function renderRecentCompanies() {
+  let list; try { list = JSON.parse(localStorage.getItem('indx_revocation_previews')||'[]'); } catch(e) { list = []; }
+  const seen = new Set();
+  const recents = [];
+  list.forEach(p=>{
+    if(!seen.has(p.company)) { seen.add(p.company); recents.push(p.company); }
+  });
+  const wrap = document.getElementById('recentCompaniesWrap');
+  const wrapList = document.getElementById('recentCompaniesList');
+  if(!wrap || !wrapList) return;
+  if(!recents.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  wrapList.innerHTML = recents.slice(0,5).map(c=>`<div class="recent-chip" onclick="quickSelectCompany('${c.replace(/'/g,"\\'")}')">${c}</div>`).join('');
+}
+
+function quickSelectCompany(name) {
+  document.querySelectorAll('.company-option').forEach(o=>o.classList.remove('selected'));
+  let matched = false;
+  document.querySelectorAll('.company-option').forEach(o=>{
+    if(o.querySelector('.co-name').textContent===name) { o.classList.add('selected'); matched = true; }
+  });
+  selectedCompany = name;
+  if(!matched) { document.getElementById('customCompany').value = name; }
+  showToast('Selected ' + name);
+}
+
+function openConfirmSheet() {
+  document.getElementById('confirmSummaryCompany').textContent = selectedCompany || '—';
+  document.getElementById('confirmSummaryScope').textContent = selectedCategories.join(', ') || '—';
+  document.getElementById('confirmAckCheckbox').checked = false;
+  updateConfirmBtn();
+  document.getElementById('confirmSheetOverlay').classList.add('show');
+  document.getElementById('confirmSheet').classList.add('show');
+  confirmSheetTrigger = document.activeElement;
+  document.addEventListener('keydown', confirmSheetKeyHandler);
+  setTimeout(()=>{ const cb = document.getElementById('confirmAckCheckbox'); if(cb) cb.focus(); }, 50);
+}
+
+function closeConfirmSheet() {
+  document.getElementById('confirmSheetOverlay').classList.remove('show');
+  document.getElementById('confirmSheet').classList.remove('show');
+  document.removeEventListener('keydown', confirmSheetKeyHandler);
+  if(confirmSheetTrigger && confirmSheetTrigger.focus) confirmSheetTrigger.focus();
+}
+
+function updateConfirmBtn() {
+  const cb = document.getElementById('confirmAckCheckbox');
+  document.getElementById('confirmSaveBtn').disabled = !(cb && cb.checked);
+}
+
+function confirmAndSend() {
+  closeConfirmSheet();
+  sendRevocation();
+}
+
+function confirmSheetKeyHandler(e) {
+  if(e.key === 'Escape') { closeConfirmSheet(); return; }
+  if(e.key === 'Tab') {
+    const sheet = document.getElementById('confirmSheet');
+    const focusable = sheet.querySelectorAll('button:not([disabled]), input, [tabindex]');
+    if(!focusable.length) return;
+    const first = focusable[0], last = focusable[focusable.length-1];
+    if(e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+}
+
+function deletePreview(ts) {
+  let list; try { list = JSON.parse(localStorage.getItem('indx_revocation_previews')||'[]'); } catch(e) { list = []; }
+  list = list.filter(p=>p.ts !== ts);
+  localStorage.setItem('indx_revocation_previews', JSON.stringify(list));
+  renderTracking();
+  showToast('Preview removed');
+}
 
 // Pre-fill from URL param
 const params = new URLSearchParams(window.location.search);
@@ -394,15 +526,29 @@ function savePreview() {
   renderTracking();
 }
 
+// GOD MODE PATCH: added stats bar, per-card delete button, and recent-companies refresh
 function renderTracking() {
   let list; try { list = JSON.parse(localStorage.getItem('indx_revocation_previews')||'[]'); } catch(e) { list = []; }
   document.querySelector('.ttab:nth-child(2)').textContent = 'Sent (' + list.length + ')';
   const empty = document.getElementById('trackingEmpty');
   const container = document.getElementById('trackingPreviewList');
-  if (!list.length) { empty.style.display='block'; container.innerHTML=''; return; }
+  const statsBar = document.getElementById('trackingStatsBar');
+  if (!list.length) { empty.style.display='block'; container.innerHTML=''; if(statsBar) statsBar.style.display='none'; renderRecentCompanies(); return; }
   empty.style.display='none';
+  if(statsBar) {
+    statsBar.style.display = 'flex';
+    const companies = new Set(list.map(p=>p.company));
+    const catCounts = {};
+    list.forEach(p=>(p.categories||[]).forEach(c=>{ catCounts[c] = (catCounts[c]||0) + 1; }));
+    let topCat = '—', topCount = 0;
+    Object.keys(catCounts).forEach(c=>{ if(catCounts[c] > topCount) { topCount = catCounts[c]; topCat = c; } });
+    document.getElementById('statTotal').textContent = list.length;
+    document.getElementById('statCompanies').textContent = companies.size;
+    document.getElementById('statTopCategory').textContent = topCat;
+  }
   container.innerHTML = list.map(p => `
     <div class="track-card">
+      <button class="track-delete" onclick="deletePreview(${p.ts})" aria-label="Delete preview">×</button>
       <div class="tc-top">
         <div>
           <div class="tc-company">${p.company}</div>
@@ -412,6 +558,7 @@ function renderTracking() {
       </div>
       <div class="tc-scope">Scope: ${p.categories.join(', ')} · Not actually sent — no company compliance system connected</div>
     </div>`).join('');
+  renderRecentCompanies();
 }
 renderTracking();
 
