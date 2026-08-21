@@ -159,6 +159,12 @@
     border-radius: 6px; padding: 2px 7px;
     font-size: 10px; font-weight: 700; color: var(--text-muted);
   }
+  .demo-badge {
+    position: absolute; bottom: 8px; right: 8px;
+    background: rgba(9,10,16,0.85); border: 1px solid var(--gold);
+    border-radius: 6px; padding: 2px 7px;
+    font-size: 9px; font-weight: 800; color: var(--gold); letter-spacing: 0.04em;
+  }
 
   .listing-info { padding: 12px; }
   .listing-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 3px; line-height: 1.3; }
@@ -746,6 +752,7 @@
   <div class="sheet-handle"></div>
   <div class="detail-img" id="detailImg">🛠️</div>
   <div class="detail-title" id="detailTitle">Listing Title</div>
+  <div id="detailPreviewBanner" style="display:none;background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.3);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--gold);font-weight:700;margin-bottom:10px;">👀 Showcase listing — not a real seller yet. No INDX is charged if you tap Buy.</div>
   <div class="detail-seller" onclick="toggleSellerExpand()" style="cursor:pointer;">
     <div class="seller-avatar" id="sellerAvatar">M</div>
     <div>
@@ -1016,6 +1023,15 @@ function listEmoji(l) {
   return l.emoji || CAT_EMOJI[l.category] || '🛒';
 }
 
+// DEMO_LISTINGS ids are hand-assigned 'd1'..'d6' (see executeBuy's purchase
+// guard below) — this is the one place that convention is checked for display.
+function isDemoListing(l) {
+  return String(l.id).startsWith('d');
+}
+function demoBadgeHTML(l) {
+  return isDemoListing(l) ? '<div class="demo-badge">PREVIEW</div>' : '';
+}
+
 // ── INIT ──
 window.addEventListener('DOMContentLoaded', () => {
   // Render demo listings immediately — no waiting
@@ -1030,6 +1046,28 @@ window.addEventListener('DOMContentLoaded', () => {
   gmStartPulse();
 });
 
+// FIXED: gmStartPulse() was called from DOMContentLoaded but never defined
+// anywhere -- threw a ReferenceError every page load (harmless in effect,
+// since it's the last statement in that handler, but the "Civilization
+// activity pulse" strip stayed permanently hidden and dead). Implemented as
+// a real count of actual (non-demo) listings rather than inventing an
+// activity feed -- there's no real per-event activity data to show yet, and
+// fabricating one would be exactly the kind of fake scarcity/activity claim
+// this app has had to remove elsewhere. Stays hidden until real listings
+// exist.
+function gmStartPulse() {
+  const real = allListings.filter(l => !isDemoListing(l));
+  const strip = document.getElementById('pulseStrip');
+  const txt = document.getElementById('pulseTxt');
+  if (!strip || !txt) return;
+  if (real.length > 0) {
+    txt.textContent = `🌊 ${real.length} real listing${real.length === 1 ? '' : 's'} live on IN$DEX right now`;
+    strip.style.display = 'flex';
+  } else {
+    strip.style.display = 'none';
+  }
+}
+
 async function loadListings() {
   try {
     // GOD MODE PATCH — use INDXDB shared client
@@ -1043,6 +1081,7 @@ async function loadListings() {
       }));
       renderFeatured();
       renderGrid(sortListings(allListings));
+      gmStartPulse();
     }
     // else: demo listings stay — already rendered
   } catch(e) {
@@ -1059,6 +1098,7 @@ function renderFeatured() {
         ${listEmoji(l)}
         <div class="featured-badge">${(l.category || 'goods').toUpperCase()}</div>
         ${heartHTML(l.id)}
+        ${demoBadgeHTML(l)}
       </div>
       <div class="featured-info">
         <div class="featured-title">${l.title}</div>
@@ -1088,6 +1128,7 @@ function renderGrid(listings) {
         ${listEmoji(l)}
         <div class="listing-category-tag">${l.category || 'goods'}</div>
         ${heartHTML(l.id)}
+        ${demoBadgeHTML(l)}
       </div>
       <div class="listing-info">
         <div class="listing-title">${l.title}</div>
@@ -1146,6 +1187,7 @@ function openDetail(id) {
   document.getElementById('dstatRating').textContent = '⭐ New';
   document.getElementById('detailPrice').textContent = l.price_indx + ' INDX';
   document.getElementById('detailPriceUSD').textContent = '≈ $' + (l.price_indx * INDX_PRICE).toFixed(2);
+  document.getElementById('detailPreviewBanner').style.display = isDemoListing(l) ? 'block' : 'none';
   document.getElementById('sheetOverlay').classList.add('active');
   document.getElementById('detailSheet').classList.add('active');
 }
@@ -1369,9 +1411,22 @@ function navTap(el, label) {
       const match = allListings.find(l => String(l.id) === a.id);
       if (match && match.price_indx < a.price) {
         showToast(`📉 "${a.title}" dropped to ${match.price_indx} INDX!`);
+        a.price = match.price_indx; // don't re-toast the same drop again
       }
     });
+    saveAlerts(alerts);
   }
+  // FIXED: checkPriceAlerts() was defined but never called from anywhere --
+  // "Notify me if price drops" / "Alert set — watching" set an expectation
+  // that did literally nothing, ever. There's no server-side price-watch job
+  // or push notifications, so this can only be honest about what it actually
+  // is: a check that runs while this tab is open. Wire it to run once real
+  // listing data loads, and re-check periodically while the tab is visible.
+  checkPriceAlerts();
+  setInterval(() => {
+    if (document.hidden) return;
+    loadListings().then(checkPriceAlerts);
+  }, 90000);
   // Update alert button state when detail sheet opens
   const _origOpenDetail = window.openDetail;
   window.openDetail = function(id) {
@@ -1405,18 +1460,31 @@ function navTap(el, label) {
     const pct = Math.round(amt / activeListing.price_indx * 100);
     document.getElementById('offerPanel').classList.remove('show');
 
-    // GOD MODE PATCH — persist to Supabase marketplace_offers
+    // FIXED: this used to unconditionally show "Offer sent to seller!" even
+    // when there was no logged-in citizen, no real seller (demo listing), or
+    // the real Supabase call actually failed -- a false success claim in all
+    // three cases. Each path now reports what actually happened.
     const citizenId = sessionStorage.getItem('citizen_id');
-    if (citizenId && !String(activeListing.id).startsWith('d')) {
-      try {
-        await INDXDB.submitOffer(activeListing.id, amt, null);
-        showToast(`✓ Offer of ${amt} INDX (${pct}% of ask) sent!`);
-      } catch(e) {
-        showToast(`Offer of ${amt} INDX (${pct}% of ask) sent to seller!`);
-      }
-    } else {
-      showToast(`Offer of ${amt} INDX (${pct}% of ask) sent to seller!`);
+    if (!citizenId) {
+      showToast('Log in to send an offer.');
+      return;
     }
+    if (isDemoListing(activeListing)) {
+      showToast(`"${activeListing.title}" is showcase content, not a real seller yet — no offer was sent.`);
+      return;
+    }
+
+    // INDXDB.submitOffer resolves to null on failure rather than throwing
+    // (it logs to console instead) -- check the return value, not a catch.
+    let offerResult = null;
+    try {
+      offerResult = await INDXDB.submitOffer(activeListing.id, amt, null);
+    } catch(e) {}
+    if (!offerResult) {
+      showToast('Could not send offer. Try again.');
+      return;
+    }
+    showToast(`✓ Offer of ${amt} INDX (${pct}% of ask) sent!`);
 
     // Persist offer in localStorage for status tracking
     try {

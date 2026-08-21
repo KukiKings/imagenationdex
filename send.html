@@ -278,15 +278,15 @@
         <div class="token-name">INDX</div>
         <div class="token-bal" id="bal-indx">1,240 available</div>
       </div>
-      <div class="token-btn" id="tok-sol" onclick="selectToken('sol')">
+      <div class="token-btn" id="tok-sol" onclick="selectToken('sol')" style="opacity:0.5;">
         <div class="token-icon">◉</div>
         <div class="token-name">SOL</div>
-        <div class="token-bal" id="bal-sol">2.48 available</div>
+        <div class="token-bal" id="bal-sol">🔜 Not live yet</div>
       </div>
-      <div class="token-btn" id="tok-usdc" onclick="selectToken('usdc')">
+      <div class="token-btn" id="tok-usdc" onclick="selectToken('usdc')" style="opacity:0.5;">
         <div class="token-icon">💵</div>
         <div class="token-name">USDC</div>
-        <div class="token-bal" id="bal-usdc">48.00 available</div>
+        <div class="token-bal" id="bal-usdc">🔜 Not live yet</div>
       </div>
     </div>
 
@@ -560,8 +560,42 @@ let selectedCorridor = null;
 let recipientPhone = '';
 let recipientName = '';
 
+// FIXED (critical): getFeePct() and updateCorridorFeePill() were called from
+// updateDisplay() and openConfirm() but never defined anywhere -- not in this
+// file, not in any script it loads. Every call to updateDisplay() (page load,
+// every numpad keypress, every token/corridor change) threw a ReferenceError,
+// and openConfirm() throws BEFORE it populates or shows the confirm sheet --
+// meaning tapping "Send INDX" did nothing visible at all. The entire Send
+// flow was unreachable for every citizen. Separately, the missing code
+// implied a discounted 0.5% fee for "Pacific corridor" destinations, but the
+// real transfer_indx RPC always charges a flat 2% with no corridor-based
+// discount (see its v_civ_fee calculation) -- showing 0.5%/keeps-99.5% here
+// while the backend actually takes 2% would be a fee claim this app can't
+// back up, so this returns the real flat rate rather than inventing a tier
+// that doesn't exist server-side.
+function getFeePct() {
+  return 0.02;
+}
+function updateCorridorFeePill() {
+  const pill = document.getElementById('corridorFeePill');
+  if (pill) pill.classList.remove('show');
+}
+
 // ── TOKEN ──
+// FIXED: SOL and USDC used to be fully selectable here with a hardcoded fake
+// "available" balance (2.48 SOL / 48.00 USDC that never changed for anyone),
+// and a real Send flow behind them. IN$DEX has no SOL/USDC custody at all --
+// citizens only have indx_balance -- and goToTrustGate() below always hands
+// off to the real transfer_indx RPC regardless of which tab was selected, so
+// a citizen picking "SOL" and sending would have actually moved their real
+// INDX balance, converted through a fake SOL/USD rate. Blocked selection
+// here rather than just relabeling, since the danger was reachability, not
+// just the label.
 function selectToken(key) {
+  if (key !== 'indx') {
+    showToast('SOL and USDC transfers aren\'t live yet — INDX only for now.');
+    return;
+  }
   selectedToken = key;
   document.querySelectorAll('.token-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tok-' + key).classList.add('active');
@@ -805,7 +839,7 @@ function goToTrustGate() {
   const t = TOKENS[selectedToken];
   const usd = (parseFloat(amountStr) * t.rate).toFixed(2);
   const memoVal = (document.getElementById('memoInput')?.value || '').trim();
-  const amtIndx = selectedToken === 'INDX' ? parseFloat(amountStr) : parseFloat(usd) / 0.24;
+  const amtIndx = selectedToken === 'indx' ? parseFloat(amountStr) : parseFloat(usd) / 0.24;
   const phone = document.getElementById('phoneInput')?.value?.trim() || '';
   const recipient = recipientPhone || recipientName || phone || 'unknown';
   const flag = selectedCorridor ? selectedCorridor.flag : '🌏';
