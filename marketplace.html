@@ -752,15 +752,28 @@
       <div class="seller-name" id="sellerName">Seller</div>
       <div class="seller-domain" id="sellerDomain">seller.IN$DEX</div>
     </div>
-    <div style="margin-left:auto;font-size:12px;color:var(--text-muted)" id="sellerRating">⭐ 4.9 ›</div>
+    <!-- FIXED: was a static "⭐ 4.9" shown for every seller, unconditionally,
+         with no JS ever updating it — a permanent fake rating baked into the
+         markup. There's no reviews table anywhere in this schema, so it's
+         honestly a neutral affordance instead of an invented number now. -->
+    <div style="margin-left:auto;font-size:12px;color:var(--text-muted)" id="sellerRating">Seller info ›</div>
   </div>
-  <!-- GOD MODE R2: Seller mini-profile expand -->
+  <!-- GOD MODE R2: Seller mini-profile expand
+       FIXED: seSales/seRating/seMember used to be fabricated — a
+       Math.random()-generated "sales count" (or a hardcoded lookup table
+       for demo listing ids), a star rating derived from that same fake
+       number, and "Wave 1" hardcoded for every seller regardless of who
+       they are. No reviews or sales-aggregate table exists anywhere in
+       this schema, so none of that could ever have been real. Now shows
+       honest "Not tracked yet" plus the seller's real KYC tier, which
+       getListings() already fetches via the seller join. -->
   <div class="seller-expand" id="sellerExpand">
     <div class="se-stats">
-      <div class="se-stat"><div class="se-val" id="seRating">⭐ 4.9</div><div class="se-lbl">Rating</div></div>
+      <div class="se-stat"><div class="se-val" id="seRating">—</div><div class="se-lbl">Rating</div></div>
       <div class="se-stat"><div class="se-val" id="seSales">—</div><div class="se-lbl">Sales</div></div>
-      <div class="se-stat"><div class="se-val" id="seMember">Wave 1</div><div class="se-lbl">Member</div></div>
+      <div class="se-stat"><div class="se-val" id="seMember">—</div><div class="se-lbl">Verified</div></div>
     </div>
+    <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:-4px;margin-bottom:8px;">Sales and ratings aren't tracked yet</div>
     <div class="se-filter-btn" id="seFilterBtn">🔍 See more by this seller</div>
   </div>
   <div class="detail-desc" id="detailDesc">Description loading…</div>
@@ -1462,13 +1475,16 @@ function navTap(el, label) {
     const isOpen = panel.classList.contains('show');
     panel.classList.toggle('show');
     if (!isOpen && activeListing) {
-      // Populate with computed/demo values based on listing
-      const salesEst = activeListing.id.toString().startsWith('d')
-        ? [12, 8, 47, 3, 24, 15][parseInt(activeListing.id.replace('d','')) - 1] || 5
-        : Math.floor(Math.random() * 30) + 2;
-      document.getElementById('seSales').textContent = salesEst;
-      document.getElementById('seRating').textContent = '⭐ 4.' + (7 + (salesEst % 3));
-      document.getElementById('seMember').textContent = 'Wave 1';
+      // FIXED: no reviews or sales-aggregate table exists anywhere in the
+      // schema, so Sales and Rating stay honestly "—". "Verified" now shows
+      // the seller's real kyc_tier (already fetched by getListings' seller
+      // join) instead of a hardcoded "Wave 1" that meant nothing.
+      document.getElementById('seSales').textContent = '—';
+      document.getElementById('seRating').textContent = '—';
+      const kycTier = activeListing.seller?.kyc_tier;
+      document.getElementById('seMember').textContent =
+        (kycTier === null || kycTier === undefined) ? '—' :
+        (kycTier >= 1 ? 'Tier ' + kycTier : 'Tier 0');
       // "See more by seller" filter
       const sellerDomain = activeListing.seller_domain || '';
       document.getElementById('seFilterBtn').onclick = function() {
