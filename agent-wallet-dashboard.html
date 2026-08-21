@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>Agent Dashboard IN$DEX</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
   <style>
     :root{--cyan:#00D4FF;--blue:#2B35D8;--purple:#8B3FE8;--black:#090A10;--green:#00E5A0;--gold:#FFB800;--red:#FF4D6D;--surface:#12141F;--surface2:#1A1D2E;--surface3:#22263A;--border:rgba(255,255,255,0.07);--text:#F0F2FF;--text-muted:rgba(240,242,255,0.45);--text-dim:rgba(240,242,255,0.2);}
     *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -107,12 +108,22 @@
          trading activity (fake swap/stake/LP transactions, fake $ volumes, fake breach
          incidents) plus setInterval loops that kept injecting more fake events and
          incrementing a fake tx counter. No agent execution exists pre-launch — replaced
-         with an honest empty/pre-launch state. See gotchas.md. -->
+         with an honest empty/pre-launch state. See gotchas.md.
+
+         UPDATED 2026-08-20: wired to real Supabase data (citizen_intents, RLS-scoped to
+         the signed-in citizen via citizen_reads_own_intents) instead of leaving the
+         zeros static forever. citizen_intents is empty for every real citizen right now,
+         so this still renders the same honest zero/empty state below — but it will now
+         reflect real activity automatically once Agent Wallet goes live and citizens have
+         real intents. Chain breakdown and the policy breach log stay static/empty on
+         purpose: citizen_intents has no chain column, and agent_audit + approval_gates
+         have no citizen-facing SELECT policy (founder-only), so there is no honest way to
+         query them from here as a citizen. -->
     <!-- STATS -->
     <div class="stats-strip">
       <div class="ss-item"><div class="ss-lbl">Txns today</div><div class="ss-val" style="color:var(--cyan);" id="txCount">0</div></div>
-      <div class="ss-item"><div class="ss-lbl">Auto-signed</div><div class="ss-val" style="color:var(--green);">0</div></div>
-      <div class="ss-item"><div class="ss-lbl">Blocked</div><div class="ss-val" style="color:var(--red);">0</div></div>
+      <div class="ss-item"><div class="ss-lbl">Auto-signed</div><div class="ss-val" style="color:var(--green);" id="autoSignedCount">0</div></div>
+      <div class="ss-item"><div class="ss-lbl">Blocked</div><div class="ss-val" style="color:var(--red);" id="blockedCount">0</div></div>
     </div>
 
     <div class="section">
@@ -121,16 +132,17 @@
       <div class="coverage-card">
         <div class="sect-title" style="margin-bottom:8px;">🛡️ Transaction Protection</div>
         <div class="cc-top">
-          <div><div class="cc-main" style="color:var(--green);">$0</div><div class="cc-sub">used this month</div></div>
-          <div style="text-align:right;"><div style="font-size:14px;font-weight:700;color:var(--text-muted);">/ $10,000</div><div style="font-size:11px;color:var(--green);">0% used</div></div>
+          <div><div class="cc-main" style="color:var(--green);" id="covUsed">$0</div><div class="cc-sub">used this month</div></div>
+          <div style="text-align:right;"><div style="font-size:14px;font-weight:700;color:var(--text-muted);">/ $10,000</div><div style="font-size:11px;color:var(--green);" id="covPct">0% used</div></div>
         </div>
-        <div class="cov-bar"><div class="cov-fill" style="width:0%;background:linear-gradient(90deg,var(--green),var(--cyan));"></div></div>
+        <div class="cov-bar"><div class="cov-fill" id="covFill" style="width:0%;background:linear-gradient(90deg,var(--green),var(--cyan));"></div></div>
         <div class="cc-detail">
           <div class="ccd"><div class="ccd-lbl">Resets</div><div class="ccd-val">Monthly</div></div>
-          <div class="ccd"><div class="ccd-lbl">Remaining</div><div class="ccd-val" style="color:var(--green);">$10,000</div></div>
-          <div class="ccd"><div class="ccd-lbl">Largest txn</div><div class="ccd-val">—</div></div>
-          <div class="ccd"><div class="ccd-lbl">Avg txn size</div><div class="ccd-val">—</div></div>
+          <div class="ccd"><div class="ccd-lbl">Remaining</div><div class="ccd-val" style="color:var(--green);" id="covRemaining">$10,000</div></div>
+          <div class="ccd"><div class="ccd-lbl">Largest txn</div><div class="ccd-val" id="covLargest">—</div></div>
+          <div class="ccd"><div class="ccd-lbl">Avg txn size</div><div class="ccd-val" id="covAvg">—</div></div>
         </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:10px;line-height:1.4;">Agent Wallet has not launched yet, so no coverage has been used. $10,000/month applies once execution goes live.</div>
       </div>
 
       <!-- PENDING APPROVALS -->
@@ -165,36 +177,101 @@
 </div>
 <div id="toast"></div>
 <script>
-function approveCard(){
-  document.getElementById('pendingCard').style.display='none';
-  // GOD MODE PATCH: target unique id, not the first .sect-title in the document
-  document.getElementById('pendingTitle').textContent='✓ No pending approvals';
-  showToast('✓ LP transaction approved broadcasting now');
-}
-function rejectCard(){
-  document.getElementById('pendingCard').style.display='none';
-  // GOD MODE PATCH: target unique id, not the first .sect-title in the document
-  document.getElementById('pendingTitle').textContent='✓ No pending approvals';
-  showToast('✗ LP transaction rejected');
+// REMOVED 2026-08-20: approveCard(), rejectCard(), askConfirm(), cancelConfirm() and
+// executeDecision() were dead code — they targeted #pendingCard, #pendingActions,
+// #confirmMsg and #pendingConfirm, none of which exist in this markup (this page has
+// no live pending-approval card, only the static #pendingTitle "No pending approvals"
+// line), and nothing in this file called them. They were a fabrication landmine: the
+// confirm dialog hardcoded "Confirm approval of $307.00 LP add?" as if it were a real
+// pending transaction. Deleting rather than leaving disabled per the audit skill's
+// "dead code is a landmine" rule — re-wiring an approval flow for a citizen intent
+// should read real data from citizen_intents/approval_gates, not resurrect this stub.
+
+const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc3NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function fmtUSD(n){
+  return '$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
 
-// GOD MODE: TWO-STEP APPROVE/REJECT CONFIRM
-let pendingDecision=null;
-function askConfirm(type){
-  pendingDecision=type;
-  document.getElementById('pendingActions').style.display='none';
-  document.getElementById('confirmMsg').textContent=type==='approve'?'Confirm approval of $307.00 LP add?':'Confirm rejection of this transaction?';
-  document.getElementById('pendingConfirm').classList.add('show');
-}
-function cancelConfirm(){
-  document.getElementById('pendingConfirm').classList.remove('show');
-  document.getElementById('pendingActions').style.display='flex';
-  pendingDecision=null;
-}
-function executeDecision(){
-  if(pendingDecision==='approve')approveCard();
-  else if(pendingDecision==='reject')rejectCard();
-  pendingDecision=null;
+// Loads the signed-in citizen's own citizen_intents (RLS policy
+// citizen_reads_own_intents scopes this to the caller automatically — no
+// citizen_id filter needed or possible from the anon client). If there's no
+// session, or the citizen has no intents yet (true for every real citizen
+// today — citizen_intents has 0 rows pre-launch), this leaves the static
+// honest zero/empty markup already in the page untouched. Chain breakdown
+// and the policy breach log are NOT wired here: citizen_intents has no
+// chain column, and agent_audit / approval_gates have no citizen-facing
+// SELECT policy (founder-only), so there is no honest way to query either
+// from a citizen session.
+async function loadAgentActivity(){
+  try{
+    const { data: { user } } = await sb.auth.getUser();
+    if(!user) return;
+
+    const { data, error } = await sb
+      .from('citizen_intents')
+      .select('id, domain, status, risk_level, amount_indx, raw_intent, created_at')
+      .order('created_at', { ascending:false })
+      .limit(25);
+
+    if(error || !data || data.length===0) return;
+
+    const startOfToday = new Date(); startOfToday.setHours(0,0,0,0);
+    const todays = data.filter(d=>new Date(d.created_at) >= startOfToday);
+    const autoSigned = data.filter(d=>['complete','verified','executing'].includes(d.status));
+    const blocked = data.filter(d=>d.status==='halted');
+    const pending = data.filter(d=>['received','classified','prepared','approved'].includes(d.status));
+
+    document.getElementById('txCount').textContent = todays.length;
+    document.getElementById('autoSignedCount').textContent = autoSigned.length;
+    document.getElementById('blockedCount').textContent = blocked.length;
+
+    if(pending.length>0){
+      document.getElementById('pendingTitle').textContent = pending.length+' pending approval'+(pending.length===1?'':'s');
+    }
+
+    // Coverage meter: sum completed-intent amounts this calendar month
+    // against the disclosed $10,000/month cap (same figure used across
+    // agent-wallet.html, agent-wallet-cli.html, compliance-shield.html).
+    const startOfMonth = new Date(); startOfMonth.setDate(1); startOfMonth.setHours(0,0,0,0);
+    const completedThisMonth = data.filter(d=>d.status==='complete' && d.amount_indx!=null && new Date(d.created_at)>=startOfMonth);
+    if(completedThisMonth.length>0){
+      const amounts = completedThisMonth.map(d=>Number(d.amount_indx));
+      const used = amounts.reduce((a,b)=>a+b,0);
+      const cap = 10000;
+      const pct = Math.min(100, Math.round((used/cap)*100));
+      document.getElementById('covUsed').textContent = fmtUSD(used);
+      document.getElementById('covPct').textContent = pct+'% used';
+      document.getElementById('covFill').style.width = pct+'%';
+      document.getElementById('covRemaining').textContent = fmtUSD(Math.max(0, cap-used));
+      document.getElementById('covLargest').textContent = fmtUSD(Math.max(...amounts));
+      document.getElementById('covAvg').textContent = fmtUSD(used/amounts.length);
+    }
+
+    // Activity feed
+    const statusMap = { complete:'ok', verified:'ok', executing:'pending', approved:'pending', prepared:'pending', classified:'pending', received:'pending', halted:'blocked' };
+    const feed = document.getElementById('activityFeed');
+    feed.innerHTML = data.map(d=>{
+      const kind = statusMap[d.status] || 'pending';
+      const dotClass = kind==='ok' ? 'dot-ok' : kind==='blocked' ? 'dot-blocked' : 'dot-pending';
+      const icon = kind==='ok' ? '✓' : kind==='blocked' ? '✕' : '…';
+      const label = (d.domain||'Agent action') + (d.status ? ' — '+d.status : '');
+      const detail = d.raw_intent ? String(d.raw_intent).slice(0,80) : '';
+      const amt = d.amount_indx!=null ? Number(d.amount_indx).toLocaleString('en-US',{maximumFractionDigits:2})+' INDX' : '';
+      const time = d.created_at ? new Date(d.created_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : '';
+      return '<div class="feed-item" data-status="'+kind+'">'
+        +'<div class="fi-dot '+dotClass+'">'+icon+'</div>'
+        +'<div class="fi-body"><div class="fi-action">'+label+'</div><div class="fi-detail">'+[detail,amt].filter(Boolean).join(' · ')+'</div></div>'
+        +'<div class="fi-time">'+time+'</div>'
+      +'</div>';
+    }).join('');
+    applyFeedFilter();
+  }catch(e){
+    // Any failure (no session, network, RLS deny) leaves the static honest
+    // zero/empty markup already in the page — never fabricate a fallback.
+  }
 }
 
 // GOD MODE: LIVE FEED PAUSE TOGGLE
@@ -242,6 +319,8 @@ function clearNewBadge(){
 // activity exists pre-launch, so txCount and activityFeed now stay at their honest
 // zero/empty state above instead of animating fake growth.
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}
+
+document.addEventListener('DOMContentLoaded', loadAgentActivity);
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

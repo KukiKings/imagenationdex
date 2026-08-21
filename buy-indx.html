@@ -961,22 +961,17 @@
 
   async function confirmPayidSent() {
     closeModal('payidModal');
-    const usd = parseFloat(document.getElementById('audInput').value) || 0;
-    const purchased = Math.floor(usd / INDX_PRICE_USD);
-    const bonus = !genesisUsed ? GENESIS_BONUS : 0;
-    const total = purchased + bonus;
     const ref = document.getElementById('payidRef').dataset.ref || makeRef();
 
-    // INSERT pending transaction to Supabase
-    if (citizenId) {
-      await sb.from('transactions').insert({
-        citizen_id: citizenId,
-        amount_indx: total,
-        direction: 'receive',
-        counterparty_address: `fiat_payid:${ref}`,
-        status: 'pending'
-      });
-    }
+    // FIXED: this used to insert a status:'pending' row into the real
+    // transactions table. There is no reconciliation system anywhere in
+    // this codebase that could ever move it to 'complete' — it would sit
+    // there permanently. history.html now correctly renders real status
+    // values instead of hardcoding "Complete", which meant this row would
+    // have shown as "Pending" forever in the citizen's own history,
+    // directly contradicting the disclosure below that nothing happened.
+    // The reference number is shown to the citizen but nothing is written
+    // to the real ledger, since no real transaction occurred.
 
     document.getElementById('pendingSub').textContent =
       `No PayID payment was taken — no receiving account or reconciliation exists. Nothing has been charged. INDX purchases open at launch. Do not send money in the meantime. Any funds sent now cannot be traced or credited. Standing by.`;//` hours. SIINDEX will notify you.`;
@@ -997,22 +992,13 @@
 
   async function confirmUsdcSent() {
     closeModal('usdcModal');
-    const usd = parseFloat(document.getElementById('audInput').value) || 0;
-    const purchased = Math.floor(usd / INDX_PRICE_USD);
-    const bonus = !genesisUsed ? GENESIS_BONUS : 0;
-    const total = purchased + bonus;
     const ref = document.getElementById('usdcRef').dataset.ref || makeRef();
 
-    // INSERT pending transaction to Supabase
-    if (citizenId) {
-      await sb.from('transactions').insert({
-        citizen_id: citizenId,
-        amount_indx: total,
-        direction: 'receive',
-        counterparty_address: `usdc_solana:${ref}`,
-        status: 'pending'
-      });
-    }
+    // FIXED: same issue as confirmPayidSent above — no reconciliation
+    // system exists, so a 'pending' row here would sit unresolved forever
+    // and (after history.html's status-badge fix) show as permanently
+    // "Pending" in the citizen's own history. Nothing is written to the
+    // real ledger for a transfer that was never actually verified.
 
     document.getElementById('pendingSub').textContent =
       `No USDC transfer was recorded — there is no on-chain reconciliation linking a deposit to your account. Nothing has been charged. INDX purchases open at launch. Do not send USDC in the meantime; it is irreversible and cannot be credited. Standing by.`;//` within 1–2 hours.`;
