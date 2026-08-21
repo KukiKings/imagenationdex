@@ -359,6 +359,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
+<script src="js/wisdom-award.js"></script>
 <script>
   const SUPABASE_URL      = 'https://zljgthfzbalsunuoohcd.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
@@ -379,7 +380,11 @@
   const citizenWisdom  = parseInt(sessionStorage.getItem('citizen_wisdom') || '0', 10);
   const WISDOM_GATE    = 50;
   const PROPOSAL_WISDOM_GATE = 150;
-  const VOTE_REWARD    = 5; // INDX
+  const VOTE_REWARD    = 5; // Wisdom Score points, NOT INDX -- castVote() only ever
+                            // calls award_wisdom for a vote. There is no INDX-crediting
+                            // call anywhere in this file's voting flow. The toast used to
+                            // say "+5 INDX earned", which was a flat fabrication of real
+                            // currency that was never awarded, attempted, or even queued.
 
   const PILLARS = [
     'Sovereignty The Republic answers to no external authority',
@@ -749,19 +754,21 @@
       recordVote(proposalId, side, proposal ? proposal.title : proposalId);
       renderActiveProposals(MY_VOTES);
 
-      // Award wisdom for voting (5 WS)
-      const { error: wisdomErr } = await sb.rpc('award_wisdom', {
-        p_citizen_id:  citizenId,
-        p_points:      5,
-        p_reason:      'governance_vote'
-      });
-      if (wisdomErr) console.warn('award_wisdom:', wisdomErr.message);
-
-      const newWisdom = citizenWisdom + 5;
-      sessionStorage.setItem('citizen_wisdom', newWisdom);
+      // Award wisdom for voting (5 WS), via the shared idempotent helper
+      // (js/wisdom-award.js) -- keyed per-proposal so every distinct vote earns
+      // wisdom, matching the pattern governance.html already used correctly.
+      const wResult = await awardWisdomIdempotent(SUPABASE_URL, rpcHeaders(), citizenId, 'governance_vote', proposalId, 5);
+      if (wResult.ok && wResult.newScore != null) {
+        sessionStorage.setItem('citizen_wisdom', String(wResult.newScore));
+      } else if (!wResult.ok) {
+        console.warn('award_wisdom:', wResult.error);
+      }
 
       document.getElementById('overlay').classList.add('show');
-      showToast(`✅ Vote recorded · +${VOTE_REWARD} INDX earned`);
+      // FIXED: this said "+5 INDX earned" -- castVote() never calls any INDX-crediting
+      // RPC, only award_wisdom. Citizens were told they'd received real currency for
+      // voting when nothing of the sort happened. Correct claim is Wisdom Score.
+      showToast(`✅ Vote recorded · +${VOTE_REWARD} Wisdom earned`);
     } catch (e) {
       showToast('❌ Vote failed: ' + (e.message || 'unknown error'));
       if (card) card.querySelectorAll('.vote-btn').forEach(b => { b.disabled = false; });

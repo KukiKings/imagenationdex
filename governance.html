@@ -402,6 +402,7 @@
   <div class="nav-item" onclick="window.location.href='profile.html'"><div class="nav-icon">👤</div><div class="nav-label">Profile</div></div>
 </nav>
 
+<script src="js/wisdom-award.js"></script>
 <script>
 const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
@@ -656,15 +657,11 @@ async function castVote(proposalId, choice) {
       if (votesEl)   votesEl.textContent   = total.toLocaleString() + ' votes cast';
     }
 
-    // Award +5 wisdom for voting
-    try {
-      const newWisdom = await sbFetch('/rest/v1/rpc/award_wisdom', {
-        method: 'POST',
-        headers: rpcHeaders(),
-        body: JSON.stringify({ p_citizen_id: CITIZEN_ID, p_points: 5, p_reason: 'governance_vote_' + proposalId })
-      });
-      if (newWisdom) sessionStorage.setItem('citizen_wisdom', String(newWisdom));
-    } catch(e) { /* non-critical */ }
+    // Award +5 wisdom for voting, via the shared idempotent helper (js/wisdom-award.js).
+    // This was already correctly keyed per-proposal here -- pillar-amendment.html had
+    // the bug this helper exists to prevent, and was fixed to match this file's pattern.
+    const wResult = await awardWisdomIdempotent(SUPABASE_URL, rpcHeaders(), CITIZEN_ID, 'governance_vote', proposalId, 5);
+    if (wResult.ok && wResult.newScore != null) sessionStorage.setItem('citizen_wisdom', String(wResult.newScore));
 
   } catch(e) { /* vote already reflected in UI */ }
 }

@@ -625,6 +625,7 @@
 </div>
 
 <script src="assets/indx-shield.js"></script>
+<script src="js/wisdom-award.js"></script>
 <script>
   // ── SUPABASE CLIENT ──
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
@@ -805,16 +806,11 @@
     await refreshBalance();
     await loadStakingData();
 
-    // Award +8 wisdom for staking
-    try {
-      const wRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/award_wisdom', {
-        method: 'POST',
-        headers: rpcHeaders(),
-        body: JSON.stringify({ p_citizen_id: citizenId, p_points: 8, p_reason: 'staking' })
-      });
-      const newWisdom = await wRes.json();
-      if (newWisdom) sessionStorage.setItem('citizen_wisdom', String(newWisdom));
-    } catch(e) { /* non-critical */ }
+    // Award +8 wisdom for staking, via the shared idempotent helper (js/wisdom-award.js).
+    // See that file for why: a fixed reason string here previously meant only a
+    // citizen's very first-ever stake ever earned wisdom.
+    const wResult = await awardWisdomIdempotent(SUPABASE_URL, rpcHeaders(), citizenId, 'staking', positionId, 8);
+    if (wResult.ok && wResult.newScore != null) sessionStorage.setItem('citizen_wisdom', String(wResult.newScore));
 
     setTimeout(() => {
       card.innerHTML = `

@@ -1470,6 +1470,26 @@
                   // moved from an existing citizen, so it's the only thing added here.
                   const newBal = Number(fBody.amount_indx || 0);
                   sessionStorage.setItem('citizen_balance', String(newBal));
+                } else {
+                  // No silent failure here either. sms-claim.html told this citizen
+                  // "the INDX lands immediately" -- that only holds if the sender's
+                  // balance still covered it at claim time (fulfill_instant_invite
+                  // checks this for real and can legitimately return payment_sent:
+                  // false), or the invite could have been claimed/expired by someone
+                  // else in the gap between sms-claim.html's status check and this
+                  // call. Either way the citizen followed a real gift link and got
+                  // a real account but no money -- say so instead of leaving
+                  // citizen_balance at its 0 default with no explanation.
+                  const reason = fBody?.success
+                    ? "the sender's balance no longer covered it at claim time"
+                    : fBody?.reason === 'already_used' ? 'it was already claimed'
+                    : fBody?.reason === 'expired' ? 'it expired'
+                    : 'it could not be completed';
+                  const giftBanner = document.createElement('div');
+                  giftBanner.style.cssText = 'position:fixed;top:16px;left:16px;right:16px;max-width:398px;margin:0 auto;background:rgba(255,184,0,0.12);border:1px solid rgba(255,184,0,0.35);border-radius:12px;padding:12px 16px;font-size:13px;color:#FFB800;z-index:500;text-align:center;';
+                  giftBanner.textContent = 'Your account is real, but the gift you followed here didn’t come through — ' + reason + '. No INDX was added.';
+                  document.body.appendChild(giftBanner);
+                  setTimeout(() => giftBanner.remove(), 8000);
                 }
               } catch(e) { console.error('[onboarding-flow] instant invite fulfillment failed (non-critical, account still created):', e); }
             }
