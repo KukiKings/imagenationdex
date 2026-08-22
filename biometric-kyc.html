@@ -472,8 +472,26 @@ async function completeOnboarding() {
       if (!error && data && data.success && data.id) {
         sessionStorage.setItem('citizen_id', data.id);
         sessionStorage.setItem('citizen_name', 'Sovereign');
-        sessionStorage.setItem('citizen_balance', '0');
-        sessionStorage.setItem('citizen_wisdom', '0');
+        // FIXED 2026-08-21: this branch used to leave balance/wisdom at 0 --
+        // unlike join.html, grid-account-onboarding.html, and
+        // quickstart-onboarding.html, which all call
+        // claim_genesis_signup_bonus_anon() right after create_onboarding_citizen
+        // to grant the real 50 INDX / 25 Wisdom welcome bonus. claim-gift.html
+        // routes here promising exactly that ("Your gift lands... 50 INDX") but
+        // nothing granted it. Matching the same real pattern used elsewhere.
+        try {
+          const bonus = await sb.rpc('claim_genesis_signup_bonus_anon', { p_citizen_id: data.id });
+          if (bonus && bonus.data && bonus.data.success) {
+            sessionStorage.setItem('citizen_balance', String(bonus.data.indx_balance));
+            sessionStorage.setItem('citizen_wisdom', String(bonus.data.wisdom_score));
+          } else {
+            sessionStorage.setItem('citizen_balance', '0');
+            sessionStorage.setItem('citizen_wisdom', '0');
+          }
+        } catch (bonusErr) {
+          sessionStorage.setItem('citizen_balance', '0');
+          sessionStorage.setItem('citizen_wisdom', '0');
+        }
       }
     }
   } catch(e) {
