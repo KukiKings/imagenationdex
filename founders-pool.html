@@ -1065,7 +1065,7 @@ function openWelcome(id) {
     <div class="welcome-pkg-domain">${f.wallet}</div>
     <div class="welcome-pkg-row"><span class="welcome-pkg-label">Investment</span><span class="welcome-pkg-val" style="color:var(--cyan)">$${fmt(f.amount)}</span></div>
     <div class="welcome-pkg-row"><span class="welcome-pkg-label">Pool Share</span><span class="welcome-pkg-val" style="color:var(--purple)">${share}%</span></div>
-    <div class="welcome-pkg-row"><span class="welcome-pkg-label">INDX Allocation</span><span class="welcome-pkg-val" style="color:var(--gold)">${indxTokens.toLocaleString()} INDX</span></div>
+    <div class="welcome-pkg-row"><span class="welcome-pkg-label">INDX Allocation (recorded, not minted)</span><span class="welcome-pkg-val" style="color:var(--gold)">${indxTokens.toLocaleString()} INDX</span></div>
     <div class="welcome-pkg-row"><span class="welcome-pkg-label">Projected Monthly (Forecast, ${yieldRate}%)</span><span class="welcome-pkg-val" style="color:var(--green)">${monthlyYield > 0 ? '$' + fmt(monthlyYield) : 'Pending activation'}</span></div>
     <div class="welcome-pkg-row"><span class="welcome-pkg-label">Projected Annual (Forecast)</span><span class="welcome-pkg-val" style="color:var(--green)">${annualYield > 0 ? '$' + fmt(annualYield) + '/yr' : '—'}</span></div>
     <div class="welcome-pkg-row"><span class="welcome-pkg-label">LP Launch</span><span class="welcome-pkg-val">24 Jan 2027 · Raydium</span></div>
@@ -1084,10 +1084,10 @@ function buildWelcomeMessage(f, share, monthlyYield, indxTokens) {
 
 Your investment of $${fmt(f.amount)} has been recorded in the IN$DEX Founders Pool.
 
-Here is what you have received:
+Here is what has been recorded for you (INDX has not been minted yet — nothing has actually been received):
 
 ✦ Your sovereign domain: ${f.wallet}
-✦ INDX token allocation: ${indxTokens.toLocaleString()} INDX at genesis price ($0.24)
+✦ INDX allocation recorded: ${indxTokens.toLocaleString()} INDX at genesis price ($0.24) — pending mint, not yet received
 ✦ Pool position: ${share !== '—' ? share + '% of the liquidity pool' : 'Pending — activates on confirmation'}
 ✦ Projected monthly (forecast only, not paid): ${monthlyYield > 0 ? '$' + fmt(monthlyYield) + ' at the current modelling rate' : 'Will show once confirmed'}
 ✦ LP launch: 24 January 2027 on Raydium CPMM
@@ -1204,7 +1204,7 @@ Status           : ${f.status === 'active' ? 'Active — In Pool' : f.status ===
 ─── CONTRIBUTION ───────────────
 Amount Contributed: $${fmt(f.amount)} USD
 Pool Share (model): ${share}%
-INDX Allocation  : ${Math.round(f.amount / 0.24).toLocaleString()} INDX
+INDX Allocation  : ${Math.round(f.amount / 0.24).toLocaleString()} INDX (recorded, not minted or received)
 Genesis Price    : $0.24 per INDX
 
 ─── FORECAST (NOT PAID, NOT GUARANTEED) ─
@@ -1589,7 +1589,7 @@ function renderFounders() {
       <!-- INDX ALLOCATION + WALLET -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
         <div style="background:var(--surface3);border:1px solid rgba(255,184,0,0.2);border-radius:10px;padding:10px 12px;">
-          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;">INDX Allocation</div>
+          <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;">INDX Allocation (recorded, not minted)</div>
           <div style="font-size:14px;font-weight:700;color:var(--gold)">${fmt(f.amount / 0.24)} INDX</div>
           <div style="font-size:9px;color:var(--muted);margin-top:2px;">@ $0.24 genesis</div>
         </div>
@@ -1669,6 +1669,11 @@ function renderHistory() {
 
 // ── GOD MODE: TGE COUNTDOWN ──
 const TGE_DATE = new Date('2027-01-24T00:00:00+11:00');
+// AUDIT: flip this to true only when the Raydium CPMM pool is confirmed deployed
+// (matches the LP Readiness checklist below, which is currently all `done: false`
+// except the USDC target). Do NOT let this auto-flip on date alone — that let the
+// countdown claim "LP LIVE" the moment the clock passed, regardless of true status.
+const LP_ACTUALLY_LIVE = false;
 
 function updateTGECountdown() {
   const now = new Date();
@@ -1679,9 +1684,14 @@ function updateTGECountdown() {
 
   if (!el) return;
 
-  if (diff <= 0) {
+  if (diff <= 0 && LP_ACTUALLY_LIVE) {
     el.innerHTML = '<div class="tge-unit"><div class="tge-num" style="font-size:16px;color:var(--gold)">LP LIVE</div><div class="tge-unit-lbl">INDX/USDC</div></div>';
     if (pill) { pill.textContent = '🟢 LP Live'; pill.className = 'tge-status-pill tge-live'; }
+    return;
+  }
+  if (diff <= 0 && !LP_ACTUALLY_LIVE) {
+    el.innerHTML = '<div class="tge-unit"><div class="tge-num" style="font-size:15px;color:var(--muted)">Target date passed</div><div class="tge-unit-lbl">LP not yet deployed — see readiness checklist</div></div>';
+    if (pill) { pill.textContent = '⏳ Not Yet Deployed'; pill.className = 'tge-status-pill'; }
     return;
   }
 
