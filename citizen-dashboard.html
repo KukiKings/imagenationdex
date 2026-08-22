@@ -2182,9 +2182,24 @@
       }
     } catch (e) { /* leave default badge text on network/RPC failure */ }
   }
-  function openPqsiSheet() {
+  async function openPqsiSheet() {
     const ov = document.getElementById('pqsiOverlay');
     if (ov) ov.style.display = 'flex';
+    const checksEl = document.getElementById('pqsiChecks');
+    if (!checksEl) return;
+    checksEl.innerHTML = '<div class="pqsi-check-row">Checking live status…</div>';
+    try {
+      const sb = INDXDB.getClient();
+      const { data, error } = await sb.rpc('get_platform_security_status');
+      if (error || !data) { checksEl.innerHTML = '<div class="pqsi-check-row">Status unavailable right now.</div>'; return; }
+      const mark = data.clear ? '✓' : '⚠️';
+      const lastScan = data.last_scan_at ? new Date(data.last_scan_at).toLocaleString() : 'no scan recorded yet';
+      checksEl.innerHTML =
+        '<div class="pqsi-check-row"><span class="pqsi-check-ok">' + mark + '</span> Platform tier ' + data.tier + (data.clear ? ' — clear' : ' — ' + data.open_count + ' open issue(s)') + '</div>' +
+        '<div class="pqsi-check-row">Last scan logged: ' + lastScan + '</div>';
+    } catch (e) {
+      checksEl.innerHTML = '<div class="pqsi-check-row">Status unavailable right now.</div>';
+    }
   }
   function closePqsiSheet() {
     const ov = document.getElementById('pqsiOverlay');
@@ -2917,13 +2932,20 @@
       <div class="pqsi-sheet-title">🛡️ PQSI Protection</div>
       <div class="ewa-x" onclick="closePqsiSheet()">✕</div>
     </div>
-    <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:4px;">Post-Quantum Security Intelligence monitors your account. Every transaction is scanned before it executes — no exceptions.</div>
-    <div class="pqsi-checks">
-      <div class="pqsi-check-row"><span class="pqsi-check-ok">✓</span> Recovery Word Shield active</div>
-      <div class="pqsi-check-row"><span class="pqsi-check-ok">✓</span> Quantum threat scan — T0 CLEAR</div>
-      <div class="pqsi-check-row"><span class="pqsi-check-ok">✓</span> Network integrity confirmed</div>
-      <div class="pqsi-check-row"><span class="pqsi-check-ok">✓</span> Civilisation Law 2% enforced</div>
-      <div class="pqsi-check-row"><span class="pqsi-check-ok">✓</span> Behavioral anomaly scan — clear</div>
+    <!-- FIXED 2026-08-21: this sheet described 5 static checkmarks (including
+         "Recovery Word Shield" -- there are no recovery words in this MPC 2-of-3
+         account, that check named a thing that doesn't exist -- and "Civilisation
+         Law 2% enforced", which contradicts indx-98-2-law.html's own honest
+         disclosure that the 98/2 split is doctrine, not yet enforced by deployed
+         contract code) plus a claim that PQSI scans "every transaction... no
+         exceptions." Verified against the live schema: no HTML screen calls
+         pqsi_classify/pqsi_log_event and no DB trigger connects PQSI to the
+         transactions table, so that claim was false. get_platform_security_status
+         IS a real RPC backed by the security_events table, so this sheet now
+         renders its real response instead of fabricated checkmarks. -->
+    <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:4px;">Post-Quantum Security Intelligence (PQSI) tracks platform-wide security events and reports the highest open severity tier. It does not scan individual transactions before they execute.</div>
+    <div class="pqsi-checks" id="pqsiChecks">
+      <div class="pqsi-check-row">Checking live status…</div>
     </div>
     <button class="ewa-cta" onclick="runPqsiScan()">Run Full Scan Now</button>
   </div>

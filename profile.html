@@ -516,6 +516,7 @@
   .act-amt{font-size:12px;font-weight:800;}
   .act-amt.neg{color:#FF4D6D;} .act-amt.pos{color:#00E5A0;} .act-amt.neu{color:#00D4FF;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -624,7 +625,7 @@
     <div class="ric-see-all" onclick="window.location.href='referral.html'">See details ›</div>
   </div>
   <div class="ric-stats">
-    <div class="ric-stat"><div class="ric-val" id="ricShares">0</div><div class="ric-lbl">Invites Sent</div></div>
+    <div class="ric-stat"><div class="ric-val" id="ricShares">0</div><div class="ric-lbl">Referred</div></div>
     <div class="ric-stat"><div class="ric-val" id="ricCitizens">0</div><div class="ric-lbl">Joined</div></div>
     <div class="ric-stat"><div class="ric-val" id="ricEarned" style="color:var(--green)">0 INDX</div><div class="ric-lbl">Earned</div></div>
     <div class="ric-stat"><div class="ric-val" id="ricUSD">$0.00</div><div class="ric-lbl">USD Value</div></div>
@@ -1100,7 +1101,6 @@
   // ══ GOD MODE R2 ══════════════════════════════════════════════
   (function godModeProfileR2() {
     const BIO_KEY  = 'indx_profile_bio';
-    const VIEW_KEY = 'indx_profile_views';
 
     // Feature 2: Inline bio editor
     function initBio() {
@@ -1180,43 +1180,72 @@
     }
 
     // Feature 3: Referral impact card
-    function buildReferralCard() {
-      var pending = JSON.parse(localStorage.getItem('indx_ref_pending') || '[]');
-      var totalShares   = pending.length;
-      var totalCitizens = Math.floor(totalShares * 0.6);
-      var earnedINDX    = totalCitizens * 10;
-      var earnedUSD     = (earnedINDX * 0.24).toFixed(2);
-      var el;
-      el = document.getElementById('ricShares');   if(el) el.textContent = totalShares;
-      el = document.getElementById('ricCitizens'); if(el) el.textContent = totalCitizens;
-      el = document.getElementById('ricEarned');   if(el) el.textContent = earnedINDX + ' INDX';
-      el = document.getElementById('ricUSD');      if(el) el.textContent = '$' + earnedUSD;
+    // FIXED 2026-08-21: "Joined" and "Earned" used to be invented from a flat,
+    // made-up 60%-conversion assumption on local share-attempt count (totalCitizens
+    // = shares*0.6, earnedINDX = totalCitizens*10) -- no real referral ever backed
+    // either number, and 10 INDX/referral was also the wrong rate. referral-dashboard.html
+    // already calls the real get_referral_stats RPC (real referrals table, real
+    // completed_referrals count, indx_earned = completed*50) -- this card now calls
+    // the same RPC instead of fabricating its own numbers.
+    async function buildReferralCard() {
+      var elShares = document.getElementById('ricShares');
+      var elCitizens = document.getElementById('ricCitizens');
+      var elEarned = document.getElementById('ricEarned');
+      var elUSD = document.getElementById('ricUSD');
+      var citizenId = sessionStorage.getItem('citizen_id');
+      if (!citizenId) return; // not signed in — leave the honest 0 defaults in the markup
+      try {
+        var SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+        var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+        var sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+        var res = await sbClient.rpc('get_referral_stats', { p_citizen_id: citizenId });
+        if (res.error || !res.data) return;
+        var d = res.data;
+        var earnedUSD = ((d.indx_earned || 0) * 0.24).toFixed(2);
+        if (elShares) elShares.textContent = d.total_referred || 0;
+        if (elCitizens) elCitizens.textContent = d.completed_referrals || 0;
+        if (elEarned) elEarned.textContent = (d.indx_earned || 0) + ' INDX';
+        if (elUSD) elUSD.textContent = '$' + earnedUSD;
+      } catch (e) { /* leave honest 0 defaults on any failure */ }
     }
 
-    // Feature 4: Profile view counter
-    function updateViewCounter() {
-      var raw = JSON.parse(localStorage.getItem(VIEW_KEY) || '{"count":0,"month":""}');
-      var thisMonth = new Date().toISOString().slice(0, 7);
-      if (raw.month !== thisMonth) { raw.count = 0; raw.month = thisMonth; }
-      raw.count++;
-      localStorage.setItem(VIEW_KEY, JSON.stringify(raw));
+    // Feature 4: Stat boxes (Citizens Referred, Items Listed)
+    // FIXED 2026-08-21: this used to overwrite the "Items Listed" box's label
+    // and number with a device-local "Profile Views" counter that just counted
+    // how many times the OWNER opened their own profile (this screen has no
+    // other-citizen viewer -- citizen-profile.html is the one others see), and
+    // populated "Citizens Referred" from the same local share-attempt count
+    // buildReferralCard() fabricated its numbers from. Neither was real. Now:
+    // "Citizens Referred" reuses buildReferralCard()'s real get_referral_stats
+    // call, and "Items Listed" calls the real get_my_listings RPC. The
+    // "Profile Views" label/counter is dropped -- there's no real cross-citizen
+    // view tracking to report.
+    async function updateStatBoxes() {
       var statBoxes = document.querySelectorAll('.stat-box');
-      if (statBoxes[2]) {
-        statBoxes[2].querySelector('.num').textContent = raw.count;
-        statBoxes[2].querySelector('.lbl').textContent = 'Profile Views';
-      }
-      // Also update Citizens Referred from referral pending
-      var pending = JSON.parse(localStorage.getItem('indx_ref_pending') || '[]');
-      if (statBoxes[1]) {
-        statBoxes[1].querySelector('.num').textContent = pending.length;
-      }
+      var citizenId = sessionStorage.getItem('citizen_id');
+      if (!citizenId) return; // not signed in — leave the honest 0 defaults in the markup
+      try {
+        var SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+        var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+        var sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+        var [refRes, listRes] = await Promise.all([
+          sbClient.rpc('get_referral_stats', { p_citizen_id: citizenId }),
+          sbClient.rpc('get_my_listings', { p_citizen_id: citizenId })
+        ]);
+        if (!refRes.error && refRes.data && statBoxes[1]) {
+          statBoxes[1].querySelector('.num').textContent = refRes.data.completed_referrals || 0;
+        }
+        if (!listRes.error && Array.isArray(listRes.data) && statBoxes[2]) {
+          statBoxes[2].querySelector('.num').textContent = listRes.data.length;
+        }
+      } catch (e) { /* leave honest 0 defaults on any failure */ }
     }
 
     // Init all
     initBio();
     buildCompletionCard();
     buildReferralCard();
-    updateViewCounter();
+    updateStatBoxes();
   })();
 </script>
 
