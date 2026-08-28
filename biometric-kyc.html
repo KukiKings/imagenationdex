@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>Sovereign Onboarding · IN$DEX</title>
+  <meta name="description" content="Join IN$DEX with just a phone number — no ID, no bank account, no face scan required for Tier 0. Real SMS code verification isn't live yet; account creation and your wallet balance are real.">
   <style>
     :root{--cyan:#00D4FF;--blue:#2B35D8;--purple:#8B3FE8;--black:#090A10;--green:#00E5A0;--gold:#FFB800;--red:#FF4D6D;--surface:#12141F;--surface2:#1A1D2E;--surface3:#22263A;--border:rgba(255,255,255,0.07);--text:#F0F2FF;--text-muted:rgba(240,242,255,0.45);--text-dim:rgba(240,242,255,0.2);}
     *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -198,7 +199,7 @@
       <div class="step-card">
         <div class="sc-icon">📱</div>
         <div class="sc-title">Your phone number</div>
-        <div class="sc-sub">We'll send a 6-digit code to confirm it's really you. Standard SMS rates may apply.</div>
+        <div class="sc-sub">Enter your number to get started. Real SMS code verification isn't live yet, so the next step won't yet confirm you own this number — full phone verification is planned before launch.</div>
         <div class="phone-input-row">
           <div class="flag-select" onclick="showToast('Country selector 180+ countries')">🇦🇺 +61</div>
           <input class="phone-input" type="tel" id="phoneInput" placeholder="4XX XXX XXX" oninput="checkPhone()">
@@ -214,8 +215,8 @@
     <div class="screen-inner">
       <div class="step-card">
         <div class="sc-icon">💬</div>
-        <div class="sc-title">Enter your code</div>
-        <div class="sc-sub" id="otpSub">We sent a 6-digit code to your number. Check your messages.</div>
+        <div class="sc-title">Enter any 6 digits</div>
+        <div class="sc-sub" id="otpSub">SMS code verification isn't live yet — no real code was sent, so any 6 digits will continue below. This will check a real code once phone verification ships.</div>
         <div class="otp-row" id="otpRow">
           <div class="otp-box" id="otp0"></div>
           <div class="otp-box" id="otp1"></div>
@@ -346,6 +347,14 @@ function checkPhone(){
   document.getElementById('sendOtpBtn').disabled = v.length < 8;
 }
 
+// AUDIT 2026-08-28: this OTP screen never sent or checked a real code — sendOtp() never calls
+// Supabase Auth (no sb.auth.signInWithOtp/verifyOtp anywhere in this file, unlike the genuinely
+// real OTP flow in sovereign-verify.html), and otpKey() accepted literally any 6 digits as
+// "confirmed". The copy claimed "We sent a 6-digit code to confirm it's really you" while no
+// phone ownership was ever checked. Account creation itself is real (create_onboarding_citizen),
+// but the "verification" was pure UI theater. Copy rewritten below to disclose this honestly
+// rather than claim a security check that doesn't exist — do not restore the old "code sent /
+// code confirmed" wording without wiring a real OTP send+verify first.
 async function sendOtp(){
   const v = document.getElementById('phoneInput').value;
   verifiedPhone = '+61' + v;
@@ -361,10 +370,10 @@ async function sendOtp(){
     if (data && data.id) citizenRecord = data;
   } catch(e) { /* silent — new citizen */ }
 
-  document.getElementById('otpSub').textContent = 'We sent a 6-digit code to ' + verifiedPhone + '. Check your messages.';
+  document.getElementById('otpSub').textContent = 'SMS verification for ' + verifiedPhone + ' isn\'t live yet — no real code was sent. Any 6 digits will continue below.';
   goToStep(2);
   btn.disabled = false; btn.textContent = 'Send code →';
-  showToast('Code sent! Check your messages.');
+  showToast('Continuing — real SMS verification isn\'t live yet.');
 }
 
 function startOtpTimer(){
@@ -394,7 +403,7 @@ function otpKey(k){
   }
   if(otpDigits.length === 6){
     clearInterval(otpInterval);
-    showToast('✓ Code confirmed!');
+    showToast('Continuing…');
     // Corrected 2026-07-27: previously routed to the liveness scan (old step 3) before
     // completing. Tier 0 is phone + OTP only now — go straight to account creation.
     setTimeout(()=>completeOnboarding(), 700);
@@ -602,7 +611,7 @@ function startResendCooldown() {
 }
 
 function triggerResend() {
-  showToast('New code sent to your number');
+  showToast('Not live yet — no real code is sent. Any 6 digits will still work.');
   startResendCooldown();
 }
 </script>
