@@ -208,6 +208,11 @@ function sse(text: string) {
 
 Deno.serve(async (req: Request) => {
   const correlationId = crypto.randomUUID();
+  // AUDIT: processing_time_ms metric merged in from a draft endpoint AJ proposed
+  // (2026-08-26) rather than deploying it as a separate, weaker duplicate — this
+  // is the only production SIINDEX website-response path, so timing is measured
+  // here.
+  const startTime = Date.now();
   if (!isAllowedOrigin(req.headers.get("Origin"))) {
     return json(req, 403, { error: "origin_not_allowed" }, correlationId);
   }
@@ -393,6 +398,22 @@ Deno.serve(async (req: Request) => {
         }
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
+        // Fire-and-forget completion metric — merged in from AJ's draft rather
+        // than a separate duplicate endpoint. No transcript/response content is
+        // logged, matching the no-content-storage promise in the privacy policy.
+        const processingTimeMs = Date.now() - startTime;
+        admin.from("security_events").insert({
+          tier: "T0",
+          zone: ZONE,
+          correlation_id: correlationId,
+          description: "SIINDEX Website Visitor Mode response completed.",
+          detail: {
+            visitor_hash: hash,
+            processing_time_ms: processingTimeMs,
+            model: MODEL,
+            content_stored: false,
+          },
+        }).then(() => {}).catch(() => {});
       }
     },
   });
