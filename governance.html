@@ -403,7 +403,6 @@
   <div class="nav-item" onclick="window.location.href='profile.html'"><div class="nav-icon">👤</div><div class="nav-label">Profile</div></div>
 </nav>
 
-<script src="js/wisdom-award.js"></script>
 <script>
 const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
@@ -641,6 +640,7 @@ async function castVote(proposalId, choice) {
         p_wisdom:      WISDOM_SCORE
       })
     });
+    const voteResult = await res.clone().json().catch(() => null);
 
     // Refresh vote counts from DB
     const fresh = await sbFetch('/rest/v1/governance_proposals?id=eq.' + proposalId + '&select=votes_for,votes_against');
@@ -657,11 +657,11 @@ async function castVote(proposalId, choice) {
       if (votesEl)   votesEl.textContent   = total.toLocaleString() + ' votes cast';
     }
 
-    // Award +5 wisdom for voting, via the shared idempotent helper (js/wisdom-award.js).
-    // This was already correctly keyed per-proposal here -- pillar-amendment.html had
-    // the bug this helper exists to prevent, and was fixed to match this file's pattern.
-    const wResult = await awardWisdomIdempotent(SUPABASE_URL, rpcHeaders(), CITIZEN_ID, 'governance_vote', proposalId, 5);
-    if (wResult.ok && wResult.newScore != null) sessionStorage.setItem('citizen_wisdom', String(wResult.newScore));
+    // Wisdom (+5) is now awarded INSIDE cast_governance_vote itself (via
+    // award_wisdom_internal, keyed to this proposal's real id) -- atomic with the vote
+    // and works for every citizen, not only ones with a real auth.uid() session. This
+    // used to be a separate client-side call to the public, auth-gated award_wisdom RPC.
+    if (voteResult && voteResult.new_wisdom != null) sessionStorage.setItem('citizen_wisdom', String(voteResult.new_wisdom));
 
   } catch(e) { /* vote already reflected in UI */ }
 }

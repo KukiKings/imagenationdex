@@ -625,7 +625,6 @@
 </div>
 
 <script src="assets/indx-shield.js"></script>
-<script src="js/wisdom-award.js"></script>
 <script>
   // ── SUPABASE CLIENT ──
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
@@ -806,11 +805,12 @@
     await refreshBalance();
     await loadStakingData();
 
-    // Award +8 wisdom for staking, via the shared idempotent helper (js/wisdom-award.js).
-    // See that file for why: a fixed reason string here previously meant only a
-    // citizen's very first-ever stake ever earned wisdom.
-    const wResult = await awardWisdomIdempotent(SUPABASE_URL, rpcHeaders(), citizenId, 'staking', positionId, 8);
-    if (wResult.ok && wResult.newScore != null) sessionStorage.setItem('citizen_wisdom', String(wResult.newScore));
+    // Wisdom (+8) is now awarded INSIDE stake_indx itself (via award_wisdom_internal,
+    // keyed to this position's real id) -- atomic with the stake and works for every
+    // citizen, not only ones with a real auth.uid() session. Previously this page made
+    // a separate client-side call to the public, auth-gated award_wisdom RPC, which
+    // silently no-op'd for any citizen without a real session.
+    if (stakeResult.new_wisdom != null) sessionStorage.setItem('citizen_wisdom', String(stakeResult.new_wisdom));
 
     setTimeout(() => {
       card.innerHTML = `

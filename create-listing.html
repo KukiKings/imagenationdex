@@ -465,7 +465,6 @@
   Good lighting and real product shots build buyer trust fastest. Fill the frame. Shoot on a plain background. Avoid screenshots or stock images — buyers trust real photos.
 </div>
 
-<script src="js/wisdom-award.js"></script>
 <script>
   const SUPA_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
   const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
@@ -609,16 +608,13 @@
       const data = await res.json();
       if (data && data.success) {
         publishedListingId = data.listing_id;
-        // Real wisdom award via the shared idempotent helper (js/wisdom-award.js).
-        // Was previously faked client-side with no backend, then (after that fix)
-        // used a fixed 'listing_published' reason that only let a seller's very
-        // first-ever listing earn wisdom -- see js/wisdom-award.js for the full story.
-        const wResult = await awardWisdomIdempotent(
-          SUPA_URL,
-          { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' },
-          sellerId, 'listing_published', publishedListingId, 5
-        );
-        if (wResult.ok && wResult.newScore != null) sessionStorage.setItem('citizen_wisdom', String(wResult.newScore));
+        // Wisdom award now happens INSIDE create_listing itself (via award_wisdom_internal,
+        // keyed to this listing's real id) -- it's atomic with listing creation and works
+        // for every seller, not just ones with a real auth.uid() session. The RPC returns
+        // the resulting score directly, so no separate client-side award_wisdom call is
+        // needed here anymore. (A redundant call used to live here -- it double-awarded
+        // wisdom once create_listing started succeeding reliably. Removed.)
+        if (data.new_wisdom != null) sessionStorage.setItem('citizen_wisdom', String(data.new_wisdom));
 
         document.getElementById('successSub').textContent =
           `"${title}" is live at ${indxVal} INDX ($${usdVal.toFixed(2)}). You keep 98% of every sale.`;

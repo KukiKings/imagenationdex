@@ -359,7 +359,6 @@
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
-<script src="js/wisdom-award.js"></script>
 <script>
   const SUPABASE_URL      = 'https://zljgthfzbalsunuoohcd.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
@@ -703,6 +702,13 @@
         renderProposeGate();
         return;
       }
+      // Submitting a proposal now awards +5 Wisdom Score server-side (submit_pillar_amendment_proposal
+      // calls award_wisdom_internal) -- previously this action earned nothing at all.
+      if (data.new_wisdom != null) {
+        citizenWisdom = data.new_wisdom;
+        sessionStorage.setItem('citizen_wisdom', String(data.new_wisdom));
+        renderProposeGate();
+      }
       showToast('✓ Proposal submitted — now open for voting');
       document.getElementById('proposeTitle').value = '';
       document.getElementById('proposeRationale').value = '';
@@ -754,15 +760,14 @@
       recordVote(proposalId, side, proposal ? proposal.title : proposalId);
       renderActiveProposals(MY_VOTES);
 
-      // Award wisdom for voting (5 WS), via the shared idempotent helper
-      // (js/wisdom-award.js) -- keyed per-proposal so every distinct vote earns
-      // wisdom, matching the pattern governance.html already used correctly.
-      const wResult = await awardWisdomIdempotent(SUPABASE_URL, rpcHeaders(), citizenId, 'governance_vote', proposalId, 5);
-      if (wResult.ok && wResult.newScore != null) {
-        sessionStorage.setItem('citizen_wisdom', String(wResult.newScore));
-      } else if (!wResult.ok) {
-        console.warn('award_wisdom:', wResult.error);
-      }
+      // Wisdom (+5) is now awarded INSIDE cast_governance_vote itself (via
+      // award_wisdom_internal, keyed to this proposal's real id) -- atomic with the
+      // vote and works for every citizen, not only ones with a real auth.uid() session.
+      // This used to be a separate client-side call to the public, auth-gated
+      // award_wisdom RPC (and, per the file's original comment, was itself a copy of a
+      // pattern that had a real idempotency bug elsewhere -- moving it server-side
+      // removes that whole class of risk here too).
+      if (data.new_wisdom != null) sessionStorage.setItem('citizen_wisdom', String(data.new_wisdom));
 
       document.getElementById('overlay').classList.add('show');
       // FIXED: this said "+5 INDX earned" -- castVote() never calls any INDX-crediting
