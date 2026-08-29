@@ -512,6 +512,18 @@ async function completeOnboarding() {
     } catch(linkErr) { /* non-fatal — citizen row still gets created/found below */ }
 
     if (citizenRecord && citizenRecord.id) {
+      // BACKEND FIX 2026-08-29: get_citizen_by_phone() now only returns citizen_name/
+      // indx_balance/wisdom_score/web3_domain to the verified phone owner (or founder) --
+      // previously any anonymous caller could pass any phone number and get a real
+      // citizen's name back, a phone-to-identity leak. The sendOtp() lookup above runs
+      // before OTP verification, so it now only gets back {id}. Re-fetch here, after
+      // verifyOtpAndComplete()'s real sb.auth.verifyOtp() has run, so this call is
+      // authenticated as the actual phone owner and gets the full record.
+      try {
+        const { data: verified } = await sb.rpc('get_citizen_by_phone', { p_phone: verifiedPhone });
+        if (verified && verified.id) citizenRecord = verified;
+      } catch (refetchErr) { /* non-fatal — fall back to the id-only pre-OTP record */ }
+
       sessionStorage.setItem('citizen_id',      citizenRecord.id || '');
       sessionStorage.setItem('citizen_name',     citizenRecord.citizen_name || 'Sovereign');
       sessionStorage.setItem('citizen_balance',  citizenRecord.indx_balance || '0');
