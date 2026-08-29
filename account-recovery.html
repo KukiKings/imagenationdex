@@ -199,9 +199,9 @@
        gotchas.md. Real phone-OTP verification IS the recovery method right now.) -->
   <div class="screen" id="screen3">
     <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-      <div class="success-ring">✅</div>
-      <div class="screen-title">Account restored!</div>
-      <div class="screen-sub">You're verified. Your account is back — including a real unfreeze if it was frozen.</div>
+      <div class="success-ring" id="restoredIcon">✅</div>
+      <div class="screen-title" id="restoredTitle">Account restored!</div>
+      <div class="screen-sub" id="restoredSub">You're verified. Your account is back — including a real unfreeze if it was frozen.</div>
 
       <div style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:24px;">
         <div class="restored-item"><div class="ri-check">✓</div><div class="ri-text" id="restoredBalance">INDX balance —</div></div>
@@ -382,18 +382,24 @@
       sessionStorage.setItem('citizen_balance', citizen.indx_balance ?? 0);
       sessionStorage.setItem('citizen_web3_domain', citizen.web3_domain || '');
 
+      // GOD MODE FIX (2026-08-29): a founder-imposed security freeze can no
+      // longer be self-lifted by phone re-verification (set_account_freeze /
+      // set_card_freeze now reject that server-side) -- this used to fire the
+      // unfreeze request and claim success unconditionally, regardless of
+      // whether the RPC actually succeeded. Now checks the real response.
       let wasFrozen = false;
+      let freezeBlocked = false;
       try {
         const freezeRes = await fetch(SUPABASE_URL + '/rest/v1/citizens?id=eq.' + citizen.id + '&select=account_frozen,card_frozen', { headers: rpcHeaders() });
         const freezeRows = await freezeRes.json();
         const row = freezeRows[0] || {};
         if (row.account_frozen) {
-          await fetch(SUPABASE_URL + '/rest/v1/rpc/set_account_freeze', { method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizen.id, p_frozen: false }) });
-          wasFrozen = true;
+          const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/set_account_freeze', { method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizen.id, p_frozen: false }) });
+          if (r.ok) { wasFrozen = true; } else { freezeBlocked = true; }
         }
         if (row.card_frozen) {
-          await fetch(SUPABASE_URL + '/rest/v1/rpc/set_card_freeze', { method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizen.id, p_frozen: false }) });
-          wasFrozen = true;
+          const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/set_card_freeze', { method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizen.id, p_frozen: false }) });
+          if (r.ok) { wasFrozen = true; } else { freezeBlocked = true; }
         }
       } catch (e) { /* freeze lift is best-effort — recovery still proceeds even if this check fails */ }
 
@@ -402,6 +408,14 @@
       document.getElementById('restoredDomain').textContent = 'Domain: ' + (citizen.web3_domain || 'not claimed yet');
       if (wasFrozen) {
         document.getElementById('restoredFreezeRow').style.display = 'flex';
+      }
+      if (freezeBlocked) {
+        document.getElementById('restoredFreezeRow').style.display = 'flex';
+        document.getElementById('restoredFreeze').textContent = 'Your account is frozen pending a security review and could not be lifted by phone verification alone — contact support.';
+        document.getElementById('restoredFreezeRow').querySelector('.ri-check').textContent = '⚠';
+        document.getElementById('restoredIcon').textContent = '⚠️';
+        document.getElementById('restoredTitle').textContent = 'Identity verified — account still frozen';
+        document.getElementById('restoredSub').textContent = 'Your phone is confirmed, but this freeze needs a security review before it can be lifted.';
       }
 
       setProgress(2);
