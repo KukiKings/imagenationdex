@@ -372,11 +372,20 @@ function updateCountdown() {
 
 // === LIVE TIME ===
 function updateTime() {
+  // NOTE: do not reconstruct a Date from a locale string (e.g. `new Date(now.toLocaleString('en-AU', ...))`).
+  // en-AU formats as DD/MM/YYYY, which the Date constructor cannot parse — it silently produced
+  // Invalid Date, so this clock rendered "NaN:NaN:NaN" in production. Use Intl.DateTimeFormat
+  // to read the time parts directly for the target time zone instead.
   const now = new Date();
-  const aest = new Date(now.toLocaleString('en-AU',{timeZone:'Australia/Melbourne'}));
-  const hh = String(aest.getHours()).padStart(2,'0');
-  const mm = String(aest.getMinutes()).padStart(2,'0');
-  const ss = String(aest.getSeconds()).padStart(2,'0');
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Australia/Melbourne',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+  }).formatToParts(now);
+  const get = (type) => { const p = parts.find(p => p.type === type); return p ? p.value : '00'; };
+  let hh = get('hour');
+  if (hh === '24') hh = '00';
+  const mm = get('minute');
+  const ss = get('second');
   document.getElementById('liveTime').textContent = hh+':'+mm+':'+ss;
 }
 
