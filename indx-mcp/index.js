@@ -13,7 +13,7 @@
  *   get_listings           — marketplace listings with optional filters
  *   get_referral_stats     — referral performance for a citizen
  *   get_governance         — active MemeDAO governance proposals
- *   get_days_to_launch     — days remaining to L99 (24 January 2027)
+ *   get_days_to_launch     — days remaining to L99 (24 February 2027)
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -24,7 +24,7 @@ import { createClient } from '@supabase/supabase-js';
 // ─── Config ───────────────────────────────────────────────────────────────────
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://zljgthfzbalsunuoohcd.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMwNjM3MjUsImV4cCI6MjA1ODYzOTcyNX0.SRSVRhNYKBRuFqMBpBaFyshFAVafxqBiPGj6N2ZwYGo';
-const L99_LAUNCH = new Date('2027-01-24T00:00:00+10:00'); // AEST
+const L99_LAUNCH = new Date('2027-02-24T00:00:00+10:00'); // AEST
 const INDX_PRICE = 0.24;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -98,7 +98,7 @@ async function getPlatformStats() {
       supply: 100000000,
     },
     launch: {
-      l99_date: '24 January 2027',
+      l99_date: '24 February 2027',
       days_remaining: daysToLaunch(),
     }
   };
@@ -300,7 +300,7 @@ const TOOLS = [
   },
   {
     name: 'get_days_to_launch',
-    description: 'Get the number of days remaining until IN$DEX L99 launch on 24 January 2027.',
+    description: 'Get the number of days remaining until IN$DEX L99 launch on 24 February 2027.',
     inputSchema: { type: 'object', properties: {}, required: [] },
   },
 ];
@@ -327,7 +327,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'get_listings':         result = await getListings(args);              break;
       case 'get_referral_stats':   result = await getReferralStats(args);         break;
       case 'get_governance':       result = await getGovernance(args);            break;
-      case 'get_days_to_launch':   result = { days_remaining: daysToLaunch(), l99: '24 January 2027' }; break;
+      case 'get_days_to_launch':   result = { days_remaining: daysToLaunch(), l99: '24 February 2027' }; break;
       default: result = { error: `Unknown tool: ${name}` };
     }
   } catch (err) {
