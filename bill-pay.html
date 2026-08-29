@@ -274,7 +274,7 @@
       <div class="pp-summary">
         <div class="pps-row"><div class="pps-lbl">Bill amount</div><div id="sumBill"></div></div>
         <div class="pps-row"><div class="pps-lbl">You pay in INDX</div><div id="sumIndx" style="color:var(--cyan);"></div></div>
-        <div class="pps-row"><div class="pps-lbl">98/2 fee</div><div id="sumFee" style="color:var(--gold);">0 INDX</div></div>
+        <div class="pps-row"><div class="pps-lbl">IN$DEX fee</div><div id="sumFee" style="color:var(--green);">0 INDX — no fee</div></div>
         <div class="pps-row"><div class="pps-lbl">Your balance after</div><div id="sumAfter" style="color:var(--text-muted);"></div></div>
       </div>
       <div style="font-size:11px;color:var(--text-muted);margin:-8px 0 14px;line-height:1.5;">⚠️ This debits your real IN$DEX balance and logs a real transaction. Settlement to the biller's own bank (BPay/ACH network) isn't connected yet, so payments show as <strong style="color:var(--text)">Pending</strong> — this is a real infrastructure gap, not a fake result.</div>
@@ -326,7 +326,7 @@
       <div class="csr-bp"><span class="csr-lbl">Reference</span><span id="csBpRef" style="font-weight:700;"></span></div>
       <div class="csr-bp"><span class="csr-lbl">Amount</span><span id="csBpAmt" style="font-weight:700;"></span></div>
       <div class="csr-bp"><span class="csr-lbl">You pay</span><span id="csBpToken" style="color:var(--cyan);font-weight:700;"></span></div>
-      <div class="csr-bp"><span class="csr-lbl">98/2 fee</span><span id="csBpFee" style="color:var(--gold);"></span></div>
+      <div class="csr-bp"><span class="csr-lbl">IN$DEX fee</span><span id="csBpFee" style="color:var(--green);"></span></div>
       <div class="csr-bp"><span class="csr-lbl">Recurring</span><span id="csBpSched"></span></div>
     </div>
     <button class="btn-confirm-bp" onclick="executePayConfirmed()">Confirm &amp; Pay</button>
@@ -426,11 +426,15 @@
     const amt = parseFloat(document.getElementById('ppAmt').value) || 0;
     const ref = document.getElementById('ppRef').value;
     const tokenAmt = (amt / INDX_PRICE_USD).toFixed(2);
-    const fee = (tokenAmt * 0.02).toFixed(2);
+    // Bill Pay charges $0 IN$DEX fee (see the "No per-transaction fees. Ever." banner
+    // above) -- pay_bill only ever debits the bill amount itself, never a fee on top.
+    // This used to show a computed 2% "98/2 fee" here that was never actually charged
+    // (and wasn't subtracted from the balance-after preview below either) -- fixed to
+    // show what's actually true.
     const afterBal = (currentBalanceIndx - parseFloat(tokenAmt)).toFixed(2);
     document.getElementById('sumBill').textContent = amt > 0 ? '$' + amt.toFixed(2) + ' USD' : '';
     document.getElementById('sumIndx').textContent = amt > 0 ? tokenAmt + ' INDX' : '';
-    document.getElementById('sumFee').textContent = amt > 0 ? fee + ' INDX' : '0 INDX';
+    document.getElementById('sumFee').textContent = '0 INDX — no fee';
     document.getElementById('sumAfter').textContent = amt > 0 ? afterBal + ' INDX' : '';
     document.getElementById('payBtn').disabled = !(amt > 0 && ref.length > 3) || payInFlight;
     document.getElementById('payBtn').textContent = amt > 0
@@ -521,14 +525,13 @@
     if (!citizenId) { showToast('No citizen session found — please log in'); return; }
 
     const tokenAmt = (amt / INDX_PRICE_USD).toFixed(2);
-    const fee      = (parseFloat(tokenAmt) * 0.02).toFixed(2);
 
     document.getElementById('csBpSub').textContent    = 'Confirm your bill payment';
     document.getElementById('csBpBiller').textContent = (selectedBiller ? selectedBiller.icon + ' ' : '') + name;
     document.getElementById('csBpRef').textContent    = ref;
     document.getElementById('csBpAmt').textContent    = '$' + amt.toFixed(2) + ' USD';
     document.getElementById('csBpToken').textContent  = tokenAmt + ' INDX';
-    document.getElementById('csBpFee').textContent    = fee + ' INDX';
+    document.getElementById('csBpFee').textContent    = '0 INDX — no fee';
     document.getElementById('csBpSched').textContent  = schedOn ? 'Monthly auto-pay on' : 'One-time only';
 
     document.getElementById('confirmOverlayBp').classList.add('show');
