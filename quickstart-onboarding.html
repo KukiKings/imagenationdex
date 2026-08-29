@@ -25,6 +25,10 @@
   /* SLIDES */
   .slides-track{flex:1;display:flex;transition:transform 0.35s cubic-bezier(0.4,0,0.2,1);overflow:hidden;}
   .slide{min-width:100%;width:100%;display:flex;flex-direction:column;padding:0;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  /* ADDED 2026-08-29: #slideOTP is intentionally NOT one of the 5 tracked slides (goTo()'s
+     translateX math only knows about SLIDE_NAMES) — it's an overlay shown on top of the current
+     position, not a 6th flex item, so it never shifts the carousel's alignment. */
+  #slideOTP.otp-active{display:flex !important;position:fixed;inset:0;z-index:999;background:var(--black);}
   .slide::-webkit-scrollbar{display:none;}
 
   /* STEP BADGE */
@@ -216,7 +220,7 @@
     <!-- SLIDE 2b: OTP VERIFY (injected)    -->
     <!-- ═══════════════════════════════════ -->
     <div class="slide s2" id="slideOTP" style="display:none;">
-      <div class="back-link" onclick="goTo(1)">← Back</div>
+      <div class="back-link" onclick="backFromOtp()">← Back</div>
       <div class="step-badge">Step 1 of 4 verify</div>
       <div class="slide-title">Enter the<br><span>6-digit code</span></div>
       <div class="slide-sub" id="otpSubText">Sent to +61 04XX XXX XXX</div>
@@ -229,7 +233,7 @@
         <input class="otp-box" type="number" maxlength="1" id="o5" oninput="otpMove(this,'o6')" inputmode="numeric">
         <input class="otp-box" type="number" maxlength="1" id="o6" oninput="otpComplete(this)" inputmode="numeric">
       </div>
-      <div class="input-hint" id="resendHint">Didn't receive it? <span style="color:var(--cyan);cursor:pointer;" onclick="showToast('Code resent!')">Resend code</span></div>
+      <div class="input-hint" id="resendHint">Didn't receive it? <span style="color:var(--cyan);cursor:pointer;" onclick="resendOTP()">Resend code</span></div>
 
       <button class="cta-btn" id="otpCta" disabled onclick="verifyOTP()">Verify →</button>
     </div>
@@ -391,12 +395,52 @@
     document.getElementById('phoneCta').disabled = val.length < 8;
   }
 
-  function sendOTP() {
-    // No SMS/OTP provider is wired up yet — we don't claim to have sent or
-    // verified a code. The phone number is saved for real at account
-    // creation (claimDomain), not verified here.
-    showToast('✓ Phone number saved');
-    setTimeout(() => goTo(2), 600);
+  // FIXED 2026-08-29: previously "No SMS/OTP provider is wired up yet" — honestly disclosed as
+  // not-live and skipped verification entirely. sovereign-verify.html and biometric-kyc.html
+  // both proved a real Supabase Auth phone OTP mechanism (signInWithOtp/verifyOtp) works in this
+  // project; wiring it here too per the 2026-08-29 business plan's Tier 0 "Build" status. #slideOTP
+  // is shown as a fixed overlay (see .otp-active CSS above), not a 6th tracked carousel slide.
+  let currentOtpPhone = '';
+  function e164Phone() {
+    const raw = (document.getElementById('phoneInput')?.value || '').replace(/\D/g,'');
+    const countryMatch = (document.getElementById('countryBtn')?.textContent || '').match(/\+\d+/);
+    const cc = countryMatch ? countryMatch[0] : '+61';
+    return cc + raw.replace(/^0+/, '');
+  }
+
+  async function sendOTP() {
+    currentOtpPhone = e164Phone();
+    const btn = document.getElementById('phoneCta');
+    btn.disabled = true; btn.textContent = 'Sending…';
+    try {
+      const { error } = await sb.auth.signInWithOtp({ phone: currentOtpPhone });
+      if (error) {
+        showToast('Could not send code. Please try again.');
+        btn.disabled = false; btn.textContent = 'Send my code →';
+        return;
+      }
+    } catch(e) {
+      showToast('Could not send code. Please try again.');
+      btn.disabled = false; btn.textContent = 'Send my code →';
+      return;
+    }
+    document.getElementById('otpSubText').textContent = 'Sent to ' + currentOtpPhone;
+    document.getElementById('slideOTP').classList.add('otp-active');
+    btn.disabled = false; btn.textContent = 'Send my code →';
+    showToast('Code sent to ' + currentOtpPhone);
+  }
+
+  function backFromOtp() {
+    document.getElementById('slideOTP').classList.remove('otp-active');
+    goTo(1);
+  }
+
+  async function resendOTP() {
+    try {
+      const { error } = await sb.auth.signInWithOtp({ phone: currentOtpPhone });
+      if (error) { showToast('Could not send code. Please try again.'); return; }
+      showToast('New code sent');
+    } catch(e) { showToast('Could not send code. Please try again.'); }
   }
 
   function otpMove(el, nextId) {
@@ -411,10 +455,26 @@
     document.getElementById('otpCta').disabled = code.length < 6;
   }
 
-  function verifyOTP() {
-    // Demo: accept any code
+  async function verifyOTP() {
+    const code = ['o1','o2','o3','o4','o5','o6'].map(id => document.getElementById(id).value).join('');
+    const btn = document.getElementById('otpCta');
+    btn.disabled = true; btn.textContent = 'Verifying…';
+    try {
+      const { error } = await sb.auth.verifyOtp({ phone: currentOtpPhone, token: code, type: 'sms' });
+      if (error) {
+        showToast('Invalid code — try again');
+        btn.disabled = false; btn.textContent = 'Verify →';
+        return;
+      }
+    } catch(e) {
+      showToast('Verification failed — try again');
+      btn.disabled = false; btn.textContent = 'Verify →';
+      return;
+    }
+    document.getElementById('slideOTP').classList.remove('otp-active');
     showToast('✓ Phone verified!');
-    setTimeout(() => goTo(2), 600);
+    btn.textContent = 'Verify →';
+    setTimeout(() => goTo(2), 400);
   }
 
   // ── NAME ──
@@ -534,6 +594,17 @@
       if (!created.success) throw { code: created.reason === 'duplicate' ? '23505' : 'unknown', message: created.reason, details: created.detail };
       const data = { id: created.id };
       await sb.rpc('claim_genesis_signup_bonus_anon', { p_citizen_id: data.id });
+
+      // ADDED 2026-08-29: link the real Supabase Auth session (created by verifyOTP()'s real
+      // sb.auth.verifyOtp() call, now that OTP is genuinely live) to this citizen row — same
+      // pattern as biometric-kyc.html/join.html/sovereign-verify.html. Non-fatal if it fails.
+      if (fullPhone) {
+        try {
+          const { data: authData } = await sb.auth.getUser();
+          const authId = authData && authData.user && authData.user.id;
+          if (authId) await sb.rpc('link_citizen_auth', { p_phone: fullPhone, p_auth_id: authId });
+        } catch (linkErr) { /* non-fatal */ }
+      }
 
       sessionStorage.setItem('citizen_id', data.id);
       sessionStorage.setItem('citizen_name', savedName);
