@@ -5,6 +5,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>SIINDEX · Marketplace Intelligence</title>
+<meta name="description" content="Architecture map of SIINDEX's planned marketplace intelligence domains and loops — shows what is genuinely live today versus what is designed but not yet running.">
+<meta property="og:title" content="SIINDEX · Marketplace Intelligence">
+<meta property="og:description" content="Architecture map of SIINDEX's marketplace intelligence domains and loops — live vs. planned.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" crossorigin="anonymous"></script>
 <script src="js/indx-db.js"></script>
 <script src="js/siindex-system.js"></script>
@@ -144,7 +147,7 @@
         Operating Intelligence · 15 Domains
       </div>
       <div class="hero-title">SIINDEX<br><span>Intelligence Layer</span></div>
-      <div class="hero-sub">Not another feature. The operating intelligence connecting every marketplace interaction — learning from every transaction, compounding trust over decades.</div>
+      <div class="hero-sub">Not another feature. The operating intelligence designed to connect every marketplace interaction — a handful of loops are live today (see below), the rest are architecture waiting on real marketplace activity.</div>
     </div>
 
     <!-- LIVE METRICS -->
@@ -155,7 +158,7 @@
       </div>
       <div class="metric-cell">
         <div class="mc-val" id="mLoops">10</div>
-        <div class="mc-lbl">Active Loops</div>
+        <div class="mc-lbl">Loop Types</div>
       </div>
       <div class="metric-cell">
         <div class="mc-val" id="mRating">8.5</div>
@@ -295,32 +298,62 @@
     executive_intelligence:'Executive Intelligence',
   };
 
+  // ── Status overrides (2026-08-29 honesty audit) ────────────────
+  // siindex-system.js marks several marketplace domains "active" that have no
+  // real data behind them: marketplace `listings` and `marketplace_offers` are
+  // both 0 rows in Supabase, as are `disputes`, `shield_checks`,
+  // `known_malicious_indicators`, `credentials`, and `citizen_account_links`.
+  // Overridden locally to "planned" here so this page doesn't display a live
+  // marketplace-intelligence badge the backend can't back up yet. Only
+  // reputation_intelligence stays "active" — citizens.wisdom_score is real,
+  // populated, and varies per citizen. Fix this at the source
+  // (js/siindex-system.js) when marketplace data starts flowing.
+  const STATUS_OVERRIDE = {
+    trade_intelligence:     'planned',
+    escrow_intelligence:    'planned',
+    pricing_intelligence:   'planned',
+    knowledge_intelligence: 'planned',
+    fraud_intelligence:     'planned',
+    sovereign_identity:     'planned',
+    digital_assets:         'planned',
+    executive_intelligence: 'planned',
+  };
+  function effectiveStatus(d) { return STATUS_OVERRIDE[d.id] || d.status; }
+
   // ── Render spoke grid ─────────────────────────────────────────
   function renderSpokes() {
     const grid = document.getElementById('spokesGrid');
     const domains = SIINDEX_CONFIG.intelligence_domains;
     grid.innerHTML = domains.map(d => {
       const icon = SPOKE_ICONS[d.id] || '◉';
-      const isLive = d.status === 'active';
+      const status = effectiveStatus(d);
+      const isLive = status === 'active';
       return `<div class="arch-spoke ${isLive ? 'live' : ''}" onclick="openDomain('${d.id}')">
         <div class="arch-spoke-icon">${icon}</div>
         <div>
           <div class="arch-spoke-name">${SPOKE_NAMES[d.id] || d.label}</div>
-          <div class="arch-spoke-status ${d.status}">${isLive ? '● Active' : '○ Planned'}</div>
+          <div class="arch-spoke-status ${status}">${isLive ? '● Active' : '○ Planned'}</div>
         </div>
       </div>`;
     }).join('');
   }
 
   // ── Render intelligence loops ─────────────────────────────────
+  // Statuses below verified against Supabase on 2026-08-29: marketplace `listings`
+  // and `marketplace_offers` are both 0 rows, `disputes` and `shield_checks` are
+  // 0 rows — so nothing marketplace-specific has real data to run on yet.
+  // Only Fraud Detection (707 real security_events being logged) and Reputation
+  // Scoring (citizens.wisdom_score is real and varies per citizen) are genuinely
+  // active. The rest are downgraded from earlier "active"/"learning" labels that
+  // weren't backed by anything in the database.
   const LOOP_META = [
-    { icon:'🎙', name:'Voice Commerce Loop',        state:'Learning from listing patterns',  status:'learning' },
+    { icon:'🎙', name:'Voice Commerce Loop',        state:'Design complete — no listing data yet',   status:'planned'  },
     { icon:'🛡', name:'Fraud Detection Loop',        state:'Monitoring active signals',   status:'active'   },
-    { icon:'💰', name:'Dynamic Pricing Loop',        state:'Calibrating 7-factor model',      status:'learning' },
+    { icon:'💰', name:'Dynamic Pricing Loop',        state:'Design complete — no marketplace data yet', status:'planned' },
     { icon:'⭐', name:'Reputation Scoring Loop',     state:'Aggregating sovereign scores',    status:'active'   },
-    { icon:'🔒', name:'Escrow Monitoring Loop',      state:'Watching active transactions',    status:'active'   },
-    { icon:'📊', name:'Executive Intelligence Loop', state:'Processing marketplace metrics',  status:'active'   },
-    { icon:'🧠', name:'Knowledge Ingestion Loop',    state:'Indexing transaction patterns',   status:'learning' },
+    { icon:'🔒', name:'Escrow Monitoring Loop',      state:'Design complete — no escrow data yet',    status:'planned' },
+    { icon:'📊', name:'Executive Intelligence Loop', state:'Design complete — no marketplace metrics yet', status:'planned' },
+    { icon:'🧠', name:'Knowledge Ingestion Loop',    state:'Design complete — no listing corpus yet', status:'planned' },
     { icon:'🌍', name:'Geo Intelligence Loop',       state:'Mapping regional demand curves',  status:'planned'  },
     { icon:'🤝', name:'Negotiation Loop',            state:'Training on offer/counter data',  status:'planned'  },
     { icon:'📸', name:'Visual Intelligence Loop',    state:'Computer vision pipeline',        status:'planned'  },
@@ -369,12 +402,13 @@
     if (!d) return;
     const icon = SPOKE_ICONS[id] || '◉';
     const signals = DOMAIN_SIGNALS[id] || [];
-    const isLive = d.status === 'active';
+    const status = effectiveStatus(d);
+    const isLive = status === 'active';
 
     document.getElementById('dsIcon').textContent = icon;
     document.getElementById('dsTitle').textContent = SPOKE_NAMES[id] || d.label;
     const badge = document.getElementById('dsBadge');
-    badge.className = 'ds-badge ' + d.status;
+    badge.className = 'ds-badge ' + status;
     badge.textContent = isLive ? '● Active Intelligence Loop' : '○ Planned — Next Phase';
     document.getElementById('dsDesc').textContent = d.desc;
     document.getElementById('dsSignals').innerHTML = signals.map(s =>
