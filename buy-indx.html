@@ -1047,45 +1047,59 @@
       return;
     }
 
-    // Payment succeeded — credit via the real credit_stripe_purchase RPC.
-    // Previously this did a direct client-side `sb.from('citizens').update()`,
-    // which citizens' RLS policies (all gated on auth.uid() = auth_user_id)
-    // silently block for this app's anon-key-only sessions — confirmed live:
-    // the balance was NEVER actually credited despite a real Stripe charge
-    // going through. Fixed 2026-07-16 with an atomic, idempotent RPC.
+    // Payment succeeded on the card. Crediting the balance is now handled by a real
+    // server-side Stripe webhook (stripe-webhook edge function, verifies the signed
+    // event from Stripe directly) that calls credit_stripe_purchase with the
+    // service-role key — NOT by this page.
+    //
+    // FIXED 2026-08-29: this used to call credit_stripe_purchase directly from the
+    // browser with the anon key right here. Two real problems with that: (1)
+    // credit_stripe_purchase was never actually reachable that way — it's granted
+    // only to service_role, not anon/authenticated, confirmed live, so this call
+    // was already a silent 42501 no-op every time; and (2) even if it had been
+    // reachable, confirmCardPayment() resolving in the browser isn't proof a charge
+    // was actually captured — a malicious client could skip Stripe entirely and
+    // call credit_stripe_purchase with a made-up payment_intent_id to mint itself
+    // free INDX. The only real proof is Stripe's own signed webhook event, so
+    // that's the only thing allowed to trigger a credit now.
+    //
+    // This page polls for the resulting transaction row instead of writing the
+    // balance itself.
     if (citizenId) {
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/credit_stripe_purchase`, {
-          method: 'POST',
-          headers: { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + SUPABASE_ANON, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            p_citizen_id: citizenId,
-            p_amount_indx: total,
-            p_amount_usd: usd,
-            p_stripe_payment_intent_id: result.paymentIntent.id
-          })
-        });
-        const data = await res.json();
-        if (data && data.success) {
-          sessionStorage.setItem('citizen_balance', String(data.new_balance));
-        } else {
-          // Real payment succeeded but the credit failed server-side (e.g.
-          // already credited, or a genuine error) — don't claim success on
-          // a balance that wasn't actually moved. The Stripe charge already
-          // went through, so surface this loudly rather than silently.
-          document.getElementById('card-errors').textContent =
-            'Payment received but crediting your balance failed (' + (data?.error || 'unknown error') + '). Contact support with reference ' + result.paymentIntent.id + '.';
-          return;
-        }
-      } catch (e) {
+      const credited = await pollForStripeCredit(result.paymentIntent.id, citizenId);
+      if (!credited) {
         document.getElementById('card-errors').textContent =
-          'Payment received but we could not confirm your balance credit. Contact support with reference ' + result.paymentIntent.id + '.';
+          'Payment received — crediting your balance can take a few seconds. If it hasn’t shown up shortly, contact support with reference ' + result.paymentIntent.id + '.';
         return;
       }
     }
 
     genesisUsed = true;
     showSuccess(usd, total, bonus);
+  }
+
+  // Polls for the transaction row the stripe-webhook function writes once Stripe's
+  // signed event lands (usually within a second or two, but webhooks are
+  // best-effort on timing). Real reads against the real transactions table — no
+  // synthetic countdown, no fabricated "processing" animation with a fixed fake
+  // duration.
+  async function pollForStripeCredit(paymentIntentId, citizenIdToCheck, attempts = 10) {
+    for (let i = 0; i < attempts; i++) {
+      await new Promise(r => setTimeout(r, 1500));
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/transactions?citizen_id=eq.${citizenIdToCheck}&counterparty_address=eq.stripe:${paymentIntentId}&select=id,amount_indx`,
+          { headers: { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + SUPABASE_ANON } }
+        );
+        const rows = await res.json();
+        if (Array.isArray(rows) && rows.length > 0) {
+          const { data: citizenRow } = await sb.from('citizens').select('indx_balance').eq('id', citizenIdToCheck).single();
+          if (citizenRow) sessionStorage.setItem('citizen_balance', String(citizenRow.indx_balance));
+          return true;
+        }
+      } catch (e) { /* keep polling */ }
+    }
+    return false;
   }
 
   // ── SUCCESS ──
