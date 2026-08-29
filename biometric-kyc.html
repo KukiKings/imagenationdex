@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>Sovereign Onboarding · IN$DEX</title>
-  <meta name="description" content="Join IN$DEX with just a phone number — no ID, no bank account, no face scan required for Tier 0. Real SMS code verification isn't live yet; account creation and your wallet balance are real.">
+  <meta name="description" content="Join IN$DEX with just a phone number — no ID, no bank account, no face scan required for Tier 0. Real SMS code verification, account creation, and your wallet balance are all real.">
   <style>
     :root{--cyan:#00D4FF;--blue:#2B35D8;--purple:#8B3FE8;--black:#090A10;--green:#00E5A0;--gold:#FFB800;--red:#FF4D6D;--surface:#12141F;--surface2:#1A1D2E;--surface3:#22263A;--border:rgba(255,255,255,0.07);--text:#F0F2FF;--text-muted:rgba(240,242,255,0.45);--text-dim:rgba(240,242,255,0.2);}
     *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -199,7 +199,7 @@
       <div class="step-card">
         <div class="sc-icon">📱</div>
         <div class="sc-title">Your phone number</div>
-        <div class="sc-sub">Enter your number to get started. Real SMS code verification isn't live yet, so the next step won't yet confirm you own this number — full phone verification is planned before launch.</div>
+        <div class="sc-sub">Enter your number to get started. We'll send a real 6-digit code by SMS to confirm you own this number.</div>
         <div class="phone-input-row">
           <div class="flag-select" onclick="showToast('Country selector 180+ countries')">🇦🇺 +61</div>
           <input class="phone-input" type="tel" id="phoneInput" placeholder="4XX XXX XXX" oninput="checkPhone()">
@@ -215,8 +215,8 @@
     <div class="screen-inner">
       <div class="step-card">
         <div class="sc-icon">💬</div>
-        <div class="sc-title">Enter any 6 digits</div>
-        <div class="sc-sub" id="otpSub">SMS code verification isn't live yet — no real code was sent, so any 6 digits will continue below. This will check a real code once phone verification ships.</div>
+        <div class="sc-title">Enter your code</div>
+        <div class="sc-sub" id="otpSub">Enter the 6-digit code we texted you.</div>
         <div class="otp-row" id="otpRow">
           <div class="otp-box" id="otp0"></div>
           <div class="otp-box" id="otp1"></div>
@@ -347,33 +347,45 @@ function checkPhone(){
   document.getElementById('sendOtpBtn').disabled = v.length < 8;
 }
 
-// AUDIT 2026-08-28: this OTP screen never sent or checked a real code — sendOtp() never calls
-// Supabase Auth (no sb.auth.signInWithOtp/verifyOtp anywhere in this file, unlike the genuinely
-// real OTP flow in sovereign-verify.html), and otpKey() accepted literally any 6 digits as
-// "confirmed". The copy claimed "We sent a 6-digit code to confirm it's really you" while no
-// phone ownership was ever checked. Account creation itself is real (create_onboarding_citizen),
-// but the "verification" was pure UI theater. Copy rewritten below to disclose this honestly
-// rather than claim a security check that doesn't exist — do not restore the old "code sent /
-// code confirmed" wording without wiring a real OTP send+verify first.
+// FIXED 2026-08-29: this OTP screen used to never send or check a real code — sendOtp() never
+// called Supabase Auth, and otpKey() accepted literally any 6 digits as "confirmed". Business
+// plan (2026-08-29) lists Tier 0 phone verification as "Build" status for the Feb 2027 launch.
+// sovereign-verify.html already proved a real Supabase Auth phone OTP mechanism works in this
+// project (sb.auth.signInWithOtp / sb.auth.verifyOtp, used there for the Tier 1 PayID upgrade) —
+// this wires the same real mechanism into the Tier 0 signup flow instead of duplicating fake UI
+// theater. Account creation was already real (create_onboarding_citizen); now the phone-ownership
+// check that precedes it is real too.
 async function sendOtp(){
   const v = document.getElementById('phoneInput').value;
-  verifiedPhone = '+61' + v;
+  verifiedPhone = '+61' + v.replace(/\s/g,'');
   const btn = document.getElementById('sendOtpBtn');
   btn.disabled = true; btn.textContent = 'Sending…';
 
-  // Try to look up existing citizen by phone
+  // Look up an existing citizen by phone (unchanged — get_citizen_by_phone returns a single
+  // object or null, not an array).
   try {
-    // FIXED: get_citizen_by_phone RETURNS json (a single object, or null),
-    // not an array — the old `data.length > 0` check was always false, so
-    // citizenRecord was never populated even for a real existing match.
     const { data } = await sb.rpc('get_citizen_by_phone', { p_phone: verifiedPhone });
     if (data && data.id) citizenRecord = data;
   } catch(e) { /* silent — new citizen */ }
 
-  document.getElementById('otpSub').textContent = 'SMS verification for ' + verifiedPhone + ' isn\'t live yet — no real code was sent. Any 6 digits will continue below.';
+  try {
+    const { error } = await sb.auth.signInWithOtp({ phone: verifiedPhone });
+    if (error) {
+      document.getElementById('phoneInput').focus();
+      showToast('Could not send code. Please try again.');
+      btn.disabled = false; btn.textContent = 'Send code →';
+      return;
+    }
+  } catch(e) {
+    showToast('Could not send code. Please try again.');
+    btn.disabled = false; btn.textContent = 'Send code →';
+    return;
+  }
+
+  document.getElementById('otpSub').textContent = 'Enter the 6-digit code we texted to ' + verifiedPhone + '.';
   goToStep(2);
   btn.disabled = false; btn.textContent = 'Send code →';
-  showToast('Continuing — real SMS verification isn\'t live yet.');
+  showToast('Code sent to ' + verifiedPhone);
 }
 
 function startOtpTimer(){
@@ -403,11 +415,41 @@ function otpKey(k){
   }
   if(otpDigits.length === 6){
     clearInterval(otpInterval);
-    showToast('Continuing…');
-    // Corrected 2026-07-27: previously routed to the liveness scan (old step 3) before
-    // completing. Tier 0 is phone + OTP only now — go straight to account creation.
-    setTimeout(()=>completeOnboarding(), 700);
+    verifyOtpAndComplete();
   }
+}
+
+// FIXED 2026-08-29: replaces the old "any 6 digits continues" behavior — this now checks the
+// real code against Supabase Auth (same call sovereign-verify.html uses) before creating or
+// resuming the citizen record.
+async function verifyOtpAndComplete(){
+  const code = otpDigits.join('');
+  showToast('Verifying…');
+  try {
+    const { error } = await sb.auth.verifyOtp({ phone: verifiedPhone, token: code, type: 'sms' });
+    if (error) {
+      showToast('Invalid code — try again');
+      otpDigits = [];
+      for(let i=0;i<6;i++){
+        const box=document.getElementById('otp'+i);
+        box.textContent=''; box.classList.remove('filled');
+      }
+      startOtpTimer();
+      return;
+    }
+  } catch(e) {
+    showToast('Verification failed — try again');
+    otpDigits = [];
+    for(let i=0;i<6;i++){
+      const box=document.getElementById('otp'+i);
+      box.textContent=''; box.classList.remove('filled');
+    }
+    startOtpTimer();
+    return;
+  }
+  // Corrected 2026-07-27: previously routed to the liveness scan (old step 3) before
+  // completing. Tier 0 is phone + OTP only now — go straight to account creation.
+  setTimeout(()=>completeOnboarding(), 400);
 }
 
 // startScan() / autoScanDemo() are orphaned from the primary flow (corrected 2026-07-27,
@@ -458,16 +500,17 @@ function autoScanDemo(){
 
 async function completeOnboarding() {
   try {
-    // FIXED: this called link_citizen_auth(p_phone, p_zk_proof) — that
-    // function's real signature is (p_phone, p_auth_id uuid); p_zk_proof
-    // isn't a parameter it accepts, so the call always failed. The "proof"
-    // itself was also fabricated (Math.random() hex, not a real ZK proof —
-    // this screen never runs a biometric check on the live Tier 0 path).
-    // There's also no real Supabase Auth session here to link (no sb.auth.*
-    // call happens on this screen), so link_citizen_auth doesn't apply.
-    // Correct behavior: reuse the existing citizen row if one was found by
-    // phone; otherwise actually create one via create_onboarding_citizen.
-    // No proof of any kind — this is an honestly-unverified phone account.
+    // FIXED 2026-08-29: verifyOtpAndComplete() now runs a real sb.auth.verifyOtp() before this
+    // ever executes, so there IS a real Supabase Auth session on this phone number by the time
+    // we get here. Link it to the citizen row with link_citizen_auth(p_phone, p_auth_id uuid) —
+    // the same call sovereign-verify.html and login.html use — so future RLS-gated calls (like
+    // transfer_indx's caller-ownership check) work for this citizen too.
+    try {
+      const { data: authData } = await sb.auth.getUser();
+      const authId = authData && authData.user && authData.user.id;
+      if (authId) await sb.rpc('link_citizen_auth', { p_phone: verifiedPhone, p_auth_id: authId });
+    } catch(linkErr) { /* non-fatal — citizen row still gets created/found below */ }
+
     if (citizenRecord && citizenRecord.id) {
       sessionStorage.setItem('citizen_id',      citizenRecord.id || '');
       sessionStorage.setItem('citizen_name',     citizenRecord.citizen_name || 'Sovereign');
@@ -610,8 +653,16 @@ function startResendCooldown() {
   }, 1000);
 }
 
-function triggerResend() {
-  showToast('Not live yet — no real code is sent. Any 6 digits will still work.');
+async function triggerResend() {
+  try {
+    const { error } = await sb.auth.signInWithOtp({ phone: verifiedPhone });
+    if (error) { showToast('Could not send code. Please try again.'); return; }
+    showToast('New code sent');
+    startOtpTimer();
+  } catch(e) {
+    showToast('Could not send code. Please try again.');
+    return;
+  }
   startResendCooldown();
 }
 </script>
