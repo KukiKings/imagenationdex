@@ -477,27 +477,19 @@
 const INDX_PRICE = 0.24;
 
 // ── GOD MODE: SIINDEX LIVE COMMENTARY ──
+// FIX 2026-08-30: this cycled 5 fabricated claims -- "cleared 7/7 SIINDEX trust
+// checks", "receives funds within one Solana block", "ZK-proof confirmed",
+// "receipt NFT is permanently on-chain, cannot be altered" -- as if this were a
+// real settled Solana transaction. This file's own earlier 2026-07-25 fix
+// (initValidatorTicker, txHash null-guard below) already established that no
+// real on-chain tx exists yet; this function was missed by that pass. One
+// honest line instead of five invented ones.
 function initCommentary(amount, recipientSlug) {
-  var msgs = [
-    'This transaction cleared <strong>7/7 SIINDEX trust checks</strong> in under 0.4 seconds. No bank. No border. No delay.',
-    '98/2 Law applied: <strong>' + (amount * 0.02).toFixed(3) + ' INDX</strong> is now building infrastructure for unbanked communities across the Pacific.',
-    '<strong>' + toTitle(recipientSlug) + '</strong> receives funds in their IN$DEX wallet within one Solana block — faster than any traditional remittance.',
-    'ZK-proof confirmed: identity and transaction validity verified without exposing any personal data from either party.',
-    'Your receipt NFT is permanently on-chain. It cannot be altered, deleted, or disputed. Trust, encoded in code.'
-  ];
-  var idx = 0;
   var textEl = document.getElementById('sicText');
+  if (textEl) textEl.innerHTML = 'Simulated preview — not yet a real Solana settlement. ' +
+    (amount * 0.02).toFixed(3) + ' INDX civilisation-fund fee shown is illustrative.';
   var dots = document.querySelectorAll('.sic-dot');
-  function showMsg(i) {
-    textEl.classList.add('fading');
-    setTimeout(function() {
-      textEl.innerHTML = msgs[i];
-      textEl.classList.remove('fading');
-      dots.forEach(function(d, di) { d.classList.toggle('active', di === i); });
-    }, 300);
-  }
-  showMsg(0);
-  setInterval(function() { idx = (idx + 1) % msgs.length; showMsg(idx); }, 5000);
+  dots.forEach(function(d, di) { d.classList.toggle('active', di === 0); });
 }
 
 // FIXED 2026-07-25: this used to animate a fake count up to 1,247 "validators
@@ -523,7 +515,11 @@ function saveAndLoadHistory(amount, senderSlug, recipientSlug, txHash) {
     return;
   }
   list.innerHTML = past.map(function(r) {
-    return '<div class="rv-item"><div class="rv-item-icon">💸</div><div class="rv-item-info"><div class="rv-item-amount">' + r.amount + ' INDX → ' + toTitle(r.recipient) + '</div><div class="rv-item-meta">' + timeAgo(r.ts) + ' · TX: ' + r.tx + '…</div></div><div class="rv-item-badge">✓ Verified</div></div>';
+    // FIX 2026-08-30: this badge used to say "✓ Verified" unconditionally, even
+    // for entries whose tx is the literal string 'pending' (no real tx hash).
+    var isReal = r.tx && r.tx !== 'pending';
+    var badge = isReal ? '✓ Verified' : 'Pending';
+    return '<div class="rv-item"><div class="rv-item-icon">💸</div><div class="rv-item-info"><div class="rv-item-amount">' + r.amount + ' INDX → ' + toTitle(r.recipient) + '</div><div class="rv-item-meta">' + timeAgo(r.ts) + ' · TX: ' + r.tx + '…</div></div><div class="rv-item-badge">' + badge + '</div></div>';
   }).join('');
 }
 function timeAgo(ts) {
