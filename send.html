@@ -350,36 +350,13 @@
         </div>
       </div>
 
-      <!-- RECENT CONTACTS -->
-      <div class="recent-list" id="recentList">
-        <div class="contact-row" onclick="selectContact('Sione Tuilagi','+67625012345','🇹🇴')">
-          <div class="contact-avatar" style="background:linear-gradient(135deg,#8B3FE8,#00D4FF)">ST</div>
-          <div>
-            <div class="contact-name">Sione Tuilagi</div>
-            <div class="contact-addr">+676 250 12345 · Tonga</div>
-          </div>
-          <div class="contact-flag">🇹🇴</div>
-          <div class="contact-time">2d ago</div>
-        </div>
-        <div class="contact-row" onclick="selectContact('Mere Tuivaga','+67933012345','🇫🇯')">
-          <div class="contact-avatar" style="background:linear-gradient(135deg,#00E5A0,#2B35D8)">MT</div>
-          <div>
-            <div class="contact-name">Mere Tuivaga</div>
-            <div class="contact-addr">+679 330 12345 · Fiji</div>
-          </div>
-          <div class="contact-flag">🇫🇯</div>
-          <div class="contact-time">5d ago</div>
-        </div>
-        <div class="contact-row" onclick="selectContact('Ana Faleolo','+68520012345','🇼🇸')">
-          <div class="contact-avatar" style="background:linear-gradient(135deg,#FFB800,#FF4D6D)">AF</div>
-          <div>
-            <div class="contact-name">Ana Faleolo</div>
-            <div class="contact-addr">+685 200 12345 · Samoa</div>
-          </div>
-          <div class="contact-flag">🇼🇸</div>
-          <div class="contact-time">1w ago</div>
-        </div>
-      </div>
+      <!-- RECENT CONTACTS
+           FIX 2026-08-30: this used to be 3 hardcoded demo people (Sione Tuilagi,
+           Mere Tuivaga, Ana Faleolo) shown to EVERY citizen as if they were that
+           citizen's own real recent recipients, on a real-money send screen. Now
+           loaded from the same real `transactions` table history.html and this
+           file's own Send History sheet already read. -->
+      <div class="recent-list" id="recentList"></div>
     </div>
 
     <!-- DESTINATION COUNTRY -->
@@ -543,13 +520,16 @@ const TOKENS = {
   usdc: { symbol:'$', ticker:'USDC', balance:48.00, rate:1.00,  decimals:2 },
 };
 
-// Mock citizen registry (phone → name)
-const CITIZENS = {
-  '+67625012345': { name:'Sione Tuilagi',  handle:'sione.IN$DEX' },
-  '+67933012345': { name:'Mere Tuivaga',   handle:'mere.IN$DEX'  },
-  '+68520012345': { name:'Ana Faleolo',    handle:'ana.IN$DEX'   },
-  '+6421123456' : { name:'Kiri Tane',      handle:'kiri.IN$DEX'  },
-};
+// FIX 2026-08-30: this used to be a hardcoded 4-entry mock dict -- only those
+// 4 demo phone numbers ever showed "✓ Citizen found · instant delivery" on
+// this real-money send screen, which reads as a verified-recipient check
+// but was pure fiction. Replaced with a real, debounced call to
+// get_citizen_by_phone (the same anon-safe RPC used by biometric-kyc.html
+// -- returns only {id} to a non-owner caller, no name, per the phone-
+// identity-leak fix applied earlier this session). transfer_indx itself
+// already resolves the recipient by phone number regardless of this
+// lookup, so this only drives the pre-flight hint shown to the sender.
+let _phoneLookupTimer = null;
 
 // ── STATE ──
 let selectedToken = 'indx';
@@ -666,21 +646,35 @@ function onPhoneInput() {
   document.getElementById('recentList').style.display = phone.length > 0 ? 'none' : 'flex';
 
   const status = document.getElementById('lookupStatus');
+  clearTimeout(_phoneLookupTimer);
   if (phone.length >= 7) {
-    const citizen = CITIZENS[fullNum];
-    if (citizen) {
-      recipientName = citizen.name;
-      status.className = 'lookup-status found';
-      document.getElementById('lookupIcon').textContent = '✓';
-      document.getElementById('lookupName').textContent = citizen.name + ' · ' + citizen.handle;
-      document.getElementById('lookupSub').textContent = 'Citizen found instant delivery';
-    } else {
-      recipientName = '';
-      status.className = 'lookup-status invite';
-      document.getElementById('lookupIcon').textContent = '✉';
-      document.getElementById('lookupName').textContent = 'New to IN$DEX';
-      document.getElementById('lookupSub').textContent = 'They\'ll get an SMS invite to claim';
-    }
+    status.className = 'lookup-status';
+    status.style.display = 'flex';
+    document.getElementById('lookupIcon').textContent = '⋯';
+    document.getElementById('lookupName').textContent = 'Checking…';
+    document.getElementById('lookupSub').textContent = '';
+    const lookupNum = fullNum; // capture so a stale response can't overwrite a newer one
+    _phoneLookupTimer = setTimeout(async () => {
+      let found = false;
+      try {
+        const { data } = await sb.rpc('get_citizen_by_phone', { p_phone: lookupNum });
+        found = !!(data && data.id);
+      } catch (e) { /* network hiccup -- fall through to the invite state */ }
+      if (lookupNum !== fullNum) return; // superseded by a newer keystroke
+      if (found) {
+        recipientName = ''; // real name is not exposed pre-transfer (privacy) -- transfer_indx resolves it server-side
+        status.className = 'lookup-status found';
+        document.getElementById('lookupIcon').textContent = '✓';
+        document.getElementById('lookupName').textContent = 'Citizen found';
+        document.getElementById('lookupSub').textContent = 'Instant delivery';
+      } else {
+        recipientName = '';
+        status.className = 'lookup-status invite';
+        document.getElementById('lookupIcon').textContent = '✉';
+        document.getElementById('lookupName').textContent = 'New to IN$DEX';
+        document.getElementById('lookupSub').textContent = 'They\'ll get an SMS invite to claim';
+      }
+    }, 400);
   } else {
     status.className = 'lookup-status';
     status.style.display = 'none';
@@ -701,14 +695,13 @@ function selectContact(name, phone, flag) {
   } else {
     document.getElementById('phoneInput').value = digits;
   }
-  recipientName = name;
   recipientPhone = phone;
-  const status = document.getElementById('lookupStatus');
-  status.className = 'lookup-status found';
-  document.getElementById('lookupIcon').textContent = '✓';
-  document.getElementById('lookupName').textContent = name;
-  document.getElementById('lookupSub').textContent = 'Citizen found instant delivery';
   document.getElementById('recentList').style.display = 'none';
+  // FIX 2026-08-30: this used to hardcode the "✓ Citizen found · instant delivery"
+  // status straight from the tapped row's name, with no real check. Run the same
+  // real onPhoneInput() lookup used for manual entry instead, so a past recipient
+  // who has since left/been removed doesn't still show as a false "found".
+  onPhoneInput();
   // Auto-select corridor based on flag
   const corr = CORRIDORS.find(c => c.flag === flag);
   if (corr) setSelectedCorridor(corr);
@@ -908,9 +901,58 @@ function showToast(msg) {
   toastTimer = setTimeout(() => t.style.opacity = '0', 2400);
 }
 
+// ── RECENT CONTACTS (real, replacing the old hardcoded 3-person demo list) ──
+function timeAgoShort(d) {
+  const s = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (s < 3600) return Math.max(1, Math.floor(s / 60)) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  return Math.floor(s / 86400) + 'd ago';
+}
+async function loadRecentContacts() {
+  const list = document.getElementById('recentList');
+  if (!list) return;
+  const citizenId = sessionStorage.getItem('citizen_id');
+  if (!citizenId) { list.style.display = 'none'; return; }
+  try {
+    const { data, error } = await sb.from('transactions')
+      .select('counterparty_address, created_at')
+      .eq('citizen_id', citizenId)
+      .eq('direction', 'send')
+      .order('created_at', { ascending: false })
+      .limit(20);
+    if (error || !data || !data.length) { list.style.display = 'none'; return; }
+    const seen = new Set();
+    const recents = [];
+    for (const row of data) {
+      const addr = row.counterparty_address;
+      if (!addr || seen.has(addr)) continue;
+      seen.add(addr);
+      recents.push(row);
+      if (recents.length >= 3) break;
+    }
+    if (!recents.length) { list.style.display = 'none'; return; }
+    list.innerHTML = recents.map(r => {
+      const addr = String(r.counterparty_address);
+      const digits = addr.replace(/\D/g, '');
+      const initials = digits ? digits.slice(-2) : addr.slice(0, 2).toUpperCase();
+      const when = timeAgoShort(new Date(r.created_at));
+      const safeAddr = addr.replace(/'/g, "\\'");
+      return `<div class="contact-row" onclick="selectContact('', '${safeAddr}', '')">
+        <div class="contact-avatar" style="background:linear-gradient(135deg,#8B3FE8,#00D4FF)">${initials}</div>
+        <div>
+          <div class="contact-name">${addr}</div>
+          <div class="contact-addr">Sent before</div>
+        </div>
+        <div class="contact-time">${when}</div>
+      </div>`;
+    }).join('');
+    list.style.display = 'flex';
+  } catch (e) { list.style.display = 'none'; }
+}
+
 // ── INIT ──
 updateDisplay();
-document.getElementById('recentList').style.display = 'flex';
+loadRecentContacts();
 
 // ════════════════════════════════════════════════
 // GOD MODE — SEND.HTML

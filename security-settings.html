@@ -161,10 +161,10 @@
         <div class="sr-item">
           <div class="sr-icon" style="background:rgba(255,184,0,0.1);">📱</div>
           <div style="flex:1;">
-            <div class="sr-label">SMS Backup</div>
-            <div class="sr-sub">+64 *** *** 842 · Verified</div>
+            <div class="sr-label">SMS (sign-in phone)</div>
+            <div class="sr-sub" id="smsBackupSub">Loading…</div>
           </div>
-          <div class="sr-value" style="color:var(--green);">On</div>
+          <div class="sr-value" id="smsBackupValue" style="color:var(--text-dim,#6B7280);">—</div>
           <div class="sr-chevron">›</div>
         </div>
       </div>
@@ -472,6 +472,30 @@
   window.addEventListener('load', async () => {
     await initRealSession();
     await loadSecState();
+    // FIX 2026-08-30: this row used to show a static fabricated masked number
+    // ("+64 *** *** 842 · Verified", "On") to every citizen regardless of who
+    // they actually are. There's no separate SMS-backup-2FA feature in the
+    // backend yet -- what's real is the phone number every citizen already
+    // signed in with via Supabase Auth OTP. Show that, masked, or an honest
+    // "not signed in" state instead of an invented one.
+    try {
+      const { data: userData } = await sb.auth.getUser();
+      const phone = userData && userData.user && userData.user.phone;
+      const smsSub = document.getElementById('smsBackupSub');
+      const smsVal = document.getElementById('smsBackupValue');
+      if (phone) {
+        const masked = phone.length > 4 ? phone.slice(0, -4).replace(/\d/g, '*') + phone.slice(-4) : phone;
+        smsSub.textContent = masked + ' · Verified at sign-in';
+        smsVal.textContent = 'On';
+        smsVal.style.color = 'var(--green)';
+      } else {
+        smsSub.textContent = 'Not signed in';
+        smsVal.textContent = '—';
+      }
+    } catch (e) {
+      const smsSub = document.getElementById('smsBackupSub');
+      if (smsSub) smsSub.textContent = 'Unavailable';
+    }
     const bioT = document.getElementById('bioToggle');
     bioT.classList.toggle('on', secState.biometric);
     document.getElementById('bioSub').textContent = secState.biometric ? 'Face ID · Enabled' : 'Face ID · Disabled';
