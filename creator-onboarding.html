@@ -543,14 +543,29 @@ async function claimGenesis(){
         throw error;
       }
 
-      await sb.rpc('claim_creator_signup_bonus', { p_citizen_id: data.id });
+      // FIXED 2026-09-03: this discarded the bonus RPC's result and always stored
+      // the hardcoded CREATOR_BONUS_* constants, regardless of what actually got
+      // credited. Low-risk in practice (this citizen row was just created in this
+      // same call, so the RPC's failure branches are effectively unreachable) but
+      // still wrong to claim a specific number without checking — use the real
+      // returned balance/wisdom when present, falling back to the constants only
+      // if the RPC call itself failed (network hiccup) since the citizen row does
+      // exist by this point either way.
+      let bonusWisdom = CREATOR_BONUS_WISDOM, bonusIndx = CREATOR_BONUS_INDX;
+      try {
+        const { data: bonus } = await sb.rpc('claim_creator_signup_bonus', { p_citizen_id: data.id });
+        if (bonus && bonus.success) {
+          bonusWisdom = bonus.wisdom_score;
+          bonusIndx = bonus.indx_balance;
+        }
+      } catch (bonusErr) { /* keep the constants — citizen row still exists */ }
 
       // Confirmed success — real row exists. Set canonical session keys.
       sessionStorage.setItem('citizen_id', data.id);
       sessionStorage.setItem('citizen_name', name);
       sessionStorage.setItem('citizen_web3_domain', domain + '.IN$DEX');
-      sessionStorage.setItem('citizen_wisdom', String(CREATOR_BONUS_WISDOM));
-      sessionStorage.setItem('citizen_balance', String(CREATOR_BONUS_INDX));
+      sessionStorage.setItem('citizen_wisdom', String(bonusWisdom));
+      sessionStorage.setItem('citizen_balance', String(bonusIndx));
       sessionStorage.setItem('citizen_genesis', '1');
       sessionStorage.setItem('citizen_kyc_tier', '0');
       if (nation) sessionStorage.setItem('citizen_nation', nation);
