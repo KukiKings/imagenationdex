@@ -305,6 +305,19 @@ const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const LARGE_AMOUNT_INDX = 500; // simple real threshold — not a fraud model, just a caution line
+
+// FIX 2026-09-03: get_consent_receipts is granted to `authenticated` only (not anon) — calling
+// it with the bare anon key was silently failing permission-denied every time (res.ok === false,
+// no error surfaced), so this page's "real receipts" section was always empty and quietly fell
+// back to demo-only local history. Fetch the citizen's real access token first, same pattern as
+// dispute.html / merchant-command-center.html.
+let _realAccessToken = null;
+async function initRealSession() {
+  try {
+    const { data } = await sb.auth.getSession();
+    if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+  } catch (e) { /* stay on anon key */ }
+}
 var isLiveMode = false;
 var liveExecuting = false;
 
@@ -929,9 +942,10 @@ async function renderHistory() {
   // Real receipts (send/withdraw actually executed or genuinely declined/failed) — source of truth.
   if (citizenId) {
     try {
+      await initRealSession();
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_consent_receipts', {
         method: 'POST',
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' },
         body: JSON.stringify({ p_citizen_id: citizenId, p_limit: 25 })
       });
       if (res.ok) {

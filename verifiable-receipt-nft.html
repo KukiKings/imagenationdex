@@ -565,10 +565,23 @@
   </div>
 </div>
 
+<!-- FIX 2026-09-03: real receipts, distinct from the example section below. consent_receipts is
+     a real, populated table and get_consent_receipts() is a real, correctly-scoped RPC — neither
+     was previously wired to this page. This section shows the citizen's actual records (still
+     honestly labeled "not minted on-chain," since minting genuinely isn't live). -->
+<div class="section">
+  <div class="sec-header">
+    <div class="sec-title">Your Real Receipts</div>
+  </div>
+</div>
+<div id="realReceiptsLoading" style="max-width:430px;margin:0 auto 12px;padding:14px 16px;font-size:12px;color:var(--text-muted);">Loading your receipts…</div>
+<div id="realReceiptsList" style="max-width:430px;margin:0 auto 12px;display:none;"></div>
+<div id="realReceiptsEmpty" style="max-width:430px;margin:0 auto 12px;padding:14px 16px;border-radius:12px;background:rgba(0,229,160,0.05);border:1px solid rgba(0,229,160,0.15);font-size:12px;color:var(--text-muted);display:none;">No real receipts yet — they're created automatically the first time you send, cash out, or pay a bill.</div>
+
 <!-- FILTER CHIPS -->
 <div class="section">
   <div class="sec-header">
-    <div class="sec-title">Receipt History</div>
+    <div class="sec-title">Example Receipts</div>
     <div class="sec-link" onclick="showToast('📥 Export all coming soon')">Export all</div>
   </div>
 </div>
@@ -717,7 +730,70 @@
   </div>
 </nav>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
+// ── FIX 2026-09-03: real receipts via get_consent_receipts (see markup comment above) ──
+const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let _realAccessToken = null;
+async function initRealSession() {
+  try {
+    const { data } = await sb.auth.getSession();
+    if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+  } catch (e) { /* stay on anon key */ }
+}
+const RECEIPT_TYPE_META = {
+  send: { icon: '💸', bg: 'rgba(0,212,255,0.12)', label: 'Sent' },
+  withdraw: { icon: '💵', bg: 'rgba(0,229,160,0.1)', label: 'Cash Out' },
+  bill_pay: { icon: '🧾', bg: 'rgba(139,63,232,0.12)', label: 'Bill Paid' }
+};
+async function loadRealReceipts() {
+  const loadingEl = document.getElementById('realReceiptsLoading');
+  const listEl = document.getElementById('realReceiptsList');
+  const emptyEl = document.getElementById('realReceiptsEmpty');
+  const citizenId = sessionStorage.getItem('citizen_id');
+  if (!citizenId) {
+    loadingEl.textContent = 'Log in to see your real receipts.';
+    return;
+  }
+  try {
+    await initRealSession();
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_consent_receipts', {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_citizen_id: citizenId, p_limit: 25 })
+    });
+    const receipts = res.ok ? await res.json() : [];
+    loadingEl.style.display = 'none';
+    if (!Array.isArray(receipts) || receipts.length === 0) {
+      emptyEl.style.display = 'block';
+      return;
+    }
+    listEl.style.display = 'block';
+    listEl.innerHTML = receipts.map(function(r) {
+      const meta = RECEIPT_TYPE_META[r.action_type] || { icon: '📄', bg: 'rgba(255,255,255,0.06)', label: r.action_type || 'Action' };
+      const when = r.created_at ? new Date(r.created_at).toLocaleString() : '';
+      const amount = (r.amount_usd != null ? '$' + Number(r.amount_usd).toFixed(2) : (r.amount_indx != null ? Number(r.amount_indx).toFixed(2) + ' INDX' : ''));
+      const outcomeColor = r.outcome === 'approved' ? 'var(--green)' : (r.outcome === 'declined' || r.outcome === 'failed' ? '#ffb800' : 'var(--text-muted)');
+      return '<div class="receipt-card" style="margin-bottom:10px;">' +
+        '<div class="receipt-top">' +
+        '<div class="receipt-icon" style="background:' + meta.bg + ';">' + meta.icon + '</div>' +
+        '<div class="receipt-meta">' +
+        '<div class="receipt-type">' + meta.label + (r.recipient ? ' · ' + r.recipient : '') + '</div>' +
+        '<div class="receipt-time">' + when + '</div></div>' +
+        '<div class="receipt-amount" style="color:' + outcomeColor + ';">' + amount + '</div></div>' +
+        '<div class="nft-proof-row"><div class="nft-proof-left"><div class="nft-proof-dot"></div><div>' +
+        '<div class="nft-proof-label">Real record · not minted on-chain</div>' +
+        '<div class="nft-proof-hash">' + (r.receipt_code || '') + ' · ' + (r.outcome || '') + '</div>' +
+        '</div></div></div></div>';
+    }).join('');
+  } catch (e) {
+    loadingEl.textContent = 'Could not load your receipts right now.';
+  }
+}
+loadRealReceipts();
+
 const RECEIPTS = [
   {
     id: 'vr-0047',
