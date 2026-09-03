@@ -377,26 +377,86 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 <div class="tab-panel" id="tab-disputes">
   <div class="nl-section">Active disputes</div>
 
-  <!-- FIX 2026-08-30: this used to be a hardcoded fake dispute ("Order #ORD-0032")
-       shown to every merchant as if it were their own real, active dispute. No
-       dispute/mediation backend exists yet. -->
-  <div style="margin:16px;padding:14px;background:rgba(255,184,0,0.06);border:1px solid rgba(255,184,0,0.2);border-radius:14px;font-size:12px;color:var(--text-muted);">
-    🚧 Dispute & mediation system is on the roadmap — not live yet. No active disputes today because nothing can be filed yet.
-  </div>
+  <!-- FIX 2026-09-03: the old copy here claimed "nothing can be filed yet," which was
+       false — dispute.html has been a fully real, RLS-checked dispute system (open_dispute,
+       add_dispute_evidence, get_my_disputes) since before this page's own "roadmap" note
+       was written. This now loads the merchant's real disputes via get_my_disputes and
+       points filing/details to the real dispute.html flow instead of disclaiming it away. -->
+  <div id="disputesLoading" style="margin:16px;padding:14px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;font-size:12px;color:var(--text-muted);">Loading your disputes…</div>
+  <div id="realDisputesList" style="display:none;"></div>
+  <div id="noDisputesMsg" style="display:none;margin:16px;padding:14px;background:rgba(0,229,160,0.05);border:1px solid rgba(0,229,160,0.15);border-radius:14px;font-size:12px;color:var(--text-muted);">No open disputes right now. If a buyer needs to escalate an order, the real dispute system is live — filing goes through dispute.html.</div>
 
   <div style="margin:16px;padding:14px;background:rgba(0,229,160,0.05);border:1px solid rgba(0,229,160,0.15);border-radius:14px;">
-    <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:8px;">✅ SIINDEX dispute protection (planned)</div>
-    <div style="font-size:12px;color:var(--text-muted);line-height:1.7;">Design: every order would create a consent receipt recording what was sold, the agreed price, and both parties' approvals — intended to support you in a dispute. Not live yet.</div>
+    <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:8px;">✅ SIINDEX dispute protection</div>
+    <div style="font-size:12px;color:var(--text-muted);line-height:1.7;">Live: every order carries the record needed to open a dispute — reason, evidence, and resolution requested. SIINDEX-mediated automatic resolution is still on the roadmap; today a dispute is opened, evidence is attached, and it is resolved by IN$DEX review.</div>
   </div>
 
-  <button class="btn-full btn-surface" onclick="showToast('Opening dispute guide…')">How disputes work</button>
+  <button class="btn-full btn-surface" onclick="window.location.href='dispute.html'">How disputes work</button>
 </div>
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
 const INDX_PRICE_USD = 0.24;
 const _MCC_KEY = 'indx_mcc_tab';
+
+// ── FIX 2026-09-03: real dispute data for the Disputes tab (see markup comment above) ──
+const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const citizenId = sessionStorage.getItem('citizen_id');
+let _realAccessToken = null;
+async function initRealSession() {
+  try {
+    const { data } = await sb.auth.getSession();
+    if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+  } catch (e) { /* stay on anon key */ }
+}
+async function rpc(name, body) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + name, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Request failed');
+  return data;
+}
+const DISPUTE_STATUS_LABEL = { open: ['OPEN','#ffb800'], evidence: ['EVIDENCE ADDED','#ffb800'], mediation: ['IN MEDIATION','#ffb800'],
+  resolved_buyer: ['RESOLVED (BUYER)','#00e5a0'], resolved_seller: ['RESOLVED (SELLER)','#00e5a0'], withdrawn: ['WITHDRAWN','var(--text-muted)'] };
+async function loadMerchantDisputes() {
+  const loadingEl = document.getElementById('disputesLoading');
+  const listEl = document.getElementById('realDisputesList');
+  const emptyEl = document.getElementById('noDisputesMsg');
+  if (!citizenId) {
+    loadingEl.style.display = 'none';
+    emptyEl.textContent = 'Log in to see your disputes.';
+    emptyEl.style.display = 'block';
+    return;
+  }
+  try {
+    await initRealSession();
+    const disputes = await rpc('get_my_disputes', { p_citizen_id: citizenId });
+    loadingEl.style.display = 'none';
+    if (!disputes || disputes.length === 0) {
+      emptyEl.style.display = 'block';
+      return;
+    }
+    listEl.style.display = 'block';
+    listEl.innerHTML = disputes.map(function(d) {
+      const meta = DISPUTE_STATUS_LABEL[d.status] || [String(d.status || '').toUpperCase(), 'var(--text-muted)'];
+      const opened = d.opened_at ? new Date(d.opened_at).toLocaleDateString() : '';
+      return '<div class="dispute-card" onclick="window.location.href=\'dispute.html\'">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+        '<span style="font-size:11px;font-weight:700;color:' + meta[1] + ';">' + meta[0] + '</span>' +
+        '<span style="font-size:11px;color:var(--text-muted);">Opened ' + opened + '</span></div>' +
+        '<div style="font-size:13px;">' + ((d.reason || '').split(':')[0] || 'Dispute') + '</div></div>';
+    }).join('');
+  } catch (e) {
+    loadingEl.textContent = 'Could not load disputes right now.';
+  }
+}
 
 var SI_MSGS = [
   'Your screen prints listing is getting 3× more views than your average. One buyer has messaged twice. I recommend responding within 2 hours.',
@@ -433,6 +493,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var btn = document.querySelector('.tab-btn[onclick*="' + saved + '"]');
     if (btn) switchTab(saved, btn);
   }
+  loadMerchantDisputes();
 });
 </script>
 </body>
