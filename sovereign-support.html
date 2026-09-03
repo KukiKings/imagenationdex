@@ -131,7 +131,9 @@
 
   <div class="status-bar">
     <div class="status-dot"></div>
-    <span>SIINDEX online · avg response time: <strong style="color:var(--green)">instant</strong> · Human escalation available 9am–9pm NZST</span>
+    <!-- FIX 2026-09-03: was "Human escalation available 9am-9pm NZST" -- fabricated, no live
+         support-hours system exists. Matches the real escalateToHuman()/file_complaint target. -->
+    <span>SIINDEX online · avg response time: <strong style="color:var(--green)">instant</strong> · Human escalation: real ticket, response within 5 business days</span>
     <span id="agentLiveBadge" class="agent-live-badge"></span>
   </div>
 
@@ -199,7 +201,29 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
+  // FIX 2026-09-03: escalateToHuman() used to be 100% localStorage -- no ticket ever left the
+  // browser, yet the copy claimed "Someone will be with you shortly" with a fabricated
+  // "9am-9pm NZST, under 2 hours" SLA. file_complaint is a real, correctly-scoped RPC (granted
+  // to `authenticated`, RLS-correct on the complaints table) already wired into
+  // consumer-rights.html this session -- reused here instead of inventing new backend.
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  let _realAccessToken = null;
+  async function initRealSession() {
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+    } catch (e) { /* stay on anon key */ }
+  }
+  function fillTokens(str) {
+    if (typeof str !== 'string') return str;
+    const ws = sessionStorage.getItem('citizen_wisdom');
+    return str.replace(/\{\{WS\}\}/g, ws !== null ? ws : '—');
+  }
+
   // GOD MODE: storage keys & helpers (chat history + ticket history)
   const CHAT_KEY = 'indx_support_chat_history';
   const TICKET_KEY = 'indx_support_tickets';
@@ -322,18 +346,28 @@
     });
   }
 
+  // FIX 2026-09-03: two entries below were fabricated. 'genesis bonus' claimed "1,000 INDX
+  // releases automatically 48 hours after Sovereign Verification is confirmed" -- the real
+  // claim_genesis_signup_bonus RPC awards 50 INDX + 25 Wisdom, once, instantly, on first
+  // claim, with no verification gate and no delay. Same fabricated-bonus pattern already
+  // fixed in notifications.html and creator-onboarding.html. 'wisdom score' hardcoded "WS 62"
+  // for every citizen and listed a point breakdown that didn't match any real
+  // award_wisdom_internal() call (verified directly against create_listing, purchase_listing,
+  // verify_payid_tier2, cast_governance_vote, stake_indx, complete_referral in Postgres),
+  // plus a "daily login streak x2" multiplier that doesn't exist as any DB routine. Now pulls
+  // the real score from session data ({{WS}}, resolved by fillTokens() below) and lists the
+  // real, verified point values.
   const RESPONSES = {
-    'genesis bonus': `Your Genesis Bonus of <strong>1,000 INDX</strong> releases automatically 48 hours after Sovereign Verification is confirmed.<br><br>
-Check your <span class="highlight">verification status</span> tap below to open it. If it's been over 48 hours and it hasn't arrived, tap Escalate and I'll log a manual review ticket immediately.`,
+    'genesis bonus': `Your Genesis Bonus is <strong>50 INDX + 25 Wisdom Score</strong>, credited once, instantly, the first time you claim it during onboarding -- there's no verification gate and no delay.<br><br>
+If you signed up and don't see it, tap Escalate and I'll open a real support ticket.`,
     'wisdom score': `Your Wisdom Score grows with every verified action:<br><br>
-· <strong>Identity Verify</strong> +15 WS (one-time)<br>
-· <strong>Every purchase</strong> +2 WS<br>
-· <strong>Every sale</strong> +3 WS<br>
+· <strong>Identity Verify</strong> +10 WS (once, Tier 0 -> Tier 1)<br>
+· <strong>Marketplace purchase</strong> +3 WS<br>
+· <strong>Marketplace sale</strong> +5 WS<br>
 · <strong>Governance vote</strong> +5 WS<br>
 · <strong>Referral</strong> +10 WS<br>
-· <strong>Staking</strong> +8 WS<br>
-· <strong>Daily login streak</strong> ×2 multiplier<br><br>
-You're at <span class="highlight">WS 62</span> right now. Reach 100 to unlock Sovereign Yield. You're closer than you think.`,
+· <strong>Staking</strong> +8 WS<br><br>
+You're at <span class="highlight">WS {{WS}}</span> right now. Reach 100 to unlock Sovereign Yield.`,
     'escrow': `Three reasons escrow might not be releasing:<br><br>
 1. <strong>Auto-release timer</strong> releases 7 days after dispatch if receipt isn't confirmed<br>
 2. <strong>Dispute active</strong> funds held until resolved<br>
@@ -350,10 +384,9 @@ The Fund is governed by citizens it covers infrastructure, education, insurance 
 3. Describe what happened and attach any evidence<br>
 4. Escrow is frozen until it's resolved<br><br>
 For complex cases, our <span class="highlight">Sovereign Court</span> handles jury-based arbitration. Want me to pre-fill the dispute form for you?`,
-    'human': `I'll connect you with a human support agent now.<br><br>
-· <strong>Available:</strong> 9am–9pm NZST<br>
-· <strong>Response time:</strong> under 2 hours<br><br>
-I've prepared a full summary of our conversation so the agent has everything they need. You won't need to repeat yourself. Standing by while they pick up.`
+    'human': `I'll open a real support ticket for you now.<br><br>
+· <strong>Response time:</strong> within 5 business days<br><br>
+Tap Escalate below and I'll file it with a summary of this conversation attached.`
   };
 
   function detectIntent(text) {
@@ -408,7 +441,7 @@ I've prepared a full summary of our conversation so the agent has everything the
     setTimeout(() => {
       hideTyping();
       if (intent && RESPONSES[intent]) {
-        appendMsg(RESPONSES[intent], 'agent');
+        appendMsg(fillTokens(RESPONSES[intent]), 'agent');
         if (intent === 'human') showEscalate();
       } else {
         appendMsg(`I heard you "<strong>${text.substring(0,40)}${text.length>40?'…':''}</strong>".<br><br>I don't have a direct answer for that right now. Here's what I can do:<br>· Search the IN$DEX knowledge base<br>· Connect you with a human agent<br>· Flag this as a known issue<br><br>Which would you like?`, 'agent');
@@ -435,18 +468,38 @@ I've prepared a full summary of our conversation so the agent has everything the
     makeKeyboardOperable(div.querySelector('.eb-btn'));
   }
 
-  function escalateToHuman() {
+  // FIX 2026-09-03: was 100% localStorage -- generated a fake "#SUP-xxxxxxxx" ID and told the
+  // citizen "Someone will be with you shortly", but nothing ever left the browser. Now files a
+  // real complaint via file_complaint (RLS-correct, granted to `authenticated`), same RPC
+  // wired into consumer-rights.html this session, and uses the real returned complaint_id.
+  async function escalateToHuman() {
     showTyping();
-    setTimeout(() => {
+    const citizenId = sessionStorage.getItem('citizen_id');
+    const lastUserBubble = document.querySelectorAll('.bubble.user');
+    const lastUserText = lastUserBubble.length ? lastUserBubble[lastUserBubble.length - 1].textContent.trim() : '';
+    const summary = lastUserText ? lastUserText.substring(0, 500) : 'General support request';
+    if (!citizenId) {
       hideTyping();
-      // GOD MODE PATCH: generate a real ticket (timestamp-based ID) and persist it, instead of a hardcoded ID
-      const ticketId = '#SUP-' + Date.now().toString().slice(-8);
-      const lastUserBubble = document.querySelectorAll('.bubble.user');
-      const lastUserText = lastUserBubble.length ? lastUserBubble[lastUserBubble.length - 1].textContent.trim() : '';
-      const summary = lastUserText ? lastUserText.substring(0, 90) : 'General support request';
+      appendMsg(`I can't open a ticket without you being logged in. Please log in and try again, or email support@index.finance directly.`, 'agent');
+      return;
+    }
+    try {
+      await initRealSession();
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/file_complaint', {
+        method: 'POST',
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ p_citizen_id: citizenId, p_category: 'support_escalation', p_description: summary })
+      });
+      const data = await res.json().catch(() => ({}));
+      hideTyping();
+      if (!res.ok || data.success === false) throw new Error(data.message || data.error || 'Could not file ticket');
+      const ticketId = '#' + String(data.complaint_id || '').slice(0, 8).toUpperCase();
       saveTicket({ id: ticketId, ts: Date.now(), summary });
-      appendMsg(`Done. I've flagged this conversation and prepared a full context summary for the agent. Ticket ID: <span class="highlight">${ticketId}</span>. Someone will be with you shortly. Standing by.`, 'agent');
-    }, 800);
+      appendMsg(`Done. I've filed a real support ticket: <span class="highlight">${ticketId}</span>. You'll hear back within 5 business days. Standing by.`, 'agent');
+    } catch (e) {
+      hideTyping();
+      appendMsg(`I couldn't file that right now — please email support@index.finance directly and quote this conversation.`, 'agent');
+    }
   }
 
   function showToast(msg) {
