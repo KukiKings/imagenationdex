@@ -817,28 +817,15 @@ async function executeBuy() {
     return;
   }
 
-  try {
-    const { data, error } = await sb.rpc('purchase_listing', {
-      p_buyer_id:  citizenId,
-      p_listing_id: activeId,
-      p_amount_indx: l.price
-    });
-    // Real RPC failures (including "no such listing" since this grid is
-    // showcase content not yet backed by live `listings` rows) must not
-    // show the success screen.
-    if (error) {
-      showToast('❌ ' + (error.message || 'Purchase failed — try again'));
-      btn.disabled = false; btn.textContent = 'Buy Now →';
-      return;
-    }
-    const bal = parseFloat(sessionStorage.getItem('citizen_balance') || '0');
-    sessionStorage.setItem('citizen_balance', (bal - l.price).toFixed(4));
-    document.getElementById('successMsg').innerHTML =
-      `<strong>${l.emoji} ${l.title}</strong><br>${l.price} INDX sent. Seller received ${(l.price*0.98).toFixed(2)} INDX (98%). 2% to Civilisation Fund. Standing by.`;
-    document.getElementById('successOverlay').classList.add('show');
-  } catch(e) {
-    showToast('❌ ' + (e.message || 'Purchase failed'));
-  }
+  // FIXED 2026-09-03: this grid is showcase content, not real `listings` rows (see
+  // submitOffer()'s note above — the listings table has no live inventory yet). This
+  // call used to hit the real purchase_listing RPC with a fake p_listing_id, then
+  // showed the "Purchase Complete — X INDX sent, seller received Y INDX" success
+  // screen and faked a balance deduction WITHOUT EVER CHECKING data.success — so
+  // "Listing not found" (or ACCOUNT_FROZEN, or any other real rejection) still
+  // displayed as a completed purchase. No real INDX ever moved. Same convention as
+  // submitOffer(): be honest that this is a preview until there's a live listing.
+  showToast('Preview only — real purchases open once live sellers list on the marketplace.');
   btn.disabled = false; btn.textContent = 'Buy Now →';
 }
 

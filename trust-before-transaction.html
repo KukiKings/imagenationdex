@@ -763,7 +763,13 @@ async function handleLiveApprove(s) {
       });
       const resBody = await res.json();
       if (!res.ok || resBody?.message || resBody?.code) {
-        rpcError = resBody?.message || 'The network rejected this action.';
+        // ACCOUNT_FROZEN / CARD_FROZEN are raw Postgres exception text, not something to
+        // show a citizen verbatim -- map them to the same clear message withdraw.html,
+        // bill-pay.html, and card-atm-withdrawal.html already show for the same real check.
+        var rawMsg = resBody?.message || '';
+        rpcError = rawMsg.includes('ACCOUNT_FROZEN') ? 'Your account is frozen — ' + (p.type === 'withdraw' ? 'withdrawal' : 'transfer') + ' blocked. Unfreeze it from Emergency Freeze, or contact support.'
+          : rawMsg.includes('CARD_FROZEN') ? 'Your card is frozen — this action is blocked.'
+          : rawMsg || 'The network rejected this action.';
       } else if (resBody && resBody.new_balance !== undefined) {
         result = resBody;
       } else {
