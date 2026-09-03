@@ -151,9 +151,13 @@
       <!-- DECISION AUDIT TRAIL -->
       <!-- FIXED 2026-07-25: was a static list of fabricated "your account" transactions
            (fake amounts, fake addresses, fake timestamps) with no real fetch behind it —
-           replaced with an honest empty state until a real decision log is wired up. -->
+           replaced with an honest empty state until a real decision log is wired up.
+           WIRED FOR REAL 2026-08-30: get_my_transfer_risk_flags() now returns real,
+           ownership-checked flags from security_events when transfer_indx flags one of
+           your sends (high amount / rapid succession / known risk indicator). Still
+           shows the honest empty state below until that RPC returns something real. -->
       <div class="section-title">Recent SIINDEX decisions (your account)</div>
-      <div class="trail-card">
+      <div class="trail-card" id="decisionTrail">
         <div style="text-align:center;padding:20px 16px;color:var(--text-muted);font-size:13px;">No decisions logged yet. SIINDEX will show your real transaction reasoning here once you're active on IN$DEX.</div>
       </div>
 
@@ -175,7 +179,7 @@
         </div>
         <div class="ex-item">
           <div class="ex-q">Does SIINDEX make financial decisions for me?</div>
-          <div class="ex-a">No. SIINDEX is designed to monitor, alert, file reports, and block illegal transactions as this is built out — not all of that is live yet. What is true today: she never buys, sells, or invests your funds without explicit instruction. You stay in control. Always.</div>
+          <div class="ex-a">No. What's live today: real-time flagging on unusually large transfers, rapid-succession sends, and recipients matching a known risk indicator — each one is logged to your account, review-only, never blocking the transfer itself. Filing formal reports and blocking illegal transactions outright are still on the roadmap, not live yet. What's always true: she never buys, sells, or invests your funds without explicit instruction. You stay in control. Always.</div>
         </div>
       </div>
 
@@ -390,6 +394,39 @@ async function ovInitSession(){
   }
 }
 
+// REAL 2026-08-30: fetch this citizen's own flagged transfers via the ownership-checked
+// get_my_transfer_risk_flags RPC (backed by security_events, written by transfer_indx's
+// real, non-blocking risk assessment). Renders real rows when present; otherwise leaves
+// the honest empty state already in the HTML untouched.
+async function loadDecisionTrail(){
+  try {
+    const { data: userData } = await ovSb.auth.getUser();
+    const user = userData && userData.user;
+    if (!user) return;
+    const { data: citizen } = await ovSb.from('citizens').select('id').eq('auth_user_id', user.id).maybeSingle();
+    if (!citizen) return;
+    const { data: flags, error } = await ovSb.rpc('get_my_transfer_risk_flags', { p_citizen_id: citizen.id });
+    if (error || !Array.isArray(flags) || flags.length === 0) return;
+
+    const labels = {
+      transfer_risk_high_amount: 'Flagged for review — larger transfer',
+      transfer_risk_rapid_succession: 'Flagged for review — several sends in quick succession',
+      transfer_risk_known_indicator: 'Flagged for review — recipient matched a risk indicator'
+    };
+    const trail = document.getElementById('decisionTrail');
+    trail.innerHTML = flags.map(f => {
+      const when = new Date(f.created_at).toLocaleString();
+      const label = labels[f.zone] || f.description || 'Flagged for review';
+      const amt = f.amount != null ? Number(f.amount).toFixed(2) + ' INDX' : '';
+      return `<div style="padding:12px 16px;border-bottom:1px solid var(--border);">
+        <div style="font-size:13px;font-weight:700;">${label}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${amt ? amt + ' · ' : ''}${when}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Reviewed automatically. No transaction was blocked — this is a review flag, not an account freeze.</div>
+      </div>`;
+    }).join('');
+  } catch (e) { /* leave the honest empty state on any failure */ }
+}
+
 function getOverrideHistory(){
   try{ return JSON.parse(localStorage.getItem(OVERRIDE_HISTORY_KEY) || '[]'); }catch(e){ return []; }
 }
@@ -539,6 +576,7 @@ document.addEventListener('DOMContentLoaded', async function(){
   renderOverrideHistory();
   await ovInitSession();
   await renderPauseBanner();
+  await loadDecisionTrail();
   setInterval(tickOverrideCountdowns, 1000);
   setInterval(renderPauseBanner, 30000);
 });
