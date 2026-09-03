@@ -330,14 +330,20 @@
   <div class="section-label">Today</div>
   <div class="notif-group">
 
+    <!-- FIX 2026-09-03: this used to claim "Done. Your 50 INDX Genesis Bonus is in your
+         wallet" to every citizen regardless of whether they'd actually made a purchase --
+         the same fabrication already fixed once in citizen-dashboard.html's activity feed
+         (see the FIX 2026-08-30 comment there). The real mechanic (buy-indx.html) is: 50
+         INDX bonus once, on your first purchase of $10 USD or more -- not automatic, no
+         expiry. Reworded to state that accurately. -->
     <div class="notif-item unread" data-id="n1" data-category="earn" onclick="tapNotif(this,'earn')">
       <div class="notif-icon earn">⚡</div>
       <div class="notif-body">
-        <div class="notif-title">Genesis Bonus Received</div>
-        <div class="notif-desc">Done. Your 50 INDX Genesis Bonus is in your wallet. Standing by.</div>
+        <div class="notif-title">Genesis Bonus Available</div>
+        <div class="notif-desc">Your first purchase of $10 USD or more comes with a one-time 50 INDX Genesis Bonus.</div>
         <div class="notif-meta">
           <div class="notif-time">2 min ago</div>
-          <div class="notif-action" onclick="event.stopPropagation(); window.location.href='citizen-dashboard.html'">View Balance</div>
+          <div class="notif-action" onclick="event.stopPropagation(); window.location.href='buy-indx.html'">Claim It</div>
         </div>
       </div>
       <div class="notif-amount">+50 INDX</div>
@@ -358,11 +364,15 @@
       </div>
     </div>
 
+    <!-- FIX 2026-09-03: was hardcoded "Wisdom Score: 20" for every citizen regardless of
+         their real score. citizen_wisdom is set into sessionStorage from the real
+         citizens.wisdom_score column on dashboard load (see citizen-dashboard.html) --
+         reading it here instead. -->
     <div class="notif-item unread" data-id="n3" data-category="system" onclick="tapNotif(this,'system')">
       <div class="notif-icon wisdom">🧠</div>
       <div class="notif-body">
-        <div class="notif-title">Wisdom Score: 20. You're on the board.</div>
-        <div class="notif-desc">Reach 50 to unlock Governance voting. Three actions gets you there. I'm tracking your progress.</div>
+        <div class="notif-title" id="wisdomNotifTitle">Wisdom Score. You're on the board.</div>
+        <div class="notif-desc">Reach 50 to unlock Governance voting. I'm tracking your progress.</div>
         <div class="notif-meta">
           <div class="notif-time">5 min ago</div>
           <div class="notif-action" onclick="event.stopPropagation(); window.location.href='profile.html'">View Score</div>
@@ -370,18 +380,12 @@
       </div>
     </div>
 
-    <div class="notif-item unread" data-id="n4" data-category="earn" onclick="tapNotif(this,'earn')">
-      <div class="notif-icon earn">💰</div>
-      <div class="notif-body">
-        <div class="notif-title">First Deposit Offer Available</div>
-        <div class="notif-desc">Deposit $50 or more in your first 7 days and receive 10 INDX. Offer expires in 6 days.</div>
-        <div class="notif-meta">
-          <div class="notif-time">10 min ago</div>
-          <div class="notif-action" onclick="event.stopPropagation(); window.location.href='deposit.html'">Deposit Now</div>
-        </div>
-      </div>
-      <div class="notif-amount" style="color:var(--gold)">🎁 +10</div>
-    </div>
+    <!-- REMOVED 2026-09-03: "First Deposit Offer" ($50 deposit -> 10 INDX within 7 days,
+         "expires in 6 days") had no backend behind it at all -- not the same program as the
+         real Genesis Bonus above (which is 50 INDX on a $10+ purchase, no deposit-count
+         threshold, no expiry), and not internally consistent with it either. Removed
+         rather than reworded since there's no real time-limited deposit program to
+         describe honestly. -->
 
   </div>
 
@@ -478,8 +482,25 @@
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
-  let unreadCount = 4;
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // wisdom_actions' RLS policy matches on real auth.uid() -- confirmed via a direct
+  // `set local role anon; select count(*) from wisdom_actions` test that anon always sees 0
+  // rows regardless of citizen_id, same as the get_consent_receipts bug fixed elsewhere this
+  // session. A real access token is required.
+  let _realAccessToken = null;
+  async function initRealSession() {
+    try {
+      const { data } = await sb.auth.getSession();
+      if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+    } catch (e) { /* stay on anon key */ }
+  }
+  // FIX 2026-09-03: was 4, matching the original 4 hardcoded "unread" items (n1-n4). n4 was
+  // removed as fabricated (see markup comment near where it used to sit), leaving 3.
+  let unreadCount = 3;
 
   // GOD MODE PATCH — persist read state
   function tapNotif(el, category) {
@@ -579,55 +600,14 @@
     });
   }
 
-  // FEATURE 2 — Live new notification injection
-  const GM_LIVE_POOL = [
-    { icon:'⚡', cls:'earn',     cat:'earn',     title:'Wisdom Score increased',      desc:'You earned +1 WS for completing your profile. Now at WS 21.',            amount:null,        action:'View Score',  href:'profile.html' },
-    { icon:'📡', cls:'system',   cat:'earn',     title:'Light Node reward',           desc:'Your node earned 0.8 INDX while running in the background.',             amount:'+0.8 INDX', action:'View Node',   href:'light-node.html' },
-    { icon:'👥', cls:'referral', cat:'referral', title:'Referral click tracked',      desc:'Someone opened your referral link — keep sharing.',                      amount:null,        action:'My Referrals',href:'referral.html' },
-    { icon:'🏪', cls:'market',   cat:'market',   title:'New listing match',           desc:'A new ceramic set was listed. Matches your saved search.',                amount:null,        action:'View Listing', href:'marketplace.html' },
-    { icon:'💰', cls:'earn',     cat:'earn',     title:'Civilisation Fund payout',    desc:'Your share of the 2% Civilisation Law pool: +1.2 INDX.',                 amount:'+1.2 INDX', action:'View Fund',   href:'citizen-dashboard.html' },
-    { icon:'🧠', cls:'system',   cat:'system',   title:'Governance proposal live',    desc:'Proposal #14: Reduce listing fee to 1%. Voting closes in 48 hours.',     amount:null,        action:'Vote Now',    href:'governance.html' },
-  ];
-  let gmLiveIdx = 0;
-  // ⚠️ DEAD CODE — DO NOT RE-ENABLE (marked 2026-07-30).
-  // The initial kick was removed, but gmInjectNotif SELF-RESCHEDULES via gmScheduleLive() below, so a
-  // single call re-arms an infinite fake-notification loop. Neither definition carried a marker.
-  function gmInjectNotif() {
-    const n = GM_LIVE_POOL[gmLiveIdx % GM_LIVE_POOL.length];
-    gmLiveIdx++;
-    const id = 'gm_live_' + Date.now();
-    const amountHtml = n.amount ? `<div class="notif-amount">${n.amount}</div>` : '';
-    const html = `
-      <div class="notif-item unread notif-new" data-id="${id}" data-category="${n.cat}" onclick="tapNotif(this,'${n.cat}')">
-        <div class="notif-icon ${n.cls}">${n.icon}</div>
-        <div class="notif-body">
-          <div class="notif-title">${n.title}</div>
-          <div class="notif-desc">${n.desc}</div>
-          <div class="notif-meta">
-            <div class="notif-time">Just now</div>
-            <div class="notif-action" onclick="event.stopPropagation();window.location.href='${n.href}'">${n.action}</div>
-          </div>
-        </div>
-        ${amountHtml}
-      </div>`;
-    const group = document.querySelector('#notifList .notif-group');
-    if (!group) return;
-    group.insertAdjacentHTML('afterbegin', html);
-    const newEl = group.firstElementChild;
-    gmSetupSwipe(newEl);
-    unreadCount++;
-    updateCount();
-    gmUpdateStrip();
-    gmSaveReadState();
-    showToast('🔔 New notification');
-    setTimeout(() => newEl.classList.remove('notif-new'), 500);
-    gmScheduleLive();
-  }
-  // ⚠️ DEAD CODE — DO NOT RE-ENABLE (marked 2026-07-30). Re-arms gmInjectNotif on a random delay.
-  function gmScheduleLive() {
-    const delay = 45000 + Math.random() * 45000;
-    setTimeout(gmInjectNotif, delay);
-  }
+  // REMOVED 2026-09-03: this block (GM_LIVE_POOL / gmInjectNotif / gmScheduleLive) was dead
+  // code that fabricated notifications on a 45-90s recursive timer -- fake Wisdom Score bumps,
+  // fake Light Node earnings, fake referral clicks, fake Civilisation Fund payouts, fake
+  // governance proposals -- with no real backend behind any of it. It was disabled 2026-07-30
+  // but left in the file as a landmine (a single re-enabled call would re-arm the infinite
+  // loop). Deleted outright rather than left disabled, per the audit skill's guidance on dead
+  // fabrication code. See also the n1/n3/n4 fixes below for the same fabrication pattern found
+  // in the *static* notification list.
 
   // FEATURE 3 — Swipe-to-dismiss
   function gmSetupSwipe(item) {
@@ -733,18 +713,58 @@
         domainEl.textContent = `I'm SIINDEX, your Sovereign SI. Your identity ${disp} is live and your account is secure. I'll be here whenever you need me.`;
       }
     }
+    // FIX 2026-09-03: fill in the real Wisdom Score instead of the hardcoded "20" this
+    // notification used to show every citizen.
+    const wisdomTitleEl = document.getElementById('wisdomNotifTitle');
+    if (wisdomTitleEl) {
+      const realWisdom = sessionStorage.getItem('citizen_wisdom');
+      if (realWisdom !== null) wisdomTitleEl.textContent = `Wisdom Score: ${realWisdom}. You're on the board.`;
+    }
     gmLoadDismissed();
     gmLoadReadState();
     gmLoadToggles();
     gmSetupAllSwipes();
     gmUpdateStrip();
-    // FIXED 2026-07-25: was gmScheduleLive() — a setInterval-style recursive
-    // timer (45-90s) that injected fictional notifications forever (fake Wisdom
-    // Score bumps, fake Light Node earnings, fake referral clicks, fake
-    // Civilisation Fund payouts) into the citizen's real notification list,
-    // making up numbers with every injection. Disabled — no real notification
-    // backend to poll yet. See gotchas.md.
+    loadRealWisdomNotifs();
   });
+
+  // FIX 2026-09-03: wisdom_actions has a real, already-correct SELECT-own-row RLS policy
+  // ("Citizens read own wisdom actions") and table grants -- no new RPC or RLS needed. Reads
+  // the citizen's real recent wisdom-point events (P2P transfers, marketplace sales/purchases,
+  // staking, governance votes, referrals) and adds them as real notification cards above the
+  // static list, so this category is no longer 100% static copy.
+  async function loadRealWisdomNotifs() {
+    const citizenId = sessionStorage.getItem('citizen_id');
+    if (!citizenId) return;
+    try {
+      await initRealSession();
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/wisdom_actions?citizen_id=eq.${citizenId}&select=action_key,points,source,created_at&order=created_at.desc&limit=5`,
+        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY) } }
+      );
+      if (!res.ok) return;
+      const rows = await res.json();
+      if (!Array.isArray(rows) || rows.length === 0) return;
+      const group = document.querySelector('#notifList .notif-group');
+      if (!group) return;
+      const html = rows.map(r => {
+        const label = (r.action_key || '').split(':')[0].replace(/_/g, ' ');
+        const when = r.created_at ? new Date(r.created_at).toLocaleString() : '';
+        const id = 'wa_' + (r.action_key || Date.now());
+        return `<div class="notif-item" data-id="${id}" data-category="earn">
+          <div class="notif-icon earn">🧠</div>
+          <div class="notif-body">
+            <div class="notif-title">+${r.points} Wisdom — ${label}</div>
+            <div class="notif-desc">Real Wisdom Score event.</div>
+            <div class="notif-meta"><div class="notif-time">${when}</div></div>
+          </div>
+          <div class="notif-amount">+${r.points}</div>
+        </div>`;
+      }).join('');
+      group.insertAdjacentHTML('afterbegin', html);
+      gmSetupAllSwipes();
+    } catch (e) { /* real data unavailable — static list still shows */ }
+  }
   // ── END GOD MODE BLOCK ───────────────────────────────────────────
 </script>
 
