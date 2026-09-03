@@ -107,6 +107,20 @@
     /* GOD MODE: jurisdiction pill focus + remembered badge */
     .jur-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
     .jur-remembered-badge{font-size:10px;color:var(--text-dim);text-align:center;margin:-8px 0 14px;}
+
+    /* FIX 2026-09-03: real complaint filing modal (file_complaint RPC) */
+    .cr-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:flex-end;justify-content:center;z-index:200;}
+    .cr-modal-overlay.active{display:flex;}
+    .cr-modal{width:100%;max-width:430px;background:var(--surface,#12141c);border-radius:20px 20px 0 0;padding:20px 18px 26px;}
+    .cr-modal h3{margin:0 0 6px;font-size:16px;}
+    .cr-modal p{margin:0 0 14px;font-size:12px;color:var(--text-muted);line-height:1.5;}
+    .cr-modal textarea{width:100%;min-height:90px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;font-family:inherit;padding:10px 12px;resize:vertical;}
+    .cr-modal-actions{display:flex;gap:10px;margin-top:14px;}
+    .cr-modal-actions button{flex:1;padding:12px;border-radius:12px;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
+    .cr-modal-cancel{background:var(--surface2);color:var(--text-muted);}
+    .cr-modal-submit{background:var(--cyan,#00D4FF);color:#000;}
+    .cr-modal-submit:disabled{opacity:0.5;}
+    .cr-modal-status{margin-top:10px;font-size:12px;line-height:1.5;}
   </style>
 </head>
 <body>
@@ -168,7 +182,7 @@
           <div class="ri-body">
             <div class="ri-title">Right to dispute any transaction</div>
             <div class="ri-desc">Any transaction can be disputed within 60 days, and we target a response within 5 business days. Escalation to an independent mediator is planned but not live yet — today, resolution happens directly between you and the other party.</div>
-            <div class="ri-action" onclick="showToast('Opening dispute form…')">Raise a dispute →</div>
+            <div class="ri-action" onclick="openComplaintModal('transaction_dispute','Raise a dispute','Describe the transaction and what went wrong. This opens a real complaint with our team — you\'ll get a response within 5 business days.')">Raise a dispute →</div>
           </div>
         </div>
         <div class="right-item">
@@ -192,7 +206,9 @@
           <div class="ri-body">
             <div class="ri-title">Right to human review</div>
             <div class="ri-desc">Any automated decision (account freeze, transaction block, KYC rejection) can be escalated for human review. Our target is within 24 hours, though this queue is new and not yet tested at volume. SIINDEX is not the final word you are.</div>
-            <div class="ri-action" onclick="showToast('Human review request sent')">Request human review →</div>
+            <!-- FIX 2026-09-03: was a fake showToast('Human review request sent') -- nothing was
+                 actually sent anywhere. Now opens the real complaint form (file_complaint RPC). -->
+            <div class="ri-action" onclick="openComplaintModal('human_review_request','Request human review','Describe the automated decision you want reviewed (account freeze, transaction block, KYC rejection, etc). Our target is within 24 hours.')">Request human review →</div>
           </div>
         </div>
       </div>
@@ -260,6 +276,9 @@
           <div class="comp-body">
             <div class="comp-title">Contact IN$DEX support</div>
             <div class="comp-detail">In-app chat or support@index.finance response within 24 hours. Quote your transaction ID.</div>
+            <!-- FIX 2026-09-03: additive real filing option alongside email/chat, not a
+                 replacement -- file_complaint is a real, correctly-scoped RPC. -->
+            <div class="ri-action" onclick="openComplaintModal('general','File a complaint','Describe your complaint. This opens a real ticket with our team — you\'ll get a response within 5 business days.')">Or file directly in-app →</div>
           </div>
         </div>
         <div class="comp-step">
@@ -354,6 +373,22 @@
   </div>
 </div>
 <div id="toast"></div>
+
+<!-- FIX 2026-09-03: real complaint filing modal (file_complaint RPC) -->
+<div class="cr-modal-overlay" id="crModalOverlay">
+  <div class="cr-modal">
+    <h3 id="crModalTitle">File a complaint</h3>
+    <p id="crModalIntro"></p>
+    <textarea id="crModalDesc" placeholder="Describe what happened…" maxlength="2000"></textarea>
+    <div id="crModalStatus" class="cr-modal-status"></div>
+    <div class="cr-modal-actions">
+      <button class="cr-modal-cancel" onclick="closeComplaintModal()">Cancel</button>
+      <button class="cr-modal-submit" id="crModalSubmitBtn" onclick="submitComplaint()">Submit</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
 // AUDIT 2026-08-28: previously framed AJ's own self-imposed policy as a regulator mandate
 // ("ASIC requirement", "FCA requirement", etc.) and promised specific ombudsman remedy
@@ -392,6 +427,60 @@ function toggleVel(btn){
   showToast(on?'Alert enabled':'Alert disabled');
 }
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}
+
+// ── FIX 2026-09-03: real complaint filing (file_complaint RPC, granted to `authenticated` only) ──
+const SUPABASE_URL='https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let _realAccessToken=null;
+async function initRealSession(){
+  try{const {data}=await sb.auth.getSession();if(data&&data.session&&data.session.access_token)_realAccessToken=data.session.access_token;}catch(e){}
+}
+let _crCategory='general';
+function openComplaintModal(category,title,intro){
+  _crCategory=category;
+  document.getElementById('crModalTitle').textContent=title;
+  document.getElementById('crModalIntro').textContent=intro;
+  document.getElementById('crModalDesc').value='';
+  document.getElementById('crModalStatus').textContent='';
+  document.getElementById('crModalSubmitBtn').disabled=false;
+  document.getElementById('crModalSubmitBtn').textContent='Submit';
+  document.getElementById('crModalOverlay').classList.add('active');
+}
+function closeComplaintModal(){
+  document.getElementById('crModalOverlay').classList.remove('active');
+}
+async function submitComplaint(){
+  const desc=document.getElementById('crModalDesc').value.trim();
+  const statusEl=document.getElementById('crModalStatus');
+  const citizenId=sessionStorage.getItem('citizen_id');
+  if(!desc){statusEl.style.color='var(--red,#ff4d6d)';statusEl.textContent='Please describe what happened.';return;}
+  if(!citizenId){statusEl.style.color='var(--red,#ff4d6d)';statusEl.textContent='Please log in to file a complaint.';return;}
+  const btn=document.getElementById('crModalSubmitBtn');
+  btn.disabled=true;btn.textContent='Submitting…';
+  statusEl.style.color='var(--text-muted)';statusEl.textContent='';
+  try{
+    await initRealSession();
+    const res=await fetch(SUPABASE_URL+'/rest/v1/rpc/file_complaint',{
+      method:'POST',
+      headers:{apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+(_realAccessToken||SUPABASE_ANON_KEY),'Content-Type':'application/json'},
+      body:JSON.stringify({p_citizen_id:citizenId,p_category:_crCategory,p_description:desc})
+    });
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok||data.success===false){
+      throw new Error(data.message||data.error||'Could not file complaint');
+    }
+    statusEl.style.color='var(--green,#00E5A0)';
+    statusEl.textContent='Filed. Reference '+(data.complaint_id||'')+' — you\'ll hear back within 5 business days.';
+    btn.textContent='Filed ✓';
+    showToast('Complaint filed — reference saved');
+    setTimeout(closeComplaintModal,2200);
+  }catch(e){
+    statusEl.style.color='var(--red,#ff4d6d)';
+    statusEl.textContent=(e.message||'').includes('ACCOUNT_FROZEN')?'Your account is frozen — contact support@index.finance directly.':'Could not file right now — please email support@index.finance instead.';
+    btn.disabled=false;btn.textContent='Submit';
+  }
+}
 
 // GOD MODE: keyboard navigation for jurisdiction pill row
 function jurKeyNav(e,el){
