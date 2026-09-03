@@ -535,10 +535,21 @@ async function doSend(){
       p_note:              `Remittance to ${recName} · ${curr.curr}`
     });
     if(error) throw error;
+    // FIXED 2026-09-03: transfer_indx returns a normal 200 response with
+    // success:false for expected rejections (recipient not found, self-send,
+    // Tier 0 monthly limit) -- this used to only check the transport-level
+    // `error` and always show the success screen regardless, faking a "sent"
+    // confirmation for a transfer that never happened.
+    if(!data || data.success===false){
+      throw new Error((data && data.message) || 'Transfer failed — nothing was sent.');
+    }
     if(data && data.new_balance!==undefined) sessionStorage.setItem('citizen_balance', data.new_balance);
     showSuccess(amt, recName, recDetail, indxAmt, data && data.tx_id);
   }catch(e){
-    showToast('❌ '+(e.message||'Transfer failed'));
+    // ACCOUNT_FROZEN is a raw Postgres exception message, not something to show verbatim.
+    const raw = e.message || 'Transfer failed';
+    const msg = raw.includes('ACCOUNT_FROZEN') ? 'Your account is frozen — transfers are blocked. Unfreeze it from Emergency Freeze, or contact support.' : raw;
+    showToast('❌ '+msg);
   }finally{
     btn.disabled=false; btn.textContent='Send Money';
   }

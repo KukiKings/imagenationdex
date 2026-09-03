@@ -985,11 +985,18 @@
     const citizenId = sessionStorage.getItem('citizen_id');
     const thisDeviceId = localStorage.getItem('indx_this_device_id');
     const others = realDevices.filter(d => !d.revoked_at && d.id !== thisDeviceId);
+    // FIXED 2026-09-03: this discarded every revoke_device result and unconditionally
+    // reported "N device(s) signed out" -- if a real revoke failed, the citizen was
+    // told (and the immutable ledger recorded) that it succeeded anyway. Now counts
+    // only the ones that actually confirmed success.
+    let succeeded = 0;
     for (const d of others) {
-      await sb.rpc('revoke_device', { p_device_id: d.id, p_reason: 'citizen_signed_out_all' });
+      const { data, error } = await sb.rpc('revoke_device', { p_device_id: d.id, p_reason: 'citizen_signed_out_all' });
+      if (!error && data && data.success) succeeded++;
     }
-    addLedgerEntry('sign_out_all', '🔐 Signed out everywhere', others.length + ' other real device(s) revoked', 'pass');
-    showToast('✅ ' + others.length + ' other device(s) signed out');
+    const failed = others.length - succeeded;
+    addLedgerEntry('sign_out_all', '🔐 Signed out everywhere', succeeded + ' other real device(s) revoked' + (failed ? ` (${failed} failed — try again)` : ''), failed ? 'warn' : 'pass');
+    showToast(failed ? `⚠️ ${succeeded} signed out, ${failed} failed — try again` : '✅ ' + succeeded + ' other device(s) signed out');
     loadRealDevices();
   }
 
@@ -1122,12 +1129,20 @@
     // same real RPC confirmSignOutAll() uses).
     const thisDeviceId = localStorage.getItem('indx_this_device_id');
     const others = realDevices.filter(d => !d.revoked_at && d.id !== thisDeviceId);
+    // FIXED 2026-09-03: this dimmed every device and logged "N revoked" unconditionally,
+    // without checking whether revoke_device actually succeeded for each one -- same bug
+    // as confirmSignOutAll(), now fixed the same way.
+    let succeeded = 0;
     for (const d of others) {
-      await sb.rpc('revoke_device', { p_device_id: d.id, p_reason: 'secure_my_account_triggered' });
-      const el = document.getElementById('dev-' + d.id);
-      if (el) { el.style.opacity = '0.35'; el.style.pointerEvents = 'none'; }
+      const { data, error } = await sb.rpc('revoke_device', { p_device_id: d.id, p_reason: 'secure_my_account_triggered' });
+      if (!error && data && data.success) {
+        succeeded++;
+        const el = document.getElementById('dev-' + d.id);
+        if (el) { el.style.opacity = '0.35'; el.style.pointerEvents = 'none'; }
+      }
     }
-    if (others.length) addLedgerEntry('sign_out_all', '🔐 Secure My Account', others.length + ' other real device(s) revoked', 'pass');
+    const failed = others.length - succeeded;
+    if (others.length) addLedgerEntry('sign_out_all', '🔐 Secure My Account', succeeded + ' other real device(s) revoked' + (failed ? ` (${failed} failed)` : ''), failed ? 'warn' : 'pass');
     loadRealDevices();
 
     // Render steps (animate in sequence)

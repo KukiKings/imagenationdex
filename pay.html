@@ -542,8 +542,12 @@ async function confirmPayment() {
 
     // PostgREST/RPC failures come back as a non-2xx HTTP status with a
     // {message, code, ...} body — not {error} — so check res.ok first.
-    if (!res.ok || result?.message || result?.code) {
-      throw new Error(result?.message || 'The network rejected this payment.');
+    // FIXED 2026-09-03: transfer_indx also returns a normal 200 response with
+    // success:false for expected rejections (e.g. "Cannot send to yourself" has
+    // neither .message nor .code) -- that branch fell through here and showed
+    // the success screen for a transfer that never happened.
+    if (!res.ok || result?.message || result?.code || result?.success === false) {
+      throw new Error(result?.message || result?.error || 'The network rejected this payment.');
     }
 
     // Success — real transfer_indx result, update local balance from what the RPC returned

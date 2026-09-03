@@ -609,26 +609,22 @@ async function loadMyVotesPanel() {
 
 // ── CAST VOTE ──
 async function castVote(proposalId, choice) {
-  if (!canVote)     { openLockedSheet(); return; }
-  if (!CITIZEN_ID)  { showToast('Please log in to vote'); return; }
-  if (myVotes[proposalId]) { showToast('You already voted on this proposal'); return; }
+  if (!canVote)     { openLockedSheet(); return false; }
+  if (!CITIZEN_ID)  { showToast('Please log in to vote'); return false; }
+  if (myVotes[proposalId]) { showToast('You already voted on this proposal'); return false; }
 
-  // Optimistic UI
-  myVotes[proposalId] = choice;
+  // FIXED 2026-09-03: this used to update the UI optimistically BEFORE the RPC
+  // even fired -- "You voted", incremented vote count, toast -- and never checked
+  // the RPC's response for success at all (cast_governance_vote returns a normal
+  // 200 with success:false for a real rejection like already-voted or a closed
+  // proposal, not a transport error). A real rejection was silently swallowed by
+  // the catch block with the UI still claiming the vote landed. pillar-amendment.html's
+  // castVote() already gets this right (check the result, THEN update UI) -- matching
+  // that pattern here instead.
   const btnEl = document.getElementById('btn_' + proposalId);
-  if (btnEl) btnEl.outerHTML = `<div class="voted-label">✅ You voted <strong>${choice === 'for' ? 'For' : 'Against'}</strong> this proposal</div>`;
   const card = document.getElementById('card_' + proposalId);
-  if (card) card.classList.add('voted');
+  if (btnEl) btnEl.disabled = true;
 
-  const votesEl = document.getElementById('votes_' + proposalId);
-  if (votesEl) {
-    const n = parseInt(votesEl.textContent.replace(/,/g,'')) || 0;
-    votesEl.textContent = (n + 1).toLocaleString() + ' votes cast';
-  }
-  document.querySelectorAll('.stat-val')[2].textContent = Object.keys(myVotes).length;
-  showToast(choice === 'for' ? '✅ Voted For your voice counts' : '❌ Voted Against noted');
-
-  // RPC call
   try {
     const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/cast_governance_vote', {
       method: 'POST',
@@ -642,7 +638,22 @@ async function castVote(proposalId, choice) {
     });
     const voteResult = await res.clone().json().catch(() => null);
 
+    if (!res.ok || !voteResult || voteResult.success === false) {
+      const raw = voteResult?.error || voteResult?.message || 'Vote could not be recorded';
+      showToast('❌ ' + raw);
+      if (btnEl) btnEl.disabled = false;
+      return false;
+    }
+
+    // Real vote confirmed — now safe to reflect in the UI.
+    myVotes[proposalId] = choice;
+    if (btnEl) btnEl.outerHTML = `<div class="voted-label">✅ You voted <strong>${choice === 'for' ? 'For' : 'Against'}</strong> this proposal</div>`;
+    if (card) card.classList.add('voted');
+    document.querySelectorAll('.stat-val')[2].textContent = Object.keys(myVotes).length;
+    showToast(choice === 'for' ? '✅ Voted For your voice counts' : '❌ Voted Against noted');
+
     // Refresh vote counts from DB
+    const votesEl = document.getElementById('votes_' + proposalId);
     const fresh = await sbFetch('/rest/v1/governance_proposals?id=eq.' + proposalId + '&select=votes_for,votes_against');
     if (fresh && fresh[0]) {
       const p = fresh[0];
@@ -661,9 +672,14 @@ async function castVote(proposalId, choice) {
     // award_wisdom_internal, keyed to this proposal's real id) -- atomic with the vote
     // and works for every citizen, not only ones with a real auth.uid() session. This
     // used to be a separate client-side call to the public, auth-gated award_wisdom RPC.
-    if (voteResult && voteResult.new_wisdom != null) sessionStorage.setItem('citizen_wisdom', String(voteResult.new_wisdom));
+    if (voteResult.new_wisdom != null) sessionStorage.setItem('citizen_wisdom', String(voteResult.new_wisdom));
+    return true;
 
-  } catch(e) { /* vote already reflected in UI */ }
+  } catch(e) {
+    showToast('❌ Connection error — vote not recorded');
+    if (btnEl) btnEl.disabled = false;
+    return false;
+  }
 }
 
 // ── TAB SWITCHING ──
@@ -1080,7 +1096,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   const _origCastVote = window.castVote;
   // GOD MODE PATCH
   window.castVote = async function(propId, choice) {
-    await _origCastVote(propId, choice);
+    // FIXED 2026-09-03: this wrapper used to run the "+5 Wisdom Earned" celebration
+    // and WS progress-bar update UNCONDITIONALLY after calling the real castVote(),
+    // even when the vote was rejected (already voted, proposal closed) -- celebrating
+    // a wisdom gain the citizen never actually received. Now skips it on failure.
+    const ok = await _origCastVote(propId, choice);
+    if (!ok) return;
     const prevWS = parseInt(sessionStorage.getItem('citizen_wisdom') || String(WISDOM_SCORE));
     const newWS  = prevWS + 5;
     const pct    = Math.min(100, (newWS / VOTE_THRESHOLD) * 100);
