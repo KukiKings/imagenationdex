@@ -208,6 +208,15 @@
   </div>
 </div>
 
+<div class="sheet-overlay" id="gateOverlay">
+  <div class="bottom-sheet" id="gateSheet" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+    <div class="sheet-title" id="gateTitle">Approval needed</div>
+    <div class="sheet-text" id="gateText">Adding this guardian needs your explicit approval before it can complete.</div>
+    <button class="sheet-btn-primary" id="gateApproveBtn">Approve & Continue</button>
+    <button class="sheet-btn-secondary" id="gateCancelBtn">Cancel</button>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
@@ -281,6 +290,14 @@
         body: JSON.stringify({ p_citizen_id: citizenId, p_identifier: value })
       });
       const data = await res.json();
+      // Approval Gateway: add_guardian is risk_class >= 3 in agent_registry, so a first
+      // call can come back a normal 200 {success:false, pending_approval:true, intent_id}
+      // instead of saving -- must be checked before the generic failure branch below,
+      // or a pending gate would just show as "Could not save".
+      if (data && data.pending_approval) {
+        await showGuardianGate(data.intent_id, num, value);
+        return;
+      }
       if (!data || !data.success) { showToast('Could not save — try again.'); return; }
       document.getElementById('g' + num + '-status').style.display = 'flex';
       document.getElementById('g' + num + '-card').classList.add('filled');
@@ -294,6 +311,45 @@
     } catch (e) {
       showToast('Could not save — try again.');
     }
+  }
+
+  async function showGuardianGate(intentId, num, value) {
+    let cardData = null;
+    try {
+      const cardRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_action_intent_card', {
+        method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_intent_id: intentId })
+      });
+      cardData = await cardRes.json();
+    } catch (e) {}
+    document.getElementById('gateText').textContent =
+      (cardData && !cardData.error && cardData.data_involved) ? cardData.data_involved
+        : `Adding ${value} as a guardian needs your explicit approval before it can complete.`;
+    document.getElementById('gateOverlay').classList.add('show');
+
+    document.getElementById('gateCancelBtn').onclick = function () {
+      document.getElementById('gateOverlay').classList.remove('show');
+    };
+    document.getElementById('gateApproveBtn').onclick = async function () {
+      const gbtn = document.getElementById('gateApproveBtn');
+      gbtn.textContent = 'Approving…'; gbtn.disabled = true;
+      try {
+        const grantRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/grant_intent_approval', {
+          method: 'POST', headers: rpcHeaders(),
+          body: JSON.stringify({ p_intent_id: intentId, p_level: 1, p_method: 'citizen_app_confirm' })
+        });
+        const grant = await grantRes.json();
+        if (!grant || !grant.success) throw new Error('Approval could not be recorded.');
+        document.getElementById('gateOverlay').classList.remove('show');
+        // The input field still holds the same value -- re-running sendInvite() sends the
+        // identical request, which now clears the gate and saves the guardian for real.
+        await sendInvite(num);
+      } catch (e) {
+        showToast(e.message || 'Approval failed. Try again.');
+        document.getElementById('gateOverlay').classList.remove('show');
+      } finally {
+        gbtn.textContent = 'Approve & Continue'; gbtn.disabled = false;
+      }
+    };
   }
 
   function updateProgress() {

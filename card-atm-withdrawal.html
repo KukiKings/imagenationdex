@@ -369,6 +369,16 @@
   </div>
 </div>
 
+<div class="overlay" id="gateOverlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Approval required</div>
+    <div class="sheet-sub" id="gateText">This ATM withdrawal needs your explicit approval before it can complete.</div>
+    <button class="sheet-btn" id="gateApproveBtn">Approve &amp; Generate Code</button>
+    <button class="sheet-btn" id="gateCancelBtn" style="background:var(--surface2);color:var(--text);">Cancel</button>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
@@ -502,15 +512,19 @@
 
     try {
       const result = await rpc('generate_atm_withdrawal', { p_citizen_id: citizenId, p_amount_usd: withdrawAmt });
-      document.getElementById('qrAmountDisplay').textContent = '$' + withdrawAmt.toFixed(2);
-      const qrEl = document.getElementById('qrDisplay');
-      qrEl.classList.add('show');
-      qrEl.scrollIntoView({ behavior:'smooth' });
-      qrEl.classList.remove('pulse-once');
-      void qrEl.offsetWidth;
-      qrEl.classList.add('pulse-once');
-      startCountdown(60);
-      showToast('✓ Code ' + result.receipt_code + ' generated · Real ATM dispensing not connected yet');
+
+      // Approval Gateway: generate_atm_withdrawal is risk_class >= 3 in agent_registry, so a
+      // first call can come back {success:false, pending_approval:true, intent_id} instead of
+      // executing -- rpc() only throws on a non-2xx status, so this must be checked explicitly
+      // or a pending request would render as "Code undefined generated".
+      if (result && result.pending_approval) {
+        genInFlight = false;
+        updateGenerateBtn();
+        await showAtmGate(result.intent_id);
+        return;
+      }
+
+      showGeneratedCode(result);
       await init();
     } catch (e) {
       const msg = e.message.includes('ACCOUNT_FROZEN') ? 'Your account is frozen — withdrawal blocked'
@@ -523,6 +537,50 @@
       genInFlight = false;
       updateGenerateBtn();
     }
+  }
+
+  function showGeneratedCode(result) {
+    document.getElementById('qrAmountDisplay').textContent = '$' + withdrawAmt.toFixed(2);
+    const qrEl = document.getElementById('qrDisplay');
+    qrEl.classList.add('show');
+    qrEl.scrollIntoView({ behavior:'smooth' });
+    qrEl.classList.remove('pulse-once');
+    void qrEl.offsetWidth;
+    qrEl.classList.add('pulse-once');
+    startCountdown(60);
+    showToast('✓ Code ' + result.receipt_code + ' generated · Real ATM dispensing not connected yet');
+  }
+
+  async function showAtmGate(intentId) {
+    let card = null;
+    try { card = await rpc('get_action_intent_card', { p_intent_id: intentId }); } catch (e) {}
+    document.getElementById('gateText').textContent =
+      (card && !card.error && card.data_involved) ? card.data_involved
+        : `Generate an ATM code for $${withdrawAmt.toFixed(2)} needs your explicit approval before it can complete.`;
+    document.getElementById('gateOverlay').classList.add('show');
+
+    document.getElementById('gateCancelBtn').onclick = function () {
+      document.getElementById('gateOverlay').classList.remove('show');
+    };
+
+    document.getElementById('gateApproveBtn').onclick = async function () {
+      const gbtn = document.getElementById('gateApproveBtn');
+      gbtn.textContent = 'Generating…'; gbtn.disabled = true;
+      try {
+        const grant = await rpc('grant_intent_approval', { p_intent_id: intentId, p_level: 1, p_method: 'citizen_app_confirm' });
+        if (!grant || !grant.success) throw new Error('Approval could not be recorded.');
+        const result2 = await rpc('generate_atm_withdrawal', { p_citizen_id: citizenId, p_amount_usd: withdrawAmt });
+        if (result2 && result2.pending_approval) throw new Error('Approval did not clear — please try again.');
+        document.getElementById('gateOverlay').classList.remove('show');
+        showGeneratedCode(result2);
+        await init();
+      } catch (e) {
+        document.getElementById('gateOverlay').classList.remove('show');
+        showToast(e.message || 'Could not generate code — please try again');
+      } finally {
+        gbtn.textContent = 'Approve & Generate Code'; gbtn.disabled = false;
+      }
+    };
   }
 
   function startCountdown(secs) {

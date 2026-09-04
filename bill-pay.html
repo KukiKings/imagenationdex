@@ -334,6 +334,17 @@
   </div>
 </div>
 
+<!-- APPROVAL GATE OVERLAY -->
+<div class="confirm-overlay-bp" id="gateOverlayBp" onclick="if(event.target===this)document.getElementById('gateOverlayBp').classList.remove('show')">
+  <div class="confirm-sheet-bp">
+    <div class="cs-handle-bp"></div>
+    <div class="cs-title-bp">Approval required</div>
+    <div class="cs-sub-bp" id="gateTextBp">This bill payment needs your explicit approval before it can complete.</div>
+    <button class="btn-confirm-bp" id="gateApproveBpBtn">Approve &amp; Pay</button>
+    <button class="btn-cancel-bp" onclick="document.getElementById('gateOverlayBp').classList.remove('show')">Cancel</button>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
@@ -571,6 +582,16 @@
         return;
       }
       const result = await res.json();
+
+      // Approval Gateway: pay_bill is risk_class >= 3 in agent_registry, so a first call can
+      // come back a normal 200 {success:false, pending_approval:true, intent_id} instead of
+      // executing. That is not a rejection or a success -- route it to the approval gate.
+      if (result && result.pending_approval) {
+        closePayConfirm();
+        await showBillGate(result.intent_id, amt, ref, name);
+        return;
+      }
+
       closePayConfirm();
       showToast('✓ $' + amt.toFixed(2) + ' paid to ' + name + (schedOn ? ' · Monthly auto-pay set' : '') + ' · Pending settlement');
       document.getElementById('ppAmt').value = '';
@@ -583,6 +604,63 @@
     } finally {
       payInFlight = false;
     }
+  }
+
+  async function showBillGate(intentId, amt, ref, name) {
+    let card = null;
+    try {
+      const cardRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_action_intent_card', {
+        method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_intent_id: intentId })
+      });
+      card = await cardRes.json();
+    } catch (e) {}
+    document.getElementById('gateTextBp').textContent =
+      (card && !card.error && card.data_involved) ? card.data_involved
+        : `Pay $${amt.toFixed(2)} to ${name} needs your explicit approval before it can complete.`;
+    document.getElementById('gateOverlayBp').classList.add('show');
+
+    document.getElementById('gateApproveBpBtn').onclick = async function () {
+      const gbtn = document.getElementById('gateApproveBpBtn');
+      gbtn.textContent = 'Paying…'; gbtn.disabled = true;
+      try {
+        const grantRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/grant_intent_approval', {
+          method: 'POST', headers: rpcHeaders(),
+          body: JSON.stringify({ p_intent_id: intentId, p_level: 1, p_method: 'citizen_app_confirm' })
+        });
+        const grant = await grantRes.json();
+        if (!grant || !grant.success) throw new Error('Approval could not be recorded.');
+
+        const retryRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/pay_bill', {
+          method: 'POST', headers: rpcHeaders(),
+          body: JSON.stringify({
+            p_citizen_id: citizenId, p_biller_name: name,
+            p_biller_icon: selectedBiller ? selectedBiller.icon : '🧾',
+            p_biller_category: selectedBiller ? selectedBiller.cat : null,
+            p_reference: ref, p_amount_usd: amt, p_schedule_recurring: schedOn
+          })
+        });
+        const retryData = await retryRes.json();
+        if (retryData?.pending_approval) throw new Error('Approval did not clear — please try again.');
+        if (!retryRes.ok || retryData?.message) {
+          const msg = (retryData?.message || '').includes('ACCOUNT_FROZEN') ? 'Your account is frozen — bill payment blocked'
+            : (retryData?.message || '').includes('Insufficient') ? "You don't have enough INDX for this bill"
+            : 'Payment failed — please try again';
+          throw new Error(msg);
+        }
+
+        document.getElementById('gateOverlayBp').classList.remove('show');
+        showToast('✓ $' + amt.toFixed(2) + ' paid to ' + name + (schedOn ? ' · Monthly auto-pay set' : '') + ' · Pending settlement');
+        document.getElementById('ppAmt').value = '';
+        document.getElementById('ppRef').value = '';
+        updatePaySummary();
+        await Promise.all([syncBalance(), renderRecentPayments(), updateSpendCard(), loadLastBiller()]);
+      } catch (e) {
+        document.getElementById('gateOverlayBp').classList.remove('show');
+        showToast(e.message || 'Payment failed — please try again');
+      } finally {
+        gbtn.textContent = 'Approve & Pay'; gbtn.disabled = false;
+      }
+    };
   }
 
   // ── PAYMENT HISTORY (real) ──────────────

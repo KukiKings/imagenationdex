@@ -672,6 +672,15 @@
   <button class="cta-btn danger" onclick="confirmWithdraw()">Confirm Withdrawal</button>
 </div>
 
+<!-- APPROVAL GATE SHEET -->
+<div class="overlay" id="gateOverlay" onclick="closeSheets()"></div>
+<div class="sheet" id="gateSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Approval required</div>
+  <div class="sheet-sub" id="gateText">This action needs your explicit approval before it can complete.</div>
+  <button class="cta-btn primary" id="gateApproveBtn">Approve &amp; Continue</button>
+</div>
+
 <!-- SUCCESS OVERLAY -->
 <div class="success-overlay" id="successOverlay">
   <div class="success-icon">✅</div>
@@ -866,17 +875,61 @@ function closeSheets() {
   document.querySelectorAll('.overlay, .sheet').forEach(el => el.classList.remove('show'));
 }
 
+// Approval Gateway: deposit_to_pool/withdraw_from_pool are risk_class >= 3 in agent_registry,
+// so a first call can come back {success:false, pending_approval:true, intent_id} instead of
+// executing -- check pending_approval specifically, before treating success:false as a real
+// rejection. Show what SIINDEX needs approved, then on explicit approve, grant it and retry.
+async function resolveGate(intentId, retryFn) {
+  let card = null;
+  try {
+    const { data } = await sb.rpc('get_action_intent_card', { p_intent_id: intentId });
+    card = data;
+  } catch (e) {}
+  document.getElementById('gateText').textContent =
+    (card && !card.error && card.data_involved) ? card.data_involved
+      : 'This action needs your explicit approval before it can complete.';
+  document.getElementById('gateOverlay').classList.add('show');
+  document.getElementById('gateSheet').classList.add('show');
+
+  return new Promise((resolve) => {
+    document.getElementById('gateApproveBtn').onclick = async function () {
+      const gbtn = document.getElementById('gateApproveBtn');
+      gbtn.textContent = 'Approving…'; gbtn.disabled = true;
+      try {
+        const { data: grant } = await sb.rpc('grant_intent_approval', { p_intent_id: intentId, p_level: 1, p_method: 'citizen_app_confirm' });
+        if (!grant || !grant.success) throw new Error('Approval could not be recorded.');
+        closeSheets();
+        const result = await retryFn();
+        resolve(result);
+      } catch (e) {
+        alert(e.message || 'Approval failed. Try again.');
+        closeSheets();
+        resolve(null);
+      } finally {
+        gbtn.textContent = 'Approve & Continue'; gbtn.disabled = false;
+      }
+    };
+  });
+}
+
 async function confirmDeposit() {
   const val = parseFloat(depositInput.value) || 0;
   const btn = document.getElementById('depositBtn');
   btn.textContent = 'Processing…'; btn.disabled = true;
 
   try {
-    const { data, error } = await sb.rpc('deposit_to_pool', {
+    let { data, error } = await sb.rpc('deposit_to_pool', {
       p_citizen_id: citizenId,
       p_amount_indx: val
     });
-    if (error || !data.success) throw new Error((data && data.error) || error.message);
+    if (!error && data && data.pending_approval) {
+      data = await resolveGate(data.intent_id, async () => {
+        const r = await sb.rpc('deposit_to_pool', { p_citizen_id: citizenId, p_amount_indx: val });
+        return r.data;
+      });
+      if (!data) { btn.textContent = 'Lend INDX →'; btn.disabled = false; return; }
+    }
+    if (error || !data.success) throw new Error((data && data.error) || (error && error.message));
 
     // Update sessionStorage balance
     sessionStorage.setItem('citizen_balance', data.new_balance);
@@ -913,12 +966,19 @@ async function confirmWithdraw() {
   }
 
   try {
-    const { data, error } = await sb.rpc('withdraw_from_pool', {
+    let { data, error } = await sb.rpc('withdraw_from_pool', {
       p_citizen_id:  citizenId,
       p_position_id: myPositionId,
       p_amount_indx: val
     });
-    if (error || !data.success) throw new Error((data && data.error) || error.message);
+    if (!error && data && data.pending_approval) {
+      data = await resolveGate(data.intent_id, async () => {
+        const r = await sb.rpc('withdraw_from_pool', { p_citizen_id: citizenId, p_position_id: myPositionId, p_amount_indx: val });
+        return r.data;
+      });
+      if (!data) { btn.textContent = 'Withdraw INDX'; btn.disabled = false; return; }
+    }
+    if (error || !data.success) throw new Error((data && data.error) || (error && error.message));
 
     // Update sessionStorage balance with returned principal + 98% yield
     const newBal = parseFloat(sessionStorage.getItem('citizen_balance') || '0') + data.total_received;

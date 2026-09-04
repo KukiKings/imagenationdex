@@ -194,6 +194,20 @@
     <button class="btn-confirm-contrib" onclick="confirmContrib()">Add to Goal</button>
   </div>
 </div>
+
+<!-- APPROVAL GATEWAY SHEET -->
+<div class="sheet-overlay" id="gateOverlay" onclick="closeGateSheet()"></div>
+<div class="bottom-sheet" id="gateSheet">
+  <div class="bs-handle"></div>
+  <div class="bs-header">
+    <span>Approval needed</span>
+    <button class="bs-close" onclick="closeGateSheet()">✕</button>
+  </div>
+  <div class="bs-body">
+    <div id="gateText" style="margin-bottom:16px;color:var(--text2,#a0a4b8);">This contribution needs your explicit approval before it can complete.</div>
+    <button class="btn-confirm-contrib" id="gateApproveBtn">Approve & Continue</button>
+  </div>
+</div>
 <div id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
@@ -352,6 +366,14 @@ async function confirmContrib(){
       });
       result = await res.json();
     }catch(e){ result = { success:false, error:'Connection error' }; }
+    // Approval Gateway: contribute_to_savings_goal is risk_class >= 3 in agent_registry, so
+    // a first call can come back a normal 200 {success:false, pending_approval:true,
+    // intent_id} instead of contributing -- must be checked before the generic failure
+    // branch below, or a pending gate would just show as "Contribution failed".
+    if(result && result.pending_approval){
+      await showContribGate(result.intent_id, amt);
+      return;
+    }
     if(!result || !result.success){
       // ACCOUNT_FROZEN arrives as result.message (a raw Postgres exception), not result.error.
       const raw = (result && (result.error || result.message)) || 'Contribution failed';
@@ -377,6 +399,46 @@ async function confirmContrib(){
   closeContribSheet();
   const pct=Math.round(g.current/g.target*100);
   showToast('💰 +$'+amt.toFixed(0)+' added · '+pct+'% complete');
+}
+
+async function showContribGate(intentId, amt){
+  let cardData = null;
+  try{
+    const cardRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_action_intent_card', {
+      method:'POST', headers: rpcHeaders(), body: JSON.stringify({ p_intent_id: intentId })
+    });
+    cardData = await cardRes.json();
+  }catch(e){}
+  document.getElementById('gateText').textContent =
+    (cardData && !cardData.error && cardData.data_involved) ? cardData.data_involved
+      : 'Adding $'+amt.toFixed(0)+' to this goal needs your explicit approval before it can complete.';
+  document.getElementById('gateOverlay').classList.add('open');
+  document.getElementById('gateSheet').classList.add('open');
+  document.getElementById('gateApproveBtn').onclick = async function(){
+    const gbtn = document.getElementById('gateApproveBtn');
+    gbtn.textContent = 'Approving…'; gbtn.disabled = true;
+    try{
+      const grantRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/grant_intent_approval', {
+        method:'POST', headers: rpcHeaders(),
+        body: JSON.stringify({ p_intent_id: intentId, p_level: 1, p_method: 'citizen_app_confirm' })
+      });
+      const grant = await grantRes.json();
+      if(!grant || !grant.success) throw new Error('Approval could not be recorded.');
+      closeGateSheet();
+      // contribAmt still holds the same value -- re-running confirmContrib() sends the
+      // identical request, which now clears the gate and contributes for real.
+      await confirmContrib();
+    }catch(e){
+      showToast(e.message || 'Approval failed. Try again.');
+      closeGateSheet();
+    }finally{
+      gbtn.textContent = 'Approve & Continue'; gbtn.disabled = false;
+    }
+  };
+}
+function closeGateSheet(){
+  document.getElementById('gateOverlay').classList.remove('open');
+  document.getElementById('gateSheet').classList.remove('open');
 }
 
 async function createGoal(){

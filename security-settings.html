@@ -317,6 +317,18 @@
   <button class="totp-btn" style="margin-top:8px;background:var(--surface2);color:var(--text);" onclick="closeTotpSheet()">Cancel</button>
 </div>
 
+<!-- APPROVAL GATEWAY SHEET -->
+<div class="sheet-overlay" id="gateOverlay" onclick="closeGateSheet()"></div>
+<div class="bottom-sheet" id="gateSheet">
+  <div class="bs-handle"></div>
+  <div class="bs-title">Approval needed</div>
+  <div class="bs-body" id="gateBody">This needs your explicit approval before it can complete.</div>
+  <div style="display:flex;gap:10px;margin-top:16px;">
+    <button class="totp-btn" style="background:var(--surface2);color:var(--text);" onclick="closeGateSheet()">Cancel</button>
+    <button class="totp-btn" id="gateApproveBtn">Approve & Continue</button>
+  </div>
+</div>
+
 <!-- REAL ACTIVITY LOG SHEET -->
 <div class="sheet-overlay" id="activityOverlay" onclick="closeActivityLog()"></div>
 <div class="bottom-sheet" id="activitySheet">
@@ -604,6 +616,14 @@
         method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizenId })
       });
       const data = await res.json();
+      // Approval Gateway: disable_totp is risk_class >= 3 in agent_registry, so a first
+      // call can come back a normal 200 {success:false, pending_approval:true, intent_id}
+      // instead of disabling -- must be checked before the generic failure branch below,
+      // or a pending gate would just show as "Could not disable 2FA".
+      if (data && data.pending_approval) {
+        await showDisable2FAGate(data.intent_id);
+        return;
+      }
       if (!data || !data.success) { showToast('Could not disable 2FA — try again'); return; }
       secState.twoFA = false;
       document.getElementById('twoFASub').textContent = 'Not set up · Tap to enable';
@@ -614,6 +634,47 @@
     } catch (e) {
       showToast('Could not disable 2FA — try again');
     }
+  }
+
+  async function showDisable2FAGate(intentId) {
+    let cardData = null;
+    try {
+      const cardRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_action_intent_card', {
+        method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_intent_id: intentId })
+      });
+      cardData = await cardRes.json();
+    } catch (e) {}
+    document.getElementById('gateBody').textContent =
+      (cardData && !cardData.error && cardData.data_involved) ? cardData.data_involved
+        : 'Turning off 2FA needs your explicit approval before it can complete.';
+    document.getElementById('gateOverlay').classList.add('show');
+    document.getElementById('gateSheet').classList.add('show');
+    document.getElementById('gateApproveBtn').onclick = async function () {
+      const gbtn = document.getElementById('gateApproveBtn');
+      gbtn.textContent = 'Approving…'; gbtn.disabled = true;
+      try {
+        const grantRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/grant_intent_approval', {
+          method: 'POST', headers: rpcHeaders(),
+          body: JSON.stringify({ p_intent_id: intentId, p_level: 1, p_method: 'citizen_app_confirm' })
+        });
+        const grant = await grantRes.json();
+        if (!grant || !grant.success) throw new Error('Approval could not be recorded.');
+        closeGateSheet();
+        // Re-running disable2FA() sends the identical request, which now clears the gate
+        // and disables 2FA for real.
+        await disable2FA();
+      } catch (e) {
+        showToast(e.message || 'Approval failed. Try again.');
+        closeGateSheet();
+      } finally {
+        gbtn.textContent = 'Approve & Continue'; gbtn.disabled = false;
+      }
+    };
+  }
+
+  function closeGateSheet() {
+    document.getElementById('gateOverlay').classList.remove('show');
+    document.getElementById('gateSheet').classList.remove('show');
   }
 
   // ── REAL activity log — reads this citizen's actual security_events rows ──

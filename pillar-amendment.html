@@ -345,6 +345,17 @@
   </div>
 </div>
 
+<!-- APPROVAL GATE -->
+<div id="approvalGate" style="display:none;position:fixed;inset:0;background:rgba(9,10,16,0.92);z-index:80;align-items:center;justify-content:center;padding:40px;">
+  <div style="background:#1A1D2E;border:1px solid rgba(0,212,255,0.3);border-radius:20px;padding:28px;max-width:340px;text-align:center;">
+    <div style="font-size:48px;margin-bottom:14px;">👆</div>
+    <div style="font-size:18px;font-weight:900;margin-bottom:8px;">Approval required</div>
+    <div style="font-size:13px;color:rgba(240,242,255,0.6);line-height:1.6;margin-bottom:20px;" id="approvalGateText">This needs your explicit approval before it can complete.</div>
+    <button id="approvalGateApproveBtn" style="width:100%;padding:14px;border-radius:12px;background:linear-gradient(135deg,#00D4FF,#0088AA);border:none;color:#000;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:10px;">Approve &amp; Continue</button>
+    <button id="approvalGateCancelBtn" style="width:100%;padding:12px;border-radius:12px;background:transparent;border:1px solid rgba(255,255,255,0.1);color:rgba(240,242,255,0.5);font-size:14px;cursor:pointer;">Cancel</button>
+  </div>
+</div>
+
 <!-- PILLAR DETAIL SHEET -->
 <div class="sheet-overlay" id="pillarSheetOverlay" onclick="closePillarSheet()"></div>
 <div class="bottom-sheet" id="pillarSheet">
@@ -692,6 +703,18 @@
         body: JSON.stringify({ p_citizen_id: citizenId, p_pillar: pillar, p_title: title, p_rationale: rationale, p_new_text: newText })
       });
       const data = await res.json();
+
+      // Approval Gateway: submit_pillar_amendment_proposal is risk_class 5 (highest) in
+      // agent_registry, so a first call can come back a normal 200 {success:false,
+      // pending_approval:true, intent_id} instead of submitting -- res.ok is true here, so
+      // this must be checked explicitly or it would fall straight into the success toast.
+      if (data && data.pending_approval) {
+        btn.disabled = false;
+        btn.textContent = 'Submit Proposal';
+        await showAmendmentGate(data.intent_id, { pillar, title, rationale, newText });
+        return;
+      }
+
       if (!res.ok) {
         const msg = data?.message || '';
         showToast(msg.includes('RATIONALE_TOO_SHORT') ? 'Rationale needs at least 200 characters'
@@ -722,6 +745,45 @@
     }
   }
 
+  async function showAmendmentGate(intentId, formVals) {
+    let cardData = null;
+    try {
+      const cardRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_action_intent_card', {
+        method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_intent_id: intentId })
+      });
+      cardData = await cardRes.json();
+    } catch (e) {}
+    document.getElementById('approvalGateText').textContent =
+      (cardData && !cardData.error && cardData.data_involved) ? cardData.data_involved
+        : 'Submit "' + formVals.title + '" needs your explicit approval before it can complete.';
+    document.getElementById('approvalGate').style.display = 'flex';
+
+    document.getElementById('approvalGateCancelBtn').onclick = function () {
+      document.getElementById('approvalGate').style.display = 'none';
+    };
+    document.getElementById('approvalGateApproveBtn').onclick = async function () {
+      const gbtn = document.getElementById('approvalGateApproveBtn');
+      gbtn.textContent = 'Submitting…'; gbtn.disabled = true;
+      try {
+        const grantRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/grant_intent_approval', {
+          method: 'POST', headers: rpcHeaders(),
+          body: JSON.stringify({ p_intent_id: intentId, p_level: 1, p_method: 'citizen_app_confirm' })
+        });
+        const grant = await grantRes.json();
+        if (!grant || !grant.success) throw new Error('Approval could not be recorded.');
+        document.getElementById('approvalGate').style.display = 'none';
+        // Form fields are untouched since the pending branch returns before clearing them --
+        // re-running submitProposal() sends the identical request, which now clears the gate.
+        await submitProposal();
+      } catch (e) {
+        showToast(e.message || 'Approval failed. Try again.');
+        document.getElementById('approvalGate').style.display = 'none';
+      } finally {
+        gbtn.textContent = 'Approve & Continue'; gbtn.disabled = false;
+      }
+    };
+  }
+
   async function castVote(proposalId, side) {
     // Wisdom Score gate (also enforced server-side against the proposal's real wisdom_gate)
     if (citizenWisdom < WISDOM_GATE) {
@@ -742,6 +804,15 @@
         p_vote:         side,        // 'for' | 'against'
         p_wisdom:       citizenWisdom
       });
+      // Approval Gateway: cast_governance_vote is risk_class >= 3 in agent_registry, so a
+      // first call can come back {success:false, pending_approval:true, intent_id} instead
+      // of recording the vote -- give the citizen an actual way to approve it.
+      if (!error && data && data.pending_approval) {
+        if (card) card.querySelectorAll('.vote-btn').forEach(b => { b.disabled = false; });
+        await showAmendmentVoteGate(data.intent_id, proposalId, side);
+        return;
+      }
+
       // This RPC returns {success:false, error:'...'} on a 200 response rather than
       // throwing, so a real failure (already voted, proposal closed, WS too low for
       // this specific proposal) must be checked in the payload, not just transport error.
@@ -778,6 +849,45 @@
       showToast('❌ Vote failed: ' + (e.message || 'unknown error'));
       if (card) card.querySelectorAll('.vote-btn').forEach(b => { b.disabled = false; });
     }
+  }
+
+  async function showAmendmentVoteGate(intentId, proposalId, side) {
+    let cardData = null;
+    try {
+      const cardRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_action_intent_card', {
+        method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_intent_id: intentId })
+      });
+      cardData = await cardRes.json();
+    } catch (e) {}
+    document.getElementById('approvalGateText').textContent =
+      (cardData && !cardData.error && cardData.data_involved) ? cardData.data_involved
+        : 'Casting your vote needs your explicit approval before it can complete.';
+    document.getElementById('approvalGate').style.display = 'flex';
+
+    document.getElementById('approvalGateCancelBtn').onclick = function () {
+      document.getElementById('approvalGate').style.display = 'none';
+    };
+    document.getElementById('approvalGateApproveBtn').onclick = async function () {
+      const gbtn = document.getElementById('approvalGateApproveBtn');
+      gbtn.textContent = 'Submitting…'; gbtn.disabled = true;
+      try {
+        const grantRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/grant_intent_approval', {
+          method: 'POST', headers: rpcHeaders(),
+          body: JSON.stringify({ p_intent_id: intentId, p_level: 1, p_method: 'citizen_app_confirm' })
+        });
+        const grant = await grantRes.json();
+        if (!grant || !grant.success) throw new Error('Approval could not be recorded.');
+        document.getElementById('approvalGate').style.display = 'none';
+        // Re-running castVote() with the identical proposalId/side sends the same
+        // request, which now clears the gate and records the vote for real.
+        await castVote(proposalId, side);
+      } catch (e) {
+        showToast(e.message || 'Approval failed. Try again.');
+        document.getElementById('approvalGate').style.display = 'none';
+      } finally {
+        gbtn.textContent = 'Approve & Continue'; gbtn.disabled = false;
+      }
+    };
   }
 
   function showToast(msg) {

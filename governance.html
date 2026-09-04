@@ -383,6 +383,24 @@
   </div>
 </div>
 
+<!-- APPROVAL GATE SHEET -->
+<div class="sheet-overlay" id="gateOverlay" onclick="closeGateSheet()"></div>
+<div class="propose-sheet" id="gateSheet" style="z-index:102;">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title">Approval required</div>
+    <button class="sheet-close" onclick="closeGateSheet()">✕</button>
+  </div>
+  <div class="propose-body">
+    <div style="text-align:center;padding:20px 0 24px;">
+      <div style="font-size:52px;margin-bottom:16px;">👆</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:24px;" id="gateSheetDesc">This vote needs your explicit approval before it can complete.</div>
+    </div>
+    <button class="btn-primary" id="gateApproveBtn">Approve &amp; Vote</button>
+    <button onclick="closeGateSheet()" style="background:none;border:none;color:var(--text-muted);font-size:14px;width:100%;padding:14px;cursor:pointer;">Cancel</button>
+  </div>
+</div>
+
 <!-- GOD MODE R3 — WS CELEBRATION BANNER -->
 <div class="ws-celebration" id="wsCelebration">
   <div class="ws-cel-icon">⚖️</div>
@@ -638,6 +656,16 @@ async function castVote(proposalId, choice) {
     });
     const voteResult = await res.clone().json().catch(() => null);
 
+    // Approval Gateway: cast_governance_vote is risk_class >= 3 in agent_registry, so a
+    // first call can come back {success:false, pending_approval:true, intent_id} instead of
+    // recording the vote. That is not a rejection -- route it to the approval gate so the
+    // citizen has an actual way to complete the vote, rather than just a dead-end toast.
+    if (voteResult && voteResult.pending_approval) {
+      if (btnEl) btnEl.disabled = false;
+      await showVoteGate(voteResult.intent_id, proposalId, choice);
+      return false;
+    }
+
     if (!res.ok || !voteResult || voteResult.success === false) {
       const raw = voteResult?.error || voteResult?.message || 'Vote could not be recorded';
       showToast('❌ ' + raw);
@@ -680,6 +708,48 @@ async function castVote(proposalId, choice) {
     if (btnEl) btnEl.disabled = false;
     return false;
   }
+}
+
+async function showVoteGate(intentId, proposalId, choice) {
+  let cardData = null;
+  try {
+    const cardRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_action_intent_card', {
+      method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_intent_id: intentId })
+    });
+    cardData = await cardRes.json();
+  } catch (e) {}
+  document.getElementById('gateSheetDesc').textContent =
+    (cardData && !cardData.error && cardData.data_involved) ? cardData.data_involved
+      : 'This vote needs your explicit approval before it can complete.';
+  document.getElementById('gateOverlay').classList.add('open');
+  document.getElementById('gateSheet').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  document.getElementById('gateApproveBtn').onclick = async function () {
+    const gbtn = document.getElementById('gateApproveBtn');
+    gbtn.textContent = 'Voting…'; gbtn.disabled = true;
+    try {
+      const grantRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/grant_intent_approval', {
+        method: 'POST', headers: rpcHeaders(),
+        body: JSON.stringify({ p_intent_id: intentId, p_level: 1, p_method: 'citizen_app_confirm' })
+      });
+      const grant = await grantRes.json();
+      if (!grant || !grant.success) throw new Error('Approval could not be recorded.');
+      closeGateSheet();
+      await castVote(proposalId, choice);
+    } catch (e) {
+      showToast('❌ ' + (e.message || 'Approval failed'));
+      closeGateSheet();
+    } finally {
+      gbtn.textContent = 'Approve & Vote'; gbtn.disabled = false;
+    }
+  };
+}
+
+function closeGateSheet() {
+  document.getElementById('gateOverlay').classList.remove('open');
+  document.getElementById('gateSheet').classList.remove('open');
+  document.body.style.overflow = '';
 }
 
 // ── TAB SWITCHING ──
