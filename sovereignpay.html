@@ -457,6 +457,22 @@
   <button onclick="closePayConfirm()" style="background:none;border:none;color:var(--text-muted);font-size:14px;width:100%;padding:12px;cursor:pointer;">Cancel</button>
 </div>
 
+<!-- Approval Gateway sheet — added 2026-09-05 (god mode Item 7, core stabilization sweep).
+     transfer_indx is risk_class>=3-gated (Session 100), so a real send can come back
+     {success:false, pending_approval:true, intent_id} instead of sending. This screen was
+     missed in the original Approval Gateway wiring (Session 100 wired pay.html/remittance.html
+     but not this one) — executePayment() only checked data.success===false and threw, which
+     showed the gate's message as a plain red error toast with no way to actually approve and
+     complete the send. Same pattern as remittance.html's showTransferGate(). -->
+<div class="sheet-overlay" id="gateOverlay" onclick="closeGateSheet()"></div>
+<div class="pay-confirm-sheet" id="gateSheet">
+  <div class="pcs-handle"></div>
+  <div class="pcs-title">🔐 Approval needed</div>
+  <div class="pcs-diagram" id="gateText" style="text-align:left;">This transfer needs your explicit approval before it can complete.</div>
+  <button class="btn-primary" id="gateApproveBtn" onclick="approveGateAndResend()" style="margin-top:12px;">Approve & Send</button>
+  <button onclick="closeGateSheet()" style="background:none;border:none;color:var(--text-muted);font-size:14px;width:100%;padding:12px;cursor:pointer;">Cancel</button>
+</div>
+
 <!-- SUCCESS -->
 <div class="success-overlay" id="successOverlay">
   <div class="success-icon">✓</div>
@@ -608,31 +624,100 @@ async function executePayment() {
   btn.textContent = 'Sending…'; btn.disabled = true;
   try {
     const cleanDomain = domain.toLowerCase().replace(/\.indx$/i, '') + '.IN$DEX';
-    const { data, error } = await sb.rpc('transfer_indx', {
+    const rpcArgs = {
       p_sender_id:          citizenId,
       p_recipient_address:  cleanDomain,
       p_amount:             amt,
       p_note:               note || null
-    });
+    };
+    const { data, error } = await sb.rpc('transfer_indx', rpcArgs);
     if (error) throw error;
-    if (data && !data.success) throw new Error(data.error || 'Transfer failed');
-    if (data && data.new_balance !== undefined) {
-      sessionStorage.setItem('citizen_balance', data.new_balance);
-      const balEl = document.querySelector('.br-val');
-      if (balEl) balEl.textContent = parseFloat(data.new_balance).toFixed(2) + ' INDX';
+    // Approval Gateway: must be checked before the generic failure branch below —
+    // see comment on #gateOverlay above.
+    if (data && data.pending_approval) {
+      _lastSendArgs = { rpcArgs, name, domain };
+      btn.textContent = 'Send Payment →'; btn.disabled = false;
+      await showTransferGate(data.intent_id);
+      return;
     }
-    logPayment(name, domain, amt);
-    // Real transaction id from transfer_indx — never a fabricated hash.
-    const txRef = data && data.tx_id ? String(data.tx_id) : null;
-    document.getElementById('successTitle').textContent = 'Sent!';
-    document.getElementById('successSub').textContent = amt + ' INDX sent to ' + name + '. Sent instantly. Zero bank needed.';
-    document.getElementById('successTx').textContent = txRef ? (txRef.slice(0,4) + '…' + txRef.slice(-4)) : '—';
-    document.getElementById('successOverlay').classList.add('active');
+    if (data && !data.success) throw new Error(data.error || data.message || 'Transfer failed');
+    showPaymentSuccess(data, name, domain, amt);
   } catch(e) {
     showToast('❌ ' + (e.message || 'Transfer failed. Try again.'));
   } finally {
     btn.textContent = 'Send Payment →'; btn.disabled = false;
     updateSendBtn();
+  }
+}
+
+function showPaymentSuccess(data, name, domain, amt) {
+  if (data && data.new_balance !== undefined) {
+    sessionStorage.setItem('citizen_balance', data.new_balance);
+    const balEl = document.querySelector('.br-val');
+    if (balEl) balEl.textContent = parseFloat(data.new_balance).toFixed(2) + ' INDX';
+  }
+  logPayment(name, domain, amt);
+  // Real transaction id from transfer_indx — never a fabricated hash.
+  const txRef = data && data.tx_id ? String(data.tx_id) : null;
+  document.getElementById('successTitle').textContent = 'Sent!';
+  document.getElementById('successSub').textContent = amt + ' INDX sent to ' + name + '. Sent instantly. Zero bank needed.';
+  document.getElementById('successTx').textContent = txRef ? (txRef.slice(0,4) + '…' + txRef.slice(-4)) : '—';
+  document.getElementById('successOverlay').classList.add('active');
+}
+
+// ── Approval Gateway sheet — see comment above #gateOverlay ──
+let _lastSendArgs = null;
+
+async function showTransferGate(intentId) {
+  let cardData = null;
+  try {
+    const { data } = await sb.rpc('get_action_intent_card', { p_intent_id: intentId });
+    cardData = data;
+  } catch (e) {}
+  document.getElementById('gateText').textContent =
+    (cardData && !cardData.error && cardData.data_involved) ? cardData.data_involved
+      : 'This transfer needs your explicit approval before it can complete.';
+  document.getElementById('gateApproveBtn').dataset.intentId = intentId;
+  document.getElementById('gateOverlay').classList.add('open');
+  document.getElementById('gateSheet').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeGateSheet() {
+  document.getElementById('gateOverlay').classList.remove('open');
+  document.getElementById('gateSheet').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+async function approveGateAndResend() {
+  const gbtn = document.getElementById('gateApproveBtn');
+  const intentId = gbtn.dataset.intentId;
+  gbtn.disabled = true; gbtn.textContent = 'Approving…';
+  try {
+    const { data: grant } = await sb.rpc('grant_intent_approval', { p_intent_id: intentId, p_level: 1, p_method: 'citizen_app_confirm' });
+    if (!grant || !grant.success) throw new Error('Approval could not be recorded.');
+    closeGateSheet();
+    if (_lastSendArgs) {
+      // Re-run the identical transfer_indx call — the terms-hash match clears
+      // the gate server-side and the transfer executes for real this time.
+      const btn = document.getElementById('sendBtn');
+      btn.disabled = true; btn.textContent = 'Sending…';
+      try {
+        const { data, error } = await sb.rpc('transfer_indx', _lastSendArgs.rpcArgs);
+        if (error) throw error;
+        if (!data || data.success === false) throw new Error((data && (data.error || data.message)) || 'Transfer failed — nothing was sent.');
+        showPaymentSuccess(data, _lastSendArgs.name, _lastSendArgs.domain, _lastSendArgs.rpcArgs.p_amount);
+      } catch (e) {
+        showToast('❌ ' + (e.message || 'Transfer failed. Try again.'));
+      } finally {
+        btn.disabled = false; btn.textContent = 'Send Payment →';
+        updateSendBtn();
+      }
+    }
+  } catch (e) {
+    showToast(e.message || 'Approval failed. Try again.');
+  } finally {
+    gbtn.disabled = false; gbtn.textContent = 'Approve & Send';
   }
 }
 

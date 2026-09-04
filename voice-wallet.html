@@ -256,6 +256,22 @@
       </div>
     </div>
 
+    <!-- Approval Gateway card — added 2026-09-05 (god mode Item 7, core stabilization sweep).
+         transfer_indx is risk_class>=3-gated (Session 100), so a real send can come back
+         {success:false, pending_approval:true, intent_id} instead of sending. This screen was
+         missed in the original Approval Gateway wiring — executeTransaction() only checked
+         data.success===false and threw, which showed the gate's message as a plain red error
+         toast with no way to actually approve and complete the send. Same pattern as
+         remittance.html's showTransferGate(). -->
+    <div class="confirm-card" id="gateCard">
+      <div class="cc-siindex">🔐 Approval needed</div>
+      <div class="cc-sub" id="gateText">This transfer needs your explicit approval before it can complete.</div>
+      <div class="cc-btns">
+        <div class="cc-cancel" onclick="closeGateCard()">Cancel</div>
+        <button class="cc-confirm" id="gateApproveBtn" onclick="approveGateAndResend()">Approve & Send</button>
+      </div>
+    </div>
+
     <!-- MIC BUTTON -->
     <div class="mic-zone">
       <button class="mic-btn" id="micBtn" onclick="toggleMic()">🎙</button>
@@ -880,14 +896,23 @@ async function executeTransaction() {
 
   try {
     const cleanDomain = intent.recipient.toLowerCase().replace(/\.indx$/i, '') + '.IN$DEX';
-    const { data, error } = await sb.rpc('transfer_indx', {
+    const rpcArgs = {
       p_sender_id:          citizenId,
       p_recipient_address:  cleanDomain,
       p_amount:             intent.amount,
       p_note:               'Voice wallet transfer'
-    });
+    };
+    const { data, error } = await sb.rpc('transfer_indx', rpcArgs);
     if (error) throw error;
-    if (data && !data.success) throw new Error(data.error || 'Transfer failed');
+    // Approval Gateway: must be checked before the generic failure branch below —
+    // see comment on #gateCard above.
+    if (data && data.pending_approval) {
+      _lastSendArgs = { rpcArgs, intent };
+      btn.textContent = 'Confirm →'; btn.disabled = false;
+      await showTransferGate(data.intent_id);
+      return;
+    }
+    if (data && !data.success) throw new Error(data.error || data.message || 'Transfer failed');
     if (data && data.new_balance !== undefined) {
       sessionStorage.setItem('citizen_balance', data.new_balance);
     }
@@ -895,6 +920,56 @@ async function executeTransaction() {
   } catch (e) {
     showToast('❌ ' + (e.message || 'Transfer failed'));
     btn.textContent = 'Confirm →'; btn.disabled = false;
+  }
+}
+
+// ── Approval Gateway card — see comment above #gateCard ──
+let _lastSendArgs = null;
+
+async function showTransferGate(intentId) {
+  let cardData = null;
+  try {
+    const { data } = await sb.rpc('get_action_intent_card', { p_intent_id: intentId });
+    cardData = data;
+  } catch (e) {}
+  document.getElementById('gateText').textContent =
+    (cardData && !cardData.error && cardData.data_involved) ? cardData.data_involved
+      : 'This transfer needs your explicit approval before it can complete.';
+  document.getElementById('gateApproveBtn').dataset.intentId = intentId;
+  document.getElementById('confirmCard').style.display = 'none';
+  document.getElementById('gateCard').style.display = 'block';
+}
+
+function closeGateCard() {
+  document.getElementById('gateCard').style.display = 'none';
+  _lastSendArgs = null;
+}
+
+async function approveGateAndResend() {
+  const gbtn = document.getElementById('gateApproveBtn');
+  const intentId = gbtn.dataset.intentId;
+  gbtn.disabled = true; gbtn.textContent = 'Approving…';
+  try {
+    const { data: grant } = await sb.rpc('grant_intent_approval', { p_intent_id: intentId, p_level: 1, p_method: 'citizen_app_confirm' });
+    if (!grant || !grant.success) throw new Error('Approval could not be recorded.');
+    document.getElementById('gateCard').style.display = 'none';
+    if (_lastSendArgs) {
+      // Re-run the identical transfer_indx call — the terms-hash match clears
+      // the gate server-side and the transfer executes for real this time.
+      try {
+        const { data, error } = await sb.rpc('transfer_indx', _lastSendArgs.rpcArgs);
+        if (error) throw error;
+        if (!data || data.success === false) throw new Error((data && (data.error || data.message)) || 'Transfer failed — nothing was sent.');
+        if (data.new_balance !== undefined) sessionStorage.setItem('citizen_balance', data.new_balance);
+        showSuccess(_lastSendArgs.intent);
+      } catch (e) {
+        showToast('❌ ' + (e.message || 'Transfer failed. Try again.'));
+      }
+    }
+  } catch (e) {
+    showToast(e.message || 'Approval failed. Try again.');
+  } finally {
+    gbtn.disabled = false; gbtn.textContent = 'Approve & Send';
   }
 }
 
