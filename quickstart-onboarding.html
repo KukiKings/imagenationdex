@@ -570,9 +570,14 @@
     btn.textContent = 'Creating your account…';
     btn.disabled = true;
 
-    const rawPhone = (document.getElementById('phoneInput')?.value || '').trim();
-    const countryMatch = (document.getElementById('countryBtn')?.textContent || '').match(/\+\d+/);
-    const fullPhone = rawPhone ? ((countryMatch ? countryMatch[0] : '') + ' ' + rawPhone).trim() : null;
+    // FIXED 2026-09-04: this used to independently rebuild the phone string from the raw,
+    // un-stripped input value (keeping a leading 0, inserting a space before the country
+    // code) — a DIFFERENT string than currentOtpPhone (e164Phone()'s output), which is what
+    // was actually sent to signInWithOtp/verifyOtp and is what Supabase Auth actually
+    // verified. The number that gets written to citizens.phone_number and later matched
+    // against auth.users.phone must be the exact same string that was verified — reusing
+    // currentOtpPhone here instead of recomputing it a second, differently-normalized way.
+    const fullPhone = currentOtpPhone || null;
 
     try {
       // Routed through create_onboarding_citizen(), not a raw insert — this
@@ -597,13 +602,12 @@
 
       // ADDED 2026-08-29: link the real Supabase Auth session (created by verifyOTP()'s real
       // sb.auth.verifyOtp() call, now that OTP is genuinely live) to this citizen row — same
-      // pattern as biometric-kyc.html/join.html/sovereign-verify.html. Non-fatal if it fails.
+      // pattern as biometric-kyc.html/join.html. Non-fatal if it fails.
+      // FIXED 2026-09-04: link_citizen_auth(p_phone, p_auth_id) had no EXECUTE grant for
+      // anon/authenticated at all (silently failed every time) and matched by phone string.
+      // Switched to link_citizen_auth_by_id(p_citizen_id), using the id already in hand.
       if (fullPhone) {
-        try {
-          const { data: authData } = await sb.auth.getUser();
-          const authId = authData && authData.user && authData.user.id;
-          if (authId) await sb.rpc('link_citizen_auth', { p_phone: fullPhone, p_auth_id: authId });
-        } catch (linkErr) { /* non-fatal */ }
+        try { await sb.rpc('link_citizen_auth_by_id', { p_citizen_id: data.id }); } catch (linkErr) { /* non-fatal */ }
       }
 
       sessionStorage.setItem('citizen_id', data.id);

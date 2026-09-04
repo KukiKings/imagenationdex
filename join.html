@@ -754,13 +754,17 @@ async function createRealCitizen(slug, attempt){
   sessionStorage.setItem('citizen_genesis', 'true');
 
   // FIXED 2026-08-29: link the real Supabase Auth session (created by verifyAndGoS3()'s real
-  // sb.auth.verifyOtp() call) to this citizen row, same pattern as biometric-kyc.html and
-  // sovereign-verify.html — non-fatal if it fails, the citizen record still exists either way.
+  // sb.auth.verifyOtp() call) to this citizen row, same pattern as biometric-kyc.html.
+  // FIXED 2026-09-04: link_citizen_auth(p_phone, p_auth_id) had no EXECUTE grant for anon/
+  // authenticated at all (every call from any screen was silently failing) AND matched by a
+  // client-formatted phone string that frequently didn't equal what Supabase Auth actually
+  // verified -- switched to link_citizen_auth_by_id(p_citizen_id), which uses the citizen id
+  // we already have in hand (data.id, just returned by create_onboarding_citizen) and
+  // self-heals phone_number from auth.users.phone (the one value in this flow guaranteed to
+  // be the real verified number) instead of trusting a re-derived string. Still non-fatal.
   if (isPhone) {
     try {
-      const { data: authData } = await sb.auth.getUser();
-      const authId = authData && authData.user && authData.user.id;
-      if (authId) await sb.rpc('link_citizen_auth', { p_phone: phoneNumber, p_auth_id: authId });
+      await sb.rpc('link_citizen_auth_by_id', { p_citizen_id: data.id });
     } catch(linkErr) { /* non-fatal */ }
   }
 

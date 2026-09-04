@@ -534,6 +534,20 @@
   }
   .loading-overlay.active { display: flex; }
 
+  /* Tier 0 KYC OTP overlay — added 2026-09-04. Same fixed-inset convention as
+     .loading-overlay above, higher z-index so it can appear before it. */
+  .otp-overlay { display:none; position:fixed; inset:0; background:var(--black); z-index:150; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:24px; text-align:center; }
+  .otp-overlay.active { display:flex; }
+  .otp-overlay .otp-title { font-size:20px; font-weight:800; }
+  .otp-overlay .otp-sub { font-size:13px; color:var(--text-muted); max-width:320px; line-height:1.5; margin-bottom:8px; }
+  .otp-row { display:flex; gap:8px; }
+  .otp-box { width:42px; height:52px; background:var(--surface); border:1.5px solid var(--border); border-radius:12px; text-align:center; font-size:22px; font-weight:800; color:var(--cyan); outline:none; }
+  .otp-box:focus { border-color:var(--cyan); }
+  .otp-error { font-size:12px; color:var(--red); min-height:16px; }
+  .otp-actions { display:flex; flex-direction:column; gap:10px; width:100%; max-width:320px; margin-top:8px; }
+  .otp-resend { background:none; border:none; color:var(--cyan); font-size:13px; cursor:pointer; }
+  .otp-back { background:none; border:none; color:var(--text-muted); font-size:13px; cursor:pointer; }
+
   .spinner {
     width: 52px; height: 52px;
     border-radius: 50%;
@@ -1217,6 +1231,30 @@
   <div class="loading-label">Sovereign onboarding in progress…</div>
 </div>
 
+<!-- Tier 0 KYC OTP overlay — added 2026-09-04. Real Supabase Auth phone/email OTP
+     (signInWithOtp/verifyOtp), same mechanism join.html/biometric-kyc.html/
+     quickstart-onboarding.html use. activatePortal() (screen2's button) now sends this
+     before any citizen row is created — previously any typed phone/email was accepted
+     with zero verification and written straight to citizens.phone_number. -->
+<div class="otp-overlay" id="otpOverlay">
+  <div class="otp-title">Verify it's you</div>
+  <div class="otp-sub" id="otpOverlaySub">Enter the 6-digit code we sent.</div>
+  <div class="otp-row">
+    <input class="otp-box" type="tel" maxlength="1" inputmode="numeric" id="oflow0" oninput="onboardOtpInput(0)">
+    <input class="otp-box" type="tel" maxlength="1" inputmode="numeric" id="oflow1" oninput="onboardOtpInput(1)">
+    <input class="otp-box" type="tel" maxlength="1" inputmode="numeric" id="oflow2" oninput="onboardOtpInput(2)">
+    <input class="otp-box" type="tel" maxlength="1" inputmode="numeric" id="oflow3" oninput="onboardOtpInput(3)">
+    <input class="otp-box" type="tel" maxlength="1" inputmode="numeric" id="oflow4" oninput="onboardOtpInput(4)">
+    <input class="otp-box" type="tel" maxlength="1" inputmode="numeric" id="oflow5" oninput="onboardOtpInput(5)">
+  </div>
+  <div class="otp-error" id="otpOverlayError"></div>
+  <div class="otp-actions">
+    <button class="btn-primary" id="otpOverlayBtn" disabled onclick="verifyOnboardOtp()">Verify →</button>
+    <button class="otp-resend" id="otpOverlayResend" onclick="resendOnboardOtp()">Resend code</button>
+    <button class="otp-back" onclick="cancelOnboardOtp()">← Back to edit</button>
+  </div>
+</div>
+
 <script>
   // ── SUPABASE CLIENT ──
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
@@ -1329,7 +1367,119 @@
   }
 
   // ── ACTIVATE PORTAL (4.2s loading) ──
+  // Tier 0 KYC — added 2026-09-04. Previously activatePortal() went straight from the
+  // identity form to create_onboarding_citizen with zero verification: any phone or email
+  // typed here was accepted and written straight to citizens.phone_number/email. This is
+  // the app's primary, most-linked signup entry point (index.html's featured card,
+  // home-v3.html, sms-claim.html's onward redirect, etc.) — per the 2026-07-27 founder
+  // decision "Tier 0 is phone + contact + OTP only", it needed the same real Supabase Auth
+  // OTP mechanism already proven in join.html/biometric-kyc.html/quickstart-onboarding.html,
+  // not another parallel implementation of it.
+  let onboardOtpContact = '';
+  let onboardOtpIsPhone = false;
+
   function activatePortal() {
+    const name = document.getElementById('nameInput').value.trim();
+    const rawContact = document.getElementById('contactInput').value.trim();
+    onboardOtpIsPhone = rawContact.startsWith('+') || /^[\d\s\-()+]+$/.test(rawContact);
+    // Same normalization as quickstart-onboarding.html's e164Phone() / login.html's
+    // sendOTP() (2026-09-04 fix) — strip everything but digits, then a leading 0, so the
+    // string sent to signInWithOtp matches what Supabase Auth actually verifies and what
+    // every other screen expects in citizens.phone_number.
+    onboardOtpContact = onboardOtpIsPhone
+      ? '+' + rawContact.replace(/\D/g, '').replace(/^0+/, '')
+      : rawContact;
+
+    if (!name || !onboardOtpContact || (onboardOtpIsPhone && onboardOtpContact.length < 6)) {
+      checkIdentityForm();
+      return;
+    }
+
+    const btn = document.getElementById('btn2');
+    btn.disabled = true; btn.textContent = 'Sending code…';
+
+    (async () => {
+      try {
+        const { error } = onboardOtpIsPhone
+          ? await sb.auth.signInWithOtp({ phone: onboardOtpContact })
+          : await sb.auth.signInWithOtp({ email: onboardOtpContact });
+        if (error) {
+          const errEl = document.getElementById('domainError');
+          if (errEl) { errEl.style.display = 'block'; errEl.textContent = error.message || 'Could not send a verification code — try again.'; }
+          btn.disabled = false; btn.textContent = 'Activate My Portal →';
+          return;
+        }
+      } catch (e) {
+        const errEl = document.getElementById('domainError');
+        if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Could not send a verification code — try again.'; }
+        btn.disabled = false; btn.textContent = 'Activate My Portal →';
+        return;
+      }
+      btn.disabled = false; btn.textContent = 'Activate My Portal →';
+      document.getElementById('otpOverlaySub').textContent =
+        (onboardOtpIsPhone ? 'We sent a real 6-digit code to ' : 'We sent a real 6-digit code to ') + onboardOtpContact + '.';
+      document.getElementById('otpOverlayError').textContent = '';
+      for (let i = 0; i < 6; i++) document.getElementById('oflow' + i).value = '';
+      document.getElementById('otpOverlayBtn').disabled = true;
+      document.getElementById('otpOverlay').classList.add('active');
+      document.getElementById('oflow0').focus();
+    })();
+  }
+
+  function onboardOtpInput(idx) {
+    const el = document.getElementById('oflow' + idx);
+    if (el.value && idx < 5) document.getElementById('oflow' + (idx + 1)).focus();
+    const code = [0,1,2,3,4,5].map(i => document.getElementById('oflow' + i).value).join('');
+    document.getElementById('otpOverlayBtn').disabled = code.length < 6;
+    document.getElementById('otpOverlayError').textContent = '';
+  }
+
+  async function resendOnboardOtp() {
+    const resendBtn = document.getElementById('otpOverlayResend');
+    resendBtn.disabled = true;
+    try {
+      const { error } = onboardOtpIsPhone
+        ? await sb.auth.signInWithOtp({ phone: onboardOtpContact })
+        : await sb.auth.signInWithOtp({ email: onboardOtpContact });
+      document.getElementById('otpOverlayError').textContent = error ? (error.message || 'Could not resend — try again.') : '';
+      if (!error) document.getElementById('otpOverlayError').style.color = 'var(--green)';
+      if (!error) document.getElementById('otpOverlayError').textContent = 'New code sent';
+    } catch (e) {
+      document.getElementById('otpOverlayError').textContent = 'Could not resend — try again.';
+    }
+    setTimeout(() => { resendBtn.disabled = false; }, 3000);
+  }
+
+  function cancelOnboardOtp() {
+    document.getElementById('otpOverlay').classList.remove('active');
+  }
+
+  async function verifyOnboardOtp() {
+    const token = [0,1,2,3,4,5].map(i => document.getElementById('oflow' + i).value).join('');
+    const btn = document.getElementById('otpOverlayBtn');
+    btn.disabled = true; btn.textContent = 'Verifying…';
+    try {
+      const { error } = onboardOtpIsPhone
+        ? await sb.auth.verifyOtp({ phone: onboardOtpContact, token, type: 'sms' })
+        : await sb.auth.verifyOtp({ email: onboardOtpContact, token, type: 'email' });
+      if (error) {
+        document.getElementById('otpOverlayError').style.color = 'var(--red)';
+        document.getElementById('otpOverlayError').textContent = 'Invalid code — try again';
+        btn.disabled = false; btn.textContent = 'Verify →';
+        return;
+      }
+    } catch (e) {
+      document.getElementById('otpOverlayError').style.color = 'var(--red)';
+      document.getElementById('otpOverlayError').textContent = 'Verification failed — try again';
+      btn.disabled = false; btn.textContent = 'Verify →';
+      return;
+    }
+    btn.textContent = 'Verify →';
+    document.getElementById('otpOverlay').classList.remove('active');
+    completeActivation(onboardOtpContact, onboardOtpIsPhone);
+  }
+
+  function completeActivation(contact, isPhone) {
     const name = document.getElementById('nameInput').value.trim();
     const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) || 'sovereign';
 
@@ -1393,8 +1543,11 @@
         });
 
         // ── SUPABASE INSERT create citizen record ──
-        const contact = document.getElementById('contactInput')?.value?.trim() || '';
-        const isPhone = contact.startsWith('+') || /^[\d\s\-()+]+$/.test(contact);
+        // FIXED 2026-09-04: contact/isPhone used to be re-read from the DOM and
+        // recomputed right here, disconnected from whatever (if anything) had actually
+        // been OTP-verified. Now passed in directly from verifyOnboardOtp() — this is
+        // the exact same string that was just sent to signInWithOtp and checked by
+        // verifyOtp, so what gets written below is guaranteed to be the verified value.
         try {
           // Check for referral code in URL params
           const urlRef = new URLSearchParams(window.location.search).get('ref') || '';
@@ -1411,12 +1564,20 @@
             p_payload: {
               citizen_name: name,
               phone_number: isPhone ? contact : null,
+              // FIXED 2026-09-04: an email contact was previously discarded entirely —
+              // create_onboarding_citizen accepts an email field, this just never sent one.
+              email: !isPhone ? contact : null,
               web3_domain: slug + '.IN$DEX',
               referred_by: urlRef || null
             }
           });
           const data = created && created.success ? { id: created.id } : null;
           const error = created && !created.success ? { code: created.reason === 'duplicate' ? '23505' : 'unknown', message: created.reason, details: created.detail } : rpcError;
+          // Real Supabase Auth session now exists (verifyOnboardOtp()'s verifyOtp() call
+          // succeeded before this ever runs) — link it so future RLS-gated calls (transfer_indx
+          // etc.) work for this citizen. link_citizen_auth_by_id self-heals phone_number from
+          // auth.users.phone too. Non-fatal if it fails.
+          if (data?.id) { try { await sb.rpc('link_citizen_auth_by_id', { p_citizen_id: data.id }); } catch (linkErr) { /* non-fatal */ } }
           // NOTE (2026-07-27): claim_genesis_signup_bonus_anon is being changed to write a
           // pending_review row to recognition_ledger instead of crediting spendable
           // indx_balance directly. NOTE 2026-07-29: the referenced migration draft is NOT

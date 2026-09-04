@@ -502,15 +502,15 @@ async function completeOnboarding() {
   try {
     // FIXED 2026-08-29: verifyOtpAndComplete() now runs a real sb.auth.verifyOtp() before this
     // ever executes, so there IS a real Supabase Auth session on this phone number by the time
-    // we get here. Link it to the citizen row with link_citizen_auth(p_phone, p_auth_id uuid) —
-    // the same call sovereign-verify.html and login.html use — so future RLS-gated calls (like
-    // transfer_indx's caller-ownership check) work for this citizen too.
-    try {
-      const { data: authData } = await sb.auth.getUser();
-      const authId = authData && authData.user && authData.user.id;
-      if (authId) await sb.rpc('link_citizen_auth', { p_phone: verifiedPhone, p_auth_id: authId });
-    } catch(linkErr) { /* non-fatal — citizen row still gets created/found below */ }
-
+    // we get here, so future RLS-gated calls (like transfer_indx's caller-ownership check)
+    // work for this citizen too.
+    // FIXED 2026-09-04: the link call used to fire here, before the citizen id was even known
+    // for a brand-new signup (citizenRecord is null in that case — the id only exists after
+    // create_onboarding_citizen below) — and it used link_citizen_auth(p_phone, p_auth_id),
+    // which had no EXECUTE grant for anon/authenticated at all, so it always failed silently
+    // regardless. Moved below, once the real citizen id is known either way, and switched to
+    // link_citizen_auth_by_id(p_citizen_id) which self-heals phone_number from auth.users.phone
+    // instead of trusting a re-derived client-side phone string.
     if (citizenRecord && citizenRecord.id) {
       // BACKEND FIX 2026-08-29: get_citizen_by_phone() now only returns citizen_name/
       // indx_balance/wisdom_score/web3_domain to the verified phone owner (or founder) --
@@ -529,6 +529,9 @@ async function completeOnboarding() {
       sessionStorage.setItem('citizen_balance',  citizenRecord.indx_balance || '0');
       sessionStorage.setItem('citizen_wisdom',   citizenRecord.wisdom_score || '0');
       sessionStorage.setItem('citizen_domain',   citizenRecord.web3_domain || '');
+      if (citizenRecord.id) {
+        try { await sb.rpc('link_citizen_auth_by_id', { p_citizen_id: citizenRecord.id }); } catch (linkErr) { /* non-fatal */ }
+      }
     } else {
       const { data, error } = await sb.rpc('create_onboarding_citizen', {
         p_payload: { phone_number: verifiedPhone, citizen_name: 'Sovereign' }
@@ -536,6 +539,7 @@ async function completeOnboarding() {
       if (!error && data && data.success && data.id) {
         sessionStorage.setItem('citizen_id', data.id);
         sessionStorage.setItem('citizen_name', 'Sovereign');
+        try { await sb.rpc('link_citizen_auth_by_id', { p_citizen_id: data.id }); } catch (linkErr) { /* non-fatal */ }
         // FIXED 2026-08-21: this branch used to leave balance/wisdom at 0 --
         // unlike join.html, grid-account-onboarding.html, and
         // quickstart-onboarding.html, which all call

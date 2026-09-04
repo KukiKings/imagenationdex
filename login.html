@@ -410,7 +410,13 @@ function requestProtectionToggle() {
 })();
 
 async function sendOTP() {
-  const raw = document.getElementById('phoneInput').value.replace(/\D/g, '');
+  // FIXED 2026-09-04: raw digits kept a leading 0 if the citizen typed their number in local
+  // format (e.g. "0451 565 863") -- combined with selectedDial this produced an invalid E.164
+  // string like "+610451565863" (one digit too many), which is what Supabase Auth actually
+  // verified and stored on auth.users.phone -- and it never matched what other screens expect.
+  // Stripped the leading zero(s), same fix already applied in quickstart-onboarding.html's
+  // e164Phone() (2026-08-29) -- reusing the identical pattern for consistency across screens.
+  const raw = document.getElementById('phoneInput').value.replace(/\D/g, '').replace(/^0+/, '');
   fullPhone = selectedDial + raw;
   document.getElementById('sendOtpBtn').disabled = true;
   document.getElementById('sendOtpBtn').textContent = 'Sending…';
@@ -472,8 +478,12 @@ async function verifyOTP() {
     const { data: byPhone } = await sb.rpc('get_citizen_by_phone', { p_phone: fullPhone });
     if (byPhone && byPhone.id) {
       citizen = byPhone;
-      // Link this auth session to the citizen row for future logins
-      await sb.rpc('link_citizen_auth', { p_phone: fullPhone, p_auth_id: data.user.id });
+      // Link this auth session to the citizen row for future logins.
+      // FIXED 2026-09-04: link_citizen_auth(p_phone, p_auth_id) had no EXECUTE grant for
+      // anon/authenticated (silently failed every time) and matched by a client-formatted
+      // phone string instead of the id we already have from byPhone above. Switched to
+      // link_citizen_auth_by_id, which also self-heals phone_number from auth.users.phone.
+      await sb.rpc('link_citizen_auth_by_id', { p_citizen_id: byPhone.id });
     }
   }
 

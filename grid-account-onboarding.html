@@ -342,6 +342,30 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
   <button class="btn-secondary" id="reviewCloseBtn" onclick="closeReviewSheet()">Edit details</button>
 </div>
 
+<!-- Tier 0 KYC OTP sheet — added 2026-09-04. Screen 3's own field hint has always said
+     "SIINDEX sends a code to confirm this is you" but nothing ever sent or checked a code —
+     any phone typed here was accepted with zero verification. Real Supabase Auth phone OTP
+     (signInWithOtp/verifyOtp), same mechanism join.html/biometric-kyc.html use. Only shown
+     when a phone was actually entered (phone is optional on this screen). -->
+<div class="sheet-overlay" id="gaOtpOverlay"></div>
+<div class="bottom-sheet" id="gaOtpSheet" role="dialog" aria-modal="true" aria-labelledby="gaOtpTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="gaOtpTitle">Verify your phone</div>
+  <div class="review-hint" id="gaOtpSub">Enter the 6-digit code we sent.</div>
+  <div style="display:flex;gap:8px;justify-content:center;margin:16px 0;">
+    <input style="width:42px;height:52px;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;text-align:center;font-size:22px;font-weight:800;color:var(--cyan);outline:none;" type="tel" maxlength="1" inputmode="numeric" id="gaOtp0" oninput="gaOtpInput(0)">
+    <input style="width:42px;height:52px;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;text-align:center;font-size:22px;font-weight:800;color:var(--cyan);outline:none;" type="tel" maxlength="1" inputmode="numeric" id="gaOtp1" oninput="gaOtpInput(1)">
+    <input style="width:42px;height:52px;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;text-align:center;font-size:22px;font-weight:800;color:var(--cyan);outline:none;" type="tel" maxlength="1" inputmode="numeric" id="gaOtp2" oninput="gaOtpInput(2)">
+    <input style="width:42px;height:52px;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;text-align:center;font-size:22px;font-weight:800;color:var(--cyan);outline:none;" type="tel" maxlength="1" inputmode="numeric" id="gaOtp3" oninput="gaOtpInput(3)">
+    <input style="width:42px;height:52px;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;text-align:center;font-size:22px;font-weight:800;color:var(--cyan);outline:none;" type="tel" maxlength="1" inputmode="numeric" id="gaOtp4" oninput="gaOtpInput(4)">
+    <input style="width:42px;height:52px;background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;text-align:center;font-size:22px;font-weight:800;color:var(--cyan);outline:none;" type="tel" maxlength="1" inputmode="numeric" id="gaOtp5" oninput="gaOtpInput(5)">
+  </div>
+  <div id="gaOtpError" style="font-size:12px;color:var(--red);min-height:16px;text-align:center;margin-bottom:8px;"></div>
+  <button class="btn-primary" id="gaOtpBtn" disabled onclick="verifyGaOtp()">Verify →</button>
+  <button class="btn-secondary" id="gaOtpResend" onclick="resendGaOtp()">Resend code</button>
+  <button class="btn-secondary" onclick="cancelGaOtp()">← Back to edit</button>
+</div>
+
 <script>
 const INDX_PRICE_USD = 0.24;
 const _GAO_KEY = 'indx_gao_state';
@@ -477,7 +501,96 @@ function goTo(step) {
   document.getElementById('s' + step).classList.add('active');
   window.scrollTo(0,0);
   document.getElementById('pFill').style.width = (STEPS_PROGRESS[step] || 10) + '%';
-  if (step === 5) buildAccountScreen();
+  // FIXED 2026-09-04: screen 3's field hint has always promised "SIINDEX sends a code to
+  // confirm this is you" but buildAccountScreen() never verified anything — any typed phone
+  // was written straight to citizens.phone_number. Phone is optional here, so only gate on
+  // OTP when one was actually entered; an empty phone still goes straight through (nothing
+  // to verify, same as before).
+  if (step === 5) {
+    var rawPhone = document.getElementById('phone').value.trim();
+    if (rawPhone && !sessionStorage.getItem('citizen_id')) {
+      startGaOtp(rawPhone);
+    } else {
+      buildAccountScreen();
+    }
+  }
+}
+
+// ── Tier 0 KYC — real Supabase Auth phone OTP, gating buildAccountScreen() ──
+var gaOtpPhone = '';
+async function startGaOtp(rawPhone) {
+  // Same normalization as quickstart-onboarding.html's e164Phone()/login.html's sendOTP()
+  // (2026-09-04 fix): strip everything but digits, then a leading 0, so the verified string
+  // matches what gets written to citizens.phone_number.
+  gaOtpPhone = rawPhone.startsWith('+') ? '+' + rawPhone.slice(1).replace(/\D/g,'') : '+' + rawPhone.replace(/\D/g,'').replace(/^0+/,'');
+  try {
+    const { error } = await sb.auth.signInWithOtp({ phone: gaOtpPhone });
+    if (error) {
+      showToast('❌ Could not send verification code — ' + (error.message || 'try again'));
+      goTo(3);
+      return;
+    }
+  } catch (e) {
+    showToast('❌ Could not send verification code — try again');
+    goTo(3);
+    return;
+  }
+  document.getElementById('gaOtpSub').textContent = 'We sent a real 6-digit code to ' + gaOtpPhone + '.';
+  document.getElementById('gaOtpError').textContent = '';
+  for (var i = 0; i < 6; i++) document.getElementById('gaOtp' + i).value = '';
+  document.getElementById('gaOtpBtn').disabled = true;
+  document.getElementById('gaOtpOverlay').classList.add('show');
+  document.getElementById('gaOtpSheet').classList.add('show');
+  document.getElementById('gaOtp0').focus();
+}
+
+function gaOtpInput(idx) {
+  var el = document.getElementById('gaOtp' + idx);
+  if (el.value && idx < 5) document.getElementById('gaOtp' + (idx + 1)).focus();
+  var code = [0,1,2,3,4,5].map(function(i){ return document.getElementById('gaOtp' + i).value; }).join('');
+  document.getElementById('gaOtpBtn').disabled = code.length < 6;
+  document.getElementById('gaOtpError').textContent = '';
+}
+
+async function resendGaOtp() {
+  try {
+    const { error } = await sb.auth.signInWithOtp({ phone: gaOtpPhone });
+    document.getElementById('gaOtpError').style.color = error ? 'var(--red)' : 'var(--green)';
+    document.getElementById('gaOtpError').textContent = error ? (error.message || 'Could not resend — try again.') : 'New code sent';
+  } catch (e) {
+    document.getElementById('gaOtpError').style.color = 'var(--red)';
+    document.getElementById('gaOtpError').textContent = 'Could not resend — try again.';
+  }
+}
+
+function cancelGaOtp() {
+  document.getElementById('gaOtpOverlay').classList.remove('show');
+  document.getElementById('gaOtpSheet').classList.remove('show');
+  goTo(3);
+}
+
+async function verifyGaOtp() {
+  var token = [0,1,2,3,4,5].map(function(i){ return document.getElementById('gaOtp' + i).value; }).join('');
+  var btn = document.getElementById('gaOtpBtn');
+  btn.disabled = true; btn.textContent = 'Verifying…';
+  try {
+    const { error } = await sb.auth.verifyOtp({ phone: gaOtpPhone, token: token, type: 'sms' });
+    if (error) {
+      document.getElementById('gaOtpError').style.color = 'var(--red)';
+      document.getElementById('gaOtpError').textContent = 'Invalid code — try again';
+      btn.disabled = false; btn.textContent = 'Verify →';
+      return;
+    }
+  } catch (e) {
+    document.getElementById('gaOtpError').style.color = 'var(--red)';
+    document.getElementById('gaOtpError').textContent = 'Verification failed — try again';
+    btn.disabled = false; btn.textContent = 'Verify →';
+    return;
+  }
+  btn.textContent = 'Verify →';
+  document.getElementById('gaOtpOverlay').classList.remove('show');
+  document.getElementById('gaOtpSheet').classList.remove('show');
+  buildAccountScreen();
 }
 
 function checkDomain() {
@@ -534,7 +647,11 @@ function selPurpose(el, id) {
 async function buildAccountScreen() {
   var fname = document.getElementById('fname').value.trim() || 'Citizen';
   var domain = document.getElementById('domain').value.trim().toLowerCase() || 'citizen';
-  var phone = document.getElementById('phone').value.trim();
+  // FIXED 2026-09-04: use the OTP-verified phone string (gaOtpPhone, set by startGaOtp())
+  // when one exists, instead of re-reading the raw field — guarantees the value written to
+  // citizens.phone_number is the exact string Supabase Auth actually verified, not a
+  // differently-formatted re-read of the same input.
+  var phone = gaOtpPhone || document.getElementById('phone').value.trim();
   document.getElementById('displayName').textContent = fname;
   document.getElementById('displayDomain').textContent = domain + '.IN$DEX';
   var bpLabel = PURPOSE_BP[selectedPurpose] || 'Explorer';
@@ -572,6 +689,10 @@ async function buildAccountScreen() {
     if (!created.success) throw { code: created.reason === 'duplicate' ? '23505' : 'unknown', message: created.reason, details: created.detail };
     const data = { id: created.id };
     await sb.rpc('claim_genesis_signup_bonus_anon', { p_citizen_id: data.id });
+    // Real Supabase Auth session now exists whenever a phone was entered (startGaOtp()'s
+    // verifyOtp() call succeeded before buildAccountScreen() ever ran) — link it so future
+    // RLS-gated calls work for this citizen. Self-heals phone_number too. Non-fatal.
+    if (gaOtpPhone) { try { await sb.rpc('link_citizen_auth_by_id', { p_citizen_id: data.id }); } catch (linkErr) { /* non-fatal */ } }
 
     sessionStorage.setItem('citizen_id', data.id);
     sessionStorage.setItem('citizen_name', fname);
