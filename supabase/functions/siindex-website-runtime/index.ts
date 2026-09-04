@@ -34,7 +34,7 @@ VERIFIED / CONTROLLED PROJECT STATUS FOR THIS MODE:
 - The founder's Cook Islands demonstration and SIINDEX interview-readiness target is 6 December 2026.
 - January 2027 is reserved for an optional soft/private pilot only, if readiness gates pass.
 - The controlled public-pilot target is 24 February 2027. It is not a promise that every roadmap feature will be live that day.
-- Image Nation Dex Limited is the intended Cook Islands company name. Registration has not yet been filed.
+- Image Nation Dex Limited is the intended Cook Islands company name. Registration is in progress; no Certificate of Incorporation has been issued yet.
 - INDX is a plain Solana SPL Token. A mainnet check reported a fixed 100,000,000 supply and revoked mint and freeze authorities. The deployed mint is owned by the original SPL Token Program, not Token-2022.
 - INDX allocation, distribution, and liquidity actions are paused pending reconciliation, specialist review, and an explicit founder decision.
 - USD $0.24 is the founder-selected launch and genesis reference. Never state another launch figure. It is not a live market price, not a price citizens can pay today, and not a promise of future value.

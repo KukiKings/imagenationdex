@@ -53,11 +53,39 @@
   function bindAsk(askBtn, inputEl, outEl, source, speak) {
     if (!askBtn || askBtn.dataset.siindexQaBound) return;
     askBtn.dataset.siindexQaBound = '1';
+    // Typed free-text questions (unlike chip clicks, which are curated
+    // data-q strings guaranteed to hit a real pattern) can be anything.
+    // Fixed 2026-09-04 (god mode Item 6): only answer instantly from the
+    // static knowledge base when it has a confident match (matchAnswer);
+    // anything else now reaches the live siindex-website-runtime model via
+    // SIINDEXVoice.ask, same as the mic path already did, instead of
+    // silently getting the generic static catch-all forever.
     function go() {
       var q = (inputEl && inputEl.value || '').trim();
       if (!q) return;
-      if (outEl) outEl.textContent = answerText(q);
-      if (speak) speakOptional(q, source);
+      var matched = (window.SIINDEX_PUBLIC && typeof SIINDEX_PUBLIC.matchAnswer === 'function')
+        ? SIINDEX_PUBLIC.matchAnswer(q)
+        : answerText(q);
+      if (matched !== null && matched !== undefined) {
+        if (outEl) outEl.textContent = matched;
+        if (speak) speakOptional(q, source);
+        return;
+      }
+      if (outEl) outEl.textContent = 'Thinking…';
+      if (window.SIINDEXVoice && typeof SIINDEXVoice.ask === 'function') {
+        var onMsg = function (ev) {
+          var d = (ev && ev.detail) || {};
+          if ((d.role === 'si' || d.role === 'assistant') && d.text) {
+            if (outEl) outEl.textContent = d.text;
+            window.removeEventListener('siindex:message', onMsg);
+          }
+        };
+        window.addEventListener('siindex:message', onMsg);
+        setTimeout(function () { window.removeEventListener('siindex:message', onMsg); }, 20000);
+        SIINDEXVoice.ask(q, { source: source || 'qa-mode' });
+      } else if (outEl) {
+        outEl.textContent = answerText(q);
+      }
     }
     askBtn.addEventListener('click', go);
     if (inputEl) {

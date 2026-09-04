@@ -2,14 +2,14 @@
  * siindex-public-knowledge.js
  * Public speech layer for SIINDEX — SI (Synthetic Intelligence), not AI.
  * RULE: Always lead with brand IN$DEX. Legal name only when the visitor asks.
- * Version: 1.5.3 | 2026-08-19 broad Q&A matching (launch, pilot, FAQ coverage)
+ * Version: 1.5.4 | 2026-09-04 matchAnswer() added — real questions reach the live model instead of the static catch-all
  * Authority: Trusted (aligned with siindex-public/live-status.json + SOUL.md)
  */
 (function (global) {
   'use strict';
 
   var SIINDEX_PUBLIC = {
-    version: '1.5.3',
+    version: '1.5.4',
     live_status_version: '1.0.0',
     kind: 'SI',
     full: 'Synthetic Intelligence',
@@ -172,7 +172,15 @@
       };
     },
 
-    answer: function (question) {
+    // matchAnswer: the same curated pattern-matching engine as answer() below,
+    // but returns null instead of the generic catch-all when nothing genuinely
+    // matched. Added 2026-09-04 (god mode Item 6) so callers with a real live
+    // model backend (siindex-website-runtime) can tell "confidently answered
+    // from canon" apart from "unmatched — ask the model" instead of the local
+    // catch-all silently intercepting every unmatched question forever.
+    // answer() (below) still always returns a string — nothing that already
+    // calls answer() changes behavior.
+    matchAnswer: function (question) {
       var q = String(question || '').toLowerCase();
       this._lastFactId = 'fallback';
       if (!q.trim()) {
@@ -410,6 +418,17 @@
         return 'IN$DEX uses the Mama Noe Test: if a normal citizen cannot understand it and use it, it is unfinished. That is how we judge whether a feature is ready.';
       }
 
+      this._lastFactId = 'unmatched';
+      return null;
+    },
+
+    // answer: the original always-a-string API every existing caller (FAQ/
+    // Interview/Present chips, speak-to-siindex.html, the network-failure
+    // fallback in siindex-speak-core.js, etc.) already relies on. Unchanged
+    // behavior — still returns the generic catch-all for anything unmatched.
+    answer: function (question) {
+      var matched = this.matchAnswer(question);
+      if (matched !== null) return matched;
       return (
         'I speak for IN$DEX from our public living knowledge. ' +
         this.what_is_indx +

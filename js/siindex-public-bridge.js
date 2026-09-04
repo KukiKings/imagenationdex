@@ -2,7 +2,7 @@
  * siindex-public-bridge.js
  * Patches SIINDEXVoice.ask for identity / status / brand facts from living public knowledge.
  * Self-loads knowledge + page-context if missing. SI not AI. Brand-first: always IN$DEX.
- * Version: 1.3.0 | Task-3 harness guard + audit 2026-08-15
+ * Version: 1.3.1 | 2026-09-04 defers to matchAnswer() instead of its own drifted regex
  */
 (function () {
   'use strict';
@@ -26,7 +26,7 @@
     if (window.SIINDEX_PUBLIC && typeof window.SIINDEX_PUBLIC.answer === 'function') {
       return Promise.resolve();
     }
-    return loadScript('/js/siindex-public-knowledge.js?v=1.5.0').catch(function () {
+    return loadScript('/js/siindex-public-knowledge.js?v=1.5.4').catch(function () {
       return loadScript('/js/siindex-public-knowledge.js').catch(function () {
         return loadScript('js/siindex-public-knowledge.js');
       });
@@ -140,14 +140,29 @@
       var q = String(text || '').trim();
       var source = (options && options.source) || 'global';
 
-      if (q && matchesPublicFact(q)) {
+      // Fixed 2026-09-04 (god mode Item 6): this used to decide "answer
+      // locally" using its own separate matchesPublicFact() regex, then
+      // always fetch SIINDEX_PUBLIC.answer(q) — which always returns a
+      // string, including its generic catch-all. Two independently
+      // maintained pattern lists (this file's regex and the real one inside
+      // siindex-public-knowledge.js's answer engine) could drift, and a
+      // "matched" verdict here didn't guarantee answer() had actually found
+      // anything specific. Now this defers to matchAnswer() — the single
+      // source of truth for "did we really match something" — and only
+      // falls back to the old regex if an older cached knowledge.js without
+      // matchAnswer is somehow loaded.
+      var hasMatcher = window.SIINDEX_PUBLIC && typeof window.SIINDEX_PUBLIC.matchAnswer === 'function';
+      var matched = q && hasMatcher ? window.SIINDEX_PUBLIC.matchAnswer(q) : null;
+      var confidentMatch = hasMatcher ? matched !== null : !!(q && matchesPublicFact(q));
+
+      if (confidentMatch) {
         var audit = null;
         var answer;
         if (typeof window.SIINDEX_PUBLIC.answerWithAudit === 'function') {
           audit = window.SIINDEX_PUBLIC.answerWithAudit(q);
           answer = audit.text;
         } else {
-          answer = window.SIINDEX_PUBLIC.answer(q);
+          answer = hasMatcher ? matched : window.SIINDEX_PUBLIC.answer(q);
           audit = {
             text: answer,
             fact_id: window.SIINDEX_PUBLIC._lastFactId || 'unknown',

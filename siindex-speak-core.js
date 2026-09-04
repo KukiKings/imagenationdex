@@ -335,8 +335,15 @@
       return;
     }
 
-    const local = !isFoundingGoalRequest && window.SIINDEX_PUBLIC && typeof SIINDEX_PUBLIC.answer === "function"
-      ? SIINDEX_PUBLIC.answer(text) : null;
+    // Use matchAnswer (not answer) here: matchAnswer returns null for anything
+    // that isn't a confident curated match, so real questions fall through to
+    // the live siindex-website-runtime model below instead of getting a vague
+    // static catch-all forever. answer() (guaranteed non-null) is still used
+    // as the network-failure fallback further down. Fixed 2026-09-04 (god mode
+    // Item 6) — previously answer()'s catch-all made this branch fire for
+    // nearly every question, so the real model call was effectively dead code.
+    const local = !isFoundingGoalRequest && window.SIINDEX_PUBLIC && typeof SIINDEX_PUBLIC.matchAnswer === "function"
+      ? SIINDEX_PUBLIC.matchAnswer(text) : null;
     if (local) {
       emitMessage("si", local, source);
       if (voiceEnabled) {
@@ -586,7 +593,7 @@
   }
 
   window.SIINDEXVoice = {
-    version: "3.0.15",
+    version: "3.0.16",
     speak: speak,
     interrupt: interrupt,
     ask: ask,
