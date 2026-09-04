@@ -698,7 +698,13 @@ function showTrustState(s) {
   lightPill(3); // "What you control"
 }
 
+// Approval Gateway: set while a real RPC has come back pending_approval (risk_class >= 3
+// in agent_registry) and the citizen is being asked for one more explicit sign-off before
+// SIINDEX's own tap-to-approve above is allowed to actually execute.
+var pendingGate = null;
+
 async function handleApprove() {
+  if (pendingGate) { await handleGateApprove(); return; }
   if (!currentScen || liveExecuting) return;
 
   if (currentScen.live) {
@@ -775,6 +781,17 @@ async function handleLiveApprove(s) {
         body: JSON.stringify(body)
       });
       const resBody = await res.json();
+
+      // Approval Gateway: transfer_indx/withdraw_indx are risk_class >= 3 in agent_registry,
+      // so this first call can come back a normal 200 {success:false, pending_approval:true,
+      // intent_id} instead of executing. That's not a rejection -- it's a second, explicit
+      // sign-off SIINDEX needs before this specific action can go through.
+      if (resBody?.pending_approval) {
+        liveExecuting = false;
+        await showGateCard(resBody.intent_id, citizenId, p, s, rid, rpcName, body);
+        return;
+      }
+
       if (!res.ok || resBody?.message || resBody?.code) {
         // ACCOUNT_FROZEN / CARD_FROZEN are raw Postgres exception text, not something to
         // show a citizen verbatim -- map them to the same clear message withdraw.html,
@@ -857,7 +874,143 @@ async function handleLiveApprove(s) {
   }
 }
 
+// Show the Approval Gateway sign-off card. `rpcName`/`body` are the exact same RPC name and
+// payload that just came back pending, so approving can retry them unchanged once granted.
+async function showGateCard(intentId, citizenId, p, s, rid, rpcName, body) {
+  pendingGate = { intentId, citizenId, p, s, rid, rpcName, body };
+
+  var card = document.getElementById('stateCard');
+  card.className = 'state-card state-needs_approval visible';
+  document.getElementById('stateIcon').textContent = '👆';
+  document.getElementById('stateLabel').textContent = 'One more approval needed';
+  document.getElementById('stateSub').textContent = 'SIINDEX Approval Gateway';
+  document.getElementById('stateSiSays').textContent =
+    'This action needs your explicit sign-off before it can complete. Nothing has moved yet.';
+  document.getElementById('stateRecordText').textContent = '';
+
+  try {
+    const cardRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_action_intent_card', {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_intent_id: intentId })
+    });
+    const cardBody = await cardRes.json();
+    if (cardBody && !cardBody.error && cardBody.data_involved) {
+      document.getElementById('stateSiSays').textContent = cardBody.data_involved + ' — approve to continue. Nothing has moved yet.';
+    }
+  } catch (e) { /* keep the generic message above */ }
+
+  var ar = document.getElementById('actionRow');
+  ar.className = 'action-row show-approve show-decline';
+  document.querySelector('.btn-approve').textContent = 'Approve';
+  document.getElementById('askRow').className = 'ask-row';
+}
+
+async function handleGateApprove() {
+  if (!pendingGate || liveExecuting) return;
+  liveExecuting = true;
+  var g = pendingGate;
+
+  var card = document.getElementById('stateCard');
+  card.className = 'state-card state-processing visible';
+  document.getElementById('stateIcon').textContent = STATE_META.processing.icon;
+  document.getElementById('stateLabel').textContent = STATE_META.processing.label;
+  document.getElementById('stateSub').textContent = STATE_META.processing.sub;
+  document.getElementById('stateSiSays').textContent = 'Recording your approval and retrying now. Do not close this screen.';
+  document.getElementById('actionRow').className = 'action-row';
+
+  try {
+    const grantRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/grant_intent_approval', {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_intent_id: g.intentId, p_level: 1, p_method: 'citizen_app_confirm' })
+    });
+    const grant = await grantRes.json();
+    if (!grant || !grant.success) throw new Error('Approval could not be recorded.');
+
+    const retryRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + g.rpcName, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(g.body)
+    });
+    const retryBody = await retryRes.json();
+
+    liveExecuting = false;
+    pendingGate = null;
+
+    if (retryBody?.pending_approval) {
+      throw new Error('Approval did not clear — please try again.');
+    }
+    if (!retryRes.ok || retryBody?.message || retryBody?.code) {
+      var rawMsg = retryBody?.message || '';
+      var rpcError = rawMsg.includes('ACCOUNT_FROZEN') ? 'Your account is frozen — action blocked.'
+        : rawMsg.includes('CARD_FROZEN') ? 'Your card is frozen — this action is blocked.'
+        : rawMsg || 'The network rejected this action.';
+      throw new Error(rpcError);
+    }
+    if (!retryBody || retryBody.new_balance === undefined) {
+      throw new Error(retryBody?.message || retryBody?.error || 'No confirmation was returned. Nothing was sent.');
+    }
+
+    sessionStorage.setItem('citizen_balance', String(Math.round(retryBody.new_balance)));
+    if (retryBody.new_wisdom !== undefined) sessionStorage.setItem('citizen_wisdom', String(retryBody.new_wisdom));
+    sessionStorage.removeItem(_PENDING_KEY);
+
+    card.className = 'state-card';
+    var now = new Date();
+    var timeStr = now.toLocaleString('en-AU', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'short', year:'numeric'});
+    document.getElementById('rId').textContent = g.rid;
+    document.getElementById('rAction').textContent = g.s.type;
+    document.getElementById('rRecipient').textContent = g.s.recipient;
+    document.getElementById('rAmount').textContent = g.s.indxAmount.toFixed(2) + ' INDX ($' + (g.s.indxAmount * INDX_PRICE_USD).toFixed(2) + ' USD)';
+    document.getElementById('rFee').textContent = g.s.feeLabel;
+    document.getElementById('rTime').textContent = timeStr;
+    document.getElementById('receiptWrap').classList.add('visible');
+    lightPill(4);
+    saveToHistory({id: g.rid, label: g.s.label, icon: g.s.icon, ts: now.getTime(), status: 'approved'});
+    renderHistory();
+    showToast(g.p.type === 'withdraw' ? '✅ Withdrawal recorded' : '✅ Sent — confirmed');
+
+    var receiptCard = document.querySelector('#receiptWrap .receipt-card');
+    if (receiptCard && !document.getElementById('liveReturnBtn')) {
+      var btn = document.createElement('button');
+      btn.id = 'liveReturnBtn';
+      btn.textContent = g.p.type === 'withdraw' ? 'Back to Cash Out' : 'Back to Send';
+      btn.style.cssText = 'width:100%;padding:14px;border-radius:12px;background:var(--cyan);border:none;color:#000;font-size:14px;font-weight:800;cursor:pointer;margin-top:12px;';
+      btn.onclick = function() { window.location.href = g.p.returnUrl || 'citizen-dashboard.html'; };
+      receiptCard.appendChild(btn);
+    }
+  } catch (e) {
+    liveExecuting = false;
+    pendingGate = null;
+    card.className = 'state-card state-failed visible';
+    document.getElementById('stateIcon').textContent = STATE_META.failed.icon;
+    document.getElementById('stateLabel').textContent = STATE_META.failed.label;
+    document.getElementById('stateSub').textContent = STATE_META.failed.sub;
+    document.getElementById('stateSiSays').textContent = e?.message || 'The network rejected this action.';
+    document.getElementById('stateRecordText').textContent = '';
+    showToast('❌ ' + (e?.message || 'Approval failed'));
+    var ar2 = document.getElementById('actionRow');
+    ar2.className = 'action-row show-decline';
+    document.querySelector('.btn-decline').textContent = 'Back';
+    document.querySelector('.btn-decline').onclick = function() {
+      window.location.href = g.p.returnUrl || 'citizen-dashboard.html';
+    };
+  }
+}
+
+function handleGateDecline() {
+  var g = pendingGate;
+  pendingGate = null;
+  sessionStorage.removeItem(_PENDING_KEY);
+  showToast('Declined — nothing moved. Returning…');
+  setTimeout(function() {
+    window.location.href = (g && g.p && g.p.returnUrl) || 'citizen-dashboard.html';
+  }, 900);
+}
+
 async function handleDecline() {
+  if (pendingGate) { handleGateDecline(); return; }
   document.getElementById('actionRow').className = 'action-row';
   document.getElementById('askRow').className = 'ask-row';
   lightPill(4);

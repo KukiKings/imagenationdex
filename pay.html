@@ -347,6 +347,17 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
   </div>
 </div>
 
+<!-- APPROVAL GATE OVERLAY -->
+<div class="confirm-overlay" id="gateOverlay">
+  <div class="confirm-sheet" id="gateSheet">
+    <div class="cs-handle"></div>
+    <div class="cs-title">Approval required</div>
+    <div class="cs-sub" id="gateText">This payment needs your explicit approval before it can complete.</div>
+    <button class="btn-confirm" id="gateApproveBtn">Approve &amp; Send →</button>
+    <button class="btn-cancel" id="gateDeclineBtn">Cancel</button>
+  </div>
+</div>
+
 <!-- SUCCESS OVERLAY -->
 <div class="success-overlay" id="successOverlay">
   <div class="success-icon">✅</div>
@@ -379,10 +390,26 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
 const INDX_PRICE = 0.24;
 const SUPA_URL   = 'https://zljgthfzbalsunuoohcd.supabase.co';
 const SUPA_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+
+// REAL AUTH FIX (God Mode) — transfer_indx/withdraw_indx/stake_indx/grant_intent_approval/
+// get_action_intent_card are granted EXECUTE to `authenticated` (and now `anon` for the two
+// intent-card RPCs) but NOT to plain `anon` for the money-moving RPCs themselves — verified via
+// information_schema.role_routine_grants. This screen was sending only the anon key as its
+// Bearer token, same bug class already fixed in withdraw.html/staking.html/trust-before-
+// transaction.html: use the real Supabase Auth access_token when a genuine session exists.
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+let _realAccessToken = null;
+async function initRealSession() {
+  try {
+    const { data } = await sb.auth.getSession();
+    if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+  } catch (e) { /* stay on anon key */ }
+}
 
 let TARGET_SLUG = '';
 let TARGET_NAME = '';
@@ -390,6 +417,7 @@ let IS_CITIZEN  = false;
 
 // ── INIT — read ?to= param ──
 (async function init() {
+  await initRealSession(); // resolves from local storage almost instantly — needed before any RPC call
   const params = new URLSearchParams(window.location.search);
   // FIX 2026-08-30: /pay/<slug> is served via a vercel.json REWRITE, not a redirect -- the
   // browser's address bar (and therefore window.location.search, which this script reads)
@@ -515,6 +543,69 @@ function closeConfirm(e) {
   }
 }
 
+async function callSupaRpc(name, body) {
+  const res = await fetch(`${SUPA_URL}/rest/v1/rpc/${name}`, {
+    method: 'POST',
+    headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + (_realAccessToken || SUPA_KEY), 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const result = await res.json().catch(() => ({}));
+  return { res, result };
+}
+
+async function sendTransfer(amt, note, senderId) {
+  return callSupaRpc('transfer_indx', {
+    p_sender_id: senderId,
+    p_amount: amt,
+    p_recipient_address: TARGET_SLUG + '.IN$DEX',
+    p_note: note
+  });
+}
+
+// Approval Gateway: transfer_indx is risk_class >= 3 in agent_registry, so a first call can
+// come back pending instead of executing. Show what SIINDEX is asking approval for; on
+// explicit approve, grant it and retry the exact same transfer — request_action_approval()
+// matches it by terms hash and lets it through.
+async function showApprovalGate(intentId, amt, note) {
+  let card = null;
+  try { ({ result: card } = await callSupaRpc('get_action_intent_card', { p_intent_id: intentId })); } catch (e) {}
+  document.getElementById('gateText').textContent =
+    (card && !card.error && card.data_involved) ? card.data_involved
+      : `Send ${amt} INDX to ${TARGET_SLUG}.IN$DEX needs your explicit approval before it can complete.`;
+  document.getElementById('gateOverlay').classList.add('show');
+
+  document.getElementById('gateApproveBtn').onclick = async function () {
+    const gbtn = document.getElementById('gateApproveBtn');
+    gbtn.textContent = 'Sending…';
+    gbtn.disabled = true;
+    try {
+      const senderId = sessionStorage.getItem('citizen_id');
+      const { result: grant } = await callSupaRpc('grant_intent_approval', { p_intent_id: intentId, p_level: 1, p_method: 'citizen_app_confirm' });
+      if (!grant || !grant.success) throw new Error('Approval could not be recorded');
+      const { result: result2 } = await sendTransfer(amt, note, senderId);
+      if (result2?.pending_approval) throw new Error('Approval did not clear — please try again');
+      if (result2?.message || result2?.code || result2?.success === false) {
+        throw new Error(result2?.message || result2?.error || 'The network rejected this payment.');
+      }
+      if (result2?.new_balance !== undefined) sessionStorage.setItem('citizen_balance', String(result2.new_balance));
+      document.getElementById('gateOverlay').classList.remove('show');
+      document.getElementById('successSub').innerHTML =
+        `${amt} INDX sent to <strong>${TARGET_SLUG}.IN$DEX</strong>.<br>Standing by.`;
+      document.getElementById('successOverlay').classList.add('show');
+    } catch (e) {
+      showToast(e?.message || 'Approval failed. Try again.');
+      document.getElementById('gateOverlay').classList.remove('show');
+    } finally {
+      gbtn.textContent = 'Approve & Send →';
+      gbtn.disabled = false;
+    }
+  };
+
+  document.getElementById('gateDeclineBtn').onclick = function () {
+    document.getElementById('gateOverlay').classList.remove('show');
+  };
+}
+
 async function confirmPayment() {
   const btn = document.querySelector('.btn-confirm');
   btn.textContent = 'Sending…';
@@ -525,20 +616,7 @@ async function confirmPayment() {
   const note    = document.getElementById('noteInput').value.trim() || 'Sent via IN$DEX';
 
   try {
-    const res = await fetch(`${SUPA_URL}/rest/v1/rpc/transfer_indx`, {
-      method: 'POST',
-      headers: {
-        apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        p_sender_id: senderId,
-        p_amount: amt,
-        p_recipient_address: TARGET_SLUG + '.IN$DEX',
-        p_note: note
-      })
-    });
-    const result = await res.json();
+    const { res, result } = await sendTransfer(amt, note, senderId);
 
     // PostgREST/RPC failures come back as a non-2xx HTTP status with a
     // {message, code, ...} body — not {error} — so check res.ok first.
@@ -546,6 +624,17 @@ async function confirmPayment() {
     // success:false for expected rejections (e.g. "Cannot send to yourself" has
     // neither .message nor .code) -- that branch fell through here and showed
     // the success screen for a transfer that never happened.
+    // Approval Gateway: transfer_indx is risk_class >= 3, so a first attempt can come
+    // back as a normal 200 {success:false, pending_approval:true, intent_id} instead of
+    // executing. That is not a rejection — route it to the approval sheet, not the error path.
+    if (result?.pending_approval) {
+      document.getElementById('confirmOverlay').classList.remove('show');
+      btn.textContent = 'Confirm & Send →';
+      btn.disabled = false;
+      await showApprovalGate(result.intent_id, amt, note);
+      return;
+    }
+
     if (!res.ok || result?.message || result?.code || result?.success === false) {
       throw new Error(result?.message || result?.error || 'The network rejected this payment.');
     }

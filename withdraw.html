@@ -839,6 +839,15 @@
       </div>
     </div>
 
+    <!-- APPROVAL GATE STATE -->
+    <div id="sheetApproval" style="display:none;">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">Approval required</div>
+      <div class="sheet-sub" id="approvalText">This withdrawal needs your explicit approval before it can complete.</div>
+      <button class="sheet-btn" id="approveGateBtn">Approve & Continue</button>
+      <button class="sheet-btn ghost" id="declineGateBtn">Cancel</button>
+    </div>
+
     <!-- SUCCESS STATE -->
     <div id="sheetSuccess" style="display:none;">
       <div class="success-wrap">
@@ -1092,6 +1101,7 @@
 
     document.getElementById('sheetDefault').style.display = 'block';
     document.getElementById('sheetProcessing').style.display = 'none';
+    document.getElementById('sheetApproval').style.display = 'none';
     document.getElementById('sheetSuccess').style.display = 'none';
     document.getElementById('confirmOverlay').classList.add('open');
   }
@@ -1114,6 +1124,15 @@
         p_destination: pendingWithdraw.dest,
         p_recipient_label: pendingWithdraw.recipientLabel
       });
+
+      // withdraw_indx returns a normal 200 with {success:false, pending_approval:true, intent_id}
+      // when the Approval Gateway holds this action for explicit citizen sign-off — that is not
+      // a network failure, so it must not fall into the catch block below or show a fake success.
+      if (result && result.pending_approval) {
+        await handleApprovalGate(result.intent_id);
+        return;
+      }
+
       showSuccess(result);
       await applyBalance();
     } catch (e) {
@@ -1124,6 +1143,51 @@
         : 'Withdrawal failed — please try again';
       showToast(msg);
     }
+  }
+
+  // Approval Gateway: withdraw_indx is risk_class >= 3 in agent_registry, so a first call
+  // creates a pending citizen_intents row instead of executing. Show the citizen what SIINDEX
+  // is asking approval for, then on explicit approve, grant it and retry the exact same
+  // withdrawal — request_action_approval() matches it by terms hash and lets it through.
+  async function handleApprovalGate(intentId) {
+    document.getElementById('sheetProcessing').style.display = 'none';
+    document.getElementById('sheetDefault').style.display = 'none';
+    let card = null;
+    try { card = await rpc('get_action_intent_card', { p_intent_id: intentId }); } catch (e) {}
+    document.getElementById('approvalText').textContent =
+      (card && !card.error && card.data_involved)
+        ? card.data_involved
+        : 'This withdrawal needs your explicit approval before it can complete.';
+    document.getElementById('sheetApproval').style.display = 'block';
+
+    document.getElementById('approveGateBtn').onclick = async function () {
+      document.getElementById('sheetApproval').style.display = 'none';
+      document.getElementById('sheetProcessing').style.display = 'block';
+      document.getElementById('processingSub').textContent = 'Recording your approval…';
+      try {
+        const grant = await rpc('grant_intent_approval', { p_intent_id: intentId, p_level: 1, p_method: 'citizen_app_confirm' });
+        if (!grant || !grant.success) throw new Error('Approval could not be recorded');
+        const result2 = await rpc('withdraw_indx', {
+          p_citizen_id: citizenId,
+          p_amount: pendingWithdraw.amt,
+          p_method: pendingWithdraw.method,
+          p_destination: pendingWithdraw.dest,
+          p_recipient_label: pendingWithdraw.recipientLabel
+        });
+        if (result2 && result2.pending_approval) throw new Error('Approval did not clear — please try again');
+        showSuccess(result2);
+        await applyBalance();
+      } catch (e) {
+        document.getElementById('sheetProcessing').style.display = 'none';
+        document.getElementById('sheetDefault').style.display = 'block';
+        showToast('Approval failed — please try again');
+      }
+    };
+
+    document.getElementById('declineGateBtn').onclick = function () {
+      document.getElementById('sheetApproval').style.display = 'none';
+      document.getElementById('sheetDefault').style.display = 'block';
+    };
   }
 
   function showSuccess(result) {

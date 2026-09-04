@@ -781,6 +781,15 @@
       stakeResult = { success: false, error: 'Connection error' };
     }
 
+    // Approval Gateway: stake_indx is risk_class >= 3 in agent_registry, so a first call can
+    // come back a normal 200 {success:false, pending_approval:true, intent_id} instead of
+    // executing. Show what SIINDEX needs approved, then on explicit approve, grant it and
+    // retry the exact same stake — request_action_approval() matches it by terms hash.
+    if (stakeResult && stakeResult.pending_approval) {
+      await showStakeApprovalGate(stakeResult.intent_id, { p_citizen_id: citizenId, p_amount_indx: amt, p_lock_period: selectedLock.key, p_apy_low: range.low, p_apy_high: range.high, p_auto_compound: compoundOn }, amt, range);
+      return;
+    }
+
     if (!stakeResult || !stakeResult.success) {
       document.getElementById('confirmOverlay').classList.remove('show');
       // ACCOUNT_FROZEN arrives as stakeResult.message (a raw Postgres exception), not .error.
@@ -827,6 +836,76 @@
           <button onclick="document.getElementById('confirmOverlay').classList.remove('show')" style="width:100%;padding:14px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:15px;cursor:pointer;">Stake More</button>
         </div>`;
     }, 2000);
+  }
+
+  async function showStakeApprovalGate(intentId, stakeBody, amt, range) {
+    const card = document.getElementById('confirmCard');
+    let detail = 'Stake ' + amt + ' INDX needs your explicit approval before it can complete.';
+    try {
+      const cardRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_action_intent_card', {
+        method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_intent_id: intentId })
+      });
+      const cardBody = await cardRes.json();
+      if (cardBody && !cardBody.error && cardBody.data_involved) detail = cardBody.data_involved;
+    } catch (e) {}
+
+    card.innerHTML = `
+      <div style="padding:8px;">
+        <div style="font-size:42px;margin-bottom:14px;">👆</div>
+        <div style="font-size:18px;font-weight:800;margin-bottom:8px;">Approval required</div>
+        <div style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:22px;">${detail}</div>
+        <button id="stakeGateApproveBtn" style="width:100%;padding:14px;border-radius:12px;background:var(--cyan);border:none;color:#000;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">Approve &amp; Stake</button>
+        <button onclick="document.getElementById('confirmOverlay').classList.remove('show')" style="width:100%;padding:14px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:15px;cursor:pointer;">Cancel</button>
+      </div>`;
+
+    document.getElementById('stakeGateApproveBtn').onclick = async function () {
+      card.innerHTML = `<div style="padding:20px 0;"><div style="font-size:42px;margin-bottom:14px;">⚡</div><div style="font-size:16px;font-weight:700;margin-bottom:6px;">Recording approval…</div></div>`;
+      try {
+        const grantRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/grant_intent_approval', {
+          method: 'POST', headers: rpcHeaders(),
+          body: JSON.stringify({ p_intent_id: intentId, p_level: 1, p_method: 'citizen_app_confirm' })
+        });
+        const grant = await grantRes.json();
+        if (!grant || !grant.success) throw new Error('Approval could not be recorded.');
+
+        const retryRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/stake_indx', {
+          method: 'POST', headers: rpcHeaders(), body: JSON.stringify(stakeBody)
+        });
+        const retryData = await retryRes.json();
+        if (retryData?.pending_approval) throw new Error('Approval did not clear — please try again.');
+        if (!retryData || !retryData.success) {
+          const raw = retryData?.error || retryData?.message || 'Could not complete stake. Try again.';
+          throw new Error(String(raw).includes('ACCOUNT_FROZEN') ? 'Your account is frozen — staking is blocked.' : raw);
+        }
+
+        sessionStorage.setItem('citizen_balance', String(retryData.new_balance));
+        if (retryData.new_wisdom != null) sessionStorage.setItem('citizen_wisdom', String(retryData.new_wisdom));
+        await refreshBalance();
+        await loadStakingData();
+
+        try {
+          const cached = JSON.parse(localStorage.getItem('staking_positions') || '[]');
+          cached.unshift({
+            citizen_id: citizenId, amount_indx: amt, lock_period: stakeBody.p_lock_period,
+            apy_low: range.low, apy_high: range.high, auto_compound: stakeBody.p_auto_compound,
+            status: 'active', started_at: new Date().toISOString(), id: retryData.position_id
+          });
+          localStorage.setItem('staking_positions', JSON.stringify(cached.slice(0, 10)));
+        } catch (e) {}
+
+        card.innerHTML = `
+          <div style="padding:8px;">
+            <div style="font-size:48px;margin-bottom:14px;">✅</div>
+            <div style="font-size:20px;font-weight:800;margin-bottom:8px;">Staked!</div>
+            <div style="font-size:14px;color:var(--text-muted);line-height:1.6;margin-bottom:22px;">${amt} INDX locked · Est. ${range.low}–${range.high}% yield · Rewards distributed daily.</div>
+            <button onclick="document.getElementById('confirmOverlay').classList.remove('show');switchTab('mystakes')" style="width:100%;padding:14px;border-radius:12px;background:var(--cyan);border:none;color:#000;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;">View My Stakes</button>
+            <button onclick="document.getElementById('confirmOverlay').classList.remove('show')" style="width:100%;padding:14px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:15px;cursor:pointer;">Stake More</button>
+          </div>`;
+      } catch (e) {
+        document.getElementById('confirmOverlay').classList.remove('show');
+        showToast(e?.message || 'Approval failed. Try again.');
+      }
+    };
   }
 
   // ── REAL BALANCE ─────────────────────────────────────────────────────
