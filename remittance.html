@@ -54,6 +54,22 @@
     .ri-detail{font-size:11px;color:var(--text-muted);margin-top:1px;}
     .ri-check{margin-left:auto;color:var(--cyan);font-size:18px;font-weight:900;opacity:0;transition:opacity 0.15s;}
     .recipient-item.selected .ri-check{opacity:1;}
+
+    /* Remittance Agent — added 2026-09-04. Standalone widget, separate backend function,
+       not the SIINDEX chat screen — see remittance-agent edge function for why. */
+    .ra-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;}
+    .ra-title{font-size:12px;font-weight:800;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+    .ra-log{display:flex;flex-direction:column;gap:8px;margin-bottom:10px;max-height:220px;overflow-y:auto;}
+    .ra-log:empty{display:none;}
+    .ra-msg{font-size:13px;line-height:1.5;padding:9px 12px;border-radius:12px;max-width:88%;}
+    .ra-msg.me{align-self:flex-end;background:rgba(0,212,255,0.12);color:var(--text);}
+    .ra-msg.agent{align-self:flex-start;background:var(--surface2);color:var(--text);}
+    .ra-proposal{align-self:flex-start;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.3);border-radius:12px;padding:10px 12px;font-size:12px;color:var(--text-muted);max-width:88%;}
+    .ra-row{display:flex;gap:8px;}
+    .ra-input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-size:13px;outline:none;}
+    .ra-input:focus{border-color:var(--cyan);}
+    .ra-send{background:var(--cyan);color:#000;border:none;border-radius:10px;padding:0 16px;font-size:13px;font-weight:800;cursor:pointer;}
+    .ra-send:disabled{opacity:0.5;cursor:default;}
     .btn-send{width:100%;padding:16px;border-radius:14px;background:var(--green);border:none;color:#000;font-size:16px;font-weight:900;cursor:pointer;transition:opacity 0.2s;}
     .btn-send:disabled{opacity:0.35;cursor:not-allowed;}
     #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
@@ -256,6 +272,18 @@
         </div>
       </div>
 
+      <!-- REMITTANCE AGENT — added 2026-09-04. Separate function (remittance-agent), not the
+           SIINDEX chat screen/backend. Only ever proposes a send; the citizen still reviews
+           and taps "Send Money" above through the real transfer_indx/Approval Gateway path. -->
+      <div class="ra-card">
+        <div class="ra-title">✨ Ask SIINDEX about this transfer</div>
+        <div class="ra-log" id="raLog"></div>
+        <div class="ra-row">
+          <input class="ra-input" id="raInput" type="text" placeholder="e.g. send $50 to my mum in Fiji" onkeydown="if(event.key==='Enter')sendRaMessage();">
+          <button class="ra-send" id="raSendBtn" onclick="sendRaMessage()">Ask</button>
+        </div>
+      </div>
+
       <!-- RECURRING SEND -->
       <div class="recurring-card">
         <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -363,6 +391,21 @@
       </div>
     </div>
     <button class="btn-cancel-sheet" onclick="closeInviteSheet()">Cancel</button>
+  </div>
+</div>
+
+<!-- Approval Gateway sheet — added 2026-09-04. transfer_indx is risk_class>=3-gated (Session
+     100), so a real remittance can come back {success:false, pending_approval:true} instead
+     of sending. doSend() used to only check data.success===false and throw, which showed the
+     gate's message as a plain red error toast with no way to actually approve and complete
+     the send — a dead end, not a false success, but still broken. -->
+<div class="invite-overlay" id="gateOverlay" onclick="if(event.target===this)closeGateSheet()">
+  <div class="invite-sheet">
+    <div class="is-handle"></div>
+    <div class="is-title">🔐 Approval needed</div>
+    <div class="is-sub" id="gateText">This transfer needs your explicit approval before it can complete.</div>
+    <button class="btn-generate" id="gateApproveBtn" onclick="approveGateAndResend()">Approve & Send</button>
+    <button class="btn-cancel-sheet" onclick="closeGateSheet()">Cancel</button>
   </div>
 </div>
 
@@ -507,6 +550,8 @@ function renderRecipients(){
   }).join('');
 }
 
+let _lastSendArgs = null;
+
 async function doSend(){
   const amt = parseFloat(document.getElementById('sendAmt').value)||0;
   if(amt<=0){showToast('Enter an amount to send');return;}
@@ -527,14 +572,24 @@ async function doSend(){
   }
   try{
     const domain = recName.toLowerCase().replace(/\s+/g,'').replace(/\.indx$/i,'') + '.IN$DEX';
-    const recvFx = amt * curr.rate * 0.992;
-    const {data,error} = await sb.rpc('transfer_indx',{
+    const rpcArgs = {
       p_sender_id:         citizenId,
       p_recipient_address: domain,
       p_amount:             indxAmt,
       p_note:              `Remittance to ${recName} · ${curr.curr}`
-    });
+    };
+    const {data,error} = await sb.rpc('transfer_indx', rpcArgs);
     if(error) throw error;
+    // Approval Gateway: transfer_indx is risk_class>=3 in agent_registry (Session 100), so a
+    // first call can come back a normal 200 {success:false, pending_approval:true, intent_id}
+    // instead of sending -- must be checked before the generic failure branch below, or the
+    // gate's message just shows as a dead-end red toast with no way to actually approve.
+    if (data && data.pending_approval) {
+      _lastSendArgs = { rpcArgs, amt, recName, recDetail, indxAmt };
+      btn.disabled=false; btn.textContent='Send Money';
+      await showTransferGate(data.intent_id);
+      return;
+    }
     // FIXED 2026-09-03: transfer_indx returns a normal 200 response with
     // success:false for expected rejections (recipient not found, self-send,
     // Tier 0 monthly limit) -- this used to only check the transport-level
@@ -554,6 +609,148 @@ async function doSend(){
     btn.disabled=false; btn.textContent='Send Money';
   }
 }
+
+async function showTransferGate(intentId){
+  let cardData = null;
+  try {
+    const { data } = await sb.rpc('get_action_intent_card', { p_intent_id: intentId });
+    cardData = data;
+  } catch (e) {}
+  document.getElementById('gateText').textContent =
+    (cardData && !cardData.error && cardData.data_involved) ? cardData.data_involved
+      : 'This transfer needs your explicit approval before it can complete.';
+  document.getElementById('gateApproveBtn').dataset.intentId = intentId;
+  document.getElementById('gateOverlay').classList.add('open');
+}
+
+function closeGateSheet(){
+  document.getElementById('gateOverlay').classList.remove('open');
+}
+
+async function approveGateAndResend(){
+  const gbtn = document.getElementById('gateApproveBtn');
+  const intentId = gbtn.dataset.intentId;
+  gbtn.disabled = true; gbtn.textContent = 'Approving…';
+  try {
+    const { data: grant } = await sb.rpc('grant_intent_approval', { p_intent_id: intentId, p_level: 1, p_method: 'citizen_app_confirm' });
+    if (!grant || !grant.success) throw new Error('Approval could not be recorded.');
+    closeGateSheet();
+    if (_lastSendArgs) {
+      // Re-run doSend()'s own RPC call with the identical args — the terms-hash match
+      // clears the gate server-side and the transfer executes for real this time.
+      const btn = document.getElementById('sendBtn');
+      btn.disabled = true; btn.textContent = 'Sending…';
+      try {
+        const { data, error } = await sb.rpc('transfer_indx', _lastSendArgs.rpcArgs);
+        if (error) throw error;
+        if (!data || data.success === false) throw new Error((data && data.message) || 'Transfer failed — nothing was sent.');
+        if (data.new_balance !== undefined) sessionStorage.setItem('citizen_balance', data.new_balance);
+        showSuccess(_lastSendArgs.amt, _lastSendArgs.recName, _lastSendArgs.recDetail, _lastSendArgs.indxAmt, data.tx_id);
+      } catch (e) {
+        const raw = e.message || 'Transfer failed';
+        const msg = raw.includes('ACCOUNT_FROZEN') ? 'Your account is frozen — transfers are blocked. Unfreeze it from Emergency Freeze, or contact support.' : raw;
+        showToast('❌ ' + msg);
+      } finally {
+        btn.disabled = false; btn.textContent = 'Send Money';
+      }
+    }
+  } catch (e) {
+    showToast(e.message || 'Approval failed. Try again.');
+  } finally {
+    gbtn.disabled = false; gbtn.textContent = 'Approve & Send';
+  }
+}
+// ── Remittance Agent — added 2026-09-04. Calls the separate remittance-agent edge
+// function (not siindex-runtime). Only ever proposes {amount, currency, recipient_text} —
+// never sends anything itself. sb.functions.invoke() attaches the current Supabase Auth
+// session automatically, same as sb.rpc() elsewhere on this page. ──
+function raLogMsg(role, text){
+  const log = document.getElementById('raLog');
+  const div = document.createElement('div');
+  div.className = 'ra-msg ' + role;
+  div.textContent = text;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+function raLogProposal(text){
+  const log = document.getElementById('raLog');
+  const div = document.createElement('div');
+  div.className = 'ra-proposal';
+  div.textContent = text;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+function raAllCorridors(){
+  const out = [];
+  const add = (set, fromLabel) => Object.keys(set).forEach(k => {
+    const c = set[k];
+    out.push({ label: fromLabel + ' → ' + c.flag, from: fromLabel, to: c.curr, rate: c.rate });
+  });
+  add(corridors, 'AUD');
+  add(nzCorridors, 'NZD');
+  return out;
+}
+async function sendRaMessage(){
+  const input = document.getElementById('raInput');
+  const text = input.value.trim();
+  if (!text) return;
+  if (!citizenId) {
+    raLogMsg('agent', 'Sign in to ask SIINDEX about a transfer.');
+    return;
+  }
+  raLogMsg('me', text);
+  input.value = '';
+  const btn = document.getElementById('raSendBtn');
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const { data, error } = await sb.functions.invoke('remittance-agent', {
+      body: { message: text, corridors: raAllCorridors() }
+    });
+    if (error) {
+      // supabase-js surfaces any non-2xx response as `error`, with the actual JSON body
+      // (from remittance-agent's own json() responses) reachable via error.context.
+      let reason = null;
+      try { reason = (await error.context.json())?.error; } catch (e2) {}
+      raLogMsg('agent', reason === 'not_authenticated' || reason === 'no_citizen_record'
+        ? 'I can only help once you have a verified account — complete phone verification first.'
+        : 'Could not reach the assistant — try again.');
+      return;
+    }
+    if (data.error) {
+      raLogMsg('agent', data.error === 'model_provider_not_configured'
+        ? 'The assistant is not switched on yet — not live for this project.'
+        : 'Could not reach the assistant — try again.');
+      return;
+    }
+    if (data.reply) raLogMsg('agent', data.reply);
+    if (data.proposal) {
+      const p = data.proposal;
+      raLogProposal('Proposed: ' + (p.currency || curr.curr || 'AUD') + ' ' + p.amount + ' to "' + p.recipient_text + '" — review below.');
+      // Pre-fill the real amount field (same field doSend() reads) — never auto-sends.
+      if (p.amount) document.getElementById('sendAmt').value = p.amount;
+      updateFX();
+      // Try to match an already-saved recipient by name (case-insensitive substring) so the
+      // citizen doesn't have to re-select it — falls back to asking them to pick/add one.
+      const items = Array.from(document.querySelectorAll('.recipient-item'));
+      const needle = String(p.recipient_text || '').toLowerCase();
+      const match = items.find(el => needle && el.querySelector('.ri-name').textContent.toLowerCase().includes(needle));
+      if (match) {
+        items.forEach(el => el.classList.remove('selected'));
+        match.classList.add('selected');
+        match.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } else {
+        raLogMsg('agent', 'I don\'t see "' + p.recipient_text + '" in your saved recipients — pick one above or add them, then tap Send Money.');
+      }
+      document.getElementById('sendBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    if (data.account_frozen) raLogMsg('agent', 'Note: your account is currently frozen — sending will be blocked until you unfreeze it.');
+  } catch (e) {
+    raLogMsg('agent', 'Could not reach the assistant — try again.');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Ask';
+  }
+}
+
 let _lastSavings = null;
 let _lastRecipient = null;
 
