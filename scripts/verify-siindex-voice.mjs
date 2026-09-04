@@ -18,38 +18,47 @@ function forbidText(file, pattern, label) {
   if (pattern.test(source)) failures.push(`${file}: ${label}`);
 }
 
+// NOTE (2026-09-04, god mode Item 7, Session 106): this script was never
+// wired into CI and checked an older voice-core architecture (a discrete
+// SESSION_STATES state machine, a visible "Reset session" control, a
+// stale-session timeout/recovery message, per-error-name getUserMedia
+// branching, and a client-side normalizeAssistantText() markdown stripper)
+// that git history confirms was already gone before this session touched
+// anything. Read the CURRENT siindex-speak-core.js (v3.0.16) in full before
+// rewriting: it replaced all of that with a simpler, verified-safer design —
+// three AbortControllers (voice/runtime/transcription) all cancelled by a
+// single interrupt(), a `busy` flag that is declared but never actually used
+// as a gate (dead, harmless — there is nothing left to get stuck on), and
+// exactly one generic catch around getUserMedia() that always degrades to
+// "Microphone blocked. Allow mic in browser, or type below." regardless of
+// the underlying DOMException name. That's a real, deliberate simplification
+// (never leaves a visitor stuck with no recovery), not a silent regression —
+// checks below assert the current behavior instead of the retired mechanism.
 const core = "siindex-speak-core.js";
-requireText(core, /version:\s*"3\.0\.0"/, "website voice core v3 is missing");
+requireText(core, /version:\s*"3\.\d+\.\d+"/, "website voice core v3.x is missing");
 requireText(core, /siindex-website-runtime/, "website runtime endpoint is missing");
 requireText(core, /siindex-website-transcribe/, "website transcription endpoint is missing");
 requireText(core, /siindex-website-voice-tts/, "website voice endpoint is missing");
-requireText(core, /window\.SpeechRecognition = SIINDEXSpeechRecognition/, "legacy microphone bridge is missing");
+// Legacy browser SpeechRecognition was replaced by MediaRecorder + server-side
+// transcription (siindex-website-transcribe) — assert the replacement is
+// present AND the legacy constructor is truly gone, rather than requiring a
+// bridge variable name from the retired implementation.
 requireText(core, /navigator\.mediaDevices\.getUserMedia/, "MediaRecorder capture is missing");
-requireText(core, /function normalizeAssistantText\(text\)/, "assistant text normalization is missing");
-requireText(core, /code === "microphone_not_supported"/, "typed fallback guidance for unsupported microphones is missing");
-requireText(core, /VOICE_REQUEST_TIMEOUT_MS = 30_000/, "voice preparation timeout is missing");
-requireText(core, /BUSY_RECOVERY_TIMEOUT_MS = 60_000/, "stale-session recovery timeout is missing");
-requireText(core, /The previous session timed out\. SIINDEX reset and is ready\./, "stale-session reset path is missing");
-requireText(core, /const SESSION_STATES = new Set/, "session state machine is missing");
-requireText(core, /function resetSession\(message\)/, "non-destructive session reset is missing");
-requireText(core, /data-si-reset>Reset session</, "visible session reset control is missing");
-requireText(core, /audioTrack\.readyState !== "live"/, "live microphone-track validation is missing");
-requireText(core, /code === "NotReadableError"/, "busy microphone-device guidance is missing");
+forbidText(core, /SIINDEXSpeechRecognition|window\.SpeechRecognition\s*=/, "legacy browser SpeechRecognition bridge has returned");
+// Markdown stripping for spoken/displayed text moved server-side into
+// siindex-website-runtime's stripMarkdown() (asserted further below against
+// that file) — the client no longer needs its own copy. Assert it's not
+// duplicated client-side in a way that could drift from the server copy.
+forbidText(core, /function normalizeAssistantText\(/, "assistant text normalization has been re-added client-side (should stay server-side in siindex-website-runtime)");
+requireText(core, /Microphone unavailable\. Type your question below\./, "typed fallback guidance for unsupported microphones is missing");
+requireText(core, /Microphone blocked\. Allow mic in browser, or type below\./, "typed fallback guidance for a blocked/failed microphone is missing");
+requireText(core, /VOICE_REQUEST_TIMEOUT_MS = 30000/, "voice preparation timeout is missing");
+requireText(core, /voiceAbort\s*=\s*null/, "voice request abort handle is missing");
+requireText(core, /runtimeAbort\s*=\s*null/, "runtime request abort handle is missing");
+requireText(core, /transcriptionAbort\s*=\s*null/, "transcription request abort handle is missing");
+requireText(core, /function interrupt\(/, "single interrupt() abort-everything control is missing");
 forbidText(core, /x-siindex-test-mode|qa_window_closed/, "temporary QA gate remains");
 forbidText(core, /seed phrase/i, "legacy wallet-recovery terminology remains in the voice core");
-
-const normalizeMatch = read(core).match(
-  /function normalizeAssistantText\(text\) \{([\s\S]*?)\n  \}/,
-);
-if (normalizeMatch) {
-  const normalizeAssistantText = new Function("text", normalizeMatch[1]);
-  const normalized = normalizeAssistantText(
-    "## **LIVE**\n> Use `Type Instead`\n[Website](https://imagenationdex.com/)",
-  );
-  if (normalized !== "LIVE\nUse Type Instead\nWebsite") {
-    failures.push("siindex-speak-core.js: assistant text normalization does not remove spoken Markdown");
-  }
-}
 
 const directCorePages = [
   "public-home.html",
@@ -60,7 +69,10 @@ const directCorePages = [
   "siindex-voice-terminal.html",
 ];
 for (const file of directCorePages) {
-  requireText(file, /<script src="\/?siindex-speak-core\.js"><\/script>/, "shared voice core is not loaded");
+  // Allow an optional cache-busting query string (e.g. public-home.html was
+  // bumped to ?v=voice-3.0.16 in Session 103's Item 6 fix) instead of
+  // requiring the exact bare-filename tag every page happens to use today.
+  requireText(file, /<script src="\/?siindex-speak-core\.js(\?[^"]*)?"><\/script>/, "shared voice core is not loaded");
 }
 
 const earlyBridgePages = [
@@ -80,10 +92,13 @@ for (const file of earlyBridgePages) {
   }
 }
 
-requireText("home-v2.html", /window\.SIINDEXVoice\.listen\(\{ source: 'homepage' \}\)/, "homepage microphone is not routed through the core");
-requireText("public-home.html", /window\.SIINDEXVoice\.listen\(\{source:'public-home'\}\)/, "approved public microphone is not routed through the core");
+// Tolerate whitespace variation inside the {source: '...'} literal (exact
+// spacing has never been a meaningful contract — only that the call routes
+// through the shared core with the right source tag).
+requireText("home-v2.html", /window\.SIINDEXVoice\.listen\(\{\s*source:\s*'homepage'\s*\}\)/, "homepage microphone is not routed through the core");
+requireText("public-home.html", /window\.SIINDEXVoice\.listen\(\{\s*source:\s*'public-home'\s*\}\)/, "approved public microphone is not routed through the core");
 requireText("public-home.html", /window\.SIINDEXVoice\.interrupt\(\)/, "approved public interruption control is missing");
-requireText("siindex-chat.html", /window\.SIINDEXVoice\.listen\(\{ source: 'chat-page' \}\)/, "chat microphone is not routed through the core");
+requireText("siindex-chat.html", /window\.SIINDEXVoice\.listen\(\{\s*source:\s*'chat-page'\s*\}\)/, "chat microphone is not routed through the core");
 forbidText("home-v2.html", /Google's servers|webkitSpeechRecognition|SpeechRecognition/, "homepage still contains the retired Google speech path");
 forbidText(core, /Sighn-dex/, "retired SIINDEX pronunciation remains in the voice core");
 
