@@ -714,3 +714,68 @@ real market data source for that screen yet. Committed as a standalone
 change; did not touch any protected file.
 
 ---
+
+## Section 8 (Compliance, Legal & Trust) audit sweep — closed out — 5 Sep 2026
+
+Six of the 23 Section 8 screens had never had the full `indx-screen-audit`
+v2 checklist run against them (the other 17 were already done in earlier
+batches). Dispatched one verification agent per file to close the gap:
+
+- **`data-breach-claim.html` — FAIL → fixed.** A live `INDX_PRICE_USD=0.24`
+  constant was actually wired into six on-screen $ conversions (not dead
+  code, unlike the same constant found elsewhere). "IN$DEX pays you based
+  on severity of data exposed" stated a live payout mechanism that doesn't
+  exist. The default scan message read "Checking 14.2 billion breached
+  records..." for the first ~700ms before the honest message replaced it.
+  A `localStorage`-persisted countdown manufactured urgency on a claim
+  ("Optus · Sep 2022," "89d" remaining) that was never real. All four
+  fixed to honest "planned/illustrative" framing; no backend exists for
+  this feature (confirmed via `list_tables`), so no real-wiring option
+  existed.
+- **`data-royalty.html` — PASS, 0 edits.** Already matches the honest
+  template `data-marketplace.html` established: real Supabase-backed zero
+  states, explicit "not connected yet," a labeled-hypothetical calculator.
+- **`data-sovereignty-hub.html` — FAIL → fixed.** One dead
+  `INDX_PRICE_USD=0.24` declaration had survived its own 28 Aug audit pass
+  (that fix predated the sibling-screen precedent for flagging this exact
+  dead-code pattern by a day). Removed. Flagged that the same dead constant
+  is still live in `citizen-dashboard.html`, `join.html`, `transparency.html`,
+  `sovereign-identity.html`, `instant-onboard.html` — outside Section 8,
+  not touched, noted for a future sweep.
+- **`trust-compliance-dashboard.html` — FAIL → fixed.** A fabricated
+  "Trust Civilisation Law guarantees no citizen is blocked unfairly" (no
+  such law exists — canon's only Civilisation Law is the unrelated 98/2
+  revenue split) and a stale "Safe when within AUSTRAC thresholds" line
+  implying an active AUSTRAC-regulated framework. Fixed the latter by
+  reusing `siindex-trust-compliance.html`'s exact canonical wording
+  verbatim (AUSTRAC/VASP registration paused/out of scope; Cook Islands
+  registration in progress). Also removed the same dead `INDX_PRICE_USD`
+  constant and added "(provisional, pending launch)" to three INDX reward
+  amounts for sitewide consistency.
+- **`sovereign-verify.html` — FAIL → fixed.** The post-verify success
+  message was hardcoded to a single Tier-2 (PayID) script — "Your PayID is
+  linked... deposit and withdraw up to $2,000/month" — and fired unchanged
+  for Tier 3 and Tier 4 verification too, so a citizen completing address/
+  source-of-funds verification would see a false claim about a PayID
+  action they never took, the wrong limit, and the wrong Wisdom award.
+  Built a tier-correct `showTierSuccess()` with honest "(not live yet)"
+  fiat framing for all three tiers; same undisclosed present-tense fiat
+  claim also existed in the "Why verify" bottom sheet, fixed there too.
+  Governance-voting perk line was missing the "not live yet" disclosure
+  present on the adjacent yield perk — added. Added missing `og:title`/
+  `og:description` meta tags.
+- **`dispute.html` — PASS, 0 edits.** Confirmed it does *not* share
+  `arbitration.html`'s fake jury/bond/verdict problem — `arbitration.html`
+  was retired to a redirect stub in Aug 2026 specifically because
+  `dispute.html` already has the real thing (real `disputes`/
+  `dispute_events` tables, real `open_dispute`/`resolve_dispute` RPCs,
+  shared with `merchant-command-center.html`).
+
+**Verification**: independently re-ran `node --check` on all four edited
+files myself (not just trusting each agent's self-report) and grepped for
+the specific fabrications each agent claimed to remove
+(`INDX_PRICE_USD`, "14.2 billion", "Trust Civilisation Law") to confirm
+none survived. All clean. Section 8 (23/23 screens) is now fully closed
+out against the v2 checklist.
+
+---

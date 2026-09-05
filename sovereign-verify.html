@@ -5,7 +5,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Sovereign Verification IN$DEX</title>
-<meta name="description" content="Verification tiers on IN$DEX are optional and never a gate. Tier 1 works from day one with just email or phone; higher tiers raise fiat limits. No ID required to earn, trade, or get paid.">
+<meta name="description" content="Verification tiers on IN$DEX are optional and never a gate. Tier 1 works from day one with just email or phone; higher tiers raise planned fiat limits (not live yet). No ID required to earn, trade, or get paid.">
+<meta property="og:title" content="Sovereign Verification IN$DEX">
+<meta property="og:description" content="Verification tiers on IN$DEX are optional and never a gate. Tier 1 works from day one with just email or phone; higher tiers raise planned fiat limits (not live yet). No ID required to earn, trade, or get paid.">
 <style>
   :root {
     --cyan: #00D4FF;
@@ -475,7 +477,7 @@
   <div class="tier-body" id="t3body">
     <div class="tier-perks">
       <div class="perk-row"><div class="p-dot purple"></div><div>Fiat deposit/withdraw up to <span>$50,000/month</span> (planned — not live yet)</div></div>
-      <div class="perk-row"><div class="p-dot purple"></div><div>Governance voting rights (Wisdom 50+)</div></div>
+      <div class="perk-row"><div class="p-dot purple"></div><div>Governance voting rights (Wisdom 50+) — planned, not live yet</div></div>
       <div class="perk-row"><div class="p-dot purple"></div><div>Sovereign Yield (Wisdom 100) — planned, not live yet; no rate is guaranteed</div></div>
       <div class="perk-row"><div class="p-dot purple"></div><div>Wisdom Score +20 bonus</div></div>
       <div class="perk-row"><div class="p-dot purple"></div><div>Sovereign Elder badge</div></div>
@@ -592,11 +594,19 @@
 </div>
 
 <!-- SUCCESS OVERLAY -->
+<!-- FIXED (audit v2): this overlay used to be a single hardcoded Tier-2 message shown
+     after ALL THREE verify actions (Tier 2 PayID, Tier 3 government-ID mock, Tier 4
+     address/funds mock). A Tier 3 or Tier 4 citizen was seeing "Your PayID is linked...
+     deposit and withdraw up to $2,000/month... +10 Wisdom" — wrong claim, wrong dollar
+     figure, wrong wisdom amount. It also asserted fiat deposit/withdraw as a present-tense
+     live capability, contradicting the "(planned — not live yet)" disclosure used
+     everywhere else on this page. showTierSuccess() below now fills in tier-correct,
+     honestly-disclosed copy before opening this overlay. -->
 <div class="overlay" id="successOverlay">
   <div class="success-card">
     <div class="success-icon">✅</div>
-    <div class="success-title">Verified Citizen!</div>
-    <div class="success-sub">Your PayID is linked. You can now deposit and withdraw up to <strong>$2,000/month</strong>. Your Wisdom Score has been boosted by +10.</div>
+    <div class="success-title" id="successTitle">Verified Citizen!</div>
+    <div class="success-sub" id="successSub">Your PayID is linked. Your Wisdom Score has been boosted.</div>
     <button class="success-btn" onclick="window.location.href='citizen-dashboard.html'">Back to Dashboard</button>
   </div>
 </div>
@@ -610,7 +620,7 @@
   <div class="sheet-title" id="whySheetTitle">Why verify at all?</div>
   <div class="sheet-body">
     Every tier on this screen is <strong>optional</strong>. IN$DEX works fully at Tier 1 with just your email or phone no ID, no gate.<br><br>
-    Verifying a higher tier simply raises your monthly fiat deposit/withdraw limit and adds a Wisdom Score bonus. It never affects what you can earn, hold, or trade.<br><br>
+    Verifying a higher tier simply raises your planned monthly fiat deposit/withdraw limit (fiat rails are not live yet) and adds a Wisdom Score bonus. It never affects what you can earn, hold, or trade.<br><br>
     Your data stays private: only what's needed for the tier you choose, stored securely, and never sold.
   </div>
   <button class="sheet-close-btn" id="whySheetCloseBtn" onclick="closeWhySheet()">Got it</button>
@@ -898,11 +908,39 @@
       // client-facing award_wisdom call it used to make would silently roll back the
       // ENTIRE tier upgrade for any citizen without a real auth session).
       if (data.new_wisdom != null) sessionStorage.setItem('citizen_wisdom', String(data.new_wisdom));
-      document.getElementById('successOverlay').classList.add('open');
+      showTierSuccess('tier2');
     } catch (e) {
       errEl.textContent = 'Could not verify — try again';
       btn.disabled = false; btn.textContent = '✓ Verify PayID';
     }
+  }
+
+  // ── FIXED (audit v2): tier-correct, honestly-disclosed success copy — see comment
+  // above #successOverlay. Fiat figures stay "planned — not live yet" instead of
+  // asserting deposit/withdraw is live, and each tier reports its own real Wisdom
+  // award (Tier 2: +10 per verify_payid; Tier 3/4: +20 per verify_government_id /
+  // verify_address_funds) instead of the old hardcoded +10 for every tier. ──
+  const TIER_SUCCESS_COPY = {
+    tier2: {
+      title: 'Verified Citizen!',
+      body: 'Your PayID is linked. This raises your planned fiat deposit/withdraw limit to <strong>$2,000/month</strong> once fiat rails are live (not live yet). Your Wisdom Score has been boosted by +10.'
+    },
+    tier3: {
+      title: 'Sovereign Verified!',
+      body: 'Your document type is on file. This is a prototype check, not a real identity verification. It raises your planned fiat deposit/withdraw limit to <strong>$50,000/month</strong> once fiat rails are live (not live yet). Your Wisdom Score has been boosted by +20.'
+    },
+    tier4: {
+      title: 'Full Sovereign!',
+      body: 'Your country and source of funds are on file. This is a prototype check, not a real address or source-of-funds verification. You\'ve completed the sovereign verification ladder. Your Wisdom Score has been boosted by +20.'
+    }
+  };
+  function showTierSuccess(kind) {
+    const copy = TIER_SUCCESS_COPY[kind] || TIER_SUCCESS_COPY.tier2;
+    const titleEl = document.getElementById('successTitle');
+    const subEl = document.getElementById('successSub');
+    if (titleEl) titleEl.textContent = copy.title;
+    if (subEl) subEl.innerHTML = copy.body;
+    document.getElementById('successOverlay').classList.add('open');
   }
 
   function showToast(msg) {
@@ -946,7 +984,7 @@
       document.getElementById('tier3card').classList.add('active');
       // GOD MODE PATCH — refresh the progress dots now that tier 3 is real
       renderProgressSnapshot(data.new_kyc_tier || 2);
-      document.getElementById('successOverlay').classList.add('open');
+      showTierSuccess('tier3');
     } catch (e) {
       errEl.textContent = 'Could not submit — try again';
       btn.disabled = false; btn.textContent = 'Submit for Review';
@@ -990,7 +1028,7 @@
       document.getElementById('tier4card').classList.add('active');
       // GOD MODE PATCH — refresh the progress dots now that tier 4 is real
       renderProgressSnapshot(data.new_kyc_tier || 3);
-      document.getElementById('successOverlay').classList.add('open');
+      showTierSuccess('tier4');
     } catch (e) {
       errEl.textContent = 'Could not submit — try again';
       btn.disabled = false; btn.textContent = 'Submit for Review';
