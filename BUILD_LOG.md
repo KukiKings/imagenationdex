@@ -138,3 +138,68 @@ Proceeding to Week 2 (Tier 1/2 KYC) will surface this concretely; noting it here
 rather than guessing a schema now.
 
 ---
+
+## Week 2 — Government-ID verification (Tier 1 per AJ's framework) — DONE, 5 Sep 2026
+
+**Decision on the open `kyc_tier` question above**: resolved by matching the
+integer the frontend already used. `sovereign-verify.html`'s own
+`renderProgressSnapshot()` had a pre-existing `tier >= 2` check driving its
+"Tier 3 Sovereign" UI dot, so government-ID verification became
+`kyc_tier = 2` (not 1) to match code that already existed rather than
+inventing a new number. `kyc_tier` ladder is now: 0 = signup, 1 = PayID
+(`verify_payid`), 2 = government ID (`verify_government_id`, new this week).
+
+1. **`verify_government_id(p_citizen_id uuid, p_doc_type text)` — new Postgres
+   function, deployed live** (migration `add_verify_government_id_mock`).
+   Explicitly a **MOCK** — validates the doc-type string against a known list
+   and checks caller authorization, but inspects no real document image (no
+   document upload/storage exists in this codebase at all). Sets
+   `kyc_tier = 2`, awards +20 wisdom, logs a `security_events` row labeled
+   `'MOCK government ID verification — placeholder validation only, no real
+   document check performed'` with `mock: true` in the detail, and returns
+   `{success, already, new_kyc_tier: 2, new_wisdom, mock: true}`. Safety
+   check performed before deploy: grepped every Postgres function referencing
+   `kyc_tier` — only `transfer_indx` gates real privilege on it (a Tier-0
+   monthly send-limit exemption at `>=1`), so this mock unlocks no additional
+   real financial privilege beyond what `verify_payid` (tier 1) already does.
+2. **`sovereign-verify.html` — Tier 3 (Government ID) flow wired to the real
+   RPC**, previously ending in two dead toasts no matter what a citizen did.
+   Added `submitGovernmentId()` (mirrors the existing `verifyTier2()` pattern
+   for PayID): reads the selected document chip, calls
+   `/rest/v1/rpc/verify_government_id`, and on success shows the "already
+   verified" state and refreshes the progress snapshot. Updated
+   `loadRealTierState()` to check `tier >= 2` on page load (mirroring the
+   existing `tier >= 1` branch for Tier 2) so a citizen who already verified
+   sees the completed state instead of the submit form. Replaced the old
+   "Usually reviewed within 24 hours" copy (implied a human review queue that
+   doesn't exist) with an honest "Prototype check — instantly approved for
+   testing. This is not yet a real identity verification." Also updated the
+   PayID RPC call on this same page from the old `verify_payid_tier2` name to
+   `verify_payid` (Priority-1 rename had shipped to the DB but this one call
+   site was missed).
+3. **`sovereign-verify.html` — separate false-claim fix found while doing the
+   above.** All three tier cards advertised "Fiat deposit/withdraw up to
+   $X/month" as a bare, present-tense capability. There is no live fiat
+   on/off-ramp anywhere in the app — `fiat-onramp.html` itself already
+   discloses "Planned rails, not live integrations yet" — but this page's
+   perk list carried no such disclosure, so a citizen reading only this
+   screen would reasonably believe fiat deposit/withdraw already works
+   today. Added "(planned — not live yet)" to all three fiat lines ($200,
+   $2,000, $50,000/month), matching the disclosure style already used
+   elsewhere on the same page (the Sovereign Yield perk line).
+
+**Verification**: `node --check` clean on all 3 inline `<script>` blocks in
+`sovereign-verify.html`. The `verify_government_id` migration was tested in a
+rolled-back transaction (`begin; ...; rollback;`) before being applied for
+real, then confirmed live (`{"success":true}` returned on a real call).
+Repo-wide grep confirms no other live call site references the old
+`verify_payid_tier2` name (2 hits remain, both are historical fix-log
+comments describing a past bug — correctly left untouched).
+
+**Still open, not addressed this pass**: Tier 2 per AJ's framework (address +
+source of funds) is not built — no `verify_address_funds` function exists
+yet. Real document upload (camera/file capture to storage) also still does
+not exist; `verify_government_id` accepts a document *type* only, never an
+actual image, and that limitation is now honestly disclosed on-screen.
+
+---
