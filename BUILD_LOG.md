@@ -852,3 +852,80 @@ siindex-writing-mode.html, siindex.html — plus the utility-directory.html
 "Live" mislabel flagged above.
 
 ---
+
+## Section 9 batch 2 — the remaining 9 unaudited SIINDEX screens closed — 5 Sep 2026
+
+All 9 remaining Section 9 gap screens had violations, several substantial.
+Notable ones (full detail per file in each agent's report, not repeated
+here):
+
+- **`siindex-voice-command-os.html` — 8 violations**, the heaviest of the
+  batch: a fabricated derived USD balance, a "genesis/founding price...
+  founding citizens hold at this price" entitlement claim, two
+  self-contradicting "staking yield earned overnight" lines on a page that
+  elsewhere correctly says no yield has been paid, an Emergency Shutdown
+  description implying live server-side job control it doesn't have, and
+  a hardcoded fake balance (1247.5) that silently displayed as real when
+  no session existed.
+- **`siindex-voice-terminal.html` — 9 violations** (8 by the agent + 1
+  caught in my own verification pass, see below): a flat "$35 million
+  fully diluted market cap" claim with wrong arithmetic ($0.24 × 100M =
+  $24M, not $35M), a live-24/7-ops claim, an Agent Wallet KB entry
+  claiming autonomous swap/stake/LP execution with no "not launched"
+  hedge (contradicting the agent-wallet-*.html family's own disclosures),
+  and a 98/2 Law answer asserting "hardcoded into the smart contract...
+  immutable... no DAO vote can change it, ever" — the exact overclaim
+  already corrected on indx-98-2-law.html but never propagated here.
+- **`siindex-web3-identity.html` — 11 violations**: an unconditional
+  "✓ Verified" badge with no backing check, an on-chain-biometric claim
+  stated as live, a UI label ("Returning Solana address") that
+  contradicted its own already-fixed resolver logic beneath it, and a
+  fabricated "+2" padding on a displayed credential count.
+- **`siindex.html` (flagship page) — 5 violations**: a withdrawn
+  pronunciation ("Sighn-dex" — reverted by an 8/13 founder ruling,
+  contradicting the live voice runtime's own "Sinn-dex only" name lock),
+  a stale hardcoded "9.6% of target reached" badge left over from a
+  retired price-target calculation that the JS above it was already
+  fixed for but the badge never updated, a security-check literally named
+  "Recovery Word Shield" (the same architectural hard-stop already fixed
+  in siindex-avatar.html — no recovery phrase exists under the MPC 2-of-3
+  Grid Account), and an unbacked "She's been watching, {name}" greeting
+  implying active monitoring.
+- **`siindex-unknowns-engine.html`, `siindex-use-case-library.html`,
+  `siindex-verify.html`, `siindex-voice-interface.html`,
+  `siindex-writing-mode.html`** — smaller fixes: the same dead
+  `INDX_PRICE_USD` constant (found in nearly every file this sweep),
+  missing meta tags, a false "Wallets/Social tabs use real Supabase-backed
+  data" claim on the anti-scam identity-verification screen `siindex-
+  verify.html` (verified against the DB: only Lookup and Scams actually
+  query Supabase; Wallets/Social are hardcoded placeholder arrays — a
+  real risk on a page whose whole purpose is telling citizens what to
+  trust), and a page-level "planned, not live" disclosure banner added to
+  `siindex-use-case-library.html` in place of per-field hedging across
+  ~70 present-tense fields (the O(1)-banner pattern from the skill's own
+  gotchas, used when per-sentence hedging stops scaling).
+
+**Caught in independent verification, not by the agent**:
+`siindex-voice-terminal.html` still computed and displayed a "worth
+roughly $X USD" figure from the citizen's real balance using the $0.24
+reference price — the identical pattern the sibling `siindex-voice-
+command-os.html` agent explicitly removed in the same batch ("fabricated
+implied USD balance"). The two agents worked independently and reached
+inconsistent verdicts on the same pattern; fixed directly for consistency
+rather than re-dispatching an agent.
+
+**Verification**: re-ran `node --check` on all 9 files (10 non-empty
+inline script blocks total) independently, and grepped every file for
+`INDX_PRICE_USD` to confirm each removal/rename landed and that no
+undisclosed live derivation of it survived — this is what caught the
+voice-terminal gap above.
+
+**Section 9 status**: all 66 `siindex-*.html`/`siindex.html` screens have
+now had the full v2 checklist + voice-check pass at least once (57 in
+earlier sessions, 9 unaudited found and closed this session across the
+two batches above). One structural finding remains open for AJ's call:
+`siindex-test-board.html` (an internal QA harness) is linked from the
+citizen-facing home page via `utility-directory.html`, which labels it
+`status:'Live'` — flagged in the batch 1 entry above, not fixed.
+
+---
