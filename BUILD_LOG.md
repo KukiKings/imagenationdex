@@ -666,3 +666,51 @@ just AJ twice), that requires inserting a second row into
 so it doesn't get missed later, not blocking on it now.
 
 ---
+
+## Audited the 5 screens AJ flagged as broken — 4 already fixed, 1 real bug found and fixed — 5 Sep 2026
+
+AJ named 5 specific screens as broken (`siindex-sovereign-embodiment.html`,
+`app-lock.html`, `l99-launch-command.html`, `limit-orders.html`,
+`token-detail.html`). Dispatched one verification agent per file rather
+than trusting the claims at face value — each agent independently read the
+full file, checked git history, and re-derived the finding before touching
+anything.
+
+**Result: 4 of the 5 were already fixed**, all by an earlier commit on
+this branch (`d058a26`, "Priority 1 critical fixes"), from earlier in this
+same session. `siindex-sovereign-embodiment.html`'s fake ticker
+percentages, `app-lock.html`'s fake-Face-ID-success animation,
+`limit-orders.html`'s unlabeled fake depth chart, and `token-detail.html`'s
+false "Metaplex Bubblegum, verified via mainnet" claim were all
+confirmed clean on the current working tree — no edits needed, verified
+independently rather than re-doing already-done work.
+
+**`l99-launch-command.html` had a real, still-live bug**: a "First
+Citizens Arriving" widget ran an *unbounded* fake-citizen generator
+(`AUTO_CITIZENS` — 8 hardcoded Pacific-nation names — driven by an
+unconditional `setInterval(..., 5000)` in `startAutoArrivals()`) that kept
+incrementing a "citizens onboarded" counter forever while the page stayed
+open, persisted that count to `localStorage`, and restored/resumed the
+climbing fake count on every later visit (`ewaRestore()`). This is
+distinct from the screen's earlier, already-fixed 4-name scripted
+rehearsal sequence — this generator kept fabricating *new* names and
+*new* growth indefinitely, on a screen whose own countdown shows the real
+launch date is still Feb 2027 (i.e. it's currently impossible for any
+real citizen to have onboarded at all).
+
+Fixed by deleting `AUTO_CITIZENS`, `startAutoArrivals()`, `ewaRestore()`,
+and their `localStorage` persistence keys entirely (no real citizen-count
+data source exists yet for a pre-launch rehearsal widget, so removal —
+not a fake-to-real swap — was the honest fix), strengthening the
+existing disclaimer copy to be unambiguous that the card is a scripted
+rehearsal that doesn't grow on its own, and confirming via grep that no
+orphaned references remain outside explanatory comments.
+
+**Verification**: `node --check` clean on the one inline script. Confirmed
+live against the Supabase schema (`list_tables`) that no `orders` /
+`order_book` / `limit_orders` table exists anywhere, corroborating the
+`limit-orders.html` agent's independent finding that there's genuinely no
+real market data source for that screen yet. Committed as a standalone
+change; did not touch any protected file.
+
+---

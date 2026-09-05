@@ -309,9 +309,9 @@
       <span class="arrival-title">First Citizens Arriving</span>
       <span style="font-size:11px;color:var(--gold);" id="arrivalLive">Simulated preview</span>
     </div>
-    <div style="font-size:10.5px;color:var(--text-muted,#8A93AD);margin-bottom:6px;">🚧 Names, countries and count below are illustrative launch-day preview data, not real citizen arrivals.</div>
+    <div style="font-size:10.5px;color:var(--text-muted,#8A93AD);margin-bottom:6px;">🚧 Names, countries and count below are a scripted rehearsal of the launch-day onboarding narrative, played out only when you press "Initiate L99 Launch Sequence" below. They are not real citizen arrivals, do not come from the citizens table, and do not persist or grow on their own between visits.</div>
     <div class="arrival-count" id="citizenCount">0</div>
-    <div class="arrival-sub">citizens onboarded since launch (simulated)</div>
+    <div class="arrival-sub">rehearsal count — not real citizens onboarded</div>
     <div class="citizen-chart-wrap">
       <canvas id="citizenChart" height="44"></canvas>
     </div>
@@ -624,15 +624,21 @@ function updateReadinessFromSequence() {
 }
 renderReadiness();
 
-// ── GOD MODE R1: CITIZEN GROWTH CHART + AUTO-STREAM ──────────────
-const CITIZEN_HIST_KEY  = 'indx_l99_citizen_hist';
-const CITIZEN_COUNT_KEY = 'indx_l99_citizen_count';
-let citizenHistory = JSON.parse(localStorage.getItem(CITIZEN_HIST_KEY) || '[]');
+// ── GOD MODE R1: CITIZEN GROWTH CHART (rehearsal only) ───────────
+// FIXED 2026-09-05: this used to persist an ever-growing "citizen count" to
+// localStorage (CITIZEN_COUNT_KEY/CITIZEN_HIST_KEY) and fed it from
+// startAutoArrivals() — an unconditional setInterval that fabricated new
+// "citizens" every 5s forever using Math.random() and a hardcoded array of
+// realistic Pacific-nation names (AUTO_CITIZENS), making the platform look
+// like it was accumulating real signups even though L99 has not launched.
+// That engine and its persistence are removed. The chart now only plots the
+// bounded, in-memory rehearsal sequence that triggerLaunch() below scripts
+// (max 4 points) — it resets on every page load and never grows on its own.
+let citizenHistory = [];
 
 function recordCitizenCount(n) {
   citizenHistory.push({ t: Date.now(), n });
   if (citizenHistory.length > 24) citizenHistory = citizenHistory.slice(-24);
-  localStorage.setItem(CITIZEN_HIST_KEY, JSON.stringify(citizenHistory));
   drawCitizenChart();
 }
 function drawCitizenChart() {
@@ -660,58 +666,19 @@ function drawCitizenChart() {
   ctx.strokeStyle = '#00D4FF'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
 }
 
-const AUTO_CITIZENS = [
-  { flag:'🇹🇴', name:'Sione Taufa',     loc:'Nukuʻalofa, Tonga' },
-  { flag:'🇻🇺', name:'Grace Naupa',     loc:'Port Vila, Vanuatu' },
-  { flag:'🇸🇧', name:'Moses Irofaʻa',  loc:'Honiara, Solomon Islands' },
-  { flag:'🇳🇷', name:'Dabwido Enos',    loc:'Yaren, Nauru' },
-  { flag:'🇰🇮', name:'Tiara Teii',      loc:'South Tarawa, Kiribati' },
-  { flag:'🇵🇼', name:'Belau Ngiraked',  loc:'Ngerulmud, Palau' },
-  { flag:'🇫🇲', name:'Lino Aisek',      loc:'Palikir, Micronesia' },
-  { flag:'🇲🇭', name:'Hilda Jeine Jr',  loc:'Majuro, Marshall Islands' },
-];
-let autoIdx = 0, autoArrivalStarted = false;
+// NOTE: the unbounded auto-arrival generator (AUTO_CITIZENS + startAutoArrivals,
+// an unconditional setInterval fabricating new "citizens" every 5s with
+// Math.random() and persisting the growing count to localStorage) has been
+// removed — see the FIXED 2026-09-05 note above. The only citizen names ever
+// shown on this screen are now the 4 fixed, clearly-labeled rehearsal entries
+// in CITIZENS above, played out once by triggerLaunch().
+drawCitizenChart();
 
-function startAutoArrivals() {
-  if (autoArrivalStarted) return;
-  autoArrivalStarted = true;
-  setInterval(() => {
-    const c = AUTO_CITIZENS[autoIdx % AUTO_CITIZENS.length];
-    autoIdx++;
-    const mins = Math.floor(Math.random() * 3) + 1;
-    const ws = Math.floor(Math.random() * 3);
-    CITIZENS.unshift({ flag:c.flag, name:c.name, loc:c.loc, ws:`WS ${ws}`, time:'Just now' });
-    if (CITIZENS.length > 8) CITIZENS.pop();
-    CITIZENS.forEach((ci, idx) => { if (idx > 0) ci.time = (idx * mins) + 'm ago'; });
-    citizenCount++;
-    document.getElementById('citizenCount').textContent = citizenCount;
-    localStorage.setItem(CITIZEN_COUNT_KEY, String(citizenCount));
-    recordCitizenCount(citizenCount);
-    document.getElementById('arrivalList').innerHTML = CITIZENS.slice(0, 5).map((ci, i) =>
-      `<div class="arrival-item${i === 0 ? ' new' : ''}">
-        <span class="arr-flag">${ci.flag}</span>
-        <div class="arr-info"><div class="arr-name">${ci.name}</div><div class="arr-loc">${ci.loc}</div></div>
-        <div style="text-align:right"><div class="arr-ws">${ci.ws}</div><div class="arr-time">${ci.time}</div></div>
-      </div>`
-    ).join('');
-    updateReadinessFromSequence();
-  }, 5000);
-}
-
-// Restore earned-while-away citizen count
-(function ewaRestore() {
-  const saved = parseInt(localStorage.getItem(CITIZEN_COUNT_KEY) || '0');
-  if (saved > citizenCount) {
-    citizenCount = saved;
-    document.getElementById('citizenCount').textContent = citizenCount;
-  }
-  drawCitizenChart();
-})();
-
-// Watch for triggerLaunch updating the citizen count DOM node
+// Watch for triggerLaunch updating the citizen count DOM node (rehearsal only,
+// bounded at 4 — see triggerLaunch()). No auto-generation is started here.
 new MutationObserver(() => {
   const n = parseInt(document.getElementById('citizenCount').textContent || '0');
-  if (n >= 4) { startAutoArrivals(); updateReadinessFromSequence(); }
+  updateReadinessFromSequence();
   recordCitizenCount(n);
 }).observe(document.getElementById('citizenCount'), { childList:true, characterData:true, subtree:true });
 
@@ -737,18 +704,17 @@ function restoreL99State() {
       document.getElementById('citizenCount').textContent = citizenCount;
       renderSequence();
       updateReadinessFromSequence();
-      if (citizenCount >= 4) startAutoArrivals();
       addFeedMsg('State restored. L99 sequence already in progress. Monitoring continues.', 'cyan');
     }
   } catch(_) {}
 }
-// GOD MODE PATCH — wrap triggerLaunch to persist state + auto-start arrivals
+// GOD MODE PATCH — wrap triggerLaunch to persist state
 const _origTriggerLaunch = triggerLaunch;
 triggerLaunch = function() {
   _origTriggerLaunch.apply(this, arguments);
   setTimeout(() => { saveL99State(); updateReadinessFromSequence(); }, 3100);
   setTimeout(() => { saveL99State(); updateReadinessFromSequence(); }, 6100);
-  setTimeout(() => { saveL99State(); updateReadinessFromSequence(); startAutoArrivals(); }, 8600);
+  setTimeout(() => { saveL99State(); updateReadinessFromSequence(); }, 8600);
 };
 restoreL99State();
 
