@@ -1379,8 +1379,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderGallery();
 
   // GOD MODE PATCH: sovereign pattern ticker — continuous scroll + live value updates
-  renderPatternTicker();
-  setInterval(tickPatterns, 950); // value updates every ~1s while strip scrolls continuously
+  renderPatternTicker(); // static symbol+label scroll — see the 2026-11 fix note above tickPatterns' old definition
 
   // GOD MODE PATCH: cyan illuminate based on active voice on load
   updateTitleIllumination();
@@ -1728,6 +1727,15 @@ function copyBrief() {
 }
 
 // ── SOVEREIGN PATTERN TICKER ──
+// FIXED 2026-11 (god mode Nov 30 build plan, Priority 1): this used to invent a
+// 0-100 "value" per node with Math.random() and animate it up/down every ~1s
+// like a live crypto price tape (colored arrows, flashing % changes) — but
+// none of these ten concept words (Voice, Presence, Authority, etc.) have any
+// real underlying metric. There was nothing to disclose *as* a number because
+// the number was never measuring anything; it was pure invented motion styled
+// to look like live market data. Removed the fabricated value/arrow/% entirely
+// rather than adding a disclosure label to a number that has no real referent
+// — the ticker is now what it honestly is: a static, symbol+label scroll.
 const PATTERN_NODES = [
   { sym: '◈', label: 'Voice'     },
   { sym: '◆', label: 'Presence'  },
@@ -1741,59 +1749,16 @@ const PATTERN_NODES = [
   { sym: '◎', label: 'Clarity'   },
 ];
 
-// Each node has a value 0–100; movements mirror crypto-style tick volatility
-const _pvals = PATTERN_NODES.map(() => 85 + Math.random() * 10);
-const _pdirs = _pvals.map(() => 'flat');
-
 function renderPatternTicker() {
   const row = document.getElementById('patternTicker');
   if (!row) return;
   // Render nodes TWICE — duplicate set for seamless CSS infinite scroll loop
-  const makeSet = (suffix) => PATTERN_NODES.map((n, i) => {
-    const pct = (_pvals[i] - 85).toFixed(1);
-    const sign = pct >= 0 ? '+' : '';
-    return `
+  const makeSet = (suffix) => PATTERN_NODES.map((n, i) => `
       <div class="pattern-cell">
         <div class="pattern-sym flat" id="psym-${suffix}-${i}">${n.sym}</div>
-        <div class="pattern-arrow flat" id="parr-${suffix}-${i}">→</div>
         <div class="pattern-lbl">${n.label}</div>
-        <div class="pattern-pct flat" id="ppct-${suffix}-${i}">${sign}${pct}%</div>
-      </div>`;
-  }).join('');
+      </div>`).join('');
   row.innerHTML = makeSet('a') + makeSet('b');
-}
-
-function tickPatterns() {
-  PATTERN_NODES.forEach((_, i) => {
-    const delta = (Math.random() - 0.47) * 1.8;
-    const prev  = _pvals[i];
-    _pvals[i]   = Math.max(78, Math.min(100, prev + delta));
-
-    const dir     = _pvals[i] > prev + 0.12 ? 'up' : _pvals[i] < prev - 0.12 ? 'down' : 'flat';
-    const prevDir = _pdirs[i];
-    _pdirs[i]     = dir;
-
-    const pct  = (_pvals[i] - 85).toFixed(1);
-    const sign = pct >= 0 ? '+' : '';
-    const arrowGlyph = dir === 'up' ? '↑' : dir === 'down' ? '↓' : '→';
-
-    // Update both duplicate sets (a + b) so values stay in sync while scrolling
-    ['a','b'].forEach(s => {
-      const symEl = document.getElementById(`psym-${s}-${i}`);
-      const arrEl = document.getElementById(`parr-${s}-${i}`);
-      const pctEl = document.getElementById(`ppct-${s}-${i}`);
-      if (!symEl || !arrEl || !pctEl) return;
-
-      symEl.className = `pattern-sym ${dir}`;
-      arrEl.className = `pattern-arrow ${dir}`;
-      arrEl.textContent = arrowGlyph;
-
-      const changed = pctEl.textContent !== `${sign}${pct}%`;
-      pctEl.className = `pattern-pct ${dir}${changed ? ' flash' : ''}`;
-      pctEl.textContent = `${sign}${pct}%`;
-      if (changed) setTimeout(() => pctEl.classList.remove('flash'), 380);
-    });
-  });
 }
 
 // ── CYAN TATTOO ILLUMINATE — Interview & Citizen modes ──
