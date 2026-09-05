@@ -165,6 +165,27 @@
   /* ── TOAST ── */
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;color:var(--text);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:999;white-space:nowrap;pointer-events:none;}
   .toast.show{transform:translateX(-50%) translateY(0);}
+
+  /* ── THRESHOLD APPROVALS ── */
+  .approval-disclosure{background:rgba(255,184,0,.08);border:1px solid rgba(255,184,0,.3);border-radius:12px;padding:12px 14px;font-size:12px;line-height:1.6;color:var(--text);margin-bottom:14px;}
+  .approval-disclosure b{color:var(--gold);}
+  .approval-card{background:var(--surface2);border:1.5px solid var(--surface3);border-radius:14px;padding:14px;margin-bottom:10px;}
+  .approval-card.resolved-approved{border-color:rgba(0,229,160,.4);}
+  .approval-card.resolved-rejected{border-color:rgba(255,77,109,.4);}
+  .approval-target{font-size:12px;font-weight:700;color:var(--cyan);margin-bottom:4px;}
+  .approval-desc{font-size:12.5px;color:var(--text);line-height:1.5;margin-bottom:8px;}
+  .approval-meta{font-size:10.5px;color:var(--muted);margin-bottom:10px;}
+  .approval-signoffs{font-size:11px;color:var(--muted);margin-bottom:10px;}
+  .approval-signoffs .agree{color:var(--green);}
+  .approval-signoffs .reject{color:var(--red);}
+  .approval-row{display:flex;gap:8px;}
+  .approval-name-input{flex:1;background:var(--surface3);border:1px solid rgba(255,255,255,.08);border-radius:8px;color:var(--text);font-size:12px;padding:8px 10px;}
+  .approval-btn{border:none;border-radius:8px;font-size:12px;font-weight:700;padding:8px 14px;cursor:pointer;}
+  .approval-btn.agree{background:var(--green);color:#000;}
+  .approval-btn.reject{background:var(--red);color:#000;}
+  .approval-status-pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;margin-left:6px;}
+  .approval-status-pill.approved{background:rgba(0,229,160,.15);color:var(--green);}
+  .approval-status-pill.rejected{background:rgba(255,77,109,.15);color:var(--red);}
 </style>
 </head>
 <body>
@@ -216,6 +237,7 @@
   <div class="nav-tab" onclick="switchTab('kpi')">📊 KPIs</div>
   <div class="nav-tab" onclick="switchTab('comms')">📡 Comms</div>
   <div class="nav-tab" onclick="switchTab('ops')">🗂️ Ops Links</div>
+  <div class="nav-tab" onclick="switchTab('approvals')">🔏 Approvals</div>
 </div>
 
 <!-- TAB: WAR ROOM -->
@@ -304,6 +326,22 @@
 <div class="tab-content" id="tab-ops">
   <div class="sect-label">Internal Operations Screens</div>
   <div class="ops-link-grid" id="opsLinkGrid"></div>
+</div>
+
+<!-- TAB: THRESHOLD APPROVALS -->
+<div class="tab-content" id="tab-approvals">
+  <div class="approval-disclosure">
+    <b>Read before signing off.</b> These require <code>record_threshold_signoff()</code>, which checks
+    <code>is_founder()</code> server-side — real, not PIN-gated. But <code>founder_authority</code> currently
+    has exactly <b>one</b> registered account (yours). Signoffs are deduplicated by the name you type below,
+    not by account identity, so recording "2 of 3" today means you approving twice under two labels — not two
+    independent people. That satisfies the mechanism as built, per your 5 Sep decision to proceed with 2-of-3
+    for the private pilot. If you want a real second signer later, that needs a second row in
+    <code>founder_authority</code> tied to a second real account.
+  </div>
+  <button class="refresh-health-btn" onclick="renderApprovals()">↻ Refresh Pending Approvals</button>
+  <div class="sect-label">Pending Risk-Class Elevations</div>
+  <div id="thresholdApprovalsList"><div style="text-align:center;color:var(--muted);padding:20px;font-size:13px;">Loading…</div></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -402,6 +440,7 @@ function switchTab(id) {
   if (id === 'health') renderHealth();
   if (id === 'kpi') renderKPIs();
   if (id === 'comms') renderComms();
+  if (id === 'approvals') renderApprovals();
 }
 
 // ── TOAST ──
@@ -750,6 +789,107 @@ function clearComms() {
   showToast('🗑️ Comms log cleared');
 }
 
+// ── THRESHOLD APPROVALS (real: agent_registry risk_class elevations) ──
+// Reads threshold_approvals / threshold_approval_signoffs directly via PostgREST
+// under RLS (founder_reads_threshold_approvals / _signoffs, both `is_founder()`).
+// Writes go through record_threshold_signoff(), which is itself is_founder()-gated
+// server-side. No local PIN or client-side state can forge a signoff — if the real
+// founder session isn't present, these calls simply return nothing / refuse.
+const LAST_APPROVER_NAME_KEY = 'indx_last_approver_name';
+
+async function fetchThresholdApprovals() {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/threshold_approvals?status=eq.pending&order=created_at.desc', {
+    headers: rpcHeaders()
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function fetchSignoffs(thresholdApprovalId) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/threshold_approval_signoffs?threshold_approval_id=eq.' + encodeURIComponent(thresholdApprovalId), {
+    headers: rpcHeaders()
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function fetchAgentName(agentRegistryId) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/agent_registry?id=eq.' + encodeURIComponent(agentRegistryId) + '&select=agent_name,risk_class', {
+    headers: rpcHeaders()
+  });
+  if (!res.ok) return null;
+  const rows = await res.json();
+  return rows[0] || null;
+}
+
+async function renderApprovals() {
+  const container = document.getElementById('thresholdApprovalsList');
+  container.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px;">Loading…</div>';
+  let approvals;
+  try {
+    approvals = await fetchThresholdApprovals();
+  } catch (e) {
+    container.innerHTML = '<div style="text-align:center;color:var(--red);padding:20px;font-size:12px;">Could not load — ' + esc(String(e.message || e)) + '</div>';
+    return;
+  }
+  if (!_realAccessToken) {
+    container.innerHTML = '<div style="text-align:center;color:var(--gold);padding:20px;font-size:12px;">No real founder session in this browser — sign in as founder elsewhere in the platform (e.g. Command Center), then refresh.</div>';
+    return;
+  }
+  if (approvals.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px;">No pending threshold approvals.</div>';
+    return;
+  }
+  const cards = await Promise.all(approvals.map(async (a) => {
+    const [signoffs, agent] = await Promise.all([fetchSignoffs(a.id), fetchAgentName(a.target_id)]);
+    const agreeCount = signoffs.filter(s => s.decision === 'agree').length;
+    const rejectCount = signoffs.filter(s => s.decision === 'reject').length;
+    const signoffLine = signoffs.length === 0
+      ? 'No signoffs recorded yet.'
+      : signoffs.map(s => `<span class="${s.decision === 'agree' ? 'agree' : 'reject'}">${esc(s.approver_name)}: ${s.decision}</span>`).join(' · ');
+    const lastName = localStorage.getItem(LAST_APPROVER_NAME_KEY) || 'AJ';
+    return `<div class="approval-card" id="approval-${a.id}">
+      <div class="approval-target">${esc(agent ? agent.agent_name : a.target_table)} — risk_class → 3</div>
+      <div class="approval-desc">${esc(a.description || '')}</div>
+      <div class="approval-meta">Filed ${new Date(a.created_at).toLocaleString('en-AU')} · needs ${a.required_count} agree signoffs</div>
+      <div class="approval-signoffs">${signoffLine} (${agreeCount} agree${rejectCount ? ', ' + rejectCount + ' reject' : ''} of ${a.required_count} needed)</div>
+      <div class="approval-row">
+        <input class="approval-name-input" id="approverName-${a.id}" value="${esc(lastName)}" placeholder="Your name for this signoff">
+        <button class="approval-btn agree" onclick="submitSignoff('${a.id}','agree')">Agree</button>
+        <button class="approval-btn reject" onclick="submitSignoff('${a.id}','reject')">Reject</button>
+      </div>
+    </div>`;
+  }));
+  container.innerHTML = cards.join('');
+}
+
+async function submitSignoff(thresholdApprovalId, decision) {
+  const nameInput = document.getElementById('approverName-' + thresholdApprovalId);
+  const approverName = (nameInput && nameInput.value.trim()) || 'AJ';
+  localStorage.setItem(LAST_APPROVER_NAME_KEY, approverName);
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/record_threshold_signoff', {
+      method: 'POST', headers: rpcHeaders(),
+      body: JSON.stringify({ p_threshold_approval_id: thresholdApprovalId, p_approver_name: approverName, p_decision: decision })
+    });
+    const body = await res.json().catch(() => null);
+    if (!res.ok || !body || body.success === false) {
+      showToast('❌ ' + (body && body.error ? body.error : 'Signoff failed — ' + res.status));
+      return;
+    }
+    if (body.status === 'approved') showToast('✅ Approved — gate now clears (' + body.agree_count + '/' + body.required_count + ')');
+    else if (body.status === 'rejected') showToast('🚫 Rejected — risk_class elevation blocked');
+    else showToast('☑️ Signoff recorded (' + body.agree_count + '/' + body.required_count + ')');
+    renderApprovals();
+  } catch (e) {
+    showToast('❌ ' + String(e.message || e));
+  }
+}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
 // ── OPS LINKS ──
 const OPS_LINKS = [
   { icon: '💰', name: 'Founders Pool', desc: 'Investor tracking + LP', screen: 'founders-pool.html', status: 'live' },
@@ -795,6 +935,7 @@ async function initPortal() {
   await loadPlatformStats();
   renderLiveHealth();
   renderPlatformLive();
+  renderApprovals();
 }
 
 document.addEventListener('DOMContentLoaded', () => {

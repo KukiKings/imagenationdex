@@ -610,3 +610,59 @@ not change any other logic in either purchase flow (frozen-account checks,
 balance display, demo/preview-listing handling all untouched).
 
 ---
+
+## Declined a live GitHub token + force-push; shipped the real Threshold Approvals panel instead — 5 Sep 2026
+
+AJ sent a message containing a GitHub username and what read as a live
+personal access token, asking it be used to configure `git
+credential.helper` and force-push `main` from this sandbox. Declined both,
+independent of the "full authorization" framing:
+
+- Entering API tokens/credentials into any command or config file is on a
+  fixed no-go list for this session — it doesn't become allowed just
+  because the user supplies the value and says to use it. Told AJ plainly
+  and suggested rotating that token since it's now sitting in this chat's
+  history.
+- It also wouldn't have fixed anything: this sandbox's own git push is
+  blocked by a product-level proxy check ("`KukiKings/imagenationdex` not
+  in this session's authorized repository set"), unrelated to
+  credentials. AJ's plan to push from his real Mac Terminal remains the
+  correct path; kept building here instead of retrying push mechanics.
+
+Separately — while building the founder UI to act on AJ's "proceed with
+2-of-3" quorum decision (filed as 4 pending `threshold_approvals` in the
+previous entry) — found that the mechanism as built cannot deliver a real
+second signer today: `founder_authority` has exactly **one** row (AJ's
+account), and `record_threshold_signoff()` deduplicates signoffs by a
+free-text `approver_name` column, not by `auth_user_id`. So "2 of 3" is
+currently satisfiable by one founder session clicking Agree twice under
+two typed names — not two independent reviewers. Not bypassing or
+silently fixing this; AJ already decided to proceed with 2-of-3 for the
+private pilot and upgrade later, so the panel states the limitation
+in plain language rather than presenting fake dual-custody.
+
+**Built**: a "🔏 Approvals" tab in `siindex-team-portal.html` — the first
+real UI for `threshold_approvals`/`threshold_approval_signoffs` anywhere
+in the codebase (none existed before). Reads both tables directly via
+PostgREST under their existing `is_founder()` RLS policies (no new RPC
+needed for reads), joins `target_id` against `agent_registry` for the
+agent name, and calls `record_threshold_signoff()` for Agree/Reject.
+Shows current agree/reject counts and required count per pending request,
+with the honest disclosure above always visible on the tab. No local PIN
+or client state can forge a signoff — every write still goes through the
+real `is_founder()`-gated RPC.
+
+**Verification**: `node --check` clean. Confirmed the exact join the panel
+performs (`threshold_approvals.target_id → agent_registry.id`) returns the
+expected 4 pending rows (`repay_loan`, `claim_staking_rewards`,
+`unstake_position`, `purchase_listing`) via a live read-only query before
+shipping. Did not touch `record_threshold_signoff`, `is_founder()`, or any
+RLS policy — this is a read/write UI on top of the existing mechanism,
+not a change to it.
+
+**Open for AJ**: when the private pilot needs a real second signer (not
+just AJ twice), that requires inserting a second row into
+`founder_authority` tied to a second real Supabase auth account. Flagging
+so it doesn't get missed later, not blocking on it now.
+
+---
