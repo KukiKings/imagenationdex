@@ -1226,9 +1226,19 @@ async function executeBuy() {
   }
 
   try {
+    // FIXED 2026-09 (Approval Gateway audit): purchase_listing is authenticated_exec
+    // only (anon cannot call it) -- this was hardcoding the anon key as the bearer
+    // token, so every real purchase attempt was silently rejected (401/RLS), the
+    // same bug class already fixed in staking.html's "God Mode R3" pass. js/indx-db.js
+    // is already loaded on this page; use its real session token when available.
+    let _accessToken = SUPA_KEY;
+    try {
+      const _session = await (window.INDXDB && INDXDB.getSession ? INDXDB.getSession() : null);
+      if (_session && _session.access_token) _accessToken = _session.access_token;
+    } catch (_) { /* fall back to anon key -- request will fail cleanly, not silently */ }
     const res = await fetch(`${SUPA_URL}/rest/v1/rpc/purchase_listing`, {
       method: 'POST',
-      headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' },
+      headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + _accessToken, 'Content-Type': 'application/json' },
       body: JSON.stringify({ p_buyer_id: buyerId, p_listing_id: activeListing.id })
     });
     const data = await res.json();
@@ -1244,6 +1254,12 @@ async function executeBuy() {
         // Remove from grid
         allListings = allListings.filter(l => String(l.id) !== String(activeListing.id));
         renderGrid(allListings);
+      } else if (data && data.pending_approval) {
+        // FIXED 2026-09 (Approval Gateway audit): purchase_listing's risk_class is
+        // filed for elevation but not yet approved (see BUILD_LOG.md) -- this is a
+        // no-op today, but future-proofing the response shape now rather than
+        // needing a second frontend deploy once it activates.
+        showToast('👆 This purchase needs approval first — check Approvals, then try again.');
       } else {
         // ACCOUNT_FROZEN / CARD_FROZEN are raw purchase_listing error codes, not something
         // to show a citizen verbatim -- map them like withdraw.html / bill-pay.html do.

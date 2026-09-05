@@ -581,3 +581,32 @@ the transaction). Applied as 4 separate tracked migrations. `node --check`
 clean on all 5 touched HTML files.
 
 ---
+
+## Marketplace purchase anon-key bug fixed — 5 Sep 2026
+
+Continued autonomously (per AJ's full-authorization directive) while waiting
+on his push-credential and 2-signer-quorum decisions. The earlier Approval
+Gateway audit noted, in passing, that `marketplace.html` and
+`nft-marketplace.html` both hardcode the anon key as the `Authorization`
+bearer token when calling `purchase_listing` — a real, unrelated bug (not a
+gating issue): `purchase_listing` is `authenticated_exec` only per the grant
+check, so every real purchase attempt through either screen was silently
+rejected (401/RLS), the same bug class `staking.html`'s own prior "God Mode
+R3" fix already addressed for `stake_indx`/`unstake_position`/etc.
+
+- **`marketplace.html`** — already loads `js/indx-db.js`; `executeBuy()` now
+  calls `INDXDB.getSession()` for a real access token before the
+  `purchase_listing` fetch, falling back to the anon key (which will fail
+  cleanly, not silently) if no session exists. Also added `pending_approval`
+  handling to the response branch, future-proofing for when the threshold
+  approval above clears (currently a no-op).
+- **`nft-marketplace.html`** — had no Supabase client loaded at all. Added
+  the `supabase-js` CDN script and a minimal inline `getSession()` call in
+  `buyNFT()`, same fix, same fallback behavior, same `pending_approval`
+  handling added.
+
+**Verification**: `node --check` clean on both files' inline scripts. Did
+not change any other logic in either purchase flow (frozen-account checks,
+balance display, demo/preview-listing handling all untouched).
+
+---
