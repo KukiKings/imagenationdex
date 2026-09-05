@@ -779,3 +779,76 @@ none survived. All clean. Section 8 (23/23 screens) is now fully closed
 out against the v2 checklist.
 
 ---
+
+## Section 9 (SIINDEX/AI cluster) — batch 1 of 9 unaudited screens — 5 Sep 2026
+
+Cross-referenced the full list of 66 `siindex-*.html`/`siindex.html` files
+against git history and found 18 that had never had the v2 audit or the
+SIINDEX voice-check run (the other ~48 were already done in earlier
+sessions). Dispatched 9 agents for the first batch, each running both
+checks:
+
+- **`siindex-domain-claim.html` — 1 fix.** Missing og: tags. Otherwise
+  already correctly gated ("Not live issuance yet... needs AJ unlock").
+- **`siindex-education-preview.html` — 2 fixes.** "SIINDEX runs the
+  education swarm" stated live autonomous execution that isn't real
+  (matches the same overclaim already fixed in siindex-present.html /
+  siindex-operator.html); missing og: tags.
+- **`siindex-faq.html` — 1 fix.** Answers render dynamically from
+  `js/siindex-public-knowledge.js` (already clean, not touched); the
+  static page itself was missing og: tags. Voice check: 10/10.
+- **`siindex-interview.html` — 1 fix.** Missing og: tags. The live
+  voice/model backend (`siindex-speak-core.js` → siindex-website-runtime
+  edge function) was correctly left untouched as a protected boundary.
+  Voice check: 10/10.
+- **`siindex-jarvis.html` — 3 fixes.** Two unhedged present-tense
+  capability claims about the prepare→approve→act mission flow
+  (contradicted by the page's own "device-local demo" disclosure two
+  lines below); missing og: tags.
+- **`siindex-sovereign-services.html` — 2 fixes.** Same dead
+  `INDX_PRICE_USD=0.24` constant found in every other "sovereign-*"
+  sibling this month; missing meta description + og: tags. Confirmed the
+  Merchant Brief's `Math.random()` numbers are already disclosed inline
+  as illustrative — not a fresh violation.
+- **`siindex-system-card.html` — 2 fixes.** A pronoun hard-fail ("it does
+  not replace legal accountability" → "she") — the highest-risk file in
+  this batch for exactly this class of error, since a system card is a
+  disclosure document where every capability claim was cross-checked
+  against what's actually built (all held up); missing og: tags.
+- **`siindex-team-portal.html` — 6 fixes**, the most of any file in this
+  batch: the "Comms" tab claimed messages were "Broadcast to Team" when
+  `sendComms()` only ever wrote to local `localStorage` — nothing left
+  the browser; the Founders Pool KPI section showed founder-entered
+  local numbers in the same card style as the genuinely-live Supabase
+  stats above it with no distinction; a "Monthly LP Yield" figure dropped
+  founders-pool.html's own "not a paid or guaranteed return" disclaimer
+  when it was echoed here; "INDX Genesis Price" and a health-tab "LP
+  target live" line both implied more liveness than exists. All fixed
+  with honest device-local/forecast/not-yet-created framing; the new
+  Approvals tab (built earlier this session) was read but not touched
+  since its one capability line accurately describes real server-side
+  enforcement. Missing og: tags added.
+- **`siindex-test-board.html` — 0 fixes, genuinely clean.** Confirmed
+  it's an internal QA harness with honest status badges throughout and
+  no fabrication. Flagged a separate, real finding outside this file's
+  scope: it's not orphaned — `public-home.html` → `utility-directory.html`
+  links to it two clicks from the citizen home page, and
+  `utility-directory.html` labels it `status:'Live'` alongside real
+  citizen features. Not fixed (out of scope for this file's audit); noted
+  here for a decision on whether to delink it or relabel its status
+  before launch.
+
+**Verification**: independently re-ran `node --check` on all 6 files that
+have inline scripts (the other 2 have none) and spot-grepped for the
+specific fabrications/fixes each agent claimed (`INDX_PRICE_USD` removed
+from siindex-sovereign-services.html, the pronoun fix landed in
+siindex-system-card.html, og:title present on all 8) before committing.
+
+**Remaining for Section 9**: 9 more unaudited screens — siindex-unknowns-
+engine.html, siindex-use-case-library.html, siindex-verify.html,
+siindex-voice-command-os.html, siindex-voice-interface.html,
+siindex-voice-terminal.html, siindex-web3-identity.html,
+siindex-writing-mode.html, siindex.html — plus the utility-directory.html
+"Live" mislabel flagged above.
+
+---
