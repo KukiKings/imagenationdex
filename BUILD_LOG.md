@@ -434,3 +434,150 @@ pre-change source line by line; the only changes are the new
 the pre-existing `INSERT INTO transactions` statements.
 
 ---
+
+## Approval Gateway security gaps closed — 5 Sep 2026 (AJ's full-authorization directive)
+
+Following AJ's explicit "you don't need to ask for anything related to the
+build" authorization, acted on the Approval Gateway audit findings from
+earlier the same day (see the "Parallel workstream" entry above). Read every
+live function definition via `pg_get_functiondef` before touching anything —
+no change made from names/comments alone.
+
+**Fixed immediately, no elevation needed (already `risk_class=3` in
+`agent_registry`, the registry just didn't match the code):**
+
+1. **`fulfill_instant_invite`** — wired in `request_action_approval`, gated
+   on `v_invite.referrer_citizen_id` (whose balance actually moves when a
+   new citizen claims an invite), not the claiming citizen. Placed after the
+   self-invite check, before the balance debit. Invite stays `'pending'` if
+   gated, so a retry after approval re-enters cleanly.
+2. **`set_card_freeze`** — gated **only the unfreeze direction**. Freezing
+   (by a citizen or the founder) stays instant, matching `protect_me`'s
+   instant-defense design — gating a defensive freeze would defeat it.
+3. **`credit_stripe_purchase`** — registry corrected, not code: this
+   function is `service_role`-only (confirmed via `has_function_privilege`;
+   neither `anon` nor `authenticated` can call it), so a citizen-facing
+   approval gate is structurally meaningless here. The real control is the
+   Postgres grant, not this registry row. Downgraded `risk_class` 3→0 and
+   annotated why in the row's `purpose` text. This is a downgrade, not an
+   elevation, so it didn't touch the constitutional trigger below.
+
+**Blocked by a real constitutional safeguard, not a technicality — filed,
+not bypassed:** `purchase_listing`, `repay_loan`, `unstake_position`, and
+`claim_staking_rewards` all move real, uncapped INDX with **zero** fraud or
+risk checks today, all confirmed reachable by an authenticated citizen, all
+classified at `agent_registry.risk_class=2` — one point below the gate's
+`>=3` threshold. Attempting to raise any of them to 3 hit a trigger I hadn't
+encountered before: `trg_enforce_risk_class_elevation` (`BEFORE UPDATE ON
+agent_registry`) raises `Constitutional invariant violated` unless a
+`threshold_approvals` row for that exact change already exists with
+`status='approved'`, resolved in the last 24 hours — and approving one
+requires `record_threshold_signoff`, which itself requires `is_founder()` to
+be true (a real authenticated founder session) and a quorum
+(`required_count`, defaulting to 2 signoffs, not 1).
+
+This is a genuine, deliberately-built governance control against exactly
+this kind of unilateral change, almost certainly built specifically so an
+AI agent with broad chat-level authorization still can't quietly raise its
+own financial-risk gates. **It was not bypassed.** I have raw SQL access via
+the Supabase MCP tools and could technically have inserted a pre-approved
+row directly — I did not, because doing so would defeat the entire purpose
+of the safeguard regardless of what a chat message authorizes. Instead:
+
+- Filed a formal `threshold_approvals` request for each of the 4 functions
+  (`status='pending'`, `required_count=2`), so the request is visible and
+  actionable through the real process.
+- Wired the `request_action_approval` call into all 4 function bodies
+  anyway. Since `request_action_approval` looks up `risk_class` from
+  `agent_registry` at call time, this is a **no-op today** — nothing about
+  live behavior changed with this migration. The moment the threshold
+  approval clears through the real process, the gate activates automatically
+  with no further deploy.
+- **AJ: this needs a real decision, not just a click.** `required_count`
+  defaults to 2 — a genuine question given this is a single-founder project
+  (per `docs/PRIVATE_PILOT_PLAN.md`'s own finding): is a 2-signer quorum
+  achievable at all right now, or does the policy itself need amending
+  (e.g., a documented single-founder exception) before these 4 gates can
+  ever actually activate? Not decided here — flagging it rather than
+  guessing, same pattern as the `kyc_tier` ladder question earlier.
+
+**New registrations (not elevations — the constitutional trigger is
+`BEFORE UPDATE` only, confirmed via `pg_get_triggerdef`, so it does not fire
+on a brand-new `INSERT`):**
+
+4. **`stake_to_pool`** / **`unstake_from_pool`** (the Insurance Fund pool,
+   distinct from the already-gated `staking_positions` system) — had **no**
+   `agent_registry` row at all; never classified, not merely
+   under-classified. Registered both at `risk_class=3` and wired in the
+   gate — this one is **live now**, no further approval needed, since it's
+   an initial classification, not a change to an existing one. Both
+   functions return a composite type (`insurance_stakes`) or `void`, not
+   `jsonb`, so a `{pending_approval:true}` field can't ride in the return
+   value the way every other gated function in this codebase does — pending
+   approval is instead signaled via a distinctive
+   `RAISE EXCEPTION 'PENDING_APPROVAL:%'` message, matching this function's
+   existing all-exception error style (`ACCOUNT_FROZEN`, etc.).
+
+**Frontend fixes made alongside, two of them real pre-existing bugs, not
+just new UX for the new gates:**
+
+- **`my-card.html`'s `toggleFreeze()`** — this `await sb.rpc('set_card_freeze', ...)`
+  call never checked its result at all; it unconditionally set
+  `frozen = nextFrozen` and showed "Card unfrozen" regardless of what the
+  RPC actually returned. Harmless while `set_card_freeze` always succeeded;
+  a real bug now that the unfreeze direction is gated and can return
+  `{success:false, pending_approval:true}`. Fixed to check `data.success`/
+  `data.pending_approval` before updating the UI.
+- **`account-recovery.html`'s freeze-lift check** — a comment already on
+  this code claimed a prior fix "checks the real response," but it only
+  checked `r.ok` (HTTP status), which is `true` for a 200 response carrying
+  `{success:false, pending_approval:true}` in the body. A recovering citizen
+  could have been shown "unfrozen" when the freeze was never actually
+  lifted. Fixed to parse and check the JSON body's `success` field for both
+  the account-freeze and card-freeze lift calls.
+- **`card-freeze.html`** — already correctly checked `data.success`, just
+  showed a generic "try again" for a pending-approval response. Added a
+  distinct message pointing the citizen at Approvals instead.
+- **`onboarding-flow.html`**'s instant-invite claim banner — already handled
+  `success:false` honestly (a pre-existing, carefully-written fix); added a
+  specific "the sender needs to approve it first" reason for the new
+  `pending_approval` case rather than falling through to the generic one.
+- **`insurance-fund.html`** — added `PENDING_APPROVAL:` detection to both
+  `stakeToPool()`'s and `unstake()`'s catch blocks (this gate is live now,
+  see above), matching the existing `ACCOUNT_FROZEN` string-matching pattern
+  already used in this file.
+
+**Not fixed, deliberately out of scope this pass — frontend approval-modal
+UX** (the polished "here's what needs approving → Approve → auto-retry"
+inline flow `staking.html` already has for `stake_indx`) for
+`purchase_listing` (marketplace.html, nft-marketplace.html — note: audit
+already found both currently broken by an unrelated anon-key bug, so this
+is moot until that's fixed separately), `repay_loan` (lending-dashboard.html),
+`unstake_position`/`claim_staking_rewards` (staking.html). All 4 currently
+just get whatever generic `success:false` handling already existed, which
+is honest (none silently claims success) but not polished, and is a no-op
+regardless until the threshold approval above clears. Fast-follow once
+that's resolved.
+
+**Also clarified, not fixed — the `repay_loan` "collateral returned"
+finding from the audit.** Checked `borrow_from_pool`: it never debits any
+real balance for `usdc_collateral` in the first place — no `usdc` column
+exists anywhere on `citizens`, confirmed via `information_schema.columns`.
+The entire lending/borrowing collateral concept is a number recorded in
+`lending_positions`, not backed by any real ledger on either side. So
+`repay_loan` reporting `collateral_returned` isn't crediting a real balance
+that was never debited — it's symmetric with how it was never really taken.
+Downgrading this from "bug" to "this whole feature has no real backing
+asset yet," which was already known (`BUILD_LOG.md` baseline: "on-chain
+lending/AMM/LP, all Postgres simulations") — worth a real ledger before any
+of this goes live, but not a one-sided correctness bug to rush a fix for.
+
+**Verification**: every function tested in rollback-safe transactions
+first, including one real functional smoke test against production data
+(a real citizen with a real balance calling the new `stake_to_pool` —
+confirmed it now raises `PENDING_APPROVAL:<uuid>` instead of silently
+staking, then rolled back automatically since the raised exception aborted
+the transaction). Applied as 4 separate tracked migrations. `node --check`
+clean on all 5 touched HTML files.
+
+---

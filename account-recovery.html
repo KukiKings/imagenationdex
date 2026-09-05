@@ -403,11 +403,17 @@
         const row = freezeRows[0] || {};
         if (row.account_frozen) {
           const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/set_account_freeze', { method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizen.id, p_frozen: false }) });
-          if (r.ok) { wasFrozen = true; } else { freezeBlocked = true; }
+          // FIXED 2026-09 (Approval Gateway wiring): r.ok only reflects the HTTP
+          // status -- a gated RPC still returns HTTP 200 with a JSON body of
+          // {success:false, pending_approval:true}, which r.ok alone can't see.
+          // Must parse the body to know whether the freeze was actually lifted.
+          const rBody = r.ok ? await r.json().catch(() => null) : null;
+          if (rBody && rBody.success) { wasFrozen = true; } else { freezeBlocked = true; }
         }
         if (row.card_frozen) {
           const r = await fetch(SUPABASE_URL + '/rest/v1/rpc/set_card_freeze', { method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizen.id, p_frozen: false }) });
-          if (r.ok) { wasFrozen = true; } else { freezeBlocked = true; }
+          const rBody = r.ok ? await r.json().catch(() => null) : null;
+          if (rBody && rBody.success) { wasFrozen = true; } else { freezeBlocked = true; }
         }
       } catch (e) { /* freeze lift is best-effort — recovery still proceeds even if this check fails */ }
 

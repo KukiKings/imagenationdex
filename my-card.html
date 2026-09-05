@@ -1000,7 +1000,22 @@
     const nextFrozen = !frozen;
     btn.disabled = true;
     try {
-      await sb.rpc('set_card_freeze', { p_citizen_id: citizenId, p_frozen: nextFrozen });
+      // FIXED 2026-09 (Approval Gateway wiring): this used to await the RPC and
+      // update the UI unconditionally, never checking the response body. That was
+      // harmless while set_card_freeze always succeeded, but the unfreeze direction
+      // is now gated (agent_registry risk_class=3) and can come back as a normal
+      // 200 {success:false, pending_approval:true} instead of actually unfreezing —
+      // showing "Card unfrozen" in that case would tell the citizen something false.
+      const { data, error } = await sb.rpc('set_card_freeze', { p_citizen_id: citizenId, p_frozen: nextFrozen });
+      if (error) throw error;
+      if (!data || data.success === false) {
+        if (data && data.pending_approval) {
+          showToast('👆 Unfreezing needs your approval first — check Approvals, then try again.');
+        } else {
+          showToast('Could not update card — try again');
+        }
+        return;
+      }
       frozen = nextFrozen;
       const dot = document.getElementById('csDot');
       const label = document.getElementById('csLabel');

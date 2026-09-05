@@ -639,7 +639,14 @@
       await Promise.all([loadPoolStats(), loadTopStakers(), loadMyStakes()]);
     } catch (e) {
       // ACCOUNT_FROZEN is a raw Postgres exception message, not something to show verbatim.
-      const msg = (e.message || '').includes('ACCOUNT_FROZEN')
+      // FIXED 2026-09 (Approval Gateway wiring): stake_to_pool is now gated
+      // (agent_registry risk_class=3, newly registered — this pool had no gate
+      // at all before). Its return type is a composite row, not jsonb, so pending
+      // approval can't ride in a {pending_approval:true} field like other gated
+      // RPCs — it's signaled via a distinctive exception message instead.
+      const msg = (e.message || '').includes('PENDING_APPROVAL:')
+        ? '👆 This stake needs your approval first — check Approvals, then try again.'
+        : (e.message || '').includes('ACCOUNT_FROZEN')
         ? 'Your account is frozen — staking is blocked. Unfreeze it from Emergency Freeze, or contact support.'
         : 'Could not stake: ' + e.message;
       showToast(msg);
@@ -659,7 +666,13 @@
       recordActivity('unstake', stakeBeingRemoved ? stakeBeingRemoved.amount : 0);
       await Promise.all([loadPoolStats(), loadTopStakers(), loadMyStakes()]);
     } catch (e) {
-      showToast('Could not unstake: ' + e.message);
+      // FIXED 2026-09 (Approval Gateway wiring): unstake_from_pool is now gated
+      // the same way stake_to_pool is above — see that comment for why this is
+      // an exception-message check rather than a jsonb field.
+      const msg = (e.message || '').includes('PENDING_APPROVAL:')
+        ? '👆 This unstake needs your approval first — check Approvals, then try again.'
+        : 'Could not unstake: ' + e.message;
+      showToast(msg);
     }
   }
 

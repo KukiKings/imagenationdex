@@ -369,6 +369,11 @@
         body: JSON.stringify({ p_citizen_id: citizenId, p_frozen: next })
       });
       const data = await res.json();
+      // FIXED 2026-09 (Approval Gateway wiring): unfreeze is now gated
+      // (agent_registry risk_class=3) and can come back as a normal 200
+      // {success:false, pending_approval:true} -- distinguish that from a real
+      // failure so the citizen knows to check Approvals rather than just retry.
+      if (data && data.pending_approval) { showToast('👆 Unfreezing needs your approval first — check Approvals, then try again.'); return; }
       if (!res.ok || !data || data.success === false) { showToast('Could not update card — try again'); return; }
       _cardFrozenAt = next ? new Date().toISOString() : null; // GOD MODE PATCH — real duration counter needs this
       renderFreezeUI(next, false);
