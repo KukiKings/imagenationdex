@@ -89,6 +89,7 @@
   .tier-icon.t1 { background: rgba(0,229,160,0.12); }
   .tier-icon.t2 { background: rgba(0,212,255,0.1); }
   .tier-icon.t3 { background: rgba(139,63,232,0.15); }
+  .tier-icon.t4 { background: rgba(255,184,0,0.14); }
 
   .tier-info { flex: 1; }
   .tier-name { font-size: 16px; font-weight: 700; margin-bottom: 3px; }
@@ -122,6 +123,7 @@
   }
   .perk-row .p-dot.cyan { background: var(--cyan); }
   .perk-row .p-dot.purple { background: var(--purple); }
+  .perk-row .p-dot.gold { background: var(--gold); }
   .perk-row span { color: var(--text); }
 
   .tier-divider { height: 1px; background: var(--border); margin-bottom: 16px; }
@@ -372,11 +374,13 @@
     <div class="progress-dot done" id="progressDotT1"></div>
     <div class="progress-dot" id="progressDotT2"></div>
     <div class="progress-dot" id="progressDotT3"></div>
+    <div class="progress-dot" id="progressDotT4"></div>
   </div>
   <div class="progress-labels">
     <div class="progress-label">Citizen</div>
     <div class="progress-label">Verified</div>
     <div class="progress-label">Sovereign</div>
+    <div class="progress-label">Complete</div>
   </div>
 </div>
 
@@ -516,6 +520,65 @@
   </div>
 </div>
 
+<!-- TIER 4: FULL SOVEREIGN -->
+<!-- NEW 2026-09 ("Tier 2 KYC" per AJ's own framework: address + source of funds,
+     the last rung of the sovereign-verify.html ladder). Mirrors Tier 3's structure
+     and honesty pattern exactly. This is an explicit MOCK on the backend
+     (verify_address_funds validates a country string is non-empty and a
+     source-of-funds category against a known list — it never inspects a real
+     bank statement or address proof, and no document/statement upload exists
+     anywhere in this codebase). No new fiat limit is claimed here — the
+     $50,000/month figure is the same one Tier 3 already lists; Tier 4 completes
+     the identity ladder rather than raising it further. -->
+<div class="tier-card" id="tier4card">
+  <div class="tier-header" onclick="toggleTier('t4')">
+    <div class="tier-icon t4">🏦</div>
+    <div class="tier-info">
+      <div class="tier-name">Tier 4 Full Sovereign</div>
+      <div class="tier-status-row">
+        <div class="tier-status locked">Optional</div>
+        <div class="tier-limit">Address · Source of funds</div>
+      </div>
+    </div>
+    <div style="font-size:12px; color:var(--text-dim);" id="t4arrow">›</div>
+  </div>
+  <div class="tier-body" id="t4body">
+    <div class="tier-perks">
+      <div class="perk-row"><div class="p-dot gold"></div><div>Fiat deposit/withdraw stays at IN$DEX's highest tier <span>$50,000/month</span> (planned — not live yet)</div></div>
+      <div class="perk-row"><div class="p-dot gold"></div><div>Address &amp; source of funds on file completes the sovereign verification ladder</div></div>
+      <div class="perk-row"><div class="p-dot gold"></div><div>Wisdom Score +20 bonus</div></div>
+    </div>
+
+    <div class="tier-divider"></div>
+
+    <div style="font-size:13px; color:var(--text-dim); margin-bottom:12px;">
+      Tell us your <strong style="color:var(--text);">country/region and where your funds come from.</strong> No bank statement or ID document is uploaded here.
+    </div>
+
+    <div id="tier4FormFields">
+      <div class="form-group" style="margin-bottom:12px;">
+        <div class="form-label">Country / region</div>
+        <input class="form-input" id="countryInput" type="text" placeholder="e.g. Fiji">
+      </div>
+
+      <div class="form-label" style="margin-bottom:8px;">Source of funds</div>
+      <div class="doc-options">
+        <div class="doc-chip active" data-sof="employment" onclick="selectSof(this,'employment')">💼 Employment</div>
+        <div class="doc-chip" data-sof="business" onclick="selectSof(this,'business')">🏢 Business</div>
+        <div class="doc-chip" data-sof="savings" onclick="selectSof(this,'savings')">🏦 Savings</div>
+        <div class="doc-chip" data-sof="investment" onclick="selectSof(this,'investment')">📈 Investment</div>
+        <div class="doc-chip" data-sof="gift" onclick="selectSof(this,'gift')">🎁 Gift</div>
+        <div class="doc-chip" data-sof="other" onclick="selectSof(this,'other')">📋 Other</div>
+      </div>
+
+      <div id="tier4Error" style="color:var(--red);font-size:12px;margin-bottom:4px;"></div>
+      <button class="verify-btn" id="tier4VerifyBtn" onclick="submitAddressFunds()">Submit for Review</button>
+      <div style="font-size:12px; color:var(--text-dim); text-align:center; margin-top:10px;">Prototype check — instantly approved for testing. This is not yet a real address or source-of-funds verification.</div>
+    </div>
+    <div id="tier4AlreadyDone" style="display:none;font-size:13px;color:var(--green);font-weight:600;text-align:center;">✓ Verified. You're already at Tier 4.</div>
+  </div>
+</div>
+
 <!-- ALTERNATIVE NOTE -->
 <div class="alt-note">
   <div class="icon">💡</div>
@@ -569,6 +632,7 @@
     if (wisdomEl) wisdomEl.textContent = 'Wisdom Score ' + wisdom;
     const dotT2 = document.getElementById('progressDotT2');
     const dotT3 = document.getElementById('progressDotT3');
+    const dotT4 = document.getElementById('progressDotT4');
     if (dotT2) {
       if (tier >= 1) { dotT2.classList.add('done'); dotT2.classList.remove('current'); }
       else { dotT2.classList.add('current'); dotT2.classList.remove('done'); }
@@ -577,11 +641,18 @@
       if (tier >= 2) { dotT3.classList.add('done'); dotT3.classList.remove('current'); }
       else { dotT3.classList.remove('done'); dotT3.classList.remove('current'); }
     }
+    // GOD MODE PATCH (Tier 4, address/source-of-funds) — mirrors the dotT3 pattern above
+    if (dotT4) {
+      if (tier >= 3) { dotT4.classList.add('done'); dotT4.classList.remove('current'); }
+      else { dotT4.classList.remove('done'); dotT4.classList.remove('current'); }
+    }
   }
 
   // ── GOD MODE: Smart Defaults — remember last-used PayID and document choice locally, never transmitted ──
   const LS_PAYID_KEY = 'indx_sovereignverify_last_payid';
   const LS_DOC_KEY = 'indx_sovereignverify_last_doc';
+  const LS_COUNTRY_KEY = 'indx_sovereignverify_last_country';
+  const LS_SOF_KEY = 'indx_sovereignverify_last_sof';
   function initSmartDefaults() {
     const savedPayid = localStorage.getItem(LS_PAYID_KEY) || '';
     const payidInput = document.getElementById('payidInput');
@@ -594,6 +665,16 @@
     if (savedDoc) {
       const chip = document.querySelector('.doc-chip[data-doc="' + savedDoc + '"]');
       if (chip) selectDoc(chip, savedDoc);
+    }
+    // GOD MODE PATCH (Tier 4, address/source-of-funds) — same locally-remembered
+    // convenience as the PayID/document fields above, never transmitted
+    const savedCountry = localStorage.getItem(LS_COUNTRY_KEY) || '';
+    const countryInput = document.getElementById('countryInput');
+    if (savedCountry && countryInput && !countryInput.value) countryInput.value = savedCountry;
+    const savedSof = localStorage.getItem(LS_SOF_KEY) || '';
+    if (savedSof) {
+      const sofChip = document.querySelector('#tier4FormFields .doc-chip[data-sof="' + savedSof + '"]');
+      if (sofChip) selectSof(sofChip, savedSof);
     }
   }
 
@@ -695,6 +776,16 @@
         if (t3StatusEl) { t3StatusEl.textContent = 'Complete'; t3StatusEl.className = 'tier-status done'; }
         document.getElementById('tier3card').classList.add('active');
       }
+      // GOD MODE PATCH (Tier 4 wiring, address/source-of-funds) — mirrors the tier3
+      // pattern above so a citizen who already has a real kyc_tier>=3 (from
+      // verify_address_funds) sees "already done" instead of the submit form.
+      if (tier >= 3) {
+        document.getElementById('tier4FormFields').style.display = 'none';
+        document.getElementById('tier4AlreadyDone').style.display = 'block';
+        const t4StatusEl = document.querySelector('#tier4card .tier-status');
+        if (t4StatusEl) { t4StatusEl.textContent = 'Complete'; t4StatusEl.className = 'tier-status done'; }
+        document.getElementById('tier4card').classList.add('active');
+      }
     } catch (e) { /* falls back to showing the verify form */ }
   }
   document.addEventListener('DOMContentLoaded', async () => {
@@ -711,7 +802,7 @@
     const arrow = document.getElementById(id + 'arrow');
     const isOpen = body.classList.contains('open');
     // Close all
-    ['t1','t2','t3'].forEach(t => {
+    ['t1','t2','t3','t4'].forEach(t => {
       document.getElementById(t+'body').classList.remove('open');
       document.getElementById(t+'arrow').textContent = '›';
     });
@@ -730,6 +821,15 @@
     el.classList.add('active');
     // GOD MODE PATCH — remember the citizen's last document choice locally
     localStorage.setItem(LS_DOC_KEY, type);
+  }
+
+  // Tier 4 (address/source-of-funds) — same chip-selection pattern as selectDoc()
+  // above, scoped to the tier4 card's own chip set so it never touches Tier 3's
+  // document chips.
+  function selectSof(el, sof) {
+    document.querySelectorAll('#tier4FormFields .doc-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    localStorage.setItem(LS_SOF_KEY, sof);
   }
 
   // ── REAL OTP send — same Supabase Auth phone mechanism proven in login.html ──
@@ -846,6 +946,50 @@
       document.getElementById('tier3card').classList.add('active');
       // GOD MODE PATCH — refresh the progress dots now that tier 3 is real
       renderProgressSnapshot(data.new_kyc_tier || 2);
+      document.getElementById('successOverlay').classList.add('open');
+    } catch (e) {
+      errEl.textContent = 'Could not submit — try again';
+      btn.disabled = false; btn.textContent = 'Submit for Review';
+    }
+  }
+
+  // ── NEW 2026-09 (Tier 2 per AJ's framework: address + source of funds) — calls
+  // the real verify_address_funds RPC added this pass. Same MOCK/placeholder
+  // pattern as submitGovernmentId(): no real bank statement or address proof is
+  // ever inspected, just a country string and a source-of-funds category — see
+  // the NEW comment above tier4FormFields. ──
+  async function submitAddressFunds() {
+    const errEl = document.getElementById('tier4Error');
+    errEl.textContent = '';
+    if (!citizenId) { errEl.textContent = 'Sign in first to verify address & source of funds'; return; }
+    const country = document.getElementById('countryInput').value.trim();
+    if (!country) { showToast('⚠️ Enter your country or region'); return; }
+    const activeChip = document.querySelector('#tier4FormFields .doc-chip.active');
+    const sof = (activeChip && activeChip.dataset.sof) || localStorage.getItem(LS_SOF_KEY) || 'employment';
+
+    const btn = document.getElementById('tier4VerifyBtn');
+    btn.disabled = true; btn.textContent = 'Submitting…';
+    try {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/verify_address_funds', {
+        method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_citizen_id: citizenId, p_country: country, p_source_of_funds: sof })
+      });
+      const data = await res.json();
+      if (!data || !data.success) {
+        errEl.textContent = 'Could not submit — try again';
+        btn.disabled = false; btn.textContent = 'Submit for Review';
+        return;
+      }
+      sessionStorage.setItem('citizen_kyc_tier', String(data.new_kyc_tier || 3));
+      if (data.new_wisdom != null) sessionStorage.setItem('citizen_wisdom', String(data.new_wisdom));
+      // GOD MODE PATCH — remember the citizen's country locally, same convention as PayID
+      localStorage.setItem(LS_COUNTRY_KEY, country);
+      document.getElementById('tier4FormFields').style.display = 'none';
+      document.getElementById('tier4AlreadyDone').style.display = 'block';
+      const statusEl = document.querySelector('#tier4card .tier-status');
+      if (statusEl) { statusEl.textContent = 'Complete'; statusEl.className = 'tier-status done'; }
+      document.getElementById('tier4card').classList.add('active');
+      // GOD MODE PATCH — refresh the progress dots now that tier 4 is real
+      renderProgressSnapshot(data.new_kyc_tier || 3);
       document.getElementById('successOverlay').classList.add('open');
     } catch (e) {
       errEl.textContent = 'Could not submit — try again';

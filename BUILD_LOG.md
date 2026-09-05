@@ -263,3 +263,174 @@ at `kyc_tier=3`. `node --check` clean. No visible copy changed on this page
 — comment only.
 
 ---
+
+## Week 2 — Address + Source-of-Funds verification (Tier 2 per AJ's framework) — DONE, 5 Sep 2026
+
+`kyc_tier` ladder is now: 0 = signup, 1 = PayID (`verify_payid`), 2 =
+government ID (`verify_government_id`), 3 = address + source of funds
+(`verify_address_funds`, new this pass).
+
+1. **`verify_address_funds(p_citizen_id uuid, p_country text,
+   p_source_of_funds text)` — new Postgres function, deployed live**
+   (migration `add_verify_address_funds_mock`). Mirrors
+   `verify_government_id`'s pattern exactly. Explicitly a **MOCK**:
+   validates `p_source_of_funds` against a known list (employment, business,
+   savings, investment, gift, other) and checks `p_country` is non-empty,
+   but performs no real address-proof or bank-statement verification — no
+   document/statement upload exists in this codebase at all, same
+   limitation `verify_government_id` already discloses for ID documents.
+   Returns early with `{success:true, already:true, new_kyc_tier}` if
+   `kyc_tier >= 3` already; otherwise sets `kyc_tier = 3`, awards +20 wisdom
+   (same amount as `verify_government_id` — `award_wisdom_internal` hard-
+   caps a single award at 20 points, so this is both consistent with the
+   ladder and the maximum single award the system allows), logs a
+   `security_events` row labeled `'MOCK address/source-of-funds
+   verification — placeholder validation only, no real bank statement or
+   address proof checked'` with `mock: true` in the detail, and returns
+   `{success, already, new_kyc_tier: 3, new_wisdom, mock: true}`. **Safety
+   check performed before deploy**: grepped every Postgres function
+   referencing `kyc_tier` (`prosrc ILIKE '%kyc_tier%'`) — 7 functions total.
+   Only `transfer_indx` gates real privilege on it, and only at
+   `kyc_tier = 0` (the existing Tier-0 monthly send-limit exemption once
+   `kyc_tier >= 1`); nothing gates on `>= 2` or `>= 3` anywhere. The two
+   read-only functions that surface `kyc_tier` (`get_citizen_verification_bundle`,
+   `get_public_domain_view`) either just display it or explicitly exclude
+   it from public output. `create_onboarding_citizen` only sets it at
+   signup, and `enforce_citizen_onboarding_defaults` is a `BEFORE INSERT`
+   trigger (confirmed via `pg_trigger`) that does not fire on `UPDATE`, so
+   it cannot clobber this function's tier upgrade. Conclusion: `kyc_tier=3`
+   unlocks no additional real financial privilege beyond what `verify_payid`
+   (tier 1) already does. Tested in a rolled-back transaction first
+   (`begin; ...; rollback;`) — invalid country, invalid source-of-funds,
+   unknown citizen, a real 0→3 upgrade with correctly-capped wisdom
+   (2→22), and an idempotent already-tier-3 re-call all verified before the
+   real `apply_migration`.
+2. **`sovereign-verify.html` — new Tier 4 card added, wired to the real
+   RPC.** Added a 4th tier card, `tier4card` ("Tier 4 Full Sovereign"),
+   placed directly after `tier3card` and before the alt-note, mirroring
+   `tier3card`'s structure and CSS classes exactly (`.tier-card`,
+   `.tier-header`, `.tier-body`, `.tier-perks`, `.tier-divider`,
+   `.verify-form`). Form fields: a text input for country/region
+   (`countryInput`) and a source-of-funds picker reusing the existing
+   `.doc-chip` pattern with a new `data-sof` attribute (employment,
+   business, savings, investment, gift, other) instead of inventing a new
+   component. No new dollar figure is claimed — the perk list repeats the
+   same $50,000/month figure Tier 3 already lists (Tier 4 completes the
+   ladder, it does not raise the limit further), and the honest "Prototype
+   check — instantly approved for testing. This is not yet a real address
+   or source-of-funds verification." line matches Tier 3's existing tone
+   word-for-word in structure. Added `submitAddressFunds()` (mirrors
+   `submitGovernmentId()` exactly: reads the active `data-sof` chip and the
+   country input, POSTs to `/rest/v1/rpc/verify_address_funds`, updates
+   `tier4card`'s status/classes and `sessionStorage` on success) and
+   `selectSof()` (mirrors `selectDoc()`, scoped to `#tier4FormFields` so it
+   never touches Tier 3's document chips). Extended `loadRealTierState()`
+   with a `tier >= 3` branch mirroring the existing `tier >= 2` branch, and
+   `renderProgressSnapshot()` with a `progressDotT4` branch mirroring
+   `dotT3` — the corresponding `progressDotT4` element and a "Complete"
+   progress label were added to the HTML so the new dot isn't a reference
+   to a nonexistent element. Extended the Smart Defaults locally-remembered
+   convenience (`LS_COUNTRY_KEY`, `LS_SOF_KEY`) the same way the existing
+   PayID/document fields already work, and added `t4` to `toggleTier()`'s
+   close-all list.
+
+**Verification**: `node --check` clean on the file's one inline `<script>`
+block (extracted via regex, one temp `.js` file per block). The
+`verify_address_funds` migration was tested in a rolled-back transaction
+before being applied for real, then confirmed live
+(`select proname from pg_proc where proname='verify_address_funds'`
+returns the row).
+
+**Still open, not addressed this pass**: real address-proof or
+bank-statement upload (camera/file capture to storage) still does not
+exist anywhere in this codebase; `verify_address_funds` accepts a country
+string and a source-of-funds category only, never an actual document or
+statement, and that limitation is honestly disclosed on-screen the same
+way Tier 3's document-type limitation already is.
+
+---
+
+## Remittance settlement-method logging + false Solana claim fixed, 5 Sep 2026
+
+**Context**: the founder's build plan asks for "Remittance Agent — use
+`transfer_indx`, initiate Solana transaction if token deployed else fallback
+to DB ledger with clear logging." No INDX SPL token is deployed
+(`js/indx-wallet.js`'s `INDX_MINT_ADDRESS` is still a placeholder), so every
+transfer `transfer_indx` processes today already **is** the fallback path —
+but until now that fact was only inferable by reading the function's source,
+not recorded anywhere in the data itself.
+
+1. **`transfer_indx` — added explicit `settlement_method` tagging, migration
+   `tag_transfer_indx_settlement_method_ledger`.** Read the live function
+   definition first (`pg_get_functiondef`) to confirm its exact current
+   behavior: an ownership check, a real Approval Gateway gate
+   (`request_action_approval` — returns `pending_approval` for risk_class≥3
+   before anything moves), recipient resolution by domain/phone/email,
+   self-send and frozen-account checks, a Tier-0 30-day send-limit check, a
+   real 2% civilisation fee deducted from the transferred amount, two
+   `transactions` inserts (sender's `send` row, recipient's `receive` row),
+   a wisdom award, a `treasury_ledger` insert, a `consent_receipts` insert,
+   and `assess_transfer_risk`. Checked `transactions`' schema before
+   deciding where to put the tag — it already has a `metadata jsonb` column,
+   already used ad-hoc by other functions (bill_pay, ATM/bank withdrawal)
+   for exactly this kind of structured per-transaction tagging, so no new
+   column was needed. Both `INSERT INTO transactions` statements now also
+   write `metadata: {"settlement_method": "ledger"}`, computed once into a
+   new local variable (`v_settlement_metadata`) from a constant literal —
+   the only diff from the previous function body. Also added a
+   `COMMENT ON FUNCTION` recording the same fact for anyone reading the
+   schema directly. This makes "did this transfer settle on IN$DEX's
+   internal ledger or on real Solana" a permanent, queryable fact per row
+   (`transactions.metadata->>'settlement_method'`), so once a real INDX mint
+   and on-chain settlement exist, historical ledger-only transfers stay
+   honestly distinguishable from real on-chain ones.
+2. **`remittance.html` — real false claim found and fixed on the success
+   screen.** The "View Sovereign Receipt" link under a completed transfer
+   said "Your transfer is sealed on Solana forever" — untrue (no INDX mint
+   exists), and it directly contradicted the honest disclosure already on
+   the page it links to (`verifiable-receipt-nft.html`, fixed earlier this
+   cycle: "nothing is minted on-chain today"). Rewrote it to "Recorded in
+   IN$DEX's ledger now — before the INDX token is deployed on Solana,
+   transfers aren't sealed on-chain yet," matching the disclosure style used
+   in this cycle's other fixes (e.g. token-detail.html's rewritten About
+   text). The rest of the page was re-read end to end: the FX/corridor card
+   already correctly discloses "Preview only — this corridor isn't
+   connected to a live backend yet. Bank cash-out isn't live yet either"
+   (accurate — no real bank/fiat cash-out exists), and the success screen's
+   "INDX credited to their Grid Account" line was already accurate (ledger
+   credit, not a blockchain claim), so no further copy changes were needed
+   there.
+
+**Separate finding, flagged but not changed (needs a founder decision, not a
+guess)**: `remittance.html`'s UI advertises an 0.8% IN$DEX fee everywhere
+(the savings banner, the FX "Recipient gets" math which applies a 0.992
+factor, the compare-strip chart, and the post-send savings calculation), but
+the live `transfer_indx` function actually deducts a 2% "civilisation fee"
+from every transfer (`v_civ_fee := round(p_amount * 0.02, 6)`) before
+crediting the recipient. That means a recipient is actually credited about
+1.2 percentage points less than the UI promises them on every real transfer.
+This is a pre-existing discrepancy, not something introduced by this
+session's changes, and it's a real fork (is the UI wrong, or is the fee
+supposed to be lower and the function needs changing — a money-movement
+change explicitly out of scope for this pass) — flagging for AJ's call
+rather than guessing, same as the earlier `kyc_tier` collision.
+
+**Verification**: read the full live `transfer_indx` definition via
+`pg_get_functiondef` before touching anything. Tested the new function body
+in a rolled-back transaction (`begin; ...; rollback;`) that exercised the
+*entire* real path end to end — including a real round-trip through the
+Approval Gateway (first call correctly returned `pending_approval`, then
+`grant_intent_approval` was called exactly as `remittance.html`'s own
+`approveGateAndResend()` calls it, then the retried call completed) —
+confirmed both resulting `transactions` rows carried
+`metadata: {"settlement_method": "ledger"}` before rolling back and only
+then applying the same body for real via `apply_migration`. Re-confirmed
+live afterward (`prosrc ~ 'settlement_method'` true, `COMMENT ON FUNCTION`
+present). `node --check` clean on `remittance.html`'s one inline `<script>`
+block. **No fraud/risk check, Approval Gateway call, fee calculation, or
+balance math was touched** — diffed the deployed function against the
+pre-change source line by line; the only changes are the new
+`v_settlement_metadata` variable and the two added `metadata` columns on
+the pre-existing `INSERT INTO transactions` statements.
+
+---
