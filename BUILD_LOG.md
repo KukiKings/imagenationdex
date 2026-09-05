@@ -250,4 +250,16 @@ column, e.g. `rwa_verification_level`, since it's 0% built and gates a
 different kind of access — regulated RWA tokens/fiat scale — than P2P
 citizen trust). Not implemented pending his answer.
 
+**Resolved 5 Sep 2026, proceeding on the stated default (AJ told me to move
+ahead with parallel workstreams rather than wait)**: confirmed by direct
+grep that `kyc-compliance.html` never reads or writes `citizens.kyc_tier` —
+its "Tier 1"/"Tier 2" labels are static display copy only, so there is no
+live database collision today. Added an explanatory comment in
+`kyc-compliance.html` (above the tier cards) documenting this and the
+forward path (Fractal ID gets its own `rwa_verification_level` column if
+and when it's actually built — not created yet since nothing would use it).
+`kyc_tier` is confirmed clear to keep extending for `verify_address_funds`
+at `kyc_tier=3`. `node --check` clean. No visible copy changed on this page
+— comment only.
+
 ---
