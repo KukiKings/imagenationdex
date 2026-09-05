@@ -203,3 +203,51 @@ not exist; `verify_government_id` accepts a document *type* only, never an
 actual image, and that limitation is now honestly disclosed on-screen.
 
 ---
+
+## Real blocker found while starting Tier 2 (address/SOF) — paused, needs AJ's call, 5 Sep 2026
+
+Before writing `verify_address_funds`, checked for any existing tier-ladder
+plans elsewhere in the repo (SIINDEX's own command-center Q&A already flags
+an open item: *"kyc-compliance.html has a real tier-numbering conflict: two
+screens write different meanings to the same kyc_tier column, and I need
+your call on one canonical ladder"* — `siindex-command-center.html`, read
+only, not modified per the standing protection rule).
+
+Confirmed the conflict directly: **`kyc-compliance.html` already defines its
+own "Tier 1"/"Tier 2"**, entirely unrelated to `sovereign-verify.html`'s
+ladder built this week:
+- Its Tier 1 = "Light KYC via Fractal ID" (a named third-party identity
+  verification vendor) — $32K/day fiat on-ramp, $160K RWA limit.
+- Its Tier 2 = "Institutional" — full AML + source-of-funds screening,
+  unlimited RWA/fiat.
+
+Both are honestly disclosed as **"not connected yet"** (the `startKYC(1)`/
+`startKYC(2)` buttons say so explicitly, no live wiring, no Fractal ID
+integration exists, no vendor contract exists) — so there is no live false
+claim on this page today, and the two "Legal Wrapper" claims SIINDEX also
+flagged (Swiss Verein, Wyoming DAO) are already corrected on this same page,
+dated 2026-07-29, ahead of SIINDEX's Q&A answer being written apparently
+stale. Not a live issue; not touched further.
+
+**But the tier-number collision is real and about to get worse.** This
+week's `kyc_tier = 2` for a driver's-licence mock (`verify_government_id`)
+sits on the same integer that `kyc-compliance.html` has already earmarked,
+in copy, for full institutional AML/source-of-funds screening with
+unlimited limits — a much heavier real-world meaning. Building
+`verify_address_funds` next (AJ's Week 2 "Tier 2 KYC") would either need a
+**3rd** incompatible meaning for the same column, or would need to finally
+pick one canonical ladder — exactly the decision SIINDEX already asked AJ
+for and has not yet received.
+
+**Paused `verify_address_funds` here rather than guessing** — this is a
+real fork with materially different consequences (regulatory limits,
+vendor integration, UI copy across 2 screens), not a stylistic call, so it
+meets AJ's own stated bar for "ask, don't guess." Proposed two options to
+AJ directly in chat, recommended Option A (keep `kyc_tier` as the
+lightweight sovereign-verify.html ladder already live and shipping; move
+`kyc-compliance.html`'s Fractal-ID/institutional plan to its own separate
+column, e.g. `rwa_verification_level`, since it's 0% built and gates a
+different kind of access — regulated RWA tokens/fiat scale — than P2P
+citizen trust). Not implemented pending his answer.
+
+---
