@@ -929,3 +929,54 @@ citizen-facing home page via `utility-directory.html`, which labels it
 `status:'Live'` — flagged in the batch 1 entry above, not fixed.
 
 ---
+
+## Section 10 (Founder & Admin) — started, hit a session rate limit mid-batch — 5 Sep 2026
+
+Started Section 10 (22 screens, `founder-voice.html` excluded as protected).
+Dispatched 11 agents for the first batch; the session hit its rate limit
+partway through and most were cut off before making any edit (confirmed
+via `git status` — only one file had an uncommitted change). Two more
+were rejected by a tool-use interrupt. Net effect: only
+`indx-liquidity-flywheel.html` got a partial edit from its agent before
+the cutoff (added a disclosure comment above the `INDX_PRICE_USD`
+constant, removed an unused `POOL_TARGET` constant) — everything else in
+that batch made no changes and needs to be re-run.
+
+**Finished `indx-liquidity-flywheel.html` myself** rather than leave it
+half-done: the interrupted agent's own disclosure comment ("must never be
+displayed or described as 'live'") was added right above code that still
+computed and displayed exactly that — an on-screen "≈ INDX Equivalent
+(live)" chip (2 places) and an exported routing-memo line ("@ $0.24")
+with no hedge, both using the $0.24 planning-reference price. Reworded
+both to "(estimate, not live)" / "planning reference — not a live rate",
+relabeled the "GOD MODE PATCH: live INDX equivalent" code comments to
+match, and added the missing meta description + og: tags this file also
+lacked. Confirmed no other `POOL_TARGET` references remained after its
+removal (none), and re-ran `node --check` clean.
+
+**Also received a new message from AJ** with a fresh "honest truth /
+strategy reset" framing plus a repeat of the same GitHub token +
+force-push instructions from earlier — declined again, same reasoning
+(credential rule, plus the sandbox proxy block is unrelated to
+credentials anyway). AJ's message asked to "scrub" 5 specific files
+(token-detail.html, app-lock.html, l99-launch-command.html,
+limit-orders.html, siindex-sovereign-embodiment.html) — all 5 were
+already fixed earlier this session (see the "5 flagged screens" entry
+above); told AJ this rather than re-doing it. Also asked for an FSC
+pre-application consultation email — a legal-correspondence draft in this
+exact spirit already exists at `docs/legal/fsc-correspondence-draft.md`
+from earlier this session; will compare it against AJ's suggested wording
+and update rather than create a duplicate.
+
+**Next**: re-dispatch the Section 10 batch (10 files still untouched:
+founder-command-center, founder-pipeline, l99-launch-command [full
+checklist, not just its earlier targeted fix], indx-build-console,
+indx-flywheel-automation, indx-automation-grid, indx-liquidity-strategy,
+indx-mission-rooms, indx-sovereign-settlement, indx-sovereign-team), then
+the remaining 10 (indx-website-strategy, cook-islands-meeting, launch,
+launchpad, imagenation-brain-builder, imagenation-builder,
+imagenation-design-studio, brain-passport, ai-oversight, analytics).
+`indx-trust-dashboard.html` is cross-listed but already closed under the
+Section 8 audit — not re-run.
+
+---
