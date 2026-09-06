@@ -980,3 +980,146 @@ imagenation-design-studio, brain-passport, ai-oversight, analytics).
 Section 8 audit — not re-run.
 
 ---
+
+## Section 10 (Founder & Admin) — batch 1 complete, 10 screens — 6 Sep 2026
+
+Re-dispatched and completed the 10-file batch left over from the rate
+limit above. All 10 verified independently after the fact (`git status`,
+`node --check` on every extracted inline script, targeted greps for
+each claimed fix, meta-tag completeness check across the whole batch) —
+not just taken on the agents' self-reports.
+
+- **`founder-command-center.html`** — the single biggest finding in this
+  batch: the screen was branded "🔒 FOUNDER COMMAND CENTER / Private
+  session" but had **zero actual access control** — no `is_founder()`
+  check, no PIN, nothing. Wired real gating: the page now calls the
+  real `get_founder_dashboard_stats()` RPC (which is `is_founder()`-gated
+  server-side) before revealing anything, and added a new "Platform
+  Signals" card showing genuinely live citizens/transactions/security
+  data from that same RPC. Removed a live `INDX_PRICE_USD=0.24` feeding
+  a price ticker + net-worth conversion ("No fixed price" / "No USD
+  price set" now); removed a dead `FOUNDER_ALLOC=0.15` that contradicted
+  token.html's documented "Founder allocation: 0%"; fixed an
+  always-green hardcoded "Protection: Active" stat to "Planned — not
+  active yet" (the $10K Transaction Protection is documented
+  platform-wide as not yet active); added meta/og tags. Confirmed via
+  grep that `is_founder()`/`get_founder_dashboard_stats()` are wired
+  into the actual gate and the Platform Signals card, not just
+  mentioned in a comment.
+- **`founder-pipeline.html`** — removed a dead `INDX_PRICE_USD`; fixed
+  the default outreach template's "INDX token live." → "INDX token
+  minted."; fixed two outreach-template "...or an INDX allocation"
+  offers → "...or a reserved INDX allocation at TGE (token launch)".
+  Left all AUD/dollar CRM deal figures alone (standing exemption — real
+  business-deal tracking, not a citizen-facing INDX claim). Added
+  missing meta/og tags (none existed before).
+- **`l99-launch-command.html`** (full checklist pass, distinct from an
+  earlier targeted fix to its fake-citizen-injection engine) — fixed a
+  Launch Sequence item falsely marked "Liquidity pool deployed"/done
+  when the page's own Pool Status card says PRE-LAUNCH/$0 TVL →
+  "Liquidity pool config verified"/"ready, not yet deployed"; fixed a
+  SIINDEX live-feed line falsely claiming completed governance/quorum
+  → "quorum mechanism configured. Not yet activated."; tightened "INDX
+  Price" → "Genesis reference price"; added missing meta/og tags.
+- **`indx-build-console.html`** — a real pre-existing functional bug,
+  not just a copy fix: `runDoctrineCheck()`'s history logger queried
+  `.violation-item`/`.warning-item`, which never matched the page's
+  actually-rendered `.vio-violation`/`.vio-warning` classes, so every
+  single doctrine scan silently computed 0 violations/warnings and
+  logged a fabricated green "Clean" badge regardless of real findings.
+  Fixed the selectors — confirmed via grep the fix now reads the
+  correct classes both in the renderer and the counter. Also fixed
+  saved specs unconditionally showing a fake "Doctrine: Passed" for a
+  check that never ran on save → neutral "Not checked — run Doctrine
+  Checker separately". Removed the live price footer. Added missing
+  meta/og tags (none existed before).
+- **`indx-flywheel-automation.html`** — removed a "Genesis price $0.24"
+  launch-price framing ("Planning reference price... not a guaranteed
+  or announced launch price"); fixed a present-tense SIINDEX
+  "Monitoring · Routing · Protecting · Optimising" claim contradicted
+  by the page's own checklist (`stage=build`); relabeled
+  "Auto-Actions"/"Recent SIINDEX Auto-Actions" (human-entered via a
+  manual Log button) → "Actions Logged"/"manual entries — no autonomous
+  agent is live"; softened a SolSplits "implements splits
+  automatically" claim (0/5 checklist items done) → "Planned... once
+  deployed — not live yet"; added meta/og tags. Note: `INDX_PRICE_USD`
+  itself was kept (not removed) here, same as the flywheel file's
+  sibling `indx-liquidity-flywheel.html` — it still feeds one preview
+  figure but is disclosed inline as "(planning estimate, not live)" in
+  both the code comment and the displayed text, matching that established
+  pattern rather than the "always delete" pattern used elsewhere.
+- **`indx-automation-grid.html`** — removed a dead price constant;
+  softened a hero claim that saved workflows are "audited" (zero
+  Supabase calls in the file, 100% localStorage); fixed workflow toggle
+  labels implying live trigger execution ("Active — running on
+  trigger" → "Active — execution not yet live"); added a page-level
+  disclosure banner. I additionally rewrote the meta description, which
+  still read "SIINDEX does that" (a live-execution claim inconsistent
+  with the page's own fix) → "Design tool — autonomous execution is
+  planned, not yet live," and added the missing og: tags.
+- **`indx-liquidity-strategy.html`** (no inline `<script>` at all, so
+  Check 9 is trivially clean) — fixed the Executive Summary's
+  present-tense claim that the core liquidity pool "is" a live,
+  continuously-managed Raydium CPMM pool, when the doc's own Strategy 1
+  labels creating one as "Recommended First Move" (not done) → "is
+  planned as... once seeded... No pool has been created yet"; fixed an
+  internal $988M/$374M inconsistency for the same sourced metric (kept
+  $374M, matching the cover figure); fixed present-tense "automatically
+  routed"/"generates fees" claims → conditional/future tense. Left
+  real third-party JitoSOL APY figures and sourced market stats alone
+  (not INDX claims). Added missing meta/og tags (none existed before).
+- **`indx-mission-rooms.html`** — removed a dead price constant; added
+  a page-level "Planned experience — not live yet" banner (the entire
+  "Let SIINDEX Build This Room" flow is 100% static client-side
+  templates, zero backend calls); fixed "Save to My Mission
+  Rooms"/"✦ saved" implying server-side persistence when it's
+  `localStorage`-only; added meta/og tags. Confirmed the earlier
+  "live activity ticker" fix (25 Jul) is still intact.
+- **`indx-sovereign-settlement.html`** — the heaviest single-file
+  finding in this batch, 12 violations in a file with zero
+  fetch/Supabase calls anywhere (a pure client-side simulator presented
+  as a real settlement mechanism): removed a price constant cascading
+  into 8 UI spots; fixed 6 present-tense compliance/monitoring claims
+  ("SIINDEX has completed pre-flight. No compliance flags detected");
+  fixed 3 claims implying real fund movement/irreversibility plus a
+  hardcoded "Settled" badge on every locally-created history entry
+  (added a page-level Preview-mode banner); made a fake rate-alert
+  trigger a no-op; removed a fabricated fee waterfall inventing a
+  nonexistent "Protocol (0.5%)" + "Governance (0.2%) DAO" deduction
+  (canon: no such fee structure exists) — now shows only the real
+  single rail fee. I additionally rewrote the meta description, which
+  still described the page as live settlement ("Send value safely...")
+  → "Preview... Preview mode — no live funds move yet," and added the
+  missing og: tags.
+- **`indx-sovereign-team.html`** — removed a live "INDX $0.24" footer
+  claim; added a LANDMINE warning comment above the also-present unused
+  `INDX_PRICE_USD` constant so a future wire-up can't reintroduce the
+  claim (confirmed via grep it is genuinely unused elsewhere in the
+  file). Confirmed the "10 SIINDEX agents" concept refers to SI
+  sub-agents, not fabricated human headcount. Added missing meta/og
+  tags (none existed before).
+
+**Independent verification notes**: `node --check` clean on every
+extracted inline script across all 10 files; no conflict markers; no
+duplicate `DOMContentLoaded` listeners (`indx-build-console.html` shows
+2 grep hits but the second is a code comment referencing the one real
+listener, not a second listener); zero `Audit.35`/stray `A$`/seed-phrase
+hits; the two CLMM/Token-2022 grep hits in this batch
+(`indx-flywheel-automation.html`, `l99-launch-command.html`) are both
+correct canon statements — "not Token-2022" / "verified, not
+Token-2022" — not violations. 6 of the 10 files (`founder-pipeline`,
+`indx-build-console`, `indx-liquidity-strategy`, `indx-sovereign-team`,
+plus partial gaps in `indx-automation-grid` and
+`indx-sovereign-settlement`) were missing meta description and/or og:
+tags after the agents' own passes — completed those myself before
+committing rather than leaving Check 7 half-done.
+
+**Section 10 progress**: 10 of 22 screens done (`founder-voice.html`
+excluded — protected). Remaining 10: `indx-website-strategy`,
+`cook-islands-meeting`, `launch`, `launchpad`,
+`imagenation-brain-builder`, `imagenation-builder`,
+`imagenation-design-studio`, `brain-passport`, `ai-oversight`,
+`analytics`. `indx-trust-dashboard.html` remains correctly excluded
+(closed under Section 8).
+
+---

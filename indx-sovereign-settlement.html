@@ -4,7 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>Sovereign Settlement — IN$DEX</title>
-  <meta name="description" content="Send value safely. Know the cost. Know the risk. Keep control. IN$DEX Sovereign Settlement Layer." />
+  <meta name="description" content="Preview the IN$DEX Sovereign Settlement Layer: know the cost, know the risk, keep control. Preview mode — no live funds move yet." />
+  <meta property="og:title" content="Sovereign Settlement — IN$DEX" />
+  <meta property="og:description" content="Preview the IN$DEX Sovereign Settlement Layer: know the cost, know the risk, keep control. Preview mode — no live funds move yet." />
   <style>
     :root {
       --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
@@ -131,6 +133,10 @@
     .rail-alert{margin:0 20px 16px;padding:12px 14px;background:rgba(255,184,0,0.04);border:1px solid rgba(255,184,0,0.1);border-radius:10px;font-size:11px;color:var(--muted);line-height:1.6;}
     .rail-alert strong{color:var(--gold);}
 
+    /* PREVIEW MODE BANNER — settlement layer is designed, not live (see AUDIT 2026-09-06) */
+    .preview-banner{margin:0 20px 16px;padding:11px 14px;background:rgba(255,184,0,0.06);border:1px solid rgba(255,184,0,0.18);border-radius:10px;font-size:11px;color:var(--muted);line-height:1.55;}
+    .preview-banner strong{color:var(--gold);}
+
     /* DOCTRINE */
     .doctrine{margin:0 20px 20px;padding:15px 16px;background:rgba(0,212,255,0.03);border:1px solid rgba(0,212,255,0.08);border-radius:12px;text-align:center;}
     .doctrine-text{font-size:12px;color:rgba(240,242,255,0.55);line-height:1.75;font-style:italic;}
@@ -220,6 +226,12 @@
     </div>
   </div>
 
+  <!-- AUDIT 2026-09-06: added — this screen previews the planned settlement flow. There is
+       no live custodian or treasury settlement mechanism, no live INDX price feed, and no
+       real fund movement anywhere on this page (confirmed: no Supabase/fetch calls in the
+       inline script). Every "transfer" below writes a local preview record only. -->
+  <div class="preview-banner"><strong>Preview mode.</strong> IN$DEX's Sovereign Settlement Layer is designed, not live — there is no custodian or treasury settlement mechanism yet, and INDX has no market price before TGE (24 Feb 2027). Nothing on this screen sends or moves real value.</div>
+
   <!-- CORRIDOR -->
   <div class="sect">
     <div class="sect-lbl">Corridor</div>
@@ -234,7 +246,7 @@
       <input class="amount-input" id="amountInput" type="number" min="0" placeholder="0" oninput="onAmount()" />
       <span class="amount-currency">INDX</span>
     </div>
-    <div class="amount-usd" id="amountUsd">≈ $0.00 USD</div>
+    <div class="amount-usd" id="amountUsd">No live USD price — INDX is pre-launch</div>
     <div class="balance-row"><span>Balance: <strong id="balAmt">0.00 INDX</strong></span><span class="over-limit-msg" id="overLimitMsg">Exceeds balance</span></div>
     <div class="amount-divider"></div>
     <div class="quick-btns">
@@ -279,7 +291,7 @@
         <div class="pv-cell"><div class="pv-cell-lbl">Corridor</div><div class="pv-cell-val" id="pvCorridor">—</div></div>
       </div>
       <div class="fx-savings" id="fxSavings"></div>
-      <div class="siindex-note">✦ SIINDEX has completed pre-flight. No compliance flags detected. Human review not required for this transfer. All actions will be logged in your Decision Ledger.</div>
+      <div class="siindex-note">✦ Preview only. This shows the planned SIINDEX pre-flight sequence — no live compliance or sanctions scan has run, and nothing here has been logged or executed.</div>
       <button class="send-btn" onclick="openConfirm()">Send Value →</button>
     </div>
   </div>
@@ -328,7 +340,7 @@
   <div class="proc-overlay" id="procOverlay">
     <div class="proc-spin">⚡</div>
     <div class="proc-title">SIINDEX Pre-Flight Check</div>
-    <div class="proc-sub">Checking safety, compliance, and optimal path.</div>
+    <div class="proc-sub">Preview of the planned safety, compliance, and routing check. Not a live scan yet.</div>
     <div class="proc-steps" id="procSteps"></div>
   </div>
 
@@ -339,7 +351,7 @@
     <div class="confirm-inner">
       <div class="confirm-title">Confirm Transfer</div>
       <div id="confirmRows"></div>
-      <div class="consent-text">By confirming, you consent to this transfer. SIINDEX will not move funds without your approval. This action will be logged in your SIINDEX Decision Ledger. You may not be able to reverse this transfer once initiated.</div>
+      <div class="consent-text">Preview only — no funds move. IN$DEX's settlement layer is not live yet, so confirming will not send, transfer, or log anything; it only saves a local preview of this transfer to your device.</div>
       <div class="confirm-btns">
         <button class="btn-confirm" onclick="executeTransfer()">Confirm & Initiate →</button>
         <button class="btn-cancel" onclick="closeConfirm()">Cancel</button>
@@ -350,7 +362,13 @@
   <div class="toast" id="toast"></div>
 
   <script>
-    const INDX_PRICE_USD = 0.24;
+    // AUDIT 2026-09-06: removed `const INDX_PRICE_USD = 0.24;` — a hardcoded fixed USD
+    // price for INDX with no live price feed. INDX has no market price before TGE
+    // (24 Feb 2027). This file previously used it to render "≈ $X.XX USD" next to every
+    // INDX amount (amount entry, settlement preview, confirm sheet, history analytics)
+    // and to compute fabricated foreign-currency "purchasing power" and rate-alert
+    // triggers. All USD/local-currency conversions below have been removed or replaced
+    // with an honest "not live yet" state; only native INDX amounts are shown.
     const HIST_KEY = 'indx_settlement_history';
 
     const CORRIDORS = [
@@ -364,7 +382,7 @@
     const RAILS = [
       {key:'indx',       name:'INDX Network',       icon:'⚡', cls:'gold-rail',
        speed:'~4.1 seconds',  fee:0.005, feeLabel:'0.5%', risk:'Low',  settlement:'T+0',
-       desc:'Native IN$DEX settlement. Fastest path. SIINDEX-monitored at every step.'},
+       desc:'Native IN$DEX settlement. Fastest planned path. Designed for SIINDEX monitoring at every step — not live yet.'},
       {key:'stablecoin', name:'Stablecoin (USDC)',  icon:'🔵', cls:'cyan-rail',
        speed:'~60 seconds',   fee:0.008, feeLabel:'0.8%', risk:'Low',  settlement:'T+0',
        desc:'Regulated stablecoin rail. Widely accepted. Compliant and auditable.'},
@@ -381,9 +399,9 @@
     ];
 
     const RAIL_ALERTS = {
-      indx:       '⚡ <strong>INDX Network:</strong> Fastest and lowest-fee path. Settlement in seconds. SIINDEX monitors every step.',
+      indx:       '⚡ <strong>INDX Network:</strong> Fastest and lowest planned fee path. Settlement in seconds once live. Designed for SIINDEX monitoring at every step — not live yet.',
       stablecoin: '🔵 <strong>Stablecoin (USDC):</strong> Regulated digital dollar. Cross-border accepted. Slightly higher fee for compliance infrastructure.',
-      fiat:       '🏦 <strong>Bank / Fiat:</strong> Best for recipients without digital wallets. Higher fee and longer settlement. SIINDEX still monitors for risk.',
+      fiat:       '🏦 <strong>Bank / Fiat:</strong> Best for recipients without digital wallets. Higher fee and longer settlement. Designed for SIINDEX risk monitoring — not live yet.',
     };
 
     let selCorridor = null, selRail = null;
@@ -425,7 +443,7 @@
               <div class="rail-stat">·</div>
               <div class="rail-stat">${r.feeLabel} fee</div>
               <div class="rail-stat">·</div>
-              <div class="rail-stat rail-status op" id="rs_${r.key}">🟢 Operational</div>
+              <div class="rail-stat rail-status" id="rs_${r.key}">— Not monitored yet</div>
             </div>
           </div>
           <div class="rail-check" id="rc_${r.key}">✓</div>`;
@@ -447,8 +465,8 @@
     }
 
     function onAmount(){
-      const v = parseFloat(document.getElementById('amountInput').value)||0;
-      document.getElementById('amountUsd').textContent=`≈ $${(v*INDX_PRICE_USD).toFixed(2)} USD`;
+      // No live INDX price feed pre-launch — the amount-usd label stays a static
+      // disclosure (see AUDIT 2026-09-06) rather than computing a fabricated $ value.
       preflightDone=false; document.getElementById('previewWrap').classList.remove('show');
       checkOverLimit(v); // GOD MODE PATCH — balance guard
       updatePreflightBtn();
@@ -503,7 +521,7 @@
       const recv = amt - fee;
       const risk = rail.risk;
 
-      document.getElementById('pvReceives').textContent = recv.toFixed(2)+' INDX (≈ $'+(recv*INDX_PRICE_USD).toFixed(2)+' USD)';
+      document.getElementById('pvReceives').textContent = recv.toFixed(2)+' INDX';
       const rEl = document.getElementById('pvRisk');
       const rColor = risk==='Low'?'var(--green)':risk==='High'?'var(--red)':'var(--gold)';
       rEl.innerHTML = `<div class="pv-risk-dot" style="background:${rColor}"></div><span style="color:${rColor}">${risk}</span>`;
@@ -519,7 +537,7 @@
       const fx = document.getElementById('fxSavings');
       if(savingsIndx > 0){
         fx.style.display='block';
-        fx.innerHTML = `💸 Save ${savingsIndx.toFixed(2)} INDX (≈ $${(savingsIndx*INDX_PRICE_USD).toFixed(2)} USD) vs Western Union (avg 6.8% fee) on this transfer.`;
+        fx.innerHTML = `💸 Save ${savingsIndx.toFixed(2)} INDX vs Western Union (avg 6.8% fee) on this transfer.`;
       } else {
         fx.style.display='none';
       }
@@ -545,7 +563,6 @@
         ['You send', amt.toFixed(2)+' INDX'],
         ['Fee', fee.toFixed(2)+' INDX ('+rail.feeLabel+')'],
         ['Recipient receives', recv.toFixed(2)+' INDX'],
-        ['USD equivalent', '≈ $'+(amt*INDX_PRICE_USD).toFixed(2)+' USD'],
         ['Rail', rail.name],
         ['Settlement', rail.settlement],
         ['Corridor', corr.label],
@@ -582,7 +599,7 @@
       updatePreflightBtn();
       renderHistory();
       initRepeatChip(); // GOD MODE PATCH — refresh repeat-last chip with new history
-      showToast('✦ Transfer initiated — SIINDEX monitoring.');
+      showToast('✦ Preview saved — no funds were sent. Settlement layer is not live yet.');
     }
 
     // GOD MODE: REPEAT LAST TRANSFER
@@ -634,7 +651,7 @@
       if(!hist.length){ list.innerHTML='<div style="font-size:12px;color:var(--muted);padding:8px 0;">No settlements yet.</div>'; return; }
       list.innerHTML = hist.slice(0,10).map(h=>{
         const date = new Date(h.ts).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});
-        return `<div class="hist-item"><div class="hist-dot"></div><div class="hist-info"><div class="hist-amount">${h.amount.toFixed(2)} INDX · ${h.rail}</div><div class="hist-meta">${h.corridor} · ${h.settlement} · ${date}</div></div><div class="hist-status">Settled</div></div>`;
+        return `<div class="hist-item"><div class="hist-dot"></div><div class="hist-info"><div class="hist-amount">${h.amount.toFixed(2)} INDX · ${h.rail}</div><div class="hist-meta">${h.corridor} · ${h.settlement} · ${date}</div></div><div class="hist-status">Preview</div></div>`;
       }).join('');
       // GOD MODE PATCH — analytics
       renderHistAnalytics();
@@ -644,20 +661,22 @@
     function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),3500); }
 
     // ── GM: TRANSFER FEE WATERFALL ───────────────────────
+    // AUDIT 2026-09-06: this used to add a fixed "Protocol (0.5%)" + "Governance (0.2%)
+    // DAO" deduction on TOP of the rail's own fee, so its "net" figure never matched the
+    // "Recipient receives" shown in the settlement preview and confirm sheet — two
+    // different, fabricated answers to the same question. There is also no live DAO or
+    // protocol fee-collection mechanism to attribute a cut to. Now the waterfall breaks
+    // down the single real rail fee only, so it stays consistent with the rest of the page.
     function renderFeeWaterfall(amount, railFee, corridorKey) {
       const el = document.getElementById('feeWaterfall');
       const stepsEl = document.getElementById('fwSteps');
       const netEl = document.getElementById('fwNetVal');
       if (!el || !amount || amount <= 0) { if(el) el.style.display='none'; return; }
       el.style.display = 'block';
-      const protocolFee = amount * 0.005;  // 0.5% SIINDEX
-      const governanceFee = amount * 0.002; // 0.2% DAO
-      const railFeePct = railFee || amount * 0.003;
-      const net = amount - protocolFee - governanceFee - railFeePct;
+      const railFeePct = railFee || amount * 0.005;
+      const net = amount - railFeePct;
       const steps = [
         { lbl:'You send',      val: amount.toFixed(2) + ' INDX', pct: 100 },
-        { lbl:'Protocol (0.5%)',val: '−' + protocolFee.toFixed(4), pct: (protocolFee/amount)*100*3 },
-        { lbl:'Governance (0.2%)',val:'−' + governanceFee.toFixed(4), pct:(governanceFee/amount)*100*3 },
         { lbl:'Rail fee',       val: '−' + railFeePct.toFixed(4), pct: (railFeePct/amount)*100*3 },
       ];
       stepsEl.innerHTML = steps.map((s,i) => {
@@ -678,12 +697,19 @@
     }
 
     // ── GM: PURCHASING POWER CARD ─────────────────────────
+    // AUDIT 2026-09-06: this card previously multiplied the fabricated INDX_PRICE_USD
+    // constant by hardcoded FX rates to invent concrete "what this buys" figures
+    // (specific grocery/rent/electricity prices in PHP/INR/IDR/VND/CNY) and presented
+    // them as real. INDX has no live price feed, and those per-item costs were never
+    // sourced from anything — DEAD DATA, do not re-enable without a real price feed
+    // and a cited cost-of-living source. The corridor→currency map is kept only to
+    // decide which currency name to mention in the honest "planned" note below.
     const PURCHASING_POWER = {
-      'AU→PH': { currency:'PHP', rate:59.4, examples:[['Grocery week','₱2,500'],['School month','₱800'],['Electricity','₱1,200'],['Ride month','₱1,500']] },
-      'AU→IN': { currency:'INR', rate:55.2, examples:[['Grocery week','₹4,800'],['Rent (1 bed)','₹8,000'],['Petrol 20L','₹2,200'],['Mobile plan','₹400']] },
-      'AU→ID': { currency:'IDR', rate:10450, examples:[['Grocery week','Rp 500K'],['School term','Rp 1.8M'],['Electric bill','Rp 600K'],['City transport','Rp 300K']] },
-      'AU→VN': { currency:'VND', rate:16800, examples:[['Grocery week','₫800K'],['Street meals week','₫350K'],['Rent (room)','₫3.5M'],['School fees','₫1.2M']] },
-      'AU→CN': { currency:'CNY', rate:4.85, examples:[['Grocery week','¥320'],['High-speed rail','¥250'],['Restaurant meal','¥80'],['City transport','¥100']] },
+      'AU→PH': { currency:'PHP' },
+      'AU→IN': { currency:'INR' },
+      'AU→ID': { currency:'IDR' },
+      'AU→VN': { currency:'VND' },
+      'AU→CN': { currency:'CNY' },
     };
     function renderPurchasingPower(amount) {
       const card = document.getElementById('ppcCard');
@@ -695,11 +721,9 @@
       const data = corridorKey ? PURCHASING_POWER[corridorKey] : null;
       if (!data) { card.style.display='none'; return; }
       card.style.display = 'block';
-      const localVal = (amount * INDX_PRICE_USD * data.rate).toFixed(0);
-      note.textContent = `${amount.toFixed(2)} INDX ≈ ${Number(localVal).toLocaleString()} ${data.currency} — here's what that buys:`;
-      grid.innerHTML = data.examples.map(([label,val]) =>
-        `<div class="ppc-cell"><div class="ppc-val">${val}</div><div class="ppc-lbl">${label}</div></div>`
-      ).join('');
+      grid.innerHTML = '';
+      grid.style.display = 'none';
+      note.textContent = `Planned: purchasing-power comparison in ${data.currency}. Not live — INDX has no market price before TGE (24 Feb 2027).`;
     }
 
     // ── GM: RATE ALERT SUBSCRIPTION ──────────────────────
@@ -728,18 +752,18 @@
       const list = document.getElementById('raList');
       if (!list) return;
       const alerts = getRateAlerts();
-      if (!alerts.length) { list.innerHTML = '<div class="ra-empty">No alerts set. You\'ll be notified on your next visit when INDX hits your target.</div>'; return; }
+      if (!alerts.length) { list.innerHTML = '<div class="ra-empty">No alerts set. Planned feature — not live yet, since INDX has no market price before TGE (24 Feb 2027). Your target is saved locally for when pricing goes live.</div>'; return; }
       list.innerHTML = alerts.map((a, i) =>
         `<div class="ra-item"><span>INDX ≥ $${a.threshold.toFixed(2)} USD</span><button class="ra-item-del" onclick="deleteRateAlert(${i})">✕</button></div>`
       ).join('');
     }
+    // AUDIT 2026-09-06: previously compared the fabricated INDX_PRICE_USD constant against
+    // saved thresholds and fired a "your alert triggered!" toast — a fake live-price check
+    // with no real price feed behind it. INDX has no market price before TGE (24 Feb 2027),
+    // so this is now a no-op until a real price feed exists. Do not re-enable against a
+    // hardcoded constant.
     function checkRateAlerts() {
-      const alerts = getRateAlerts();
-      const currentPrice = INDX_PRICE_USD;
-      const triggered = alerts.filter(a => currentPrice >= a.threshold);
-      if (triggered.length) {
-        showToast(`🎯 INDX is now $${currentPrice.toFixed(2)} — your alert triggered!`);
-      }
+      // Not live — no real price feed to check against yet.
     }
 
     // ── GM: SETTLEMENT HISTORY ANALYTICS ─────────────────
@@ -752,12 +776,10 @@
       const total = hist.reduce((s,h) => s + h.amount, 0);
       const avgAmt = total / hist.length;
       const uniqueCorridors = new Set(hist.map(h=>h.corridor)).size;
-      const totalUSD = (total * INDX_PRICE_USD).toFixed(2);
-      el.innerHTML = `<div class="ha-title">Your Settlement Stats</div>
+      el.innerHTML = `<div class="ha-title">Your Preview Stats</div>
         <div class="ha-grid">
-          <div class="ha-cell"><div class="ha-val">${hist.length}</div><div class="ha-lbl">Settlements</div></div>
-          <div class="ha-cell"><div class="ha-val">${total.toFixed(0)} INDX</div><div class="ha-lbl">Total sent</div></div>
-          <div class="ha-cell"><div class="ha-val">$${totalUSD}</div><div class="ha-lbl">USD value</div></div>
+          <div class="ha-cell"><div class="ha-val">${hist.length}</div><div class="ha-lbl">Previews</div></div>
+          <div class="ha-cell"><div class="ha-val">${total.toFixed(0)} INDX</div><div class="ha-lbl">Total previewed</div></div>
           <div class="ha-cell"><div class="ha-val">${avgAmt.toFixed(0)} INDX</div><div class="ha-lbl">Avg transfer</div></div>
           <div class="ha-cell"><div class="ha-val">${uniqueCorridors}</div><div class="ha-lbl">Corridors used</div></div>
           <div class="ha-cell"><div class="ha-val">${(hist.reduce((s,h)=>s+(h.feesPct||0.005),0)/hist.length*100).toFixed(2)}%</div><div class="ha-lbl">Avg fee rate</div></div>
