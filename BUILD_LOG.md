@@ -1123,3 +1123,167 @@ excluded — protected). Remaining 10: `indx-website-strategy`,
 (closed under Section 8).
 
 ---
+
+## Section 10 (Founder & Admin) — batch 2 complete, final 10 screens — 9 Sep 2026
+
+Session hit its **weekly** rate limit mid-dispatch of this batch on 6 Sep
+(distinct from the earlier session-limit hit during batch 1) — every
+agent in that attempt errored immediately with zero file changes
+(confirmed via `git status` before re-dispatching, nothing was left
+half-done this time). Re-dispatched the full 10-file batch after the
+weekly reset (confirmed via `date -u` past the stated Sep 9 02:00 UTC
+reset) — all 10 completed cleanly. Independently verified after the
+fact: `git status` confirms exactly these 10 files changed; `node
+--check` clean on every extracted inline script; no conflict markers;
+`DOMContentLoaded` listener count 0 or 1 on every file; all 10 have
+complete `<title>`/description/og:title/og:description; a full sweep
+for CLMM/Token-2022/Swiss Verein/Wyoming DAO/stray `0.35`/stray `A$`/
+seed-phrase/recovery-words-as-possession/liveness-face-scan turned up
+only correct canon statements (e.g. "Swiss Verein... was never real",
+"Corrected — Tier 0 has no face scan"), not violations.
+
+This completes **all 22 screens in Section 10** (`founder-voice.html`
+excluded — protected).
+
+- **`ai-oversight.html`** — already had prior partial remediation from
+  earlier passes (fake decision counter, fake compliance badges, fake
+  bias-audit numbers). What survived: three "override" buttons (freeze
+  challenge, live-support request) wrote to `localStorage` and, once a
+  fabricated SLA timer elapsed, displayed **"Resolved"** — implying a
+  human had received and closed a request that was never sent anywhere
+  (no backend table/RPC exists for this). Only the SIINDEX personal-pause
+  toggle is genuinely real (`set_siindex_personal_pause` RPC). Fixed:
+  added a disclosure above the button list, split the countdown/"Resolved"
+  UI so only the real pause action gets it, non-real requests now show a
+  static "Saved on this device". Also softened an unqualified "every
+  decision is logged... overridable by you" claim, fixed 3 toasts
+  falsely asserting a request reached a human, added missing og: tags.
+- **`analytics.html`** — already largely clean from a prior pass (correct
+  "Live at launch" placeholders for un-launched metrics). Fixed: a bare
+  `$0.24` "INDX Price" stat sat undisclosed next to real-looking TVL/
+  Citizens stats — extended the existing disclosure line to explicitly
+  cover it; "Fixed at $0.24 pre-launch" reworded (removed "Fixed at",
+  reads as live fact); a share-message hedge still used the forbidden
+  "genesis price" framing term despite already saying "not a live
+  price" — reworded to also say "not a launch price"; added missing
+  meta/og tags (only `<title>` existed).
+- **`brain-passport.html`** — the entire screen's premise ("your 10
+  SIINDEX agents are briefed", "the team gets smarter each time") is
+  present-tense for a feature that makes zero Supabase calls — saves
+  only to `localStorage`, nothing is ever sent to any agent. Added a
+  page-level "not live yet / saves to this device only" banner covering
+  the pervasive claim. Also fixed a "Encrypting delegation layer..."
+  processing-step claim (no crypto anywhere in the save path — plain
+  JSON to localStorage; notably risky since the form collects sensitive
+  cultural/family data); landmine-commented a dead `INDX_PRICE_USD`;
+  removed a fabricated "INDX $0.24" footer price; added missing meta/og
+  tags.
+- **`cook-islands-meeting.html`** — the highest legal-sensitivity file in
+  this batch. Strengthened the entity-status banner to explicitly state
+  the Cook Islands entity is **not yet incorporated** and **no legal
+  counsel has been retained** (previously just "Registration in
+  progress" — technically true but thin for a doc meant for officials).
+  Found and closed an implication gap: the file said "Engagement
+  strengthens after 6 December 2026" — traced this date to AJ's actual
+  travel/arrival date in Rarotonga, NOT the separately-referenced,
+  still-unconfirmed "10 December" FSC meeting mentioned in other repo
+  docs (`docs/legal/fsc-correspondence-draft.md`, `BUILD_LOG.md`'s own
+  Legal section both flag that meeting as not sourced to a booking
+  record). This file never named a specific regulator meeting as booked,
+  but the phrasing was vague enough to be misread by exactly the
+  audience (officials) it targets. Fixed: reworded to "Founder in-country
+  presence planned from 6 December 2026 (travel window, not a confirmed
+  regulator meeting)" and added an explicit "No meeting with any Cook
+  Islands regulator is currently confirmed or booked" line to the
+  banner. Added missing og: tags.
+- **`imagenation-brain-builder.html`** (~116KB, largest file in this
+  batch) — a template picker dressed as AI generation: 6 fixed category
+  templates keyed only off which chip the citizen picks; the free-text
+  fields they type (idea, situation, 30-day goal) are saved but never
+  read by the output generator, so two citizens picking the same
+  category get byte-identical output regardless of what they wrote.
+  Copy claimed present-tense personalized generation ("SIINDEX builds
+  your Identity Brain... one idea becomes...") with a fake "Reading your
+  idea / Mapping your audience" processing animation. Also found ~15+
+  instances across all 6 templates instructing citizens to list/sell on
+  "IN$DEX marketplace" today — cross-checked against `marketplace.html`,
+  which is itself explicitly labeled pre-launch/"Coming soon". Fixed via
+  one page-level banner (visible across all 5 phases) disclosing the
+  template-not-personalization and marketplace-not-live facts; removed
+  a dead `INDX_PRICE_USD`; added missing og: tags.
+- **`imagenation-builder.html`** (~56KB) — same "fake SI is building..."
+  progress-animation pattern as its sibling above (only reads
+  `idea.length`, never the actual text, to pick between 3 canned name
+  variants). Fixed via a page-level banner matching the established
+  precedent. Also fixed a live (not dead) `INDX_PRICE_USD` converting
+  dollar estimates into an undisclosed "live-reading" INDX figure
+  (relabeled "assumed... planning rate, not a live price"); fixed 2
+  "launch price" FRAMING violations (renamed to "launch discount" — both
+  referred to the citizen's own product discount, not an INDX sale, but
+  the exact forbidden phrase was still present); added missing meta/og
+  tags.
+- **`imagenation-design-studio.html`** (~64KB) — already carried a
+  page-level "not live yet" banner from a prior pass covering most
+  present-tense SIINDEX-design claims, left intact. Fixed: a live
+  `INDX_PRICE_USD` feeding an undisclosed "INDX equiv." cost estimate —
+  relabeled "Est. INDX*" with an "*Illustrative only" caption; added
+  missing meta/og tags (only `<title>` existed).
+- **`indx-website-strategy.html`** (~40KB, internal founder-facing
+  planning doc, no citizen-facing content) — fixed the worst single
+  claim in this batch: *"Price is always $0.24 USD canonical, never
+  changes"* stated as immutable fact, plus 2 more `$0.24`-as-fact
+  instances — all relabeled as planning estimates with a correction
+  annotation matching the doc's own existing correction style. Fixed a
+  broken-grammar leftover ("There is no recovery words to write down" —
+  the exact singular/plural agreement break the audit skill's Check 6b
+  warns about) → "There is nothing to write down — no recovery words,
+  ever." Fixed 2 canon-drift lines: a Pacific Islander onboarding
+  journey step said "Biometric scan → wallet created" (Tier 0 is
+  phone-only, no scan) → "Phone number verified → wallet created"; a
+  Compliance Shield card claimed "Reserve transparency (live on-chain)"
+  contradicting `reserve-transparency.html`'s own already-shipped
+  "pre-launch, no reserve attestation exists yet" correction → matched
+  wording. Added missing og: tags.
+- **`launch.html`** — the highest violation count in this batch (11,
+  across 5 categories) for a page whose entire purpose is describing an
+  unlaunched product's onboarding. A `"Portal Live"` badge sat next to a
+  Feb-2027 launch date; hero copy said *"The doors are open... claim it
+  now before the first 5,000 are gone"* asserting a live, scarce
+  enrollment that doesn't exist; a spots-remaining progress bar was
+  hardcoded to `width:57%` before any real count loaded (identical
+  fabrication class to the `2,153 spots remaining` example the audit
+  skill's own history section warns about) and a failed-fetch handler
+  left the bar frozen at that fake width instead of resetting it. Also
+  fixed: a `$47.50+` struck-through fixed valuation on an unlaunched
+  bundle (removed); "Every payment covered by SIINDEX" (present tense,
+  → "Planned coverage — not yet active"); "your sovereign portal is
+  live" claim; an unconditional "always" guarantee word. Added the same
+  disclosure-banner pattern already established and audited on the
+  near-duplicate `genesis-offer.html` (2026-07-29); added missing og:
+  tags. **Flagged, not fixed** (out of scope for this file): confirmed
+  `genesis-offer.html` carries the identical `$47.50+` and "covered by
+  SIINDEX" violations under its own already-passed 2026-07-29 audit —
+  worth a follow-up pass when that file is revisited, since its banner
+  addressed the entitlement question but not the dollar-valuation one.
+- **`launchpad.html`** — found a fully *functional* fake-investment flow
+  behind a card labeled "⏳ PREVIEW": `contribute()` wrote a real-looking
+  entry to `localStorage` and displayed `"✅ X INDX contributed to
+  AgriChain"`, then a portfolio strip persisted `"✅ You invested X
+  INDX"` across sessions — a persisted confirmation for a purchase that
+  never happened, no entity, no payment rail. Removed the entire
+  flow (`contribute()` gutted to a no-op, `getLaunchPortfolio`/
+  `saveLaunchPortfolio`/`renderPortfolioStrip` and their HTML/CSS
+  deleted, with AUDIT comments) rather than just disclosing it. Also
+  fixed a second card showing a fake imminent date (`IN 3 DAYS`, `Opens:
+  13 Jun`) inconsistent with a sibling card already fixed for the same
+  pattern on 2026-07-25 → matched. Relabeled a live `INDX_PRICE_USD`
+  display as estimates. Added missing meta/og tags (none existed
+  before).
+
+**Section 10 status: complete.** All 22 screens now have at least one
+full v2 checklist pass. `indx-trust-dashboard.html` closed under
+Section 8; `founder-voice.html` excluded (protected). Next: Section 11
+(task #26, "Static, Marketing & Misc," ~60 screens) — the last unstarted
+section of the pre-existing 281-screen audit plan.
+
+---

@@ -6,6 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>SIINDEX Oversight IN$DEX</title>
   <meta name="description" content="SIINDEX oversight controls: decision logging and personal pause are real and backed by Supabase. EU AI Act conformity is a self-assessment only — no independent audit has been engaged yet.">
+  <meta property="og:title" content="SIINDEX Oversight IN$DEX">
+  <meta property="og:description" content="SIINDEX oversight controls: decision logging and personal pause are real and backed by Supabase. EU AI Act conformity is a self-assessment only — no independent audit has been engaged yet.">
+  <!-- AUDIT 2026-09-09: og:title/og:description were missing entirely (Check 7). Added, mirroring
+       the existing honest <title>/description rather than introducing new claims. -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
   <style>
     :root{--cyan:#00D4FF;--blue:#2B35D8;--purple:#8B3FE8;--black:#090A10;--green:#00E5A0;--gold:#FFB800;--red:#FF4D6D;--surface:#12141F;--surface2:#1A1D2E;--surface3:#22263A;--border:rgba(255,255,255,0.07);--text:#F0F2FF;--text-muted:rgba(240,242,255,0.45);--text-dim:rgba(240,242,255,0.2);}
@@ -102,6 +106,7 @@
     .ai-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
     .ai-dot-pending{background:var(--gold);box-shadow:0 0 0 3px rgba(255,184,0,0.15);animation:aiPulse 1.6s ease-in-out infinite;}
     .ai-dot-done{background:var(--green);box-shadow:0 0 0 3px rgba(0,229,160,0.15);}
+    .ai-dot-local{background:var(--text-dim);}
     @keyframes aiPulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
     .ai-body{flex:1;min-width:0;}
     .ai-label{font-size:12px;font-weight:700;}
@@ -135,7 +140,12 @@
           <div class="sih-avatar">🧠</div>
           <div class="sih-text">
             <div class="sih-title">SIINDEX Sovereign SI CEO &amp; COO</div>
-            <div class="sih-sub">Every decision is logged, explained in plain language, and overridable by you. SIINDEX works for citizens not instead of them.</div>
+            <!-- AUDIT 2026-09-09 (Check 2, CAPABILITY): was an unqualified "Every decision IS
+                 logged... and overridable by you" — a present-tense universal claim, but only
+                 non-blocking transfer-risk flags and personal pause are actually wired to a
+                 real backend today (see loadDecisionTrail() and the override-card note below).
+                 Reframed as design intent, not operating fact. -->
+            <div class="sih-sub">SIINDEX is designed so every decision affecting your account gets logged, explained in plain language, and can be overridden by you. SIINDEX works for citizens, not instead of them.</div>
           </div>
         </div>
         <!-- FIXED 2026-07-25: "1,284 Decisions today" was hardcoded and climbed forever via
@@ -193,7 +203,16 @@
       </div>
       <div class="override-card">
         <div class="oc-title">🧑 You're always in charge</div>
-        <div class="oc-sub">Any SIINDEX automated action can be challenged or overridden. These buttons are always available they can't be disabled.</div>
+        <div class="oc-sub">Any SIINDEX automated action can be challenged or overridden. These buttons are always available — they can't be disabled.</div>
+        <!-- AUDIT 2026-09-09 (Checks 2/3/5, CAPABILITY/AVAILABILITY/FABRICATION): "Request",
+             "Challenge" and "Connect" below wrote to localStorage only, with a fake ticking
+             SLA countdown that ended in a status literally labeled "Resolved" — implying a
+             human received and closed the request when nobody was ever notified. "Pause" is
+             the one real, backed action here (set_siindex_personal_pause RPC). Added an honest
+             disclosure per the ONE-banner pattern used elsewhere on this page, and stopped the
+             other three from claiming resolution — see logOverrideRequest/renderOverrideHistory
+             in the script below. -->
+        <div style="font-size:11px;line-height:1.5;color:var(--text-muted);margin-bottom:2px;">🚧 Not live yet: except for "Pause" below, these requests are saved on this device only — the human-review queue and live-support chat behind them are still being built, so nothing is sent to a person yet.</div>
         <div class="override-list">
           <div class="or-item">
             <div class="or-ico">🔓</div>
@@ -455,6 +474,11 @@ function formatCountdown(ms){
   if(h>0) return h+'h '+m+'m left';
   return m+'m left';
 }
+// AUDIT 2026-09-09 (Checks 2/3/5): only 'pause' is backed by a real RPC
+// (set_siindex_personal_pause) whose 48h window this countdown genuinely reflects.
+// 'freeze' / 'challenge' / 'support' are saved to localStorage only — nobody is
+// notified — so they must never show a ticking SLA or a "Resolved" state, both of
+// which previously implied a human had received and closed the request.
 function renderOverrideHistory(){
   const wrap = document.getElementById('overrideHistoryList');
   if(!wrap) return;
@@ -464,6 +488,13 @@ function renderOverrideHistory(){
     return;
   }
   wrap.innerHTML = list.map(function(item){
+    if(item.type !== 'pause'){
+      return '<div class="activity-item">'
+        + '<div class="ai-dot ai-dot-local"></div>'
+        + '<div class="ai-body"><div class="ai-label">'+item.label+'</div><div class="ai-time">'+new Date(item.requestedAt).toLocaleString()+'</div></div>'
+        + '<div class="ai-countdown" style="color:var(--text-muted);">Saved on this device</div>'
+        + '</div>';
+    }
     const remaining = (item.slaMs||0) - (Date.now() - item.requestedAt);
     const done = remaining<=0;
     return '<div class="activity-item" data-requested="'+item.requestedAt+'" data-sla="'+item.slaMs+'">'
@@ -474,7 +505,7 @@ function renderOverrideHistory(){
   }).join('');
 }
 function tickOverrideCountdowns(){
-  document.querySelectorAll('.activity-item').forEach(function(row){
+  document.querySelectorAll('.activity-item[data-sla]').forEach(function(row){
     const requested = parseInt(row.getAttribute('data-requested'),10) || 0;
     const sla = parseInt(row.getAttribute('data-sla'),10) || 0;
     const remaining = sla - (Date.now() - requested);
@@ -484,17 +515,21 @@ function tickOverrideCountdowns(){
     if(dot) dot.className = 'ai-dot ' + (remaining<=0 ? 'ai-dot-done' : 'ai-dot-pending');
   });
 }
+// AUDIT 2026-09-09 (Check 3, AVAILABILITY): these toasts previously claimed a
+// transaction had happened — "requested", "submitted to review team", "opening
+// live support chat" — when nothing left this device. Corrected to match what
+// actually happens (see logOverrideRequest / OVERRIDE_HISTORY_KEY above).
 function requestFreezeOverride(){
   logOverrideRequest('freeze','Override account freeze requested',240);
-  showToast('Human review requested — 4-hour SLA');
+  showToast('Saved on this device — human review queue isn\'t live yet');
 }
 function requestChallenge(){
   logOverrideRequest('challenge','Challenge submitted to review team',1440);
-  showToast('Challenge submitted to review team');
+  showToast('Saved on this device — review-team routing isn\'t live yet');
 }
 function requestLiveSupport(){
   logOverrideRequest('support','Live support requested',15);
-  showToast('Opening live support chat…');
+  showToast('Saved on this device — live chat isn\'t built yet');
 }
 function openPauseSheet(){
   pauseSheetTriggerEl = document.activeElement;
