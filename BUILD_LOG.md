@@ -1670,3 +1670,91 @@ This closes the 10-file Section 11 batch 3 list. Section 11 (task #26) remaining
 `sovereign-id.html`, `sovereign-identity.html`, `sovereign-support.html`, `sovereignpay.html`,
 `speak-to-siindex.html`, `tokenize.html`, `voice-wallet.html`, plus a final check for "any leftover
 files not covered by other sections" per task #26's own description.
+
+## 2026-09-10 — Section 11 final batch: portfolio, qr-scanner, skill-point-nft, sovereign-academy, sovereign-id, sovereign-identity, sovereign-support, sovereignpay, speak-to-siindex, tokenize, voice-wallet
+
+Closes out task #26 (Section 11 — Static, Marketing & Misc) — this was the last set of named
+screens in that section's list.
+
+- `portfolio.html`: found a VALUE violation the standard regex misses entirely — `bal *
+  INDX_PRICE_USD` computed a live-looking `$624.75`-style USD figure in six rendered locations
+  with no literal `$0.24` adjacent to most of the source. Also caught that this file was running
+  stale canon: `founder-command-center.html`, `data-sovereignty-hub.html`, and
+  `siindex-proof-insight-network.html` (all dated 2026-09-05/06) had already concluded "no genesis
+  price has been set; INDX has no fixed USD price," but portfolio.html hadn't picked that up —
+  textbook "canon drifts with no commit recording it." All six computed-$ locations rewritten to
+  "No fixed USD price / Pre-launch"; dead constant removed; meta tags added.
+- `qr-scanner.html`: a fake "GOD MODE: Live USD conversion" hint computed off the dead price
+  constant, removed along with its function/DOM hook. A PQSI T0 security-check animation
+  unconditionally landed on "PQSI T0 CLEAR ✓" regardless of any actual check — the same
+  fake-badge bug pattern `citizen-dashboard.html` already documented fixing elsewhere — relabeled
+  to describe only the real local QR-format check it performs. Meta tags added.
+- `skill-point-nft.html`: one leftover live-infrastructure claim ("Chain: Solana · Metaplex",
+  "Storage: Arweave (permanent)") survived an earlier hedging pass and directly contradicted the
+  page's own "no minting infrastructure exists" banner two sections up — relabeled "(planned) ...
+  not live". Meta tags added.
+- `sovereign-academy.html`: 13 violations, the largest count in this batch — two grammar-wreckage
+  "There is no recovery words" sentences (same historical bug class as `about.html`); a mint/freeze
+  "revoked on-chain on 12 July 2026" claim asserted as a completed past event contradicting its own
+  later quiz answer; a live present-tense "1% redistribution to all holders...without doing
+  anything" passive-income mechanic (no live token, no live redistribution); an unhedged staking
+  lesson while sibling T4/ZK lessons in the same file carried disclaimers; a fabricated 20%-discount
+  clause in a quiz answer with no support anywhere else in the lesson; two repeated $0.24
+  mentions missing the hedge their first occurrence had; an "INDX bonus is locked and waiting"
+  availability claim for a non-existent live token. Meta tags added.
+- `sovereign-id.html`: a prior 2026-08-30 remediation pass fixed the greppable violations but
+  missed Check 2/8 (not greppable) — the passport card asserted a live minted SBT ("✓ SBT #00142"),
+  a live "Tier 2" verification badge (hardcoded regardless of actual 1-of-6 phone-only credentials),
+  an unqualified "ZK-Proof" badge, and — the highest-risk instance — the external share-to-
+  WhatsApp/Telegram/SMS/Email text asserted "ZK-verified on Solana" as fact, pushed to third
+  parties outside the app. All corrected to preview/planned framing. Meta tags added.
+- `sovereign-identity.html`: the most serious canon-drift finding of this batch — a full
+  biometric "Zero-Knowledge Biometric Proof" / face-scan / "Active Liveness: 99/100" score section
+  with fake bars for "Face ID match," "Active liveness (blink/turn)," and "Behavioural biometrics,"
+  sitting directly below the page's own Tier-0-phone-only-no-face-scan disclosure banner. This is
+  architecturally forbidden, not merely unbuilt, so it was removed outright (not hedged) along with
+  its dead JS (`animateLiveness()`) and CSS. A SIINDEX toast falsely claiming "Your CPT is valid
+  and on-chain" was also fixed, and a dead `INDX_PRICE_USD` landmine removed. Meta tags added.
+- `sovereign-support.html`: verified directly against the live Postgres schema (per this batch's
+  brief, given the contact.html fake-form precedent) that `file_complaint`, `claim_genesis_signup_
+  bonus`, and all six Wisdom Score point values cited in the chat responses are real, correctly
+  wired RPCs matching the on-screen copy exactly — no contact.html-style fakery here. Two remaining
+  violations: an unhedged "Sovereign Yield" mention and a present-tense "Sovereign Court handles
+  jury-based arbitration" claim contradicting `help.html`'s already-fixed canon (Sovereign Court is
+  planned; IN$DEX support handles disputes during the pilot). Meta tags added.
+- `sovereignpay.html`: three present-tense "confirmed on Solana" / "settlement ... Solana" claims
+  (no live INDX token/settlement exists — payments record in IN$DEX's own ledger) fixed, matching
+  the already-corrected `remittance.html` pattern. A fake recipient-verification badge marked any
+  typed string over 5 characters "✓ Verified" with no real lookup — same bug class already fixed on
+  `qr-scanner.html` — now checks real send history instead. A hardcoded 4-name fake "Recent
+  contacts" list replaced with a function reading real transfer history. A dead `randomTx()`
+  fabrication function marked as a landmine rather than silently left. Meta tags added.
+- `speak-to-siindex.html`: one VALUE violation ($0.24 "Genesis reference" price contradicting the
+  page's own "no live token price" banner) and missing og: tags. SIINDEX's two first-person
+  dialogue lines passed a full voice check (correct SI/she framing, no forbidden phrases).
+- `tokenize.html`: the front door to the whole mint/tokenize flow had zero disclosure while every
+  downstream screen it links to (`business-nft.html`, `music-nft.html`) already carries the house
+  "not connected yet" banner. 9 present-tense minting/on-chain claims across the hero, all 4
+  category cards, and all 4 "how it works" steps rewritten to the `rwa.html` house phrasing
+  ("NFT minting is a Phase 2 feature — not available in this pilot"), plus a new page-level
+  disclosure banner. Meta tags added.
+- `voice-wallet.html`: "genesis price" framing violation (forbidden phrase, same fix pattern as
+  `citizen-dashboard.html`'s "genesis reference"); a forbidden SIINDEX voice phrase ("I'm not sure")
+  in the unrecognized-command fallback; a static HTML success-message fallback ("Payment sent
+  instantly. Zero bank needed.") that's always JS-overwritten but live in raw markup if anything
+  scrapes/pre-renders it, replaced with the file's own placeholder convention. Meta tags added.
+  Verified `transfer_indx` goes through a genuine Approval Gateway RPC flow, not a fake send.
+
+All 11 files independently re-verified directly (not trusting agent self-reports alone): `node
+--check` on every extracted inline `<script>` block (all pass, zero errors across 32 total script
+blocks), `DOMContentLoaded` count check (0 or 1 everywhere), conflict-marker grep (none found), and
+targeted post-fix greps confirming each file's headline violation pattern (dangling
+`INDX_PRICE_USD` refs, leftover liveness/ZK-Solana claims, the hardcoded `CONTACTS` array, meta
+tags) was genuinely gone, not just claimed gone.
+
+**This closes Section 11 (task #26) — all ~42 named screens in the section's description have now
+been audited.** Remaining: a final check for "any leftover files not covered by other sections"
+per the task's own description, then mark task #26 complete.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
