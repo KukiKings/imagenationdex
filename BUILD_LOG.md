@@ -1457,3 +1457,116 @@ above), `skill-point-nft`, `sovereign-academy`, `sovereign-id`,
 not covered by other sections.
 
 ---
+
+## Section 11 batch 2 — 9 screens (1 already clean, 0 edits needed) — 10 Sep 2026
+
+Dispatched 9 agents (`planned`, `public-home`, `ui-kit`,
+`voice-accent-preview`, `fee-schedule`, `indx-98-2-law`,
+`indx-asset-meaning`, `indx-corridor-fiji`, `indx-corridor-rmi`,
+`indx-corridor-samoa`). Independently verified after the fact: `git
+status` confirms exactly 9 of the 10 files changed (`public-home.html`
+genuinely had zero edits — see below); `node --check` clean on every
+extracted inline script; no conflict markers; `DOMContentLoaded` 0 or 1
+everywhere; full legacy/canon sweep clean (including a targeted
+"immutable/hardcoded smart contract" grep given this batch's 98/2-Law
+content — only hits were the already-corrected disclosure text and CSS
+class names).
+
+- **`public-home.html`** — confirmed this, not `index.html`, is the
+  actual page served at the root domain (`vercel.json` routes `/` here;
+  `index.html` is an internal 244-screen prototype directory that's
+  itself routed to 404 in production). Read in full — genuinely clean,
+  0 edits needed. This is the most heavily-hedged page found in the
+  whole audit so far: an explicit "Honest status" section listing live
+  vs. not-live, "$0.24 is a genesis reference only — not a live market
+  price," "SIINDEX does not invent licences or completed registration."
+  Worth noting for AJ: this page already does, unprompted, everything
+  the rest of this audit has been retrofitting elsewhere.
+- **`planned.html`**, **`ui-kit.html`**, **`voice-accent-preview.html`**
+  — all near-clean internal/utility pages, 1 meta-tags fix each.
+  `ui-kit.html` and `voice-accent-preview.html` are explicitly
+  self-described as internal, unlinked tools — given `noindex,nofollow`
+  (matching the `index.html` precedent) instead of og: tags meant for
+  public sharing. `voice-accent-preview.html`'s preview playback was
+  independently verified as genuinely functional (real
+  `SpeechSynthesisUtterance`/real `<audio>` elements, not faked) — flagged
+  but did not touch an unresolved, already-disclosed open question about
+  which ElevenLabs voice accent is "currently live" (outside audit scope,
+  a product decision not a fabrication).
+- **`fee-schedule.html`** — a live (not dead) `INDX_PRICE_USD` feeding
+  an undisclosed "≈ INDX equivalent" fee-calculator figure, relabeled
+  "(estimate, not live)"; a "You keep 98%. Every fee. Every time."
+  present-tense promise directly above a banner saying the opposite,
+  reworded to "The design:... once it's live"; missing meta tags added.
+  The 98/2 "Civilisation Law" disclosure and APY-range comparison were
+  already correctly fixed by an earlier pass — verified, left alone.
+- **`indx-98-2-law.html`** — confirmed as the actual source file for
+  the "hardcoded into the smart contract...immutable...no DAO vote,
+  ever" framing that a much earlier session found already-fixed
+  elsewhere (`siindex-voice-terminal.html`) but never traced back here.
+  The page's hero and one disclosure block already carried the correct
+  hedge from a prior pass, but a second, independent copy of the same
+  overclaim survived lower on the page in a visually prominent
+  lock-icon "immutable strip" — self-contradicting the page's own hero
+  copy. Fixed to match the `help.html` precedent: "applied by IN$DEX's
+  ledger system, not by deployed on-chain contract code." Also fixed a
+  live price constant silently rendering a real-looking $ figure in the
+  page's own INDX/USD calculator.
+- **`indx-asset-meaning.html`** — 2 undisclosed "INDX $0.24" price
+  badges (nav bar + footer), directly contradicting the page's own
+  "versus" strip which explicitly advertises that IN$DEX does *not*
+  show price unlike competitors; removed. Dead price constant removed.
+  Flagged, not changed: present-tense "Cultural Rights Graph can verify
+  permissions" — identical present-tense language is used consistently
+  across 20+ other files including screens marked `status:'live'`, so
+  treated as established cross-platform canon rather than a
+  file-specific fabrication; worth a canon decision, not a spot-fix.
+- **`indx-corridor-fiji.html`** — the worst of the three corridor pages
+  audited this batch (5 violations): an entirely fake "Join waitlist"
+  button that only wrote to `localStorage` and showed "You're on the
+  list" with nothing persisted anywhere real — found the site already
+  has a genuine Supabase-backed waitlist flow (`waitlist.html` →
+  `rpc/join_waitlist`) and pointed the button at that instead of
+  disclosing the fake one; an unhedged fee/speed claim in the meta
+  description (read in search/social previews with none of the on-page
+  "Coming Soon" context visible); 2 settlement-timeline branches with no
+  "Not live yet" hedge while sibling branches in the same function had
+  one. Flagged, not fixed (out of scope for this file): the identical
+  fake local-only waitlist pattern also exists in `indx-corridor-samoa.html`
+  and `indx-corridor-rmi.html` — worth checking directly since both were
+  also in this batch (see below; their own agents reported the waitlist
+  CTA as real/pointing at a live page — the fiji agent's cross-file
+  flag may be describing a smaller local-flag side effect alongside a
+  real link; recommend a direct spot-check before assuming samoa/rmi
+  need the same fix).
+- **`indx-corridor-rmi.html`** — the most consequential single finding
+  in this batch: the settlement-timeline widget's default-state branch
+  (which fires on page load, given the page's default slider values)
+  was the one branch missing the "Planned:... Not live yet" hedge its
+  three siblings had — meaning the very first thing a visitor to this
+  "Coming Soon" page saw was an unqualified claim of a working
+  settlement window. Fixed. Missing og: tags added, meta description
+  reworded from an unhedged present-tense claim to match the corrected
+  house pattern already shipped on `indx-corridor-samoa.html`.
+- **`indx-corridor-samoa.html`** — dead price constant removed; a
+  settlement-timeline inconsistency (3 of 4 transfer tiers had no "Not
+  live yet" hedge while the top tier did) fixed with one added
+  disclosure line; missing og: tags added with the corrected pattern.
+
+**Cross-file reconciliation, done before committing**: the
+`indx-corridor-fiji.html` agent's report claimed sibling corridor pages
+shared its fake localStorage-only waitlist bug, but the
+`indx-corridor-samoa.html` and `indx-corridor-rmi.html` agents
+(dispatched in the same parallel batch, so neither could see the
+other's fix) had not independently flagged or fixed it in their own
+files. Checked directly rather than trusting either report: confirmed
+both `indx-corridor-samoa.html` and `indx-corridor-rmi.html` had the
+identical bug (`joinWaitlist()` writing only to `localStorage`, showing
+"You're on the list" with nothing recorded anywhere real). Fixed both
+myself, same pattern as fiji: button now links straight to the real
+Supabase-backed `waitlist.html`, the fake function and its dead
+init-time state check removed, `node --check` re-verified clean on
+both. `indx-corridor-vanuatu.html` (next batch) needs the same check —
+don't assume it's clean just because its own agent doesn't flag it.
+
+---
