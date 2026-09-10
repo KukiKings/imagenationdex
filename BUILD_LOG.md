@@ -1326,3 +1326,134 @@ push (confirmed via `git fetch origin main` — origin/main is at `430d0bb`,
 `indx-unpushed-through-rwa-fix.bundle`.
 
 ---
+
+## Section 11 (Static, Marketing & Misc) — started, batch 1 complete, 10 screens — 10 Sep 2026
+
+Started Section 11 (task #26, ~42 named screens, last unstarted section of
+the 281-screen plan). First dispatch of 10 hit the session rate limit
+partway through — 404.html finished clean, about.html got exactly one
+fix in before the cutoff (the token-existence banner correction), the
+other 8 got zero edits. Re-dispatched after confirming via `git status`
+that only those two files had any change, and finished about.html's
+remaining checklist plus the 8 untouched files once the limit cleared.
+Independently verified after the fact: `git status` confirms exactly
+these 10 files changed; `node --check` clean on every extracted inline
+script; no conflict markers; `DOMContentLoaded` 0 or 1 everywhere; full
+legacy/canon sweep (CLMM/Token-2022/Swiss Verein/Wyoming DAO/stray
+`0.35`/stray `A$`/seed-phrase/recovery-words-as-possession/liveness-face-scan)
+turned up only correct negations and corrections, not violations.
+
+- **`404.html`** — clean file overall; added missing og: tags; fixed a
+  fake-terminal line claiming an automatic redirect ("Redirecting you to
+  the republic") when the page has no redirect logic at all — only
+  manual link buttons.
+- **`about.html`** — 7 violations beyond the earlier partial fix. Most
+  notable: a "Citizen Assembly... governance layer where citizens vote...
+  all decisions are on-chain" present-tense block directly contradicted
+  a "Not live yet — no vote has been held" disclosure four sections
+  earlier in the *same file*; a closing CTA said "The republic is open"
+  contradicting the page's own top banner (aligned to `how-it-works.html`'s
+  already-fixed waitlist framing); a $0.24 stat lacked the hedge every
+  sibling page uses; a dead `INDX_PRICE_USD` removed; fixed the exact
+  "There is no recovery words to lose" grammar-wreckage pattern the audit
+  skill's own history section warns about, by name.
+- **`contact.html`** — the contact form was entirely fake: `confirmAndSend()`
+  had no fetch, no Supabase call, no mailto — it only wrote to
+  `localStorage` while showing "Message sent. AJ will be in touch."
+  Checked the live Supabase project: no `contact_messages` table exists,
+  and the closest table requires a logged-in citizen_id an anonymous
+  visitor doesn't have. Wired the form to a real `mailto:` handoff to
+  the same address already shown honestly on the page, instead of
+  claiming a delivery that never happened. Also removed a live ticking
+  "Reply expected within 47h 59m 12s" countdown manufacturing a fake
+  SLA, and a "we read every message, you'll hear back within 48 hours"
+  guarantee — both contradicted the page's own honest AJ-reads-personally
+  copy.
+- **`help.html`** — the highest violation count of any file audited so
+  far (~24, across every category) on a 717-line FAQ/glossary. Fabricated
+  $240 USD Genesis Bonus value and "$0.24 genesis price"; a "98/2 Law
+  enforced automatically, cannot be changed" immutable-code claim for
+  code not deployed on-chain; 6 AVAILABILITY violations answering "Yes"
+  to buy/withdraw/dispute questions for rails that don't exist; 10
+  CAPABILITY violations presenting on-chain settlement, staking yield,
+  Sovereign Mesh/Delivery, and .IN$DEX domains as already live — closed
+  with individual fixes plus one page-level disclosure banner (per house
+  style) so future edits inherit it; a fake per-device "Most helpful"
+  FAQ badge (from localStorage vote counts) relabeled "You found this
+  helpful"; found and fixed a distinct legacy defect — an earlier editing
+  pass had silently *deleted* em dashes (not replaced them) across ~13
+  places, producing run-on nonsense sentences ("escrow locked by a smart
+  contract wallet but unlike a regular crypto wallet") — all restored;
+  fixed 2 recovery-words hard-stop violations describing them as
+  something a citizen optionally doesn't need, rather than something
+  that doesn't exist.
+- **`home-v2.html`** (~127KB, largest file in the codebase) — already
+  in good shape from prior passes. Found: 2 present-tense feature cards
+  (fan-tipping, Heritage Flag IP protection) missed by an earlier
+  "Planned:" sweep applied to every sibling card; a dead `INDX_PRICE_USD`;
+  and — via a live Supabase check (`select count(*) from waitlist` → 3,
+  not 0) — a hardcoded "No signups have been recorded yet" claim that
+  was already false. Wired the element to the page's own existing
+  Supabase-driven counter function instead of hardcoding either state.
+- **`home-v3.html`** — a $0.24 "Genesis price" stat and a live-used
+  price constant in the fee calculator, both relabeled with hedges; a
+  scripted `speechSynthesis`-based "SIINDEX Voice Demo" presented as the
+  live backend, hedged as illustrative; and the most significant find —
+  3 separate face-scan/biometric mentions in the onboarding copy (word
+  order varied enough to dodge a naive grep: "Face + phone verification",
+  "accepts your face", "a quick face check") contradicting this exact
+  page's own Tier-0-phone-only badge two sections up. All 3 rewritten to
+  phone-only Tier 0.
+- **`how-it-works.html`** — already a model of careful hedging (7 of 9
+  feature cards, security cards, and the walkthrough all correctly
+  disclosed) with 2 outlier cards that weren't ("SIINDEX pre-flight
+  checks every swap" — matches the audit skill's own named high-risk
+  phrase almost verbatim; a present-tense Citizen Assembly voting claim)
+  — both aligned to the sibling pattern. Dead price constant removed;
+  missing `og:description` added.
+- **`index.html`** — turns out not to be the public homepage: it's an
+  internal 244-screen prototype directory, routed to 404 in production
+  per `vercel.json` (real public root is `public-home.html`). Still
+  fully audited since it ships in the repo. The most serious single
+  finding across this whole batch: a footer flatly stated "INDX Token
+  minted on Solana Mainnet" with a "Token Minted ✅" badge — completely
+  false, no mint exists. Fixed to "planned for Solana, not yet minted."
+  Also fixed 2 undisclosed $0.24 mentions, a "PASSIVE" badge (forbidden
+  framing term) on Light Node, and a "liveness check" mention on a
+  Biometric KYC card description contradicting Tier-0-phone-only canon.
+  Added `noindex,nofollow` instead of og: tags, since this page is
+  deliberately not meant to be publicly indexed or shared.
+- **`landing-page.html`** — 7 present-tense SIINDEX capability claims
+  ("the world's first AI Chief Operating Officer... 24/7. Autonomous.")
+  that had drifted from the "Planned:/Not live yet" pattern every
+  sibling homepage already uses for the identical capability grid — also
+  fixed the literal "AI Chief Operating Officer" framing (SIINDEX is SI,
+  never AI) and a "Biometric + blockchain identity" pillar contradicting
+  Tier-0-phone-only canon. Added a roadmap-disclosure banner over the
+  page's 14-Pillars sci-fi grid (fusion energy, brain-computer interfaces,
+  etc.) since those are wall-to-wall present-tense claims that would each
+  fail Check 2 read literally. Missing meta/og tags added.
+- **`pacific-first.html`** — an app screen (Sovereign Social creator
+  feed) already carrying a 2026-07-25 honesty banner for fake
+  platform-wide counters. Found what that pass missed: an undisclosed
+  `$0.24 INDX Price` stat pill and a live-used price constant, both
+  relabeled as estimates; a present-tense "SIINDEX protects [cultural
+  heritage]" claim softened to "is built to help protect"; an unsourced
+  "70% Pacific nations creators · Always" statistic reworded as a stated
+  curation policy rather than a measured live fact. Missing meta/og
+  tags added.
+
+**Section 11 progress: 10 of ~42 named screens done.** Remaining from
+the task's named list: `contact`(done)... next batch: `pacific-first`(done),
+`planned`, `public-home`, `ui-kit`, `voice-accent-preview`,
+`fee-schedule`, `indx-98-2-law`, `indx-asset-meaning`,
+`indx-corridor-fiji/rmi/samoa/vanuatu`, `indx-grand-synchronicity-countdown`,
+`indx-kids`, `indx-legacy-vault`, `language-settings`, `life-graph`,
+`light-node`, `offline-fallback`, `offline`, `pag`, `portfolio`,
+`qr-scanner`, `rwa`(separately closed via AJ's direct request, see
+above), `skill-point-nft`, `sovereign-academy`, `sovereign-id`,
+`sovereign-identity`, `sovereign-support`, `sovereignpay`,
+`speak-to-siindex`, `tokenize`, `voice-wallet` — plus any leftover files
+not covered by other sections.
+
+---
