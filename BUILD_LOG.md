@@ -1570,3 +1570,103 @@ both. `indx-corridor-vanuatu.html` (next batch) needs the same check —
 don't assume it's clean just because its own agent doesn't flag it.
 
 ---
+
+## 2026-09-10 — Section 11 batch 3 (indx-screen-audit v2)
+
+Files audited this batch: `indx-corridor-vanuatu.html`, `indx-grand-synchronicity-countdown.html`,
+`indx-kids.html`, `life-graph.html`, `indx-legacy-vault.html`, `language-settings.html`,
+`light-node.html`, `offline-fallback.html`, `offline.html`, `pag.html`. This batch was split
+across two dispatches after a session rate-limit interruption mid-way through the first;
+`indx-kids.html` and `life-graph.html` initially only got their meta tags fixed (Check 7) before
+the interruption and were finished in a follow-up pass.
+
+- `indx-corridor-vanuatu.html`: fake `joinWaitlist()` (localStorage-only, no real signup) replaced
+  with a link to the real Supabase-backed `waitlist.html` — same bug pattern as
+  fiji/samoa/rmi. Hero-sub capability claim and all 4 settlement-timeline branches (incl. the
+  default branch that fires on page load) given consistent "Planned:...Not live yet" hedges. Dead
+  `INDX_PRICE_USD` constant removed. Meta/og tags added.
+- `indx-grand-synchronicity-countdown.html`: "INDX Today / Genesis Price" two-box strip (same-number
+  price trajectory + forbidden launch-price framing) relabeled to a disclosed planning reference.
+  "Bonding curve graduates, LP burned, no one holds the key" claims (obsolete Pump.fun-style
+  mechanism, superseded by the SIINDEX-managed continuous-custody plan, founder decision
+  2026-07-22) rewritten in the manifesto body, the chip row, and a readiness-checklist item
+  ("LP Burn confirmed" → "Liquidity custody mechanism finalized and published" — canon drift, not
+  just a tense issue, since LP burn isn't the actual plan).
+- `indx-kids.html`: hero `$0.24` price stat relabeled "Genesis Est. · Not Live"; dead
+  `INDX_PRICE_USD` constant removed; flat "3–13% APY" claim clarified into its tiered ranges;
+  "Every completed lesson earns XP and INDX" (present tense, no live token) split into
+  XP-now/INDX-later; "COPPA 2025 compliant" declarative compliance claim softened to "Built for
+  COPPA 2025"; "Claim your...yourname.IN$DEX domain" (imperative present-tense availability claim)
+  changed to "Planned:...once live"; added a page-level pre-launch banner over the many
+  present-tense tier-feature bullets (custodial wallets, NFTs, domains) rather than hedging each
+  one individually. **Recovery-words hard-stop check: confirmed CLEAN** — the historical
+  "taught recovery words to children" violation documented in the audit skill's own gotchas was
+  already remediated in an earlier (2026-07-30) pass; only remaining reference is the corrected
+  "why a Grid Account needs no recovery phrase" framing, verified still correct.
+- `life-graph.html`: dominant issue was Check 2 (CAPABILITY) — 17 instances of present-tense
+  claims that SIINDEX/named Agents were actively reading, logging, and updating citizen data,
+  contradicting the file's own already-fixed meta description ("SIINDEX review...not live yet").
+  Added a page-level preview banner plus rewrote the hero-sub, all 8 category SIINDEX-response
+  strings (shown across toast/timeline/detail-sheet surfaces), the empty-state insights copy, the
+  dynamic insights-rendering strings, and the save-flow overlay steps to the
+  "Preview...Planned...once SIINDEX review is live" pattern. One `$0.24` VALUE violation
+  (unlabeled price in a footer stat strip) relabeled "(estimate, not live)"; one dead
+  `INDX_PRICE_USD` constant removed.
+- `indx-legacy-vault.html`: found a VALUE/FABRICATION violation the standard regex would have
+  missed — `${(1240 * INDX_PRICE_USD).toFixed(2)} USD` multiplies a fabricated token count by the
+  dead price constant with no `$` adjacent to the literal number in source, but renders a live-
+  looking fixed USD balance; replaced with a plain token-count display, constant removed. Five
+  CAPABILITY violations in the guardian/council vault-release flow and the privacy/access-control
+  claim (asserted a live legal-access guarantee for data that isn't even synced anywhere) rewritten
+  to "Planned:...Not live yet". Missing og: tags added. No recovery-words content found despite the
+  inheritance/legacy subject matter being exactly the kind of screen where that violation tends to
+  hide.
+- `language-settings.html`: genuinely CLEAN, 0 edits. Missing meta description/og: tags were
+  flagged but intentionally not added — confirmed this is a uniform convention across sibling
+  settings screens (`currency-settings.html`, `security-settings.html`,
+  `notification-settings.html`, `privacy-settings.html` all follow the same title-only or no-title
+  pattern), so adding them here would be inconsistent scope creep rather than fixing an actual
+  screen-specific defect.
+- `light-node.html`: classic Light Node overclaim pattern — "Earn INDX passively from your phone",
+  "Passive INDX Earnings", "3–8 INDX per day just for staying online", live-looking `≈ $` USD
+  projection computed from the dead price constant, and an activate-flow that told the citizen
+  their node was "Online · Earning" / "Running · Battery saver on" with a live uptime percentage —
+  none of it real (Sovereign Mesh is not live). All present-tense earning/online language rewritten
+  to a "sign up now, switch on automatically at launch" framing; dead `INDX_PRICE_USD` constant and
+  its `≈ $` projection removed in favor of "Not priced / INDX has no live price yet"; meta/og tags
+  added. The two `FIXED 2026-07-25` comments (fake peer count, fake regional rank) from an earlier
+  pass were left as-is — still correct, not touched.
+- `offline-fallback.html`: genuinely clean on every content check; only missing meta/og tags
+  needed fixing, matching the sibling-utility-page convention (e.g. `404.html`).
+- `offline.html` (Sovereign Mesh P2P screen): an earlier 2026-07-25 pass had already stripped the
+  `Math.random()`-driven fake peers/latency and added a top-of-page "Preview — not live yet"
+  banner, but left the hero copy, status-grid pills ("Active"/"On"), all four "How It Works" info
+  cards, and — most seriously — a live runtime banner titled "Sovereign Mesh Active" shown to real
+  users when they actually go offline, all still asserting the feature in present tense directly
+  under the disclosure banner that said otherwise. All six rewritten to
+  "Planned:...Not live yet". Also fixed one canon-drift line — "signed by your Grid Account private
+  key" — which contradicts the documented Squads v4 MPC 2-of-3 architecture (no single private key
+  exists); and one grammar-wreckage sentence. Meta/og tags added.
+- `pag.html` (the in-app "PAG" assistant/ambient-alerts screen): five instances of an unhedged
+  flat "100 [Wisdom Score] unlocks 5.5% Sovereign Yield" claim (VALUE + CAPABILITY — asserts a live
+  yield feature at a specific rate) across the ambient-alert generator, two duplicate "what is my
+  wisdom score" response entries, the price-lookup response, and the ambient-tips array — all
+  rewritten to "unlocks Sovereign Yield — planned, not live yet, target 5.5%". No meta tags exist
+  on this file (title-only, like the settings screens) — left as-is per the same sibling-convention
+  reasoning as `language-settings.html`, not fixed.
+
+All seven touched-this-batch files (`indx-corridor-vanuatu.html`,
+`indx-grand-synchronicity-countdown.html`, `indx-kids.html`, `life-graph.html`,
+`indx-legacy-vault.html`, `light-node.html`, `offline-fallback.html`, `offline.html`, `pag.html`)
+independently re-verified directly (not just trusting agent self-reports) via `node --check` on
+every extracted inline `<script>` block (all pass, zero errors), a `DOMContentLoaded` count check
+(0 or 1 everywhere, correct), a conflict-marker grep (none found), and targeted greps confirming no
+unfixed instances of each batch's headline violation pattern remained in the file after editing.
+`language-settings.html` was independently confirmed genuinely clean (0 edits, not just an agent
+claim) via the same discipline.
+
+This closes the 10-file Section 11 batch 3 list. Section 11 (task #26) remaining screens:
+`portfolio.html`, `qr-scanner.html`, `skill-point-nft.html`, `sovereign-academy.html`,
+`sovereign-id.html`, `sovereign-identity.html`, `sovereign-support.html`, `sovereignpay.html`,
+`speak-to-siindex.html`, `tokenize.html`, `voice-wallet.html`, plus a final check for "any leftover
+files not covered by other sections" per task #26's own description.
