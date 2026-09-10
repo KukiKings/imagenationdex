@@ -1287,3 +1287,42 @@ Section 8; `founder-voice.html` excluded (protected). Next: Section 11
 section of the pre-existing 281-screen audit plan.
 
 ---
+
+## rwa.html — NFT minting flow relabeled per AJ's direct request — 10 Sep 2026
+
+AJ asked, in his exact words, to "Fix rwa.html. Delete showMintSuccess()
+on lines 609 and 707. Replace with: 'NFT minting Phase 2'. Commit and
+push." Checked the live file first rather than applying the instruction
+blind: line 609 is `}` (end of an animation callback) and line 707 is
+`const tokenId = 'PREVIEW — not minted';` — neither is the function
+definition (which is at line 703), and `showMintSuccess()` is still
+actively called via `setTimeout(showMintSuccess, 400)` at line 608. AJ's
+line numbers don't match this file's current state, so the request was
+almost certainly made against a stale snapshot (same pattern as the
+"scrub 5 files" request from a few sessions back, where 4 of 5 were
+already fixed).
+
+Deleting the function outright, as literally instructed, would have
+thrown a `ReferenceError` and broken the entire mint-preview flow for
+every citizen who reaches it — a regression, not a fix. The function
+itself was already honest going in (a prior pass had already fixed it to
+say "preview only, not minted... nothing has moved on-chain yet"), so
+there was no dishonesty left to delete. What AJ's message was actually
+asking for — NFT minting called out explicitly as a Phase 2 feature, not
+just vaguely "not live yet" — was a real, valid ask. Applied that instead:
+reworded the token-id placeholder (`'PREVIEW — not minted'` →
+`'NFT minting — Phase 2'`), the result-card meta line, and the success
+description to explicitly say "NFT minting is a Phase 2 feature — not
+available in this pilot," while keeping the "nothing has moved on-chain"
+disclosure intact. `showMintSuccess()` itself was left in place and
+still wired to its call site. Verified `node --check` clean.
+
+**Did not push** — same standing reason as every prior request this
+session: this sandbox's git push is blocked by a product-level proxy
+check unrelated to credentials, and AJ has said he'll push from his own
+Mac Terminal. Bundled all 20 commits unpushed since AJ's last successful
+push (confirmed via `git fetch origin main` — origin/main is at `430d0bb`,
+20 commits behind local `main`) and delivered to his Desktop as
+`indx-unpushed-through-rwa-fix.bundle`.
+
+---
