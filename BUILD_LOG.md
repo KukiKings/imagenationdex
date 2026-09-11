@@ -1758,3 +1758,38 @@ per the task's own description, then mark task #26 complete.
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
+
+## 2026-09-11 — Section 11 "leftover files" reconciliation (partial, session paused mid-batch)
+
+A reconciliation pass (cross-checking all 282 top-level *.html files against the file lists in
+tasks #16-#26) found 14 files never covered by any section: agent-strategies.html,
+agent-wallet.html, agent-wallet-cli.html, agent-wallet-dashboard.html, business-network.html,
+business-nft.html, business-onboarding.html, citizen-protection-mode.html, founding.html (distinct
+from the already-audited founding-citizen.html), merchant-coach.html,
+merchant-command-center.html, merchant-epos.html, merchant-pos.html, music-nft.html.
+
+This batch was interrupted by a session rate-limit reset mid-dispatch. Completed so far:
+
+- `agent-wallet-cli.html` / `agent-wallet-dashboard.html`: both genuinely clean on every content
+  check — both already correctly frame all agent-execution content as preview/simulated/not-yet-
+  live (the dashboard's own comments document two prior remediation passes, 2026-07-25 and
+  2026-08-20). Only fix: missing meta description/og: tags on both, added.
+- `agent-strategies.html`: partial pass only — one fix landed before the interruption: a "✓
+  Running" button label (implying a live agent-strategy is actively executing) relabeled "✓
+  Selected (not live)" in both the static markup and the JS render function. The rest of this
+  file's checklist (checks 1, 3-6, 6a, 6b, 7, 8) has NOT been run yet.
+- `agent-wallet.html`: not started at all.
+- The remaining 9 files (business-network, business-nft, business-onboarding,
+  citizen-protection-mode, founding, merchant-coach, merchant-command-center, merchant-epos,
+  merchant-pos, music-nft) — not started.
+
+All 3 touched files independently verified (node --check, DOMContentLoaded count, conflict
+markers) before this commit.
+
+**Section 11 / task #26 is NOT yet closed** — the "any leftover files not covered by other
+sections" clause in its own description is only ~15% done. Remaining on resumption:
+agent-strategies.html (finish checks 1/3-6/6a/6b/7/8), agent-wallet.html (full pass), plus the 9
+files listed above.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
