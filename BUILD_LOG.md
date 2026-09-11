@@ -1793,3 +1793,65 @@ files listed above.
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
+
+## 2026-09-11 — Section 11 "leftover files" reconciliation, completed
+
+Closes out the remaining 11 of 14 leftover files (agent-strategies.html finished, agent-wallet.html,
+business-network.html, business-nft.html, business-onboarding.html, citizen-protection-mode.html,
+founding.html, merchant-coach.html, merchant-command-center.html, merchant-epos.html,
+merchant-pos.html, music-nft.html).
+
+- `agent-strategies.html`: finished the checklist left incomplete by the prior interruption — only
+  a missing meta-tags gap found, added.
+- `agent-wallet.html`: 13 violations, the largest count in this batch. 11 present-tense claims that
+  the agent-wallet policy (auto-sign limits, hard-stop approval, biometric confirmation, sanctions
+  screening, txn simulation) was already active, rewritten to future tense with a page-level
+  "Planned — not live yet" banner. One canon-drift finding via cross-file check (not caught by the
+  grep list): a "Key Security" card claimed Device Key/Cloud Key(TEE)/Grid Account were all
+  "Active"/"Bound" with an "Export your keys" action — directly contradicting `compliance-shield.html`
+  ("No Grid Account issued yet... do not send anything anywhere on the basis of this screen") — all
+  three statuses corrected to "Not yet issued."
+- `business-onboarding.html`: 12 violations, incl. the highest-risk class found this campaign —
+  outbound share text (native share sheet + a WhatsApp message template) sent to real third parties
+  outside the app claiming a live merchant could already "Pay [name] instantly on IN$DEX," rewritten
+  to disclose the platform hasn't launched. Also "Start accepting payments now," a live "180+
+  countries accepted" stat, and a "You're live" completion screen — all fixed; page-level banner
+  added.
+- `business-nft.html` / `music-nft.html`: both already carried the house "not connected yet"
+  disclosure banner (confirmed intact), but had present-tense feature-grid items sitting right next
+  to correctly-hedged siblings on the same page. music-nft.html additionally had 5 unlabeled
+  fixed-USD-for-INDX prices and an unlabeled "Sold: 47/200" fake ticket-scarcity mockup (same shape
+  as the audit history's documented fake-scarcity incident) — both fixed with visible
+  "illustrative, not real" captions.
+- `citizen-protection-mode.html`: 3 violations — 2 self-contradictions (guardian-alert copy in two
+  places asserted live notifications the page's own feature grid already disclosed as "not wired up
+  yet"), plus a dead unused `INDX_PRICE_USD` constant.
+- `founding.html`: 6 violations — 5 "Claim your/my Sovereign Link" AVAILABILITY-entitlement phrasings
+  softened to "Get," and a hard "selecting 500 citizens" cap directly contradicting the
+  already-audited sibling `founding-citizen.html` ("no separate tier or cutoff number") and matching
+  the exact fake-scarcity pattern in the audit's own incident history — cap removed.
+- `merchant-coach.html`: an undisclosed `$0.24` planning-reference price computation (every sibling
+  file using this constant carries a disclaimer; this one had none) — page-level disclaimer added.
+- `merchant-command-center.html`: a "Locked forever... cannot be changed by any... market condition"
+  98/2-law overclaim — the same enforcement-guarantee drift already corrected in
+  `indx-98-2-law.html` — realigned to that canon wording ("permanent doctrine... policy commitment,
+  not yet a smart-contract guarantee").
+- `merchant-epos.html` / `merchant-pos.html`: matching present-tense "instant payment terminal" /
+  live PQSI-pre-flight / "waiting for payment" claims on two payment-terminal screens with no real
+  payment rail. The most serious single finding: `merchant-pos.html`'s success-screen default HTML
+  correctly said "Simulated payment — no real Solana transaction," but its own `simulatePay()`
+  function overwrote that with an unqualified "$X received / Paid by [fabricated Math.random()
+  name]" at runtime — fixed to keep the simulated disclosure visible in the overwritten text too.
+
+All 12 files independently re-verified (node --check on every inline script, DOMContentLoaded
+counts, conflict markers, targeted post-fix greps confirming the headline fix in each file) rather
+than trusting agent self-reports alone.
+
+**This closes task #26 (Section 11) in full** — all named screens plus the "any leftover files not
+covered by other sections" clause are now audited. 14 leftover files were found via a direct
+reconciliation pass (not previously tracked in any section's file list) — worth noting for future
+campaigns that a file can silently exist outside every section's scope with no section ever
+claiming it.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
