@@ -181,6 +181,19 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
 .fi-val{font-size:12px;font-weight:800;text-align:right;}
 .fi-time{font-size:10px;color:var(--text-muted);text-align:right;margin-top:1px;}
 
+/* GOD MODE: SCENARIO SAVE + COMPARE, SIM PERSISTENCE, ACCESSIBLE TABS */
+.scenario-save-row{display:flex;gap:8px;margin-top:14px;}
+.scenario-save-btn{flex:1;padding:10px;border-radius:10px;background:var(--purple-bg);border:1px solid rgba(139,63,232,0.3);color:var(--purple);font-size:12px;font-weight:800;cursor:pointer;}
+.scenario-clear-btn{padding:10px 14px;border-radius:10px;background:transparent;border:1px solid var(--border);color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer;}
+.scenario-list{margin-top:12px;display:flex;flex-direction:column;gap:8px;}
+.scenario-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.scenario-meta{font-size:11px;color:var(--text-muted);}
+.scenario-meta strong{color:var(--text);}
+.scenario-apy{font-size:13px;font-weight:800;color:var(--gold);text-align:right;}
+.scenario-del{background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:0 2px;}
+.scenario-empty{font-size:11px;color:var(--text-muted);text-align:center;padding:8px 0;}
+.tab:focus-visible,.scenario-save-btn:focus-visible,.scenario-clear-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:-2px;}
+
 /* TOAST */
 #toast{position:fixed;bottom:84px;left:50%;transform:translateX(-50%) translateY(30px);background:var(--surface3);border:1px solid var(--border);border-radius:12px;padding:10px 18px;font-size:13px;font-weight:600;opacity:0;transition:all 0.28s;pointer-events:none;z-index:999;white-space:nowrap;}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -250,11 +263,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
 </div>
 
 <!-- TAB BAR -->
-<div class="tab-bar">
-  <div class="tab active" id="tabOverview" onclick="switchTab('overview')">Overview</div>
-  <div class="tab" id="tabPool" onclick="switchTab('pool')">🌊 Pool</div>
-  <div class="tab" id="tabStaking" onclick="switchTab('staking')">⚡ Staking</div>
-  <div class="tab" id="tabSimulate" onclick="switchTab('simulate')">📊 Simulate</div>
+<div class="tab-bar" role="tablist" aria-label="LP Manager sections">
+  <div class="tab active" id="tabOverview" role="tab" tabindex="0" aria-selected="true" onclick="switchTab('overview')">Overview</div>
+  <div class="tab" id="tabPool" role="tab" tabindex="0" aria-selected="false" onclick="switchTab('pool')">🌊 Pool</div>
+  <div class="tab" id="tabStaking" role="tab" tabindex="0" aria-selected="false" onclick="switchTab('staking')">⚡ Staking</div>
+  <div class="tab" id="tabSimulate" role="tab" tabindex="0" aria-selected="false" onclick="switchTab('simulate')">📊 Simulate</div>
 </div>
 
 <!-- ── OVERVIEW PANE ── -->
@@ -487,6 +500,15 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
       </div>
     </div>
 
+    <!-- GOD MODE: save & compare scenarios -->
+    <div class="scenario-save-row">
+      <button class="scenario-save-btn" onclick="saveScenario()">💾 Save Scenario</button>
+      <button class="scenario-clear-btn" onclick="clearScenarios()">Clear</button>
+    </div>
+    <div class="scenario-list" id="scenarioList">
+      <div class="scenario-empty" id="scenarioEmpty">No saved scenarios yet — adjust the sliders and tap Save to compare LP sizes side by side.</div>
+    </div>
+
   </div>
 
 </div>
@@ -506,6 +528,100 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
 const INDX_PRICE_USD = 0.24;
 const GRAND_SYNC = new Date('2027-02-24T00:00:00+11:00');
 const CIV_RATE = 0.02;
+
+// ── GOD MODE: SIMULATOR INPUT PERSISTENCE + SMART DEFAULT FROM SESSION BALANCE ──
+function restoreSimInputs() {
+  const sizeInput = document.getElementById('simSize');
+  const savedSize = localStorage.getItem('indx_lpmanager_sim_size') || '';
+  const sessionBalance = parseFloat(sessionStorage.getItem('citizen_balance') || '0');
+  let restored = false;
+  if (savedSize) {
+    sizeInput.value = savedSize;
+    restored = true;
+  } else if (sessionBalance > 0) {
+    const clamped = Math.min(Math.max(sessionBalance, parseFloat(sizeInput.min)), parseFloat(sizeInput.max));
+    sizeInput.value = clamped;
+  }
+  const savedVol = localStorage.getItem('indx_lpmanager_sim_vol') || '';
+  if (savedVol) { document.getElementById('simVol').value = savedVol; restored = true; }
+  const savedFee = localStorage.getItem('indx_lpmanager_sim_fee') || '';
+  if (savedFee) { document.getElementById('simFee').value = savedFee; restored = true; }
+  const savedCompound = localStorage.getItem('indx_lpmanager_sim_compound') || 'false';
+  if (savedCompound === 'true') {
+    compoundOn = true;
+    document.getElementById('compoundToggle').classList.add('on');
+    restored = true;
+  }
+  if (restored) setTimeout(() => showToast('Restored your last simulation'), 400);
+}
+function persistSimInputs() {
+  localStorage.setItem('indx_lpmanager_sim_size', document.getElementById('simSize').value);
+  localStorage.setItem('indx_lpmanager_sim_vol', document.getElementById('simVol').value);
+  localStorage.setItem('indx_lpmanager_sim_fee', document.getElementById('simFee').value);
+  localStorage.setItem('indx_lpmanager_sim_compound', String(compoundOn));
+}
+
+// ── GOD MODE: SAVE & COMPARE LP SCENARIOS (real numbers read back from the simulator above only) ──
+function getScenarios() {
+  try { return JSON.parse(localStorage.getItem('indx_lpmanager_scenarios') || '[]'); }
+  catch (e) { return []; }
+}
+function saveScenario() {
+  const scenarios = getScenarios();
+  scenarios.unshift({
+    size: document.getElementById('simSize').value,
+    vol: document.getElementById('simVol').value,
+    feeLabel: document.getElementById('simFeeVal').textContent,
+    apy: document.getElementById('simApy').textContent,
+    ts: Date.now()
+  });
+  localStorage.setItem('indx_lpmanager_scenarios', JSON.stringify(scenarios.slice(0, 5)));
+  renderScenarios();
+  showToast('Scenario saved');
+}
+function deleteScenario(idx) {
+  const scenarios = getScenarios();
+  scenarios.splice(idx, 1);
+  localStorage.setItem('indx_lpmanager_scenarios', JSON.stringify(scenarios));
+  renderScenarios();
+}
+function clearScenarios() {
+  localStorage.setItem('indx_lpmanager_scenarios', '[]');
+  renderScenarios();
+}
+function renderScenarios() {
+  const scenarios = getScenarios();
+  const list = document.getElementById('scenarioList');
+  if (!scenarios.length) {
+    list.innerHTML = '<div class="scenario-empty" id="scenarioEmpty">No saved scenarios yet — adjust the sliders and tap Save to compare LP sizes side by side.</div>';
+    return;
+  }
+  list.innerHTML = scenarios.map((s, i) => `
+    <div class="scenario-card">
+      <div class="scenario-meta"><strong>$${Number(s.size).toLocaleString()}</strong> LP · $${Number(s.vol).toLocaleString()}/day vol · ${s.feeLabel}</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="scenario-apy">${s.apy}</div>
+        <button class="scenario-del" onclick="deleteScenario(${i})" aria-label="Delete this saved scenario">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── GOD MODE: KEYBOARD-ACCESSIBLE TAB BAR (arrow keys / Home / End) ──
+function setupTabKeyboardNav() {
+  const tabs = Array.from(document.querySelectorAll('.tab-bar .tab'));
+  tabs.forEach((tab, i) => {
+    tab.addEventListener('keydown', (e) => {
+      let next = null;
+      if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
+      else if (e.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
+      else if (e.key === 'Home') next = tabs[0];
+      else if (e.key === 'End') next = tabs[tabs.length - 1];
+      else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tab.click(); return; }
+      if (next) { e.preventDefault(); next.focus(); next.click(); }
+    });
+  });
+}
 
 // ── TOAST ──
 function showToast(msg) {

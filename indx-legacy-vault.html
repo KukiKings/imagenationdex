@@ -117,6 +117,17 @@ input:checked + .toggle-slider::before{transform:translateX(18px);background:var
 .vault-pct-bar{height:8px;background:rgba(240,242,255,0.08);border-radius:4px;overflow:hidden;}
 .vault-pct-fill{height:100%;background:linear-gradient(90deg,var(--purple),var(--cyan));border-radius:4px;transition:width 0.6s;}
 
+/* GOD MODE: HEIR REMOVAL CONFIRM SHEET + UNLOCK COUNTDOWN */
+.unlock-countdown{font-size:12px;font-weight:700;color:var(--cyan);margin-top:10px;}
+.sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.7);opacity:0;pointer-events:none;transition:opacity 0.2s;z-index:400;}
+.sheet-overlay.show{opacity:1;pointer-events:auto;}
+.bottom-sheet{position:fixed;left:0;right:0;bottom:0;background:var(--surface2);border-top:1px solid rgba(255,77,109,0.2);border-radius:20px 20px 0 0;padding:22px 20px calc(20px + env(safe-area-inset-bottom));z-index:401;transform:translateY(100%);transition:transform 0.25s ease;max-width:860px;margin:0 auto;}
+.bottom-sheet.open{transform:translateY(0);}
+.sheet-handle{width:36px;height:4px;border-radius:2px;background:rgba(240,242,255,0.15);margin:0 auto 16px;}
+.sheet-title{font-size:16px;font-weight:800;margin-bottom:8px;}
+.sheet-body{font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:18px;}
+.sheet-actions{display:flex;gap:10px;justify-content:flex-end;}
+
 /* TOAST */
 .toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,80px);background:var(--surface3);color:var(--text);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;border:1px solid rgba(0,212,255,0.3);opacity:0;transition:transform 0.3s,opacity 0.3s;z-index:300;pointer-events:none;max-width:90vw;text-align:center;}
 .toast.show{transform:translate(-50%,0);opacity:1;}
@@ -280,6 +291,7 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
       <strong>Your unlock condition</strong>
       <span id="unlockPreviewText">Tap a condition type above to configure.</span>
     </div>
+    <div class="unlock-countdown" id="unlockCountdown"></div>
     <div style="margin-top:16px;">
       <button class="btn btn-cyan btn-sm" onclick="saveUnlock()">Save condition</button>
     </div>
@@ -308,6 +320,18 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
 
 <div class="toast" id="toast"></div>
 
+<!-- GOD MODE: HEIR REMOVAL CONFIRM SHEET -->
+<div class="sheet-overlay" id="removeHeirOverlay" onclick="closeRemoveHeirSheet()"></div>
+<div class="bottom-sheet" id="removeHeirSheet" role="dialog" aria-modal="true" aria-labelledby="removeHeirTitle">
+  <div class="sheet-handle"></div>
+  <h3 class="sheet-title" id="removeHeirTitle">Remove this heir?</h3>
+  <p class="sheet-body" id="removeHeirBody"></p>
+  <div class="sheet-actions">
+    <button class="btn btn-ghost btn-sm" onclick="closeRemoveHeirSheet()">Cancel</button>
+    <button class="btn btn-red btn-sm" onclick="confirmRemoveHeir()">Remove heir</button>
+  </div>
+</div>
+
 <footer>
   <div class="container">
     <div class="footer-links">
@@ -322,6 +346,62 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
 </footer>
 
 <script>
+// ── GOD MODE: HEIR REMOVAL CONFIRM SHEET + UNLOCK COUNTDOWN ─────────────────
+let pendingRemoveHeirId = null;
+let lastFocusedBeforeSheet = null;
+
+function openRemoveHeirSheet() {
+  lastFocusedBeforeSheet = document.activeElement;
+  document.getElementById('removeHeirOverlay').classList.add('show');
+  document.getElementById('removeHeirSheet').classList.add('open');
+  const cancelBtn = document.querySelector('#removeHeirSheet .btn-ghost');
+  if (cancelBtn) cancelBtn.focus();
+  document.addEventListener('keydown', removeHeirSheetKeyHandler);
+}
+
+function closeRemoveHeirSheet() {
+  document.getElementById('removeHeirOverlay').classList.remove('show');
+  document.getElementById('removeHeirSheet').classList.remove('open');
+  pendingRemoveHeirId = null;
+  document.removeEventListener('keydown', removeHeirSheetKeyHandler);
+  if (lastFocusedBeforeSheet) lastFocusedBeforeSheet.focus();
+}
+
+function removeHeirSheetKeyHandler(e) {
+  if (e.key === 'Escape') { closeRemoveHeirSheet(); return; }
+  if (e.key === 'Tab') {
+    const focusable = document.querySelectorAll('#removeHeirSheet button');
+    if (!focusable.length) return;
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+}
+
+function confirmRemoveHeir() {
+  if (pendingRemoveHeirId == null) return;
+  heirs = heirs.filter(h => h.id !== pendingRemoveHeirId);
+  localStorage.setItem('indx_vault_heirs', JSON.stringify(heirs));
+  renderHeirs();
+  updateReadiness();
+  closeRemoveHeirSheet();
+  showToast('Heir removed from your vault.');
+}
+
+// Real countdown to the citizen's own saved release date + waiting period — no fabricated data.
+function updateUnlockCountdown() {
+  const el = document.getElementById('unlockCountdown');
+  if (!el) return;
+  const saved = JSON.parse(localStorage.getItem('indx_vault_unlock') || 'null');
+  if (!saved || saved.type !== 'date' || !saved.date) { el.textContent = ''; return; }
+  const target = new Date(saved.date + 'T00:00:00');
+  target.setDate(target.getDate() + (parseInt(saved.wait) || 0));
+  const diff = target.getTime() - Date.now();
+  if (diff <= 0) { el.textContent = 'Your saved release date has passed.'; return; }
+  const days = Math.ceil(diff / 86400000);
+  el.textContent = `⏳ ${days} day${days === 1 ? '' : 's'} until your vault could open, based on your saved release date + waiting period.`;
+}
+
 // ── GM1: HEIR MANAGEMENT ──────────────────────────────────────────────────
 let heirs = JSON.parse(localStorage.getItem('indx_vault_heirs') || '[]');
 
@@ -355,11 +435,14 @@ function addHeir() {
   showToast(`${name} added as heir (${pct}% share).`);
 }
 
+// GOD MODE PATCH: removal now opens a confirm sheet instead of deleting instantly
 function removeHeir(id) {
-  heirs = heirs.filter(h => h.id !== id);
-  localStorage.setItem('indx_vault_heirs', JSON.stringify(heirs));
-  renderHeirs();
-  updateReadiness();
+  const heir = heirs.find(h => h.id === id);
+  if (!heir) return;
+  pendingRemoveHeirId = id;
+  document.getElementById('removeHeirBody').textContent =
+    `Remove ${heir.name} (${heir.pct}% share) from your vault? You can always add them back later.`;
+  openRemoveHeirSheet();
 }
 
 function renderHeirs() {
@@ -462,6 +545,7 @@ function saveUnlock() {
   localStorage.setItem('indx_vault_unlock', JSON.stringify(data));
   unlockSaved = true;
   updateReadiness();
+  updateUnlockCountdown(); // GOD MODE PATCH: keep the live countdown in sync with the saved condition
   showToast('Unlock condition saved.');
 }
 
@@ -560,6 +644,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedUnlock.guardian) document.getElementById('unlockGuardian').value = savedUnlock.guardian;
     updateUnlockPreview();
   }
+
+  // GOD MODE: live "time until vault could open" countdown, refreshed hourly
+  updateUnlockCountdown();
+  setInterval(updateUnlockCountdown, 3600000);
 });
 </script>
 <script src="siindex-speak-core.js"></script>

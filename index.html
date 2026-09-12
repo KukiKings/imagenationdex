@@ -82,6 +82,22 @@
   .footer-wave{margin-top:16px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;}
   .wave-badge{font-size:11px;font-weight:600;padding:5px 12px;border-radius:20px;background:var(--surface);border:1px solid var(--border);color:var(--text2);}
   .wave-badge.current{background:var(--cyan-dim);border-color:rgba(0,212,255,0.3);color:var(--cyan);}
+
+  /* GOD MODE */
+  .gm-strip{padding:0 16px 4px;}
+  .gm-strip-title{display:flex;align-items:center;gap:8px;padding:10px 0 8px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);}
+  .gm-strip-scroll{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;}
+  .gm-strip-scroll::-webkit-scrollbar{display:none;}
+  .gm-chip{flex-shrink:0;display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--text);text-decoration:none;white-space:nowrap;}
+  .gm-chip:active{border-color:var(--cyan);}
+  .gm-chip .gm-chip-icon{font-size:14px;}
+  .gm-empty-hint{font-size:11px;color:var(--text-muted);padding:2px 0 4px;}
+  .screen-card{position:relative;}
+  .pin-star{position:absolute;top:8px;right:8px;font-size:15px;line-height:1;background:rgba(9,10,16,0.55);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;color:var(--text-muted);}
+  .pin-star.pinned{color:var(--gold);}
+  .screen-card.featured .pin-star{top:12px;right:12px;}
+  .search-meta{font-size:11px;color:var(--text-muted);padding:0 4px 6px;min-height:14px;}
+  .search-input:focus-visible{outline:2px solid var(--cyan);outline-offset:1px;}
 </style>
 <meta name="theme-color" content="#090A10">
 <link rel="manifest" href="/manifest.json">
@@ -105,7 +121,20 @@
 
 <!-- SEARCH -->
 <div class="search-wrap">
-  <input class="search-input" type="text" placeholder="🔍  Search screens..." oninput="filterScreens(this.value)">
+  <input class="search-input" id="navSearchInput" type="text" placeholder="🔍  Search screens..." oninput="filterScreens(this.value)" onkeydown="handleSearchKey(event)">
+  <div class="search-meta" id="searchMeta"></div>
+</div>
+
+<!-- GOD MODE: PINNED -->
+<div class="gm-strip hidden" id="pinnedStrip">
+  <div class="gm-strip-title">⭐ Pinned</div>
+  <div class="gm-strip-scroll" id="pinnedScroll"></div>
+</div>
+
+<!-- GOD MODE: RECENTLY VISITED -->
+<div class="gm-strip hidden" id="recentStrip">
+  <div class="gm-strip-title">🕘 Recently Visited</div>
+  <div class="gm-strip-scroll" id="recentScroll"></div>
 </div>
 
 <!-- ══════════════════════════════════
@@ -2088,18 +2117,118 @@
 </div>
 
 <script>
+// GOD MODE PATCH: filterScreens now also reports an honest live result count (real DOM count, not fabricated)
 function filterScreens(query) {
   const q = query.toLowerCase().trim();
+  let visibleCount = 0;
+  const totalCount = document.querySelectorAll('.screen-card').length;
   document.querySelectorAll('.screen-card').forEach(card => {
     const text = card.textContent.toLowerCase();
-    card.style.display = (!q || text.includes(q)) ? '' : 'none';
+    const match = (!q || text.includes(q));
+    card.style.display = match ? '' : 'none';
+    if (match) visibleCount++;
   });
   // Show/hide section headers based on visible cards
   document.querySelectorAll('.section').forEach(sec => {
     const visible = [...sec.querySelectorAll('.screen-card')].some(c => c.style.display !== 'none');
     sec.style.display = visible ? '' : 'none';
   });
+  const meta = document.getElementById('searchMeta');
+  if (meta) meta.textContent = q ? `${visibleCount} of ${totalCount} screens match "${query.trim()}"` : '';
 }
+
+// GOD MODE: Escape clears the search box
+function handleSearchKey(e) {
+  if (e.key === 'Escape') {
+    e.target.value = '';
+    filterScreens('');
+    e.target.blur();
+  }
+}
+
+// GOD MODE: pin favourites + recently visited, both localStorage-backed per device
+const PIN_KEY = 'indx_navigator_pins';
+const RECENT_KEY = 'indx_navigator_recent';
+const RECENT_MAX = 8;
+
+function getPins() {
+  try { return JSON.parse(localStorage.getItem(PIN_KEY) || '[]'); } catch (e) { return []; }
+}
+function setPins(arr) {
+  localStorage.setItem(PIN_KEY, JSON.stringify(arr));
+}
+function getRecent() {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch (e) { return []; }
+}
+function togglePin(href, e) {
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  let pins = getPins();
+  if (pins.includes(href)) pins = pins.filter(h => h !== href);
+  else pins.unshift(href);
+  setPins(pins.slice(0, 24));
+  renderPinStars();
+  renderStrips();
+}
+function renderPinStars() {
+  const pins = getPins();
+  document.querySelectorAll('.screen-card[href]').forEach(card => {
+    const href = card.getAttribute('href');
+    let star = card.querySelector('.pin-star');
+    if (!star) {
+      star = document.createElement('span');
+      star.className = 'pin-star';
+      star.setAttribute('role', 'button');
+      star.setAttribute('aria-label', 'Pin this screen');
+      star.onclick = (e) => togglePin(href, e);
+      card.appendChild(star);
+    }
+    const isPinned = pins.includes(href);
+    star.textContent = isPinned ? '★' : '☆';
+    star.classList.toggle('pinned', isPinned);
+  });
+}
+function cardMetaFor(href) {
+  const card = document.querySelector(`.screen-card[href="${CSS.escape(href)}"]`);
+  if (!card) return { icon: '📄', name: href };
+  const icon = card.querySelector('.screen-icon');
+  const name = card.querySelector('.screen-name');
+  return { icon: icon ? icon.textContent : '📄', name: name ? name.textContent : href };
+}
+function renderStrips() {
+  const pins = getPins();
+  const recent = getRecent().filter(h => !pins.includes(h));
+  const pinnedStrip = document.getElementById('pinnedStrip');
+  const recentStrip = document.getElementById('recentStrip');
+  const pinnedScroll = document.getElementById('pinnedScroll');
+  const recentScroll = document.getElementById('recentScroll');
+  pinnedScroll.innerHTML = pins.map(h => {
+    const m = cardMetaFor(h);
+    return `<a class="gm-chip" href="${h}"><span class="gm-chip-icon">${m.icon}</span>${m.name}</a>`;
+  }).join('');
+  recentScroll.innerHTML = recent.map(h => {
+    const m = cardMetaFor(h);
+    return `<a class="gm-chip" href="${h}"><span class="gm-chip-icon">${m.icon}</span>${m.name}</a>`;
+  }).join('');
+  pinnedStrip.classList.toggle('hidden', pins.length === 0);
+  recentStrip.classList.toggle('hidden', recent.length === 0);
+}
+function trackVisit(href) {
+  if (!href) return;
+  let recent = getRecent().filter(h => h !== href);
+  recent.unshift(href);
+  localStorage.setItem(RECENT_KEY, JSON.stringify(recent.slice(0, RECENT_MAX)));
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderPinStars();
+  renderStrips();
+  // Record a visit whenever a citizen actually leaves the directory for a screen.
+  // Delegated on document.body so it also covers pinned/recent chips rendered after this point.
+  document.body.addEventListener('click', (e) => {
+    const link = e.target.closest('a.screen-card[href], a.flow-step[href], a.gm-chip[href]');
+    if (link) trackVisit(link.getAttribute('href'));
+  });
+});
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

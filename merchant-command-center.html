@@ -147,6 +147,30 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--surface3);color:var(--text);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;pointer-events:none;transition:transform 0.3s,opacity 0.3s;opacity:0;z-index:999;max-width:320px;text-align:center;white-space:nowrap;}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+/* GOD MODE: ORDER STATUS (persisted) */
+.oc-status.confirmed{background:rgba(0,229,160,0.12);color:var(--green);}
+.oc-status.cancelled{background:rgba(255,77,109,0.12);color:var(--red);}
+.order-card.cancelled{opacity:0.55;}
+
+/* GOD MODE: BOTTOM SHEETS (payout confirm + payout history) */
+.sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.85);z-index:200;display:none;align-items:flex-end;}
+.sheet-overlay.show{display:flex;}
+.bottom-sheet{background:var(--surface2);border-radius:22px 22px 0 0;padding:22px;width:100%;max-width:430px;margin:0 auto;max-height:80vh;overflow-y:auto;}
+.sheet-handle{width:40px;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 auto 18px;}
+.sheet-title{font-size:17px;font-weight:800;margin-bottom:8px;}
+.sheet-sub{font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:16px;}
+.sheet-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.sheet-row:last-child{border-bottom:none;}
+.sheet-row .key{color:var(--text-muted);}
+.sheet-row .val{font-weight:700;}
+.sheet-btn{width:100%;padding:14px;border-radius:14px;border:none;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;margin-top:16px;}
+.sheet-btn.primary{background:var(--green);color:#000;}
+.sheet-btn.cancel{background:none;border:1px solid var(--border);color:var(--text2);margin-top:10px;}
+.payout-log-item{background:var(--surface3);border-radius:12px;padding:12px 14px;margin-bottom:8px;}
+.payout-log-top{display:flex;justify-content:space-between;font-size:13px;font-weight:700;}
+.payout-log-meta{font-size:11px;color:var(--text-muted);margin-top:4px;}
+.payout-log-empty{font-size:12px;color:var(--text-muted);text-align:center;padding:16px 0;}
 </style>
 </head>
 <body>
@@ -286,23 +310,23 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 <div class="tab-panel" id="tab-orders">
   <div class="nl-section">Orders this week</div>
 
-  <div class="order-card">
+  <div class="order-card" id="orderCard-order1">
     <div class="oc-top">
       <div class="oc-icon">🪡</div>
       <div class="oc-info">
         <div class="oc-name">Handmade screen print × 2</div>
         <div class="oc-buyer">Buyer: lena_s.IN$DEX · Apia, Samoa</div>
       </div>
-      <div class="oc-status new">New</div>
+      <div class="oc-status new" id="orderStatus-order1">New</div>
     </div>
     <div class="oc-detail">
       <div>Total: <span>$70.00</span></div>
       <div>You receive: <span style="color:var(--green);">$68.60</span></div>
       <div>Fee: <span>$1.40</span></div>
     </div>
-    <div class="oc-actions">
+    <div class="oc-actions" id="orderActions-order1">
       <button class="oc-btn" onclick="showToast('Opening buyer chat…')">Message buyer</button>
-      <button class="oc-btn primary" onclick="showToast('Order confirmed. Consent receipt generated.')">Confirm order</button>
+      <button class="oc-btn primary" onclick="confirmOrder('order1')">Confirm order</button>
     </div>
   </div>
 
@@ -326,23 +350,23 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
     </div>
   </div>
 
-  <div class="order-card">
+  <div class="order-card" id="orderCard-order3">
     <div class="oc-top">
       <div class="oc-icon">🪡</div>
       <div class="oc-info">
         <div class="oc-name">Screen print × 1</div>
         <div class="oc-buyer">Buyer: ana_f.IN$DEX · Suva, Fiji</div>
       </div>
-      <div class="oc-status pending">Pending payment</div>
+      <div class="oc-status pending" id="orderStatus-order3">Pending payment</div>
     </div>
     <div class="oc-detail">
       <div>Total: <span>$35.00</span></div>
       <div>You receive: <span style="color:var(--green);">$34.30</span></div>
-      <div>Status: <span style="color:var(--gold);">Awaiting buyer</span></div>
+      <div>Status: <span style="color:var(--gold);" id="orderStatusNote-order3">Awaiting buyer</span></div>
     </div>
-    <div class="oc-actions">
+    <div class="oc-actions" id="orderActions-order3">
       <button class="oc-btn" onclick="showToast('Sending payment reminder…')">Remind buyer</button>
-      <button class="oc-btn" onclick="showToast('Order cancelled. No funds moved.')">Cancel</button>
+      <button class="oc-btn" onclick="cancelOrder('order3')">Cancel</button>
     </div>
   </div>
 </div>
@@ -376,8 +400,34 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
     <div class="pr-row"><div class="pr-key">Next payout</div><div class="pr-val">Manual — tap when ready</div></div>
   </div>
 
-  <button class="btn-full btn-green" onclick="showToast('SIINDEX trust check: Payout $346.40 → ANZ. Approve to proceed.')">Request payout</button>
-  <button class="btn-full btn-surface" onclick="showToast('Opening payout history…')">View payout history</button>
+  <button class="btn-full btn-green" onclick="openPayoutConfirmSheet()">Request payout</button>
+  <button class="btn-full btn-surface" onclick="openPayoutHistorySheet()">View payout history</button>
+</div>
+
+<!-- GOD MODE: PAYOUT CONFIRM SHEET -->
+<div class="sheet-overlay" id="payoutConfirmOverlay" onclick="if(event.target===this)closePayoutConfirmSheet()">
+  <div class="bottom-sheet" id="payoutConfirmSheet" role="dialog" aria-modal="true" aria-label="Confirm payout request">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Confirm payout request</div>
+    <div class="sheet-sub">Review before you request. Nothing moves until you tap confirm below.</div>
+    <div class="sheet-row"><div class="key">Amount</div><div class="val" style="color:var(--green);">$346.40</div></div>
+    <div class="sheet-row"><div class="key">IN$DEX fee (2%)</div><div class="val">$6.93</div></div>
+    <div class="sheet-row"><div class="key">Destination</div><div class="val">ANZ PayID</div></div>
+    <div class="sheet-row"><div class="key">Estimated timing</div><div class="val">2 hours</div></div>
+    <button class="sheet-btn primary" onclick="confirmPayoutRequest()">Confirm payout request</button>
+    <button class="sheet-btn cancel" onclick="closePayoutConfirmSheet()">Cancel</button>
+  </div>
+</div>
+
+<!-- GOD MODE: PAYOUT HISTORY SHEET -->
+<div class="sheet-overlay" id="payoutHistoryOverlay" onclick="if(event.target===this)closePayoutHistorySheet()">
+  <div class="bottom-sheet" id="payoutHistorySheet" role="dialog" aria-modal="true" aria-label="Your payout requests">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Your payout requests</div>
+    <div class="sheet-sub">Logged on this device when you tap "Confirm payout request" above.</div>
+    <div id="payoutHistoryList"></div>
+    <button class="sheet-btn cancel" onclick="closePayoutHistorySheet()">Close</button>
+  </div>
 </div>
 
 <!-- ════ DISPUTES ════ -->
@@ -407,6 +457,130 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 <script>
 const INDX_PRICE_USD = 0.24;
 const _MCC_KEY = 'indx_mcc_tab';
+
+// ── GOD MODE: ORDER STATUS PERSISTENCE ──
+const ORDER_STATUS_KEY = 'indx_mcc_order_status';
+
+function getOrderStatuses() {
+  try { return JSON.parse(localStorage.getItem(ORDER_STATUS_KEY) || '{}'); }
+  catch (e) { return {}; }
+}
+
+function saveOrderStatus(id, status) {
+  const all = getOrderStatuses();
+  all[id] = status;
+  localStorage.setItem(ORDER_STATUS_KEY, JSON.stringify(all));
+}
+
+function applyOrderStatus(id, status) {
+  const badge = document.getElementById('orderStatus-' + id);
+  const card = document.getElementById('orderCard-' + id);
+  const actions = document.getElementById('orderActions-' + id);
+  if (!badge || !card || !actions) return;
+  if (status === 'confirmed') {
+    badge.textContent = 'Confirmed';
+    badge.className = 'oc-status confirmed';
+    actions.innerHTML = '<div style="flex:1;text-align:center;font-size:12px;color:var(--green);font-weight:700;">✓ Confirmed — consent receipt generated</div>';
+  } else if (status === 'cancelled') {
+    badge.textContent = 'Cancelled';
+    badge.className = 'oc-status cancelled';
+    card.classList.add('cancelled');
+    const note = document.getElementById('orderStatusNote-' + id);
+    if (note) note.textContent = 'Cancelled — no funds moved';
+    actions.innerHTML = '<div style="flex:1;text-align:center;font-size:12px;color:var(--red);font-weight:700;">✕ Cancelled — no funds moved</div>';
+  }
+}
+
+function confirmOrder(id) {
+  applyOrderStatus(id, 'confirmed');
+  saveOrderStatus(id, 'confirmed');
+  showToast('Order confirmed. Consent receipt generated.');
+}
+
+function cancelOrder(id) {
+  applyOrderStatus(id, 'cancelled');
+  saveOrderStatus(id, 'cancelled');
+  showToast('Order cancelled. No funds moved.');
+}
+
+function restoreOrderStatuses() {
+  const all = getOrderStatuses();
+  Object.keys(all).forEach(id => applyOrderStatus(id, all[id]));
+}
+
+// ── GOD MODE: PAYOUT CONFIRM SHEET + LOCAL PAYOUT LOG ──
+const PAYOUT_LOG_KEY = 'indx_mcc_payout_log';
+
+function getPayoutLog() {
+  try { return JSON.parse(localStorage.getItem(PAYOUT_LOG_KEY) || '[]'); }
+  catch (e) { return []; }
+}
+
+function openPayoutConfirmSheet() {
+  document.getElementById('payoutConfirmOverlay').classList.add('show');
+  const btn = document.querySelector('#payoutConfirmSheet .sheet-btn.primary');
+  if (btn) btn.focus();
+}
+
+function closePayoutConfirmSheet() {
+  document.getElementById('payoutConfirmOverlay').classList.remove('show');
+}
+
+function confirmPayoutRequest() {
+  const log = getPayoutLog();
+  log.unshift({ amount: 346.40, fee: 6.93, destination: 'ANZ PayID', ts: Date.now() });
+  localStorage.setItem(PAYOUT_LOG_KEY, JSON.stringify(log.slice(0, 20)));
+  closePayoutConfirmSheet();
+  showToast('Payout requested: $346.40 → ANZ PayID. Logged to your payout history.');
+}
+
+function openPayoutHistorySheet() {
+  renderPayoutHistory();
+  document.getElementById('payoutHistoryOverlay').classList.add('show');
+  const btn = document.querySelector('#payoutHistorySheet .sheet-btn.cancel');
+  if (btn) btn.focus();
+}
+
+function closePayoutHistorySheet() {
+  document.getElementById('payoutHistoryOverlay').classList.remove('show');
+}
+
+function renderPayoutHistory() {
+  const log = getPayoutLog();
+  const container = document.getElementById('payoutHistoryList');
+  if (!log.length) {
+    container.innerHTML = '<div class="payout-log-empty">No payout requests logged on this device yet.</div>';
+    return;
+  }
+  container.innerHTML = log.map(function(p) {
+    const d = new Date(p.ts);
+    const dateStr = d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) + ' · ' + d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+    return '<div class="payout-log-item">' +
+      '<div class="payout-log-top"><span>$' + p.amount.toFixed(2) + '</span><span style="color:var(--text-muted);font-weight:600;">-$' + p.fee.toFixed(2) + ' fee</span></div>' +
+      '<div class="payout-log-meta">' + p.destination + ' · ' + dateStr + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+// ── GOD MODE: ESCAPE-TO-CLOSE + FOCUS TRAP for both new sheets ──
+function _activeGodModeSheet() {
+  if (document.getElementById('payoutConfirmOverlay').classList.contains('show')) return { overlay: 'payoutConfirmOverlay', sheet: 'payoutConfirmSheet', close: closePayoutConfirmSheet };
+  if (document.getElementById('payoutHistoryOverlay').classList.contains('show')) return { overlay: 'payoutHistoryOverlay', sheet: 'payoutHistorySheet', close: closePayoutHistorySheet };
+  return null;
+}
+
+document.addEventListener('keydown', function(e) {
+  const active = _activeGodModeSheet();
+  if (!active) return;
+  if (e.key === 'Escape') { active.close(); return; }
+  if (e.key !== 'Tab') return;
+  const sheet = document.getElementById(active.sheet);
+  const focusables = sheet.querySelectorAll('button, [tabindex]:not([tabindex="-1"])');
+  if (!focusables.length) return;
+  const first = focusables[0], last = focusables[focusables.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
 
 // ── FIX 2026-09-03: real dispute data for the Disputes tab (see markup comment above) ──
 const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
@@ -501,6 +675,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (btn) switchTab(saved, btn);
   }
   loadMerchantDisputes();
+  // GOD MODE PATCH: restore any persisted order confirm/cancel state on load
+  restoreOrderStatuses();
 });
 </script>
 </body>

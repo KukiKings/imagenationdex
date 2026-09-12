@@ -92,6 +92,18 @@ a{color:inherit;text-decoration:none;}
 .timeline-time{font-size:16px;font-weight:800;color:var(--corridor);}
 .timeline-note{font-size:12px;color:var(--muted);margin-top:2px;}
 
+/* GOD MODE PATCH: launch countdown + corridor watchlist */
+.countdown-card{background:var(--surface2);border:1px solid rgba(0,212,255,0.15);border-radius:16px;padding:18px 20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.countdown-label{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:1px;}
+.countdown-units{display:flex;gap:14px;}
+.countdown-unit{text-align:center;}
+.countdown-val{font-size:22px;font-weight:900;color:var(--corridor);font-variant-numeric:tabular-nums;display:block;}
+.countdown-unit-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+.watch-btn{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid rgba(0,212,255,0.3);color:var(--cyan);font-family:var(--font);font-weight:700;font-size:12px;padding:8px 14px;border-radius:10px;cursor:pointer;transition:all 0.15s;}
+.watch-btn.active{background:rgba(0,212,255,0.12);border-color:var(--cyan);}
+.watch-btn:hover{background:rgba(0,212,255,0.08);}
+.watch-count{font-size:11px;color:var(--muted);margin-top:6px;text-align:center;}
+
 .toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,80px);background:var(--surface3);color:var(--text);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;border:1px solid rgba(0,212,255,0.3);opacity:0;transition:transform 0.3s,opacity 0.3s;z-index:300;pointer-events:none;max-width:90vw;text-align:center;}
 .toast.show{transform:translate(-50%,0);opacity:1;}
 
@@ -118,6 +130,14 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
     <h1 class="hero-h1">Melbourne <span style="color:var(--corridor)">↔</span> Fiji</h1>
     <p class="hero-sub">Planned: send FJD to Suva at 0.5% — not 9%. Fiji has one of the Pacific's largest diaspora communities in Melbourne. They deserve better than bank rates.</p>
     <div class="status-pill">⏳ Coming Soon · Grand Synchronicity — 24 Feb 2027</div>
+    <!-- GOD MODE: live launch countdown -->
+    <div class="countdown-card">
+      <div class="countdown-label">Time to Grand Synchronicity</div>
+      <div class="countdown-units" id="countdownUnits"></div>
+    </div>
+    <!-- GOD MODE: corridor watchlist -->
+    <button class="watch-btn" id="watchBtn" onclick="toggleWatch()">☆ Watch this corridor</button>
+    <div class="watch-count" id="watchCount"></div>
     <div class="other-corridors">
       <a href="indx-corridor-samoa.html" class="corridor-chip">🇼🇸 Samoa</a>
       <a href="indx-corridor-vanuatu.html" class="corridor-chip">🇻🇺 Vanuatu</a>
@@ -192,6 +212,58 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
 </footer>
 
 <script>
+// ── GOD MODE: LIVE LAUNCH COUNTDOWN + CORRIDOR WATCHLIST ────────────────────
+function showToast(msg, ms) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), ms || 2800);
+}
+
+const GRAND_SYNCHRONICITY = new Date('2027-02-24T00:00:00+11:00').getTime();
+const CORRIDOR_ID = 'fiji';
+
+function updateCountdown() {
+  const now = Date.now();
+  const diff = Math.max(0, GRAND_SYNCHRONICITY - now);
+  const days  = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const mins  = Math.floor((diff % 3600000) / 60000);
+  document.getElementById('countdownUnits').innerHTML = `
+    <div class="countdown-unit"><span class="countdown-val">${days}</span><span class="countdown-unit-label">Days</span></div>
+    <div class="countdown-unit"><span class="countdown-val">${hours}</span><span class="countdown-unit-label">Hrs</span></div>
+    <div class="countdown-unit"><span class="countdown-val">${mins}</span><span class="countdown-unit-label">Min</span></div>`;
+}
+
+function getWatchlist() {
+  return JSON.parse(localStorage.getItem('indx_corridor_watchlist') || '[]');
+}
+
+function toggleWatch() {
+  let list = getWatchlist();
+  const btn = document.getElementById('watchBtn');
+  if (list.includes(CORRIDOR_ID)) {
+    list = list.filter(c => c !== CORRIDOR_ID);
+    showToast('Removed Fiji from your watchlist');
+  } else {
+    list.push(CORRIDOR_ID);
+    showToast("Watching Fiji — we'll flag it when it goes live");
+  }
+  localStorage.setItem('indx_corridor_watchlist', JSON.stringify(list));
+  renderWatchState();
+}
+
+function renderWatchState() {
+  const list = getWatchlist();
+  const btn = document.getElementById('watchBtn');
+  const watching = list.includes(CORRIDOR_ID);
+  btn.classList.toggle('active', watching);
+  btn.textContent = watching ? '★ Watching this corridor' : '☆ Watch this corridor';
+  document.getElementById('watchCount').textContent = list.length > 0
+    ? `Watching ${list.length} corridor${list.length === 1 ? '' : 's'}`
+    : '';
+}
+
 const CORRIDOR = {
   wuFee:0.09, bankFlat:20, bankPct:0.02, indxFee:0.005,
   annualFlow:'$247M AUD', communitySize:'45,000+', avgTransfer:'$420 AUD', savingsPotential:'$20.8M / year',
@@ -249,6 +321,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   const saved=localStorage.getItem('indx_fiji_last_amt');
   if(saved)document.getElementById('calcInput').value=saved;
   updateCalc();renderTODChips();updateTimeline();
+
+  // GOD MODE PATCH: start live countdown + init watchlist state
+  updateCountdown();
+  setInterval(updateCountdown, 60000);
+  renderWatchState();
 });
 </script>
 <script src="siindex-speak-core.js"></script>

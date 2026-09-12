@@ -95,6 +95,17 @@ a{color:inherit;text-decoration:none;}
 .feature-name{font-size:13px;font-weight:800;margin-bottom:3px;}
 .feature-desc{font-size:12px;color:var(--text2);line-height:1.5;}
 
+/* GOD MODE ADDITION: PROTECTION DURATION + SCAM HISTORY */
+.protect-duration{font-size:13px;font-weight:700;color:var(--green);margin-top:-8px;margin-bottom:16px;min-height:18px;}
+.scam-history-wrap{background:var(--surface2);border:1px solid rgba(240,242,255,0.07);border-radius:18px;padding:20px;margin-bottom:24px;}
+.scam-history-head{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px;}
+.scam-history-item{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid rgba(240,242,255,0.06);}
+.scam-history-item:first-child{border-top:none;padding-top:0;}
+.scam-history-badge{font-size:16px;flex-shrink:0;}
+.scam-history-text{flex:1;min-width:0;}
+.scam-history-snippet{font-size:13px;color:var(--text);word-break:break-word;}
+.scam-history-time{font-size:11px;color:var(--muted);margin-top:2px;}
+
 /* TOAST */
 .toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,80px);background:var(--surface3);color:var(--text);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;border:1px solid rgba(0,229,160,0.3);opacity:0;transition:transform 0.3s,opacity 0.3s;z-index:300;pointer-events:none;max-width:90vw;text-align:center;}
 .toast.show{transform:translate(-50%,0);opacity:1;}
@@ -128,6 +139,7 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
   <span class="shield-icon" id="shieldIcon">🛡️</span>
   <div class="protect-status inactive" id="protectStatus">Protection Mode is OFF</div>
   <div class="protect-sub" id="protectSub">Turn it on to add extra safety layers to your account.</div>
+  <div class="protect-duration" id="protectDuration"></div>
   <div class="toggle-wrap">
     <span class="toggle-label" style="color:var(--muted);">Off</span>
     <label class="toggle">
@@ -184,6 +196,15 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
     <div class="scam-detail" id="scamDetail"></div>
     <div class="scam-flags" id="scamFlags"></div>
   </div>
+</div>
+
+<!-- GOD MODE ADDITION: SCAM CHECK HISTORY -->
+<div class="scam-history-wrap" id="scamHistoryWrap" style="display:none;">
+  <div class="scam-history-head">
+    <span>Recent Checks (this device)</span>
+    <button class="btn btn-ghost btn-sm" onclick="clearScamHistory()">Clear</button>
+  </div>
+  <div id="scamHistoryList"></div>
 </div>
 
 <!-- PANIC COMMAND -->
@@ -278,6 +299,78 @@ const SPEED_DATA = [
   { label:'Guardian Mode', desc:'<strong>Guardian mode.</strong> Maximum protection. Your guardian contact is saved so SIINDEX can reference them in conversation — automatic alerts are not wired up yet, coming soon. All actions require your approval and extra confirmation. Ideal for elderly or very new citizens.' },
 ];
 
+// ── GOD MODE ADDITION: PROTECTION DURATION TIMER + SCAM CHECK HISTORY ──────
+let _protectDurationTimer = null;
+
+function startProtectDurationTimer() {
+  updateProtectDuration();
+  if (_protectDurationTimer) clearInterval(_protectDurationTimer);
+  _protectDurationTimer = setInterval(updateProtectDuration, 30000);
+}
+
+function stopProtectDurationTimer() {
+  if (_protectDurationTimer) { clearInterval(_protectDurationTimer); _protectDurationTimer = null; }
+  const el = document.getElementById('protectDuration');
+  if (el) el.textContent = '';
+}
+
+function updateProtectDuration() {
+  const startedAt = parseInt(localStorage.getItem('indx_protection_activated_at') || '0', 10);
+  const el = document.getElementById('protectDuration');
+  if (!el || !startedAt) return;
+  const mins = Math.floor((Date.now() - startedAt) / 60000);
+  const hrs = Math.floor(mins / 60);
+  const remMins = mins % 60;
+  el.textContent = hrs > 0 ? `🛡️ Active for ${hrs}h ${remMins}m` : `🛡️ Active for ${mins}m`;
+}
+
+function escapeHtmlText(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function timeAgoLabel(ts) {
+  const diff = Math.max(0, Date.now() - ts);
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  return Math.floor(hrs / 24) + 'd ago';
+}
+
+function pushScamHistory(snippet, cls, icon) {
+  const list = JSON.parse(localStorage.getItem('indx_protection_scam_history') || '[]');
+  list.unshift({ snippet: snippet.slice(0, 60), cls, icon, ts: Date.now() });
+  localStorage.setItem('indx_protection_scam_history', JSON.stringify(list.slice(0, 5)));
+  renderScamHistory();
+}
+
+function renderScamHistory() {
+  const list = JSON.parse(localStorage.getItem('indx_protection_scam_history') || '[]');
+  const wrap = document.getElementById('scamHistoryWrap');
+  const body = document.getElementById('scamHistoryList');
+  if (!wrap || !body) return;
+  if (!list.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  body.innerHTML = list.map(item => `
+    <div class="scam-history-item">
+      <span class="scam-history-badge">${item.icon}</span>
+      <div class="scam-history-text">
+        <div class="scam-history-snippet">${escapeHtmlText(item.snippet)}</div>
+        <div class="scam-history-time">${timeAgoLabel(item.ts)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function clearScamHistory() {
+  localStorage.removeItem('indx_protection_scam_history');
+  renderScamHistory();
+  showToast('Scam check history cleared');
+}
+
 // ── GM1: TOGGLE ────────────────────────────────────────────────────────────
 function toggleProtect() {
   const on = document.getElementById('protectToggle').checked;
@@ -305,6 +398,14 @@ function saveProtectMode() {
   const on = document.getElementById('protectToggle').checked;
   localStorage.setItem('indx_protection_mode', on ? '1' : '0');
   sessionStorage.setItem('protection_mode', on ? '1' : '0');
+  // GOD MODE PATCH: track activation timestamp so the banner can show a live active-for duration
+  if (on) {
+    if (!localStorage.getItem('indx_protection_activated_at')) localStorage.setItem('indx_protection_activated_at', String(Date.now()));
+    startProtectDurationTimer();
+  } else {
+    localStorage.removeItem('indx_protection_activated_at');
+    stopProtectDurationTimer();
+  }
   showToast(on ? '🛡️ Protection Mode activated' : 'Protection Mode turned off');
 }
 
@@ -365,6 +466,8 @@ async function runScamCheck() {
     const reportBtn = data.classification === 'STOP' || data.classification === 'CAUTION'
       ? `<button class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick="reportScam('${inputType}')">🚩 Report this to SIINDEX</button>` : '';
     flags.innerHTML = (data.receipt_code ? `<span class="scam-flag" style="background:rgba(0,212,255,0.1);color:var(--cyan);">Receipt ${data.receipt_code}</span>` : '') + reportBtn;
+    // GOD MODE PATCH: log this check into the on-device history panel
+    pushScamHistory(text, meta.cls, meta.icon);
   } catch (e) {
     console.error('[citizen-protection-mode] shield check failed:', e);
     result.classList.add('warning');
@@ -487,6 +590,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('guardianRelation').value = g.relation || '';
     showGuardianSaved(g);
   }
+
+  // GOD MODE PATCH: restore scam check history + start the live protection duration timer
+  renderScamHistory();
+  if (pm) startProtectDurationTimer();
 });
 </script>
 <script src="siindex-speak-core.js"></script>

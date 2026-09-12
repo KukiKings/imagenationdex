@@ -143,6 +143,15 @@ a{color:inherit;text-decoration:none;}
 .token-note{background:rgba(255,184,0,0.05);border:1px solid rgba(255,184,0,0.2);border-radius:14px;padding:18px 20px;font-size:13px;color:var(--muted);line-height:1.65;margin-top:32px;}
 .token-note strong{color:var(--gold);}
 
+/* GOD MODE PATCH: smart balance default + calculation history */
+.calc-balance-btn{display:inline-flex;align-items:center;gap:6px;background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.3);color:var(--green);font-family:var(--font);font-weight:700;font-size:12px;padding:9px 14px;border-radius:10px;cursor:pointer;margin-bottom:20px;transition:all 0.15s;}
+.calc-balance-btn:hover{background:rgba(0,229,160,0.18);}
+.calc-history{margin-top:20px;padding-top:16px;border-top:1px solid rgba(240,242,255,0.07);}
+.calc-history-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px;}
+.calc-history-chips{display:flex;gap:8px;flex-wrap:wrap;}
+.calc-history-chip{background:var(--surface3);border:1px solid rgba(240,242,255,0.1);color:var(--text2);font-family:var(--font);font-size:12px;font-weight:700;padding:7px 12px;border-radius:20px;cursor:pointer;transition:all 0.15s;}
+.calc-history-chip:hover{border-color:var(--cyan);color:var(--cyan);}
+
 /* TOAST */
 .toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,80px);background:var(--surface3);color:var(--text);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;border:1px solid rgba(0,229,160,0.3);opacity:0;transition:transform 0.3s,opacity 0.3s;z-index:300;pointer-events:none;max-width:90vw;text-align:center;}
 .toast.show{transform:translate(-50%,0);opacity:1;}
@@ -226,13 +235,16 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
       <div class="calc-input-row">
         <div class="calc-input-wrap">
           <span class="calc-prefix" id="calcPrefix">$</span>
-          <input class="calc-input" id="calcInput" type="number" min="0" step="any" value="100" inputmode="decimal" placeholder="100" oninput="updateCalc()">
+          <!-- GOD MODE PATCH: added onblur to log this amount to calc history -->
+          <input class="calc-input" id="calcInput" type="number" min="0" step="any" value="100" inputmode="decimal" placeholder="100" oninput="updateCalc()" onblur="saveCalcHistory()">
         </div>
         <div class="calc-unit-tabs">
           <button class="unit-tab active" id="tabUSD" onclick="setUnit('USD')">USD</button>
           <button class="unit-tab" id="tabINDX" onclick="setUnit('INDX')">INDX</button>
         </div>
       </div>
+      <!-- GOD MODE: smart balance default -->
+      <button class="calc-balance-btn" id="calcBalanceBtn" hidden onclick="useMyBalance()">💰 Use my balance</button>
       <div class="calc-results">
         <div class="calc-result-block">
           <div class="calc-result-label">You receive</div>
@@ -256,6 +268,11 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
       </div>
       <div class="calc-example" id="calcExample">On a $100.00 sale: you receive $98.00 · civilization fee $2.00</div>
       <div class="calc-example" id="calcPriceNote" hidden style="margin-top:4px;color:var(--muted);">INDX/USD figures above use a placeholder rate for illustration only — INDX has no live market price and is not yet trading anywhere.</div>
+      <!-- GOD MODE: calculation history -->
+      <div class="calc-history" id="calcHistory" hidden>
+        <div class="calc-history-label">Recent checks</div>
+        <div class="calc-history-chips" id="calcHistoryChips"></div>
+      </div>
     </div>
   </div>
 </section>
@@ -391,6 +408,44 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
 </footer>
 
 <script>
+// ── GOD MODE: SMART BALANCE DEFAULT + CALCULATION HISTORY ───────────────────
+function useMyBalance() {
+  const bal = parseFloat(sessionStorage.getItem('citizen_balance') || '0');
+  if (!bal) return;
+  setUnit('USD');
+  document.getElementById('calcInput').value = bal.toFixed(2);
+  updateCalc();
+  saveCalcHistory();
+  const name = sessionStorage.getItem('citizen_name');
+  showToast(name ? `Loaded ${name}'s balance: $${bal.toFixed(2)}` : `Loaded your balance: $${bal.toFixed(2)}`);
+}
+
+function saveCalcHistory() {
+  const amt = calcAmt;
+  if (!amt || amt <= 0) return;
+  let hist = JSON.parse(localStorage.getItem('indx_law_calc_history') || '[]');
+  hist = hist.filter(v => v !== amt);
+  hist.unshift(amt);
+  hist = hist.slice(0, 5);
+  localStorage.setItem('indx_law_calc_history', JSON.stringify(hist));
+  renderCalcHistory();
+}
+
+function renderCalcHistory() {
+  const hist = JSON.parse(localStorage.getItem('indx_law_calc_history') || '[]');
+  const wrap = document.getElementById('calcHistory');
+  const chips = document.getElementById('calcHistoryChips');
+  if (!hist.length) { wrap.hidden = true; return; }
+  wrap.hidden = false;
+  chips.innerHTML = hist.map(v => `<button class="calc-history-chip" onclick="loadHistoryAmount(${v})">$${v.toFixed(2)}</button>`).join('');
+}
+
+function loadHistoryAmount(v) {
+  setUnit('USD');
+  document.getElementById('calcInput').value = v.toFixed(2);
+  updateCalc();
+}
+
 // ── CONSTANTS ─────────────────────────────────────────────────────────────
 // AUDIT 2026-09-10: INDX has no live market price — the token is not deployed
 // or trading anywhere yet. This value is a placeholder used only to render an
@@ -559,6 +614,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('savingsCompare').value = sv.key || 'wu';
   }
   updateSavings();
+
+  // GOD MODE PATCH: reveal "Use my balance" when a citizen session has a balance, render history
+  if (parseFloat(sessionStorage.getItem('citizen_balance') || '0') > 0) {
+    document.getElementById('calcBalanceBtn').hidden = false;
+  }
+  renderCalcHistory();
 });
 </script>
 <script src="siindex-speak-core.js"></script>

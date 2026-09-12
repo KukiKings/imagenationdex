@@ -40,10 +40,22 @@ input:focus,select:focus{border-color:var(--gold)}
 .toast.show{opacity:1}
 .toast.err{border-color:var(--red)}
 .toast.ok{border-color:var(--green)}
+/* GOD MODE */
+.fieldwrap{position:relative}
+input.field-valid{border-color:var(--green)}
+input.field-invalid{border-color:var(--red)}
+.fieldmsg{font-size:11px;margin-top:5px;min-height:14px;transition:color .15s}
+.fieldmsg.ok{color:var(--green)}
+.fieldmsg.bad{color:var(--red)}
+.share.share4{grid-template-columns:1fr 1fr 1fr 1fr}
+.resumebar{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:var(--muted);padding:14px 0}
+.resumebar .spin{width:14px;height:14px;border:2px solid #2a3547;border-top-color:var(--gold);border-radius:50%;animation:fspin .7s linear infinite}
+@keyframes fspin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 <div class="app">
+<div id="resumeBar" class="resumebar hidden"><span class="spin"></span> Welcome back — loading your Sovereign Link…</div>
 <div id="formView">
 <div class="hero">
 <h2>Get your <span class="gold">Sovereign Link</span>.<br>Shape the Republic.</h2>
@@ -52,9 +64,11 @@ input:focus,select:focus{border-color:var(--gold)}
 </div>
 <div class="card">
 <label>Your name</label>
-<input id="fName" type="text" placeholder="e.g. Mere Samoa" autocomplete="name">
+<div class="fieldwrap"><input id="fName" type="text" placeholder="e.g. Mere Samoa" autocomplete="name" oninput="validateNameField()" onkeydown="handleFieldEnter(event)"></div>
+<div class="fieldmsg" id="fNameMsg"></div>
 <label>Email or phone</label>
-<input id="fContact" type="text" placeholder="you@email.com or +61 4xx..." autocomplete="email">
+<div class="fieldwrap"><input id="fContact" type="text" placeholder="you@email.com or +61 4xx..." autocomplete="email" oninput="validateContactField()" onkeydown="handleFieldEnter(event)"></div>
+<div class="fieldmsg" id="fContactMsg"></div>
 <label>I am from</label>
 <select id="fOrigin">
 <option>Cook Islands</option>
@@ -85,10 +99,11 @@ input:focus,select:focus{border-color:var(--gold)}
 <div class="card">
 <label>Your Sovereign Link</label>
 <div class="linkbox" id="sovLink">—</div>
-<div class="share">
+<div class="share" id="shareGrid">
 <button onclick="copyLink()">📋 Copy</button>
 <button onclick="shareWhatsApp()">💬 WhatsApp</button>
 <button onclick="shareSMS()">✉️ SMS</button>
+<button onclick="shareNative()" id="shareMoreBtn" class="hidden">🔗 More</button>
 </div>
 <div class="note" id="genesisProgress"></div>
 </div>
@@ -101,7 +116,54 @@ var SUPABASE_URL='https://zljgthfzbalsunuoohcd.supabase.co';
 var SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
 var sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
 var urlRef=new URLSearchParams(window.location.search).get('ref');
-function init(){if(urlRef){document.getElementById('refNote').textContent='You were invited by a Founding Citizen. Your referral will be credited.';}}
+
+// GOD MODE: live field validation
+function validateNameField(){
+var v=document.getElementById('fName').value.trim();
+var el=document.getElementById('fName');
+var msg=document.getElementById('fNameMsg');
+if(!v){el.className='';msg.textContent='';msg.className='fieldmsg';return false;}
+if(v.length<2){el.className='field-invalid';msg.textContent='Name looks too short.';msg.className='fieldmsg bad';return false;}
+el.className='field-valid';msg.textContent='Looks good.';msg.className='fieldmsg ok';return true;
+}
+function validateContactField(){
+var v=document.getElementById('fContact').value.trim();
+var el=document.getElementById('fContact');
+var msg=document.getElementById('fContactMsg');
+if(!v){el.className='';msg.textContent='';msg.className='fieldmsg';return false;}
+var isEmail=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+var isPhone=/^\+?[0-9()\-\s]{7,}$/.test(v);
+if(!isEmail&&!isPhone){el.className='field-invalid';msg.textContent='Enter a valid email or phone number.';msg.className='fieldmsg bad';return false;}
+el.className='field-valid';msg.textContent=isEmail?'Valid email.':'Valid phone number.';msg.className='fieldmsg ok';return true;
+}
+// GOD MODE: Enter key submits the form (inputs aren't in a native <form>)
+function handleFieldEnter(e){
+if(e.key==='Enter'){e.preventDefault();joinWaitlist();}
+}
+// GOD MODE: native Web Share API, progressive enhancement over the fixed WhatsApp/SMS buttons
+function shareNative(){
+var link=getSovereignLink();
+if(navigator.share){
+navigator.share({title:'IN$DEX',text:'The bank never came. So we are building something better. Join me on IN$DEX:',url:link}).catch(function(){});
+}else{
+toast('Native share not supported on this device.','err');
+}
+}
+// GOD MODE: auto-resume dashboard for a returning citizen who already has a Sovereign Link on this device
+function tryAutoResume(){
+var savedCode=localStorage.getItem('founding_code')||'';
+if(!savedCode)return;
+document.getElementById('resumeBar').classList.remove('hidden');
+document.getElementById('formView').classList.add('hidden');
+showDashboard(savedCode).finally(function(){
+document.getElementById('resumeBar').classList.add('hidden');
+});
+}
+function init(){
+if(urlRef){document.getElementById('refNote').textContent='You were invited by a Founding Citizen. Your referral will be credited.';}
+if(navigator.share){document.getElementById('shareMoreBtn').classList.remove('hidden');document.getElementById('shareGrid').classList.add('share4');}
+tryAutoResume();
+}
 async function joinWaitlist(){
 var name=document.getElementById('fName').value.trim();
 var contact=document.getElementById('fContact').value.trim();
@@ -144,6 +206,9 @@ console.error(e);
 toast(e.message||'Could not load your dashboard.','err');
 document.getElementById('joinBtn').disabled=false;
 document.getElementById('joinBtn').textContent='Get my Sovereign Link';
+// GOD MODE PATCH: an auto-resume attempt hides formView before this runs — restore it on failure
+document.getElementById('formView').classList.remove('hidden');
+localStorage.removeItem('founding_code');
 }
 }
 function getSovereignLink(){return document.getElementById('sovLink').textContent;}

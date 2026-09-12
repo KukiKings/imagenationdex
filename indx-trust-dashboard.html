@@ -92,6 +92,16 @@ a{color:inherit;text-decoration:none;}
 .transparency-item:last-child{border-bottom:none;}
 .transparency-item-icon{font-size:16px;flex-shrink:0;}
 
+/* GOD MODE — Live Countdown + Auto-Refresh */
+.gm-countdown{background:linear-gradient(135deg,rgba(0,212,255,0.08),rgba(139,63,232,0.08));border:1px solid rgba(0,212,255,0.2);border-radius:18px;padding:22px 20px;margin-bottom:32px;text-align:center;}
+.gm-countdown-label{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px;}
+.gm-countdown-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:400px;margin:0 auto;}
+.gm-countdown-unit{background:var(--surface3);border-radius:12px;padding:10px 4px;}
+.gm-countdown-val{font-size:clamp(18px,4vw,26px);font-weight:900;font-variant-numeric:tabular-nums;color:var(--cyan);display:block;}
+.gm-countdown-lbl{font-size:9px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-top:2px;}
+.gm-refresh-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;font-size:11px;color:var(--muted);}
+.gm-refresh-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.5s ease-in-out infinite;}
+
 /* TOAST */
 .toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,80px);background:var(--surface3);color:var(--text);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;border:1px solid rgba(0,229,160,0.3);opacity:0;transition:transform 0.3s,opacity 0.3s;z-index:300;pointer-events:none;max-width:90vw;text-align:center;}
 .toast.show{transform:translate(-50%,0);opacity:1;}
@@ -132,6 +142,17 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
 
 <div class="container">
 
+<!-- GOD MODE: LIVE GRAND SYNCHRONICITY COUNTDOWN -->
+<div class="gm-countdown">
+  <div class="gm-countdown-label">⏳ Time to Grand Synchronicity — 24 Feb 2027</div>
+  <div class="gm-countdown-grid">
+    <div class="gm-countdown-unit"><span class="gm-countdown-val" id="cdDays">—</span><div class="gm-countdown-lbl">Days</div></div>
+    <div class="gm-countdown-unit"><span class="gm-countdown-val" id="cdHours">—</span><div class="gm-countdown-lbl">Hours</div></div>
+    <div class="gm-countdown-unit"><span class="gm-countdown-val" id="cdMins">—</span><div class="gm-countdown-lbl">Mins</div></div>
+    <div class="gm-countdown-unit"><span class="gm-countdown-val" id="cdSecs">—</span><div class="gm-countdown-lbl">Secs</div></div>
+  </div>
+</div>
+
 <!-- GM1: LIVE STAT COUNTERS -->
 <div class="eyebrow">God Mode Feature 1 — Live Metrics</div>
 <h2 class="h2" style="margin-bottom:20px;">What IN$DEX Has Done</h2>
@@ -146,6 +167,7 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
   <div class="stat-card"><span class="stat-val" id="statDisputes">0</span><div class="stat-label">Disputes Resolved</div><div class="stat-sub">By SIINDEX + council</div></div>
   <div class="stat-card"><span class="stat-val" id="statBlocked">0</span><div class="stat-label">Scams Blocked</div><div class="stat-sub">Security incidents stopped</div></div>
 </div>
+<div class="gm-refresh-row"><div class="gm-refresh-dot"></div><span id="statsLastChecked">Checking live count…</span></div>
 
 <!-- GM2: LIVE ACTIVITY FEED -->
 <div class="eyebrow">God Mode Feature 2 — Activity</div>
@@ -256,6 +278,42 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" crossorigin="anonymous"></script>
 <script>
+// ── GOD MODE: LIVE COUNTDOWN + AUTO-REFRESH ─────────────────────────────────
+const GRAND_SYNC_TARGET = new Date('2027-02-24T00:00:00+11:00').getTime();
+let gmReceiptPollTimer = null;
+
+function updateGrandSyncCountdown() {
+  const now = Date.now();
+  const diff = GRAND_SYNC_TARGET - now;
+  const dEl = document.getElementById('cdDays');
+  const hEl = document.getElementById('cdHours');
+  const mEl = document.getElementById('cdMins');
+  const sEl = document.getElementById('cdSecs');
+  if (!dEl) return;
+  if (diff <= 0) {
+    dEl.textContent = '0'; hEl.textContent = '0'; mEl.textContent = '0'; sEl.textContent = '0';
+    return;
+  }
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
+  const secs = Math.floor((diff % 60000) / 1000);
+  dEl.textContent = days.toLocaleString();
+  hEl.textContent = String(hours).padStart(2, '0');
+  mEl.textContent = String(mins).padStart(2, '0');
+  sEl.textContent = String(secs).padStart(2, '0');
+}
+
+function startGrandSyncCountdown() {
+  updateGrandSyncCountdown();
+  setInterval(updateGrandSyncCountdown, 1000);
+}
+
+function startReceiptAutoRefresh() {
+  if (gmReceiptPollTimer) clearInterval(gmReceiptPollTimer);
+  gmReceiptPollTimer = setInterval(loadRealReceiptCount, 30000);
+}
+
 // ── CONSTANTS ──────────────────────────────────────────────────────────────
 const INDX_PRICE_USD = 0.24;
 const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
@@ -315,6 +373,8 @@ function initSavingsTicker() {
 // ── REAL CONSENT RECEIPT COUNT (Task 7 — no fake data here) ────────────────
 async function loadRealReceiptCount() {
   const el = document.getElementById('statReceipts');
+  // GOD MODE PATCH — also stamp the real "last checked" time so the auto-refresh is visible
+  const stampEl = document.getElementById('statsLastChecked');
   if (!el) return;
   try {
     const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_consent_receipt_count', {
@@ -322,12 +382,18 @@ async function loadRealReceiptCount() {
       headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
       body: '{}'
     });
-    if (!res.ok) { el.textContent = '0'; return; }
+    if (!res.ok) {
+      el.textContent = '0';
+      if (stampEl) stampEl.textContent = 'Last checked ' + new Date().toLocaleTimeString();
+      return;
+    }
     const count = await res.json();
     animCount(el, Number(count) || 0, '', '', 1400);
+    if (stampEl) stampEl.textContent = 'Live · last checked ' + new Date().toLocaleTimeString();
   } catch (e) {
     console.error('[indx-trust-dashboard] failed to load consent receipt count:', e);
     el.textContent = '0';
+    if (stampEl) stampEl.textContent = 'Last checked ' + new Date().toLocaleTimeString();
   }
 }
 
@@ -345,6 +411,9 @@ document.addEventListener('DOMContentLoaded', () => {
   loadRealReceiptCount();
   renderFeed();
   initSavingsTicker();
+  // GOD MODE PATCH — live countdown + auto-refreshing real stat
+  startGrandSyncCountdown();
+  startReceiptAutoRefresh();
 });
 </script>
 <script src="siindex-speak-core.js"></script>

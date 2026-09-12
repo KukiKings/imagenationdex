@@ -122,6 +122,17 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
 
 .no-results{padding:32px 16px;text-align:center;color:var(--text-muted);font-size:13px;line-height:1.7;}
+
+/* GOD MODE: recent-viewed panel, clear-confirm sheet, accessibility */
+.tb-recent{font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;background:rgba(0,212,255,0.1);color:var(--cyan);border:1px solid rgba(0,212,255,0.2);cursor:pointer;}
+.clear-all-btn{font-size:11px;font-weight:700;padding:5px 10px;border-radius:8px;background:rgba(255,77,109,0.1);color:var(--red);border:1px solid rgba(255,77,109,0.25);cursor:pointer;}
+.sheet-title-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 16px 8px;}
+.sheet-title-row .sheet-title{padding:0;}
+.confirm-desc{padding:0 16px 16px;font-size:13px;color:var(--text-muted);line-height:1.6;}
+.confirm-actions{display:flex;gap:10px;padding:0 16px 20px;}
+.confirm-actions .oc-btn{flex:1;}
+button:focus-visible, .skill-chip:focus-visible, .corridor-btn:focus-visible, .si-remove:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+.bottom-sheet:focus{outline:none;}
 </style>
 </head>
 <body>
@@ -131,6 +142,7 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 <div class="topbar">
   <button class="tb-back" onclick="history.back()">←</button>
   <div class="tb-title">Opportunity Finder</div>
+  <div class="tb-recent" id="recentBtn" onclick="openRecent()">Recent</div>
   <div class="tb-saves" id="savesBtn" onclick="openSaved()">Saved <span id="saveCount">0</span></div>
 </div>
 
@@ -174,8 +186,34 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 <div class="sheet-overlay" id="savedOverlay" onclick="closeSaved()"></div>
 <div class="bottom-sheet" id="savedSheet">
   <div class="sheet-handle"></div>
-  <div class="sheet-title">Saved opportunities</div>
+  <div class="sheet-title-row">
+    <div class="sheet-title">Saved opportunities</div>
+    <button class="clear-all-btn" id="clearAllBtn" onclick="openClearConfirm()" style="display:none;">Clear all</button>
+  </div>
   <div id="savedList"></div>
+</div>
+
+<!-- RECENT SHEET -->
+<div class="sheet-overlay" id="recentOverlay" onclick="closeRecent()"></div>
+<div class="bottom-sheet" id="recentSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title-row">
+    <div class="sheet-title">Recently viewed</div>
+    <button class="clear-all-btn" onclick="clearHistory()">Clear</button>
+  </div>
+  <div id="recentList"></div>
+</div>
+
+<!-- CLEAR-SAVED CONFIRM SHEET -->
+<div class="sheet-overlay" id="clearConfirmOverlay" onclick="closeClearConfirm()"></div>
+<div class="bottom-sheet" id="clearConfirmSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">Clear all saved opportunities?</div>
+  <div class="confirm-desc">This removes every opportunity from your saved list on this device. This can't be undone.</div>
+  <div class="confirm-actions">
+    <button class="oc-btn save" onclick="closeClearConfirm()">Cancel</button>
+    <button class="oc-btn primary" style="background:var(--red);border-color:var(--red);color:#fff;" onclick="confirmClearSaved()">Clear all</button>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -184,6 +222,100 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 const INDX_PRICE_USD = 0.24;
 const _SAVED_KEY = 'indx_oppfinder_saved';
 const _HIST_KEY  = 'indx_oppfinder_hist';
+const _PREFS_KEY = 'indx_oppfinder_prefs';
+
+// ── GOD MODE: remembered filters, recently-viewed panel, confirm-clear, sheet a11y ──
+
+var _lastFocusedEl = null;
+
+function savePrefs() {
+  try {
+    localStorage.setItem(_PREFS_KEY, JSON.stringify({ skills: selectedSkills, corridor: activeCorridor }));
+  } catch (e) {}
+}
+
+function loadPrefs() {
+  try {
+    var p = JSON.parse(localStorage.getItem(_PREFS_KEY) || 'null');
+    if (p) {
+      selectedSkills = Array.isArray(p.skills) ? p.skills : [];
+      activeCorridor = p.corridor || 'all';
+    }
+  } catch (e) {}
+}
+
+function openRecent() {
+  _lastFocusedEl = document.getElementById('recentBtn');
+  var list = document.getElementById('recentList');
+  list.innerHTML = '';
+  var hist = [];
+  try { hist = JSON.parse(localStorage.getItem(_HIST_KEY) || '[]'); } catch (e) { hist = []; }
+  if (hist.length === 0) {
+    list.innerHTML = '<div class="saved-empty">Nothing viewed yet.<br>Opportunities you save or open will show up here.</div>';
+  } else {
+    hist.forEach(function (h) {
+      var opp = OPPS.find(function (o) { return o.id === h.id; });
+      var div = document.createElement('div');
+      div.className = 'saved-item';
+      div.innerHTML = '<div class="si-icon">' + (opp ? opp.icon : '📄') + '</div><div class="si-info"><div class="si-name">' + h.name + '</div><div class="si-time">' + h.time + '</div></div>';
+      list.appendChild(div);
+    });
+  }
+  document.getElementById('recentOverlay').classList.add('open');
+  document.getElementById('recentSheet').classList.add('open');
+}
+
+function closeRecent() {
+  document.getElementById('recentOverlay').classList.remove('open');
+  document.getElementById('recentSheet').classList.remove('open');
+  if (_lastFocusedEl && _lastFocusedEl.focus) _lastFocusedEl.focus();
+}
+
+function clearHistory() {
+  try { localStorage.setItem(_HIST_KEY, '[]'); } catch (e) {}
+  showToast('Viewing history cleared.');
+  openRecent();
+}
+
+function openClearConfirm() {
+  _lastFocusedEl = document.getElementById('clearAllBtn');
+  document.getElementById('clearConfirmOverlay').classList.add('open');
+  document.getElementById('clearConfirmSheet').classList.add('open');
+}
+
+function closeClearConfirm() {
+  document.getElementById('clearConfirmOverlay').classList.remove('open');
+  document.getElementById('clearConfirmSheet').classList.remove('open');
+  if (_lastFocusedEl && _lastFocusedEl.focus) _lastFocusedEl.focus();
+}
+
+function confirmClearSaved() {
+  savedIds = [];
+  try { localStorage.setItem(_SAVED_KEY, '[]'); } catch (e) {}
+  updateSaveCount();
+  renderOpps();
+  closeClearConfirm();
+  closeSaved();
+  showToast('All saved opportunities cleared.');
+}
+
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') {
+    if (document.getElementById('savedSheet').classList.contains('open')) closeSaved();
+    if (document.getElementById('recentSheet').classList.contains('open')) closeRecent();
+    if (document.getElementById('clearConfirmSheet').classList.contains('open')) closeClearConfirm();
+    return;
+  }
+  if (e.key === 'Tab') {
+    var openSheetEl = document.querySelector('.bottom-sheet.open');
+    if (!openSheetEl) return;
+    var focusables = openSheetEl.querySelectorAll('button, [href], input, [tabindex]:not([tabindex="-1"])');
+    if (focusables.length === 0) return;
+    var first = focusables[0], last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+});
 
 // ── DATA ──────────────────────────────────────────────────────────────
 var SKILLS = [
@@ -287,6 +419,9 @@ var savedIds = [];
 var citizenWisdom = 0;
 
 function init() {
+  // GOD MODE PATCH: restore remembered skill/corridor selections before rendering
+  loadPrefs();
+
   // Load wisdom from sessionStorage
   var ws = parseInt(sessionStorage.getItem('citizen_wisdom') || '0');
   citizenWisdom = isNaN(ws) ? 42 : ws || 42; // demo default 42
@@ -301,7 +436,8 @@ function init() {
   var grid = document.getElementById('skillsGrid');
   SKILLS.forEach(function(s){
     var chip = document.createElement('button');
-    chip.className = 'skill-chip';
+    // GOD MODE PATCH: restore selected state from remembered prefs
+    chip.className = 'skill-chip' + (selectedSkills.indexOf(s.id) > -1 ? ' selected' : '');
     chip.textContent = s.label;
     chip.dataset.id = s.id;
     chip.onclick = function(){ toggleSkill(s.id, chip); };
@@ -312,13 +448,15 @@ function init() {
   var strip = document.getElementById('corridorStrip');
   CORRIDORS.forEach(function(c){
     var btn = document.createElement('button');
-    btn.className = 'corridor-btn' + (c.id==='all' ? ' active' : '');
+    // GOD MODE PATCH: restore active corridor from remembered prefs
+    btn.className = 'corridor-btn' + (c.id===activeCorridor ? ' active' : '');
     btn.textContent = c.label;
     btn.dataset.id = c.id;
     btn.onclick = function(){ setCorridorFilter(c.id, btn); };
     strip.appendChild(btn);
   });
 
+  updateMatchBar();
   renderOpps();
 }
 
@@ -333,6 +471,7 @@ function toggleSkill(id, chip) {
   }
   updateMatchBar();
   renderOpps();
+  savePrefs(); // GOD MODE PATCH: remember skill selection
 }
 
 function setCorridorFilter(id, btn) {
@@ -340,6 +479,7 @@ function setCorridorFilter(id, btn) {
   document.querySelectorAll('.corridor-btn').forEach(function(b){ b.classList.remove('active'); });
   btn.classList.add('active');
   renderOpps();
+  savePrefs(); // GOD MODE PATCH: remember corridor selection
 }
 
 function computeMatch(opp) {
@@ -497,6 +637,9 @@ function updateSaveCount() {
 }
 
 function openSaved() {
+  _lastFocusedEl = document.getElementById('savesBtn'); // GOD MODE PATCH: a11y focus return
+  var clearBtn = document.getElementById('clearAllBtn');
+  if (clearBtn) clearBtn.style.display = savedIds.length > 0 ? '' : 'none';
   var list = document.getElementById('savedList');
   list.innerHTML = '';
   if (savedIds.length === 0) {

@@ -92,6 +92,13 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
 .footer-links a{font-size:13px;color:var(--muted);}
 .footer-links a:hover{color:var(--cyan);}
 .footer-copy{font-size:12px;color:var(--muted);}
+
+/* GOD MODE: GS COUNTDOWN + RECENT AMOUNT CHIPS */
+.gs-countdown{display:block;font-size:11px;font-weight:800;color:var(--purple);margin-top:6px;letter-spacing:0.3px;}
+.recent-amt-chips{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.recent-amt-label{font-size:11px;color:var(--muted);font-weight:700;margin-right:2px;}
+.recent-amt-chip{background:var(--surface3);color:var(--purple);border:1px solid rgba(139,63,232,0.25);border-radius:20px;font-family:var(--font);font-weight:700;font-size:12px;padding:5px 12px;cursor:pointer;transition:all 0.15s;}
+.recent-amt-chip:hover,.recent-amt-chip:focus-visible{background:rgba(139,63,232,0.14);outline:none;}
 </style>
 </head>
 <body>
@@ -107,7 +114,7 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
     <div class="eyebrow">Pacific Corridor</div>
     <h1 class="hero-h1">Melbourne <span style="color:var(--corridor)">↔</span> Vanuatu</h1>
     <p class="hero-sub">Planned: send VUV to Port Vila at 0.5% — not 10%. Vanuatu's ni-Vanuatu community in Melbourne sends home. They deserve a corridor that works for them.</p>
-    <div class="status-pill">⏳ Coming Soon · Grand Synchronicity — 24 Feb 2027</div>
+    <div class="status-pill">⏳ Coming Soon · Grand Synchronicity — 24 Feb 2027<span class="gs-countdown" id="gsCountdown"></span></div>
     <div class="other-corridors">
       <a href="indx-corridor-samoa.html" class="corridor-chip">🇼🇸 Samoa</a>
       <a href="indx-corridor-fiji.html" class="corridor-chip">🇫🇯 Fiji</a>
@@ -122,7 +129,8 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
     <h2 class="h2">How Much Does Your Family Actually Receive?</h2>
     <div class="calc-card">
       <label class="calc-label">You send (USD)</label>
-      <input class="calc-input" id="calcInput" type="number" value="175" min="1" max="50000" oninput="updateCalc()">
+      <input class="calc-input" id="calcInput" type="number" value="175" min="1" max="50000" oninput="updateCalc()" onchange="recordRecentAmt()">
+      <div class="recent-amt-chips" id="recentAmtChips"></div>
       <div class="calc-rows" id="calcRows"></div>
       <div class="calc-savings-bar"><div class="calc-savings-fill" id="savingsFill" style="width:0%"></div></div>
       <div class="calc-savings-label" id="savingsLabel"></div>
@@ -169,6 +177,43 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
   </div>
 </footer>
 <script>
+// ── GOD MODE: GRAND SYNCHRONICITY COUNTDOWN + RECENT AMOUNTS ────────────────
+const GS_LAUNCH_TS = new Date('2027-02-24T00:00:00Z').getTime();
+function updateGSCountdown() {
+  const el = document.getElementById('gsCountdown');
+  if (!el) return;
+  const diff = GS_LAUNCH_TS - Date.now();
+  if (diff <= 0) { el.textContent = 'Live now'; return; }
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
+  el.textContent = `${days}d ${hours}h ${mins}m to go`;
+}
+function recordRecentAmt() {
+  const amt = parseFloat(document.getElementById('calcInput').value) || 0;
+  if (amt <= 0) return;
+  let recent = JSON.parse(localStorage.getItem('indx_vanuatu_recent_amts') || '[]');
+  recent = recent.filter(a => a !== amt);
+  recent.unshift(amt);
+  recent = recent.slice(0, 3);
+  localStorage.setItem('indx_vanuatu_recent_amts', JSON.stringify(recent));
+  renderRecentAmts();
+}
+function setRecentAmt(a) {
+  document.getElementById('calcInput').value = a;
+  updateCalc();
+  recordRecentAmt();
+}
+function renderRecentAmts() {
+  const el = document.getElementById('recentAmtChips');
+  if (!el) return;
+  const recent = JSON.parse(localStorage.getItem('indx_vanuatu_recent_amts') || '[]');
+  if (!recent.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<span class="recent-amt-label">Recent:</span>' + recent.map(a =>
+    `<button type="button" class="recent-amt-chip" onclick="setRecentAmt(${a})">$${a.toLocaleString()}</button>`
+  ).join('');
+}
+
 // AUDIT 2026-09-10: removed unused INDX_PRICE_USD constant (was 0.24, never
 // referenced anywhere in this file). INDX has no live market price — do not
 // reintroduce a fixed USD valuation here.
@@ -233,6 +278,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   const saved=localStorage.getItem('indx_vanuatu_last_amt');
   if(saved)document.getElementById('calcInput').value=saved;
   updateCalc();renderTODChips();updateTimeline();
+
+  // GOD MODE: recent-amount chips + live Grand Synchronicity countdown
+  renderRecentAmts();
+  updateGSCountdown();
+  setInterval(updateGSCountdown, 60000);
 });
 </script>
 <script src="siindex-speak-core.js"></script>

@@ -139,6 +139,40 @@
       font-size:10px;font-weight:600;letter-spacing:.3px;gap:3px;transition:color .2s;}
     .nav-item.active{color:var(--cyan);}
     .nav-icon{font-size:20px;}
+
+    /* GOD MODE: LIVE CHAR COUNTERS */
+    .char-count{font-size:10px;color:var(--muted);text-align:right;margin-top:4px;}
+    .char-count.near-limit{color:var(--gold);}
+    .char-count.at-limit{color:var(--red);}
+
+    /* GOD MODE: DRAFT RESTORE BANNER */
+    .draft-banner{display:none;margin:0 16px 12px;background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.2);border-radius:12px;padding:10px 14px;font-size:12px;color:var(--text2);align-items:center;justify-content:space-between;gap:10px;}
+    .draft-banner.show{display:flex;}
+    .draft-banner button{flex-shrink:0;background:none;border:1px solid rgba(0,212,255,0.3);color:var(--cyan);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
+
+    /* GOD MODE: COACHING STATS SUMMARY */
+    .coach-stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 16px;}
+    .coach-stat{background:var(--surface);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:10px 8px;text-align:center;}
+    .coach-stat-val{font-size:15px;font-weight:900;color:var(--text);}
+    .coach-stat-label{font-size:9px;color:var(--muted);margin-top:2px;}
+
+    /* GOD MODE: HISTORY MANAGEMENT */
+    .history-head-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+    .history-clear-btn{background:none;border:1px solid rgba(255,77,109,0.3);color:var(--red);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
+    .history-card{position:relative;}
+    .history-del-btn{position:absolute;top:10px;right:10px;background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:4px 6px;line-height:1;}
+    .history-del-btn:active{color:var(--red);}
+
+    /* GOD MODE: CONFIRM SHEET (clear-all) */
+    .sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.85);z-index:200;display:none;align-items:flex-end;}
+    .sheet-overlay.show{display:flex;}
+    .bottom-sheet{background:var(--surface);border-radius:22px 22px 0 0;padding:22px;width:100%;max-width:430px;margin:0 auto;}
+    .sheet-handle{width:40px;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 auto 18px;}
+    .sheet-title{font-size:17px;font-weight:800;margin-bottom:8px;}
+    .sheet-sub{font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:18px;}
+    .sheet-btn{width:100%;padding:14px;border-radius:14px;border:none;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:10px;}
+    .sheet-btn.danger{background:var(--red);color:#fff;}
+    .sheet-btn.cancel{background:none;border:1px solid rgba(255,255,255,0.12);color:var(--text2);}
   </style>
 </head>
 <body>
@@ -168,18 +202,24 @@
 
 <!-- INPUT FORM -->
 <section class="form-section">
+  <div class="draft-banner" id="draftBanner">
+    <span>You have an unsaved draft from earlier — want it back?</span>
+    <button onclick="restoreDraft()">Restore</button>
+  </div>
   <div class="form-card">
     <div class="field">
       <label class="field-label" for="listingTitle">Current listing title</label>
-      <input class="field-input" id="listingTitle" type="text" placeholder="e.g. nice blue bowl i made" maxlength="120" autocomplete="off">
+      <input class="field-input" id="listingTitle" type="text" placeholder="e.g. nice blue bowl i made" maxlength="120" autocomplete="off" oninput="updateCharCount('listingTitle','titleCount',120);saveDraft();">
+      <div class="char-count" id="titleCount">0 / 120</div>
     </div>
     <div class="field">
       <label class="field-label" for="listingDesc">Current description</label>
-      <textarea class="field-textarea" id="listingDesc" placeholder="Paste your current description, or write a rough version. Even a single sentence helps." maxlength="800"></textarea>
+      <textarea class="field-textarea" id="listingDesc" placeholder="Paste your current description, or write a rough version. Even a single sentence helps." maxlength="800" oninput="updateCharCount('listingDesc','descCount',800);saveDraft();"></textarea>
+      <div class="char-count" id="descCount">0 / 800</div>
     </div>
     <div class="field">
       <label class="field-label" for="listingCat">Category</label>
-      <select class="field-select" id="listingCat">
+      <select class="field-select" id="listingCat" onchange="saveDraft()">
         <option value="art">Art & Craft</option>
         <option value="food">Food & Produce</option>
         <option value="fashion">Fashion & Clothing</option>
@@ -195,7 +235,7 @@
     <div class="price-row">
       <div class="field">
         <label class="field-label" for="listingPrice">Your price (INDX)</label>
-        <input class="field-input" id="listingPrice" type="number" placeholder="0" min="1" max="99999" inputmode="decimal" oninput="updatePriceHint()">
+        <input class="field-input" id="listingPrice" type="number" placeholder="0" min="1" max="99999" inputmode="decimal" oninput="updatePriceHint();saveDraft();">
         <div class="price-hint" id="priceHint"></div>
       </div>
     </div>
@@ -249,9 +289,28 @@
 
 <!-- COACHING HISTORY -->
 <section class="history-section" id="historySection" style="display:none">
-  <div class="history-label">Previous coachings</div>
+  <div class="coach-stats-row" id="coachStatsRow">
+    <div class="coach-stat"><div class="coach-stat-val" id="coachStatCount">0</div><div class="coach-stat-label">Listings coached</div></div>
+    <div class="coach-stat"><div class="coach-stat-val" id="coachStatCat">—</div><div class="coach-stat-label">Top category</div></div>
+    <div class="coach-stat"><div class="coach-stat-val" id="coachStatAvg">—</div><div class="coach-stat-label">Avg price (INDX)</div></div>
+  </div>
+  <div class="history-head-row">
+    <div class="history-label" style="margin-bottom:0;">Previous coachings</div>
+    <button class="history-clear-btn" onclick="openClearHistorySheet()">Clear all</button>
+  </div>
   <div id="historyList"></div>
 </section>
+
+<!-- GOD MODE: CLEAR HISTORY CONFIRM SHEET -->
+<div class="sheet-overlay" id="clearHistoryOverlay" onclick="if(event.target===this)closeClearHistorySheet()">
+  <div class="bottom-sheet" id="clearHistorySheet" role="dialog" aria-modal="true" aria-label="Clear all coaching history">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Clear all coaching history?</div>
+    <div class="sheet-sub">This deletes every saved coaching on this device. It can't be undone.</div>
+    <button class="sheet-btn danger" onclick="confirmClearHistory()">Delete all history</button>
+    <button class="sheet-btn cancel" onclick="closeClearHistorySheet()">Cancel</button>
+  </div>
+</div>
 
 <nav class="bottom-nav">
   <a href="home-v2.html" class="nav-item"><span class="nav-icon">🏠</span><span>Home</span></a>
@@ -268,6 +327,116 @@
 // figures in the price hint and pricing advice below; both are labeled accordingly in
 // the markup. Do not present these figures as real or live.
 const INDX_PRICE_USD = 0.24;
+
+// ── GOD MODE: LIVE CHAR COUNTERS ──
+function updateCharCount(inputId, countId, max) {
+  const el = document.getElementById(inputId);
+  const out = document.getElementById(countId);
+  if (!el || !out) return;
+  const len = (el.value || '').length;
+  out.textContent = len + ' / ' + max;
+  out.classList.toggle('near-limit', len >= max * 0.9 && len < max);
+  out.classList.toggle('at-limit', len >= max);
+}
+
+// ── GOD MODE: DRAFT AUTOSAVE (sessionStorage) ──
+const DRAFT_KEY = 'indx_merchcoach_draft';
+let _draftDismissed = false;
+
+function saveDraft() {
+  const draft = {
+    title: document.getElementById('listingTitle').value,
+    desc: document.getElementById('listingDesc').value,
+    cat: document.getElementById('listingCat').value,
+    price: document.getElementById('listingPrice').value,
+    ts: Date.now()
+  };
+  try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch (e) { /* storage unavailable */ }
+}
+
+function restoreDraft() {
+  let draft = null;
+  try { draft = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || 'null'); } catch (e) { /* ignore */ }
+  if (!draft) { closeDraftBanner(); return; }
+  document.getElementById('listingTitle').value = draft.title || '';
+  document.getElementById('listingDesc').value = draft.desc || '';
+  document.getElementById('listingCat').value = draft.cat || 'art';
+  document.getElementById('listingPrice').value = draft.price || '';
+  updateCharCount('listingTitle', 'titleCount', 120);
+  updateCharCount('listingDesc', 'descCount', 800);
+  updatePriceHint();
+  closeDraftBanner();
+}
+
+function closeDraftBanner() {
+  _draftDismissed = true;
+  document.getElementById('draftBanner').classList.remove('show');
+}
+
+function checkDraftOnLoad() {
+  let draft = null;
+  try { draft = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || 'null'); } catch (e) { /* ignore */ }
+  if (draft && (draft.title || draft.desc)) {
+    document.getElementById('draftBanner').classList.add('show');
+  }
+}
+
+// ── GOD MODE: COACHING STATS SUMMARY ──
+function renderCoachStats(hist) {
+  const countEl = document.getElementById('coachStatCount');
+  const catEl = document.getElementById('coachStatCat');
+  const avgEl = document.getElementById('coachStatAvg');
+  if (!countEl) return;
+  if (!hist.length) { countEl.textContent = '0'; catEl.textContent = '—'; avgEl.textContent = '—'; return; }
+  countEl.textContent = String(hist.length);
+  const catCounts = {};
+  let priceSum = 0;
+  hist.forEach(h => {
+    catCounts[h.cat] = (catCounts[h.cat] || 0) + 1;
+    priceSum += (h.price || 0);
+  });
+  const topCat = Object.keys(catCounts).sort((a, b) => catCounts[b] - catCounts[a])[0];
+  catEl.textContent = topCat || '—';
+  avgEl.textContent = Math.round(priceSum / hist.length) + '';
+}
+
+// ── GOD MODE: HISTORY DELETE / CLEAR-ALL ──
+function deleteHistoryEntry(idx) {
+  let hist = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+  hist.splice(idx, 1);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
+  renderHistory();
+}
+
+function openClearHistorySheet() {
+  document.getElementById('clearHistoryOverlay').classList.add('show');
+  const sheet = document.getElementById('clearHistorySheet');
+  const btn = sheet.querySelector('.sheet-btn.danger');
+  if (btn) btn.focus();
+}
+
+function closeClearHistorySheet() {
+  document.getElementById('clearHistoryOverlay').classList.remove('show');
+}
+
+function confirmClearHistory() {
+  localStorage.setItem(HISTORY_KEY, '[]');
+  closeClearHistorySheet();
+  renderHistory();
+}
+
+document.addEventListener('keydown', function(e) {
+  const overlay = document.getElementById('clearHistoryOverlay');
+  if (!overlay || !overlay.classList.contains('show')) return;
+  if (e.key === 'Escape') { closeClearHistorySheet(); return; }
+  if (e.key !== 'Tab') return;
+  const sheet = document.getElementById('clearHistorySheet');
+  const focusables = sheet.querySelectorAll('button, [tabindex]:not([tabindex="-1"])');
+  if (!focusables.length) return;
+  const first = focusables[0], last = focusables[focusables.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
 
 // ── CATEGORY DATA ──
 const CAT_DATA = {
@@ -525,21 +694,29 @@ function saveCoaching() {
   hist = hist.slice(0, 20);
   localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
   renderHistory();
+  // GOD MODE PATCH: coaching has been formally saved, so the in-progress draft is no longer needed
+  try { sessionStorage.removeItem(DRAFT_KEY); } catch (e) { /* ignore */ }
+  closeDraftBanner();
   alert('Saved! You can find this coaching in your history below.');
 }
 
+// GOD MODE PATCH: adds a per-entry delete button and the coaching stats summary
 function renderHistory() {
   const hist = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
   const sec = document.getElementById('historySection');
   const list = document.getElementById('historyList');
+  renderCoachStats(hist);
   if (!hist.length) { sec.style.display = 'none'; return; }
   sec.style.display = 'block';
   list.innerHTML = hist.map((h, i) => {
     const d = new Date(h.ts);
     const dateStr = d.toLocaleDateString('en-AU', {day:'numeric',month:'short'});
-    return `<div class="history-card" onclick="reloadCoaching(${i})">
-      <div class="history-title">${h.newTitle || h.title}</div>
-      <div class="history-meta">${h.cat} · ${dateStr} · ${h.price} INDX</div>
+    return `<div class="history-card">
+      <button class="history-del-btn" onclick="event.stopPropagation();deleteHistoryEntry(${i})" aria-label="Delete this coaching">✕</button>
+      <div onclick="reloadCoaching(${i})">
+        <div class="history-title">${h.newTitle || h.title}</div>
+        <div class="history-meta">${h.cat} · ${dateStr} · ${h.price} INDX</div>
+      </div>
     </div>`;
   }).join('');
 }
@@ -559,6 +736,10 @@ function reloadCoaching(idx) {
 // ── INIT ──
 document.addEventListener('DOMContentLoaded', () => {
   renderHistory();
+  // GOD MODE PATCH: init char counters + check for a restorable draft
+  updateCharCount('listingTitle', 'titleCount', 120);
+  updateCharCount('listingDesc', 'descCount', 800);
+  checkDraftOnLoad();
 });
 </script>
 <script src="siindex-speak-core.js"></script>

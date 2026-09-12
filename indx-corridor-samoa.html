@@ -102,6 +102,10 @@ a{color:inherit;text-decoration:none;}
 .timeline-time{font-size:16px;font-weight:800;color:var(--corridor);}
 .timeline-note{font-size:12px;color:var(--muted);margin-top:2px;}
 
+/* GOD MODE: GS COUNTDOWN + ACCESSIBLE TOD CHIPS */
+.gs-countdown{display:block;font-size:11px;font-weight:800;color:var(--cyan);margin-top:6px;letter-spacing:0.3px;}
+.tod-chip:focus-visible,.corridor-chip:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+
 /* TOAST */
 .toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,80px);background:var(--surface3);color:var(--text);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;border:1px solid rgba(0,212,255,0.3);opacity:0;transition:transform 0.3s,opacity 0.3s;z-index:300;pointer-events:none;max-width:90vw;text-align:center;}
 .toast.show{transform:translate(-50%,0);opacity:1;}
@@ -130,7 +134,7 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
     <div class="eyebrow">Pacific Corridor</div>
     <h1 class="hero-h1">Melbourne <span style="color:var(--corridor)">↔</span> Samoa</h1>
     <p class="hero-sub">Send WST to Apia at 0.5% — not 9%. The IN$DEX Pacific corridor is designed for Samoa's diaspora, not for banks.</p>
-    <div class="status-pill">⏳ Coming Soon · Grand Synchronicity — 24 Feb 2027</div>
+    <div class="status-pill">⏳ Coming Soon · Grand Synchronicity — 24 Feb 2027<span class="gs-countdown" id="gsCountdown"></span></div>
     <div class="other-corridors">
       <a href="indx-corridor-fiji.html" class="corridor-chip">🇫🇯 Fiji</a>
       <a href="indx-corridor-vanuatu.html" class="corridor-chip">🇻🇺 Vanuatu</a>
@@ -217,6 +221,19 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
 </footer>
 
 <script>
+// ── GOD MODE: GRAND SYNCHRONICITY COUNTDOWN ─────────────────────────────────
+const GS_LAUNCH_TS = new Date('2027-02-24T00:00:00Z').getTime();
+function updateGSCountdown() {
+  const el = document.getElementById('gsCountdown');
+  if (!el) return;
+  const diff = GS_LAUNCH_TS - Date.now();
+  if (diff <= 0) { el.textContent = 'Live now'; return; }
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
+  el.textContent = `${days}d ${hours}h ${mins}m to go`;
+}
+
 // ── CORRIDOR DATA ──────────────────────────────────────────────────────────
 // AUDIT 2026-09-10: removed unused INDX_PRICE_USD constant (was 0.24, never
 // referenced anywhere in this file). INDX has no live market price — do not
@@ -303,13 +320,15 @@ document.getElementById('insightGrid').innerHTML = INSIGHTS.map(i =>
 const TOD = ['Morning (6am–12pm)', 'Afternoon (12pm–5pm)', 'Evening (5pm–9pm)', 'Night (9pm–6am)'];
 let selectedTOD = 0;
 
+// GOD MODE PATCH: tod-chips are now keyboard operable (tabindex + Enter/Space + aria-pressed)
 function renderTODChips() {
   document.getElementById('todChips').innerHTML = TOD.map((t, i) =>
-    `<div class="tod-chip ${i === selectedTOD ? 'sel' : ''}" onclick="selectTOD(${i})">${t}</div>`
+    `<div class="tod-chip ${i === selectedTOD ? 'sel' : ''}" tabindex="0" role="button" aria-pressed="${i === selectedTOD}" onclick="selectTOD(${i})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectTOD(${i});}">${t}</div>`
   ).join('');
 }
 
-function selectTOD(i) { selectedTOD = i; renderTODChips(); updateTimeline(); }
+// GOD MODE PATCH: selected time-of-day is now remembered across visits
+function selectTOD(i) { selectedTOD = i; localStorage.setItem('indx_samoa_last_tod', i); renderTODChips(); updateTimeline(); }
 
 function updateTimeline() {
   const amt = parseInt(document.getElementById('timelineSlider').value);
@@ -346,8 +365,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem('indx_samoa_last_amt');
   if (saved) document.getElementById('calcInput').value = saved;
   updateCalc();
+
+  // GOD MODE: restore last time-of-day selection, then start the live GS countdown
+  const savedTOD = parseInt(localStorage.getItem('indx_samoa_last_tod') || '0');
+  selectedTOD = isNaN(savedTOD) ? 0 : savedTOD;
   renderTODChips();
   updateTimeline();
+  updateGSCountdown();
+  setInterval(updateGSCountdown, 60000);
 });
 </script>
 <script src="siindex-speak-core.js"></script>

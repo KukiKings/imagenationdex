@@ -24,6 +24,22 @@
     a.btn{display:inline-flex;align-items:center;min-height:44px;padding:0 1rem;border-radius:12px;text-decoration:none;font-weight:800;font-size:.9rem}
     .primary{background:linear-gradient(135deg,#2b35d8,var(--purple));color:#fff}
     .secondary{border:1px solid rgba(0,212,255,.4);color:var(--cyan)}
+
+    /* GOD MODE ADDITION: COUNTDOWN, MEETING NOTES, SHARE, CALENDAR EXPORT */
+    .godmode-grid{display:grid;gap:.75rem;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin:1rem 0}
+    .countdown-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:1rem;text-align:center}
+    .countdown-card strong{display:block;color:var(--cyan);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.5rem}
+    .countdown-num{font-size:1.5rem;font-weight:900;color:var(--text)}
+    .countdown-sub{font-size:.75rem;color:var(--muted);margin-top:.15rem}
+    .notes-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:1rem;margin:1rem 0}
+    .notes-card strong{display:block;color:var(--green);font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.5rem}
+    .notes-textarea{width:100%;min-height:110px;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--text);font-family:inherit;font-size:.9rem;padding:.65rem;resize:vertical;outline:none}
+    .notes-textarea:focus{border-color:var(--cyan)}
+    .notes-footer{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;font-size:.78rem;color:var(--muted)}
+    .notes-footer button{background:none;border:none;color:var(--cyan);font-weight:700;cursor:pointer;font-size:.78rem;padding:0}
+    button.btn.secondary{cursor:pointer;font-family:inherit}
+    .gm-toast{position:fixed;bottom:20px;left:50%;transform:translate(-50%,60px);background:var(--card);color:var(--text);border:1px solid rgba(0,229,160,.35);padding:.6rem 1.1rem;border-radius:12px;font-size:.82rem;font-weight:700;opacity:0;transition:transform .25s,opacity .25s;z-index:300;pointer-events:none;max-width:90vw;text-align:center}
+    .gm-toast.show{transform:translate(-50%,0);opacity:1}
   </style>
 </head>
 <body>
@@ -38,6 +54,20 @@
 
     <h2>One-minute narrative</h2>
     <div class="card">IN$DEX builds phone-first sovereign digital identity and everyday tools for the Pacific, starting from a practical Cook Islands gap. Public visitor tools are testable now. Financial rails are not claimed live. Pilot target: <strong>24 February 2027</strong>. Founder in-country presence planned from <strong>6 December 2026</strong> (travel window, not a confirmed regulator meeting).</div>
+
+    <h2>Key dates</h2>
+    <div class="godmode-grid">
+      <div class="countdown-card">
+        <strong>Days to pilot target</strong>
+        <div class="countdown-num" id="cdPilot">—</div>
+        <div class="countdown-sub">24 February 2027</div>
+      </div>
+      <div class="countdown-card">
+        <strong>Days to travel window</strong>
+        <div class="countdown-num" id="cdTravel">—</div>
+        <div class="countdown-sub">From 6 December 2026</div>
+      </div>
+    </div>
 
     <h2>What officials can verify today</h2>
     <div class="grid">
@@ -55,12 +85,136 @@
       <li>Continuous deep research under approval</li>
     </ul>
 
+    <div class="notes-card">
+      <strong>Meeting notes (saved on this device only)</strong>
+      <textarea class="notes-textarea" id="meetingNotes" placeholder="Jot notes during the meeting — questions raised, follow-ups, names…" maxlength="4000"></textarea>
+      <div class="notes-footer">
+        <span id="notesSavedLabel">Not saved yet</span>
+        <button type="button" onclick="clearMeetingNotes()">Clear notes</button>
+      </div>
+    </div>
+
     <div class="actions">
       <a class="btn primary" href="/siindex-present.html">Present (9 acts)</a>
       <a class="btn secondary" href="/siindex-government-qa.html">Government Q&amp;A</a>
       <a class="btn secondary" href="/siindex-interview.html">Interview</a>
       <a class="btn secondary" href="/siindex-operator.html">Operator</a>
+      <button type="button" class="btn secondary" onclick="copyBriefLink(event)">🔗 Copy brief link</button>
+      <button type="button" class="btn secondary" onclick="downloadKeyDatesICS(event)">📅 Add key dates to calendar</button>
     </div>
   </div>
+
+  <div class="gm-toast" id="gmToast"></div>
+
+  <script>
+  // ── GOD MODE ADDITIONS: KEY-DATE COUNTDOWNS, SHARE, CALENDAR EXPORT, MEETING NOTES ──
+  const PILOT_TARGET_DATE = new Date(2027, 1, 24);   // 24 February 2027 — matches the copy above
+  const TRAVEL_WINDOW_DATE = new Date(2026, 11, 6);  // 6 December 2026 — matches the copy above
+
+  function daysUntil(target) {
+    const startOfToday = new Date(); startOfToday.setHours(0,0,0,0);
+    return Math.ceil((target.getTime() - startOfToday.getTime()) / 86400000);
+  }
+
+  function formatCountdown(days) {
+    if (days > 0) return String(days);
+    if (days === 0) return 'Today';
+    return 'Passed';
+  }
+
+  function updateCountdowns() {
+    const pilotEl = document.getElementById('cdPilot');
+    const travelEl = document.getElementById('cdTravel');
+    if (pilotEl) pilotEl.textContent = formatCountdown(daysUntil(PILOT_TARGET_DATE));
+    if (travelEl) travelEl.textContent = formatCountdown(daysUntil(TRAVEL_WINDOW_DATE));
+  }
+
+  function showGmToast(msg) {
+    const t = document.getElementById('gmToast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  function copyBriefLink(e) {
+    if (e) e.preventDefault();
+    const url = window.location.href;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url)
+        .then(() => showGmToast('Link copied — share it with your team'))
+        .catch(() => showGmToast('Could not copy — copy the address bar link manually'));
+    } else {
+      showGmToast('Copy not supported on this browser — copy the address bar link manually');
+    }
+  }
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function icsDateOnly(d) { return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()); }
+  function icsTimestamp(d) { return d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'; }
+
+  function downloadKeyDatesICS(e) {
+    if (e) e.preventDefault();
+    const now = icsTimestamp(new Date());
+    const lines = [
+      'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//IN$DEX//Cook Islands Meeting Brief//EN','CALSCALE:GREGORIAN',
+      'BEGIN:VEVENT','UID:indx-pilot-target@imagenationdex','DTSTAMP:' + now,
+      'DTSTART;VALUE=DATE:' + icsDateOnly(PILOT_TARGET_DATE),
+      'SUMMARY:IN$DEX Cook Islands pilot target',
+      'DESCRIPTION:Pilot target date from the IN$DEX Cook Islands meeting brief.','END:VEVENT',
+      'BEGIN:VEVENT','UID:indx-travel-window@imagenationdex','DTSTAMP:' + now,
+      'DTSTART;VALUE=DATE:' + icsDateOnly(TRAVEL_WINDOW_DATE),
+      'SUMMARY:IN$DEX founder in-country travel window opens',
+      'DESCRIPTION:Founder in-country presence travel window — not a confirmed regulator meeting.','END:VEVENT',
+      'END:VCALENDAR'
+    ].join('\r\n');
+    const blob = new Blob([lines], { type: 'text/calendar' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'indx-cook-islands-key-dates.ics';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showGmToast('Calendar file downloaded');
+  }
+
+  function saveMeetingNotes() {
+    const el = document.getElementById('meetingNotes');
+    if (!el) return;
+    localStorage.setItem('indx_cookmeeting_notes', el.value);
+    const label = document.getElementById('notesSavedLabel');
+    if (label) label.textContent = el.value.trim() ? 'Saved ' + new Date().toLocaleTimeString() : 'Not saved yet';
+  }
+
+  function clearMeetingNotes() {
+    localStorage.removeItem('indx_cookmeeting_notes');
+    const el = document.getElementById('meetingNotes');
+    if (el) el.value = '';
+    const label = document.getElementById('notesSavedLabel');
+    if (label) label.textContent = 'Not saved yet';
+    showGmToast('Notes cleared');
+  }
+
+  let _notesDebounce = null;
+  function onMeetingNotesInput() {
+    clearTimeout(_notesDebounce);
+    _notesDebounce = setTimeout(saveMeetingNotes, 500);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    updateCountdowns();
+    setInterval(updateCountdowns, 3600000);
+
+    const saved = localStorage.getItem('indx_cookmeeting_notes') || '';
+    const notesEl = document.getElementById('meetingNotes');
+    if (notesEl) {
+      notesEl.value = saved;
+      notesEl.addEventListener('input', onMeetingNotesInput);
+      if (saved.trim()) {
+        const label = document.getElementById('notesSavedLabel');
+        if (label) label.textContent = 'Restored from this device';
+      }
+    }
+  });
+  </script>
 </body>
 </html>

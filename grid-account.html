@@ -89,6 +89,7 @@ a{color:inherit;text-decoration:none;}
 .tier-tab.t0.active{background:var(--cyan);}
 .tier-tab.t1.active{background:var(--purple);}
 .tier-tab.t2.active{background:var(--gold);color:#000;}
+.tier-tab:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
 .tier-panel{background:var(--surface2);border:1px solid rgba(240,242,255,0.07);border-radius:20px;padding:24px;display:none;}
 .tier-panel.active{display:block;}
 .tier-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
@@ -121,6 +122,18 @@ a{color:inherit;text-decoration:none;}
 .grid-feature-icon{font-size:22px;margin-bottom:8px;}
 .grid-feature-title{font-size:14px;font-weight:800;margin-bottom:4px;}
 .grid-feature-desc{font-size:13px;color:var(--text2);line-height:1.5;}
+
+/* GM5 — DOMAIN RESERVATION CONFIRM SHEET */
+.sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.7);backdrop-filter:blur(4px);z-index:400;opacity:0;pointer-events:none;transition:opacity 0.2s;}
+.sheet-overlay.show{opacity:1;pointer-events:auto;}
+.bottom-sheet{position:fixed;left:50%;bottom:0;transform:translate(-50%,100%);width:100%;max-width:430px;background:var(--surface2);border:1px solid rgba(240,242,255,0.1);border-bottom:none;border-radius:24px 24px 0 0;padding:24px 20px calc(24px + env(safe-area-inset-bottom));z-index:401;transition:transform 0.3s cubic-bezier(.32,.72,0,1);}
+.bottom-sheet.show{transform:translate(-50%,0);}
+.sheet-handle{width:36px;height:4px;background:var(--surface3);border-radius:2px;margin:0 auto 18px;}
+.sheet-title{font-size:17px;font-weight:800;margin-bottom:8px;text-align:center;}
+.sheet-domain-preview{font-size:22px;font-weight:900;text-align:center;color:var(--cyan);margin:14px 0;word-break:break-all;}
+.sheet-desc{font-size:13px;color:var(--text2);text-align:center;line-height:1.6;margin-bottom:20px;}
+.sheet-actions{display:flex;flex-direction:column;gap:10px;}
+.sheet-actions .btn{width:100%;}
 
 /* TOAST */
 .toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,80px);background:var(--surface3);color:var(--text);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;border:1px solid rgba(0,229,160,0.3);opacity:0;transition:transform 0.3s,opacity 0.3s;z-index:300;pointer-events:none;max-width:90vw;text-align:center;}
@@ -222,7 +235,7 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
   </div>
   <div class="domain-input-row">
     <input class="domain-input" id="domainInput" type="text" placeholder="Type your name..." maxlength="32" oninput="checkDomain()" autocomplete="off" autocorrect="off" autocapitalize="off">
-    <button class="btn btn-primary" onclick="reserveDomain()">Reserve →</button>
+    <button class="btn btn-primary" onclick="openReserveSheet()">Reserve →</button>
   </div>
   <div class="domain-status" id="domainStatus"></div>
   <div class="domain-examples">
@@ -240,10 +253,10 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
 <h2 class="section-h2">Verification Tiers</h2>
 <p class="section-lead">Start immediately with minimal verification. SIINDEX only asks for more when your safety, limits, or the law require it.</p>
 
-<div class="tier-tabs">
-  <button class="tier-tab t0 active" onclick="showTier(0)">Tier 0 — Start</button>
-  <button class="tier-tab t1" onclick="showTier(1)">Tier 1 — Expand</button>
-  <button class="tier-tab t2" onclick="showTier(2)">Tier 2 — Full</button>
+<div class="tier-tabs" id="tierTabs" role="tablist">
+  <button class="tier-tab t0 active" role="tab" aria-selected="true" onclick="showTier(0)" onkeydown="handleTierTabKey(event,0)">Tier 0 — Start</button>
+  <button class="tier-tab t1" role="tab" aria-selected="false" onclick="showTier(1)" onkeydown="handleTierTabKey(event,1)">Tier 1 — Expand</button>
+  <button class="tier-tab t2" role="tab" aria-selected="false" onclick="showTier(2)" onkeydown="handleTierTabKey(event,2)">Tier 2 — Full</button>
 </div>
 
 <div class="tier-panel active" id="tier0">
@@ -361,6 +374,19 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
 
 </div><!-- /container -->
 
+<!-- GM5 — DOMAIN RESERVATION CONFIRM SHEET -->
+<div class="sheet-overlay" id="reserveSheetOverlay" onclick="closeReserveSheet()"></div>
+<div class="bottom-sheet" id="reserveSheet" role="dialog" aria-modal="true" aria-labelledby="reserveSheetTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="reserveSheetTitle">Confirm your domain</div>
+  <div class="sheet-domain-preview" id="reserveSheetDomain">yourname.IN$DEX</div>
+  <div class="sheet-desc">This name is reserved to your device now and claimed permanently when you open your Grid Account.</div>
+  <div class="sheet-actions">
+    <button class="btn btn-primary" id="reserveConfirmBtn" onclick="confirmReserveDomain()">Confirm Reservation →</button>
+    <button class="btn btn-ghost" onclick="closeReserveSheet()">Go Back</button>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
@@ -452,22 +478,70 @@ function checkDomain() {
   }, 600);
 }
 
-function reserveDomain() {
+// ── GM5: DOMAIN RESERVATION CONFIRM SHEET ──────────────────────────────────
+// GOD MODE PATCH: reserving used to happen instantly on tap (old reserveDomain()) — now
+// openReserveSheet() previews the domain and confirmReserveDomain() does the actual reserve.
+let reserveSheetLastFocus = null;
+function openReserveSheet() {
   const raw = document.getElementById('domainInput').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
   if (!raw || raw.length < 3 || TAKEN_DOMAINS.has(raw)) {
     showToast('Enter a valid available name first');
     return;
   }
+  document.getElementById('reserveSheetDomain').textContent = raw + '.IN$DEX';
+  document.getElementById('reserveSheetOverlay').classList.add('show');
+  document.getElementById('reserveSheet').classList.add('show');
+  reserveSheetLastFocus = document.activeElement;
+  document.addEventListener('keydown', reserveSheetKeyHandler);
+  setTimeout(() => document.getElementById('reserveConfirmBtn').focus(), 250);
+}
+function closeReserveSheet() {
+  document.getElementById('reserveSheetOverlay').classList.remove('show');
+  document.getElementById('reserveSheet').classList.remove('show');
+  document.removeEventListener('keydown', reserveSheetKeyHandler);
+  if (reserveSheetLastFocus) reserveSheetLastFocus.focus();
+}
+function reserveSheetKeyHandler(e) {
+  if (e.key === 'Escape') { closeReserveSheet(); return; }
+  if (e.key === 'Tab') {
+    // Focus trap: only two focusable elements in the sheet
+    const focusables = document.querySelectorAll('#reserveSheet button');
+    const first = focusables[0], last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+}
+function confirmReserveDomain() {
+  const raw = document.getElementById('domainInput').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+  if (!raw || raw.length < 3 || TAKEN_DOMAINS.has(raw)) {
+    showToast('Enter a valid available name first');
+    closeReserveSheet();
+    return;
+  }
   localStorage.setItem('indx_grid_domain_reserved', raw);
+  closeReserveSheet();
   showToast(`${raw}.IN$DEX reserved! Open your account to claim it 🎉`);
   setTimeout(() => window.location = 'onboarding-flow.html', 1800);
 }
 
 // ── GM3: TIER TABS ────────────────────────────────────────────────────────
 function showTier(t) {
-  document.querySelectorAll('.tier-tab').forEach((b, i) => b.classList.toggle('active', i === t));
+  document.querySelectorAll('.tier-tab').forEach((b, i) => { b.classList.toggle('active', i === t); b.setAttribute('aria-selected', i === t ? 'true' : 'false'); });
   document.querySelectorAll('.tier-panel').forEach((p, i) => p.classList.toggle('active', i === t));
   localStorage.setItem('indx_grid_tier_viewed', t);
+}
+// GM6: keyboard-accessible tier tabs — Left/Right/Home/End move focus and selection
+function handleTierTabKey(e, t) {
+  const tabs = document.querySelectorAll('#tierTabs .tier-tab');
+  let next = null;
+  if (e.key === 'ArrowRight') next = (t + 1) % tabs.length;
+  else if (e.key === 'ArrowLeft') next = (t - 1 + tabs.length) % tabs.length;
+  else if (e.key === 'Home') next = 0;
+  else if (e.key === 'End') next = tabs.length - 1;
+  else return;
+  e.preventDefault();
+  showTier(next);
+  tabs[next].focus();
 }
 
 // ── GM4: VOICE TRIGGER ────────────────────────────────────────────────────
