@@ -146,6 +146,20 @@
   .sandbox-empty{text-align:center;color:var(--muted);padding:24px;font-size:12px;}
   .sandbox-clear-btn{background:transparent;border:none;color:var(--red);font-size:11px;cursor:pointer;}
 
+  /* ── GOD MODE: API search + clone saved drafts ── */
+  .api-search-input{width:100%;background:var(--surface2);border:1.5px solid var(--surface3);border-radius:10px;color:var(--text);font-size:13px;padding:9px 12px;margin-bottom:10px;font-family:inherit;}
+  .api-search-input:focus{outline:none;border-color:rgba(0,212,255,.4);}
+
+  .clone-history-card{background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:12px 13px;margin-bottom:8px;}
+  .clone-history-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+  .clone-history-name{font-size:13px;font-weight:800;}
+  .clone-history-date{font-size:10px;color:var(--muted);}
+  .clone-history-type{font-size:10px;color:var(--purple);font-weight:600;margin-bottom:8px;}
+  .clone-history-actions{display:flex;gap:8px;}
+  .clone-history-btn{flex:1;padding:7px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--surface3);background:var(--surface3);color:var(--cyan);}
+  .clone-history-btn.danger{color:var(--red);}
+  .clone-new-btn{width:100%;padding:10px;border-radius:10px;background:transparent;border:1.5px dashed var(--surface3);color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;margin-bottom:14px;}
+
   /* ── TOAST ── */
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;color:var(--text);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:99;white-space:nowrap;pointer-events:none;}
   .toast.show{transform:translateX(-50%) translateY(0);}
@@ -215,6 +229,7 @@
   <!-- AUDIT 2026-08-29: presented as a live public API with no live/planned indicator, for
   a pre-launch app — matches the Integrations tab's honest live/beta/planned pattern below. -->
   <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5;">Reference spec below — IN$DEX is pre-launch; not all endpoints are deployed at api.siindex.io yet.</div>
+  <input type="text" class="api-search-input" id="apiSearchInput" placeholder="Search endpoints (path, module, description)…" oninput="onApiSearch()">
   <div class="sect-label">Filter by Module</div>
   <div class="api-filter-row" id="apiFilterRow"></div>
   <div class="sect-label">Endpoints <span id="apiCount" style="color:var(--muted);font-weight:400;font-size:10px"></span></div>
@@ -226,6 +241,7 @@
   <div class="sect-label">Clone License Application</div>
   <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6;">A SIINDEX Clone is a licensed derivative platform built on SIINDEX infrastructure. Clones must operate within the Clone Covenant V1 — including revenue routing, identity doctrine, and forbidden use rules. Complete all 4 steps to generate your application.</div>
 
+  <div id="cloneHistoryPanel"></div>
   <div class="clone-steps" id="cloneSteps"></div>
   <div id="clonePanels"></div>
 </div>
@@ -280,6 +296,65 @@ const COVENANTS = {
   enterprise: { lp:.40, ops:.30, vault:.20, sec:.10, name:'Enterprise 40/30/20/10', gmvFee:.02 },
   cultural:   { lp:.10, ops:.10, vault:.10, creator:.70, sec:0, name:'Cultural 70cr/10/10/10', gmvFee:.02 },
 };
+
+// ── GOD MODE ──
+const CLONE_HISTORY_KEY = 'indx_devportal_clonehistory';
+let _apiSearch = '';
+
+function onApiSearch() {
+  _apiSearch = document.getElementById('apiSearchInput').value.trim().toLowerCase();
+  renderAPI();
+}
+
+function getCloneHistory() {
+  try { return JSON.parse(localStorage.getItem(CLONE_HISTORY_KEY) || '[]'); } catch (e) { return []; }
+}
+function saveCloneHistory(list) { localStorage.setItem(CLONE_HISTORY_KEY, JSON.stringify(list)); }
+
+function renderCloneHistory() {
+  const panel = document.getElementById('cloneHistoryPanel');
+  if (!panel) return;
+  const history = getCloneHistory();
+  let html = '';
+  if (history.length) {
+    html += `<div class="sect-label">Saved Applications (${history.length})</div>`;
+    html += history.slice().reverse().map((h, i) => {
+      const realIdx = history.length - 1 - i;
+      return `<div class="clone-history-card">
+        <div class="clone-history-top"><span class="clone-history-name">${h.name}</span><span class="clone-history-date">${h.generatedAt}</span></div>
+        <div class="clone-history-type">${h.type} clone · ${h.id}</div>
+        <div class="clone-history-actions">
+          <button class="clone-history-btn" onclick="viewCloneHistory(${realIdx})">📄 View / Copy</button>
+          <button class="clone-history-btn danger" onclick="deleteCloneHistory(${realIdx})">🗑 Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  html += `<button class="clone-new-btn" onclick="startNewCloneApp()">+ Start a new application</button>`;
+  panel.innerHTML = html;
+}
+function viewCloneHistory(idx) {
+  const history = getCloneHistory();
+  const h = history[idx];
+  if (!h) return;
+  if (navigator.clipboard) navigator.clipboard.writeText(h.appText).catch(() => {});
+  showToast('📋 Copied saved application: ' + h.name);
+}
+function deleteCloneHistory(idx) {
+  const history = getCloneHistory();
+  history.splice(idx, 1);
+  saveCloneHistory(history);
+  renderCloneHistory();
+  showToast('Saved application removed');
+}
+function startNewCloneApp() {
+  _cloneData = {};
+  _cloneChecks = {};
+  _cloneStep = 0;
+  localStorage.removeItem('indx_devportal_cloneapp');
+  renderClone();
+  showToast('Started a new blank application');
+}
 
 // ── NAV ──
 function switchTab(id) {
@@ -336,7 +411,15 @@ function renderAPI() {
   filterRow.innerHTML = API_MODULES.map(m=>
     `<button class="api-filter-btn ${m===_apiFilter?'active':''}" onclick="setApiFilter('${m}')">${m}</button>`
   ).join('');
-  const filtered = _apiFilter==='All' ? API_ENDPOINTS : API_ENDPOINTS.filter(e=>e.module===_apiFilter);
+  // GOD MODE PATCH: module filter + live keyword search combine together
+  let filtered = _apiFilter==='All' ? API_ENDPOINTS : API_ENDPOINTS.filter(e=>e.module===_apiFilter);
+  if (_apiSearch) {
+    filtered = filtered.filter(e =>
+      e.path.toLowerCase().includes(_apiSearch) ||
+      e.desc.toLowerCase().includes(_apiSearch) ||
+      e.module.toLowerCase().includes(_apiSearch)
+    );
+  }
   document.getElementById('apiCount').textContent = '('+filtered.length+' endpoints)';
   document.getElementById('apiList').innerHTML = filtered.map((ep,i)=>{
     const key = ep.method+ep.path;
@@ -379,6 +462,8 @@ function saveCloneApp(d) { localStorage.setItem('indx_devportal_cloneapp', JSON.
 function renderClone() {
   const saved = getCloneApp();
   if(Object.keys(saved).length && !Object.keys(_cloneData).length) { _cloneData = saved; }
+  // GOD MODE PATCH: render the saved-applications history alongside the in-progress step flow
+  renderCloneHistory();
   document.getElementById('cloneSteps').innerHTML = CLONE_STEPS_DEF.map((s,i)=>
     `<div class="clone-step ${i===_cloneStep?'active':i<_cloneStep?'done':''}" onclick="if(${i}<${_cloneStep}) goCloneStep(${i})">
       <span class="clone-step-num">${i<_cloneStep?'✅':i+1}</span>${s}
@@ -507,6 +592,11 @@ Final license requires review and execution by SIINDEX legal team.`;
   const out=document.getElementById('cloneOutput');
   out.textContent=app; out.classList.add('show');
   if(navigator.clipboard) navigator.clipboard.writeText(app).catch(()=>{});
+  // GOD MODE PATCH: keep a persistent history of every generated application, not just the single in-progress draft
+  const history = getCloneHistory();
+  history.push({ id: 'CLONE-'+Date.now().toString(36).toUpperCase(), name: _cloneData.name, type: _cloneData.type, generatedAt: today, appText: app });
+  saveCloneHistory(history.slice(-20));
+  renderCloneHistory();
   showToast('✅ Clone application generated + copied');
 }
 

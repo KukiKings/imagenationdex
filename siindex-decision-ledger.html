@@ -556,6 +556,57 @@
     .trust-footer-text { font-size: 11px; color: var(--muted); line-height: 1.5; }
     .trust-footer-text strong { color: var(--green); }
 
+    /* ── GOD MODE: search, my-appeals history, clickable stat card ── */
+    .stat-card.clickable { cursor: pointer; transition: border-color 0.2s, transform 0.15s; }
+    .stat-card.clickable:active { transform: scale(0.97); }
+    .stat-card.clickable:hover { border-color: rgba(0,212,255,0.3); }
+
+    .search-row {
+      padding: 0 20px 12px;
+    }
+    .search-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 13px;
+      padding: 10px 14px;
+      font-family: inherit;
+    }
+    .search-input:focus {
+      outline: none;
+      border-color: rgba(0,212,255,0.4);
+    }
+    .search-input::placeholder { color: var(--muted); }
+
+    .appeal-hist-card {
+      background: var(--surface2);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+    .appeal-hist-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .appeal-hist-id { font-size: 11px; font-weight: 700; color: var(--cyan); }
+    .appeal-hist-ts { font-size: 10px; color: var(--muted); }
+    .appeal-hist-reason { font-size: 12px; color: var(--text); line-height: 1.4; margin-bottom: 8px; }
+    .appeal-hist-resend {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--cyan);
+      background: rgba(0,212,255,0.08);
+      border: 1px solid rgba(0,212,255,0.25);
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+
     /* ── TOAST ── */
     .toast {
       position: fixed;
@@ -594,7 +645,7 @@
   <section class="hero">
     <div class="hero-orb">⚖️</div>
     <h1 class="hero-title">SIINDEX<br><span>Decision Ledger</span></h1>
-    <p class="hero-sub">Every SIINDEX recommendation is logged, explained, and open to appeal. This is your trust layer — not a surveillance layer.</p>
+    <p class="hero-sub" id="heroSub">Every SIINDEX recommendation is logged, explained, and open to appeal. This is your trust layer — not a surveillance layer.</p>
   </section>
 
   <!-- FIXED 2026-07-25: DECISIONS below are hardcoded fabricated entries (fake citizen
@@ -635,10 +686,15 @@
       <div class="stat-num" id="statHuman">0</div>
       <div class="stat-label">Human<br>Reviewed</div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card clickable" id="statAppealsCard" onclick="openMyAppeals()" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){openMyAppeals()}">
       <div class="stat-num" id="statAppeals">0</div>
       <div class="stat-label">Appeals<br>Filed</div>
     </div>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="search-row">
+    <input type="text" class="search-input" id="decisionSearch" placeholder="Search decisions by keyword…" oninput="onSearchInput()">
   </div>
 
   <!-- FILTER BAR -->
@@ -728,12 +784,106 @@
     <button class="sheet-submit" onclick="submitAppeal()">Submit Appeal →</button>
   </div>
 
+  <!-- MY APPEALS HISTORY SHEET -->
+  <div class="sheet-overlay" id="myAppealsOverlay" onclick="if(event.target===this)closeMyAppeals()"></div>
+  <div class="bottom-sheet" id="myAppealsSheet" role="dialog" aria-modal="true" aria-labelledby="myAppealsTitle">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="myAppealsTitle">My Appeals</div>
+    <div class="sheet-sub">Appeals you've drafted on this device. Each one was emailed to the IN$DEX Governance Council when you submitted it.</div>
+    <div id="myAppealsList"></div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script>
     const INDX_PRICE_USD = 0.24;
     const LEDGER_KEY = 'indx_ledger_appeals';
     const citizenName = sessionStorage.getItem('citizen_name') || 'Citizen';
+
+    // ── GOD MODE ──
+    const LAST_FILTER_KEY = 'indx_ledger_lastfilter';
+    const citizenId = sessionStorage.getItem('citizen_id') || '';
+    let searchTerm = '';
+
+    function onSearchInput() {
+      searchTerm = document.getElementById('decisionSearch').value.trim().toLowerCase();
+      renderDecisions();
+    }
+
+    function personalizeHero() {
+      const el = document.getElementById('heroSub');
+      if (!el) return;
+      if (citizenName && citizenName !== 'Citizen') {
+        el.textContent = `${citizenName}, every SIINDEX recommendation affecting you is logged, explained, and open to appeal. This is your trust layer — not a surveillance layer.`;
+      }
+    }
+
+    function restoreLastFilter() {
+      const saved = localStorage.getItem(LAST_FILTER_KEY);
+      if (!saved) return;
+      const chip = Array.from(document.querySelectorAll('.f-chip')).find(c => (c.getAttribute('onclick') || '').includes(`'${saved}'`));
+      if (chip) filterLedger(chip, saved);
+    }
+
+    // ── MY APPEALS HISTORY ──
+    function openMyAppeals() {
+      renderMyAppeals();
+      document.getElementById('myAppealsOverlay').classList.add('open');
+      document.getElementById('myAppealsSheet').classList.add('open');
+      document.addEventListener('keydown', sheetKeydownHandler);
+    }
+    function closeMyAppeals() {
+      document.getElementById('myAppealsOverlay').classList.remove('open');
+      document.getElementById('myAppealsSheet').classList.remove('open');
+      document.removeEventListener('keydown', sheetKeydownHandler);
+    }
+    function renderMyAppeals() {
+      const el = document.getElementById('myAppealsList');
+      const appeals = getAppeals();
+      if (appeals.length === 0) {
+        el.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0;">No appeals filed yet from this device.</div>';
+        return;
+      }
+      el.innerHTML = appeals.slice().reverse().map((a, i) => `
+        <div class="appeal-hist-card">
+          <div class="appeal-hist-top">
+            <span class="appeal-hist-id">${a.decId}</span>
+            <span class="appeal-hist-ts">${new Date(a.ts).toLocaleString()}</span>
+          </div>
+          <div class="appeal-hist-reason">${a.reason}</div>
+          <button class="appeal-hist-resend" onclick="resendAppealEmail(${appeals.length - 1 - i})">✉️ Copy email again</button>
+        </div>
+      `).join('');
+    }
+    function resendAppealEmail(idx) {
+      const appeals = getAppeals();
+      const a = appeals[idx];
+      if (!a) return;
+      const signature = a.citizenName ? `\n\n— ${a.citizenName}, via IN$DEX SIINDEX Decision Ledger` : '\n\n— Sent from IN$DEX SIINDEX Decision Ledger';
+      const emailBody = `Decision ID: ${a.decId}\nAppeal reason: ${a.reason}${signature}`;
+      const mailto = `mailto:imagenationdex@gmail.com?subject=${encodeURIComponent('SIINDEX Decision Ledger Appeal — ' + a.decId)}&body=${encodeURIComponent(emailBody)}`;
+      if (navigator.clipboard) navigator.clipboard.writeText(emailBody).catch(() => {});
+      showToast('Copied — opening email…');
+      window.location.href = mailto;
+    }
+
+    // ── ACCESSIBILITY: escape + focus trap for sheets ──
+    function sheetKeydownHandler(e) {
+      const openSheet = document.querySelector('.bottom-sheet.open');
+      if (!openSheet) return;
+      if (e.key === 'Escape') {
+        if (openSheet.id === 'appealSheet') closeAppeal();
+        else if (openSheet.id === 'myAppealsSheet') closeMyAppeals();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const focusable = openSheet.querySelectorAll('button, textarea, input, [tabindex]');
+        if (focusable.length === 0) return;
+        const first = focusable[0], last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    }
 
     // ── DECISION DATA ──
     const DECISIONS = [
@@ -898,11 +1048,19 @@
 
     function renderDecisions() {
       const list = document.getElementById('decisionList');
-      const filtered = activeFilter === 'all'
+      // GOD MODE PATCH: apply the risk/appeal filter first, then a keyword search across request/recommendation/id
+      let filtered = activeFilter === 'all'
         ? DECISIONS
         : activeFilter === 'appeal'
           ? DECISIONS.filter(d => d.appealable)
           : DECISIONS.filter(d => d.riskLevel === activeFilter);
+      if (searchTerm) {
+        filtered = filtered.filter(d =>
+          d.request.toLowerCase().includes(searchTerm) ||
+          d.recommendation.toLowerCase().includes(searchTerm) ||
+          d.id.toLowerCase().includes(searchTerm)
+        );
+      }
 
       document.getElementById('decisionCount').textContent = filtered.length + ' entr' + (filtered.length === 1 ? 'y' : 'ies');
 
@@ -993,6 +1151,8 @@
       activeFilter = filter;
       document.querySelectorAll('.f-chip').forEach(c => c.classList.remove('active'));
       el.classList.add('active');
+      // GOD MODE PATCH: remember the last-used filter as a smart default for next visit
+      localStorage.setItem(LAST_FILTER_KEY, filter);
       renderDecisions();
     }
 
@@ -1027,11 +1187,16 @@
       document.getElementById('appealReason').value = '';
       document.getElementById('appealOverlay').classList.add('open');
       document.getElementById('appealSheet').classList.add('open');
+      // GOD MODE PATCH: keyboard support — Escape closes the sheet, Tab is trapped inside it
+      document.addEventListener('keydown', sheetKeydownHandler);
+      setTimeout(() => document.getElementById('appealReason').focus(), 50);
     }
 
     function closeAppeal() {
       document.getElementById('appealOverlay').classList.remove('open');
       document.getElementById('appealSheet').classList.remove('open');
+      // GOD MODE PATCH: drop the keyboard handler once the sheet is closed
+      document.removeEventListener('keydown', sheetKeydownHandler);
     }
 
     // Honesty fix: there is no real backend endpoint wired to this screen that
@@ -1047,15 +1212,19 @@
       if (!reason) { showToast('Please describe the reason for your appeal.'); return; }
 
       const appeals = getAppeals();
+      // GOD MODE PATCH: stamp the citizen's name/id so the My Appeals history and resent emails carry it
       appeals.push({
         decId: currentAppealId,
         reason,
         ts: Date.now(),
-        status: 'draft_saved_locally'
+        status: 'draft_saved_locally',
+        citizenName: citizenName !== 'Citizen' ? citizenName : null,
+        citizenId: citizenId || null
       });
       localStorage.setItem(LEDGER_KEY, JSON.stringify(appeals));
 
-      const emailBody = `Decision ID: ${currentAppealId}\nAppeal reason: ${reason}\n\n— Sent from IN$DEX SIINDEX Decision Ledger`;
+      const signature = citizenName !== 'Citizen' ? `\n\n— ${citizenName}, via IN$DEX SIINDEX Decision Ledger` : '\n\n— Sent from IN$DEX SIINDEX Decision Ledger';
+      const emailBody = `Decision ID: ${currentAppealId}\nAppeal reason: ${reason}${signature}`;
       const mailto = `mailto:imagenationdex@gmail.com?subject=${encodeURIComponent('SIINDEX Decision Ledger Appeal — ' + currentAppealId)}&body=${encodeURIComponent(emailBody)}`;
 
       closeAppeal();
@@ -1076,6 +1245,9 @@
     document.addEventListener('DOMContentLoaded', () => {
       renderDecisions();
       updateStats();
+      // GOD MODE PATCH: personalize the greeting and restore the last-used filter
+      personalizeHero();
+      restoreLastFilter();
     });
   </script>
 

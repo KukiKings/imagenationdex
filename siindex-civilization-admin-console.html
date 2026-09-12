@@ -138,6 +138,22 @@
   .conn-tools{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px;}
   .conn-tool-chip{font-size:10px;background:var(--surface3);border-radius:5px;padding:2px 8px;color:var(--muted);}
 
+  /* ── GM5: LAUNCH READINESS CHECKLIST ── */
+  .checklist-track{height:6px;background:var(--surface3);border-radius:3px;overflow:hidden;margin-bottom:12px;}
+  .checklist-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));border-radius:3px;transition:width .4s ease;}
+  .checklist-item{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--surface3);cursor:pointer;}
+  .checklist-item:last-child{border-bottom:none;}
+  .checklist-box{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--surface3);background:var(--surface3);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--green);margin-top:1px;}
+  .checklist-item.done .checklist-box{background:rgba(0,229,160,.15);border-color:rgba(0,229,160,.4);}
+  .checklist-label{font-size:12px;color:var(--text);line-height:1.45;}
+  .checklist-item.done .checklist-label{color:var(--muted);text-decoration:line-through;}
+
+  /* ── GM6: CONNECTOR SEARCH/FILTER ── */
+  .connector-search-input{width:100%;background:var(--surface2);border:1.5px solid var(--surface3);border-radius:10px;color:var(--text);font-size:13px;padding:9px 12px;margin-bottom:8px;}
+  .connector-search-input:focus{outline:none;border-color:rgba(0,212,255,.35);}
+  .connector-filter-row{display:flex;gap:6px;margin-bottom:10px;overflow-x:auto;scrollbar-width:none;}
+  .connector-filter-row::-webkit-scrollbar{display:none;}
+
   /* ── TOAST ── */
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;color:var(--text);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:99;white-space:nowrap;pointer-events:none;}
   .toast.show{transform:translateX(-50%) translateY(0);}
@@ -166,6 +182,9 @@
 
   <div class="sect-label">Active Alerts</div>
   <div id="overviewAlerts"></div>
+
+  <div class="sect-label">Launch Readiness Checklist</div>
+  <div class="card" id="checklistCard"></div>
 
   <div class="sect-label">Quick Links</div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -234,12 +253,68 @@
 <div class="tab-content" id="tab-connectors">
   <div class="connector-summary" id="connectorSummary"></div>
   <div class="sect-label">Connector Registry</div>
+  <input class="connector-search-input" id="connectorSearchInput" placeholder="Search connectors by name or category..." oninput="handleConnectorSearch(this.value)">
+  <div class="connector-filter-row" id="connectorFilterRow"></div>
   <div id="connectorList"></div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
+// ── GM5: LAUNCH READINESS CHECKLIST — real localStorage checklist, no fabricated progress ──
+const LAUNCH_CHECKLIST = [
+  { id:'cook-islands',   label:'Cook Islands registration certified for Image Nation DEx Limited' },
+  { id:'solsplits',      label:'SolSplits revenue routing deployed onchain (covenant splits live)' },
+  { id:'raydium-pool',   label:'Raydium INDX/USDC pool created — pool_owner + custody multisig configured' },
+  { id:'austrac-review', label:'AUSTRAC path reviewed with AJ — confirm stays closed or reopen before TGE' },
+  { id:'streamflow',     label:'Streamflow vesting streams configured for founder pool payouts' },
+  { id:'legal-review',   label:'Final legal review of covenant routing splits (30/30/30/10 model)' },
+];
+
+function getChecklistState() { return JSON.parse(localStorage.getItem('indx_admin_launch_checklist')||'{}'); }
+function saveChecklistState(state) { localStorage.setItem('indx_admin_launch_checklist', JSON.stringify(state)); }
+
+function toggleChecklistItem(id) {
+  const state = getChecklistState();
+  state[id] = !state[id];
+  saveChecklistState(state);
+  const item = LAUNCH_CHECKLIST.find(i=>i.id===id);
+  addAuditEntry('AJ Henry','admin-action', `Launch checklist — "${item.label}" marked ${state[id]?'complete':'incomplete'}`);
+  renderChecklist();
+  renderAudit();
+}
+
+function renderChecklist() {
+  const el = document.getElementById('checklistCard');
+  if (!el) return;
+  const state = getChecklistState();
+  const done = LAUNCH_CHECKLIST.filter(i=>state[i.id]).length;
+  const pct = Math.round((done/LAUNCH_CHECKLIST.length)*100);
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-size:12px;font-weight:700;">Pre-TGE Launch Tasks</div>
+      <div style="font-size:11px;color:var(--muted)">${done}/${LAUNCH_CHECKLIST.length} complete</div>
+    </div>
+    <div class="checklist-track"><div class="checklist-fill" style="width:${pct}%"></div></div>
+    ${LAUNCH_CHECKLIST.map(item => `
+      <div class="checklist-item ${state[item.id]?'done':''}" onclick="toggleChecklistItem('${item.id}')">
+        <div class="checklist-box">${state[item.id]?'✓':''}</div>
+        <div class="checklist-label">${item.label}</div>
+      </div>`).join('')}`;
+}
+
+// ── GM6: CONNECTOR SEARCH + STATUS FILTER (filterable table) ──
+let _connectorFilter = 'all';
+let _connectorSearch = '';
+function handleConnectorSearch(val) {
+  _connectorSearch = (val||'').trim().toLowerCase();
+  renderConnectors();
+}
+function setConnectorFilter(f) {
+  _connectorFilter = f;
+  renderConnectors();
+}
+
 // ── CONSTANTS ──
 const INDX_PRICE_USD = 0.24;
 const POOL_TARGET = 100000;
@@ -516,6 +591,7 @@ const CONNECTORS = [
   { name:'Solana RPC', category:'Blockchain', status:'planned', desc:'Direct Solana network access for transaction signing, balance checks, token account management.', policy:'Read freely · Sign transactions (dual approval)', tools:['get_balance','send_transaction','get_signature_status'] },
 ];
 
+// GOD MODE PATCH — filter row + search/status filtering added over the same summary/list render
 function renderConnectors() {
   let connected=0, planned=0, blocked=0;
   CONNECTORS.forEach(c=>{ if(c.status==='connected') connected++; else if(c.status==='planned') planned++; else blocked++; });
@@ -523,7 +599,26 @@ function renderConnectors() {
     <div class="conn-sum"><div class="conn-sum-num" style="color:var(--green)">${connected}</div><div class="conn-sum-lbl">Connected</div></div>
     <div class="conn-sum"><div class="conn-sum-num" style="color:var(--gold)">${planned}</div><div class="conn-sum-lbl">Planned</div></div>
     <div class="conn-sum"><div class="conn-sum-num" style="color:var(--red)">${blocked}</div><div class="conn-sum-lbl">Blocked</div></div>`;
-  document.getElementById('connectorList').innerHTML = CONNECTORS.map(c =>
+
+  const filterRow = document.getElementById('connectorFilterRow');
+  if (filterRow) {
+    filterRow.innerHTML = ['all','connected','planned','blocked'].map(f =>
+      `<button class="audit-filter-btn ${f===_connectorFilter?'active':''}" onclick="setConnectorFilter('${f}')">${f==='all'?'All':f.charAt(0).toUpperCase()+f.slice(1)}</button>`
+    ).join('');
+  }
+
+  const filtered = CONNECTORS.filter(c => {
+    const matchesStatus = _connectorFilter==='all' || c.status===_connectorFilter;
+    const matchesSearch = !_connectorSearch || c.name.toLowerCase().includes(_connectorSearch) || c.category.toLowerCase().includes(_connectorSearch);
+    return matchesStatus && matchesSearch;
+  });
+
+  const listEl = document.getElementById('connectorList');
+  if (filtered.length === 0) {
+    listEl.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px;">No connectors match this filter or search.</div>';
+    return;
+  }
+  listEl.innerHTML = filtered.map(c =>
     `<div class="conn-card ${c.status}">
       <div class="conn-header">
         <div class="conn-name">${c.name}</div>
@@ -563,6 +658,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   renderOverview();
   renderRoles();
   renderConnectors();
+  renderChecklist();
 });
 </script>
 <script src="siindex-speak-core.js"></script>

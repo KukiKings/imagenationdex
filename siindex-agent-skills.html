@@ -157,6 +157,14 @@
     .nav-item.active .nav-label{color:var(--cyan);}
     .nav-item.active .nav-icon{filter:drop-shadow(0 0 5px var(--cyan));}
 
+    /* ── GOD MODE: copy full stack + remember last viewed ── */
+    .hero-copyall{margin-top:14px;display:flex;align-items:center;gap:8px;width:100%;
+      padding:11px 14px;border-radius:12px;font-size:12.5px;font-weight:800;cursor:pointer;
+      background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.25);color:var(--cyan);
+      transition:all 0.2s;}
+    .hero-copyall.done{background:rgba(0,229,160,0.12);border-color:rgba(0,229,160,0.3);color:var(--green);}
+    .hero-copyall:active{transform:scale(0.98);}
+
     /* ── TOAST ── */
     #toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(16px);
       background:var(--surface2);border:1px solid var(--border2);border-radius:12px;
@@ -188,6 +196,7 @@
     <div class="h-stat"><div class="h-stat-val" id="heroInstalled">0</div><div class="h-stat-lbl">Copied</div></div>
     <div class="h-stat"><div class="h-stat-val" id="heroExplored">0</div><div class="h-stat-lbl">Explored</div></div>
   </div>
+  <button class="hero-copyall" id="copyAllBtn" onclick="copyFullStack()">⬡ Copy full stack (11 install commands)</button>
 </div>
 
 <!-- SEARCH -->
@@ -231,6 +240,45 @@
 <script>
 // FOUNDER GATE
 (function(){if(localStorage.getItem('indx_founder_access')!=='true'){window.location.replace('citizen-dashboard.html');}})();
+
+// ── GOD MODE: copy full stack + remember last-viewed skill ──
+const STACK_COPIED_KEY = 'indx_agentskills_stack_copied';
+const LAST_VIEWED_KEY = 'indx_agentskills_last_viewed';
+
+function copyFullStack() {
+  const script = SKILLS.map(s => s.cmd).join('\n');
+  navigator.clipboard.writeText(script).then(() => {
+    try { localStorage.setItem(STACK_COPIED_KEY, '1'); } catch (e) {}
+    const btn = document.getElementById('copyAllBtn');
+    if (btn) { btn.classList.add('done'); btn.textContent = '✓ Full stack copied — 11 commands'; }
+    showToast('All 11 install commands copied');
+  });
+}
+
+function restoreLastViewedSkill() {
+  let lastId = null;
+  try { lastId = sessionStorage.getItem(LAST_VIEWED_KEY) || null; } catch (e) {}
+  if (lastId && SKILLS.some(s => s.id === lastId)) {
+    expandedId = lastId;
+    renderSkills();
+    setTimeout(() => {
+      const card = document.getElementById('card-' + lastId);
+      if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 150);
+  }
+  try {
+    if (localStorage.getItem(STACK_COPIED_KEY) === '1') {
+      const btn = document.getElementById('copyAllBtn');
+      if (btn) { btn.classList.add('done'); btn.textContent = '✓ Full stack copied — 11 commands'; }
+    }
+  } catch (e) {}
+}
+
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && expandedId) {
+    toggleSkill(expandedId); // GOD MODE: Escape collapses the currently expanded skill card
+  }
+});
 
 // ── SKILLS DATA ──
 const SKILLS = [
@@ -459,6 +507,7 @@ function buildSkillCard(skill, container) {
 function toggleSkill(id) {
   const wasExpanded = expandedId === id;
   expandedId = wasExpanded ? null : id;
+  try { sessionStorage.setItem(LAST_VIEWED_KEY, expandedId || ''); } catch (e) {} // GOD MODE PATCH: remember last-viewed skill
   if (!wasExpanded) {
     if (!exploredIds.has(id)) {
       exploredIds.add(id);
@@ -547,6 +596,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderSkills();
   const name = sessionStorage.getItem('citizen_name');
   if (name) setTimeout(() => showToast(`${name}. 11 skills active.`), 800);
+  restoreLastViewedSkill(); // GOD MODE: reopen last-viewed skill + restore full-stack-copied button state
 });
 </script>
 <script src="siindex-speak-core.js"></script>

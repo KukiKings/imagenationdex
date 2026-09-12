@@ -199,6 +199,18 @@
     .nav-item.active .nav-label{color:var(--cyan);}
     .nav-item.active .nav-icon{filter:drop-shadow(0 0 5px var(--cyan));}
 
+    /* ── GOD MODE: status filter pills + comms last-checked ── */
+    .status-filter-wrap{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding:0 16px 10px;}
+    .status-filter-wrap::-webkit-scrollbar{display:none;}
+    .status-filter-pill{flex-shrink:0;padding:6px 13px;border-radius:20px;font-size:11px;font-weight:800;
+      cursor:pointer;background:var(--surface2);border:1px solid var(--border2);color:var(--muted);
+      transition:all 0.2s;white-space:nowrap;}
+    .status-filter-pill.active{background:rgba(0,212,255,0.12);border-color:rgba(0,212,255,0.3);color:var(--cyan);}
+    .comms-refresh-row{display:flex;align-items:center;gap:8px;margin:6px 0 2px;}
+    .comms-last-checked{font-size:10px;color:var(--muted);}
+    .comms-refresh-btn{font-size:10px;font-weight:700;color:var(--cyan);background:transparent;
+      border:1px solid rgba(0,212,255,0.25);border-radius:6px;padding:3px 8px;cursor:pointer;}
+
     /* ── TOAST ── */
     #toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(16px);
       background:var(--surface2);border:1px solid var(--border2);border-radius:12px;
@@ -265,6 +277,7 @@
 
 <!-- AGENTS -->
 <div class="section-label">Agent Roster — local founder view only (pause/resume does not change live agent execution)</div>
+<div class="status-filter-wrap" id="statusFilterWrap"></div>
 <div class="agents-wrap" id="agentsWrap">
   <!-- Rendered by JS -->
 </div>
@@ -288,6 +301,10 @@
     <div class="comms-live-dot"></div>
     <div class="comms-title">Live Feed</div>
     <button class="comms-pause-btn" id="commsPauseBtn" onclick="toggleCommsPause()">⏸ Pause</button>
+  </div>
+  <div class="comms-refresh-row">
+    <span class="comms-last-checked" id="commsLastChecked">Not checked yet</span>
+    <button class="comms-refresh-btn" onclick="loadCommsFeed()">↻ Refresh now</button>
   </div>
   <div class="comms-list" id="commsList"></div>
 </div>
@@ -455,6 +472,35 @@ let pausedAgents = new Set(JSON.parse(localStorage.getItem(PAUSED_KEY) || '[]'))
 let totalDecisions = AGENTS.reduce((sum, a) => sum + a.decisions.length, 0);
 let expandedAgent = null;
 
+// ── GOD MODE: status filter (remembers last choice) + honest comms "last checked" timestamp ──
+const STATUS_FILTER_KEY = 'indx_agents_status_filter';
+const STATUS_FILTERS = ['ALL', 'ACTIVE', 'PROCESSING', 'IDLE', 'PAUSED'];
+let statusFilter = localStorage.getItem(STATUS_FILTER_KEY) || 'ALL';
+if (STATUS_FILTERS.indexOf(statusFilter) === -1) statusFilter = 'ALL';
+
+function effectiveStatus(i) {
+  return pausedAgents.has(i) ? 'PAUSED' : AGENTS[i].status;
+}
+
+function buildStatusFilterPills() {
+  const wrap = document.getElementById('statusFilterWrap');
+  wrap.innerHTML = STATUS_FILTERS.map(f => {
+    const count = f === 'ALL' ? AGENTS.length : AGENTS.filter((a, i) => effectiveStatus(i) === f).length;
+    return `<div class="status-filter-pill${f === statusFilter ? ' active' : ''}" onclick="setStatusFilter('${f}')">${f === 'ALL' ? 'All' : f} (${count})</div>`;
+  }).join('');
+}
+
+function setStatusFilter(f) {
+  statusFilter = f;
+  try { localStorage.setItem(STATUS_FILTER_KEY, f); } catch (e) {}
+  buildStatusFilterPills();
+  buildAgents();
+}
+
+function formatLastChecked(d) {
+  return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0') + ':' + d.getSeconds().toString().padStart(2,'0');
+}
+
 // ── TASK STREAMS ──
 const ACTIVE_TASKS = [
   {agent:'Engineering Agent', task:'Building siindex-memory.html', pct:42},
@@ -496,7 +542,16 @@ function getStatusClass(status) {
 function buildAgents() {
   const wrap = document.getElementById('agentsWrap');
   wrap.innerHTML = '';
-  AGENTS.forEach((a, i) => {
+  // GOD MODE PATCH: apply the status filter pill selection before rendering the roster
+  const visible = AGENTS.filter((a, i) => statusFilter === 'ALL' || effectiveStatus(i) === statusFilter);
+  if (!visible.length) {
+    wrap.innerHTML = `<div style="padding:24px 4px;text-align:center;color:var(--muted);font-size:13px">No agents currently ${statusFilter.toLowerCase()}.</div>`;
+    updateExploreProgress();
+    updatePausedUI();
+    return;
+  }
+  visible.forEach(a => {
+    const i = a.id;
     const isPaused = pausedAgents.has(i);
     const isExplored = exploredAgents.has(i);
     const displayStatus = isPaused ? 'PAUSED' : a.status;
@@ -587,6 +642,7 @@ function togglePause(i) {
     showToast(`⏸ ${AGENTS[i].name} paused (local view only)`);
   }
   localStorage.setItem(PAUSED_KEY, JSON.stringify([...pausedAgents]));
+  buildStatusFilterPills(); // GOD MODE PATCH: pause/resume changes effective status, so pill counts must refresh
   buildAgents(); // Rebuild to reflect new state
   // Re-expand if was open
   if (expandedAgent === i) {
@@ -597,6 +653,7 @@ function togglePause(i) {
 function resumeAll() {
   pausedAgents.clear();
   localStorage.setItem(PAUSED_KEY, JSON.stringify([]));
+  buildStatusFilterPills(); // GOD MODE PATCH
   buildAgents();
   showToast('▶ All agents resumed (local view)');
 }
@@ -645,12 +702,14 @@ function formatTime(iso) {
 
 async function loadCommsFeed() {
   if (commsPaused) return;
+  // GOD MODE PATCH: record a real "last checked" timestamp for every genuine fetch attempt below
+  // (success, RLS-locked, or network error) — never a fabricated or auto-advancing clock.
   try {
     const res = await fetch(
       SUPABASE_URL + '/rest/v1/agent_messages?select=agent_id,task_id,action_requested,output,created_at&order=created_at.desc&limit=' + MAX_COMMS,
       { headers: rpcHeaders() }
     );
-    if (!res.ok) { commsEntries = null; renderComms(); return; } // RLS-blocked (not signed in as founder) — honest locked state
+    if (!res.ok) { commsEntries = null; renderComms(); updateCommsLastChecked(); return; } // RLS-blocked (not signed in as founder) — honest locked state
     const rows = await res.json();
     commsEntries = (rows || []).map(r => ({
       from: 'Agent ' + String(r.agent_id).slice(0, 8),
@@ -659,10 +718,18 @@ async function loadCommsFeed() {
       time: formatTime(r.created_at)
     }));
     renderComms();
+    updateCommsLastChecked();
   } catch (e) {
     commsEntries = null;
     renderComms();
+    updateCommsLastChecked(true);
   }
+}
+
+function updateCommsLastChecked(failed) {
+  const el = document.getElementById('commsLastChecked');
+  if (!el) return;
+  el.textContent = (failed ? 'Last attempt failed at ' : 'Last checked ') + formatLastChecked(new Date());
 }
 
 function renderComms() {
@@ -714,6 +781,7 @@ function showToast(msg) {
 // ── INIT ──
 document.addEventListener('DOMContentLoaded', async () => {
   buildTaskStreams();
+  buildStatusFilterPills(); // GOD MODE
   buildAgents();
   document.getElementById('heroExplored').textContent = exploredAgents.size;
   document.getElementById('heroDecisions').textContent = totalDecisions;

@@ -198,6 +198,21 @@
   .doctrine-line:last-child { border-bottom:none; }
   .doctrine-line::before { content:'🔨'; flex-shrink:0; margin-top:1px; }
 
+  /* ── GOD MODE PATCH: GENESIS STATUS SUMMARY ── */
+  .status-card { margin:0 20px 16px; background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:6px 16px; }
+  .status-row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--border); font-size:12px; }
+  .status-row:last-of-type { border-bottom:none; }
+  .status-label { color:var(--text2); font-weight:600; }
+  .status-val { font-weight:800; text-align:right; }
+  .status-next { margin:10px 0 12px; padding:10px 12px; border-radius:12px; background:rgba(255,184,0,0.1); border:1px solid rgba(255,184,0,0.3); color:var(--gold); font-size:11px; font-weight:700; line-height:1.5; cursor:pointer; }
+
+  /* ── GOD MODE PATCH: APPLICATION REVIEW STEP ── */
+  .app-review-item { padding:10px 0; border-bottom:1px solid var(--border); }
+  .app-review-item:last-child { border-bottom:none; }
+  .app-review-q { font-size:10px; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:0.4px; margin-bottom:4px; }
+  .app-review-a { font-size:12px; color:var(--text); line-height:1.5; white-space:pre-wrap; }
+  .app-review-edit { font-size:10px; font-weight:800; color:var(--cyan); margin-top:5px; cursor:pointer; display:inline-block; }
+
   /* TOAST */
   .toast { position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--surface3); border:1px solid rgba(255,255,255,0.12); color:var(--text); font-size:13px; font-weight:600; padding:12px 20px; border-radius:24px; opacity:0; transition:all 0.3s; z-index:999; white-space:nowrap; max-width:340px; pointer-events:none; }
   .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
@@ -232,6 +247,13 @@
   <div class="stat-card"><div class="stat-val" style="color:var(--green)">30</div><div class="stat-label">Day structured journey</div></div>
   <div class="stat-card"><div class="stat-val" style="color:var(--cyan)">10</div><div class="stat-label">Capability Proofs to earn</div></div>
 </div>
+
+<!-- GOD MODE PATCH: GENESIS STATUS SUMMARY -->
+<div class="section-hdr fade-in" style="animation-delay:.05s">
+  <h2>🧭 Your Genesis Status</h2>
+  <span id="statusDayLabel">Day 1</span>
+</div>
+<div class="status-card fade-in" id="statusCard" style="animation-delay:.055s"></div>
 
 <!-- GM1: TIER SELECTOR -->
 <div class="section-hdr fade-in" style="animation-delay:.06s">
@@ -597,6 +619,7 @@
     renderTiers();
     const tier = TIERS.find(t=>t.key===key);
     showToast('✓ ' + tier.name + ' tier selected — scroll down to apply');
+    renderStatusSummary(); // GOD MODE PATCH
     setTimeout(() => {
       document.querySelector('.app-card')?.scrollIntoView({ behavior:'smooth', block:'start' });
     }, 400);
@@ -680,6 +703,7 @@
         setTimeout(() => showToast('🔨 Week ' + (wi+1) + ' complete — Week ' + (wi+2) + ' unlocked!'), 1500);
       }
     }
+    renderStatusSummary(); // GOD MODE PATCH
   }
 
   // ── GM3: APPLICATION FLOW ──
@@ -691,7 +715,8 @@
       `<div class="app-step-dot ${i < _appStep ? 'done' : i === _appStep ? 'active' : ''}"></div>`
     ).join('');
 
-    if (_appStep >= steps) { submitApp(); return; }
+    // GOD MODE PATCH: review-before-submit instead of auto-submitting on the last answer
+    if (_appStep >= steps) { renderAppReview(); return; }
 
     const q = APP_QUESTIONS[_appStep];
     const saved = _appAnswers[_appStep] || null;
@@ -765,6 +790,38 @@
     if (_appStep > 0) { _appStep--; renderApp(); }
   }
 
+  // ── GOD MODE PATCH: APPLICATION REVIEW STEP ──
+  function formatAnswerForReview(q, idx) {
+    const a = _appAnswers[idx];
+    if (q.type === 'textarea') return (typeof a === 'string' && a.trim()) ? a : '— not answered —';
+    if (Array.isArray(a) && a.length) return a.join(', ');
+    return '— not answered —';
+  }
+
+  function renderAppReview() {
+    document.getElementById('appProgress').innerHTML = APP_QUESTIONS.map(()=>`<div class="app-step-dot done"></div>`).join('');
+    document.getElementById('appBody').innerHTML = `
+      <div class="app-q-num">Review Your Application</div>
+      <div class="app-q-text">Check your answers before you submit</div>
+      <div class="app-hint">Tap "Edit" on any answer to change it. Nothing is sent until you confirm below.</div>
+      <div id="appReviewList">
+        ${APP_QUESTIONS.map((q, i) => `<div class="app-review-item">
+          <div class="app-review-q">Q${q.num} · ${q.text}</div>
+          <div class="app-review-a">${formatAnswerForReview(q, i)}</div>
+          <div class="app-review-edit" onclick="editAnswer(${i})">Edit →</div>
+        </div>`).join('')}
+      </div>
+      <div class="app-nav">
+        <div class="app-btn app-btn-sec" onclick="appBack()">← Back</div>
+        <div class="app-btn app-btn-primary" onclick="submitApp()">Confirm &amp; Submit Application</div>
+      </div>`;
+  }
+
+  function editAnswer(idx) {
+    _appStep = idx;
+    renderApp();
+  }
+
   async function submitApp() {
     _appAnswers._submitted = true;
     _appAnswers._ref = 'GBP-' + Date.now().toString(36).toUpperCase();
@@ -774,6 +831,7 @@
     _appAnswers._saveResult = await saveApplicationToPassport(_appAnswers, _selectedTier, _appAnswers._ref);
     localStorage.setItem('indx_genesis_app', JSON.stringify(_appAnswers));
     renderAppConfirm();
+    renderStatusSummary(); // GOD MODE PATCH
   }
 
   // NOTE: this used to unconditionally claim "SIINDEX is reviewing your application.
@@ -853,6 +911,36 @@
     renderEvents();
   }
 
+  // ── GOD MODE PATCH: GENESIS STATUS SUMMARY ──
+  function renderStatusSummary() {
+    let startedAt = parseInt(localStorage.getItem('indx_genesis_started_at') || '0', 10);
+    if (!startedAt) { startedAt = Date.now(); localStorage.setItem('indx_genesis_started_at', String(startedAt)); }
+    const daysIn = Math.max(1, Math.floor((Date.now() - startedAt) / 86400000) + 1);
+    const dayLbl = document.getElementById('statusDayLabel');
+    if (dayLbl) dayLbl.textContent = 'Day ' + daysIn;
+
+    const tier = _selectedTier ? TIERS.find(t=>t.key===_selectedTier) : null;
+    const stats = getJourneyStats();
+    const hasDraft = Object.keys(_appAnswers).some(k => !k.startsWith('_'));
+    const appStatus = _appSubmitted
+      ? 'Submitted · ' + (_appAnswers._ref || 'Ref pending')
+      : (hasDraft ? 'Draft in progress' : 'Not started');
+
+    let next = 'Choose a Genesis Builder tier above to get started.';
+    if (tier && appStatus === 'Not started') next = 'Apply as a ' + tier.name + ' — scroll to the application below.';
+    else if (appStatus === 'Draft in progress') next = 'Finish and submit your Genesis Builder application.';
+    else if (_appSubmitted && stats.pct < 100) next = 'Open the 30-Day Journey above and complete your next task.';
+    else if (stats.pct >= 100) next = 'Journey complete — check the Builder Network below for your next connection.';
+
+    const card = document.getElementById('statusCard');
+    if (!card) return;
+    card.innerHTML = `
+      <div class="status-row"><div class="status-label">Tier</div><div class="status-val">${tier ? tier.icon + ' ' + tier.name : 'Not selected'}</div></div>
+      <div class="status-row"><div class="status-label">Application</div><div class="status-val">${appStatus}</div></div>
+      <div class="status-row"><div class="status-label">Journey</div><div class="status-val">${stats.pct}% · ${stats.done}/${stats.total} tasks</div></div>
+      <div class="status-next" onclick="document.querySelector('.app-card')?.scrollIntoView({behavior:'smooth',block:'start'})">→ ${next}</div>`;
+  }
+
   // ── DOCTRINE ──
   function renderDoctrine() {
     document.getElementById('doctrineLines').innerHTML = DOCTRINE.map((d,i)=>
@@ -875,6 +963,7 @@
     renderNetwork();
     renderEvents();
     renderDoctrine();
+    renderStatusSummary(); // GOD MODE PATCH
     await initRealSession();
   });
 </script>

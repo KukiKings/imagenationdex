@@ -210,6 +210,22 @@
   .sheet-btn-primary:hover { background:rgba(0,212,255,0.2); }
   .sheet-btn-sec { background:var(--surface3); border:1px solid var(--border); color:var(--text2); }
 
+  /* ── GM5: LESSON SEARCH ── */
+  .lib-search-wrap { position:relative; padding:12px 14px; border-bottom:1px solid var(--border); }
+  .lib-search-input {
+    width:100%; background:var(--surface3); border:1px solid var(--border); border-radius:11px;
+    padding:10px 34px 10px 14px; font-size:12px; color:var(--text); font-family:inherit;
+  }
+  .lib-search-input::placeholder { color:var(--muted); }
+  .lib-search-input:focus { outline:none; border-color:rgba(0,212,255,0.4); }
+  .lib-search-clear {
+    position:absolute; right:24px; top:50%; transform:translateY(-50%);
+    font-size:12px; color:var(--muted); cursor:pointer; padding:4px;
+  }
+
+  /* ── GM6: SHEET FOCUS/KEYBOARD SUPPORT ── */
+  .sheet-btn:focus-visible, .nav-back:focus-visible { outline:2px solid var(--cyan); outline-offset:2px; }
+
   /* TOAST */
   .toast {
     position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px);
@@ -278,6 +294,10 @@
   <span>Every lesson creates something real</span>
 </div>
 <div class="library-card fade-in" style="animation-delay:.20s">
+  <div class="lib-search-wrap">
+    <input type="text" id="libSearchInput" class="lib-search-input" placeholder="Search all 65+ lessons…" oninput="handleLibSearch(this.value)" aria-label="Search lessons">
+    <div class="lib-search-clear" id="libSearchClear" style="display:none" onclick="clearLibSearch()">✕</div>
+  </div>
   <div class="lib-tabs" id="libTabs"></div>
   <div id="libContent"></div>
 </div>
@@ -353,8 +373,8 @@
     </div>
   </div>
   <div class="sheet-actions">
-    <div class="sheet-btn sheet-btn-primary" id="sheetStartBtn" onclick="markLessonDone()">Mark as Complete</div>
-    <div class="sheet-btn sheet-btn-sec" onclick="closeLessonSheet()">Close</div>
+    <div class="sheet-btn sheet-btn-primary" id="sheetStartBtn" role="button" tabindex="0" onclick="markLessonDone()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();markLessonDone();}">Mark as Complete</div>
+    <div class="sheet-btn sheet-btn-sec" id="sheetCloseBtn" role="button" tabindex="0" onclick="closeLessonSheet()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();closeLessonSheet();}">Close</div>
   </div>
 </div>
 
@@ -689,6 +709,42 @@
   let _fluency = JSON.parse(localStorage.getItem('indx_academy_fluency') || '{}');
   let _proofs = JSON.parse(localStorage.getItem('indx_academy_proofs') || '[]');
   let _currentLesson = null;
+  let _librarySearch = '';
+  let _sheetLastFocused = null;
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ── GM5: LESSON SEARCH ──
+  function handleLibSearch(val) {
+    _librarySearch = (val || '').trim().toLowerCase();
+    document.getElementById('libSearchClear').style.display = _librarySearch ? 'block' : 'none';
+    renderLibContent();
+  }
+
+  function clearLibSearch() {
+    _librarySearch = '';
+    const input = document.getElementById('libSearchInput');
+    if (input) input.value = '';
+    document.getElementById('libSearchClear').style.display = 'none';
+    renderLibContent();
+  }
+
+  // ── GM6: SHEET ESCAPE-TO-CLOSE + FOCUS TRAP ──
+  function handleSheetKeydown(e) {
+    const sheet = document.getElementById('lessonSheet');
+    if (!sheet || !sheet.classList.contains('show')) return;
+    if (e.key === 'Escape') { e.preventDefault(); closeLessonSheet(); return; }
+    if (e.key === 'Tab') {
+      const focusables = Array.from(sheet.querySelectorAll('[tabindex="0"]'));
+      if (!focusables.length) return;
+      const first = focusables[0], last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }
+  document.addEventListener('keydown', handleSheetKeydown);
 
   // ── GM1: CAPABILITY PATHWAY NAVIGATOR ──
   function renderPathways() {
@@ -763,9 +819,51 @@
     renderLibContent();
   }
 
+  // GOD MODE PATCH — cross-category search now short-circuits the normal tab render
   function renderLibContent() {
-    const cat = ACADEMY_CATS[_selectedLib];
     const el = document.getElementById('libContent');
+    if (_librarySearch) {
+      const results = [];
+      ACADEMY_CATS.forEach((c, ci) => {
+        c.lessons.forEach((l, li) => {
+          if (l.title.toLowerCase().includes(_librarySearch) || l.output.toLowerCase().includes(_librarySearch)) {
+            results.push({ cat: c, ci, l, li });
+          }
+        });
+      });
+      if (results.length === 0) {
+        el.innerHTML = `<div class="proof-empty">
+          <div class="proof-empty-icon">🔍</div>
+          <div class="proof-empty-text">No lessons match "${escapeHtml(_librarySearch)}". Try a different search term.</div>
+        </div>`;
+        return;
+      }
+      el.innerHTML = `<div class="lib-cat-hdr">
+          <div class="lib-cat-row">
+            <div class="lib-cat-icon">🔍</div>
+            <div class="lib-cat-name">${results.length} matching lesson${results.length===1?'':'s'}</div>
+          </div>
+        </div>` +
+        results.map(r => {
+          const key = `lib-${r.ci}-${r.li}`;
+          const isDone = !!_completedLessons[key];
+          return `<div class="lesson-item">
+            <div class="lesson-row" onclick="openLessonSheet(ACADEMY_CATS[${r.ci}].lessons[${r.li}], ACADEMY_CATS[${r.ci}].label, '${key}')">
+              <div class="lesson-num">${r.cat.icon}</div>
+              <div class="lesson-body">
+                <div class="lesson-title">${r.l.title}</div>
+                <div class="lesson-creates">
+                  <div class="lesson-creates-lbl">${r.cat.label}:</div>
+                  <div class="lesson-creates-val">${r.l.output}</div>
+                </div>
+              </div>
+              ${isDone ? `<div class="lesson-done-badge">✓ Done</div>` : `<div class="lesson-start">Start →</div>`}
+            </div>
+          </div>`;
+        }).join('');
+      return;
+    }
+    const cat = ACADEMY_CATS[_selectedLib];
     el.innerHTML = `
       <div class="lib-cat-hdr">
         <div class="lib-cat-row">
@@ -914,11 +1012,17 @@
 
     document.getElementById('sheetOverlay').classList.add('show');
     document.getElementById('lessonSheet').classList.add('show');
+    // GOD MODE PATCH — remember focus origin and move focus into the sheet
+    _sheetLastFocused = document.activeElement;
+    setTimeout(() => { const btn = document.getElementById('sheetCloseBtn'); if (btn) btn.focus(); }, 50);
   }
 
   function closeLessonSheet() {
     document.getElementById('sheetOverlay').classList.remove('show');
     document.getElementById('lessonSheet').classList.remove('show');
+    // GOD MODE PATCH — restore focus to whatever opened the sheet
+    if (_sheetLastFocused && typeof _sheetLastFocused.focus === 'function') _sheetLastFocused.focus();
+    _sheetLastFocused = null;
   }
 
   async function markLessonDone() {
