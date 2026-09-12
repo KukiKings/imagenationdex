@@ -7,7 +7,7 @@
   <meta name="description" content="SIINDEX CEO/COO control surface. Sub-agent swarms are registered and policy-gated under AJ approval; autonomous execution is not yet live. Pre-launch honest status for Cook Islands and citizens.">
   <link rel="icon" type="image/png" href="/assets/favicon.png">
   <style>
-    :root{--bg:#070912;--card:#12141f;--line:rgba(148,163,255,.18);--text:#f4f6ff;--muted:#aab2d4;--cyan:#00d4ff;--purple:#8b3fe8;--green:#00e5a0;--gold:#ffbf3f}
+    :root{--bg:#070912;--card:#12141f;--line:rgba(148,163,255,.18);--text:#f4f6ff;--muted:#aab2d4;--cyan:#00d4ff;--purple:#8b3fe8;--green:#00e5a0;--gold:#ffbf3f;--red:#FF4D6D;--surface2:#1A1D2E;--surface3:#22263A}
     *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;line-height:1.5}
     .top{position:sticky;top:0;z-index:40;backdrop-filter:blur(12px);background:rgba(7,9,18,.92);border-bottom:1px solid var(--line);padding:.75rem 1rem;display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;justify-content:space-between}
     .brand{font-weight:900;background:linear-gradient(90deg,var(--cyan),var(--purple));-webkit-background-clip:text;color:transparent;text-decoration:none}
@@ -32,6 +32,22 @@
     ol,ul{color:#d8def5;font-size:.92rem}
     li{margin:.35rem 0}
     code{font-size:.85em;color:#8ceaff}
+
+    /* ── GOD MODE: stat strip, utility search, recently-opened ── */
+    .op-stat-row{display:flex;gap:.6rem;flex-wrap:wrap;margin:.9rem 0}
+    .op-stat{flex:1;min-width:110px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:.7rem .8rem;text-align:center}
+    .op-stat b{display:block;font-size:1.15rem;color:var(--cyan)}
+    .op-stat span{font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+    .util-search{width:100%;box-sizing:border-box;background:var(--card);border:1.5px solid var(--line);border-radius:12px;
+      padding:.6rem .9rem;color:var(--text);font:inherit;font-size:.85rem;margin:.7rem 0}
+    .util-search:focus{outline:none;border-color:var(--cyan)}
+    .util-search::placeholder{color:var(--muted)}
+    .recent-strip{display:flex;gap:.5rem;overflow-x:auto;padding-bottom:.3rem;margin-bottom:.2rem;scrollbar-width:none}
+    .recent-strip::-webkit-scrollbar{display:none}
+    .recent-chip{flex-shrink:0;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.25);border-radius:20px;
+      padding:.35rem .8rem;font-size:.74rem;color:var(--cyan);text-decoration:none;white-space:nowrap}
+    .recent-label{font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin:.9rem 0 .3rem}
+    .no-results{color:var(--muted);font-size:.85rem;padding:.6rem 0}
   </style>
 </head>
 <body>
@@ -54,6 +70,12 @@
     <h1>Operator proof</h1>
     <p class="sub">What government and citizens can verify today: control model, live utilities, and the approval gate — without invented swarm telemetry.</p>
 
+    <div class="op-stat-row" id="opStatRow">
+      <div class="op-stat"><b id="statUtilCount">—</b><span>Live utilities</span></div>
+      <div class="op-stat"><b id="statSwarmCount">—</b><span>Registered swarms</span></div>
+      <div class="op-stat"><b id="statCountdown">—</b><span>Days to pilot</span></div>
+    </div>
+
     <h2>Control model</h2>
     <div class="grid">
       <div class="card"><span class="pill live">Live</span><strong>SIINDEX</strong><span>CEO/COO — prioritises, sets swarm policy, public executive presence, honest status.</span></div>
@@ -62,6 +84,9 @@
     </div>
 
     <h2>Live visitor / media utilities</h2>
+    <div class="recent-label" id="recentLabel" style="display:none">Recently opened</div>
+    <div class="recent-strip" id="recentStrip"></div>
+    <input type="text" class="util-search" id="utilSearch" placeholder="Search utilities…" oninput="filterUtils(this.value)">
     <div class="grid" id="utils"></div>
 
     <h2>Deep research law</h2>
@@ -73,7 +98,7 @@
     </ol>
 
     <h2>Swarms (org)</h2>
-    <ul>
+    <ul id="swarmsList">
       <li>Media — video, voice, avatar presence</li>
       <li>Knowledge — deep research always</li>
       <li>Education — Cook Islands + Pacific; school portal preview</li>
@@ -107,14 +132,68 @@
       ['Voice Command OS', '/siindex-voice-command-os.html'],
       ['Hub → Command Center', '/siindex-hub.html']
     ];
-    var g = document.getElementById('utils');
-    links.forEach(function (pair) {
+    // GOD MODE: recently-opened persistence, live search filter, real stat strip
+    var RECENT_KEY = 'indx_operator_recent_utils';
+    function getRecent(){ try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch(e){ return []; } }
+    function saveRecent(list){ localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0,6))); }
+    function recordRecent(label, href){
+      var list = getRecent().filter(function(r){ return r.href !== href; });
+      list.unshift({label:label, href:href});
+      saveRecent(list);
+    }
+    function renderRecent(){
+      var list = getRecent();
+      var strip = document.getElementById('recentStrip');
+      var lbl = document.getElementById('recentLabel');
+      if (!strip || !lbl) return;
+      if (!list.length) { lbl.style.display = 'none'; strip.innerHTML = ''; return; }
+      lbl.style.display = 'block';
+      strip.innerHTML = list.map(function(r){
+        return '<a class="recent-chip" href="' + r.href + '">' + r.label + '</a>';
+      }).join('');
+    }
+
+    function renderUtilCard(pair){
+      var g = document.getElementById('utils');
       var a = document.createElement('a');
       a.className = 'card';
       a.href = pair[1];
       a.innerHTML = '<span class="pill live">Open</span><strong>' + pair[0] + '</strong><span>' + pair[1] + '</span>';
+      a.addEventListener('click', function(){ recordRecent(pair[0], pair[1]); });
       g.appendChild(a);
-    });
+    }
+
+    window.filterUtils = function(q){
+      var lq = q.trim().toLowerCase();
+      var g = document.getElementById('utils');
+      g.innerHTML = '';
+      var matches = links.filter(function(pair){
+        return !lq || pair[0].toLowerCase().indexOf(lq) > -1 || pair[1].toLowerCase().indexOf(lq) > -1;
+      });
+      if (!matches.length) { g.innerHTML = '<div class="no-results">No utilities match "' + q + '"</div>'; return; }
+      matches.forEach(renderUtilCard);
+    };
+
+    function renderStats(){
+      var utilCount = document.getElementById('statUtilCount');
+      var swarmCount = document.getElementById('statSwarmCount');
+      var countdown = document.getElementById('statCountdown');
+      if (utilCount) utilCount.textContent = links.length;
+      if (swarmCount) {
+        var swarmsList = document.getElementById('swarmsList');
+        swarmCount.textContent = swarmsList ? swarmsList.querySelectorAll('li').length : '—';
+      }
+      if (countdown) {
+        var target = new Date('2027-02-24T00:00:00Z').getTime();
+        var diff = target - Date.now();
+        countdown.textContent = diff > 0 ? Math.ceil(diff / 86400000) : 'Live';
+      }
+    }
+
+    links.forEach(renderUtilCard);
+    renderRecent();
+    renderStats();
+    setInterval(renderStats, 60000);
   </script>
 </body>
 </html>

@@ -166,6 +166,14 @@
     .readiness-bar{height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;margin-top:10px;}
     .readiness-fill{height:100%;border-radius:4px;transition:width 0.5s ease,background 0.4s ease;}
 
+    /* ── GOD MODE: KEYBOARD NAV + COPY SPEC ── */
+    .tab:focus-visible,.armor-card:focus-visible,.icon-tile:focus-visible,.m-chip:focus-visible,
+    .quality-card:focus-visible,.state-btn:focus-visible,.toggle-sw:focus-visible,
+    .copy-spec-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+    .copy-spec-btn{width:100%;margin-top:12px;padding:11px;border-radius:10px;background:var(--surface3);border:1px solid var(--border);color:var(--text);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;}
+    .copy-spec-btn:active{transform:scale(0.97);background:rgba(0,212,255,0.1);border-color:var(--cyan);}
+    .copy-spec-btn.copied{color:var(--green);border-color:rgba(0,229,160,0.4);}
+
     /* TOAST */
     #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
   </style>
@@ -190,11 +198,11 @@
   </div>
 
   <!-- TABS -->
-  <div class="tabs">
-    <div class="tab active" onclick="switchTab(0)">🎭 Armor</div>
-    <div class="tab" onclick="switchTab(1)">🔷 Icons</div>
-    <div class="tab" onclick="switchTab(2)">⚡ Command</div>
-    <div class="tab" onclick="switchTab(3)">🛡️ Guard</div>
+  <div class="tabs" id="tabBar" role="tablist">
+    <div class="tab active" tabindex="0" role="tab" aria-selected="true" onclick="switchTab(0)" onkeydown="handleTabKey(event,0)">🎭 Armor</div>
+    <div class="tab" tabindex="0" role="tab" aria-selected="false" onclick="switchTab(1)" onkeydown="handleTabKey(event,1)">🔷 Icons</div>
+    <div class="tab" tabindex="0" role="tab" aria-selected="false" onclick="switchTab(2)" onkeydown="handleTabKey(event,2)">⚡ Command</div>
+    <div class="tab" tabindex="0" role="tab" aria-selected="false" onclick="switchTab(3)" onkeydown="handleTabKey(event,3)">🛡️ Guard</div>
   </div>
 
   <!-- ── SECTION 0: ARMOR MODES ── -->
@@ -203,6 +211,7 @@
     <div class="armor-detail" id="armorDetail">
       <div class="armor-detail-hdr" id="adHdr"></div>
       <div id="adBody"></div>
+      <button class="copy-spec-btn" id="copySpecBtn" onclick="copyModeSpec()">📋 Copy Mode Spec</button>
     </div>
 
     <div class="sect-label">Select SIINDEX Mode</div>
@@ -309,6 +318,52 @@
   const _ICON_KEY     = 'indx_liface_iconstate';
   const _MISSION_KEY  = 'indx_liface_missions';
   const _SETTINGS_KEY = 'indx_liface_settings';
+
+  // ── GOD MODE: KEYBOARD NAV ──
+  function handleTabKey(ev, idx) {
+    var tabs = document.querySelectorAll('.tab');
+    if (ev.key === 'Enter' || ev.key === ' ') {
+      ev.preventDefault();
+      switchTab(idx);
+      return;
+    }
+    if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') {
+      ev.preventDefault();
+      var next = ev.key === 'ArrowRight' ? (idx + 1) % tabs.length : (idx - 1 + tabs.length) % tabs.length;
+      switchTab(next);
+      tabs[next].focus();
+    } else if (ev.key === 'Escape') {
+      document.getElementById('armorDetail').classList.remove('open');
+      document.getElementById('missionResult').classList.remove('open');
+    }
+  }
+
+  // ── GOD MODE: COPY MODE SPEC ──
+  function copyModeSpec() {
+    var mode = ARMOR_MODES.find(function(m){ return m.id===_activeMode; });
+    if (!mode) return;
+    var spec = mode.name + ' Mode (' + mode.icon + ')\n' +
+      'Armor: ' + mode.armor + '\n' +
+      'Clothing: ' + mode.clothing + '\n' +
+      'Lighting: ' + mode.lighting + '\n' +
+      'Posture: ' + mode.posture + '\n' +
+      'Voice: ' + mode.voice + '\n' +
+      'Background: ' + mode.bg + '\n' +
+      'Allowed: ' + mode.allowed + '\n' +
+      'Forbidden: ' + mode.forbidden;
+    var btn = document.getElementById('copySpecBtn');
+    function markCopied() {
+      btn.textContent = '✅ Spec Copied';
+      btn.classList.add('copied');
+      showToast('Mode spec copied to clipboard');
+      setTimeout(function(){ btn.textContent = '📋 Copy Mode Spec'; btn.classList.remove('copied'); }, 2000);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(spec).then(markCopied).catch(function(){ showToast('Copy failed — select text manually'); });
+    } else {
+      showToast('Clipboard not available on this device');
+    }
+  }
 
   // ── ARMOR MODES ──
   var ARMOR_MODES = [
@@ -521,7 +576,11 @@
 
   // ── TABS ──
   function switchTab(idx) {
-    document.querySelectorAll('.tab').forEach(function(t,i){ t.classList.toggle('active', i===idx); });
+    document.querySelectorAll('.tab').forEach(function(t,i){
+      t.classList.toggle('active', i===idx);
+      // GOD MODE PATCH — keep aria-selected in sync for screen readers
+      t.setAttribute('aria-selected', i===idx ? 'true' : 'false');
+    });
     document.querySelectorAll('.section').forEach(function(s,i){ s.classList.toggle('active', i===idx); });
   }
 

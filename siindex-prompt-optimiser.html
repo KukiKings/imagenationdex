@@ -101,6 +101,9 @@
     .nav-item.active{opacity:1;}
     .nav-item-icon{font-size:20px;}
     .nav-item-label{font-size:9px;font-weight:700;color:var(--text2);letter-spacing:0.05em;}
+    /* GOD MODE: optimisation stats card */
+    .opt-stats{display:flex;gap:10px;flex-wrap:wrap;background:var(--surface3);border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--text2);}
+    .opt-stats b{color:var(--cyan);font-weight:800;}
     /* TOAST */
     .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);border-radius:24px;padding:10px 20px;font-size:13px;font-weight:700;color:var(--text);opacity:0;pointer-events:none;transition:opacity 0.25s;z-index:999;white-space:nowrap;}
     .toast.show{opacity:1;}
@@ -194,6 +197,8 @@
     <div class="output-box" id="outputBox"></div>
     <button class="copy-btn" onclick="copyPrompt()">⎘ Copy Prompt</button>
 
+    <div class="opt-stats" id="optStats"></div>
+
     <div class="field-lbl">Key Improvements</div>
     <div class="improve-list" id="improveList"></div>
 
@@ -253,6 +258,31 @@
   let _platform = null;
   let _mode = 'DETAIL';
   const _HIST_KEY = 'indx_promptopt_history';
+  const _PREF_KEY = 'indx_promptopt_lastsettings';
+
+  // ── GOD MODE: smart defaults + optimisation stats ──
+  function saveLastSettings() {
+    try { localStorage.setItem(_PREF_KEY, JSON.stringify({ platform: _platform, mode: _mode })); } catch (e) {}
+  }
+
+  function restoreLastSettings() {
+    let prefs;
+    try { prefs = JSON.parse(localStorage.getItem(_PREF_KEY) || '{}'); } catch (e) { prefs = {}; }
+    if (prefs.mode) setMode(prefs.mode);
+    if (prefs.platform && PLATFORMS.some(p => p.id === prefs.platform)) {
+      selectPlatform(prefs.platform);
+      showToast('✓ Restored your last platform and mode.');
+    }
+  }
+
+  function updateOptStats(raw, optimised) {
+    const el = document.getElementById('optStats');
+    if (!el) return;
+    const rawWords = raw.trim().split(/\s+/).filter(Boolean).length;
+    const optWords = optimised.trim().split(/\s+/).filter(Boolean).length;
+    const ratio = rawWords > 0 ? (optWords / rawWords).toFixed(1) : '—';
+    el.innerHTML = `<span><b>${raw.length}</b> → <b>${optimised.length}</b> characters</span><span><b>${rawWords}</b> → <b>${optWords}</b> words</span><span><b>${ratio}×</b> expansion</span>`;
+  }
 
   // ── PLATFORM GRID ──
   function renderPlatformGrid() {
@@ -272,6 +302,8 @@
     const tip = document.getElementById('platformTip');
     tip.textContent = '💡 ' + p.tip;
     tip.style.display = 'block';
+    // GOD MODE PATCH: remember the selected platform for next visit
+    saveLastSettings();
   }
 
   // ── MODE ──
@@ -279,6 +311,8 @@
     _mode = m;
     document.getElementById('modeDetail').classList.toggle('active', m === 'DETAIL');
     document.getElementById('modeBasic').classList.toggle('active', m === 'BASIC');
+    // GOD MODE PATCH: remember the selected mode for next visit
+    saveLastSettings();
   }
 
   // ── CHAR COUNT ──
@@ -422,6 +456,8 @@
       document.getElementById('techList').innerHTML = techniques.map(t => `<div class="tech-chip">${t}</div>`).join('');
       document.getElementById('proTipText').textContent = tip;
       document.getElementById('outputSection').classList.add('show');
+      // GOD MODE PATCH: show the real before/after size comparison for this optimisation
+      updateOptStats(raw, optimised);
 
       saveHist(raw, optimised, type);
       renderHist();
@@ -480,6 +516,8 @@
   window.addEventListener('DOMContentLoaded', () => {
     renderPlatformGrid();
     renderHist();
+    // GOD MODE: restore last-used platform + mode
+    restoreLastSettings();
   });
 </script>
 <script src="siindex-speak-core.js"></script>

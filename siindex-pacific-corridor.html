@@ -122,6 +122,17 @@
     .doctrine-text{font-size:13px;font-weight:600;line-height:1.6;}
     .doctrine-text span{color:var(--cyan);}
 
+    /* WATCHLIST (GOD MODE) */
+    .corr-btn{position:relative;}
+    .corr-star{position:absolute;top:2px;right:4px;font-size:9px;line-height:1;opacity:0.35;}
+    .corr-star.on{opacity:1;}
+    .watchlist-card{background:var(--surface2);border:1px solid rgba(255,184,0,0.2);border-radius:14px;padding:12px 14px;margin:0 18px 12px;}
+    .watchlist-title{font-size:11px;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;}
+    .watchlist-chips{display:flex;flex-wrap:wrap;gap:6px;}
+    .watchlist-chip{display:flex;align-items:center;gap:5px;background:var(--surface3);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;}
+    .watchlist-chip.active{border-color:rgba(0,212,255,0.4);color:var(--cyan);}
+    .watchlist-empty{font-size:11px;color:var(--muted);}
+
     /* TOAST */
     .toast-el{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--surface2);border:1px solid rgba(0,229,160,0.3);border-radius:24px;padding:10px 18px;font-size:12px;font-weight:700;color:var(--green);z-index:9000;opacity:0;transition:all 0.3s;pointer-events:none;white-space:nowrap;}
     .toast-el.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -152,6 +163,12 @@
   <div class="corridor-section">
     <div class="sect-lbl">Select Corridor</div>
     <div class="corridor-grid" id="corridorGrid"></div>
+  </div>
+
+  <!-- WATCHLIST (GOD MODE) -->
+  <div class="watchlist-card">
+    <div class="watchlist-title">⭐ Your Watchlist</div>
+    <div class="watchlist-chips" id="watchlistChips"></div>
   </div>
 
   <!-- AMOUNT INPUT -->
@@ -340,6 +357,67 @@
       },
     };
 
+    // ── GOD MODE: WATCHLIST + SMART DEFAULTS ──────────────
+    const WATCHLIST_KEY   = 'indx_corridor_watchlist';
+    const LAST_STATE_KEY  = 'indx_pacific_last';
+
+    function getWatchlist() {
+      try { return JSON.parse(localStorage.getItem(WATCHLIST_KEY) || '[]'); }
+      catch (e) { return []; }
+    }
+    function saveWatchlist(list) {
+      try { localStorage.setItem(WATCHLIST_KEY, JSON.stringify(list)); } catch (e) {}
+    }
+    function toggleWatch(code, evt) {
+      if (evt) evt.stopPropagation();
+      let list = getWatchlist();
+      const label = CORRIDORS[code] ? `AU→${code}` : code;
+      if (list.includes(label)) {
+        list = list.filter(x => x !== label);
+        showToast(`${CORRIDORS[code].flag} ${CORRIDORS[code].name} removed from watchlist`);
+      } else {
+        list.push(label);
+        showToast(`${CORRIDORS[code].flag} ${CORRIDORS[code].name} added to watchlist`, 'gold');
+      }
+      saveWatchlist(list);
+      renderCorridorGrid();
+      renderWatchlist();
+    }
+    function watchLabelToCode(label) {
+      const m = /^AU→(.+)$/.exec(label);
+      return m ? m[1] : label;
+    }
+    function renderWatchlist() {
+      const el = document.getElementById('watchlistChips');
+      if (!el) return;
+      const list = getWatchlist().filter(l => CORRIDORS[watchLabelToCode(l)]);
+      if (!list.length) {
+        el.innerHTML = '<div class="watchlist-empty">Tap ⭐ on a corridor above to pin it here for quick access.</div>';
+        return;
+      }
+      el.innerHTML = list.map(label => {
+        const code = watchLabelToCode(label);
+        const c = CORRIDORS[code];
+        return `<div class="watchlist-chip${code === activeCorridor ? ' active' : ''}" onclick="selectCorridor('${code}')">${c.flag} ${c.name}</div>`;
+      }).join('');
+    }
+
+    function saveLastState() {
+      try {
+        localStorage.setItem(LAST_STATE_KEY, JSON.stringify({
+          corridor: activeCorridor,
+          amount: parseFloat(document.getElementById('sendAmount').value) || 0,
+        }));
+      } catch (e) {}
+    }
+    function loadLastState() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(LAST_STATE_KEY) || 'null');
+        if (saved && CORRIDORS[saved.corridor]) activeCorridor = saved.corridor;
+        if (saved && saved.amount > 0) document.getElementById('sendAmount').value = saved.amount;
+      } catch (e) {}
+    }
+
     // ── STATE ────────────────────────────────────────────
     let activeCorridor = 'TO';
 
@@ -355,12 +433,17 @@
     // ── CORRIDOR SELECTOR ────────────────────────────────
     function renderCorridorGrid() {
       const grid = document.getElementById('corridorGrid');
-      grid.innerHTML = Object.entries(CORRIDORS).map(([code, c]) => `
+      const watched = getWatchlist();
+      grid.innerHTML = Object.entries(CORRIDORS).map(([code, c]) => {
+        const isWatched = watched.includes(`AU→${code}`);
+        return `
         <div class="corr-btn${code === activeCorridor ? ' active' : ''}" onclick="selectCorridor('${code}')">
+          <div class="corr-star${isWatched ? ' on' : ''}" onclick="toggleWatch('${code}', event)">${isWatched ? '⭐' : '☆'}</div>
           <div class="corr-flag">${c.flag}</div>
           <div class="corr-code">${code}</div>
         </div>
-      `).join('');
+      `;
+      }).join('');
     }
 
     function selectCorridor(code) {
@@ -368,6 +451,8 @@
       renderCorridorGrid();
       recalcAll();
       renderCommunityPools();
+      renderWatchlist();
+      saveLastState(); // GOD MODE PATCH: remember last-used corridor
     }
 
     // ── GM1: FEE COMPARISON ───────────────────────────────
@@ -382,6 +467,7 @@
 
       renderFeeTable(indxAmt, usd, c);
       renderPurchasingPower(usd, c);
+      saveLastState(); // GOD MODE PATCH: remember last-used amount
     }
 
     function renderFeeTable(indxAmt, usd, c) {
@@ -565,10 +651,12 @@
 
     // ── INIT ─────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
+      loadLastState(); // GOD MODE: resume last-used corridor + amount
       renderCorridorGrid();
       recalcAll();
       renderCommunityPools();
       loadRealHistory();
+      renderWatchlist(); // GOD MODE: shared corridor watchlist
     });
   </script>
 <script src="siindex-speak-core.js"></script>

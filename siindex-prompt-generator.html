@@ -145,6 +145,69 @@ body {
   .layout { grid-template-columns: 1fr; }
   .out-col { position: static; order: -1; }
 }
+/* GOD MODE: history sheet, favorites, stats bar, focus */
+.hdr-actions { margin-left: auto; display: flex; gap: 8px; }
+.hdr-btn {
+  width: 34px; height: 34px; border-radius: 10px; border: 0.5px solid var(--s3);
+  background: var(--s2); color: var(--text2); cursor: pointer; font-size: 15px;
+  display: flex; align-items: center; justify-content: center; transition: all .15s;
+}
+.hdr-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+.sheet-overlay {
+  position: fixed; inset: 0; background: rgba(9,10,16,.7);
+  z-index: 200; opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.sheet-overlay.show { opacity: 1; pointer-events: auto; }
+.bottom-sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; max-width: 480px; margin: 0 auto;
+  background: var(--s); border: 0.5px solid var(--s3); border-radius: 16px 16px 0 0;
+  padding: 16px; z-index: 201; transform: translateY(100%); transition: transform .25s ease;
+  max-height: 72vh; overflow-y: auto;
+}
+.bottom-sheet.show { transform: translateY(0); }
+.sheet-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.sheet-hdr h3 { font-size: 14px; font-weight: 600; }
+.sheet-close {
+  width: 28px; height: 28px; border-radius: 50%; border: 0.5px solid var(--s3);
+  background: transparent; color: var(--text2); cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
+.sheet-close:hover { border-color: var(--red); color: var(--red); }
+.hist-item {
+  display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: 10px;
+  background: var(--s2); border: 0.5px solid var(--s3); margin-bottom: 8px; cursor: pointer; transition: border-color .15s;
+}
+.hist-item:hover { border-color: var(--cyan); }
+.hist-item .hist-subj { font-size: 12px; color: var(--text); line-height: 1.4; }
+.hist-item .hist-meta { font-size: 10px; color: var(--muted); display: flex; justify-content: space-between; margin-top: 4px; }
+.hist-empty { font-size: 12px; color: var(--muted); text-align: center; padding: 24px 0; }
+.hist-clear {
+  width: 100%; font-size: 11px; font-weight: 500; padding: 8px; margin-top: 4px;
+  border-radius: 8px; border: 0.5px solid var(--s3); background: transparent; color: var(--muted); cursor: pointer;
+}
+.hist-clear:hover { border-color: var(--red); color: var(--red); }
+.presets-label-row { display: flex; align-items: center; justify-content: space-between; }
+.save-fav-btn {
+  font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 20px;
+  border: 0.5px solid var(--gold); background: transparent; color: var(--gold); cursor: pointer;
+}
+.save-fav-btn:hover { background: rgba(255,184,0,.12); }
+.fav-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.fav-chip {
+  display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 500;
+  padding: 5px 8px 5px 12px; border-radius: 20px; border: 0.5px solid var(--gold);
+  background: rgba(255,184,0,.10); color: var(--gold); cursor: pointer;
+}
+.fav-chip .fav-del { color: var(--muted); cursor: pointer; font-size: 12px; padding: 2px; }
+.fav-chip .fav-del:hover { color: var(--red); }
+.stats-bar {
+  display: flex; gap: 12px; flex-wrap: wrap; font-size: 10px; color: var(--muted);
+  background: var(--s); border: 0.5px solid var(--s3); border-radius: 8px; padding: 8px 12px;
+}
+.stats-bar b { color: var(--cyan); font-weight: 600; }
+@media (max-width: 430px) {
+  .bottom-sheet { max-width: 100%; }
+}
 </style>
 </head>
 <body>
@@ -155,6 +218,9 @@ body {
   <div>
     <h1>SI Image — Meta Prompt Generator 10X</h1>
     <p>Assemble high-fidelity prompts for SIINDEX portraits, products, avatars &amp; banners</p>
+  </div>
+  <div class="hdr-actions">
+    <button class="hdr-btn" onclick="openHistorySheet()" title="Prompt history" aria-label="Open prompt history">🕘</button>
   </div>
 </div>
 
@@ -169,8 +235,12 @@ body {
 
   <!-- Presets -->
   <div>
-    <div class="field-label">Quick presets</div>
+    <div class="presets-label-row">
+      <div class="field-label">Quick presets</div>
+      <button class="save-fav-btn" onclick="saveFavorite()" title="Save current selection as a reusable preset">★ Save current</button>
+    </div>
     <div class="presets" id="presets"></div>
+    <div class="fav-row" id="favRow"></div>
   </div>
 
   <!-- Banks -->
@@ -201,6 +271,9 @@ body {
     <div class="field-label">Output format</div>
     <div class="fmt-row" id="fmtRow"></div>
   </div>
+
+  <!-- Build stats -->
+  <div class="stats-bar" id="statsBar"></div>
 
   <!-- Positive prompt -->
   <div class="out-panel">
@@ -234,6 +307,17 @@ body {
 
 </div>
 </div>
+</div>
+
+<!-- History sheet -->
+<div class="sheet-overlay" id="histOverlay" onclick="closeHistorySheet()"></div>
+<div class="bottom-sheet" id="histSheet" role="dialog" aria-hidden="true" aria-label="Prompt history">
+  <div class="sheet-hdr">
+    <h3>Prompt history</h3>
+    <button class="sheet-close" onclick="closeHistorySheet()" aria-label="Close history">✕</button>
+  </div>
+  <div id="histList"></div>
+  <button class="hist-clear" onclick="clearHistory()">Clear history</button>
 </div>
 
 <script>
@@ -421,6 +505,168 @@ let sel = new Set();
 let fmt = 'Ideogram';
 let negType = 'portrait';
 
+// ── GOD MODE: history, favorites, stats, accessibility ──
+const HISTORY_KEY = 'indx_promptgen_history';
+const FAV_KEY = 'indx_promptgen_favorites';
+const HISTORY_MAX = 20;
+
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch (e) { return []; }
+}
+function getFavorites() {
+  try { return JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); } catch (e) { return []; }
+}
+function currentState() {
+  return {
+    subj: document.getElementById('subj').value.trim(),
+    custom: document.getElementById('custom').value.trim(),
+    chips: Array.from(sel),
+    negType, fmt,
+  };
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function addHistory() {
+  const state = currentState();
+  if (!state.subj && state.chips.length === 0) return;
+  let hist = getHistory();
+  const last = hist[0];
+  if (last && last.subj === state.subj && JSON.stringify(last.chips) === JSON.stringify(state.chips)) return;
+  hist.unshift({ ...state, ts: Date.now() });
+  hist = hist.slice(0, HISTORY_MAX);
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(hist));
+}
+function restoreState(state) {
+  document.getElementById('subj').value = state.subj || '';
+  document.getElementById('custom').value = state.custom || '';
+  negType = state.negType || 'portrait';
+  fmt = state.fmt || 'Ideogram';
+  sel = new Set(state.chips || []);
+  document.querySelectorAll('.chip').forEach(c => {
+    c.classList.remove('on', 'p', 'g', 'w');
+    if (sel.has(c.dataset.t)) {
+      c.classList.add('on');
+      if (c.dataset.c) c.classList.add(c.dataset.c);
+    }
+  });
+  document.querySelectorAll('.preset').forEach(b => b.classList.remove('on'));
+  renderFormats();
+  build();
+}
+function renderHistory() {
+  const hist = getHistory();
+  const el = document.getElementById('histList');
+  if (!el) return;
+  if (hist.length === 0) {
+    el.innerHTML = '<div class="hist-empty">No prompts copied yet. Build one and hit Copy to save it here.</div>';
+    return;
+  }
+  el.innerHTML = hist.map((h, i) => {
+    const d = new Date(h.ts || 0);
+    const time = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    const preview = (h.subj || (h.chips || []).join(', ')).slice(0, 90);
+    return `<div class="hist-item" onclick="restoreFromHistory(${i})">
+      <div class="hist-subj">${escapeHtml(preview)}${preview.length >= 90 ? '…' : ''}</div>
+      <div class="hist-meta"><span>${(h.chips || []).length} chips · ${h.fmt || 'Ideogram'}</span><span>${time}</span></div>
+    </div>`;
+  }).join('');
+}
+function restoreFromHistory(i) {
+  const hist = getHistory();
+  const state = hist[i];
+  if (!state) return;
+  restoreState(state);
+  closeHistorySheet();
+  showToastLocal('Prompt restored from history');
+}
+function clearHistory() {
+  localStorage.setItem(HISTORY_KEY, '[]');
+  renderHistory();
+}
+function openHistorySheet() {
+  renderHistory();
+  document.getElementById('histOverlay').classList.add('show');
+  const sheet = document.getElementById('histSheet');
+  sheet.classList.add('show');
+  sheet.setAttribute('aria-hidden', 'false');
+  const focusable = sheet.querySelector('button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])');
+  if (focusable) focusable.focus();
+}
+function closeHistorySheet() {
+  document.getElementById('histOverlay').classList.remove('show');
+  const sheet = document.getElementById('histSheet');
+  sheet.classList.remove('show');
+  sheet.setAttribute('aria-hidden', 'true');
+}
+function saveFavorite() {
+  const state = currentState();
+  if (!state.subj && state.chips.length === 0) {
+    showToastLocal('Build a prompt first before saving it');
+    return;
+  }
+  const name = window.prompt('Name this saved preset:', state.subj.slice(0, 30) || 'My preset');
+  if (!name || !name.trim()) return;
+  const cleanName = name.trim().slice(0, 40);
+  const favs = getFavorites();
+  favs.unshift({ name: cleanName, ...state, ts: Date.now() });
+  localStorage.setItem(FAV_KEY, JSON.stringify(favs.slice(0, 30)));
+  renderFavorites();
+  showToastLocal('Saved "' + cleanName + '" to your presets');
+}
+function applyFavorite(i) {
+  const favs = getFavorites();
+  const state = favs[i];
+  if (!state) return;
+  restoreState(state);
+}
+function deleteFavorite(i, ev) {
+  ev.stopPropagation();
+  const favs = getFavorites();
+  favs.splice(i, 1);
+  localStorage.setItem(FAV_KEY, JSON.stringify(favs));
+  renderFavorites();
+}
+function renderFavorites() {
+  const el = document.getElementById('favRow');
+  if (!el) return;
+  const favs = getFavorites();
+  el.innerHTML = favs.map((f, i) =>
+    `<span class="fav-chip" onclick="applyFavorite(${i})">★ ${escapeHtml(f.name || 'Preset')}<span class="fav-del" onclick="deleteFavorite(${i}, event)">✕</span></span>`
+  ).join('');
+}
+function updateStats() {
+  const el = document.getElementById('statsBar');
+  if (!el) return;
+  const posEl = document.getElementById('posOut');
+  const chars = posEl ? posEl.textContent.length : 0;
+  const banksUsed = new Set();
+  BANKS.forEach(b => { if (b.chips.some(c => sel.has(c.t))) banksUsed.add(b.id); });
+  el.innerHTML = `<span><b>${sel.size}</b> chips selected</span><span><b>${banksUsed.size}</b> of ${BANKS.length} banks used</span><span><b>${chars}</b> characters</span>`;
+}
+function showToastLocal(msg) {
+  if (typeof showToast === 'function') { showToast(msg); return; }
+  let t = document.getElementById('godModeToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'godModeToast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--s2);border:0.5px solid var(--s3);color:var(--text);padding:10px 18px;border-radius:20px;font-size:12px;z-index:300;opacity:0;transition:opacity .2s;pointer-events:none;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._hideT);
+  t._hideT = setTimeout(() => { t.style.opacity = '0'; }, 2200);
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeHistorySheet();
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    const btn = document.querySelector('.out-panel .copy-btn');
+    if (btn) btn.click();
+  }
+});
+
 function renderBanks() {
   BANKS.forEach(b => {
     const el = document.getElementById('bank-' + b.id);
@@ -508,6 +754,8 @@ function build() {
   const negWords = neg.split(/\s+/).filter(Boolean).length;
   document.getElementById('posWc').textContent = posWords + ' words';
   document.getElementById('negWc').textContent = negWords + ' words';
+  // GOD MODE PATCH: keep the live stats bar in sync with every build
+  updateStats();
 }
 
 function copyText(which) {
@@ -515,6 +763,8 @@ function copyText(which) {
     ? document.getElementById('posOut').textContent
     : document.getElementById('negOut').textContent;
   navigator.clipboard.writeText(txt).catch(() => {});
+  // GOD MODE PATCH: log copied positive prompts to history
+  if (which === 'pos' && txt && !txt.startsWith('Select a preset')) addHistory();
   const btn = event.currentTarget;
   const orig = btn.textContent;
   btn.textContent = 'Copied!';
@@ -535,6 +785,7 @@ function clearAll() {
 renderBanks();
 renderPresets();
 renderFormats();
+renderFavorites();
 build();
 </script>
 <script src="siindex-speak-core.js"></script>

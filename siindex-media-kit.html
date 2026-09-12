@@ -461,6 +461,25 @@
     .history-item-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
     .history-item-arrow { color: var(--muted); font-size: 12px; margin-left: 8px; }
 
+    /* ── GOD MODE: CHAR COUNTER, SMART DEFAULTS, HISTORY STAT, EXIT CONFIRM ── */
+    .char-counter { font-size: 11px; color: var(--muted); text-align: right; margin-top: -8px; margin-bottom: 14px; }
+    .char-counter.ready { color: var(--green); }
+    .history-stat { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+
+    .sheet-overlay { display: none; position: fixed; inset: 0; background: rgba(9,10,16,0.75); z-index: 400; }
+    .sheet-overlay.show { display: block; }
+    .bottom-sheet { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%) translateY(100%); width: 100%; max-width: 430px; background: var(--surface); border-top: 1px solid rgba(255,255,255,0.08); border-radius: 20px 20px 0 0; padding: 20px; z-index: 401; transition: transform 0.3s cubic-bezier(0.32,0.72,0,1); }
+    .bottom-sheet.open { transform: translateX(-50%) translateY(0); }
+    .bottom-sheet-handle { width: 36px; height: 4px; background: var(--surface3); border-radius: 2px; margin: 0 auto 16px; }
+    .ec-title { font-size: 15px; font-weight: 800; margin-bottom: 6px; text-align: center; }
+    .ec-sub { font-size: 12px; color: var(--muted); line-height: 1.5; text-align: center; margin-bottom: 18px; }
+    .ec-btn-row { display: flex; flex-direction: column; gap: 8px; }
+    .ec-btn { width: 100%; padding: 13px; border-radius: 10px; border: none; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; }
+    .ec-btn:active { opacity: 0.85; }
+    .ec-btn-save { background: linear-gradient(135deg, var(--purple), var(--cyan)); color: #fff; }
+    .ec-btn-discard { background: var(--surface2); color: var(--red); border: 1px solid rgba(255,77,109,0.25); }
+    .ec-btn-cancel { background: transparent; color: var(--muted); }
+
     /* ── TOAST ── */
     .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--surface3); color: var(--text); padding: 12px 20px; border-radius: 24px; font-size: 13px; font-weight: 600; z-index: 999; border: 1px solid rgba(255,255,255,0.1); opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
     .toast.show { opacity: 1; }
@@ -491,7 +510,8 @@
   <!-- BUILDER -->
   <div class="builder-card" id="builderSection">
     <div class="builder-label">What is your offer?</div>
-    <textarea class="builder-input" id="offerInput" rows="3" placeholder="e.g. I make handmade Pacific jewellery — necklaces, earrings, and bracelets using shells, bone, and natural materials. Ready for local markets and online orders."></textarea>
+    <textarea class="builder-input" id="offerInput" rows="3" oninput="updateCharCount()" placeholder="e.g. I make handmade Pacific jewellery — necklaces, earrings, and bracelets using shells, bone, and natural materials. Ready for local markets and online orders."></textarea>
+    <div class="char-counter" id="offerCharCount">0 characters</div>
 
     <div class="builder-label">Category</div>
     <div class="cat-row" id="catRow">
@@ -506,16 +526,16 @@
     <div class="builder-label">Generate for</div>
     <div class="platform-select">
       <div class="plat-grid">
-        <button class="plat-btn active" onclick="togglePlat(this,'instagram')">
+        <button class="plat-btn active" data-plat="instagram" onclick="togglePlat(this,'instagram')">
           <span class="plat-icon">📸</span>Instagram
         </button>
-        <button class="plat-btn active" onclick="togglePlat(this,'tiktok')">
+        <button class="plat-btn active" data-plat="tiktok" onclick="togglePlat(this,'tiktok')">
           <span class="plat-icon">🎵</span>TikTok
         </button>
-        <button class="plat-btn active" onclick="togglePlat(this,'linkedin')">
+        <button class="plat-btn active" data-plat="linkedin" onclick="togglePlat(this,'linkedin')">
           <span class="plat-icon">💼</span>LinkedIn
         </button>
-        <button class="plat-btn active" onclick="togglePlat(this,'whatsapp')">
+        <button class="plat-btn active" data-plat="whatsapp" onclick="togglePlat(this,'whatsapp')">
           <span class="plat-icon">💬</span>WhatsApp
         </button>
       </div>
@@ -527,6 +547,7 @@
   <!-- HISTORY -->
   <div class="history-section" id="historySection" style="display:none">
     <div class="history-title">Previous Kits</div>
+    <div class="history-stat" id="historyStat"></div>
     <div id="historyList"></div>
   </div>
 
@@ -670,6 +691,19 @@
 
   <div class="toast" id="toast"></div>
 
+  <!-- GOD MODE: EXIT CONFIRM SHEET -->
+  <div class="sheet-overlay" id="exitConfirmOverlay" onclick="cancelExitConfirm()"></div>
+  <div class="bottom-sheet" id="exitConfirmSheet">
+    <div class="bottom-sheet-handle"></div>
+    <div class="ec-title">Discard this kit?</div>
+    <div class="ec-sub">This media kit hasn't been saved to this device yet. Save it first, or discard it and start a new one.</div>
+    <div class="ec-btn-row">
+      <button class="ec-btn ec-btn-save" onclick="saveThenNewKit()">💾 Save, Then New Kit</button>
+      <button class="ec-btn ec-btn-discard" onclick="confirmDiscardKit()">Discard Without Saving</button>
+      <button class="ec-btn ec-btn-cancel" onclick="cancelExitConfirm()">Cancel</button>
+    </div>
+  </div>
+
   <script>
     const KIT_HISTORY_KEY = 'indx_mediakit_history';
     const citizenName = sessionStorage.getItem('citizen_name') || '';
@@ -683,16 +717,77 @@
       document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
       el.classList.add('active');
       selectedCat = el.textContent;
+      saveLastSelection(); // GOD MODE PATCH — remember last category
     }
 
     function togglePlat(el, plat) {
       el.classList.toggle('active');
       if (activePlatforms.has(plat)) { activePlatforms.delete(plat); }
       else { activePlatforms.add(plat); }
+      saveLastSelection(); // GOD MODE PATCH — remember last platform selection
     }
 
     function toggleKit(id) {
       document.getElementById('card-' + id).classList.toggle('expanded');
+    }
+
+    // ── GOD MODE: CHAR COUNTER, SMART DEFAULTS, HISTORY REOPEN, EXIT CONFIRM ──
+    const SELECTION_KEY = 'indx_mediakit_lastselection';
+    let _kitSaved = false;
+
+    function updateCharCount() {
+      const val = document.getElementById('offerInput').value;
+      const el = document.getElementById('offerCharCount');
+      if (!el) return;
+      const len = val.trim().length;
+      el.textContent = len + (len === 1 ? ' character' : ' characters') + (len < 10 ? ' — add a bit more (min 10)' : ' ✓ ready to generate');
+      el.classList.toggle('ready', len >= 10);
+    }
+
+    function saveLastSelection() {
+      try {
+        localStorage.setItem(SELECTION_KEY, JSON.stringify({ cat: selectedCat, platforms: Array.from(activePlatforms) }));
+      } catch (e) { /* storage unavailable — non-fatal */ }
+    }
+
+    function restoreLastSelection() {
+      let saved;
+      try { saved = JSON.parse(localStorage.getItem(SELECTION_KEY) || 'null'); } catch (e) { saved = null; }
+      if (!saved) return;
+      if (saved.cat) {
+        document.querySelectorAll('.cat-chip').forEach(c => {
+          c.classList.toggle('active', c.textContent === saved.cat);
+        });
+        selectedCat = saved.cat;
+      }
+      if (Array.isArray(saved.platforms) && saved.platforms.length) {
+        activePlatforms = new Set(saved.platforms);
+        document.querySelectorAll('.plat-btn').forEach(btn => {
+          const plat = btn.getAttribute('data-plat');
+          btn.classList.toggle('active', activePlatforms.has(plat));
+        });
+      }
+    }
+
+    function openExitConfirm() {
+      document.getElementById('exitConfirmOverlay').classList.add('show');
+      setTimeout(() => document.getElementById('exitConfirmSheet').classList.add('open'), 10);
+    }
+
+    function cancelExitConfirm() {
+      document.getElementById('exitConfirmSheet').classList.remove('open');
+      setTimeout(() => document.getElementById('exitConfirmOverlay').classList.remove('show'), 300);
+    }
+
+    function confirmDiscardKit() {
+      cancelExitConfirm();
+      doResetKit();
+    }
+
+    function saveThenNewKit() {
+      saveKit();
+      cancelExitConfirm();
+      doResetKit();
     }
 
     // ── CONTENT TEMPLATES ──
@@ -1270,6 +1365,7 @@ Joining is [free/affordable]. DM to learn more or to join. 🌿🙏`,
 
       currentOffer = offer;
       currentCat = selectedCat;
+      _kitSaved = false; // GOD MODE PATCH — a freshly generated kit starts unsaved
 
       // Show overlay
       document.getElementById('procOverlay').classList.add('show');
@@ -1328,10 +1424,17 @@ Joining is [free/affordable]. DM to learn more or to join. 🌿🙏`,
       if (first) { document.getElementById('card-' + first).classList.add('expanded'); }
     }
 
+    // GOD MODE PATCH — confirm before discarding an unsaved kit
     function resetKit() {
+      if (!_kitSaved) { openExitConfirm(); return; }
+      doResetKit();
+    }
+
+    function doResetKit() {
       document.getElementById('kitResults').classList.remove('show');
       document.getElementById('builderSection').style.display = 'block';
       document.querySelectorAll('.kit-card').forEach(c => c.classList.remove('expanded'));
+      _kitSaved = false;
     }
 
     // ── COPY ──
@@ -1349,10 +1452,12 @@ Joining is [free/affordable]. DM to learn more or to join. 🌿🙏`,
     function saveKit() {
       const history = getHistory();
       const existing = history.findIndex(h => h.offer === currentOffer);
-      const entry = { offer: currentOffer, cat: currentCat, ts: Date.now() };
+      // GOD MODE PATCH — store platforms too, so history can fully reopen a kit
+      const entry = { offer: currentOffer, cat: currentCat, platforms: Array.from(activePlatforms), ts: Date.now() };
       if (existing >= 0) { history[existing] = entry; }
       else { history.unshift(entry); if (history.length > 10) history.pop(); }
       localStorage.setItem(KIT_HISTORY_KEY, JSON.stringify(history));
+      _kitSaved = true; // GOD MODE PATCH
       showToast('Media kit saved on this device ✓');
       renderHistory();
     }
@@ -1361,8 +1466,11 @@ Joining is [free/affordable]. DM to learn more or to join. 🌿🙏`,
       const history = getHistory();
       const sec = document.getElementById('historySection');
       const list = document.getElementById('historyList');
+      const stat = document.getElementById('historyStat');
       if (!history.length) { sec.style.display = 'none'; return; }
       sec.style.display = 'block';
+      // GOD MODE PATCH — real count computed from stored history, not fabricated
+      if (stat) stat.textContent = history.length + (history.length === 1 ? ' kit saved on this device' : ' kits saved on this device');
       list.innerHTML = history.map((h,i) => `
         <div class="history-item" onclick="loadHistory(${i})">
           <div class="history-item-left">
@@ -1374,16 +1482,35 @@ Joining is [free/affordable]. DM to learn more or to join. 🌿🙏`,
       `).join('');
     }
 
+    // GOD MODE PATCH — reopening a history item now fully regenerates and displays
+    // the saved kit (offer, category, and platform selection) instead of only
+    // pre-filling the builder form.
     function loadHistory(idx) {
       const history = getHistory();
       const h = history[idx];
       if (!h) return;
       document.getElementById('offerInput').value = h.offer;
-      // Set cat chip
+      updateCharCount();
       document.querySelectorAll('.cat-chip').forEach(c => {
         c.classList.toggle('active', c.textContent === h.cat);
       });
       selectedCat = h.cat;
+      currentOffer = h.offer;
+      currentCat = h.cat;
+
+      const platforms = Array.isArray(h.platforms) && h.platforms.length
+        ? h.platforms
+        : ['instagram', 'tiktok', 'linkedin', 'whatsapp'];
+      activePlatforms = new Set(platforms);
+      document.querySelectorAll('.plat-btn').forEach(btn => {
+        const plat = btn.getAttribute('data-plat');
+        btn.classList.toggle('active', activePlatforms.has(plat));
+      });
+      saveLastSelection();
+
+      _kitSaved = true;
+      populateKit(h.offer, h.cat);
+      showToast('Reopened saved kit ✓');
     }
 
     function showToast(msg) {
@@ -1395,6 +1522,9 @@ Joining is [free/affordable]. DM to learn more or to join. 🌿🙏`,
 
     document.addEventListener('DOMContentLoaded', () => {
       renderHistory();
+      // GOD MODE — restore last-used category/platforms and init the char counter
+      restoreLastSelection();
+      updateCharCount();
     });
   </script>
 
