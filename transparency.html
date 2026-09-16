@@ -147,9 +147,31 @@ a{color:inherit;text-decoration:none;}
 /* ── TOAST ── */
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface2);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:10px 18px;font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;z-index:1000;opacity:0;transition:all 0.35s;pointer-events:none;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* GOD MODE PATCH — pin favourites, live refresh, visit delta, accessibility */
+.skip-link{position:absolute;left:-999px;top:-999px;background:var(--cyan);color:var(--black);font-weight:800;padding:10px 16px;border-radius:0 0 10px 0;z-index:1000;text-decoration:none;}
+.skip-link:focus{left:0;top:0;}
+.pin-btn{position:absolute;top:10px;left:10px;width:22px;height:22px;border-radius:50%;border:1px solid rgba(255,255,255,0.12);background:rgba(9,10,16,0.4);color:var(--muted);font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;z-index:2;padding:0;}
+.pin-btn.pinned{color:var(--gold);border-color:rgba(255,184,0,0.4);background:rgba(255,184,0,0.1);}
+.metric-card.pinned{border-color:rgba(255,184,0,0.35);}
+.refresh-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;}
+.refresh-btn{background:var(--surface2);border:1px solid var(--surface3);color:var(--cyan);font-size:11px;font-weight:700;border-radius:20px;padding:5px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;}
+.refresh-btn:disabled{opacity:0.6;cursor:default;}
+.refresh-btn:focus-visible,.pin-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+.refresh-icon{display:inline-block;}
+.refresh-btn.spinning .refresh-icon{animation:gmSpin 0.8s linear infinite;}
+@keyframes gmSpin{to{transform:rotate(360deg);}}
+.delta-badge{display:block;font-size:10px;font-weight:700;color:var(--green);margin-top:4px;}
+.delta-badge.neg{color:var(--red);}
+@media (prefers-reduced-motion: reduce){
+  .live-dot,.lu-dot,.si-status-portrait,.si-status-dot,.refresh-icon{animation:none !important;}
+  .af-item{transition:none !important;}
+}
 </style>
 </head>
 <body>
+
+<a class="skip-link" href="#primaryMetrics">Skip to metrics</a>
 
 <!-- ══ TOPBAR ══ -->
 <nav class="topbar">
@@ -168,6 +190,11 @@ a{color:inherit;text-decoration:none;}
   <h1 class="hero-title">Everything observable.<br>Nothing hidden.</h1>
   <p class="hero-sub">IN$DEX hasn't launched yet, so most metrics below honestly read zero. Every figure here is real — nothing is invented to look busier than it is.</p>
   <div class="last-updated"><span class="lu-dot"></span> <span id="lastUpdatedText">Updating now…</span></div>
+  <div class="refresh-row">
+    <button type="button" class="refresh-btn" id="refreshBtn" onclick="gmRefreshData()" aria-label="Refresh live data">
+      <span class="refresh-icon">↻</span> Refresh
+    </button>
+  </div>
 </div>
 
 <!-- ══ SIINDEX STATUS ══ -->
@@ -184,7 +211,7 @@ a{color:inherit;text-decoration:none;}
 </div>
 
 <!-- ══ PRIMARY METRICS ══ -->
-<div class="section">
+<div class="section" id="primaryMetrics">
   <div class="section-label">Platform Health</div>
   <div class="primary-metrics">
 
@@ -195,6 +222,7 @@ a{color:inherit;text-decoration:none;}
       <div class="metric-label">Waitlist Signups</div>
       <span class="metric-trend trend-up">▲ Real count</span>
       <div class="metric-sub">Total signups so far, not active sessions</div>
+      <div class="delta-badge" id="mCitizensDelta"></div>
       <span class="metric-update">↻ updated</span>
     </div>
 
@@ -635,9 +663,88 @@ async function loadLiveData() {
       if (typeof count === 'number' && count >= 0) {
         metrics.citizensOnline = count;
         document.getElementById('mCitizensOnline').textContent = count.toLocaleString();
+        // GOD MODE PATCH — compare against the real count from the citizen's last visit
+        gmShowVisitDelta(count);
       }
     }
   } catch(e) { /* real count unavailable — stays at honest 0 */ }
+}
+
+// GOD MODE PATCH — pin favourite metric cards (localStorage, per-citizen watchlist)
+function gmPinnedSet() {
+  try { return new Set(JSON.parse(localStorage.getItem('indx_transparency_pinned') || '[]')); }
+  catch (e) { return new Set(); }
+}
+function gmSavePinned(set) {
+  try { localStorage.setItem('indx_transparency_pinned', JSON.stringify(Array.from(set))); } catch (e) {}
+}
+function gmInitPins() {
+  const pinned = gmPinnedSet();
+  document.querySelectorAll('.metric-card').forEach((card) => {
+    const valueEl = card.querySelector('.metric-value[id]');
+    if (!valueEl) return;
+    const key = valueEl.id;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'pin-btn';
+    btn.setAttribute('aria-label', 'Pin this metric to your watchlist');
+    btn.setAttribute('aria-pressed', pinned.has(key) ? 'true' : 'false');
+    btn.textContent = '★';
+    if (pinned.has(key)) { btn.classList.add('pinned'); card.classList.add('pinned'); }
+    btn.addEventListener('click', () => {
+      const set = gmPinnedSet();
+      if (set.has(key)) {
+        set.delete(key);
+        btn.classList.remove('pinned'); card.classList.remove('pinned');
+        btn.setAttribute('aria-pressed', 'false');
+      } else {
+        set.add(key);
+        btn.classList.add('pinned'); card.classList.add('pinned');
+        btn.setAttribute('aria-pressed', 'true');
+      }
+      gmSavePinned(set);
+      showToast(set.has(key) ? 'Pinned to your watchlist' : 'Unpinned');
+    });
+    card.appendChild(btn);
+  });
+}
+
+// GOD MODE PATCH — relative "updated Xs ago" ticker + manual refresh of the real Supabase count
+let gmLastFetchAt = Date.now();
+function gmTickRelative() {
+  const el = document.getElementById('lastUpdatedText');
+  if (!el) return;
+  const secs = Math.max(0, Math.round((Date.now() - gmLastFetchAt) / 1000));
+  el.textContent = secs < 5 ? 'Updated just now' : secs < 60 ? ('Updated ' + secs + 's ago') : ('Updated ' + Math.round(secs / 60) + 'm ago');
+}
+async function gmRefreshData() {
+  const btn = document.getElementById('refreshBtn');
+  if (btn) { btn.classList.add('spinning'); btn.disabled = true; }
+  await loadLiveData();
+  gmLastFetchAt = Date.now();
+  gmTickRelative();
+  if (btn) { btn.classList.remove('spinning'); btn.disabled = false; }
+  showToast('Live data refreshed');
+}
+
+// GOD MODE PATCH — "since your last visit" delta for the one real figure on this page.
+// Only ever compares the real fetched count to the real count saved from a previous visit —
+// never a fabricated or network-wide statistic.
+function gmShowVisitDelta(count) {
+  const el = document.getElementById('mCitizensDelta');
+  if (!el || typeof count !== 'number') return;
+  const key = 'indx_transparency_last_count';
+  let prev = null;
+  try {
+    const raw = localStorage.getItem(key);
+    prev = raw !== null ? parseInt(raw, 10) : null;
+  } catch (e) {}
+  if (prev !== null && !isNaN(prev) && prev !== count) {
+    const diff = count - prev;
+    el.textContent = (diff > 0 ? '+' : '') + diff + ' since your last visit';
+    el.className = 'delta-badge' + (diff < 0 ? ' neg' : '');
+  }
+  try { localStorage.setItem(key, String(count)); } catch (e) {}
 }
 
 // ── tx hash display ──
@@ -668,6 +775,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Set initial timestamp
   const ts = new Date().toLocaleTimeString('en-AU', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
   document.getElementById('lastUpdatedText').textContent = 'Updated ' + ts;
+
+  // GOD MODE PATCH — pin favourites + relative-time ticker (appended to existing init, no new listener)
+  gmInitPins();
+  gmLastFetchAt = Date.now();
+  setInterval(gmTickRelative, 1000);
 });
 </script>
 <script src="siindex-speak-core.js"></script>

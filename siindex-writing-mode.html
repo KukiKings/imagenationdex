@@ -101,6 +101,38 @@
     .nav-item.active{opacity:1;}
     .nav-item-icon{font-size:20px;}
     .nav-item-label{font-size:9px;font-weight:700;color:var(--text2);letter-spacing:0.05em;}
+    /* GOD MODE PATCH: live flag counter (real-time feedback while typing) */
+    .live-flag-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+    .live-flag-badge{font-size:10px;font-weight:800;padding:3px 9px;border-radius:20px;background:var(--surface3);color:var(--text2);border:1px solid var(--border);transition:color 0.18s,border-color 0.18s;}
+    .live-flag-badge.clear{color:var(--green);border-color:rgba(0,229,160,0.3);}
+    .live-flag-badge.warn{color:var(--gold);border-color:rgba(255,184,0,0.3);}
+
+    /* GOD MODE PATCH: draft restored badge */
+    .draft-restored-badge{font-size:10px;color:var(--gold);background:rgba(255,184,0,0.1);border:1px solid rgba(255,184,0,0.3);border-radius:8px;padding:6px 10px;margin-bottom:8px;display:none;}
+    .draft-restored-badge.show{display:block;}
+
+    /* GOD MODE PATCH: bottom sheet + overlay (confirm-before-clear) */
+    .sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.7);z-index:998;opacity:0;pointer-events:none;transition:opacity .2s;}
+    .sheet-overlay.show{opacity:1;pointer-events:auto;}
+    .bottom-sheet{position:fixed;left:0;right:0;bottom:0;max-width:430px;margin:0 auto;background:var(--surface2);border-top:1px solid var(--border);border-radius:20px 20px 0 0;padding:18px 20px calc(18px + env(safe-area-inset-bottom));z-index:999;transform:translateY(100%);transition:transform .25s ease;box-shadow:0 -8px 30px rgba(0,0,0,0.4);}
+    .bottom-sheet.show{transform:translateY(0);}
+    .sheet-title{font-size:15px;font-weight:800;margin-bottom:8px;color:var(--text);}
+    .sheet-body{font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:16px;}
+    .sheet-btn-row{display:flex;gap:8px;}
+    .sheet-btn{flex:1;padding:12px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--surface3);color:var(--text);}
+    .sheet-btn.danger{background:rgba(255,77,109,0.12);color:var(--red);border-color:rgba(255,77,109,0.3);}
+
+    /* GOD MODE PATCH: session stats card (local-device history stats only) */
+    .session-stats-strip{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;}
+    .sstat-tile{background:var(--surface3);border-radius:12px;padding:10px;text-align:center;}
+    .sstat-val{font-size:16px;font-weight:900;color:var(--cyan);}
+    .sstat-lbl{font-size:9px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:0.05em;}
+    .sstat-note{font-size:10px;color:var(--muted);text-align:center;}
+
+    /* GOD MODE PATCH: accessibility focus ring */
+    .top-bar-back:focus-visible,.rules-card-hdr:focus-visible,.check-btn:focus-visible,.copy-btn:focus-visible,.hist-item:focus-visible,.sheet-btn:focus-visible,.clear-hist-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+    .clear-hist-btn{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-weight:700;}
+
     /* TOAST */
     .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);border-radius:24px;padding:10px 20px;font-size:13px;font-weight:700;color:var(--text);opacity:0;pointer-events:none;transition:opacity 0.25s;z-index:999;white-space:nowrap;}
     .toast.show{opacity:1;}
@@ -112,7 +144,7 @@
 
 <!-- TOP BAR -->
 <div class="top-bar">
-  <a href="public-home.html" class="top-bar-back">←</a>
+  <a href="public-home.html" class="top-bar-back" aria-label="Go back">←</a>
   <div class="top-bar-title">Writing Mode</div>
   <div class="top-bar-badge">SIINDEX VOICE</div>
 </div>
@@ -126,7 +158,7 @@
 
 <!-- VOICE RULES -->
 <div class="rules-card fade-in" style="animation-delay:0.06s">
-  <div class="rules-card-hdr" onclick="toggleRules()">
+  <div class="rules-card-hdr" onclick="toggleRules()" role="button" tabindex="0" aria-expanded="false" aria-controls="rulesBody" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleRules();}">
     <div class="rules-card-title">📋 SIINDEX Voice Rules</div>
     <div class="rules-card-toggle" id="rulesToggle">show ↓</div>
   </div>
@@ -152,9 +184,16 @@
   <span>paste anything</span>
 </div>
 <div class="card fade-in" style="animation-delay:0.11s">
+  <!-- GOD MODE PATCH: draft restored notice -->
+  <div class="draft-restored-badge" id="draftRestoredBadge">Restored your unsent draft from last time.</div>
   <textarea class="write-input" id="writeInput" placeholder="Paste any text here — a social post, an email, a product description, screen copy, a brief — and SIINDEX will check it against the sovereign voice rules and rewrite it." oninput="updateCharCount(this)"></textarea>
-  <div class="char-count" id="charCount">0 characters</div>
+  <!-- GOD MODE PATCH: live flag counter (real-time feedback before running the full check) -->
+  <div class="live-flag-row">
+    <div class="char-count" id="charCount" style="margin-bottom:0">0 characters</div>
+    <div class="live-flag-badge" id="liveFlagBadge">— not checked yet</div>
+  </div>
   <button class="check-btn" onclick="runVoiceCheck()">⚡ Run Voice Check</button>
+  <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:8px">Tip: Ctrl/Cmd + Enter also runs the check</div>
 </div>
 
 <!-- RESULTS SECTION -->
@@ -217,10 +256,24 @@
 <!-- HISTORY -->
 <div class="section-hdr fade-in" style="animation-delay:0.13s">
   <h2>🕐 History</h2>
-  <span>last 5 checks</span>
+  <button class="clear-hist-btn" id="clearHistBtn" onclick="openClearHistSheet()" style="display:none">Clear</button>
 </div>
 <div class="card fade-in" style="animation-delay:0.15s">
+  <!-- GOD MODE PATCH: session stats (derived from this device's own check history) -->
+  <div class="session-stats-strip" id="sessionStatsStrip" style="display:none"></div>
+  <div class="sstat-note" id="sessionStatsNote" style="display:none">From your checks on this device</div>
   <div id="histList"><div class="hist-empty">No checks run yet.</div></div>
+</div>
+
+<!-- GOD MODE PATCH: Clear History Confirm Sheet -->
+<div class="sheet-overlay" id="clearHistOverlay" onclick="closeClearHistSheet()"></div>
+<div class="bottom-sheet" id="clearHistSheet" role="dialog" aria-modal="true" aria-labelledby="clearHistTitle">
+  <div class="sheet-title" id="clearHistTitle">Clear check history?</div>
+  <div class="sheet-body">This removes your last 5 voice checks and session stats from this device. It does not affect the text in the box above.</div>
+  <div class="sheet-btn-row">
+    <button class="sheet-btn" onclick="closeClearHistSheet()">Cancel</button>
+    <button class="sheet-btn danger" onclick="confirmClearHist()">Clear history</button>
+  </div>
 </div>
 
 <!-- BOTTOM NAV -->
@@ -231,7 +284,7 @@
   <a href="siindex-intelligence.html" class="nav-item"><span class="nav-item-icon">🧠</span><span class="nav-item-label">SIINDEX</span></a>
   <a href="sovereign-academy.html" class="nav-item"><span class="nav-item-icon">📚</span><span class="nav-item-label">Academy</span></a>
 </nav>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
   // ── BANNED WORD DEFINITIONS (phrase → replacement) ──
@@ -316,17 +369,113 @@
   let _lastRewrite = '';
   const _HIST_KEY = 'indx_writing_hist';
 
+  // GOD MODE PATCH: namespaced draft key — separate from the checked-text history above
+  const _DRAFT_KEY = 'indx_writing_draft';
+  let _draftSaveTimer = null;
+  let _liveFlagTimer = null;
+
   // ── RULES TOGGLE ──
   function toggleRules() {
     const body = document.getElementById('rulesBody');
     const toggle = document.getElementById('rulesToggle');
     const open = body.classList.toggle('open');
     toggle.textContent = open ? 'hide ↑' : 'show ↓';
+    document.getElementById('rulesBody').closest('.rules-card').querySelector('.rules-card-hdr').setAttribute('aria-expanded', open ? 'true' : 'false'); // GOD MODE PATCH
+  }
+
+  // GOD MODE PATCH: draft autosave/restore — an unsent paste survives a refresh
+  // or accidental navigation instead of being lost.
+  function saveDraft() {
+    clearTimeout(_draftSaveTimer);
+    _draftSaveTimer = setTimeout(() => {
+      const el = document.getElementById('writeInput');
+      const val = el ? el.value : '';
+      try {
+        if (val && val.trim().length > 0) localStorage.setItem(_DRAFT_KEY, val);
+        else localStorage.removeItem(_DRAFT_KEY);
+      } catch (e) { /* storage unavailable — ignore */ }
+    }, 400);
+  }
+
+  function clearDraft() {
+    try { localStorage.removeItem(_DRAFT_KEY); } catch (e) { /* ignore */ }
+    const badge = document.getElementById('draftRestoredBadge');
+    if (badge) badge.classList.remove('show');
+  }
+
+  function restoreDraft() {
+    let draft = null;
+    try { draft = localStorage.getItem(_DRAFT_KEY); } catch (e) { /* ignore */ }
+    if (draft && draft.trim().length > 0) {
+      const el = document.getElementById('writeInput');
+      if (el) { el.value = draft; updateCharCount(el); }
+      const badge = document.getElementById('draftRestoredBadge');
+      if (badge) badge.classList.add('show');
+    }
+  }
+
+  // GOD MODE PATCH: live flag counter — quick feedback on banned words as you type,
+  // before you run the full check. Debounced so it doesn't run on every keystroke.
+  function updateLiveFlagCount() {
+    clearTimeout(_liveFlagTimer);
+    _liveFlagTimer = setTimeout(() => {
+      const badge = document.getElementById('liveFlagBadge');
+      if (!badge) return;
+      const text = document.getElementById('writeInput').value.trim();
+      if (!text) { badge.textContent = '— not checked yet'; badge.className = 'live-flag-badge'; return; }
+      const found = scanBanned(text).length;
+      if (found === 0) { badge.textContent = '✓ no flagged words'; badge.className = 'live-flag-badge clear'; }
+      else { badge.textContent = found + ' flagged word' + (found === 1 ? '' : 's'); badge.className = 'live-flag-badge warn'; }
+    }, 350);
+  }
+
+  // GOD MODE PATCH: confirm-before-clear for check history
+  function openClearHistSheet() {
+    document.getElementById('clearHistOverlay').classList.add('show');
+    document.getElementById('clearHistSheet').classList.add('show');
+  }
+  function closeClearHistSheet() {
+    document.getElementById('clearHistOverlay').classList.remove('show');
+    document.getElementById('clearHistSheet').classList.remove('show');
+  }
+  function confirmClearHist() {
+    try { localStorage.removeItem(_HIST_KEY); } catch (e) { /* ignore */ }
+    renderHist();
+    closeClearHistSheet();
+    showToast('🗑 Check history cleared.');
+  }
+
+  // GOD MODE PATCH: session stats — total checks, average score, most flagged word,
+  // all derived from this device's own stored history (never a network-wide figure).
+  function renderSessionStats() {
+    const strip = document.getElementById('sessionStatsStrip');
+    const note = document.getElementById('sessionStatsNote');
+    const clearBtn = document.getElementById('clearHistBtn');
+    if (!strip) return;
+    let hist = [];
+    try { hist = JSON.parse(localStorage.getItem(_HIST_KEY) || '[]'); } catch (e) { hist = []; }
+    if (!hist.length) {
+      strip.style.display = 'none';
+      note.style.display = 'none';
+      if (clearBtn) clearBtn.style.display = 'none';
+      return;
+    }
+    const avg = hist.reduce((sum, h) => sum + (h.score || 0), 0) / hist.length;
+    const best = Math.max(...hist.map(h => h.score || 0));
+    strip.style.display = 'grid';
+    note.style.display = 'block';
+    if (clearBtn) clearBtn.style.display = 'inline-block';
+    strip.innerHTML = `
+      <div class="sstat-tile"><div class="sstat-val">${hist.length}</div><div class="sstat-lbl">Checks Run</div></div>
+      <div class="sstat-tile"><div class="sstat-val" style="color:var(--gold)">${avg.toFixed(1)}</div><div class="sstat-lbl">Avg Score</div></div>
+      <div class="sstat-tile"><div class="sstat-val" style="color:var(--green)">${best.toFixed(1)}</div><div class="sstat-lbl">Best Score</div></div>`;
   }
 
   // ── CHAR COUNT ──
   function updateCharCount(el) {
     document.getElementById('charCount').textContent = el.value.length + ' characters';
+    saveDraft(); // GOD MODE PATCH
+    updateLiveFlagCount(); // GOD MODE PATCH
   }
 
   // ── SCAN FOR BANNED WORDS ──
@@ -468,6 +617,8 @@
     // Save to history
     saveHist(text.slice(0, 80), score, grade.label, rewritten);
     renderHist();
+    renderSessionStats(); // GOD MODE PATCH
+    clearDraft(); // GOD MODE PATCH — checked text is now in history, draft no longer needed
 
     showToast(totalViolations === 0 ? '✓ Voice check passed!' : '⚠ ' + totalViolations + ' violation' + (totalViolations === 1 ? '' : 's') + ' found. Rewrite ready.');
     setTimeout(() => document.getElementById('scoreSection').scrollIntoView({ behavior:'smooth', block:'start' }), 100);
@@ -525,6 +676,19 @@
   // ── INIT ──
   window.addEventListener('DOMContentLoaded', () => {
     renderHist();
+
+    // GOD MODE PATCH: draft restore, session stats, keyboard shortcut
+    renderSessionStats();
+    restoreDraft();
+    const writeEl = document.getElementById('writeInput');
+    if (writeEl) {
+      writeEl.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+          e.preventDefault();
+          runVoiceCheck();
+        }
+      });
+    }
   });
 </script>
 <script src="siindex-speak-core.js"></script>

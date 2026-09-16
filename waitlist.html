@@ -112,6 +112,23 @@
   .otp-resend { text-align:center; font-size:13px; color:var(--text-muted); margin-bottom:16px; }
   .otp-resend span { color:var(--cyan); cursor:pointer; }
   .otp-back { width:100%; padding:12px; background:transparent; border:1px solid var(--surface3); border-radius:14px; color:var(--text-muted); font-size:14px; cursor:pointer; margin-top:10px; }
+
+  /* GOD MODE PATCH — combined CSS block: field validity, accessibility, info sheet */
+  .field-hint-row { display:flex; align-items:center; gap:6px; }
+  .field-status { font-size:12px; font-weight:700; min-height:14px; margin-top:4px; }
+  .field-status.ok { color:var(--green); }
+  .field-status.bad { color:var(--red); }
+  .info-icon { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; background:var(--surface3); color:var(--text2); font-size:10px; font-weight:800; cursor:pointer; flex-shrink:0; border:none; }
+  .region-btn:focus-visible, .info-icon:focus-visible, .share-btn:focus-visible, .submit-btn:focus-visible { outline:2px solid var(--cyan); outline-offset:2px; }
+
+  .sheet-overlay { position:fixed; inset:0; background:rgba(9,10,16,0.7); z-index:300; opacity:0; pointer-events:none; transition:opacity 0.25s; }
+  .sheet-overlay.show { opacity:1; pointer-events:auto; }
+  .bottom-sheet { position:fixed; left:50%; bottom:0; transform:translate(-50%,100%); width:100%; max-width:430px; background:var(--surface2); border-top:1px solid var(--surface3); border-radius:20px 20px 0 0; padding:20px 20px 28px; z-index:301; transition:transform 0.3s cubic-bezier(.2,.9,.3,1); max-height:80vh; overflow-y:auto; box-sizing:border-box; }
+  .bottom-sheet.show { transform:translate(-50%,0); }
+  .bs-handle { width:36px; height:4px; background:var(--surface3); border-radius:4px; margin:0 auto 16px; }
+  .bs-title { font-size:16px; font-weight:800; margin-bottom:10px; }
+  .bs-desc { font-size:13px; color:var(--text2); line-height:1.65; margin-bottom:18px; }
+  .bs-btn { width:100%; padding:12px; border-radius:12px; font-size:14px; font-weight:700; border:none; cursor:pointer; background:var(--cyan); color:#000; }
 </style>
 </head>
 <body>
@@ -147,24 +164,29 @@
 
     <div class="input-group">
       <label class="input-label">Your name</label>
-      <input class="input-field" id="nameInput" type="text" placeholder="Maria Santos" autocomplete="given-name">
+      <input class="input-field" id="nameInput" type="text" placeholder="Maria Santos" autocomplete="given-name" oninput="wlCheckNameField()">
+      <div class="field-status" id="nameStatus"></div>
     </div>
 
     <div class="input-group">
       <label class="input-label">Phone or email</label>
-      <input class="input-field" id="contactInput" type="text" placeholder="+63 917 123 4567 or maria@gmail.com" autocomplete="tel email">
-      <div style="font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.4;">Email addresses get a real verification code before your spot is confirmed. Phone-only signups aren't verified yet.</div>
+      <input class="input-field" id="contactInput" type="text" placeholder="+63 917 123 4567 or maria@gmail.com" autocomplete="tel email" oninput="wlCheckContactField()">
+      <div class="field-hint-row" style="margin-top:6px;">
+        <div style="font-size:11px;color:var(--text-muted);line-height:1.4;">Email addresses get a real verification code before your spot is confirmed. Phone-only signups aren't verified yet.</div>
+        <button type="button" class="info-icon" onclick="openWhyVerifySheet()" aria-label="Why we verify">i</button>
+      </div>
+      <div class="field-status" id="contactStatus"></div>
     </div>
 
     <div class="input-group">
       <label class="input-label" style="margin-bottom:8px;">I'm from</label>
-      <div class="region-grid">
-        <div class="region-btn selected" onclick="selectRegion(this,'Fiji')"><span class="region-flag">🇫🇯</span><span class="region-name">Fiji</span></div>
-        <div class="region-btn" onclick="selectRegion(this,'PNG')"><span class="region-flag">🇵🇬</span><span class="region-name">Papua New Guinea</span></div>
-        <div class="region-btn" onclick="selectRegion(this,'Samoa')"><span class="region-flag">🇼🇸</span><span class="region-name">Samoa</span></div>
-        <div class="region-btn" onclick="selectRegion(this,'Philippines')"><span class="region-flag">🇵🇭</span><span class="region-name">Philippines</span></div>
-        <div class="region-btn" onclick="selectRegion(this,'Cook Islands')"><span class="region-flag">🇨🇰</span><span class="region-name">Cook Islands</span></div>
-        <div class="region-btn" onclick="selectRegion(this,'Other')"><span class="region-flag">🌍</span><span class="region-name">Somewhere else</span></div>
+      <div class="region-grid" role="radiogroup" aria-label="I'm from" onkeydown="wlRegionKeyNav(event)">
+        <div class="region-btn selected" role="radio" aria-checked="true" tabindex="0" onclick="selectRegion(this,'Fiji')"><span class="region-flag">🇫🇯</span><span class="region-name">Fiji</span></div>
+        <div class="region-btn" role="radio" aria-checked="false" tabindex="-1" onclick="selectRegion(this,'PNG')"><span class="region-flag">🇵🇬</span><span class="region-name">Papua New Guinea</span></div>
+        <div class="region-btn" role="radio" aria-checked="false" tabindex="-1" onclick="selectRegion(this,'Samoa')"><span class="region-flag">🇼🇸</span><span class="region-name">Samoa</span></div>
+        <div class="region-btn" role="radio" aria-checked="false" tabindex="-1" onclick="selectRegion(this,'Philippines')"><span class="region-flag">🇵🇭</span><span class="region-name">Philippines</span></div>
+        <div class="region-btn" role="radio" aria-checked="false" tabindex="-1" onclick="selectRegion(this,'Cook Islands')"><span class="region-flag">🇨🇰</span><span class="region-name">Cook Islands</span></div>
+        <div class="region-btn" role="radio" aria-checked="false" tabindex="-1" onclick="selectRegion(this,'Other')"><span class="region-flag">🌍</span><span class="region-name">Somewhere else</span></div>
       </div>
     </div>
 
@@ -242,7 +264,16 @@
 
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" aria-live="polite" aria-atomic="true"></div>
+
+<!-- GOD MODE PATCH — "why we verify" info sheet (purely informational, no OTP copy/logic touched) -->
+<div class="sheet-overlay" id="wlInfoOverlay" onclick="closeWhyVerifySheet()"></div>
+<div class="bottom-sheet" id="wlInfoSheet">
+  <div class="bs-handle"></div>
+  <div class="bs-title">Why we verify email</div>
+  <div class="bs-desc">A queue position is a real spot held for one person. Confirming an email with a one-time code makes sure the address behind it is actually reachable, before that spot is claimed — so it can't be taken by an email nobody controls.</div>
+  <button class="bs-btn" onclick="closeWhyVerifySheet()">Got it</button>
+</div>
 
 <script>
   const WL_SUPA_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
@@ -279,15 +310,120 @@
 
   let selectedRegion = 'Fiji';
   function selectRegion(el, region) {
-    document.querySelectorAll('.region-btn').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('.region-btn').forEach(b => { b.classList.remove('selected'); b.setAttribute('aria-checked','false'); b.tabIndex = -1; });
     el.classList.add('selected');
+    // GOD MODE PATCH — aria-checked/roving tabindex for keyboard users + draft autosave
+    el.setAttribute('aria-checked','true');
+    el.tabIndex = 0;
     selectedRegion = region;
+    wlSaveDraft();
   }
 
   function checkRef() {
     const val = document.getElementById('refInput').value.trim();
     const badge = document.getElementById('refBadge');
     badge.classList.toggle('show', val.length >= 4);
+    // GOD MODE PATCH — keep the saved draft in sync with the referral code field
+    wlSaveDraft();
+  }
+
+  // ── GOD MODE PATCH: 4 additive features (form draft persistence, accessibility,
+  // real-time field feedback, "why we verify" info sheet). None of this touches the
+  // OTP verification screen, its copy, or its logic above/below. ──
+
+  const WL_DRAFT_KEY = 'indx_waitlist_draft';
+
+  // Data persistence — remember partially-filled fields across navigations/reloads
+  function wlSaveDraft() {
+    try {
+      const draft = {
+        name: document.getElementById('nameInput').value,
+        contact: document.getElementById('contactInput').value,
+        region: selectedRegion,
+        ref: document.getElementById('refInput').value
+      };
+      localStorage.setItem(WL_DRAFT_KEY, JSON.stringify(draft));
+    } catch (e) {}
+  }
+
+  function wlRestoreDraft() {
+    let draft = null;
+    try { draft = JSON.parse(localStorage.getItem(WL_DRAFT_KEY) || 'null'); } catch (e) { draft = null; }
+    if (!draft) return;
+    const refParam = new URLSearchParams(window.location.search).get('ref');
+    const nameEl = document.getElementById('nameInput');
+    const contactEl = document.getElementById('contactInput');
+    const refEl = document.getElementById('refInput');
+    if (draft.name && nameEl && !nameEl.value) nameEl.value = draft.name;
+    if (draft.contact && contactEl && !contactEl.value) contactEl.value = draft.contact;
+    // Don't clobber a real ?ref= link with a stale saved draft ref
+    if (!refParam && draft.ref && refEl && !refEl.value) {
+      refEl.value = draft.ref;
+      refEl.dispatchEvent(new Event('input'));
+    }
+    if (draft.region) {
+      const btn = Array.prototype.find.call(document.querySelectorAll('.region-btn'), b => {
+        const nameSpan = b.querySelector('.region-name');
+        return nameSpan && nameSpan.textContent === draft.region;
+      });
+      if (btn) selectRegion(btn, draft.region);
+    }
+    wlCheckNameField();
+    wlCheckContactField();
+  }
+
+  function wlClearDraft() {
+    try { localStorage.removeItem(WL_DRAFT_KEY); } catch (e) {}
+  }
+
+  // Real-time feedback — inline validity hints as the citizen types (display-only;
+  // never replaces or bypasses the real submit-time / OTP checks elsewhere in this file)
+  function wlCheckNameField() {
+    const el = document.getElementById('nameInput');
+    const status = document.getElementById('nameStatus');
+    if (!el || !status) return;
+    const v = el.value.trim();
+    if (!v) { status.textContent = ''; status.className = 'field-status'; }
+    else if (v.length > 80) { status.textContent = 'Too long — keep it under 80 characters'; status.className = 'field-status bad'; }
+    else { status.textContent = '✓ Looks good'; status.className = 'field-status ok'; }
+    wlSaveDraft();
+  }
+
+  function wlCheckContactField() {
+    const el = document.getElementById('contactInput');
+    const status = document.getElementById('contactStatus');
+    if (!el || !status) return;
+    const v = el.value.trim();
+    if (!v) { status.textContent = ''; status.className = 'field-status'; wlSaveDraft(); return; }
+    if (EMAIL_RE.test(v)) { status.textContent = '✓ Valid email — a code will be sent here'; status.className = 'field-status ok'; }
+    else if (PHONE_RE.test(v)) { status.textContent = '✓ Valid phone number'; status.className = 'field-status ok'; }
+    else { status.textContent = 'Enter a valid email or phone number'; status.className = 'field-status bad'; }
+    wlSaveDraft();
+  }
+
+  // Accessibility — arrow-key / space / enter navigation across the region radiogroup
+  function wlRegionKeyNav(e) {
+    const keys = ['ArrowRight','ArrowLeft','ArrowDown','ArrowUp',' ','Enter'];
+    if (keys.indexOf(e.key) === -1) return;
+    const btns = Array.prototype.slice.call(document.querySelectorAll('.region-btn'));
+    const idx = btns.indexOf(document.activeElement);
+    if (idx === -1) return;
+    e.preventDefault();
+    if (e.key === ' ' || e.key === 'Enter') { document.activeElement.click(); return; }
+    let next = idx;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (idx + 1) % btns.length;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (idx - 1 + btns.length) % btns.length;
+    btns[next].focus();
+  }
+
+  // "Why we verify" info sheet — purely informational, additive
+  function openWhyVerifySheet() {
+    document.getElementById('wlInfoOverlay').classList.add('show');
+    document.getElementById('wlInfoSheet').classList.add('show');
+  }
+  function closeWhyVerifySheet() {
+    document.getElementById('wlInfoOverlay').classList.remove('show');
+    document.getElementById('wlInfoSheet').classList.remove('show');
   }
 
   // SUPABASE CONFIG
@@ -434,6 +570,8 @@
       document.getElementById('shareLink').textContent = 'https://imagenationdex.com/join?ref=' + refCode;
       base = result.total;
       document.getElementById('waitlistCount').textContent = result.total.toLocaleString();
+      // GOD MODE PATCH — the application succeeded, so the saved draft is no longer needed
+      wlClearDraft();
 
     } catch (e) {
       console.error('Waitlist error:', e);
@@ -558,6 +696,9 @@
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 3000);
   }
+
+  // GOD MODE PATCH — restore any saved draft now that the form exists in the DOM
+  wlRestoreDraft();
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

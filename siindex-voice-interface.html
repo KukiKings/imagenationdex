@@ -164,6 +164,32 @@
     .card-title{font-size:12px;font-weight:700;margin-bottom:6px}
     .card-body{font-size:12px;color:rgba(232,234,240,0.75);line-height:1.6}
 
+    /* GOD MODE PATCH: bottom sheet + overlay (confirm-before-clear) */
+    .sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.7);z-index:998;opacity:0;pointer-events:none;transition:opacity .2s}
+    .sheet-overlay.show{opacity:1;pointer-events:auto}
+    .bottom-sheet{position:fixed;left:0;right:0;bottom:0;max-width:430px;margin:0 auto;background:var(--surface2);border-top:1px solid var(--border);border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));z-index:999;transform:translateY(100%);transition:transform .25s ease;box-shadow:0 -8px 30px rgba(0,0,0,0.4)}
+    .bottom-sheet.show{transform:translateY(0)}
+    .sheet-title{font-size:15px;font-weight:800;margin-bottom:8px}
+    .sheet-body{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:16px}
+    .sheet-btn-row{display:flex;gap:8px}
+    .sheet-btn{flex:1;padding:12px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--surface3);color:var(--text)}
+    .sheet-btn.danger{background:rgba(255,77,109,0.12);color:var(--red);border-color:rgba(255,77,109,0.3)}
+
+    /* GOD MODE PATCH: personal mission stats bar (local-device stats only) */
+    .mission-stats-bar{display:flex;gap:8px;margin-bottom:4px}
+    .mstat{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:10px 8px;text-align:center}
+    .mstat-val{font-size:16px;font-weight:800;color:var(--cyan)}
+    .mstat-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px}
+    .mstat-note{font-size:9px;color:var(--muted);text-align:center;margin:6px 0 14px}
+
+    /* GOD MODE PATCH: draft restored badge */
+    .draft-restored-badge{font-size:10px;color:var(--gold);background:rgba(255,184,0,0.1);border:1px solid rgba(255,184,0,0.3);border-radius:8px;padding:6px 10px;margin-bottom:8px;display:none}
+    .draft-restored-badge.show{display:block}
+
+    /* GOD MODE PATCH: accessibility focus ring for keyboard nav */
+    .back-btn:focus-visible,.speak-mic:focus-visible,.tab-btn:focus-visible,.example-chip:focus-visible,.speak-btn:focus-visible,.approve-btn:focus-visible,.gate-btn:focus-visible,.sheet-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+    .kbd-hint{font-size:10px;color:var(--muted);text-align:center;margin-top:6px}
+
     /* TOAST */
     .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:10px 16px;font-size:13px;font-weight:600;white-space:nowrap;z-index:999;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none}
     .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -177,7 +203,7 @@
 
 <!-- HEADER -->
 <header class="screen-header">
-  <button class="back-btn" onclick="history.back()">&#8249;</button>
+  <button class="back-btn" onclick="history.back()" aria-label="Go back">&#8249;</button>
   <div class="header-info">
     <div class="header-title"><span class="si">SI</span>INDEX <span style="color:var(--gold)">Voice Interface</span></div>
     <div style="font-size:10px;color:var(--muted)">Speak your mission. She handles the system.</div>
@@ -215,13 +241,21 @@
 <!-- ==================== TAB: SPEAK ==================== -->
 <div class="tab-panel active" id="tab-speak">
 
+  <!-- GOD MODE PATCH: Personal Mission Stats (local-device only) -->
+  <div class="mission-stats-bar" id="missionStatsBar"></div>
+  <div class="mstat-note">From your activity on this device only</div>
+
   <!-- GM1: Voice Mission Interpreter -->
   <div class="speak-input-wrap">
-    <span class="speak-mic" id="micIcon" onclick="toggleMic()">&#127908;</span>
+    <!-- GOD MODE PATCH: draft restored notice -->
+    <div class="draft-restored-badge" id="draftRestoredBadge">Restored your unsent draft from last time.</div>
+    <span class="speak-mic" id="micIcon" onclick="toggleMic()" role="button" tabindex="0" aria-label="Speak with voice input">&#127908;</span>
     <textarea class="speak-textarea" id="speakInput" placeholder="Tell me what you want to do. Use your own words, in your own language. For example: I want to sell some of my art. Or: I need to receive money from overseas. Or: I want to protect my cultural story." rows="4"></textarea>
   </div>
 
   <button class="speak-btn" onclick="interpretMission()">&#128170; Speak to SIINDEX</button>
+  <!-- GOD MODE PATCH: keyboard shortcut hint for accessibility -->
+  <div class="kbd-hint">Tip: Ctrl/Cmd + Enter also sends</div>
 
   <div class="examples-label">Try saying something like…</div>
   <div class="examples-scroll" id="examplesRow"></div>
@@ -310,7 +344,7 @@
   <!-- GM4: Mission Decision Ledger -->
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
     <div class="section-lbl" style="margin:0">Mission History</div>
-    <button onclick="clearLedger()" style="font-size:10px;color:var(--muted);background:none;border:none;cursor:pointer">Clear all</button>
+    <button onclick="openClearLedgerSheet()" style="font-size:10px;color:var(--muted);background:none;border:none;cursor:pointer">Clear all</button>
   </div>
   <div id="ledgerEntries"></div>
 
@@ -358,8 +392,19 @@
 
 </div>
 
+<!-- GOD MODE PATCH: Clear Ledger Confirm Sheet -->
+<div class="sheet-overlay" id="clearLedgerOverlay" onclick="closeClearLedgerSheet()"></div>
+<div class="bottom-sheet" id="clearLedgerSheet" role="dialog" aria-modal="true" aria-labelledby="clearLedgerTitle">
+  <div class="sheet-title" id="clearLedgerTitle">Clear mission history?</div>
+  <div class="sheet-body">This removes all saved missions from this device's Mission History. It does not touch your real pending approvals or account records.</div>
+  <div class="sheet-btn-row">
+    <button class="sheet-btn" onclick="closeClearLedgerSheet()">Cancel</button>
+    <button class="sheet-btn danger" onclick="confirmClearLedger()">Clear history</button>
+  </div>
+</div>
+
 <!-- TOAST -->
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
@@ -556,6 +601,70 @@
   let _ledger = JSON.parse(localStorage.getItem('indx_voice_ledger') || '[]');
   let _activeMission = null;
 
+  /* ── GOD MODE PATCH: local persistence + UX polish helpers ── */
+  const DRAFT_KEY = 'indx_voice_draft';
+  let _draftSaveTimer = null;
+
+  // GOD MODE PATCH: autosave the unsent mission draft so a refresh or accidental
+  // navigation doesn't lose what the citizen typed.
+  function saveDraft() {
+    clearTimeout(_draftSaveTimer);
+    _draftSaveTimer = setTimeout(() => {
+      const el = document.getElementById('speakInput');
+      const val = el ? el.value : '';
+      try {
+        if (val && val.trim().length > 0) localStorage.setItem(DRAFT_KEY, val);
+        else localStorage.removeItem(DRAFT_KEY);
+      } catch (e) { /* storage unavailable — ignore */ }
+    }, 400);
+  }
+
+  function clearDraft() {
+    try { localStorage.removeItem(DRAFT_KEY); } catch (e) { /* ignore */ }
+    const badge = document.getElementById('draftRestoredBadge');
+    if (badge) badge.classList.remove('show');
+  }
+
+  function restoreDraft() {
+    let draft = null;
+    try { draft = localStorage.getItem(DRAFT_KEY); } catch (e) { /* ignore */ }
+    if (draft && draft.trim().length > 0) {
+      const el = document.getElementById('speakInput');
+      if (el) el.value = draft;
+      const badge = document.getElementById('draftRestoredBadge');
+      if (badge) badge.classList.add('show');
+    }
+  }
+
+  // GOD MODE PATCH: personal local mission stats — derived entirely from this
+  // device's own ledger + gate history, never a network-wide figure.
+  function renderMissionStats() {
+    const bar = document.getElementById('missionStatsBar');
+    if (!bar) return;
+    const spoken = _ledger.length;
+    const approvedGates = Object.values(_gateStatuses).filter(v => v === 'approved').length;
+    const pendingGates = Object.values(_gateStatuses).filter(v => v === 'pending').length;
+    bar.innerHTML = `
+      <div class="mstat"><div class="mstat-val">${spoken}</div><div class="mstat-lbl">Missions Spoken</div></div>
+      <div class="mstat"><div class="mstat-val" style="color:var(--green)">${approvedGates}</div><div class="mstat-lbl">Gates Approved</div></div>
+      <div class="mstat"><div class="mstat-val" style="color:var(--gold)">${pendingGates}</div><div class="mstat-lbl">Gates Pending</div></div>`;
+  }
+
+  // GOD MODE PATCH: confirm-before-clear — "Clear all" used to wipe local mission
+  // history with a single tap and no way back.
+  function openClearLedgerSheet() {
+    document.getElementById('clearLedgerOverlay').classList.add('show');
+    document.getElementById('clearLedgerSheet').classList.add('show');
+  }
+  function closeClearLedgerSheet() {
+    document.getElementById('clearLedgerOverlay').classList.remove('show');
+    document.getElementById('clearLedgerSheet').classList.remove('show');
+  }
+  function confirmClearLedger() {
+    clearLedger();
+    closeClearLedgerSheet();
+  }
+
   /* ── GM1: VOICE MISSION INTERPRETER ── */
 
   function detectMissionType(text) {
@@ -650,6 +759,8 @@
     _activeMission = null;
     document.getElementById('responseWrap').classList.remove('show');
     document.getElementById('speakInput').value = '';
+    clearDraft(); // GOD MODE PATCH: mission approved, no draft left to restore
+    renderMissionStats(); // GOD MODE PATCH
     showToast('Saved to this device — check the Ledger and Gates tabs', 'green');
   }
 
@@ -864,6 +975,7 @@
     localStorage.setItem('indx_voice_gates', JSON.stringify(_gateStatuses));
     renderGates();
     addLedgerEntry('✅', 'Gate Approved — '+GATE_ITEMS[id].name, 'complete');
+    renderMissionStats(); // GOD MODE PATCH
     showToast('Gate approved — SIINDEX will proceed', 'green');
   }
 
@@ -872,6 +984,7 @@
     localStorage.setItem('indx_voice_gates', JSON.stringify(_gateStatuses));
     renderGates();
     addLedgerEntry('🚫', 'Gate Declined — '+GATE_ITEMS[id].name, 'paused');
+    renderMissionStats(); // GOD MODE PATCH
     showToast('Gate declined — action will not proceed', 'red');
   }
 
@@ -923,6 +1036,7 @@
     _ledger = [];
     localStorage.setItem('indx_voice_ledger', JSON.stringify(_ledger));
     renderLedger();
+    renderMissionStats(); // GOD MODE PATCH
     showToast('Mission ledger cleared', 'red');
   }
 
@@ -964,6 +1078,26 @@
     renderExamples();
     renderDoors();
     await initRealSession();
+
+    // GOD MODE PATCH: draft autosave/restore, live mission stats, keyboard shortcut
+    restoreDraft();
+    renderMissionStats();
+    const speakEl = document.getElementById('speakInput');
+    if (speakEl) {
+      speakEl.addEventListener('input', saveDraft);
+      speakEl.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+          e.preventDefault();
+          interpretMission();
+        }
+      });
+    }
+    const micEl = document.getElementById('micIcon');
+    if (micEl) {
+      micEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleMic(); }
+      });
+    }
   });
 </script>
 <script src="siindex-speak-core.js"></script>

@@ -143,6 +143,20 @@
   .sf-hint{font-size:10px;color:var(--text-muted);margin-top:4px;line-height:1.4;}
   .sheet-btn{width:100%;padding:16px;border-radius:14px;background:linear-gradient(135deg,var(--red),rgba(255,77,109,0.7));border:none;color:#fff;font-size:15px;font-weight:800;cursor:pointer;margin-top:4px;}
   .sheet-cancel{width:100%;padding:13px;border-radius:12px;background:none;border:1px solid var(--border);color:var(--text-muted);font-size:13px;font-weight:700;cursor:pointer;margin-top:8px;}
+
+  /* GOD MODE PATCH: copy-to-clipboard buttons (UX polish) */
+  .copy-btn{background:none;border:none;color:var(--cyan);font-size:11px;font-weight:700;cursor:pointer;padding:2px 6px;flex-shrink:0;}
+  .copy-btn:active{opacity:0.6;}
+  .cpt-domain-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+
+  /* GOD MODE PATCH: live local session timer (real-time feedback — a local clock, not a live network feed) */
+  .session-timer{font-size:10px;color:var(--text-muted);margin-top:4px;font-family:monospace;}
+
+  /* GOD MODE PATCH: duress-disable warning sheet reuses .bottom-sheet/.sheet-overlay above */
+  .warn-icon-row{font-size:32px;text-align:center;margin-bottom:10px;}
+
+  /* GOD MODE PATCH: accessibility focus rings for keyboard nav */
+  .tb-back:focus-visible,.tb-siindex:focus-visible,.duress-toggle:focus-visible,.duress-config-btn:focus-visible,.copy-btn:focus-visible,.sheet-btn:focus-visible,.sheet-cancel:focus-visible,.sf-input:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
 </style>
 </head>
 <body>
@@ -160,9 +174,9 @@
 
 
   <div class="topbar">
-    <button class="tb-back" onclick="history.back()">←</button>
+    <button class="tb-back" onclick="history.back()" aria-label="Go back">←</button>
     <div class="tb-title">Sovereign Identity</div>
-    <div class="tb-siindex" onclick="showSiindexToast()">SIINDEX 🟢</div>
+    <div class="tb-siindex" onclick="showSiindexToast()" role="button" tabindex="0" aria-label="SIINDEX status" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showSiindexToast();}">SIINDEX 🟢</div>
   </div>
 
   <!-- CPT HERO -->
@@ -177,11 +191,17 @@
       </div>
       <div class="cpt-info">
         <div class="cpt-name" id="cptName">Arthur Henry</div>
-        <div class="cpt-domain" id="cptDomain">arthur.IN$DEX</div>
+        <!-- GOD MODE PATCH: copy-to-clipboard for domain -->
+        <div class="cpt-domain-row">
+          <div class="cpt-domain" id="cptDomain">arthur.IN$DEX</div>
+          <button class="copy-btn" onclick="copyText(document.getElementById('cptDomain').textContent,'Domain copied')" aria-label="Copy domain">⧉ copy</button>
+        </div>
         <div class="cpt-status">
           <div class="cpt-dot"></div>
           Soul-bound · Non-transferable · On-chain
         </div>
+        <!-- GOD MODE PATCH: live local session timer (real elapsed time on this device, not a live network feed) -->
+        <div class="session-timer" id="sessionTimer">Viewing this preview for 0:00</div>
       </div>
     </div>
     <div class="cpt-stats">
@@ -200,7 +220,11 @@
     </div>
     <div class="cpt-token-id">
       <div class="cpt-token-label">Token ID (Soul-Bound · Non-Transferable)</div>
-      <div class="cpt-token-val" id="cptTokenId">CPT-7A4F…B29C</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="cpt-token-val" id="cptTokenId">CPT-7A4F…B29C</div>
+        <!-- GOD MODE PATCH: copy-to-clipboard for token ID -->
+        <button class="copy-btn" onclick="copyText(document.getElementById('cptTokenId').textContent,'Token ID copied')" aria-label="Copy token ID">⧉ copy</button>
+      </div>
     </div>
   </div>
 
@@ -307,7 +331,7 @@
         <div class="duress-title">🔧 Coercion Protection</div>
         <div class="duress-badge">PQSI T4</div>
       </div>
-      <button class="duress-toggle" id="duressToggle" onclick="toggleDuress()"></button>
+      <button class="duress-toggle" id="duressToggle" onclick="toggleDuress()" aria-pressed="false" aria-label="Toggle Duress Mode"></button>
     </div>
     <div class="duress-body">
       <div class="duress-desc">If you're forced to hand over access, Duress Mode shows an attacker a decoy wallet with a small visible balance. Your real funds freeze instantly. SIINDEX sends a silent T4 alert — the attacker never knows.</div>
@@ -464,6 +488,17 @@
   <button class="sheet-cancel" onclick="closeDuressSheet()">Cancel</button>
 </div>
 
+<!-- GOD MODE PATCH: confirm-before-disable sheet for Duress Mode (safety) -->
+<div class="sheet-overlay" id="duressDisableOverlay" onclick="closeDuressDisableSheet()"></div>
+<div class="bottom-sheet" id="duressDisableSheet" role="dialog" aria-modal="true" aria-labelledby="duressDisableTitle">
+  <div class="sheet-handle"></div>
+  <div class="warn-icon-row">⚠️</div>
+  <div class="sheet-title" id="duressDisableTitle">Turn off Duress Mode?</div>
+  <div class="sheet-sub">This removes the coercion PIN and decoy wallet setup described above. If you're forced to unlock your wallet after this, there will be no decoy to show and no silent alert.</div>
+  <button class="sheet-btn" onclick="confirmDuressDisable()">Turn off Duress Mode</button>
+  <button class="sheet-cancel" onclick="closeDuressDisableSheet()">Keep it on</button>
+</div>
+
 <script>
   let duressEnabled = false;
 
@@ -492,30 +527,108 @@
     // Duress state
     duressEnabled = localStorage.getItem('indx_identity_duress_on') === 'true';
     document.getElementById('duressToggle').classList.toggle('on', duressEnabled);
+    document.getElementById('duressToggle').setAttribute('aria-pressed', duressEnabled ? 'true' : 'false'); // GOD MODE PATCH
 
     // Feed timestamps
     document.getElementById('feedTime1').textContent = 'Just now';
   }
 
+  // GOD MODE PATCH: copy-to-clipboard helper (UX polish)
+  function copyText(text, label) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => showToast('✓ ' + label)).catch(() => showToast('Could not copy — select and copy manually.'));
+    } else {
+      showToast('Could not copy — select and copy manually.');
+    }
+  }
+
+  // GOD MODE PATCH: live local session timer — counts up from the real moment this
+  // page loaded. A local clock display only; it is not a claim of live monitoring.
+  let _sessionStartTs = null;
+  let _sessionTimerInterval = null;
+  function startSessionTimer() {
+    _sessionStartTs = Date.now();
+    updateSessionTimer();
+    clearInterval(_sessionTimerInterval);
+    _sessionTimerInterval = setInterval(updateSessionTimer, 1000);
+  }
+  function updateSessionTimer() {
+    const el = document.getElementById('sessionTimer');
+    if (!el || !_sessionStartTs) return;
+    const elapsed = Math.floor((Date.now() - _sessionStartTs) / 1000);
+    const m = Math.floor(elapsed / 60);
+    const s = elapsed % 60;
+    el.textContent = 'Viewing this preview for ' + m + ':' + String(s).padStart(2, '0');
+  }
+
   function toggleDuress() {
-    duressEnabled = !duressEnabled;
-    document.getElementById('duressToggle').classList.toggle('on', duressEnabled);
-    localStorage.setItem('indx_identity_duress_on', duressEnabled);
-    if (duressEnabled) {
+    if (!duressEnabled) {
+      duressEnabled = true;
+      document.getElementById('duressToggle').classList.toggle('on', duressEnabled);
+      document.getElementById('duressToggle').setAttribute('aria-pressed', 'true'); // GOD MODE PATCH
+      localStorage.setItem('indx_identity_duress_on', duressEnabled);
       openDuressSheet();
     } else {
-      showToast('Duress Mode disabled. PQSI T4 coercion protection off.');
+      // GOD MODE PATCH: turning off duress protection now asks for confirmation first
+      openDuressDisableSheet();
     }
   }
 
   function openDuressSheet() {
     document.getElementById('duressSheet').classList.add('open');
     document.getElementById('duressOverlay').classList.add('open');
+    trapFocus(document.getElementById('duressSheet')); // GOD MODE PATCH: accessibility
   }
 
   function closeDuressSheet() {
     document.getElementById('duressSheet').classList.remove('open');
     document.getElementById('duressOverlay').classList.remove('open');
+    releaseFocusTrap(); // GOD MODE PATCH
+  }
+
+  // GOD MODE PATCH: confirm-before-disable sheet for Duress Mode (safety)
+  function openDuressDisableSheet() {
+    document.getElementById('duressDisableSheet').classList.add('open');
+    document.getElementById('duressDisableOverlay').classList.add('open');
+    trapFocus(document.getElementById('duressDisableSheet'));
+  }
+  function closeDuressDisableSheet() {
+    document.getElementById('duressDisableSheet').classList.remove('open');
+    document.getElementById('duressDisableOverlay').classList.remove('open');
+    releaseFocusTrap();
+  }
+  function confirmDuressDisable() {
+    duressEnabled = false;
+    document.getElementById('duressToggle').classList.remove('on');
+    document.getElementById('duressToggle').setAttribute('aria-pressed', 'false');
+    localStorage.setItem('indx_identity_duress_on', 'false');
+    localStorage.removeItem('indx_identity_duress_decoy');
+    closeDuressDisableSheet();
+    showToast('Duress Mode disabled. PQSI T4 coercion protection off.');
+  }
+
+  // GOD MODE PATCH: simple focus trap for open bottom sheets (accessibility)
+  let _focusTrapHandler = null;
+  let _focusTrapReturnEl = null;
+  function trapFocus(sheetEl) {
+    _focusTrapReturnEl = document.activeElement;
+    const focusables = sheetEl.querySelectorAll('button, input, [tabindex]:not([tabindex="-1"])');
+    if (focusables.length) focusables[0].focus();
+    _focusTrapHandler = function (e) {
+      if (e.key !== 'Tab') return;
+      const items = Array.from(sheetEl.querySelectorAll('button, input, [tabindex]:not([tabindex="-1"])')).filter(el => !el.disabled);
+      if (!items.length) return;
+      const first = items[0], last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', _focusTrapHandler);
+  }
+  function releaseFocusTrap() {
+    if (_focusTrapHandler) document.removeEventListener('keydown', _focusTrapHandler);
+    _focusTrapHandler = null;
+    if (_focusTrapReturnEl && _focusTrapReturnEl.focus) _focusTrapReturnEl.focus();
+    _focusTrapReturnEl = null;
   }
 
   let _pendingDuressPin = '';
@@ -566,6 +679,8 @@
     if (!t) {
       t = document.createElement('div');
       t.id = 'toast';
+      t.setAttribute('role', 'status'); // GOD MODE PATCH: accessibility
+      t.setAttribute('aria-live', 'polite'); // GOD MODE PATCH
       t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#22263A;border:1px solid #2A2D38;color:#EAEAEA;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:999;max-width:360px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.4);transition:opacity 0.3s;';
       document.body.appendChild(t);
     }
@@ -574,7 +689,10 @@
     window._tt = setTimeout(() => { t.style.opacity = '0'; }, 4000);
   }
 
-  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('DOMContentLoaded', () => {
+    init();
+    startSessionTimer(); // GOD MODE PATCH
+  });
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

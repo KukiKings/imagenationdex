@@ -160,6 +160,37 @@
   .doctrine-line:last-child { border-bottom:none; }
   .doctrine-line::before { content:'🌊'; flex-shrink:0; margin-top:1px; }
 
+  /* ── GOD MODE PATCH: LIVE SEARCH ── */
+  .search-wrap { padding:0 20px 12px; }
+  .search-input-row { position:relative; }
+  .search-input { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:11px 40px 11px 14px; font-size:12px; color:var(--text); font-family:inherit; outline:none; transition:border-color 0.2s; }
+  .search-input:focus { border-color:rgba(0,229,160,0.4); }
+  .search-input::placeholder { color:var(--muted); }
+  .search-clear { position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:13px; color:var(--muted); cursor:pointer; display:none; }
+  .search-clear.show { display:block; }
+  .search-count { font-size:10px; color:var(--text2); margin-top:8px; padding-left:2px; }
+  .search-result-tag { font-size:9px; font-weight:800; color:var(--green); text-transform:uppercase; letter-spacing:0.5px; margin-right:6px; }
+
+  /* ── GOD MODE PATCH: FAVORITES ── */
+  .mission-card { position:relative; }
+  .fav-star { position:absolute; top:10px; right:10px; font-size:15px; color:var(--muted); cursor:pointer; z-index:2; line-height:1; }
+  .fav-star.active { color:var(--gold); }
+  .fav-filter-chip { font-size:10px; font-weight:700; color:var(--text2); background:var(--surface3); border:1px solid var(--border); border-radius:20px; padding:4px 10px; cursor:pointer; transition:all 0.15s; }
+  .fav-filter-chip.active { color:var(--gold); border-color:rgba(255,184,0,0.4); background:rgba(255,184,0,0.08); }
+  .sheet-fav-star { font-size:18px; color:var(--muted); cursor:pointer; flex-shrink:0; }
+  .sheet-fav-star.active { color:var(--gold); }
+
+  /* ── GOD MODE PATCH: PERSONAL ACTIVITY STATS (local-only, not network-wide) ── */
+  .activity-strip { display:flex; gap:8px; padding:0 20px 20px; }
+  .activity-chip { flex:1; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:9px 10px; text-align:center; }
+  .activity-chip-val { font-size:14px; font-weight:800; color:var(--cyan); }
+  .activity-chip-lbl { font-size:9px; color:var(--text2); font-weight:600; margin-top:2px; line-height:1.3; }
+
+  /* ── GOD MODE PATCH: ACCESSIBILITY ── */
+  .cat-tab:focus-visible, .role-chip:focus-visible, .mission-card:focus-visible,
+  .search-input:focus-visible, .fav-star:focus-visible, .fav-filter-chip:focus-visible,
+  .use-case-row:focus-visible, .sheet-fav-star:focus-visible { outline:2px solid var(--cyan); outline-offset:2px; }
+
   /* TOAST */
   .toast {
     position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px);
@@ -219,6 +250,9 @@
   </div>
 </div>
 
+<!-- GOD MODE PATCH: PERSONAL ACTIVITY STATS -->
+<div class="activity-strip fade-in" id="activityStrip" style="animation-delay:.17s"></div>
+
 <!-- GM3: CITIZEN PROFILE MATCHER -->
 <div class="section-hdr fade-in" style="animation-delay:.08s">
   <h2>👤 Who Are You?</h2>
@@ -235,7 +269,10 @@
 <!-- GM1: MISSION GALLERY -->
 <div class="section-hdr fade-in" style="animation-delay:.14s">
   <h2>🚪 Mission Doorways</h2>
-  <span id="galleryCount">12 doorways</span>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span id="galleryCount">12 doorways</span>
+    <span class="fav-filter-chip" id="favFilterChip" onclick="toggleFavFilter()" role="button" tabindex="0" aria-pressed="false" aria-label="Show favorites only" onkeydown="if(event.key==='Enter'){this.click()}">⭐ Favorites</span>
+  </div>
 </div>
 <div class="mission-grid fade-in" id="missionGrid" style="animation-delay:.16s"></div>
 
@@ -244,8 +281,18 @@
   <h2>📖 Use Case Explorer</h2>
   <span>100 missions · tap to expand</span>
 </div>
+
+<!-- GOD MODE PATCH: LIVE SEARCH -->
+<div class="search-wrap fade-in" style="animation-delay:.23s">
+  <div class="search-input-row">
+    <input type="text" class="search-input" id="missionSearchInput" placeholder="Search all 100 missions…" oninput="handleMissionSearch(this.value)" aria-label="Search all missions">
+    <span class="search-clear" id="searchClearBtn" onclick="clearMissionSearch()" role="button" tabindex="0" aria-label="Clear search" onkeydown="if(event.key==='Enter'){this.click()}">✕</span>
+  </div>
+  <div class="search-count" id="searchCount"></div>
+</div>
+
 <div class="explorer-card fade-in" style="animation-delay:.24s">
-  <div class="cat-tabs" id="catTabs"></div>
+  <div class="cat-tabs" id="catTabs" role="tablist" aria-label="Mission categories" onkeydown="handleCatTabsKeydown(event)"></div>
   <div id="catContent"></div>
 </div>
 
@@ -255,15 +302,18 @@
   <div id="doctrineLines"></div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <!-- GM4: MISSION LAUNCH SHEET -->
 <div class="sheet-overlay" id="sheetOverlay" onclick="closeLaunchSheet()"></div>
-<div class="launch-sheet" id="launchSheet">
+<div class="launch-sheet" id="launchSheet" role="dialog" aria-modal="true" aria-labelledby="sheetMissionTitle">
   <div class="sheet-drag"></div>
   <div class="sheet-hdr">
     <div class="sheet-cat-tag" id="sheetCatTag">SIINDEX Mission</div>
-    <div class="sheet-mission-title" id="sheetMissionTitle">—</div>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+      <div class="sheet-mission-title" id="sheetMissionTitle">—</div>
+      <span class="sheet-fav-star" id="sheetFavStar" onclick="toggleSheetFavorite()" role="button" tabindex="0" aria-label="Save mission to favorites" onkeydown="if(event.key==='Enter'){this.click()}">☆</span>
+    </div>
   </div>
   <div class="recent-strip" id="recentStrip" style="display:none">
     <div class="recent-lbl">Recent missions</div>
@@ -577,11 +627,19 @@
   let _currentMission = null;
   let _recentMissions = JSON.parse(localStorage.getItem('indx_gallery_recent') || '[]');
 
+  // GOD MODE PATCH: state for search, favorites, personal activity stats, a11y
+  let _missionSearchQuery = '';
+  let _favorites = JSON.parse(localStorage.getItem('indx_gallery_favorites') || '[]');
+  let _favFilterActive = false;
+  let _previewCount = parseInt(localStorage.getItem('indx_gallery_preview_count') || '0', 10);
+  let _lastFocusedEl = null;
+
   // ── GM3: ROLES ──
   function renderRoles() {
     const el = document.getElementById('roleGrid');
+    // GOD MODE PATCH: keyboard-accessible role chips
     el.innerHTML = ROLES.map(r =>
-      `<div class="role-chip ${_selectedRole===r.key?'sel':''}" onclick="selectRole('${r.key}')">
+      `<div class="role-chip ${_selectedRole===r.key?'sel':''}" onclick="selectRole('${r.key}')" role="button" tabindex="0" aria-pressed="${_selectedRole===r.key}" onkeydown="if(event.key==='Enter'){this.click()}">
         <span class="role-chip-icon">${r.icon}</span>
         <span class="role-chip-label">${r.label}</span>
       </div>`
@@ -608,7 +666,7 @@
   function renderMissionGrid() {
     const el = document.getElementById('missionGrid');
     const role = ROLES.find(r=>r.key===_selectedRole);
-    const sorted = _selectedRole && role
+    let sorted = _selectedRole && role
       ? [...MISSION_GALLERY].sort((a,b) => {
           const aRel = role.cats.includes(a.catKey) ? 0 : 1;
           const bRel = role.cats.includes(b.catKey) ? 0 : 1;
@@ -616,21 +674,132 @@
         })
       : MISSION_GALLERY;
 
-    el.innerHTML = sorted.map((m, i) => {
-      const cat = CATEGORIES.find(c=>c.key===m.catKey);
-      const highlight = _selectedRole && role && role.cats.includes(m.catKey);
-      return `<div class="mission-card ${highlight?'role-highlight':''}" onclick="openMissionFromGallery(${MISSION_GALLERY.indexOf(m)})">
-        <div class="mission-icon">${m.icon}</div>
-        <div class="mission-title">${m.title}</div>
-        <div class="mission-sub">${m.sub}</div>
-        <div class="mission-cta">Preview → <span style="font-size:9px;color:var(--muted)">${cat?cat.label:''}</span></div>
-      </div>`;
-    }).join('');
+    // GOD MODE PATCH: apply favorites filter and live-search filter to the gallery
+    if (_favFilterActive) sorted = sorted.filter(m => isFavorite(m.title));
+    if (_missionSearchQuery) sorted = sorted.filter(m =>
+      m.title.toLowerCase().includes(_missionSearchQuery) || m.sub.toLowerCase().includes(_missionSearchQuery));
+
+    if (!sorted.length) {
+      el.innerHTML = `<div style="grid-column:1/-1;padding:20px 10px;text-align:center;font-size:12px;color:var(--text2);">${_favFilterActive ? 'No favorites yet — tap ☆ on any mission to save it.' : 'No missions match your search.'}</div>`;
+    } else {
+      el.innerHTML = sorted.map((m, i) => {
+        const cat = CATEGORIES.find(c=>c.key===m.catKey);
+        const highlight = _selectedRole && role && role.cats.includes(m.catKey);
+        const fav = isFavorite(m.title); // GOD MODE PATCH
+        const safeTitle = m.title.replace(/'/g,"\\'");
+        return `<div class="mission-card ${highlight?'role-highlight':''}" onclick="openMissionFromGallery(${MISSION_GALLERY.indexOf(m)})" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click()}">
+          <span class="fav-star ${fav?'active':''}" onclick="toggleFavorite('${safeTitle}',event)" role="button" tabindex="0" aria-label="${fav?'Remove from favorites':'Save to favorites'}" onkeydown="event.stopPropagation();if(event.key==='Enter'){this.click()}">${fav?'★':'☆'}</span>
+          <div class="mission-icon">${m.icon}</div>
+          <div class="mission-title">${m.title}</div>
+          <div class="mission-sub">${m.sub}</div>
+          <div class="mission-cta">Preview → <span style="font-size:9px;color:var(--muted)">${cat?cat.label:''}</span></div>
+        </div>`;
+      }).join('');
+    }
 
     const count = sorted.length;
-    document.getElementById('galleryCount').textContent = _selectedRole
-      ? `${ROLES.find(r=>r.key===_selectedRole)?.cats.filter(c=>MISSION_GALLERY.some(m=>m.catKey===c)).length || count} most relevant first`
-      : count + ' doorways';
+    document.getElementById('galleryCount').textContent = _favFilterActive
+      ? count + ' favorited'
+      : (_selectedRole
+        ? `${ROLES.find(r=>r.key===_selectedRole)?.cats.filter(c=>MISSION_GALLERY.some(m=>m.catKey===c)).length || count} most relevant first`
+        : count + ' doorways');
+  }
+
+  // ── GOD MODE PATCH: FAVORITES ──
+  function isFavorite(title) { return _favorites.includes(title); }
+  function toggleFavorite(title, evt) {
+    if (evt) evt.stopPropagation();
+    const idx = _favorites.indexOf(title);
+    if (idx >= 0) { _favorites.splice(idx,1); showToast('Removed from favorites'); }
+    else { _favorites.unshift(title); showToast('⭐ Saved to favorites'); }
+    localStorage.setItem('indx_gallery_favorites', JSON.stringify(_favorites));
+    renderMissionGrid();
+    renderActivityStrip();
+    if (_currentMission && _currentMission.title === title) updateSheetFavStar();
+  }
+  function toggleFavFilter() {
+    _favFilterActive = !_favFilterActive;
+    const chip = document.getElementById('favFilterChip');
+    chip.classList.toggle('active', _favFilterActive);
+    chip.setAttribute('aria-pressed', String(_favFilterActive));
+    renderMissionGrid();
+  }
+  function toggleSheetFavorite() {
+    if (!_currentMission) return;
+    toggleFavorite(_currentMission.title);
+    updateSheetFavStar();
+  }
+  function updateSheetFavStar() {
+    const star = document.getElementById('sheetFavStar');
+    if (!star || !_currentMission) return;
+    const fav = isFavorite(_currentMission.title);
+    star.textContent = fav ? '★' : '☆';
+    star.classList.toggle('active', fav);
+    star.setAttribute('aria-label', fav ? 'Remove from favorites' : 'Save mission to favorites');
+  }
+
+  // ── GOD MODE PATCH: PERSONAL ACTIVITY STATS (local-only, this device) ──
+  function renderActivityStrip() {
+    const el = document.getElementById('activityStrip');
+    if (!el) return;
+    el.innerHTML = `
+      <div class="activity-chip"><div class="activity-chip-val">${_previewCount}</div><div class="activity-chip-lbl">Missions previewed on this device</div></div>
+      <div class="activity-chip"><div class="activity-chip-val">${_favorites.length}</div><div class="activity-chip-lbl">Saved to favorites</div></div>
+    `;
+  }
+
+  // ── GOD MODE PATCH: LIVE SEARCH ──
+  function handleMissionSearch(q) {
+    _missionSearchQuery = q.trim().toLowerCase();
+    document.getElementById('searchClearBtn').classList.toggle('show', _missionSearchQuery.length > 0);
+    renderMissionGrid();
+    renderSearchOrCatContent();
+  }
+  function clearMissionSearch() {
+    document.getElementById('missionSearchInput').value = '';
+    handleMissionSearch('');
+    document.getElementById('missionSearchInput').focus();
+  }
+  function renderSearchOrCatContent() {
+    const tabs = document.getElementById('catTabs');
+    const count = document.getElementById('searchCount');
+    if (_missionSearchQuery) {
+      tabs.style.display = 'none';
+      renderSearchResults();
+    } else {
+      tabs.style.display = '';
+      count.textContent = '';
+      renderCatContent();
+    }
+  }
+  function renderSearchResults() {
+    const q = _missionSearchQuery;
+    const matches = [];
+    CATEGORIES.forEach((cat, ci) => {
+      cat.cases.forEach((c, i) => {
+        if (c.toLowerCase().includes(q)) matches.push({ cat, ci, i, title: c });
+      });
+    });
+    document.getElementById('searchCount').textContent = `${matches.length} of 100 missions match "${q}"`;
+    const el = document.getElementById('catContent');
+    if (!matches.length) {
+      el.innerHTML = `<div style="padding:20px 16px;font-size:12px;color:var(--text2);text-align:center;">No missions match. Try a different word.</div>`;
+      return;
+    }
+    el.innerHTML = matches.map(m => {
+      const isOpen = _openCase && _openCase.catIdx===m.ci && _openCase.caseIdx===m.i;
+      return `<div class="use-case-item">
+        <div class="use-case-row" onclick="toggleCase(${m.ci},${m.i})" role="button" tabindex="0" aria-expanded="${!!isOpen}" onkeydown="if(event.key==='Enter'){this.click()}">
+          <div class="use-case-num">${m.cat.icon}</div>
+          <div class="use-case-title-text"><span class="search-result-tag">${m.cat.label}</span>${m.title}</div>
+          <div class="use-case-chevron ${isOpen?'open':''}">›</div>
+        </div>
+        <div class="use-case-expand ${isOpen?'show':''}">
+          ${buildFieldRows(m.title, m.cat)}
+          <div class="expand-launch" onclick="openMissionFromExplorer(${m.ci},${m.i},event)">Preview this mission →</div>
+        </div>
+      </div>`;
+    }).join('');
   }
 
   function openMissionFromGallery(idx) {
@@ -643,12 +812,26 @@
   // ── GM2: USE CASE EXPLORER ──
   function renderCatTabs() {
     const el = document.getElementById('catTabs');
+    // GOD MODE PATCH: tab semantics + keyboard focus support
     el.innerHTML = CATEGORIES.map((c, i) =>
-      `<div class="cat-tab ${i===_selectedCat?'active':''}" onclick="selectCat(${i})">${c.icon} ${c.label}</div>`
+      `<div class="cat-tab ${i===_selectedCat?'active':''}" onclick="selectCat(${i})" role="tab" tabindex="${i===_selectedCat?'0':'-1'}" aria-selected="${i===_selectedCat}">${c.icon} ${c.label}</div>`
     ).join('');
     // scroll active into view
     const active = el.querySelector('.active');
     if (active) active.scrollIntoView({ behavior:'smooth', block:'nearest', inline:'center' });
+  }
+
+  // GOD MODE PATCH: accessibility — arrow-key navigation across category tabs
+  function handleCatTabsKeydown(e) {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const dir = e.key === 'ArrowRight' ? 1 : -1;
+    let next = _selectedCat + dir;
+    if (next < 0) next = CATEGORIES.length - 1;
+    if (next >= CATEGORIES.length) next = 0;
+    selectCat(next);
+    const btns = document.querySelectorAll('#catTabs .cat-tab');
+    if (btns[next]) btns[next].focus();
   }
 
   function selectCat(i) {
@@ -672,7 +855,7 @@
       ${cat.cases.map((c, i) => {
         const isOpen = _openCase && _openCase.catIdx===_selectedCat && _openCase.caseIdx===i;
         return `<div class="use-case-item">
-          <div class="use-case-row" onclick="toggleCase(${_selectedCat},${i})">
+          <div class="use-case-row" onclick="toggleCase(${_selectedCat},${i})" role="button" tabindex="0" aria-expanded="${!!isOpen}" onkeydown="if(event.key==='Enter'){this.click()}">
             <div class="use-case-num">${i+1}</div>
             <div class="use-case-title-text">${c}</div>
             <div class="use-case-chevron ${isOpen?'open':''}">›</div>
@@ -706,7 +889,8 @@
     } else {
       _openCase = { catIdx, caseIdx };
     }
-    renderCatContent();
+    // GOD MODE PATCH: keep search results rendered (instead of the per-category view) while a search is active
+    if (_missionSearchQuery) { renderSearchResults(); } else { renderCatContent(); }
   }
 
   function openMissionFromExplorer(catIdx, caseIdx, evt) {
@@ -721,6 +905,12 @@
     _currentMission = { title, catLabel, who, example };
     document.getElementById('sheetCatTag').textContent = catLabel;
     document.getElementById('sheetMissionTitle').textContent = title;
+    updateSheetFavStar(); // GOD MODE PATCH
+
+    // GOD MODE PATCH: personal preview counter (local-only stat, not a network stat)
+    _previewCount++;
+    localStorage.setItem('indx_gallery_preview_count', String(_previewCount));
+    renderActivityStrip();
 
     const fields = document.getElementById('sheetFields');
     fields.innerHTML = [
@@ -742,14 +932,27 @@
     localStorage.setItem('indx_gallery_recent', JSON.stringify(_recentMissions));
     renderRecentStrip();
 
+    // GOD MODE PATCH: accessibility — remember trigger element, move focus into the sheet
+    _lastFocusedEl = document.activeElement;
     document.getElementById('sheetOverlay').classList.add('show');
     document.getElementById('launchSheet').classList.add('show');
+    const closeBtn = document.querySelector('#launchSheet .sheet-btn-sec');
+    if (closeBtn) closeBtn.focus();
   }
 
   function closeLaunchSheet() {
     document.getElementById('sheetOverlay').classList.remove('show');
     document.getElementById('launchSheet').classList.remove('show');
+    // GOD MODE PATCH: accessibility — restore focus to whatever opened the sheet
+    if (_lastFocusedEl && typeof _lastFocusedEl.focus === 'function') _lastFocusedEl.focus();
   }
+
+  // GOD MODE PATCH: accessibility — Escape closes the open launch sheet
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.getElementById('launchSheet').classList.contains('show')) {
+      closeLaunchSheet();
+    }
+  });
 
   function copyMissionBrief() {
     if (!_currentMission) return;
@@ -814,6 +1017,7 @@
     renderCatContent();
     renderDoctrine();
     renderRecentStrip();
+    renderActivityStrip(); // GOD MODE PATCH
   });
 </script>
 <script src="siindex-speak-core.js"></script>
