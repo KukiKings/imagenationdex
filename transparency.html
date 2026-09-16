@@ -558,94 +558,17 @@ function renderHealth() {
 }
 
 // ── Activity feed ──
-// DEAD CODE — startFeed() is deliberately disabled (see INIT block, ~line 645). Do NOT
-// re-enable without replacing this array first. Verified 2026-07-29: these entries are
-// fabricated, and one of them ("Sovereign Yield distributed · WS 112 · 22.4% APY · ✓ Paid")
-// asserts a payout from a programme that has never paid anyone. Re-enabling startFeed()
-// would put fabricated financial activity back on a screen literally titled Transparency.
-const SI_ACTIONS = [
-  { icon:'🛡️', cls:'green',  action:'Pre-flight scan passed',     meta:'Anonymous · 500 INDX transfer · 4 corridors',  result:'✓ Cleared', ok:true },
-  { icon:'⚛️', cls:'cyan',   action:'PQSI T0 confirmed',          meta:'Anonymous · Wallet activation',                 result:'✓ T0',      ok:true },
-  { icon:'🔒', cls:'gold',   action:'Escrow released',            meta:'Anonymous · P2P sale · 120 INDX',              result:'✓ Done',    ok:true },
-  { icon:'⚡', cls:'cyan',   action:'Instant settlement',         meta:'Anonymous · FJD corridor · 4.1s',              result:'✓ 4.1s',    ok:true },
-  { icon:'🛡️', cls:'green',  action:'Fraud pattern blocked',      meta:'Anonymous · Suspicious sequence detected',     result:'⚠ Blocked', ok:false },
-  { icon:'🗳️', cls:'purple', action:'Governance vote recorded',   meta:'Anonymous · Pillar #7 amendment',              result:'✓ Logged',  ok:true },
-  { icon:'💰', cls:'green',  action:'Sovereign Yield distributed', meta:'Anonymous · WS 112 · 22.4% APY',              result:'✓ Paid',    ok:true },
-  { icon:'🌐', cls:'cyan',   action:'Domain resolved',            meta:'Anonymous · yourname.IN$DEX lookup',           result:'✓ Fast',    ok:true },
-  { icon:'📊', cls:'purple', action:'Wisdom Score updated',        meta:'Anonymous · Activity threshold reached',       result:'✓ +5 WS',   ok:true },
-  { icon:'🔍', cls:'gold',   action:'MEV protection activated',   meta:'Anonymous · High-value transaction',           result:'✓ Safe',    ok:true },
-];
-
-let afTotal = 0;
-function addFeedItem(item) {
-  const list = document.getElementById('afList');
-  afTotal++;
-  document.getElementById('afCount').textContent = afTotal;
-  document.getElementById('siDecisionsToday').textContent = fmtNum(metrics.siDecisions + afTotal);
-
-  const el = document.createElement('div');
-  el.className = 'af-item';
-  const ts = new Date().toLocaleTimeString('en-AU', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
-  el.innerHTML = `
-    <div class="af-icon ${item.cls}">${item.icon}</div>
-    <div class="af-text">
-      <div class="af-action">${item.action}</div>
-      <div class="af-meta">${item.meta} · ${ts}</div>
-    </div>
-    <div class="af-result ${item.ok ? 'ok' : 'warn'}">${item.result}</div>
-  `;
-  list.insertBefore(el, list.firstChild);
-  requestAnimationFrame(() => { el.classList.add('visible'); });
-
-  // Cap at 20 items
-  while (list.children.length > 20) list.removeChild(list.lastChild);
-}
-
-function startFeed() {
-  // Seed 5 initial items
-  for (let i = 0; i < 5; i++) {
-    setTimeout(() => {
-      const item = SI_ACTIONS[Math.floor(Math.random() * SI_ACTIONS.length)];
-      addFeedItem(item);
-    }, i * 350);
-  }
-  // New item every 5–9 seconds
-  function schedNext() {
-    const delay = 5000 + Math.random() * 4000;
-    setTimeout(() => {
-      const item = SI_ACTIONS[Math.floor(Math.random() * SI_ACTIONS.length)];
-      addFeedItem(item);
-      schedNext();
-    }, delay);
-  }
-  schedNext();
-}
+// REMOVED 2026-09-16 (Task #15 audit): this block previously held a fabricated activity feed
+// (SI_ACTIONS array + addFeedItem()/startFeed()), including a fake "Sovereign Yield distributed
+// · 22.4% APY · ✓ Paid" entry asserting a payout from a programme that has never paid anyone. It
+// was already disabled dead code; deleted outright per the audit finding rather than left as a
+// re-enable landmine. #afList/#afCount stay empty until a real activity source exists.
 
 // ── Live metric drift ──
-// DEAD CODE — driftMetrics() is deliberately disabled (see INIT block, ~line 651). Do NOT
-// re-enable. Verified 2026-07-30: every figure it writes is fabricated. It randomly increments
-// citizensOnline with a HARDCODED FLOOR OF 80, which would overwrite the one real value on this
-// page — the live Supabase citizen count set by loadLiveData() — with an invented minimum, then
-// stamp "Updated <time>" to make the invention look live. It also fabricates totalTx, settlement
-// seconds and siDecisions. Re-enabling this puts manufactured financial and activity data on a
-// screen titled Transparency. Replace every figure with a real query before it is ever called.
-function driftMetrics() {
-  setInterval(() => {
-    metrics.citizensOnline = Math.max(80, metrics.citizensOnline + Math.round((Math.random() - 0.4) * 4));
-    metrics.totalTx        += Math.round(Math.random() * 3);
-    metrics.settlement      = +(3.8 + Math.random() * 0.8).toFixed(1);
-    metrics.siDecisions    += Math.round(Math.random() * 2);
-
-    document.getElementById('mCitizensOnline').textContent = metrics.citizensOnline.toLocaleString();
-    document.getElementById('mTotalTx').textContent        = fmtNum(metrics.totalTx);
-    document.getElementById('mSettlement').textContent     = metrics.settlement.toFixed(1) + 's';
-
-    // Update last-updated
-    const ts = new Date().toLocaleTimeString('en-AU', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
-    document.getElementById('lastUpdatedText').textContent = 'Updated ' + ts;
-    renderHealth();
-  }, 8000);
-}
+// REMOVED 2026-09-16 (Task #15 audit): driftMetrics() previously fabricated citizensOnline
+// (with a hardcoded floor of 80 that would overwrite the one real Supabase-sourced figure),
+// totalTx, settlement seconds and siDecisions, restamping "Updated <time>" to look live. It was
+// already disabled dead code; deleted outright rather than left as a re-enable landmine.
 
 // ── Try Supabase for live waitlist count ──
 async function loadLiveData() {
@@ -747,28 +670,18 @@ function gmShowVisitDelta(count) {
   try { localStorage.setItem(key, String(count)); } catch (e) {}
 }
 
-// ── tx hash display ──
-function randomHash() {
-  const chars = '0123456789abcdef';
-  let h = '';
-  for (let i = 0; i < 8; i++) h += chars[Math.floor(Math.random() * 16)];
-  return 'zljgthfz…' + h;
-}
+// REMOVED 2026-09-16 (Task #15 audit): randomHash() previously cycled a fake "reserve proof"
+// hash every 15s to look like a live, changing on-chain reference. Already disabled dead code;
+// deleted outright — the static honest label below is the only thing that ever ran.
 
 // ── INIT ──
 document.addEventListener('DOMContentLoaded', () => {
   initCountUps();
   renderHealth();
-  // Corrected 2026-07-25: startFeed() (fake activity feed) and driftMetrics() (randomly incrementing
-  // fake citizen/tx/settlement/SI-decision numbers every 8s) disabled — no real activity to simulate
-  // pre-launch. loadLiveData() kept; it now sets the one real figure (citizen count) honestly.
-  // startFeed();
-  // driftMetrics();
+  // 2026-09-16: no fake activity feed or metric drift — loadLiveData() sets the one real figure
+  // (citizen count) honestly; everything else stays at its honest static/pre-launch label.
   loadLiveData();
 
-  // Corrected 2026-07-25: this cycled a fake "reserve proof" hash every 15s to look like a live,
-  // changing on-chain reference. Disabled — static honest label set below instead.
-  // setInterval(() => { document.getElementById('rpHash').textContent = randomHash(); }, 15000);
   const rpEl = document.getElementById('rpHash');
   if (rpEl) rpEl.textContent = 'Not yet on-chain — pre-launch';
 
