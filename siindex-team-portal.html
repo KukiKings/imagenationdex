@@ -189,6 +189,20 @@
   .approval-status-pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;margin-left:6px;}
   .approval-status-pill.approved{background:rgba(0,229,160,.15);color:var(--green);}
   .approval-status-pill.rejected{background:rgba(255,77,109,.15);color:var(--red);}
+
+  /* ── GOD MODE PATCH: search + confirm-sheet + a11y (siindex-team-portal.html) ── */
+  .approval-search-input{width:100%;background:var(--surface3);border:1px solid rgba(255,255,255,.08);border-radius:10px;color:var(--text);font-size:12px;padding:10px 12px;margin-bottom:12px;font-family:inherit;}
+  .approval-search-input:focus{outline:none;border-color:var(--cyan);}
+  .sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,.72);z-index:900;opacity:0;pointer-events:none;transition:opacity .2s;}
+  .sheet-overlay.show{opacity:1;pointer-events:auto;}
+  .bottom-sheet{position:fixed;left:0;right:0;bottom:0;max-width:430px;margin:0 auto;background:var(--surface2);border:1px solid var(--surface3);border-radius:20px 20px 0 0;padding:20px;transform:translateY(100%);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:901;}
+  .bottom-sheet.show{transform:translateY(0);}
+  .sheet-handle{width:36px;height:4px;background:var(--surface3);border-radius:2px;margin:0 auto 16px;}
+  .sheet-title{font-size:15px;font-weight:800;color:var(--text);margin-bottom:10px;}
+  .sheet-body{font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:18px;}
+  .sheet-actions{display:flex;gap:10px;}
+  .sheet-actions .approval-btn{flex:1;padding:12px;font-size:13px;}
+  .nav-tab:focus-visible,.gate-btn:focus-visible,.approval-btn:focus-visible,.refresh-health-btn:focus-visible,.approval-search-input:focus-visible,.lock-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
 </style>
 </head>
 <body>
@@ -234,13 +248,13 @@
 </div>
 
 <!-- NAV TABS -->
-<div class="nav-tabs">
-  <div class="nav-tab active" onclick="switchTab('warroom')">⚡ War Room</div>
-  <div class="nav-tab" onclick="switchTab('health')">🟢 Health</div>
-  <div class="nav-tab" onclick="switchTab('kpi')">📊 KPIs</div>
-  <div class="nav-tab" onclick="switchTab('comms')">📡 Comms</div>
-  <div class="nav-tab" onclick="switchTab('ops')">🗂️ Ops Links</div>
-  <div class="nav-tab" onclick="switchTab('approvals')">🔏 Approvals</div>
+<div class="nav-tabs" role="tablist" aria-label="Team portal sections">
+  <div class="nav-tab active" data-tab="warroom" role="tab" aria-selected="true" tabindex="0" onclick="switchTab('warroom')">⚡ War Room</div>
+  <div class="nav-tab" data-tab="health" role="tab" aria-selected="false" tabindex="0" onclick="switchTab('health')">🟢 Health</div>
+  <div class="nav-tab" data-tab="kpi" role="tab" aria-selected="false" tabindex="0" onclick="switchTab('kpi')">📊 KPIs</div>
+  <div class="nav-tab" data-tab="comms" role="tab" aria-selected="false" tabindex="0" onclick="switchTab('comms')">📡 Comms</div>
+  <div class="nav-tab" data-tab="ops" role="tab" aria-selected="false" tabindex="0" onclick="switchTab('ops')">🗂️ Ops Links</div>
+  <div class="nav-tab" data-tab="approvals" role="tab" aria-selected="false" tabindex="0" onclick="switchTab('approvals')">🔏 Approvals</div>
 </div>
 
 <!-- TAB: WAR ROOM -->
@@ -344,12 +358,26 @@
     for the private pilot. If you want a real second signer later, that needs a second row in
     <code>founder_authority</code> tied to a second real account.
   </div>
-  <button class="refresh-health-btn" onclick="renderApprovals()">↻ Refresh Pending Approvals</button>
+  <button class="refresh-health-btn" onclick="refreshApprovalsFiltered()">↻ Refresh Pending Approvals</button>
+  <!-- GOD MODE PATCH: client-side search over already-rendered approval cards (no fetch/RPC change) -->
+  <input type="text" id="approvalSearchInput" class="approval-search-input" placeholder="Search by agent name or description…" oninput="filterApprovals()" aria-label="Search pending approvals">
   <div class="sect-label">Pending Risk-Class Elevations</div>
   <div id="thresholdApprovalsList"><div style="text-align:center;color:var(--muted);padding:20px;font-size:13px;">Loading…</div></div>
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- GOD MODE PATCH: confirmation sheet — wraps Agree/Reject taps, does not alter record_threshold_signoff() itself -->
+<div class="sheet-overlay" id="signoffConfirmOverlay" onclick="closeSignoffConfirm()"></div>
+<div class="bottom-sheet" id="signoffConfirmSheet" role="dialog" aria-modal="true" aria-labelledby="signoffConfirmTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="signoffConfirmTitle">Confirm signoff</div>
+  <div class="sheet-body" id="signoffConfirmBody"></div>
+  <div class="sheet-actions">
+    <button class="approval-btn" style="background:var(--surface3);color:var(--text);" onclick="closeSignoffConfirm()">Cancel</button>
+    <button class="approval-btn agree" id="signoffConfirmBtn" onclick="confirmSignoffAction()">Confirm</button>
+  </div>
+</div>
 
 <script>
 // ── CONSTANTS ──
@@ -439,13 +467,27 @@ function lockPortal() {
 // ── TAB NAV ──
 function switchTab(id) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
   document.getElementById('tab-' + id).classList.add('active');
   event.target.classList.add('active');
+  event.target.setAttribute('aria-selected', 'true');
+  // GOD MODE PATCH: remember last-viewed tab locally (device-only, cosmetic)
+  try { localStorage.setItem('indx_teamportal_last_tab', id); } catch (e) {}
   if (id === 'health') renderHealth();
   if (id === 'kpi') renderKPIs();
   if (id === 'comms') renderComms();
   if (id === 'approvals') renderApprovals();
+}
+
+// GOD MODE PATCH: restore last-viewed tab on unlock (reads localStorage only, safe default = warroom)
+function restoreLastTab() {
+  try {
+    const last = localStorage.getItem('indx_teamportal_last_tab');
+    if (last) {
+      const btn = document.querySelector('.nav-tab[data-tab="' + last + '"]');
+      if (btn) btn.click();
+    }
+  } catch (e) {}
 }
 
 // ── TOAST ──
@@ -860,12 +902,56 @@ async function renderApprovals() {
       <div class="approval-signoffs">${signoffLine} (${agreeCount} agree${rejectCount ? ', ' + rejectCount + ' reject' : ''} of ${a.required_count} needed)</div>
       <div class="approval-row">
         <input class="approval-name-input" id="approverName-${a.id}" value="${esc(lastName)}" placeholder="Your name for this signoff">
-        <button class="approval-btn agree" onclick="submitSignoff('${a.id}','agree')">Agree</button>
-        <button class="approval-btn reject" onclick="submitSignoff('${a.id}','reject')">Reject</button>
+        <button class="approval-btn agree" onclick="confirmSignoff('${a.id}','agree')">Agree</button>
+        <button class="approval-btn reject" onclick="confirmSignoff('${a.id}','reject')">Reject</button>
       </div>
     </div>`;
   }));
   container.innerHTML = cards.join('');
+  // GOD MODE PATCH: re-apply any active search filter after a re-render
+  filterApprovals();
+}
+
+// GOD MODE PATCH: confirmation sheet wrapping the real signoff call below.
+// This only gates the UI tap — submitSignoff() itself, and the real RPC it calls,
+// are completely unmodified.
+let _pendingSignoff = null;
+function confirmSignoff(thresholdApprovalId, decision) {
+  _pendingSignoff = { id: thresholdApprovalId, decision };
+  const body = document.getElementById('signoffConfirmBody');
+  const verbLabel = decision === 'agree' ? 'AGREE (approve)' : 'REJECT';
+  body.textContent = 'You are about to record a real, binding signoff: ' + verbLabel + '. This calls the live record_threshold_signoff() function and cannot be undone from this screen.';
+  const btn = document.getElementById('signoffConfirmBtn');
+  btn.textContent = decision === 'agree' ? 'Confirm Agree' : 'Confirm Reject';
+  btn.className = 'approval-btn ' + (decision === 'agree' ? 'agree' : 'reject');
+  document.getElementById('signoffConfirmOverlay').classList.add('show');
+  document.getElementById('signoffConfirmSheet').classList.add('show');
+  btn.focus();
+}
+function closeSignoffConfirm() {
+  _pendingSignoff = null;
+  document.getElementById('signoffConfirmOverlay').classList.remove('show');
+  document.getElementById('signoffConfirmSheet').classList.remove('show');
+}
+function confirmSignoffAction() {
+  if (!_pendingSignoff) return;
+  const { id, decision } = _pendingSignoff;
+  closeSignoffConfirm();
+  submitSignoff(id, decision); // unchanged — real record_threshold_signoff() RPC call
+}
+
+// GOD MODE PATCH: client-side search over already-rendered cards — never touches the fetch/RPC layer
+function filterApprovals() {
+  const input = document.getElementById('approvalSearchInput');
+  if (!input) return;
+  const q = input.value.trim().toLowerCase();
+  document.querySelectorAll('#thresholdApprovalsList .approval-card').forEach(card => {
+    card.style.display = (!q || card.textContent.toLowerCase().includes(q)) ? '' : 'none';
+  });
+}
+async function refreshApprovalsFiltered() {
+  await renderApprovals();
+  showToast(_realAccessToken ? '↻ Approvals refreshed' : '⚠️ No founder session — showing what loaded');
 }
 
 async function submitSignoff(thresholdApprovalId, decision) {
@@ -941,7 +1027,20 @@ async function initPortal() {
   renderLiveHealth();
   renderPlatformLive();
   renderApprovals();
+  restoreLastTab(); // GOD MODE PATCH: reopen the tab the founder was last viewing (local only)
 }
+
+// GOD MODE PATCH: keyboard navigation (Left/Right across nav tabs, Escape closes the confirm sheet)
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') { closeSignoffConfirm(); return; }
+  const tabsContainer = document.querySelector('.nav-tabs');
+  if (!tabsContainer || !tabsContainer.contains(document.activeElement)) return;
+  const tabs = Array.from(tabsContainer.querySelectorAll('.nav-tab'));
+  const idx = tabs.indexOf(document.activeElement);
+  if (idx === -1) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); const next = tabs[(idx + 1) % tabs.length]; next.focus(); next.click(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); const prev = tabs[(idx - 1 + tabs.length) % tabs.length]; prev.focus(); prev.click(); }
+});
 
 document.addEventListener('DOMContentLoaded', () => {
   // Check if already unlocked this session (within 4 hours)

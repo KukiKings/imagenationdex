@@ -831,6 +831,45 @@
   .brief-integrity-txt { flex: 1; font-size: 11px; color: var(--text2); line-height: 1.45; }
   .brief-integrity-txt strong { color: var(--green); }
 
+  /* ── GOD MODE PATCH: confirm sheet, overlay, keyboard focus states ── */
+  .sheet-overlay {
+    position: fixed; inset: 0;
+    background: rgba(9,10,16,0.7);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s;
+    z-index: 400;
+  }
+  .sheet-overlay.show { opacity: 1; pointer-events: auto; }
+  .bottom-sheet {
+    position: fixed; left: 50%; bottom: 0;
+    transform: translate(-50%, 100%);
+    width: 100%; max-width: 430px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px 20px 0 0;
+    padding: 10px 20px 28px;
+    z-index: 401;
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  }
+  .bottom-sheet.show { transform: translate(-50%, 0); }
+  .confirm-sheet-handle { width: 36px; height: 4px; background: var(--surface3); border-radius: 2px; margin: 0 auto 14px; }
+  .confirm-sheet-icon { font-size: 26px; text-align: center; margin-bottom: 8px; }
+  .confirm-sheet-msg { font-size: 13px; color: var(--text2); text-align: center; line-height: 1.5; margin-bottom: 16px; }
+  .confirm-sheet-actions { display: flex; gap: 10px; }
+  .confirm-sheet-btn {
+    flex: 1; padding: 12px; border-radius: 12px;
+    font-size: 13px; font-weight: 800; cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface3); color: var(--text);
+    font-family: inherit;
+  }
+  .confirm-sheet-btn.confirm { background: rgba(255,77,109,0.12); border-color: rgba(255,77,109,0.35); color: var(--red); }
+  .gm-kb:focus-visible, .confirm-sheet-btn:focus-visible, [tabindex="0"]:focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+
   /* ── TOAST ── */
   .toast {
     position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px);
@@ -1334,7 +1373,19 @@
   <div id="doctrineLines"></div>
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- GOD MODE PATCH: shared confirm sheet for destructive actions (revoke consent, revoke session key, reject bid) -->
+<div class="sheet-overlay" id="confirmSheetOverlay" onclick="closeConfirmSheet()"></div>
+<div class="bottom-sheet" id="confirmSheet" role="alertdialog" aria-modal="true" aria-labelledby="confirmSheetMsg">
+  <div class="confirm-sheet-handle"></div>
+  <div class="confirm-sheet-icon">⚠️</div>
+  <div class="confirm-sheet-msg" id="confirmSheetMsg"></div>
+  <div class="confirm-sheet-actions">
+    <button type="button" class="confirm-sheet-btn cancel" onclick="closeConfirmSheet()">Cancel</button>
+    <button type="button" class="confirm-sheet-btn confirm" id="confirmSheetConfirmBtn" onclick="runPendingAction()">Confirm</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" aria-live="polite" aria-atomic="true"></div>
 
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav">
@@ -1502,10 +1553,13 @@
     showToast((CONSENT_DATA[idx].active ? '✓' : '⏸') + ' ' + CONSENT_DATA[idx].name + ' access ' + state);
   }
 
+  // GOD MODE PATCH — confirmation/safety: revoking access is permanent, so route through the shared confirm sheet instead of acting on the first tap
   function revokeConsent(name) {
-    const idx = CONSENT_DATA.findIndex(c => c.name === name);
-    if (idx > -1) { CONSENT_DATA.splice(idx, 1); renderConsentManager(); }
-    showToast('✕ Consent revoked — ' + name + ' can no longer access your credentials');
+    openConfirmSheet('Revoke ' + name + '’s access? This stops future credential checks immediately.', () => {
+      const idx = CONSENT_DATA.findIndex(c => c.name === name);
+      if (idx > -1) { CONSENT_DATA.splice(idx, 1); renderConsentManager(); }
+      showToast('✕ Consent revoked — ' + name + ' can no longer access your credentials');
+    });
   }
 
   // ── GM4: IAB LEDGER ──
@@ -1620,6 +1674,8 @@
     const accesses  = parseInt(document.getElementById('rangeAccess').value);
     const creds     = parseInt(document.getElementById('rangeCreds').value);
     const guildOn   = document.getElementById('guildToggle').checked;
+    // GOD MODE PATCH — data persistence: remember this simulation for the next visit
+    saveProjectorState(accesses, creds, guildOn);
     document.getElementById('sliderAccess').textContent = accesses;
     document.getElementById('sliderCreds').textContent  = creds;
     document.getElementById('guildToggleSub').textContent = guildOn
@@ -1866,10 +1922,13 @@
       </div>`).join('');
   }
 
+  // GOD MODE PATCH — confirmation/safety: same shared confirm sheet before revoking a signing key
   function revokeSessionKey(idx, name) {
-    SESSION_KEYS_DATA.splice(idx, 1);
-    renderSessionKeys();
-    showToast('✗ Session key revoked — ' + name + ' can no longer sign transactions');
+    openConfirmSheet('Revoke session key "' + name + '"? It will stop signing transactions immediately.', () => {
+      SESSION_KEYS_DATA.splice(idx, 1);
+      renderSessionKeys();
+      showToast('✗ Session key revoked — ' + name + ' can no longer sign transactions');
+    });
   }
 
   // ── PIONEER TABLE ──
@@ -1894,6 +1953,94 @@
         <div class="pioneer-cell value">${r.pioneer}</div>
       </div>`).join('');
   }
+
+  // ── GOD MODE PATCH: confirm sheet engine (confirmation/safety) ──
+  let _pendingConfirmAction = null;
+
+  function openConfirmSheet(message, onConfirm) {
+    _pendingConfirmAction = onConfirm;
+    document.getElementById('confirmSheetMsg').textContent = message;
+    document.getElementById('confirmSheetOverlay').classList.add('show');
+    document.getElementById('confirmSheet').classList.add('show');
+    const btn = document.getElementById('confirmSheetConfirmBtn');
+    if (btn) btn.focus();
+    document.addEventListener('keydown', _confirmSheetKeydown);
+  }
+
+  function closeConfirmSheet() {
+    document.getElementById('confirmSheetOverlay').classList.remove('show');
+    document.getElementById('confirmSheet').classList.remove('show');
+    _pendingConfirmAction = null;
+    document.removeEventListener('keydown', _confirmSheetKeydown);
+  }
+
+  function runPendingAction() {
+    const action = _pendingConfirmAction;
+    closeConfirmSheet();
+    if (typeof action === 'function') action();
+  }
+
+  // Accessibility: Escape closes the sheet, Tab is trapped between its two buttons while open
+  function _confirmSheetKeydown(e) {
+    if (e.key === 'Escape') { closeConfirmSheet(); return; }
+    if (e.key === 'Tab') {
+      const focusables = document.querySelectorAll('#confirmSheet button');
+      if (!focusables.length) return;
+      const first = focusables[0], last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }
+
+  // ── GOD MODE PATCH: lifetime projector persistence (data persistence) ──
+  const PROJECTOR_STORAGE_KEY = 'indx_dataeconomy_projector';
+
+  function restoreProjectorState() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(PROJECTOR_STORAGE_KEY) || 'null');
+      if (saved) {
+        if (saved.accesses) document.getElementById('rangeAccess').value = saved.accesses;
+        if (saved.creds)    document.getElementById('rangeCreds').value  = saved.creds;
+        document.getElementById('guildToggle').checked = !!saved.guildOn;
+      }
+    } catch (e) { /* storage unavailable or corrupt — fall back to slider defaults */ }
+  }
+
+  function saveProjectorState(accesses, creds, guildOn) {
+    try { localStorage.setItem(PROJECTOR_STORAGE_KEY, JSON.stringify({ accesses, creds, guildOn })); }
+    catch (e) { /* storage unavailable — simulation just won't persist */ }
+  }
+
+  // ── GOD MODE PATCH: personalize the illustrative "yourname.IN$DEX" placeholder (smart defaults) ──
+  // Read-only use of the citizen's own session domain, when set — never invents new citizen state.
+  function personalizeDomainReferences() {
+    let domain = null;
+    try { domain = sessionStorage.getItem('citizen_web3_domain'); } catch (e) { /* sessionStorage unavailable */ }
+    if (!domain) return;
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+    const targets = [];
+    while (walker.nextNode()) {
+      if (walker.currentNode.nodeValue.indexOf('yourname.IN$DEX') > -1) targets.push(walker.currentNode);
+    }
+    targets.forEach(node => { node.nodeValue = node.nodeValue.split('yourname.IN$DEX').join(domain); });
+  }
+
+  // ── GOD MODE PATCH: keyboard access for tap-only controls (accessibility) ──
+  function enhanceKeyboardAccess() {
+    document.querySelectorAll('[onclick]').forEach(el => {
+      if (el.classList.contains('gm-kb')) return;
+      const tag = el.tagName.toLowerCase();
+      if (tag === 'button' || tag === 'a' || tag === 'input') return;
+      if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+      if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
+      el.classList.add('gm-kb');
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }
+      });
+    });
+  }
+  // Re-run whenever a section re-renders new tap targets (consent list, IAB ledger, guild, auction, etc.)
+  const _gmKeyboardObserver = new MutationObserver(() => enhanceKeyboardAccess());
 
   // ── GM10: PQSI HUNT MODE ──
   const HUNT_DATA = [
@@ -1986,10 +2133,14 @@
     showToast('✓ Bid accepted — earning ' + AUCTION_BIDS[idx].indx + '. Consent record created on-chain.');
   }
 
+  // GOD MODE PATCH — confirmation/safety: rejecting a bid is final, so confirm before dismissing it
   function rejectBid(idx) {
-    const el = document.getElementById('auctionBid-' + idx);
-    if (el) { el.style.opacity = '0.3'; el.style.pointerEvents = 'none'; }
-    showToast('✕ Bid rejected — ' + AUCTION_BIDS[idx].who + ' cannot access your credentials.');
+    const bidder = AUCTION_BIDS[idx].who;
+    openConfirmSheet('Reject ' + bidder + '’s bid? This offer cannot be reinstated.', () => {
+      const el = document.getElementById('auctionBid-' + idx);
+      if (el) { el.style.opacity = '0.3'; el.style.pointerEvents = 'none'; }
+      showToast('✕ Bid rejected — ' + bidder + ' cannot access your credentials.');
+    });
   }
 
   // ── GM12: PRIVACY EXPOSURE RADAR ──
@@ -2139,6 +2290,7 @@
     renderThreatFeed();
     renderConsentManager();
     renderIABLedger();
+    restoreProjectorState(); // GOD MODE PATCH — data persistence
     updateProjector();
     renderGuild();
     buildDcgSteps();
@@ -2150,6 +2302,11 @@
     renderBriefing();
     renderPioneerTable();
     renderDoctrine();
+
+    // GOD MODE PATCH — smart defaults + accessibility, run after the initial render pass
+    personalizeDomainReferences();
+    enhanceKeyboardAccess();
+    _gmKeyboardObserver.observe(document.body, { childList: true, subtree: true });
   });
 </script>
 <script src="siindex-speak-core.js"></script>

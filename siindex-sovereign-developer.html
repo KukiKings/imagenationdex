@@ -166,6 +166,16 @@
   .feat-btn.ship{color:var(--green);}
   .feat-btn.del{color:var(--red);}
 
+  /* ── GOD MODE PATCH: confirm sheet, keyboard focus, live elapsed-time tag ── */
+  .bottom-sheet{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--surface3);border-radius:20px 20px 0 0;padding:20px;z-index:50;transform:translateY(100%);transition:transform .3s cubic-bezier(.34,1.2,.64,1);}
+  .bottom-sheet.open{transform:translateY(0);}
+  .confirm-msg{font-size:13px;color:var(--text);line-height:1.5;margin-bottom:16px;}
+  .confirm-btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .confirm-danger{background:var(--red);color:var(--text);border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;}
+  .confirm-cancel{background:var(--surface2);border:1.5px solid var(--surface3);border-radius:10px;padding:11px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;}
+  .gm-kb:focus-visible,[tabindex="0"]:focus-visible,button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;border-radius:6px;}
+  .elapsed-tag{font-size:10px;color:var(--muted);font-weight:600;margin-left:8px;}
+
   /* ── TOAST ── */
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;color:var(--text);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:99;white-space:nowrap;pointer-events:none;}
   .toast.show{transform:translateX(-50%) translateY(0);}
@@ -259,7 +269,19 @@
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- GOD MODE PATCH: shared confirm sheet for destructive actions (delete backlog item, archive build) -->
+<div class="sheet-overlay" id="confirmOverlay" onclick="closeConfirmSheet()"></div>
+<div class="bottom-sheet" id="destructiveConfirmSheet" role="alertdialog" aria-modal="true" aria-labelledby="confirmMsg">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" style="color:var(--red)">Are you sure?</div>
+  <div class="confirm-msg" id="confirmMsg"></div>
+  <div class="confirm-btn-row">
+    <button class="confirm-cancel" onclick="closeConfirmSheet()">Cancel</button>
+    <button class="confirm-danger" id="confirmDangerBtn" onclick="runConfirmedAction()">Confirm</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" aria-live="polite" aria-atomic="true"></div>
 
 <script>
 // ── CONSTANTS ──
@@ -268,14 +290,17 @@
 const TGE_DATE = new Date('2027-02-24T00:00:00+11:00');
 
 // ── NAV ──
-function switchTab(id) {
+// GOD MODE PATCH — accept an explicit target element so this can be called without a real click event (smart defaults: tab restore)
+function switchTab(id, targetEl) {
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
-  event.target.classList.add('active');
+  const el = targetEl || (typeof event !== 'undefined' && event ? event.target : null);
+  if (el) el.classList.add('active');
   if(id==='agents') renderAgents();
   if(id==='velocity') renderVelocity();
   if(id==='backlog') renderBacklog();
+  saveLastView(id); // GOD MODE PATCH — smart defaults: remember the last tab viewed
 }
 function showToast(msg){
   const t=document.getElementById('toast');
@@ -349,7 +374,7 @@ function renderProtocol() {
   const pct = Math.round((doneCount/BUILD_STEPS.length)*100);
   document.getElementById('protocolContent').innerHTML = `
     <div class="protocol-progress">
-      <div class="pp-header"><div class="pp-name">${build.name}</div><div class="pp-pct">${doneCount}/${BUILD_STEPS.length} steps · ${pct}%</div></div>
+      <div class="pp-header"><div class="pp-name">${build.name}</div><div><span class="pp-pct">${doneCount}/${BUILD_STEPS.length} steps · ${pct}%</span><span class="elapsed-tag" id="buildElapsed"></span></div></div>
       <div class="pp-bar"><div class="pp-fill" style="width:${pct}%"></div></div>
       <div class="step-list">
         ${BUILD_STEPS.map((s,i)=>{
@@ -367,6 +392,7 @@ function renderProtocol() {
       </div>
       <button onclick="clearBuild('${build.id}')" style="margin-top:12px;width:100%;background:var(--surface3);border:none;border-radius:9px;color:var(--red);font-size:12px;padding:9px;cursor:pointer;font-weight:600;">Archive Build</button>
     </div>`;
+  updateElapsedTag(); // GOD MODE PATCH — real-time feedback: fill in the live "started Xm ago" tag just rendered
 }
 
 function selectBuild(id) { _activeBuildId = id; renderProtocol(); }
@@ -383,13 +409,19 @@ function cycleStep(buildId, stepId) {
   if(next==='done') showToast('✅ Step done: '+BUILD_STEPS.find(s=>s.id===stepId)?.label);
 }
 
+// GOD MODE PATCH — confirmation/safety: archiving a build drops its step progress, so confirm first
 function clearBuild(id) {
-  let builds = getBuilds();
-  builds = builds.filter(b=>b.id!==id);
-  saveBuilds(builds);
-  _activeBuildId = builds.length > 0 ? builds[builds.length-1].id : null;
-  renderProtocol();
-  showToast('Build archived');
+  const builds = getBuilds();
+  const build = builds.find(b=>b.id===id);
+  const label = build ? build.name : 'this build';
+  openConfirmSheet('Archive "'+label+'"? Its step progress will be removed from this list.', () => {
+    let list = getBuilds();
+    list = list.filter(b=>b.id!==id);
+    saveBuilds(list);
+    _activeBuildId = list.length > 0 ? list[list.length-1].id : null;
+    renderProtocol();
+    showToast('Build archived');
+  });
 }
 
 // ── GM2: DEVELOPER AGENTS ──
@@ -453,12 +485,16 @@ function openAgentSheet(id) {
   document.getElementById('agentTaskInput').value = (data[id]||{}).task||'';
   document.getElementById('agentSheet').classList.add('open');
   document.getElementById('agentOverlay').classList.add('open');
+  // GOD MODE PATCH — accessibility: move focus into the sheet and trap it there while open
+  document.getElementById('agentTaskInput').focus();
+  document.addEventListener('keydown', _agentSheetKeydown);
 }
 
 function closeAgentSheet() {
   document.getElementById('agentSheet').classList.remove('open');
   document.getElementById('agentOverlay').classList.remove('open');
   _assigningAgent=null;
+  document.removeEventListener('keydown', _agentSheetKeydown); // GOD MODE PATCH — accessibility
 }
 
 function confirmAgentAssign() {
@@ -627,18 +663,138 @@ function moveFeature(id, dir) {
   renderBacklog();
 }
 
+// GOD MODE PATCH — confirmation/safety: deleting a backlog item is permanent, so confirm first
 function deleteFeature(id) {
-  let backlog = getBacklog();
-  backlog = backlog.filter(f=>f.id!==id);
-  saveBacklog(backlog);
-  renderBacklog();
-  showToast('Removed from backlog');
+  const backlog = getBacklog();
+  const f = backlog.find(x=>x.id===id);
+  const label = f ? f.title : 'this feature';
+  openConfirmSheet('Remove "'+label+'" from the backlog? This can’t be undone.', () => {
+    let list = getBacklog();
+    list = list.filter(x=>x.id!==id);
+    saveBacklog(list);
+    renderBacklog();
+    showToast('Removed from backlog');
+  });
 }
+
+// ── GOD MODE PATCH: shared destructive-action confirm sheet (confirmation/safety) ──
+let _pendingDestructiveAction = null;
+
+function openConfirmSheet(message, onConfirm) {
+  _pendingDestructiveAction = onConfirm;
+  document.getElementById('confirmMsg').textContent = message;
+  document.getElementById('destructiveConfirmSheet').classList.add('open');
+  document.getElementById('confirmOverlay').classList.add('open');
+  const btn = document.getElementById('confirmDangerBtn');
+  if (btn) btn.focus();
+  document.addEventListener('keydown', _confirmSheetKeydown);
+}
+
+function closeConfirmSheet() {
+  document.getElementById('destructiveConfirmSheet').classList.remove('open');
+  document.getElementById('confirmOverlay').classList.remove('open');
+  _pendingDestructiveAction = null;
+  document.removeEventListener('keydown', _confirmSheetKeydown);
+}
+
+function runConfirmedAction() {
+  const action = _pendingDestructiveAction;
+  closeConfirmSheet();
+  if (typeof action === 'function') action();
+}
+
+// ── GOD MODE PATCH: shared focus-trap/Escape helper (accessibility) — used by both bottom sheets ──
+function _sheetKeydownFactory(sheetSelector, closeFn) {
+  return function(e) {
+    if (e.key === 'Escape') { closeFn(); return; }
+    if (e.key === 'Tab') {
+      const focusables = document.querySelectorAll(sheetSelector + ' button, ' + sheetSelector + ' input');
+      if (!focusables.length) return;
+      const first = focusables[0], last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  };
+}
+const _confirmSheetKeydown = _sheetKeydownFactory('#destructiveConfirmSheet', closeConfirmSheet);
+const _agentSheetKeydown   = _sheetKeydownFactory('#agentSheet', closeAgentSheet);
+
+// ── GOD MODE PATCH: remember last-viewed tab + active build (smart defaults) ──
+const LASTVIEW_KEY = 'indx_dev_lastview';
+
+function saveLastView(tabId) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LASTVIEW_KEY) || '{}');
+    saved.tab = tabId;
+    if (_activeBuildId) saved.buildId = _activeBuildId;
+    localStorage.setItem(LASTVIEW_KEY, JSON.stringify(saved));
+  } catch (e) { /* storage unavailable */ }
+}
+
+// Restores the last active build id as a side effect and returns the last viewed tab name (or null)
+function restoreLastView() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LASTVIEW_KEY) || 'null');
+    if (!saved) return null;
+    if (saved.buildId) _activeBuildId = saved.buildId;
+    return saved.tab || null;
+  } catch (e) { return null; }
+}
+
+// ── GOD MODE PATCH: live "started Xm ago" tag for the active build (real-time feedback) ──
+function formatElapsed(iso) {
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  return Math.floor(hrs / 24) + 'd ago';
+}
+
+function updateElapsedTag() {
+  const el = document.getElementById('buildElapsed');
+  if (!el) return;
+  const build = getBuilds().find(b => b.id === _activeBuildId);
+  el.textContent = build ? ('Started ' + formatElapsed(build.created)) : '';
+}
+
+let _elapsedTimer = null;
+function startElapsedTicker() {
+  updateElapsedTag();
+  if (_elapsedTimer) clearInterval(_elapsedTimer);
+  _elapsedTimer = setInterval(updateElapsedTag, 30000);
+}
+
+// ── GOD MODE PATCH: keyboard access for tap-only controls (accessibility) ──
+function enhanceKeyboardAccess() {
+  document.querySelectorAll('[onclick]').forEach(el => {
+    if (el.classList.contains('gm-kb')) return;
+    const tag = el.tagName.toLowerCase();
+    if (tag === 'button' || tag === 'a' || tag === 'input') return;
+    if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+    if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
+    el.classList.add('gm-kb');
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }
+    });
+  });
+}
+// Re-run whenever a tab re-renders new tap targets (agents, backlog, protocol steps, etc.)
+const _gmKeyboardObserver = new MutationObserver(() => enhanceKeyboardAccess());
 
 // ── INIT ──
 document.addEventListener('DOMContentLoaded',()=>{
+  const lastTab = restoreLastView(); // GOD MODE PATCH — smart defaults: restore last active build + tab
   renderProtocol();
   renderAgents();
+  if (lastTab && lastTab !== 'protocol') {
+    const tabEl = document.querySelector(`.nav-tab[onclick="switchTab('${lastTab}')"]`);
+    if (tabEl) switchTab(lastTab, tabEl);
+  }
+  startElapsedTicker();      // GOD MODE PATCH — real-time feedback
+  enhanceKeyboardAccess();   // GOD MODE PATCH — accessibility
+  _gmKeyboardObserver.observe(document.body, { childList: true, subtree: true });
 });
 </script>
 <script src="siindex-speak-core.js"></script>

@@ -151,6 +151,14 @@
     .toast-el.red{border-color:rgba(255,77,109,0.4);color:var(--red);}
     .toast-el.gold{border-color:rgba(255,184,0,0.4);color:var(--gold);}
     .toast-el.cyan{border-color:rgba(0,212,255,0.4);color:var(--cyan);}
+
+    /* ── GOD MODE PATCH: draft banner + log search + a11y (siindex-travel-rule.html) ── */
+    .draft-banner{display:none;align-items:center;gap:10px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.25);border-radius:10px;padding:10px 12px;font-size:11px;color:var(--cyan);margin-bottom:10px;line-height:1.4;}
+    .draft-banner span{flex:1;}
+    .draft-banner button{background:transparent;border:1px solid rgba(0,212,255,0.35);color:var(--cyan);font-size:10px;font-weight:700;padding:5px 10px;border-radius:7px;cursor:pointer;font-family:inherit;}
+    .log-search-input{width:100%;background:var(--surface3);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:9px 12px;color:var(--text);font-size:12px;font-family:inherit;outline:none;margin-bottom:10px;}
+    .log-search-input:focus{border-color:rgba(255,77,109,0.4);}
+    .tab-btn:focus-visible,.btn-primary:focus-visible,.btn-secondary:focus-visible,.btn-cyan:focus-visible,.btn-sm:focus-visible,.field-input:focus-visible,.field-select:focus-visible,.log-search-input:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
   </style>
 </head>
 <body>
@@ -171,16 +179,22 @@
     </div>
   </div>
 
-  <div class="tabs">
-    <button class="tab-btn active" onclick="openTab('tab-transfer')">📤 Transfer</button>
-    <button class="tab-btn" onclick="openTab('tab-attest')">🔐 Wallet Check</button>
-    <button class="tab-btn" onclick="openTab('tab-log')">📋 Log</button>
-    <button class="tab-btn" onclick="openTab('tab-vasp')">🌐 VASP Network</button>
-    <button class="tab-btn" onclick="openTab('tab-enrol')">✅ Enrollment</button>
+  <div class="tabs" role="tablist" aria-label="Travel Rule sections">
+    <button class="tab-btn active" data-tab="tab-transfer" role="tab" aria-selected="true" onclick="openTab('tab-transfer')">📤 Transfer</button>
+    <button class="tab-btn" data-tab="tab-attest" role="tab" aria-selected="false" onclick="openTab('tab-attest')">🔐 Wallet Check</button>
+    <button class="tab-btn" data-tab="tab-log" role="tab" aria-selected="false" onclick="openTab('tab-log')">📋 Log</button>
+    <button class="tab-btn" data-tab="tab-vasp" role="tab" aria-selected="false" onclick="openTab('tab-vasp')">🌐 VASP Network</button>
+    <button class="tab-btn" data-tab="tab-enrol" role="tab" aria-selected="false" onclick="openTab('tab-enrol')">✅ Enrollment</button>
   </div>
 
   <!-- TAB: TRANSFER DATA COLLECTION -->
   <div class="tab-pane active" id="tab-transfer">
+
+    <!-- GOD MODE PATCH: draft-restored indicator -->
+    <div class="draft-banner" id="draftResumeBanner">
+      <span>📝 A saved draft from this device was restored into the fields below.</span>
+      <button onclick="discardDraftBanner()">Discard</button>
+    </div>
 
     <div class="threshold-bar">
       <div class="tb-icon">⚡</div>
@@ -348,6 +362,8 @@
       <span class="sect-lbl">Travel Rule Log</span>
       <button class="btn-sm red" onclick="clearLog()">Clear</button>
     </div>
+    <!-- GOD MODE PATCH: client-side log search -->
+    <input type="text" id="logSearchInput" class="log-search-input" placeholder="Search by name, VASP, or purpose…" oninput="filterLog()" aria-label="Search Travel Rule log">
     <div id="txLog"></div>
     <div id="txLogEmpty" style="font-size:12px;color:var(--muted);padding:8px 0;display:none;">No Travel Rule records yet. Complete a transfer to see records here.</div>
 
@@ -466,11 +482,26 @@
     // ── TABS ──────────────────────────────────────────────
     function openTab(id) {
       document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
       document.getElementById(id).classList.add('active');
       const idx = ['tab-transfer','tab-attest','tab-log','tab-vasp','tab-enrol'].indexOf(id);
       document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+      document.querySelectorAll('.tab-btn')[idx].setAttribute('aria-selected', 'true');
     }
+
+    // GOD MODE PATCH: keyboard navigation across the tab bar
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      const tabsContainer = document.querySelector('.tabs');
+      if (!tabsContainer || !tabsContainer.contains(document.activeElement)) return;
+      const tabs = Array.from(tabsContainer.querySelectorAll('.tab-btn'));
+      const idx = tabs.indexOf(document.activeElement);
+      if (idx === -1) return;
+      e.preventDefault();
+      const next = e.key === 'ArrowRight' ? tabs[(idx + 1) % tabs.length] : tabs[(idx - 1 + tabs.length) % tabs.length];
+      next.focus();
+      next.click();
+    });
 
     // ── TOAST ─────────────────────────────────────────────
     function showToast(msg, type='') {
@@ -602,9 +633,38 @@
       renderLog();
     }
     function clearLog() {
+      // GOD MODE PATCH: confirm before a destructive, irreversible local-data wipe
+      if (!confirm('Clear all Travel Rule log records on this device? This cannot be undone.')) return;
       localStorage.removeItem(LOG_KEY);
       renderLog();
       showToast('Log cleared');
+    }
+
+    // GOD MODE PATCH: client-side log search — filters already-rendered .tx-item rows
+    function filterLog() {
+      const input = document.getElementById('logSearchInput');
+      if (!input) return;
+      const q = input.value.trim().toLowerCase();
+      document.querySelectorAll('#txLog .tx-item').forEach(item => {
+        item.style.display = (!q || item.textContent.toLowerCase().includes(q)) ? '' : 'none';
+      });
+    }
+
+    // GOD MODE PATCH: draft-restored indicator (loadDraft() itself is unchanged — this only
+    // decides whether to show/hide the banner after it runs)
+    function checkDraftIndicator() {
+      try {
+        const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+        const hasContent = d && Object.values(d).some(v => v && String(v).trim());
+        const banner = document.getElementById('draftResumeBanner');
+        if (banner) banner.style.display = hasContent ? 'flex' : 'none';
+      } catch (e) {}
+    }
+    function discardDraftBanner() {
+      localStorage.removeItem(DRAFT_KEY);
+      const banner = document.getElementById('draftResumeBanner');
+      if (banner) banner.style.display = 'none';
+      showToast('Draft discarded');
     }
 
     function renderLog() {
@@ -644,6 +704,7 @@
       }).join('');
 
       renderLogAnalytics(log);
+      filterLog(); // GOD MODE PATCH: re-apply any active search after re-render
     }
 
     function renderLogAnalytics(log) {
@@ -836,6 +897,7 @@
       renderDocVault();
       renderLog();
       loadDraft();
+      checkDraftIndicator(); // GOD MODE PATCH: show/hide the draft-restored banner
 
       // Restore CO fields
       const enrol = getEnrol();

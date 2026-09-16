@@ -178,6 +178,19 @@
   .doctrine-line:last-child { border-bottom:none; }
   .doctrine-line::before { content:'⚡'; flex-shrink:0; margin-top:1px; }
 
+  /* ── GOD MODE PATCH: confirm sheet, overlay, keyboard focus states ── */
+  .sheet-overlay { position:fixed; inset:0; background:rgba(9,10,16,0.7); opacity:0; pointer-events:none; transition:opacity 0.25s; z-index:400; }
+  .sheet-overlay.show { opacity:1; pointer-events:auto; }
+  .bottom-sheet { position:fixed; left:50%; bottom:0; transform:translate(-50%,100%); width:100%; max-width:430px; background:var(--surface2); border:1px solid var(--border); border-radius:20px 20px 0 0; padding:10px 20px 28px; z-index:401; transition:transform 0.3s cubic-bezier(0.4,0,0.2,1); }
+  .bottom-sheet.show { transform:translate(-50%,0); }
+  .confirm-sheet-handle { width:36px; height:4px; background:var(--surface3); border-radius:2px; margin:0 auto 14px; }
+  .confirm-sheet-icon { font-size:26px; text-align:center; margin-bottom:8px; }
+  .confirm-sheet-msg { font-size:13px; color:var(--text2); text-align:center; line-height:1.5; margin-bottom:16px; }
+  .confirm-sheet-actions { display:flex; gap:10px; }
+  .confirm-sheet-btn { flex:1; padding:12px; border-radius:12px; font-size:13px; font-weight:800; cursor:pointer; border:1px solid var(--border); background:var(--surface3); color:var(--text); font-family:inherit; }
+  .confirm-sheet-btn.confirm { background:rgba(255,77,109,0.12); border-color:rgba(255,77,109,0.35); color:var(--red); }
+  .gm-kb:focus-visible, .confirm-sheet-btn:focus-visible, [tabindex="0"]:focus-visible { outline:2px solid var(--cyan); outline-offset:2px; border-radius:8px; }
+
   /* TOAST */
   .toast { position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--surface3); border:1px solid rgba(255,255,255,0.12); color:var(--text); font-size:13px; font-weight:600; padding:12px 20px; border-radius:24px; opacity:0; transition:all 0.3s; z-index:999; white-space:nowrap; max-width:340px; pointer-events:none; }
   .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
@@ -297,7 +310,19 @@
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- GOD MODE PATCH: shared confirm sheet for destructive actions (revoke connector, revoke Mission Room tool) -->
+<div class="sheet-overlay" id="confirmSheetOverlay" onclick="closeConfirmSheet()"></div>
+<div class="bottom-sheet" id="confirmSheet" role="alertdialog" aria-modal="true" aria-labelledby="confirmSheetMsg">
+  <div class="confirm-sheet-handle"></div>
+  <div class="confirm-sheet-icon">⚠️</div>
+  <div class="confirm-sheet-msg" id="confirmSheetMsg"></div>
+  <div class="confirm-sheet-actions">
+    <button type="button" class="confirm-sheet-btn cancel" onclick="closeConfirmSheet()">Cancel</button>
+    <button type="button" class="confirm-sheet-btn confirm" id="confirmSheetConfirmBtn" onclick="runPendingAction()">Confirm</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" aria-live="polite" aria-atomic="true"></div>
 
 <nav class="bottom-nav">
   <div class="nav-item"><div class="nav-item-icon">🏠</div>Home</div>
@@ -622,6 +647,8 @@
     if (tab==='skills')   renderSkills();
     if (tab==='tools')    renderMrTools();
     if (tab==='map')      renderEcoMap();
+    // GOD MODE PATCH — smart defaults: remember the last tab viewed so a reload returns here
+    try { localStorage.setItem('indx_eco_lastview', tab); } catch (e) { /* storage unavailable */ }
   }
 
   // ── GM1: CONNECTOR REGISTRY ──
@@ -698,10 +725,15 @@
   }
 
   function toggleConn(key) { _openConn = _openConn===key ? null : key; renderConnectors(); }
+  // GOD MODE PATCH — confirmation/safety: revoking a connector cuts it off immediately, so confirm first
   function revokeConn(key, evt) {
-    evt.stopPropagation(); _connStatuses[key]='revoked';
-    localStorage.setItem('indx_eco_status', JSON.stringify(_connStatuses));
-    showToast('✕ ' + CONNECTORS.find(c=>c.key===key)?.name + ' revoked'); renderConnectors();
+    evt.stopPropagation();
+    const name = CONNECTORS.find(c=>c.key===key)?.name || key;
+    openConfirmSheet('Revoke ' + name + '? This cuts off its access immediately.', () => {
+      _connStatuses[key]='revoked';
+      localStorage.setItem('indx_eco_status', JSON.stringify(_connStatuses));
+      showToast('✕ ' + name + ' revoked'); renderConnectors();
+    });
   }
   function pauseConn(key, evt) {
     evt.stopPropagation();
@@ -808,7 +840,12 @@
     }).join('');
 
     const dashEl = document.getElementById('citizenDashboard');
-    dashEl.innerHTML = CITIZEN_DASH_ROWS.map(r=>
+    // GOD MODE PATCH — information density: compute the "what is connected" summary from the real
+    // MR_TOOLS list + live pause/revoke state instead of a hardcoded string, so it can't drift from
+    // the tool rows shown just above it (same drift class already fixed for the top stat row).
+    const liveConnectedRow = { q: CITIZEN_DASH_ROWS[0].q, a: summarizeConnectedTools() };
+    const dashRows = [liveConnectedRow, ...CITIZEN_DASH_ROWS.slice(1)];
+    dashEl.innerHTML = dashRows.map(r=>
       `<div style="display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border)">
         <div style="font-size:11px;font-weight:700;color:var(--text2);flex:1;line-height:1.4">${r.q}</div>
         <div style="font-size:11px;color:var(--text);flex:1;line-height:1.4">${r.a}</div>
@@ -821,10 +858,13 @@
     localStorage.setItem('indx_eco_tools', JSON.stringify(_toolStates));
     renderMrTools(); showToast(((_toolStates[name]==='paused'?'⏸ Paused: ':'▶ Enabled: ') + name));
   }
+  // GOD MODE PATCH — confirmation/safety: revoking a Mission Room tool is immediate and disruptive to the mission, confirm first
   function revokeMrTool(name) {
-    _toolStates[name] = 'revoked';
-    localStorage.setItem('indx_eco_tools', JSON.stringify(_toolStates));
-    showToast('✕ Tool revoked from Mission Room: ' + name); renderMrTools();
+    openConfirmSheet('Revoke "' + name + '" from this Mission Room? It will stop working immediately.', () => {
+      _toolStates[name] = 'revoked';
+      localStorage.setItem('indx_eco_tools', JSON.stringify(_toolStates));
+      showToast('✕ Tool revoked from Mission Room: ' + name); renderMrTools();
+    });
   }
 
   // ── GM4: ECOSYSTEM MAP ──
@@ -861,6 +901,71 @@
 
   function toggleEcoLayer(num) { _openEcoLayer = _openEcoLayer===num ? null : num; renderEcoMap(); }
 
+  // GOD MODE PATCH — information density: live count of connected Mission Room tools + risk mix,
+  // derived from MR_TOOLS + _toolStates rather than a hardcoded figure.
+  function summarizeConnectedTools() {
+    const connected = MR_TOOLS.filter(t => (_toolStates[t.name] || 'active') !== 'revoked');
+    const low  = connected.filter(t => t.risk === 'low').length;
+    const med  = connected.filter(t => t.risk === 'med').length;
+    const high = connected.filter(t => t.risk === 'high').length;
+    return `${connected.length} tools · ${low} low risk · ${med} medium risk · ${high} high risk`;
+  }
+
+  // ── GOD MODE PATCH: shared confirm sheet (confirmation/safety) ──
+  let _pendingConfirmAction = null;
+
+  function openConfirmSheet(message, onConfirm) {
+    _pendingConfirmAction = onConfirm;
+    document.getElementById('confirmSheetMsg').textContent = message;
+    document.getElementById('confirmSheetOverlay').classList.add('show');
+    document.getElementById('confirmSheet').classList.add('show');
+    const btn = document.getElementById('confirmSheetConfirmBtn');
+    if (btn) btn.focus();
+    document.addEventListener('keydown', _confirmSheetKeydown);
+  }
+
+  function closeConfirmSheet() {
+    document.getElementById('confirmSheetOverlay').classList.remove('show');
+    document.getElementById('confirmSheet').classList.remove('show');
+    _pendingConfirmAction = null;
+    document.removeEventListener('keydown', _confirmSheetKeydown);
+  }
+
+  function runPendingAction() {
+    const action = _pendingConfirmAction;
+    closeConfirmSheet();
+    if (typeof action === 'function') action();
+  }
+
+  // Accessibility: Escape closes the sheet, Tab is trapped between its two buttons while open
+  function _confirmSheetKeydown(e) {
+    if (e.key === 'Escape') { closeConfirmSheet(); return; }
+    if (e.key === 'Tab') {
+      const focusables = document.querySelectorAll('#confirmSheet button');
+      if (!focusables.length) return;
+      const first = focusables[0], last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }
+
+  // ── GOD MODE PATCH: keyboard access for tap-only controls (accessibility) ──
+  function enhanceKeyboardAccess() {
+    document.querySelectorAll('[onclick]').forEach(el => {
+      if (el.classList.contains('gm-kb')) return;
+      const tag = el.tagName.toLowerCase();
+      if (tag === 'button' || tag === 'a' || tag === 'input') return;
+      if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+      if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
+      el.classList.add('gm-kb');
+      el.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }
+      });
+    });
+  }
+  // Re-run whenever a tab re-renders new tap targets (registry cards, skill cards, MR tools, map layers)
+  const _gmKeyboardObserver = new MutationObserver(() => enhanceKeyboardAccess());
+
   // ── TOAST ──
   function showToast(msg) {
     const t = document.getElementById('toast');
@@ -881,6 +986,17 @@
     document.getElementById('statSkills').textContent = SKILLS.length;
     document.getElementById('statLayers').textContent = ECO_LAYERS.length;
     // Other tabs render on switch
+
+    // GOD MODE PATCH — smart defaults: reopen on the last tab this citizen was viewing
+    let lastTab = null;
+    try { lastTab = localStorage.getItem('indx_eco_lastview'); } catch (e) { /* storage unavailable */ }
+    if (lastTab && lastTab !== 'registry' && document.getElementById('tab-' + lastTab)) {
+      switchTab(lastTab);
+    }
+
+    // GOD MODE PATCH — accessibility: keyboard-operate tap-only controls, keep it in sync as tabs re-render
+    enhanceKeyboardAccess();
+    _gmKeyboardObserver.observe(document.body, { childList: true, subtree: true });
   });
 </script>
 <script src="siindex-speak-core.js"></script>

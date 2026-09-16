@@ -103,6 +103,21 @@ a{color:inherit;text-decoration:none;}
 .right-title{font-size:13px;font-weight:800;color:var(--green);margin-bottom:4px;}
 .right-desc{font-size:12px;color:var(--text2);}
 
+/* ── GOD MODE PATCH: COMBINED FEATURE STYLES ── */
+.predict-chip{display:none;align-items:center;gap:8px;margin-top:10px;padding:8px 12px;border-radius:20px;font-size:12px;font-weight:700;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);color:var(--cyan);}
+.predict-chip.show{display:inline-flex;}
+.predict-chip.warn{background:rgba(255,184,0,0.08);border-color:rgba(255,184,0,0.2);color:var(--gold);}
+.predict-chip.block{background:rgba(255,77,109,0.08);border-color:rgba(255,77,109,0.2);color:var(--red);}
+.ack-progress-wrap{margin-bottom:14px;}
+.ack-progress-row{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:6px;}
+.ack-progress-bar{background:var(--surface3);border-radius:20px;height:6px;overflow:hidden;}
+.ack-progress-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--cyan));border-radius:20px;transition:width 0.3s;}
+.consent-item.acked{border-color:rgba(0,229,160,0.25);background:rgba(0,229,160,0.04);}
+.consent-ack{flex-shrink:0;width:24px;height:24px;border-radius:8px;border:2px solid rgba(240,242,255,0.15);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted);margin-top:1px;transition:all 0.15s;}
+.consent-item.acked .consent-ack{border-color:var(--green);background:rgba(0,229,160,0.15);color:var(--green);}
+.status-card:focus-visible,.consent-item:focus-visible,.log-clear:focus-visible,.ack-reset:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+.ack-reset{font-size:12px;color:var(--muted);cursor:pointer;background:none;border:none;font-family:var(--font);}
+.ack-reset:hover{color:var(--red);}
 /* TOAST */
 .toast{position:fixed;bottom:24px;left:50%;transform:translate(-50%,80px);background:var(--surface3);color:var(--text);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;border:1px solid rgba(0,212,255,0.3);opacity:0;transition:transform 0.3s,opacity 0.3s;z-index:300;pointer-events:none;max-width:90vw;text-align:center;}
 .toast.show{transform:translate(-50%,0);opacity:1;}
@@ -153,6 +168,8 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
     <div class="tester-input-wrap">
       <textarea class="tester-input" id="scenarioInput" rows="3" placeholder="e.g. Send $500 to my brother in Samoa..."></textarea>
     </div>
+    <!-- GOD MODE PATCH: live prediction chip -->
+    <span class="predict-chip" id="predictChip"></span>
     <div class="tester-actions">
       <button class="btn btn-cyan" onclick="runScenario()">Ask SIINDEX</button>
       <button class="btn btn-ghost btn-sm" onclick="clearScenario()">Clear</button>
@@ -255,6 +272,14 @@ footer{background:var(--surface);border-top:1px solid rgba(240,242,255,0.07);pad
   <div class="eyebrow">God Mode Feature 3 — Consent Categories</div>
   <h2 class="h2">14 Actions That Always Require Citizen Approval</h2>
   <p class="lead">SIINDEX will never perform these without an explicit yes from the citizen — regardless of context, history, or instruction.</p>
+  <!-- GOD MODE PATCH: acknowledgment tracker -->
+  <div class="ack-progress-wrap">
+    <div class="ack-progress-row">
+      <span id="ackProgressLabel">0 / 14 acknowledged</span>
+      <button class="ack-reset" onclick="resetAcknowledgments()">Reset</button>
+    </div>
+    <div class="ack-progress-bar"><div class="ack-progress-fill" id="ackProgressFill" style="width:0%"></div></div>
+  </div>
   <div class="consent-list" id="consentList"></div>
 </div>
 
@@ -368,6 +393,9 @@ function runScenario() {
     resEl.classList.add('safe');
   }
 
+  // GOD MODE PATCH: remember last scenario for smart-default restore on return
+  localStorage.setItem('indx_refusal_last_scenario', input);
+
   addLogEntry(input, result);
 }
 
@@ -375,6 +403,27 @@ function clearScenario() {
   document.getElementById('scenarioInput').value = '';
   const r = document.getElementById('testerResult');
   r.className = 'tester-result';
+  hidePredictChip(); // GOD MODE PATCH
+}
+
+// ── GOD MODE PATCH: LIVE PREDICTION CHIP (real-time feedback while typing) ──
+function predictLive() {
+  const input = document.getElementById('scenarioInput').value.trim();
+  const chip = document.getElementById('predictChip');
+  if (input.length < 4) { hidePredictChip(); return; }
+  let match = null;
+  for (const rule of REFUSAL_RULES) {
+    if (rule.pattern.test(input)) { match = rule; break; }
+  }
+  const status = match ? match.status : FALLBACK.status;
+  chip.textContent = '💭 Likely: ' + status;
+  chip.className = 'predict-chip show';
+  if (status.startsWith('⬛') || status.startsWith('🌺') || status.startsWith('⚖️')) chip.classList.add('block');
+  else if (status.startsWith('⚠️') || status.startsWith('📋')) chip.classList.add('warn');
+}
+function hidePredictChip() {
+  const chip = document.getElementById('predictChip');
+  chip.className = 'predict-chip';
 }
 
 // ── GM2: STATUS TOGGLE ────────────────────────────────────────────────────
@@ -402,15 +451,48 @@ const CONSENT_CATEGORIES = [
   ['Changing security or recovery settings', 'Authentication methods, guardian contacts, or account recovery'],
 ];
 
-document.getElementById('consentList').innerHTML = CONSENT_CATEGORIES.map((c, i) =>
-  `<div class="consent-item">
+// GOD MODE PATCH: consent items are now tappable acknowledgment toggles, keyboard-operable
+function getAcks() {
+  try { return JSON.parse(localStorage.getItem('indx_refusal_ack_categories') || '[]'); } catch(e) { return []; }
+}
+function renderConsentList() {
+  const acks = getAcks();
+  document.getElementById('consentList').innerHTML = CONSENT_CATEGORIES.map((c, i) => {
+    const acked = !!acks[i];
+    return `<div class="consent-item${acked ? ' acked' : ''}" tabindex="0" role="button" aria-pressed="${acked}" onclick="toggleAck(${i})" onkeydown="handleKeyActivate(event)">
     <div class="consent-num">${i + 1}</div>
     <div class="consent-text">
       <div class="consent-title">${c[0]}</div>
       <div class="consent-desc">${c[1]}</div>
     </div>
-  </div>`
-).join('');
+    <div class="consent-ack">${acked ? '✓' : ''}</div>
+  </div>`;
+  }).join('');
+  renderAckProgress();
+}
+function toggleAck(i) {
+  const acks = getAcks();
+  acks[i] = !acks[i];
+  localStorage.setItem('indx_refusal_ack_categories', JSON.stringify(acks));
+  renderConsentList();
+  if (acks.filter(Boolean).length === CONSENT_CATEGORIES.length) showToast('✓ All 14 categories acknowledged.');
+}
+function resetAcknowledgments() {
+  localStorage.removeItem('indx_refusal_ack_categories');
+  renderConsentList();
+  showToast('Acknowledgments reset.');
+}
+function renderAckProgress() {
+  const acks = getAcks();
+  const count = acks.filter(Boolean).length;
+  const total = CONSENT_CATEGORIES.length;
+  document.getElementById('ackProgressLabel').textContent = count + ' / ' + total + ' acknowledged';
+  document.getElementById('ackProgressFill').style.width = Math.round((count / total) * 100) + '%';
+}
+function handleKeyActivate(e) {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); }
+}
+renderConsentList();
 
 // ── GM4: REFUSAL LOG ──────────────────────────────────────────────────────
 let sessionLog = JSON.parse(localStorage.getItem('indx_refusal_session_log') || '[]');
@@ -465,7 +547,37 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('scenarioInput').addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); runScenario(); }
   });
+
+  // GOD MODE PATCH: live prediction while typing
+  document.getElementById('scenarioInput').addEventListener('input', predictLive);
+
+  // GOD MODE PATCH: smart defaults — restore last scenario, personalize with citizen name
+  const lastScenario = localStorage.getItem('indx_refusal_last_scenario');
+  if (lastScenario) {
+    document.getElementById('scenarioInput').value = lastScenario;
+    predictLive();
+  }
+  const citizenName = sessionStorage.getItem('citizen_name');
+  if (citizenName) {
+    const lbl = document.querySelector('.tester-label');
+    if (lbl) lbl.textContent = 'Describe an action you want SIINDEX to help with, ' + citizenName;
+  }
+
+  // GOD MODE PATCH: keyboard + ARIA support for status cards
+  document.querySelectorAll('.status-card').forEach(el => {
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-expanded', 'false');
+    el.addEventListener('keydown', handleKeyActivate);
+  });
 });
+
+// GOD MODE PATCH: keep aria-expanded in sync with the existing status-card toggle
+const _origToggleStatus = toggleStatus;
+toggleStatus = function(el) {
+  _origToggleStatus(el);
+  document.querySelectorAll('.status-card').forEach(c => c.setAttribute('aria-expanded', c.classList.contains('active') ? 'true' : 'false'));
+};
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

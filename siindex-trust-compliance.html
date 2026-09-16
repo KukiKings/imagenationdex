@@ -111,6 +111,12 @@
     .toast-el{position:fixed;bottom:88px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--surface2);border:1px solid rgba(0,229,160,0.3);border-radius:24px;padding:10px 18px;font-size:12px;font-weight:700;color:var(--green);z-index:9000;opacity:0;transition:all 0.3s;pointer-events:none;white-space:nowrap;}
     .toast-el.show{opacity:1;transform:translateX(-50%) translateY(0);}
     .toast-el.gold{border-color:rgba(255,184,0,0.4);color:var(--gold);}
+
+    /* ── GOD MODE PATCH: citizen context + list search + a11y (siindex-trust-compliance.html) ── */
+    .citizen-context{display:none;background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.22);border-radius:10px;padding:9px 12px;font-size:11px;color:var(--cyan);line-height:1.5;margin-bottom:12px;}
+    .list-search-input{width:100%;background:var(--surface2);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:9px 12px;color:var(--text);font-size:12px;font-family:inherit;outline:none;margin-bottom:8px;}
+    .list-search-input:focus{border-color:rgba(0,229,160,0.4);}
+    .tab-btn:focus-visible,.tier-cta:focus-visible,.receipt-btn:focus-visible,.list-search-input:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
   </style>
 </head>
 <body>
@@ -121,16 +127,18 @@
     <span class="nav-badge">Public</span>
   </nav>
 
-  <div class="tabs">
-    <button class="tab-btn active" onclick="openTab('tab-verify')">🪪 Verification</button>
-    <button class="tab-btn" onclick="openTab('tab-compliance')">⚖️ Compliance</button>
-    <button class="tab-btn" onclick="openTab('tab-consent')">📋 Consent</button>
-    <button class="tab-btn" onclick="openTab('tab-appeal')">👁️ Review</button>
-    <button class="tab-btn" onclick="openTab('tab-never')">⬛ Limits</button>
+  <div class="tabs" role="tablist" aria-label="Trust and compliance sections">
+    <button class="tab-btn active" data-tab="tab-verify" role="tab" aria-selected="true" onclick="openTab('tab-verify')">🪪 Verification</button>
+    <button class="tab-btn" data-tab="tab-compliance" role="tab" aria-selected="false" onclick="openTab('tab-compliance')">⚖️ Compliance</button>
+    <button class="tab-btn" data-tab="tab-consent" role="tab" aria-selected="false" onclick="openTab('tab-consent')">📋 Consent</button>
+    <button class="tab-btn" data-tab="tab-appeal" role="tab" aria-selected="false" onclick="openTab('tab-appeal')">👁️ Review</button>
+    <button class="tab-btn" data-tab="tab-never" role="tab" aria-selected="false" onclick="openTab('tab-never')">⬛ Limits</button>
   </div>
 
   <!-- VERIFICATION TAB — GM1 -->
   <div class="tab-pane active" id="tab-verify">
+    <!-- GOD MODE PATCH: read-only citizen context, sessionStorage only -->
+    <div class="citizen-context" id="citizenContextBanner"></div>
     <div class="sect-lbl">Progressive Verification</div>
     <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:14px;">Start with minimal verification where permitted. SIINDEX only asks for more when the law, your transfer limits, or your safety require it. Tap a tier to see what it unlocks.</div>
 
@@ -201,6 +209,8 @@
 
     <div class="card" style="margin-top:10px;">
       <div class="card-title" style="margin-bottom:8px;">Sensitive Actions Requiring a Receipt</div>
+      <!-- GOD MODE PATCH: client-side search over the rendered list -->
+      <input type="text" class="list-search-input" id="sensitiveSearchInput" placeholder="Search sensitive actions…" oninput="filterListItems('sensitiveSearchInput','sensitiveList')" aria-label="Search sensitive actions list">
       <div id="sensitiveList"></div>
     </div>
 
@@ -238,6 +248,8 @@
   <div class="tab-pane" id="tab-never">
     <div class="sect-lbl">What SIINDEX Will Never Do</div>
     <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:14px;">These are IN$DEX's public, published doctrine commitments. There is no Decision Ledger backend yet, so the reference numbers below are static list positions for citation — not cryptographic verification hashes.</div>
+    <!-- GOD MODE PATCH: client-side search over the rendered list -->
+    <input type="text" class="list-search-input" id="neverSearchInput" placeholder="Search commitments…" oninput="filterListItems('neverSearchInput','neverList')" aria-label="Search never-do commitments">
     <div class="never-list" id="neverList"></div>
     <div class="legal-box" style="margin-top:10px;">
       These commitments represent IN$DEX's design principles and operational doctrine. They are not a contractual guarantee enforceable in all jurisdictions. Citizens retain all rights under applicable consumer and privacy law. If you believe SIINDEX has violated any commitment, you may lodge a complaint through the Review & Appeal process.
@@ -251,10 +263,65 @@
 
     function openTab(id) {
       document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
       document.getElementById(id).classList.add('active');
       const idx = ['tab-verify','tab-compliance','tab-consent','tab-appeal','tab-never'].indexOf(id);
       document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+      document.querySelectorAll('.tab-btn')[idx].setAttribute('aria-selected', 'true');
+      // GOD MODE PATCH: remember last-viewed tab locally (device-only, cosmetic)
+      try { localStorage.setItem('indx_trustcompliance_last_tab', id); } catch (e) {}
+    }
+
+    // GOD MODE PATCH: restore last-viewed tab on load (falls back to default Verification tab)
+    function restoreLastTab() {
+      try {
+        const last = localStorage.getItem('indx_trustcompliance_last_tab');
+        if (last) {
+          const btn = document.querySelector('.tab-btn[data-tab="' + last + '"]');
+          if (btn) btn.click();
+        }
+      } catch (e) {}
+    }
+
+    // GOD MODE PATCH: keyboard navigation across the tab bar
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      const tabsContainer = document.querySelector('.tabs');
+      if (!tabsContainer || !tabsContainer.contains(document.activeElement)) return;
+      const tabs = Array.from(tabsContainer.querySelectorAll('.tab-btn'));
+      const idx = tabs.indexOf(document.activeElement);
+      if (idx === -1) return;
+      e.preventDefault();
+      const next = e.key === 'ArrowRight' ? tabs[(idx + 1) % tabs.length] : tabs[(idx - 1 + tabs.length) % tabs.length];
+      next.focus();
+      next.click();
+    });
+
+    // GOD MODE PATCH: read-only citizen context banner (sessionStorage only, no invented state)
+    function renderCitizenContext() {
+      try {
+        const name = sessionStorage.getItem('citizen_name');
+        const domain = sessionStorage.getItem('citizen_web3_domain');
+        const banner = document.getElementById('citizenContextBanner');
+        if (!banner) return;
+        if (name) {
+          banner.textContent = 'Viewing as ' + name + (domain ? ' · ' + domain : '') + ' — the tiers below describe general platform policy, not an account-specific check.';
+          banner.style.display = 'block';
+        } else {
+          banner.style.display = 'none';
+        }
+      } catch (e) {}
+    }
+
+    // GOD MODE PATCH: generic client-side list search — filters already-rendered list items
+    function filterListItems(inputId, listId) {
+      const input = document.getElementById(inputId);
+      const list = document.getElementById(listId);
+      if (!input || !list) return;
+      const q = input.value.trim().toLowerCase();
+      Array.from(list.children).forEach(item => {
+        item.style.display = (!q || item.textContent.toLowerCase().includes(q)) ? '' : 'none';
+      });
     }
 
     function showToast(msg, type='') {
@@ -491,6 +558,8 @@
       renderStatuses();
       renderAppealFlow();
       renderNeverList();
+      renderCitizenContext(); // GOD MODE PATCH
+      restoreLastTab();       // GOD MODE PATCH
     });
   </script>
 <script src="siindex-speak-core.js"></script>
