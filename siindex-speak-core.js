@@ -352,6 +352,16 @@
       return;
     }
 
+    // FIX 2026-09-17: ensureProviderConsent() was only ever called from the mic/voice
+    // path (transcribeBlob/recordAndTranscribe), never from here. headers()'s
+    // x-siindex-provider-consent is read straight from localStorage, so any visitor who
+    // typed a question first (the primary input path per the UI copy: "Chips & typing
+    // primary") sent "not-accepted" and got a 403 provider_consent_required from
+    // siindex-website-runtime on every first real question -- silently swallowed into
+    // the generic on-device fallback with only a transient status line as any sign of
+    // failure. Confirmed live: two fresh-session test questions on imagenationdex.com
+    // both 403'd (checked via Supabase edge function logs) before this fix.
+    ensureProviderConsent();
     setStatus("thinking", "Thinking…");
     const controller = new AbortController();
     runtimeAbort = controller;

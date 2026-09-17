@@ -2217,3 +2217,51 @@ onboarding-concierge bug.
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
+
+## Found & fixed: Talk to SIINDEX (typed) silently 403'd on first real question — 2026-09-17
+
+**Trigger:** AJ asked "are all utilities built and working" — checked the self-audited
+`siindex-public/utility-directory.html` "honest status" board. All 17 Live/Testing/Planned
+pages with real hrefs return HTTP 200 on production (verified via live fetch from the actual
+browser, bypassing the sandbox's egress restriction on `*.supabase.co`). But "the page loads"
+isn't the same as "the utility works," so also functionally exercised the site's single most
+prominent utility — the homepage "Talk to SIINDEX" chat, called out in its own UI copy as
+"Chips & typing primary."
+
+**Found:** clicking a pre-written chip question worked correctly (matched the on-device
+knowledge base, answered instantly, no backend call needed). Typing a free-text question that
+isn't in the on-device knowledge base — exactly the case the code comment says this path exists
+for ("real questions fall through to the live siindex-website-runtime model... instead of
+getting a vague static catch-all forever") — silently failed and fell back to a generic canned
+answer, with only a transient "Could not reach SIINDEX runtime." status line as any visible
+sign of failure.
+
+**Root cause, confirmed via Supabase edge function logs** (`POST | 403 |
+.../siindex-website-runtime` immediately after my test): `siindex-website-runtime` (and
+`siindex-website-voice-tts`, same pattern) both require a `x-siindex-provider-consent: accepted`
+header before they'll call their upstream provider (Anthropic / ElevenLabs) — a real, sensible
+gate. `siindex-speak-core.js`'s `headers()` reads that value straight from
+`localStorage.siindex_website_provider_consent_v1`, which is only ever set by
+`ensureProviderConsent()` — but that function was called from the two mic/voice functions
+(`transcribeBlob`, `recordAndTranscribe`) and nowhere else. The typed-question handler, `ask()`,
+never called it. Result: any visitor whose first interaction was typing (again, the UI's own
+stated *primary* path) got `not-accepted` on every request and a 403 on every real question, with
+the failure invisibly absorbed by the fallback UX. This affects every page loading
+`siindex-speak-core.js`: `public-home.html` (the homepage), `speak-to-siindex.html`,
+`siindex-present.html`, `siindex-interview.html`, `siindex-jarvis.html`.
+
+**Fix:** added `ensureProviderConsent();` to the top of `ask()` in `siindex-speak-core.js`,
+matching the same call already present in the voice path. Bumped the shared script's
+cache-busting query string (`?v=voice-3.0.16` → `?v=voice-3.0.17`) across all 5 pages that load
+it so the fix isn't served stale from CDN/browser cache.
+
+**Also checked:** `siindex-avatar.html` uses a separate, independent implementation that
+hardcodes `x-siindex-provider-consent: accepted` on its own TTS calls — not affected by this
+bug, no changes needed there.
+
+**Not yet re-verified live** (the fix isn't pushed yet) — will re-test the same typed-question
+flow against production after AJ pushes, the same way every other fix this session has been
+independently re-verified rather than trusted on report alone.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
