@@ -1994,3 +1994,34 @@ Verified: `node --check` on the extracted inline script passes, exactly one
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
+
+## Backfilled today's live migrations into the repo + updated DEPLOYMENT.md — 17 Sep 2026
+
+Housekeeping task, picked as the next item since the two build-affecting follow-ups
+(vault wallet, Helius) are blocked on AJ. All three schema changes applied today via
+`mcp__Supabase__apply_migration` (the borrow_from_pool hardening, the real collateral
+escrow schema, and the grant-lockdown fix) were already live and already correctly
+registered in the remote's own `supabase_migrations.schema_migrations` table — but,
+same as a pre-existing gap from 5 Sep's assisted-session migrations, they had no
+matching file in the repo's `supabase/migrations/`. Added the three files using the
+exact versions Supabase already recorded (`20260917015602`, `20260917022059`,
+`20260917022140`), so a future `supabase db push` recognizes them as already applied
+and does not attempt to rerun them, while a fresh deploy of this project from scratch
+would still create everything correctly (every statement is safe to run once from
+empty; `CREATE POLICY` calls were given a matching `DROP POLICY IF EXISTS` for safety
+even though these specific ones only ever ran once).
+
+Also updated `DEPLOYMENT.md`: added `lending-collateral-webhook` to the Edge Functions
+list (noting it's deployed but inert — fails closed with 503 until
+`COLLATERAL_WEBHOOK_SECRET` is set), and added a new "Lending Collateral Escrow"
+section consolidating what's built, what's tracked where, and the exact two remaining
+steps only AJ can do (vault address, Helius account + webhook secret) plus the SQL to
+run once the vault address is decided — so this doesn't only live in chat/BUILD_LOG.
+
+Did not touch the pre-existing gap of unbackfilled migrations from 5 Sep (four
+migrations tracked remotely with no matching repo file) — that's prior, unrelated work
+and rewriting that history wasn't asked for; noted here only so it isn't mistaken for
+something this entry already fixed.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814

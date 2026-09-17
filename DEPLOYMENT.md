@@ -100,7 +100,13 @@ secrets, per `.github/workflows/deploy-supabase-functions.yml`):
 Deployed functions live under `supabase/functions/`: `remittance-agent`,
 `siindex-agent-claim`, `siindex-agent-complete`, `siindex-agent-dispatch`,
 `siindex-visitor-feedback`, `siindex-website-runtime`, `siindex-website-transcribe`,
-`siindex-website-voice-setup`, `siindex-website-voice-tts`.
+`siindex-website-voice-setup`, `siindex-website-voice-tts`, `lending-collateral-webhook`.
+
+`lending-collateral-webhook` (added 17 Sep 2026) is deployed with `verify_jwt: false`
+(it authenticates via a shared-secret header instead, since it's called by Helius, not
+a signed-in citizen) but is currently **inert**: it fails closed with a 503 because its
+`COLLATERAL_WEBHOOK_SECRET` environment secret is not set. See "Lending Collateral
+Escrow" below.
 
 Two ways to deploy one:
 
@@ -154,3 +160,34 @@ list of what's still required, per `BUILD_LOG.md` and direct code inspection:
 a specific RPC provider for mainnet) is intended for the eventual deployment, and who
 holds/will hold the treasury keypair. Nothing in `BUILD_LOG.md` or the codebase
 specifies this yet.
+
+## 6. Lending Collateral Escrow — built, inert, two steps from live
+
+Per `BUILD_LOG.md` (17 Sep 2026): `borrow_from_pool` used to trust a caller-supplied
+USDC amount with nothing behind it — fixed, then replaced with a real verification
+path. The schema (`lending_config`, `collateral_deposit_intents`,
+`collateral_deposits`), the `create_collateral_deposit_intent` RPC, and the
+`lending-collateral-webhook` Edge Function are all live on
+`zljgthfzbalsunuoohcd`, tracked in `supabase/migrations/` (the three
+`20260917*` files), and safe by default — nothing in this system can currently move
+INDX or record a fake deposit.
+
+**Two steps only AJ can do before this goes live (not a code task — real custody and
+an external account, see BUILD_LOG.md and chat log 17 Sep 2026 for the full reasoning):**
+
+1. Create/designate the real vault wallet (a Squads v4 multisig is recommended — it
+   matches the existing Grid Account MPC pattern) and insert its address:
+   ```sql
+   insert into lending_config (key, value) values ('vault_address', '<the real address>')
+   on conflict (key) do update set value = excluded.value, updated_at = now();
+   ```
+2. Create a Helius account, register an Enhanced Transaction webhook pointed at
+   `https://zljgthfzbalsunuoohcd.supabase.co/functions/v1/lending-collateral-webhook`
+   with a shared secret, and set that same secret as this project's
+   `COLLATERAL_WEBHOOK_SECRET` Edge Function secret (Supabase dashboard or
+   `supabase secrets set` — not something to paste into a chat session).
+
+**Only after both exist and have been tested with a real small deposit:** re-grant
+`EXECUTE` on `borrow_from_pool` to `authenticated` (currently `postgres`/`service_role`
+only) and build the citizen-facing deposit/QR UI on `lending-dashboard.html` (still
+correctly showing "Borrowing is not live yet" and has not been touched).
