@@ -1970,3 +1970,27 @@ database schema/RPCs applied directly to the live project.
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
+
+## rwa.html — fixed the mint-overlay dead end left by the showMintSuccess() removal — 17 Sep 2026
+
+Picked up the last item on the "what's next" list: when `showMintSuccess()` was deleted
+earlier (Task #15-adjacent fix, NFT minting is Phase 2 / not live), nothing replaced its one
+real job of swapping `#mintMinting` for `#mintSuccess`. `runMinting()`'s animation would
+finish its 5 steps and then just stop — the overlay stayed open on "Finishing... Nothing has
+moved on-chain" forever, with no way out, since `#mintSuccess` was never revealed.
+
+Fix: after the last animation step, reveal the already-existing `#mintSuccess` panel (its
+copy was already honest — "Preview Complete", "NFT minting is Phase 2 · not available in
+this pilot", "Nothing has moved on-chain yet", with working "Back to Dashboard" /
+"List on Marketplace" buttons) instead of reintroducing any of the fabricated claims that
+were removed with `showMintSuccess()` (fake confirmation time, wrong hardcoded domain,
+Math.random() token ID, "certificate issued"). Also reworded the static token-ID placeholder
+from "IN$DEX-RWA-" (reads like a truncated real ID) to "No token ID — not minted", to remove
+any ambiguity now that this screen is actually reachable again.
+
+Verified: `node --check` on the extracted inline script passes, exactly one
+`DOMContentLoaded` listener, grep confirms no other reference to the deleted
+`showMintSuccess()` and nothing else writes to `#successTokenId`.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
