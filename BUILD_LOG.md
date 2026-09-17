@@ -2117,3 +2117,103 @@ fourth `.unit` span without layout changes needed.
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
+
+## Full SIINDEX compliance sweep (5 sub-agents) — 2026-09-17
+
+**Trigger:** AJ said "god mode, proceed with all siindex and all sub agents" — interpreted as:
+run the project's own `indx-screen-audit` v2 skill across every SIINDEX-related file, using
+the skill's own recommended sub-agent dispatch pattern (Agent A/B/C/D by check group), plus a
+5th agent running the `siindex-voice-check` skill against SIINDEX's own dialogue/system-prompt
+text. Read-only research agents only — every fix below was applied and verified by me
+afterward, not by the sub-agents.
+
+**Scope:** 221 files referencing "SIINDEX" (194 was the estimate from an earlier session's
+skill doc; the repo has grown). Agent A covered Checks 1/4/7 (value/framing/meta) across all
+221. Agent B covered Checks 2/3 (capability/availability) across the 68 siindex-named screens,
+reading rendered prose rather than grepping. Agent C covered Checks 5/8 (fabrication/canon
+drift) across all 221. Agent D covered Checks 6/6a/6b/7/9 (legacy/recovery-words/meta/syntax)
+across all 221. Agent E ran SI-label/pronoun/forbidden-phrase voice checks across the 68
+siindex-named screens.
+
+**Confirmed and fixed:**
+
+1. `founder-pipeline.html` — the live outreach-email drafter (`OUTREACH_TEMPLATES`, real tool
+   AJ uses to draft messages to real investors/influencers/creators/ramps) claimed "INDX token
+   minted" in 3 templates. Per DEPLOYMENT.md §5, no SPL mint has been deployed on any Solana
+   cluster — this is a false, undisclosed material claim in investor/partner solicitation
+   copy, worse than a marketing overstatement. Changed to "SPL token structure finalized on
+   Solana, mint deployment pending" in all 3 spots. Also hedged "a reserved INDX allocation at
+   TGE" (undisclosed promise to external third parties) to "a planned INDX allocation at TGE —
+   not guaranteed, subject to final terms once the token is live" in the influencer and creator
+   templates.
+
+2. `siindex-avatar.html` — the file's own Q&A knowledge base contained multiple entries
+   describing live revenue/marketplace/NFT/protection mechanics with zero hedge, directly
+   contradicting sibling entries in the same array that were already correctly hedged in a
+   prior audit (2026-07-30/08-19 comments visible in the file). Fixed: the Identity Sheet
+   mandate quote ("built to oversee every transaction, every citizen, every decision" →
+   "built to oversee IN$DEX operations as they come online"), the $10,000 Transaction
+   Protection answer (now hedged to match the sibling security-layers answer that already says
+   "none of these citizen financial protections is live yet"), the 7-revenue-streams summary
+   and its P2P/data-earnings/creator-NFT sub-answers, the Genesis NFT onboarding answer (no
+   Metaplex/NFT tooling exists in this codebase per DEPLOYMENT.md), and two mission-statement
+   answers asserting the 98/2 split as a live mechanic rather than doctrine pending
+   smart-contract verification (matching the already-correct civ-law answer elsewhere in the
+   same file).
+
+3. `siindex-citizen-fluency-academy.html` — the entire ~40-lesson curriculum had zero
+   planned/not-live disclosure anywhere in the file, while describing SIINDEX drafting,
+   generating, and reviewing real citizen work in present tense. Added the same visible
+   "Planned experience — not live yet" banner already used correctly in
+   `siindex-use-case-library.html`, rather than hedging ~10 lesson blocks individually.
+
+4. `siindex-living-interface.html` — an internal design-doctrine tool whose only disclosure
+   ("an internal design tool, not a live feature") was in the `<meta name="description">` tag,
+   invisible to anyone actually viewing the page, while the visible mode-step walkthroughs
+   described automated security audits and compliance checks in present tense. Added a visible
+   banner under the top bar.
+
+5. `siindex-web3-identity.html` — a decorative "Claim yourname.IN$DEX" button's toast had no
+   hedge, inconsistent with the rest of the page. Changed toast text to "planned, not live yet".
+
+6. `sovereign-social.html` meta description — "Every post earns. Every like pays." with no
+   hedge, directly contradicting the page's own body copy ("Illustrative examples... not live
+   citizen posts yet"). This text also propagates to social-share previews (no og:description
+   override exists). Hedged to match the body.
+
+7. `claim-gift.html` — grammar wreckage from an old seed-phrase→recovery-words find/replace:
+   "Protected by MPC keys no recovery words to lose" (missing connector). Added an em dash.
+
+8. `SIINDEX-Skills/indx-onboarding-concierge/SKILL.md` — the most serious finding this sweep,
+   surfaced by the voice-check agent even though it's outside the HTML scope it was asked to
+   check: this is a live, hourly-scheduled skill that emails real newly-joined citizens via
+   Gmail. It called SIINDEX "your Sovereign AI" (SI-label violation) and told new citizens
+   "Real money, sent directly to your sovereign wallet" for the Earn Feed — but per
+   DEPLOYMENT.md §5, no INDX mint has been deployed on any Solana cluster, so no real money
+   moves anywhere; the Earn Feed only credits a Supabase balance. Fixed the label, rewrote the
+   earning-stream and Sovereign Yield lines to be accurate (Supabase credit, not on-chain
+   settlement; yield simulated, not on-chain), and added explicit constraints plus an audit-note
+   section so a future edit of this skill doesn't reintroduce either claim. Checked every other
+   `SKILL.md` in the repo for the same "Sovereign AI"/"real money" pattern — none found.
+
+**Reviewed and deliberately left unchanged (already correctly guarded, not new findings):**
+`home-v2.html`'s `gmShowReturnFeed()` dead code (fake yield/activity feed, confirmed never
+called, already carries an explicit "DO NOT re-enable" comment from a 2026-07-29 audit —
+left in place per that comment's own stated reasoning, not a fresh issue this sweep created);
+`sovereign-lending.html`'s `_addAFEvent()`/`seedActivityFeed()` (same pattern, already labeled
+"DEAD CODE — DO NOT RE-ENABLE" and confirmed not called); `siindex-os.html`'s scripted
+hero/layer stats (Math.random()-driven but disclosed inline via a visible "scripted animation,
+not real agent telemetry" banner); `biometric-kyc.html`'s disconnected liveness screen (DOM
+present but explicitly guarded against being wired back in without a founder decision);
+`siindex-marketplace-intelligence.html:247` (a direct, dated, attributed quote from AJ Henry —
+editing a quotation attributed to a named person is a different and worse risk than leaving a
+borderline pronoun call alone).
+
+**Verified:** `node --check` on every extracted inline `<script>` block in every edited file
+(and a `new Function()` parse test on both `siindex-avatar.html` scripts specifically, given
+how much of that file's edit surface was inside template-literal JS objects); grepped every
+edited file for conflict markers; confirmed no other `SKILL.md` in the repo repeats the
+onboarding-concierge bug.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
