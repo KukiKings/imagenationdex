@@ -2087,3 +2087,33 @@ confirms `credit_stripe_purchase`/`stripe-webhook` reasoning by reading real, cu
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
+
+## Fixed: homepage pilot countdown looked frozen — 2026-09-17
+
+**Report:** AJ said "countdown on the app is not workings" then "still not counting down" after
+I initially reported the countdown as working (confirmed via live browser load of
+imagenationdex.com showing correct, decreasing values across two separate checks).
+
+**Root cause, confirmed live:** `public-home.html` is the app's actual homepage (`vercel.json`
+maps `/` to it; the superficially similar `index.html` is an internal dev catalog page,
+explicitly 404'd in production). Its `#pilotCountdown` widget's date math was always correct,
+but it only recomputed once a minute (`setInterval(updatePilotCountdown, 60000)`) and never
+displayed a seconds field. Proved this directly: loaded the live page, read its text, waited 20
+real seconds with no navigation, read the text again — byte-for-byte identical
+("159 DAYS 14 HRS 52 MIN" both times). To anyone watching for under a minute, that's
+indistinguishable from broken, even though the underlying value is real and does decrease over
+time (also independently confirmed by AJ's own two reports, several minutes apart, showing a
+correct decrease).
+
+**Fix:** `public-home.html` — added a seconds unit to `updatePilotCountdown()`'s rendered output
+and dropped the refresh interval from 60000ms to 1000ms, matching the pattern already used
+correctly by `buy-indx.html`'s Grand Synchronicity countdown and `genesis-offer.html`'s Time
+Until L99 Launch countdown (both already tick every second with a visible seconds digit — this
+was the one countdown on the site that didn't).
+
+**Verified:** `node --check` on the extracted inline script passed; confirmed `flex-wrap:wrap`
+and the existing `@media(max-width:430px)` rule on `.pilot-countdown` already accommodate a
+fourth `.unit` span without layout changes needed.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
