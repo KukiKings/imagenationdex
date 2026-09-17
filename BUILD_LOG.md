@@ -1910,3 +1910,63 @@ a paper trail in the repo.
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
+
+## Built the real collateral escrow — schema, RPC, and webhook scaffold — 17 Sep 2026
+
+Following up the same-day `borrow_from_pool` hardening (see prior entry). AJ said "proceed"
+without picking a specific option, so the safe/buildable half of the real fix was completed
+now, and the one part that genuinely requires AJ's own decisions was scoped clearly rather
+than guessed at.
+
+**Built (all live in Supabase project `zljgthfzbalsunuoohcd`, all safe/inert by default):**
+
+- `lending_config` table — non-secret platform config (public Solana addresses only, not
+  credentials). RLS-enabled, no policies — default-deny for anon/authenticated, matching
+  the pattern already used elsewhere for admin-only tables.
+- `collateral_deposit_intents` table + `create_collateral_deposit_intent(p_citizen_id)` RPC
+  — a citizen requests a unique reference before sending USDC. Refuses honestly
+  ("Collateral custody is not configured yet") until a `vault_address` row exists in
+  `lending_config`. Granted to `authenticated` only — caught and fixed a real bug in the
+  same session: Postgres grants new functions EXECUTE to `PUBLIC` by default, which would
+  have let unauthenticated `anon` callers create intents for arbitrary citizen ids (the
+  ownership check only runs when `auth.uid()` is non-null, same pattern already relied on
+  elsewhere in this schema for functions that are simply never granted to `anon`). Revoked
+  `PUBLIC`/`anon`, re-verified only `authenticated`/`postgres`/`service_role` remain.
+- `collateral_deposits` table — a real, on-chain-confirmed USDC transfer, written only by
+  the webhook below (or by `borrow_from_pool` marking one consumed). `CHECK (mint = '<real
+  USDC mint>')` and a `UNIQUE` constraint on `tx_signature` for defense in depth and replay
+  safety.
+- `borrow_from_pool` rewritten again (superseding this morning's hard-block): now looks up
+  a real unconsumed `collateral_deposits` row for the citizen with enough USDC to clear
+  150%, and only proceeds if one exists. `p_usdc_collateral` is now an ignored legacy
+  parameter kept for call-signature compatibility with `lending-dashboard.html`'s existing
+  (still ungranted, still unreachable) call site. Verified live: `create_collateral_deposit_intent`
+  and `borrow_from_pool` both still correctly refuse (no vault configured / no verified
+  collateral) against a real test citizen, balance unchanged, matching the same safe
+  behavior as the hard-block — but this version starts working automatically the moment
+  real deposits exist, with no further code changes.
+- `supabase/functions/lending-collateral-webhook/index.ts` — new edge function (deployed,
+  `verify_jwt: false`, custom shared-secret auth via `COLLATERAL_WEBHOOK_SECRET`). Parses a
+  Helius Enhanced Transaction webhook payload, matches a memo-embedded reference to a
+  pending intent, confirms the USDC transfer went to the configured vault, and records a
+  `collateral_deposits` row. Fails closed (503) if `COLLATERAL_WEBHOOK_SECRET` is unset,
+  which it currently is. Not live-tested against a real Helius payload (no Helius account
+  exists yet for this project) — flagged clearly in the file's own header comment.
+
+**Deliberately not done / left for AJ:**
+- EXECUTE on `borrow_from_pool` is still not granted to `authenticated` — re-granting it is
+  a launch decision for once the vault + webhook are real and tested, not something this
+  session did unilaterally.
+- No real vault wallet was created or chosen (recommended: reuse the project's existing
+  Squads v4 multisig pattern from Grid Accounts) — a real custody decision only AJ can make.
+- No Helius account/webhook was created, and no secret was set — `lending-collateral-webhook`
+  stays inert until AJ does this and gives it a `COLLATERAL_WEBHOOK_SECRET`.
+- `lending-dashboard.html` was not touched — it still correctly shows "Borrowing is not live
+  yet" and its preflight code is still dead code by design, pending a real deposit-intent +
+  QR UI as a follow-up frontend feature once the backend above is proven working end to end.
+
+No app HTML/JS files changed except the one new edge function file — everything else is
+database schema/RPCs applied directly to the live project.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
