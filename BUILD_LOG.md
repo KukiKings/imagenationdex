@@ -1855,3 +1855,58 @@ claiming it.
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
+
+## Fixed a live vulnerability in `borrow_from_pool` — unverified USDC collateral could mint real INDX — 17 Sep 2026
+
+AJ asked to proceed with building the real collateral escrow for lending (item 3 on the "what's
+next" list). Before writing any escrow code, checked the real schema and the function's actual
+source via `pg_get_functiondef` — this is what was found and fixed.
+
+**The finding**: `borrow_from_pool(p_citizen_id, p_usdc_collateral, p_borrow_indx)` accepted
+`p_usdc_collateral` as a raw, self-reported caller parameter. There is no USDC/fiat/collateral
+balance column on `citizens`, no deposit/custody table, and no on-chain deposit monitoring anywhere
+in the schema — confirmed by checking every lending-related function (`accrue_lending_interest`,
+`get_lending_positions`, `repay_loan`, `set_lending_updated_at`) and every USDC/deposit/fiat-named
+RPC in the database. The function computed a 150% collateral ratio against that unverified number
+and, if it cleared, unconditionally ran `UPDATE citizens SET indx_balance = indx_balance + ...` —
+i.e. it would mint unlimited real, spendable INDX to anyone who lied about USDC they never
+provided.
+
+**Why it was not an active incident**: `information_schema.routine_privileges` confirms EXECUTE on
+this RPC was already revoked from `authenticated`/`anon` on 2026-08-29 (matches the existing
+"Borrowing is not live yet" disclosure banner and dead preflight code in `lending-dashboard.html`),
+and a direct query of `lending_positions` returned zero rows ever created. No citizen was
+affected. But the function body itself still contained the unsafe logic — a landmine, since any
+future re-grant of EXECUTE to `authenticated` (e.g. while wiring up a real launch feature) would
+have silently reopened unlimited INDX minting with no code review catching it, because the grant
+alone was the only thing preventing it.
+
+**The fix** (Supabase migration `harden_borrow_from_pool_block_unverified_collateral`, applied
+directly to project `zljgthfzbalsunuoohcd`): replaced the borrow/credit logic entirely. The
+function now always returns `{success: false, error: "Borrowing against USDC collateral is not
+live yet..."}` for any citizen, cannot insert a `lending_positions` row, and cannot touch
+`indx_balance` — safe on its own terms regardless of grants. Verified live: called it with a
+citizen id and a wildly inflated fake collateral figure (999,999) — returned the honest error,
+`indx_balance` unchanged, `lending_positions` still empty.
+
+**What real borrowing needs before it can ship**: on-chain USDC custody (a program- or
+multisig-controlled vault — Squads v4 multisig is already the project's MPC pattern for Grid
+Accounts, so reusing it here is the lowest-new-infrastructure option), a per-citizen deposit
+reference, and a backend watcher (a Helius webhook was already scoped as a "currentTask" in
+`siindex-agents.html` and never built) that confirms a real on-chain transfer before the RPC is
+ever allowed to see it as collateral — the same real-verification pattern `verify_payid` already
+uses, not the self-reported pattern this replaced. Left as a scoped, not-yet-started build; this
+session only closed the live hole.
+
+Also ran a general Supabase security-advisor pass while in there: no ERROR-level findings; 3
+WARN-level (structural — every RPC in this SECURITY DEFINER-heavy architecture is EXECUTE-granted
+to `anon`/`authenticated` by design, each gating internally via `auth.uid()` ownership checks, so
+this is expected shape rather than a new finding) plus one real one-click item — Supabase Auth's
+leaked-password-protection (HaveIBeenPwned check) is currently disabled — worth turning on before
+December but is an account setting, not code, so left for AJ to flip or explicitly authorize.
+
+No HTML/JS files changed — this was a database-only fix. Committing this log entry so the fix has
+a paper trail in the repo.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
