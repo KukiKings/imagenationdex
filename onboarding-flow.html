@@ -814,6 +814,68 @@
   }
   .referral-welcome.show { display: flex; align-items: flex-start; gap: 10px; }
   .referral-welcome-icon { font-size: 18px; flex-shrink: 0; }
+
+  /* ── QR REFERRAL SCAN ── additive convenience, hooks into the existing
+     ?ref= / referral_code concept above. See the QR REFERRAL SCAN JS block
+     near the end of the page's inline script for details and constraints. ── */
+  .qr-scan-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+    transition: border-color 0.2s;
+  }
+  .qr-scan-link:active { transform: scale(0.98); }
+  .qr-scan-link:hover { border-color: var(--cyan-dim); }
+  .qr-scan-link strong { color: var(--text); }
+  .qr-scan-link-icon { font-size: 16px; flex-shrink: 0; }
+
+  .qr-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--black);
+    z-index: 160;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 24px;
+    text-align: center;
+  }
+  .qr-overlay.active { display: flex; }
+  .qr-title { font-size: 20px; font-weight: 800; }
+  .qr-sub { font-size: 13px; color: var(--text-muted); max-width: 320px; line-height: 1.5; }
+  .qr-video-wrap {
+    position: relative;
+    width: 240px;
+    height: 240px;
+    border-radius: 20px;
+    overflow: hidden;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    display: none;
+  }
+  .qr-video-wrap.active { display: block; }
+  .qr-video-wrap video { width: 100%; height: 100%; object-fit: cover; }
+  .qr-video-frame { position: absolute; inset: 12px; border: 2px solid var(--cyan); border-radius: 16px; pointer-events: none; opacity: 0.7; }
+  .qr-status { font-size: 13px; color: var(--cyan); min-height: 18px; }
+  .qr-manual { width: 100%; max-width: 320px; display: none; flex-direction: column; gap: 10px; text-align: left; }
+  .qr-manual.active { display: flex; }
+  .qr-manual-label { font-size: 12px; color: var(--text-muted); }
+  .qr-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 320px; margin-top: 4px; }
+  .qr-error { font-size: 12px; color: var(--red); min-height: 16px; text-align: left; }
+  .qr-toggle-manual { background: none; border: none; color: var(--cyan); font-size: 13px; cursor: pointer; padding: 4px; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <meta name="theme-color" content="#090A10">
@@ -853,6 +915,14 @@
       <div class="referral-welcome" id="referralBanner">
         <div class="referral-welcome-icon">🎟️</div>
         <div><strong style="color:var(--cyan);">You were invited!</strong> Your referral code is applied. Complete onboarding to unlock your welcome bonus.</div>
+      </div>
+
+      <!-- Optional QR referral-code scanner — additive convenience only. A scanned
+           or manually-typed code only prefills the same referral_code used by the
+           ?ref= URL flow above; it never touches identity verification. -->
+      <div class="qr-scan-link" id="referralQrLink" onclick="openReferralQrScan()">
+        <div class="qr-scan-link-icon">🎟️</div>
+        <div><strong>Have an invite code?</strong> Scan the QR code or enter it manually.</div>
       </div>
 
       <h1>What do you want to <em>do</em>?</h1>
@@ -1255,6 +1325,36 @@
   </div>
 </div>
 
+<!-- Optional QR referral-code scanner — additive convenience only. Never touches
+     phone/email OTP verification above: scanning or typing a code here only sets
+     sessionStorage('referral_code'), which completeActivation() reads the same way
+     it already reads a ?ref= URL param. Feature-detects BarcodeDetector and falls
+     back to manual code entry when it (or the camera) isn't available, so this is
+     never a dead button. No fabricated "scan success" — either the browser's real
+     BarcodeDetector reads an actual QR code, or the user types the code in. -->
+<div class="qr-overlay" id="qrScanOverlay">
+  <div class="qr-title">Scan invite QR code</div>
+  <div class="qr-sub" id="qrScanSub">Point your camera at the QR code your friend shared, or enter their code below.</div>
+
+  <div class="qr-video-wrap" id="qrVideoWrap">
+    <video id="qrVideo" playsinline muted></video>
+    <div class="qr-video-frame"></div>
+  </div>
+  <div class="qr-status" id="qrScanStatus"></div>
+
+  <div class="qr-manual" id="qrManualWrap">
+    <label class="qr-manual-label" for="qrManualInput">Invite / referral code</label>
+    <input class="field-input" id="qrManualInput" type="text" placeholder="e.g. MARIA50" autocomplete="off">
+    <div class="qr-error" id="qrManualError"></div>
+  </div>
+
+  <div class="qr-actions">
+    <button class="btn-primary" id="qrApplyBtn" onclick="applyManualReferralCode()">Apply code</button>
+    <button class="qr-toggle-manual" id="qrToggleManualBtn" onclick="toggleQrManualEntry()" style="display:none;">Type it in instead</button>
+    <button class="otp-back" onclick="closeQrScanOverlay()">← Cancel</button>
+  </div>
+</div>
+
 <script>
   // ── SUPABASE CLIENT ──
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
@@ -1549,8 +1649,11 @@
         // the exact same string that was just sent to signInWithOtp and checked by
         // verifyOtp, so what gets written below is guaranteed to be the verified value.
         try {
-          // Check for referral code in URL params
-          const urlRef = new URLSearchParams(window.location.search).get('ref') || '';
+          // Check for referral code in URL params, falling back to one applied via
+          // the QR-scan / manual-entry flow below (applyReferralCode() stores it in
+          // sessionStorage under the same 'referral_code' key detectReferral() uses
+          // for a ?ref= link, so either path lands here identically).
+          const urlRef = new URLSearchParams(window.location.search).get('ref') || sessionStorage.getItem('referral_code') || '';
 
           // Routed through create_onboarding_citizen(), not a raw insert —
           // this flow never authenticates, so it always runs as the 'anon'
@@ -1946,6 +2049,166 @@
       if (banner) banner.classList.add('show');
     }
   })();
+
+  // ══════════════════════════════════════════════
+  // QR REFERRAL SCAN — additive convenience only.
+  // Lets a citizen scan (or type) an invite/referral code instead of needing a
+  // ?ref= link. It only ever writes sessionStorage('referral_code') — the exact
+  // same value completeActivation() above already reads for a URL-based referral
+  // — so it can only prefill that one field. It never touches, bypasses, or runs
+  // before signInWithOtp/verifyOtp; identity verification is untouched.
+  //
+  // Feature-detects the standard BarcodeDetector API (no external CDN dependency
+  // added). When it — or camera access — isn't available, this drops straight to
+  // manual code entry so there is never a scan button that can't do anything.
+  // There is no fabricated "scan success": a code is only applied when the real
+  // BarcodeDetector actually decodes a QR code, or the citizen types one in.
+  // ══════════════════════════════════════════════
+  let _qrStream = null;
+  let _qrDetector = null;
+  let _qrScanTimer = null;
+
+  function openReferralQrScan() {
+    document.getElementById('qrScanOverlay').classList.add('active');
+    document.getElementById('qrManualError').textContent = '';
+    document.getElementById('qrManualInput').value = sessionStorage.getItem('referral_code') || '';
+    document.getElementById('qrScanSub').textContent = 'Point your camera at the QR code your friend shared, or enter their code below.';
+
+    const hasBarcodeDetector = 'BarcodeDetector' in window;
+    const hasCamera = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+
+    if (hasBarcodeDetector && hasCamera) {
+      document.getElementById('qrManualWrap').classList.remove('active');
+      document.getElementById('qrToggleManualBtn').style.display = 'block';
+      document.getElementById('qrToggleManualBtn').textContent = 'Type it in instead';
+      startQrCamera();
+    } else {
+      // No live-scanning path on this device/browser — go straight to manual entry
+      // rather than showing a camera control that could never work.
+      document.getElementById('qrScanSub').textContent = "QR scanning isn't supported on this device — enter the invite code below.";
+      document.getElementById('qrVideoWrap').classList.remove('active');
+      document.getElementById('qrManualWrap').classList.add('active');
+      document.getElementById('qrToggleManualBtn').style.display = 'none';
+    }
+  }
+
+  function toggleQrManualEntry() {
+    const manual = document.getElementById('qrManualWrap');
+    const showing = manual.classList.toggle('active');
+    document.getElementById('qrToggleManualBtn').textContent = showing ? 'Use camera instead' : 'Type it in instead';
+    if (showing) {
+      stopQrCamera();
+      document.getElementById('qrVideoWrap').classList.remove('active');
+      document.getElementById('qrScanStatus').textContent = '';
+    } else {
+      startQrCamera();
+    }
+  }
+
+  async function startQrCamera() {
+    const statusEl = document.getElementById('qrScanStatus');
+    try {
+      _qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    } catch (e) {
+      // Camera denied or unavailable — fall back to manual entry. Never leave a
+      // scan UI showing with nothing actually happening.
+      statusEl.textContent = '';
+      document.getElementById('qrScanSub').textContent = 'Camera unavailable — enter the invite code below instead.';
+      document.getElementById('qrVideoWrap').classList.remove('active');
+      document.getElementById('qrManualWrap').classList.add('active');
+      document.getElementById('qrToggleManualBtn').style.display = 'none';
+      return;
+    }
+
+    const video = document.getElementById('qrVideo');
+    video.srcObject = _qrStream;
+    try { await video.play(); } catch (e) { /* some browsers autoplay muted video without a play() promise resolving cleanly */ }
+    document.getElementById('qrVideoWrap').classList.add('active');
+    statusEl.textContent = 'Looking for a QR code…';
+
+    try {
+      _qrDetector = new BarcodeDetector({ formats: ['qr_code'] });
+    } catch (e) {
+      stopQrCamera();
+      document.getElementById('qrVideoWrap').classList.remove('active');
+      document.getElementById('qrManualWrap').classList.add('active');
+      document.getElementById('qrToggleManualBtn').style.display = 'none';
+      document.getElementById('qrScanSub').textContent = "QR scanning isn't supported on this device — enter the invite code below.";
+      return;
+    }
+
+    const scanFrame = async () => {
+      if (!_qrStream) return; // camera was stopped (overlay closed / fallback taken)
+      try {
+        const codes = await _qrDetector.detect(video);
+        if (codes && codes.length > 0 && codes[0].rawValue) {
+          const raw = codes[0].rawValue;
+          stopQrCamera();
+          document.getElementById('qrVideoWrap').classList.remove('active');
+          processScannedReferralValue(raw);
+          return;
+        }
+      } catch (e) { /* a single failed detect() call on one frame isn't fatal — keep scanning */ }
+      _qrScanTimer = setTimeout(scanFrame, 250);
+    };
+    scanFrame();
+  }
+
+  function stopQrCamera() {
+    if (_qrScanTimer) { clearTimeout(_qrScanTimer); _qrScanTimer = null; }
+    if (_qrStream) { _qrStream.getTracks().forEach(t => t.stop()); _qrStream = null; }
+    _qrDetector = null;
+  }
+
+  function processScannedReferralValue(raw) {
+    let code = String(raw).trim();
+    // A shared invite QR is usually a link like https://…/onboarding-flow.html?ref=MARIA50 —
+    // pull the ref param out when it's a URL; otherwise treat the decoded text as the code itself.
+    try {
+      const url = new URL(raw);
+      const refParam = url.searchParams.get('ref');
+      if (refParam) code = refParam;
+    } catch (e) { /* not a URL — use the decoded text as-is */ }
+    applyReferralCode(code);
+  }
+
+  function applyManualReferralCode() {
+    const input = document.getElementById('qrManualInput');
+    const code = (input.value || '').trim();
+    if (!code) {
+      document.getElementById('qrManualError').textContent = 'Enter a code first, or cancel.';
+      return;
+    }
+    applyReferralCode(code);
+  }
+
+  function applyReferralCode(rawCode) {
+    // Same character-class sanitisation as the domain slug elsewhere in this file.
+    const code = String(rawCode).trim().replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40);
+    if (!code) {
+      document.getElementById('qrManualError').textContent = "That code didn't look right — try again.";
+      return;
+    }
+    sessionStorage.setItem('referral_code', code);
+    stopQrCamera();
+    document.getElementById('qrScanOverlay').classList.remove('active');
+
+    const banner = document.getElementById('referralBanner');
+    if (banner) {
+      const textEl = banner.querySelector('div:last-child');
+      if (textEl) textEl.innerHTML = `<strong style="color:var(--cyan);">Invite code applied: ${code}.</strong> Complete onboarding to unlock your welcome bonus.`;
+      banner.classList.add('show');
+    }
+    const link = document.getElementById('referralQrLink');
+    if (link) {
+      link.innerHTML = `<div class="qr-scan-link-icon">✅</div><div><strong style="color:var(--green);">Invite code applied:</strong> ${code} — tap to change.</div>`;
+    }
+  }
+
+  function closeQrScanOverlay() {
+    stopQrCamera();
+    document.getElementById('qrScanOverlay').classList.remove('active');
+  }
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>
