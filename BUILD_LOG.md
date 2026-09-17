@@ -2025,3 +2025,65 @@ something this entry already fixed.
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
+
+## Proactive sweep of every real-money-crediting RPC + a second live landmine found and fixed — 17 Sep 2026
+
+Picked as the next task after the housekeeping pass: rather than guess what to build
+next, checked whether the exact vulnerability class just fixed in `borrow_from_pool`
+(a self-reported value trusted and credited as real balance) exists anywhere else.
+Queried every function whose source contains `indx_balance = indx_balance +` (7
+matches) and read each one's real logic and grants:
+
+- `borrow_from_pool` — already fixed earlier today.
+- `credit_stripe_purchase` — trusts a caller-supplied amount by design, but is safe:
+  granted only to `postgres`/`service_role` (confirmed live), and its only real caller
+  is `stripe-webhook`, which verifies Stripe's own signed event before calling it with
+  values taken from Stripe's confirmed `amount_received` — already fixed 2026-08-29
+  per its own code comments.
+- `fulfill_instant_invite`, `purchase_listing`, `unstake_from_pool`,
+  `withdraw_from_pool` — all safe. Every amount they move comes from a real,
+  previously-recorded row (an invite, a listing price, a stake, a deposit position),
+  not a caller-supplied number, and citizen-to-citizen movements are self-balancing
+  (debit and credit sum to the same real total).
+- `transfer_indx` — safe. `p_amount` is caller-supplied but bounded by the sender's own
+  real balance (`v_sender_balance < p_amount` guard) — pure internal ledger movement,
+  never minting.
+
+**Found a second real landmine while verifying `credit_stripe_purchase`'s safety net.**
+`credit_stripe_purchase` is only as safe as its callers, so both real callers needed
+checking. `stripe-webhook` (read via `mcp__Supabase__get_edge_function` — deployed
+live, version 1, but with no matching file in the repo) is correctly built. But
+`create-payment-intent` — the function that creates the Stripe PaymentIntent in the
+first place — took `indx_total` directly from the request body and wrote it,
+unchecked, into the PaymentIntent's metadata. Nothing tied it to `amount_usd`.
+Chained together: pay the real $10.00 minimum, claim `indx_total: 999999999` in the
+request, and `stripe-webhook` would have credited 999,999,999 real INDX for a real $10
+charge — the same self-reported-value shape as `borrow_from_pool`, just one hop
+upstream. Currently inert only because `STRIPE_SECRET_KEY` has never been set (both
+functions fail closed with a 503), but this was a live landmine waiting for Stripe to
+be switched on, not a hypothetical, so fixed now rather than left for whenever Stripe
+setup happens.
+
+**Fix** (deployed, `supabase/functions/create-payment-intent/index.ts` version 9):
+`indx_total` is now computed server-side from the real `amount_usd` the PaymentIntent
+is actually being created for — `floor(amount_usd / $0.24) + 50 Genesis Bonus` for any
+purchase ≥ $10, exactly matching `buy-indx.html`'s own real client-side
+`calcConversion()` math. The client's claimed total is no longer read at all. Noted,
+not fixed (separate, much lower-stakes gap): nothing in the schema currently marks the
+Genesis Bonus as consumed by a purchase (`citizens.genesis_bonus_claimed_at` is
+written by the signup-bonus claim functions, a different bonus) — this fix mirrors
+today's real behavior (bonus available on every purchase) rather than inventing new
+eligibility logic unprompted.
+
+Both `create-payment-intent` and `stripe-webhook` backfilled into the repo (previously
+deployed live with no matching file, same gap pattern as the morning's migrations).
+`DEPLOYMENT.md` updated with both functions and the real setup steps needed before
+Stripe purchases can go live.
+
+Verified: brace/paren balance checked on both files (no Deno runtime available in this
+sandbox to fully type-check, same limitation as `lending-collateral-webhook`); grep
+confirms `credit_stripe_purchase`/`stripe-webhook` reasoning by reading real, current
+`pg_get_functiondef` output and the live edge function source, not assumptions.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814

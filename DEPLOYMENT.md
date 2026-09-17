@@ -100,13 +100,30 @@ secrets, per `.github/workflows/deploy-supabase-functions.yml`):
 Deployed functions live under `supabase/functions/`: `remittance-agent`,
 `siindex-agent-claim`, `siindex-agent-complete`, `siindex-agent-dispatch`,
 `siindex-visitor-feedback`, `siindex-website-runtime`, `siindex-website-transcribe`,
-`siindex-website-voice-setup`, `siindex-website-voice-tts`, `lending-collateral-webhook`.
+`siindex-website-voice-setup`, `siindex-website-voice-tts`, `lending-collateral-webhook`,
+`create-payment-intent`, `stripe-webhook`.
 
 `lending-collateral-webhook` (added 17 Sep 2026) is deployed with `verify_jwt: false`
 (it authenticates via a shared-secret header instead, since it's called by Helius, not
 a signed-in citizen) but is currently **inert**: it fails closed with a 503 because its
 `COLLATERAL_WEBHOOK_SECRET` environment secret is not set. See "Lending Collateral
 Escrow" below.
+
+`create-payment-intent` and `stripe-webhook` (both backfilled into the repo 17 Sep
+2026 — they were already live, just untracked) are IN$DEX's card-purchase path for
+buying INDX with a real Stripe charge. Both currently fail closed with a 503 because
+`STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` are not set. `create-payment-intent` was
+found and fixed the same day: it used to take the buyer's claimed `indx_total`
+straight from the request body with nothing checking it matched `amount_usd`, which
+would have let anyone pay the real $10 minimum and claim an arbitrary INDX total once
+Stripe was switched on. It now computes `indx_total` itself server-side from the real
+charge amount (`floor(amount_usd / $0.24) + 50 Genesis Bonus`, matching
+`buy-indx.html`'s own math) and ignores whatever the client sends. `stripe-webhook`
+was already correct — it verifies Stripe's real signature and only credits off
+`amount_received` and metadata Stripe itself received, never anything the browser
+asserts after the fact. To go live: set both secrets, add the webhook endpoint in the
+Stripe dashboard (`.../functions/v1/stripe-webhook`, `payment_intent.succeeded`), and
+replace the `STRIPE_PK` placeholder in `buy-indx.html` with a real publishable key.
 
 Two ways to deploy one:
 
