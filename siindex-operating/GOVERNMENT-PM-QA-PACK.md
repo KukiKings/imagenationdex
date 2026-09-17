@@ -77,7 +77,7 @@
 | Ocean / minerals | Stewardship honesty — no invented rights |
 | Diaspora remittance | Corridor **name** planned; settlement not live |
 | School portal | Planned utility |
-| Radio / SMS citizens | Tracked; SMS needs Twilio for ops alerts |
+| Radio / SMS citizens | Tracked; SMS provider not yet chosen (Twilio ruled out 2026-09-17) |
 
 ---
 

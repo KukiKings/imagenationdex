@@ -51,7 +51,7 @@
 | Component | Technology |
 |---|---|
 | Database | **Supabase** (PostgreSQL) — project ref: `zljgthfzbalsunuoohcd`, region: ap-southeast-2 |
-| Auth | **Supabase Auth** — phone OTP via Twilio |
+| Auth | **Supabase Auth** — phone OTP; SMS provider TBD (Twilio ruled out 2026-09-17, replacement not yet chosen — see `second-brain/companies/twilio.md`) |
 | Key tables | `citizens`, `waitlist`, `transactions`, `security_events` |
 | RLS | Row Level Security enabled on all tables |
 

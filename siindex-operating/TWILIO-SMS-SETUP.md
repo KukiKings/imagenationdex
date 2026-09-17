@@ -1,4 +1,13 @@
-# Twilio SMS setup — needs-aj short alerts
+# Twilio SMS setup — SUPERSEDED 2026-09-17, kept for history only
+
+**AJ decision (2026-09-17): "we are no longer using twilio... it's not user friendly."** Do not
+follow the steps below. Email is the working primary channel for founder alerts and needs no
+change. See `AJ-BLOCKERS-RUNBOOK.md` §3 for the current status. This file is retained only so
+the reasoning trail isn't lost, not as a live setup guide.
+
+---
+
+*(Original doc below, for history only.)*
 
 **Priority:** Email first · SMS second  
 **AJ mobile (locked):** `+61451565863`  

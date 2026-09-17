@@ -2265,3 +2265,55 @@ independently re-verified rather than trusted on report alone.
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
+
+## Twilio ruled out — documentation updated to reflect AJ's decision — 2026-09-17
+
+**Trigger:** while checking on `status.json`'s stale "AJ: STT deploy, P0-A MP4, Twilio" pending
+items (surfaced during the utility-directory check earlier today), AJ said "we can't use twilio
+it's not user friendly," then "we are no longer using twilio," then clarified "we are using
+supabase" when I started digging into what Twilio actually backed in this codebase.
+
+**What Twilio actually was, found by tracing every reference (not assumed):** two separate,
+unrelated dependencies, both currently unconfigured (no live secrets ever set for either):
+
+1. A founder-notification SMS second channel (`siindex-m2m/notify.mjs`, `AJ-BLOCKERS-RUNBOOK.md`
+   §3, `TWILIO-SMS-SETUP.md`) — a backup alert path to AJ's own phone, always secondary to email,
+   which has been the working primary channel the whole time. Low stakes: retired outright, no
+   functional change needed since email already covers it. Marked both docs superseded/retired
+   rather than deleted, so the reasoning trail isn't lost.
+
+2. The SMS OTP provider configured in Supabase Auth's phone-login stack
+   (`second-brain/companies/twilio.md`, `memory.md`, `what-we-build-on.md`,
+   `GOVERNMENT-PM-QA-PACK.md`) — since the 2026-07-27 Tier 0 decision (phone + OTP only, no face
+   scan), this is the **sole verification step for real citizen signup**, and the single reason
+   Part Sixteen Stage C's staging positive-test sequence has never completed end to end. This is
+   the higher-stakes one and genuinely still open.
+
+**Researched (did not commit to a choice — this is a real vendor/cost decision, not mine to make
+unilaterally):** per AJ's "we are using supabase" direction, confirmed Supabase Auth natively
+supports three other built-in phone/SMS providers besides Twilio — MessageBird, Vonage, and
+TextLocal (community-supported) — each configured the same simple dashboard way Twilio was, no
+custom code. Supabase also offers a "Send SMS Hook" for a fully custom provider (e.g. Africa's
+Talking, already floated in this codebase's own planning docs as a Pacific-reach alternative) if
+none of the four built-ins work out. No provider has confirmed Pacific-corridor (Samoa, Fiji,
+Vanuatu, RMI) deliverability data from a quick check today — the same untested-deliverability risk
+flag that existed for Twilio applies to whichever replacement is chosen, and should be tested for
+real before relying on it for launch.
+
+**Docs updated to stop presenting Twilio as the plan** (living/status docs only — left dated
+changelog entries in `whitepaper-v1.md` untouched, since those are historical records of what was
+true at the time, not claims about today): `status.json`, `AJ-BLOCKERS-RUNBOOK.md`,
+`TWILIO-SMS-SETUP.md`, `second-brain/companies/twilio.md`, `second-brain/companies/_index.md`,
+`what-we-build-on.md`, `GOVERNMENT-PM-QA-PACK.md`, `savings-goals.html` (code comment only),
+`SIINDEX-Skills/siindex-waitlist-ops/SKILL.md`.
+
+**Not touched (protected):** `founder-voice.html` mentions Twilio twice (its fixed OTP-status
+briefing text) — this file is on the standing do-not-modify list, so it was read but not edited.
+AJ may want to update its OTP answer himself once a replacement provider is chosen.
+
+**Next step, AJ's call, not mine:** pick MessageBird, Vonage, TextLocal, or a custom Send-SMS-Hook
+provider; whichever is chosen still needs account creation (my standing rule: I don't create
+accounts) and real Pacific-corridor delivery testing before Tier 0 signup can be called live.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814

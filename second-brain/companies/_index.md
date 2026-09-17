@@ -83,7 +83,7 @@
 
 ### Infrastructure — newly filed
 
-- **[[twilio]]** — SMS/voice OTP provider behind Supabase Auth phone login. Since the 2026-07-27 Tier 0 decision (phone + contact + OTP only, no face scan, no liveness), Twilio is the **sole verification step at Tier 0** and therefore a single point of failure for citizen signup. Blocked Part Sixteen Stage C (Session 121 x74, 18 Jul). Pacific-corridor deliverability and cost untested; Africa's Talking / WhatsApp Business API floated as alternatives, no decision recorded.
+- **[[twilio]]** — RULED OUT 2026-09-17 (AJ: "not user friendly"). Was the SMS/voice OTP provider behind Supabase Auth phone login and, since the 2026-07-27 Tier 0 decision (phone + contact + OTP only, no face scan, no liveness), the **sole verification step at Tier 0** — a single point of failure for citizen signup. Replacement provider not yet chosen; AJ's follow-up direction is to stay within Supabase Auth's native phone-provider options (MessageBird, Vonage, or TextLocal) rather than a custom integration. Blocked Part Sixteen Stage C (Session 121 x74, 18 Jul) and still blocked until a provider is chosen. Pacific-corridor deliverability and cost untested for any candidate, including the replacement options — see `twilio.md` for full detail.
 
 ### Researched, not adopted
 

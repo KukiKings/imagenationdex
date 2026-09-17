@@ -1,4 +1,4 @@
-# AJ blockers runbook — STT · P0-A MP4 · Twilio
+# AJ blockers runbook — STT · P0-A MP4 · founder-notification SMS (retired)
 
 **Status:** Agent cannot complete these without your machine / secrets.  
 **Updated:** 2026-08-19
@@ -64,29 +64,20 @@ Then hard-refresh home and play introduction.
 
 ---
 
-## 3. Twilio SMS (needs-aj second channel)
+## 3. Founder-notification SMS second channel — RETIRED 2026-09-17
 
-**Priority:** Email first · SMS second  
-**Numbers locked:** `+61451565863` · email `dadyboy73@gmail.com` · CC `imagenationdex@gmail.com`
+**AJ decision (2026-09-17): "we are no longer using twilio... it's not user friendly."** This
+was always the lower-stakes of the two Twilio dependencies in this repo — a backup alert
+channel to AJ's own phone, never his citizens' onboarding path (see item below and
+`second-brain/companies/twilio.md` for that separate, higher-stakes one).
 
-### Secrets (never commit)
+Email (`dadyboy73@gmail.com` / CC `imagenationdex@gmail.com`) has been the working primary
+channel all along and stays that way. `siindex-m2m/notify.mjs` continues to work exactly as
+before on the outbox + email path — nothing breaks by leaving this second channel unbuilt. If
+AJ ever wants a second channel again, it should not default back to Twilio; a push notification
+or a Supabase-native option would fit better with the "we are using supabase" direction below.
 
-```bash
-TWILIO_ACCOUNT_SID=
-TWILIO_AUTH_TOKEN=
-TWILIO_FROM=
-AJ_NOTIFY_SMS=+61451565863
-AJ_NOTIFY_EMAIL=dadyboy73@gmail.com
-AJ_NOTIFY_EMAIL_CC=imagenationdex@gmail.com
-```
-
-Put in Vercel / server / Actions secrets, then:
-
-```bash
-node siindex-m2m/notify.mjs test
-```
-
-Until then: outbox + email path only. **No auto-approve.**
+~~Old Twilio setup steps retained for history in `TWILIO-SMS-SETUP.md`, marked superseded.~~
 
 ---
 
