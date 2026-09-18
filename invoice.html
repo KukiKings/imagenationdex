@@ -63,6 +63,42 @@
     .btn-share{background:rgba(0,212,255,0.1);color:var(--cyan);}
     .btn-pdf{background:rgba(0,229,160,0.1);color:var(--green);}
     #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
+    /* GOD MODE: HISTORY, SMART DEFAULTS, DUE STATUS, CONFIRM SAFETY */
+    .tb-icon-btn{width:32px;height:32px;border-radius:9px;background:var(--surface2);border:none;color:var(--text);font-size:14px;cursor:pointer;flex-shrink:0;}
+    .recent-chips{display:none;flex-wrap:wrap;gap:6px;margin-top:6px;}
+    .recent-chip{background:var(--surface3);border:1px solid var(--border);border-radius:20px;padding:5px 10px;font-size:11px;color:var(--cyan);cursor:pointer;font-weight:700;}
+    .due-countdown{font-size:11px;font-weight:700;padding:2px 0 4px;}
+    .due-countdown.soon{color:var(--gold);}
+    .due-countdown.overdue{color:var(--red);}
+    .due-countdown.ok{color:var(--text-muted);}
+    .inv-status.status-soon{background:rgba(255,184,0,0.2);color:var(--gold);}
+    .inv-status.status-overdue{background:rgba(255,77,109,0.2);color:var(--red);}
+    .sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.7);z-index:98;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+    .sheet-overlay.open{opacity:1;pointer-events:auto;}
+    .bottom-sheet{position:fixed;left:50%;bottom:0;transform:translate(-50%,100%);width:100%;max-width:430px;max-height:75vh;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-bottom:none;border-radius:20px 20px 0 0;padding:10px 16px 24px;z-index:99;transition:transform 0.3s cubic-bezier(0.16,1,0.3,1);}
+    .bottom-sheet.open{transform:translate(-50%,0);}
+    .sheet-handle{width:36px;height:4px;background:var(--surface3);border-radius:3px;margin:4px auto 12px;}
+    .sheet-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+    .sheet-title{font-size:15px;font-weight:800;}
+    .sheet-close{width:30px;height:30px;border-radius:9px;background:var(--surface2);border:none;color:var(--text);font-size:16px;cursor:pointer;}
+    .history-item{display:flex;justify-content:space-between;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;gap:8px;}
+    .history-info{flex:1;min-width:0;}
+    .history-inv{font-size:13px;font-weight:800;}
+    .history-meta{font-size:11px;color:var(--text-muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .history-actions{display:flex;gap:6px;flex-shrink:0;}
+    .history-actions button{width:30px;height:30px;border-radius:8px;border:none;cursor:pointer;font-size:13px;}
+    .btn-history-load{background:rgba(0,212,255,0.12);color:var(--cyan);}
+    .btn-history-del{background:rgba(255,77,109,0.12);color:var(--red);}
+    .empty-history{text-align:center;color:var(--text-muted);font-size:13px;padding:24px 0;}
+    .confirm-box{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(0.94);width:calc(100% - 48px);max-width:340px;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:22px 18px;z-index:100;text-align:center;opacity:0;pointer-events:none;transition:all 0.2s;}
+    .confirm-box.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1);}
+    .confirm-ico{font-size:28px;margin-bottom:8px;}
+    .confirm-title{font-size:15px;font-weight:800;margin-bottom:6px;}
+    .confirm-sub{font-size:12px;color:var(--text-muted);line-height:1.5;margin-bottom:16px;}
+    .confirm-actions{display:flex;gap:8px;}
+    .confirm-btn{flex:1;padding:11px 8px;border-radius:12px;border:none;font-size:13px;font-weight:700;cursor:pointer;}
+    .confirm-cancel{background:var(--surface2);color:var(--text);}
+    .confirm-danger{background:var(--red);color:#fff;}
   </style>
 </head>
 <body>
@@ -70,6 +106,8 @@
   <div class="topbar">
     <button class="tb-back" onclick="history.back()">←</button>
     <div class="tb-title">🧾 Invoice Generator</div>
+    <button class="tb-icon-btn" onclick="openHistory()" aria-label="Invoice history" title="Invoice history">🕘</button>
+    <button class="tb-icon-btn" onclick="saveDraft()" aria-label="Save draft" title="Save draft">💾</button>
   </div>
   <div class="scroll-body">
     <div class="section">
@@ -98,6 +136,7 @@
         <div class="fc-title">To (client)</div>
         <div class="field"><label>Client name</label><input type="text" id="toName" placeholder="Maria Santos" oninput="updatePreview()"></div>
         <div class="field"><label>Client .IN$DEX domain or wallet</label><input type="text" id="toDomain" placeholder="Maria.IN$DEX" oninput="updatePreview()"></div>
+        <div class="recent-chips" id="recentClients"></div>
       </div>
 
       <!-- DETAILS -->
@@ -153,12 +192,13 @@
             <div class="inv-logo">IN$DEX</div>
             <div class="inv-no" id="prevInvNum">INV-0042</div>
           </div>
-          <div class="inv-status">UNPAID</div>
+          <div class="inv-status" id="invStatusBadge">UNPAID</div>
         </div>
         <div class="inv-body">
           <div class="inv-row"><div class="inv-lbl">From</div><div id="prevFrom" style="font-weight:700;">AJ Creative Studio</div></div>
           <div class="inv-row"><div class="inv-lbl">To</div><div id="prevTo" style="font-weight:700;"></div></div>
           <div class="inv-row"><div class="inv-lbl">Due</div><div id="prevDue"></div></div>
+          <div class="due-countdown ok" id="dueCountdown"></div>
           <div class="inv-items" id="prevItems">
             <div class="inv-item"><span style="color:var(--text-muted);">Logo design × 1</span><span>100.00 INDX</span></div>
           </div>
@@ -185,8 +225,30 @@
         <button class="action-btn btn-pdf" style="flex:2;" onclick="exportPDF()">🖨️ Print / Save as PDF</button>
         <button class="action-btn" style="flex:1;background:rgba(255,184,0,0.1);color:var(--gold);" onclick="sendInvoice()">📤 Send</button>
       </div>
+      <button class="action-btn" style="width:100%;background:rgba(255,77,109,0.1);color:var(--red);margin-bottom:8px;" onclick="requestNewInvoice()">🗑️ New invoice (clear form)</button>
       <div style="font-size:11px;color:var(--text-muted);text-align:center;margin-top:2px;">No QR-to-pay or email delivery is connected yet — "Copy invoice text" and "Print" work for real; "Send" just shows you what to do manually for now.</div>
     </div>
+  </div>
+</div>
+<!-- HISTORY SHEET -->
+<div class="sheet-overlay" id="historyOverlay" onclick="closeHistory()"></div>
+<div class="bottom-sheet" id="historySheet" role="dialog" aria-modal="true" aria-label="Invoice history">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title">🕘 Saved invoices</div>
+    <button class="sheet-close" onclick="closeHistory()" aria-label="Close history">×</button>
+  </div>
+  <div id="historyList"></div>
+</div>
+<!-- CONFIRM OVERLAY -->
+<div class="sheet-overlay" id="confirmOverlay" onclick="cancelNewInvoice()"></div>
+<div class="confirm-box" id="confirmBox" role="dialog" aria-modal="true" aria-label="Confirm new invoice">
+  <div class="confirm-ico">⚠️</div>
+  <div class="confirm-title">Start a new invoice?</div>
+  <div class="confirm-sub">This clears every field on this form. Saved drafts in history are not affected.</div>
+  <div class="confirm-actions">
+    <button class="confirm-btn confirm-cancel" onclick="cancelNewInvoice()">Cancel</button>
+    <button class="confirm-btn confirm-danger" onclick="confirmNewInvoice()">Clear form</button>
   </div>
 </div>
 <div id="toast"></div>
@@ -248,6 +310,8 @@ function updatePreview(){
   document.getElementById('prevTo').textContent=tn;
   document.getElementById('prevDue').textContent=dd||'';
   document.getElementById('prevInvNum').textContent=inv;
+  // GOD MODE PATCH: keep due-date status badge live as the user edits
+  updateDueStatus();
 }
 
 function invoiceText(){
@@ -277,9 +341,200 @@ function exportPDF(){ showToast('Opening print dialog — choose "Save as PDF".'
 function sendInvoice(){showToast('No email/delivery is connected yet — use "Copy invoice text" and send it yourself.');}
 function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2500);}
 
+// GOD MODE: invoice drafts/history, smart defaults, live due-date status, confirm-to-clear
+const DRAFTS_KEY='indx_invoice_drafts';
+const CLIENTS_KEY='indx_invoice_recent_clients';
+
+function getDrafts(){ try{ return JSON.parse(localStorage.getItem(DRAFTS_KEY)||'[]'); }catch(e){ return []; } }
+function getRecentClients(){ try{ return JSON.parse(localStorage.getItem(CLIENTS_KEY)||'[]'); }catch(e){ return []; } }
+
+function loadSmartDefaults(){
+  const name=sessionStorage.getItem('citizen_name')||'';
+  const domain=sessionStorage.getItem('citizen_web3_domain')||'';
+  const fromNameEl=document.getElementById('fromName');
+  const fromDomainEl=document.getElementById('fromDomain');
+  if(name && !fromNameEl.value) fromNameEl.value=name;
+  if(domain && !fromDomainEl.value) fromDomainEl.value=domain;
+  renderRecentClients();
+}
+
+function renderRecentClients(){
+  const wrap=document.getElementById('recentClients');
+  const clients=getRecentClients();
+  if(!clients.length){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+  wrap.style.display='flex';
+  wrap.innerHTML=clients.map((c,i)=>`<div class="recent-chip" onclick="fillClient(${i})">${(c.name||c.domain||'Client').replace(/</g,'')}</div>`).join('');
+}
+
+function fillClient(i){
+  const c=getRecentClients()[i];
+  if(!c) return;
+  document.getElementById('toName').value=c.name||'';
+  document.getElementById('toDomain').value=c.domain||'';
+  updatePreview();
+  showToast('Filled client from recent history.');
+}
+
+function saveRecentClient(){
+  const name=document.getElementById('toName').value.trim();
+  const domain=document.getElementById('toDomain').value.trim();
+  if(!name && !domain) return;
+  let clients=getRecentClients().filter(c=>c.name!==name || c.domain!==domain);
+  clients.unshift({name,domain});
+  clients=clients.slice(0,5);
+  localStorage.setItem(CLIENTS_KEY, JSON.stringify(clients));
+  renderRecentClients();
+}
+
+function updateDueStatus(){
+  const dueVal=document.getElementById('dueDate').value;
+  const badge=document.getElementById('invStatusBadge');
+  const cd=document.getElementById('dueCountdown');
+  if(!badge||!cd) return;
+  if(!dueVal){ cd.textContent=''; return; }
+  const due=new Date(dueVal+'T23:59:59');
+  const now=new Date();
+  const diffDays=Math.ceil((due-now)/864e5);
+  badge.classList.remove('status-soon','status-overdue');
+  if(diffDays<0){
+    badge.textContent='OVERDUE';
+    badge.classList.add('status-overdue');
+    cd.textContent=`Overdue by ${Math.abs(diffDays)} day${Math.abs(diffDays)===1?'':'s'}`;
+    cd.className='due-countdown overdue';
+  } else if(diffDays<=2){
+    badge.textContent='DUE SOON';
+    badge.classList.add('status-soon');
+    cd.textContent=diffDays===0?'Due today':`Due in ${diffDays} day${diffDays===1?'':'s'}`;
+    cd.className='due-countdown soon';
+  } else {
+    badge.textContent='UNPAID';
+    cd.textContent=`Due in ${diffDays} days`;
+    cd.className='due-countdown ok';
+  }
+}
+
+function saveDraft(){
+  const drafts=getDrafts();
+  const items=[];
+  document.querySelectorAll('#lineItems .line-item').forEach(row=>{
+    const inputs=row.querySelectorAll('input');
+    items.push({desc:inputs[0]?.value||'',qty:inputs[1]?.value||'',rate:inputs[2]?.value||''});
+  });
+  const draft={
+    id:Date.now(),
+    invNum:document.getElementById('invNum').value||'INV',
+    fromName:document.getElementById('fromName').value,
+    fromDomain:document.getElementById('fromDomain').value,
+    toName:document.getElementById('toName').value,
+    toDomain:document.getElementById('toDomain').value,
+    dueDate:document.getElementById('dueDate').value,
+    currency:document.getElementById('currency').value,
+    items,
+    total:document.getElementById('totalAmt').textContent,
+    savedAt:new Date().toISOString()
+  };
+  drafts.unshift(draft);
+  localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts.slice(0,20)));
+  saveRecentClient();
+  showToast('Draft saved to this device.');
+  renderHistory();
+}
+
+function renderHistory(){
+  const list=document.getElementById('historyList');
+  const drafts=getDrafts();
+  if(!drafts.length){ list.innerHTML='<div class="empty-history">No saved invoices yet. Tap 💾 to save one.</div>'; return; }
+  list.innerHTML=drafts.map(d=>`
+    <div class="history-item">
+      <div class="history-info">
+        <div class="history-inv">${d.invNum||'INV'} · ${d.total||''}</div>
+        <div class="history-meta">${d.toName||'No client'} · ${new Date(d.savedAt).toLocaleDateString()}</div>
+      </div>
+      <div class="history-actions">
+        <button class="btn-history-load" onclick="loadDraft(${d.id})" aria-label="Load draft">↩︎</button>
+        <button class="btn-history-del" onclick="deleteDraft(${d.id})" aria-label="Delete draft">🗑</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function loadDraft(id){
+  const draft=getDrafts().find(d=>d.id===id);
+  if(!draft) return;
+  document.getElementById('invNum').value=draft.invNum||'';
+  document.getElementById('fromName').value=draft.fromName||'';
+  document.getElementById('fromDomain').value=draft.fromDomain||'';
+  document.getElementById('toName').value=draft.toName||'';
+  document.getElementById('toDomain').value=draft.toDomain||'';
+  document.getElementById('dueDate').value=draft.dueDate||'';
+  document.getElementById('currency').value=draft.currency||'INDX';
+  const wrap=document.getElementById('lineItems');
+  wrap.innerHTML='';
+  lineCount=0;
+  (draft.items||[]).forEach(it=>{
+    const id2=lineCount++;
+    const div=document.createElement('div');div.className='line-item';div.id='li'+id2;
+    div.innerHTML=`<input class="li-input" type="text" placeholder="Service / product" value="${(it.desc||'').replace(/"/g,'&quot;')}" oninput="updateTotals()">
+      <input class="li-input" type="number" placeholder="1" value="${it.qty||1}" oninput="updateTotals()" style="text-align:center;">
+      <input class="li-input" type="number" placeholder="0.00" value="${it.rate||''}" oninput="updateTotals()" style="text-align:right;">
+      <button class="li-del" onclick="removeLine(${id2})">×</button>`;
+    wrap.appendChild(div);
+  });
+  if(!lineCount) addLine();
+  updateTotals();
+  closeHistory();
+  showToast('Draft loaded.');
+}
+
+function deleteDraft(id){
+  const drafts=getDrafts().filter(d=>d.id!==id);
+  localStorage.setItem(DRAFTS_KEY, JSON.stringify(drafts));
+  renderHistory();
+  showToast('Draft deleted.');
+}
+
+function openHistory(){
+  renderHistory();
+  document.getElementById('historyOverlay').classList.add('open');
+  document.getElementById('historySheet').classList.add('open');
+}
+function closeHistory(){
+  document.getElementById('historyOverlay').classList.remove('open');
+  document.getElementById('historySheet').classList.remove('open');
+}
+
+function requestNewInvoice(){
+  document.getElementById('confirmOverlay').classList.add('open');
+  document.getElementById('confirmBox').classList.add('open');
+}
+function cancelNewInvoice(){
+  document.getElementById('confirmOverlay').classList.remove('open');
+  document.getElementById('confirmBox').classList.remove('open');
+}
+function confirmNewInvoice(){
+  document.getElementById('fromName').value='';
+  document.getElementById('fromDomain').value='';
+  document.getElementById('toName').value='';
+  document.getElementById('toDomain').value='';
+  document.getElementById('invNum').value='INV-0001';
+  document.getElementById('dueDate').value=new Date(Date.now()+30*864e5).toISOString().split('T')[0];
+  document.getElementById('currency').value='INDX';
+  document.getElementById('lineItems').innerHTML='';
+  lineCount=0;
+  addLine();
+  updateTotals();
+  cancelNewInvoice();
+  loadSmartDefaults();
+  showToast('New invoice — form cleared.');
+}
+
 // init date
 document.getElementById('dueDate').value=new Date(Date.now()+30*864e5).toISOString().split('T')[0];
 updateTotals();
+// GOD MODE PATCH: init smart defaults + live due-date status, refreshed every 60s
+loadSmartDefaults();
+updateDueStatus();
+setInterval(updateDueStatus,60000);
 </script>
 <script src="siindex-speak-core.js"></script>
 </body>

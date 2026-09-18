@@ -34,7 +34,7 @@ VERIFIED / CONTROLLED PROJECT STATUS FOR THIS MODE:
 - The founder's Cook Islands demonstration and SIINDEX interview-readiness target is 6 December 2026.
 - January 2027 is reserved for an optional soft/private pilot only, if readiness gates pass.
 - The controlled public-pilot target is 24 February 2027. It is not a promise that every roadmap feature will be live that day.
-- Image Nation Dex Limited is the intended Cook Islands company name. Registration has not yet been filed.
+- Image Nation Dex Limited is the intended Cook Islands company name. Registration is in progress; no Certificate of Incorporation has been issued yet.
 - INDX is a plain Solana SPL Token. A mainnet check reported a fixed 100,000,000 supply and revoked mint and freeze authorities. The deployed mint is owned by the original SPL Token Program, not Token-2022.
 - INDX allocation, distribution, and liquidity actions are paused pending reconciliation, specialist review, and an explicit founder decision.
 - USD $0.24 is the founder-selected launch and genesis reference. Never state another launch figure. It is not a live market price, not a price citizens can pay today, and not a promise of future value.
@@ -49,8 +49,9 @@ VERIFIED / CONTROLLED PROJECT STATUS FOR THIS MODE:
 - The World Bank Global Findex 2025 reports 1.3 billion adults without financial accounts; about 900 million of them have a mobile phone, including 530 million with smartphones.
 
 STYLE:
-- Start with the answer.
-- Keep most replies under 180 words unless the visitor asks for detail.
+- Start with the answer in the first sentence.
+- Keep default replies to 2 to 4 short sentences (about 40 to 80 words). Target a full spoken answer in under 20 seconds of speech.
+- Only go longer when the visitor clearly asks for detail, a list, or an interview-style answer.
 - Use plain sentences only. Do not use Markdown, asterisks, headings, bullet markers, tables, or code fences.
 - Write status labels such as LIVE, PLANNED, VERIFIED, PAUSED, and UNKNOWN as ordinary words without surrounding punctuation.
 - Clearly label LIVE, PLANNED, VERIFIED, PAUSED, or UNKNOWN when status matters.
@@ -207,6 +208,11 @@ function sse(text: string) {
 
 Deno.serve(async (req: Request) => {
   const correlationId = crypto.randomUUID();
+  // AUDIT: processing_time_ms metric merged in from a draft endpoint AJ proposed
+  // (2026-08-26) rather than deploying it as a separate, weaker duplicate — this
+  // is the only production SIINDEX website-response path, so timing is measured
+  // here.
+  const startTime = Date.now();
   if (!isAllowedOrigin(req.headers.get("Origin"))) {
     return json(req, 403, { error: "origin_not_allowed" }, correlationId);
   }
@@ -273,18 +279,19 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  const rawHistory = Array.isArray(body.history) ? body.history.slice(-8) : [];
+  const rawHistory = Array.isArray(body.history) ? body.history.slice(-6) : [];
   const history = rawHistory.flatMap((entry: unknown) => {
     if (!entry || typeof entry !== "object") return [];
     const item = entry as Record<string, unknown>;
     const role = item.role === "assistant" ? "assistant" : item.role === "user"
       ? "user"
       : null;
-    const content = String(item.content || "").trim().slice(0, 1200);
+    const content = String(item.content || "").trim().slice(0, 800);
     return role && content ? [{ role, content }] : [];
   });
 
-  const { error: auditError } = await admin.from("security_events").insert({
+  // Fire-and-forget audit — do not block the reply path
+  admin.from("security_events").insert({
     tier: "T0",
     zone: ZONE,
     correlation_id: correlationId,
@@ -296,21 +303,13 @@ Deno.serve(async (req: Request) => {
       model: MODEL,
       content_stored: false,
     },
-  });
-  if (auditError) {
-    return json(
-      req,
-      503,
-      { error: "rate_limit_unavailable" },
-      correlationId,
-    );
-  }
+  }).then(() => {}).catch(() => {});
 
   let upstream: Response;
   try {
     upstream = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(12_000),
       headers: {
         "x-api-key": ANTHROPIC_KEY,
         "anthropic-version": "2023-06-01",
@@ -318,7 +317,7 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 700,
+        max_tokens: 220,
         system: SYSTEM_PROMPT,
         messages: [...history, { role: "user", content: message }],
         stream: true,
@@ -399,6 +398,22 @@ Deno.serve(async (req: Request) => {
         }
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         controller.close();
+        // Fire-and-forget completion metric — merged in from AJ's draft rather
+        // than a separate duplicate endpoint. No transcript/response content is
+        // logged, matching the no-content-storage promise in the privacy policy.
+        const processingTimeMs = Date.now() - startTime;
+        admin.from("security_events").insert({
+          tier: "T0",
+          zone: ZONE,
+          correlation_id: correlationId,
+          description: "SIINDEX Website Visitor Mode response completed.",
+          detail: {
+            visitor_hash: hash,
+            processing_time_ms: processingTimeMs,
+            model: MODEL,
+            content_stored: false,
+          },
+        }).then(() => {}).catch(() => {});
       }
     },
   });

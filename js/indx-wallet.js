@@ -13,7 +13,18 @@
   'use strict';
 
   // ── INDX SPL Token config ──────────────────────────────────────
-  // Placeholder mint — replace with live mint address at TGE (2027-02-24)
+  // ⚠️ PLACEHOLDER — no real INDX mint exists yet. This is a literal string,
+  // not a valid Solana pubkey, and getINDXBalance() below is written to be
+  // safe about that: before TGE_DATE it never queries this mint at all (it
+  // returns the sessionStorage demo/alpha balance instead), so this
+  // placeholder currently cannot produce a wrong on-chain balance. The risk
+  // is entirely at TGE: once IS_POST_TGE flips true, getINDXBalance() WILL
+  // start querying this address for real — if it's still this placeholder
+  // string at that point, the RPC call fails and getINDXBalance() silently
+  // returns 0 for every citizen (see the catch block below). MUST be
+  // replaced with the real deployed mint address before 2027-02-24, not
+  // after — confirmed and flagged 2026-11 (god mode Nov 30 build plan,
+  // Priority 1; see BUILD_LOG.md).
   const INDX_MINT_ADDRESS  = 'INDXmintAddressPlaceholderReplaceAtTGE';
   const SOLANA_RPC_DEVNET  = 'https://api.devnet.solana.com';
   const SOLANA_RPC_MAINNET = 'https://api.mainnet-beta.solana.com';

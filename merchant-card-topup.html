@@ -122,6 +122,22 @@
   .hist-name{font-size:13px;font-weight:700;}
   .hist-meta{font-size:11px;color:var(--text-muted);}
   .hist-earn{font-size:13px;font-weight:700;color:var(--green);}
+
+  /* GOD MODE: QUICK REPEAT */
+  .quick-repeat{display:none;margin:0 0 14px;background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.22);border-radius:12px;padding:12px 14px;align-items:center;justify-content:space-between;gap:10px;text-align:left;}
+  .quick-repeat.show{display:flex;}
+  .qr-label{font-size:11px;color:var(--text-muted);}
+  .qr-domain{font-size:13px;font-weight:800;color:var(--cyan);}
+  .qr-btn{flex-shrink:0;padding:9px 14px;border-radius:10px;background:var(--cyan);border:none;color:#000;font-size:12px;font-weight:800;cursor:pointer;}
+
+  /* GOD MODE: SESSION LOG STATS */
+  .session-log-head{display:flex;align-items:baseline;justify-content:space-between;padding:0 20px;margin:24px 0 10px;}
+  .session-log-title{font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;}
+  .session-log-tag{font-size:10px;color:var(--gold);font-weight:700;}
+  .session-stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 20px 16px;}
+  .session-stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 8px;text-align:center;}
+  .session-stat-val{font-size:15px;font-weight:900;color:var(--text);}
+  .session-stat-label{font-size:9px;color:var(--text-muted);margin-top:2px;}
 </style>
 </head>
 <body>
@@ -174,6 +190,13 @@
     <div class="scan-icon">📷</div>
     <div class="scan-title">Scan Citizen QR</div>
     <div class="scan-sub">Camera-based QR scanning isn't wired in this build yet. Enter the citizen's .IN$DEX domain to look up their real account.</div>
+    <div class="quick-repeat" id="quickRepeatBox">
+      <div>
+        <div class="qr-label">Repeat last citizen</div>
+        <div class="qr-domain" id="qrDomainLabel">—</div>
+      </div>
+      <button class="qr-btn" onclick="quickRepeatLookup()">Look up again →</button>
+    </div>
     <button class="scan-btn" onclick="showManualEntry()">📷 Scan QR Code (uses manual entry)</button>
     <button class="manual-btn" onclick="showManualEntry()">Enter domain manually</button>
   </div>
@@ -288,6 +311,17 @@
     <button class="new-topup-btn" onclick="resetFlow()">Top Up Another Citizen →</button>
   </div>
 
+  <!-- GOD MODE: SESSION LOG STATS -->
+  <div class="session-log-head">
+    <div class="session-log-title">Session Log</div>
+    <div class="session-log-tag">local only</div>
+  </div>
+  <div class="session-stats-row">
+    <div class="session-stat"><div class="session-stat-val" id="sessStatTotal">$0.00</div><div class="session-stat-label">Total logged</div></div>
+    <div class="session-stat"><div class="session-stat-val" id="sessStatCount">0</div><div class="session-stat-label">Logged today</div></div>
+    <div class="session-stat"><div class="session-stat-val" id="sessStatAvg">$0.00</div><div class="session-stat-label">Avg amount</div></div>
+  </div>
+
   <!-- TODAY'S HISTORY -->
   <div class="section-title" id="histTitle" style="margin-top:24px;">Today's Top-Ups</div>
   <div class="hist-list" id="histList" style="padding:12px 16px;">
@@ -297,8 +331,8 @@
 </div>
 
 <!-- MANUAL ENTRY OVERLAY -->
-<div style="position:fixed;inset:0;background:rgba(9,10,16,0.92);z-index:200;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity 0.3s;" id="manualOverlay" onclick="closeManual(event)">
-  <div style="background:var(--surface);border-radius:24px 24px 0 0;padding:24px;width:100%;max-width:430px;margin:0 auto;">
+<div style="position:fixed;inset:0;background:rgba(9,10,16,0.92);z-index:200;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity 0.3s;" id="manualOverlay" class="sheet-overlay" onclick="closeManual(event)" role="dialog" aria-modal="true" aria-label="Enter citizen domain">
+  <div style="background:var(--surface);border-radius:24px 24px 0 0;padding:24px;width:100%;max-width:430px;margin:0 auto;" id="manualSheet">
     <div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;"></div>
     <div style="font-size:18px;font-weight:800;margin-bottom:8px;">Enter citizen domain</div>
     <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Type the citizen's .IN$DEX domain name</div>
@@ -312,6 +346,114 @@
 </div>
 
 <script>
+  // ── GOD MODE: session log + quick-repeat + sheet accessibility ──
+  const TOPUP_HISTORY_KEY = 'indx_cardtopup_history';
+  const TOPUP_LASTDOMAIN_KEY = 'indx_cardtopup_lastdomain';
+
+  function getTopupHistory() {
+    try { return JSON.parse(localStorage.getItem(TOPUP_HISTORY_KEY) || '[]'); }
+    catch (e) { return []; }
+  }
+
+  function logTopup(entry) {
+    const hist = getTopupHistory();
+    hist.unshift(entry);
+    localStorage.setItem(TOPUP_HISTORY_KEY, JSON.stringify(hist.slice(0, 50)));
+    renderTopupHistory();
+  }
+
+  function timeAgo(ts) {
+    const mins = Math.floor((Date.now() - ts) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + 'm ago';
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs + 'h ago';
+    return new Date(ts).toLocaleDateString();
+  }
+
+  function renderTopupHistory() {
+    const hist = getTopupHistory();
+    const list = document.getElementById('histList');
+    const isSameDay = (ts) => new Date(ts).toDateString() === new Date().toDateString();
+    const todays = hist.filter(h => isSameDay(h.ts));
+
+    if (!hist.length) {
+      list.innerHTML = '<div style="font-size:12px;color:var(--text-muted);text-align:center;padding:8px 0;">No real top-ups yet — this feature isn\'t connected to a settlement system, so nothing here is recorded for real.</div>';
+    } else {
+      list.innerHTML = hist.slice(0, 20).map(h => `
+        <div class="hist-item">
+          <div class="hist-icon">🧾</div>
+          <div class="hist-body">
+            <div class="hist-name">${h.domain}</div>
+            <div class="hist-meta">${timeAgo(h.ts)} · logged only, not settled</div>
+          </div>
+          <div class="hist-earn">$${h.amount.toFixed(2)}</div>
+        </div>
+      `).join('');
+    }
+
+    const total = todays.reduce((s, h) => s + h.amount, 0);
+    document.getElementById('sessStatTotal').textContent = '$' + total.toFixed(2);
+    document.getElementById('sessStatCount').textContent = String(todays.length);
+    document.getElementById('sessStatAvg').textContent = '$' + (todays.length ? (total / todays.length) : 0).toFixed(2);
+  }
+
+  function renderQuickRepeat() {
+    const last = localStorage.getItem(TOPUP_LASTDOMAIN_KEY) || '';
+    const box = document.getElementById('quickRepeatBox');
+    if (!last) { box.classList.remove('show'); return; }
+    document.getElementById('qrDomainLabel').textContent = last;
+    box.classList.add('show');
+  }
+
+  async function quickRepeatLookup() {
+    const last = localStorage.getItem(TOPUP_LASTDOMAIN_KEY) || '';
+    if (!last) return;
+    await lookupAndPreviewDomain(last.replace('.IN$DEX', '').toLowerCase());
+  }
+
+  // Shared lookup used by both manual entry and quick-repeat
+  async function lookupAndPreviewDomain(domain) {
+    if (!domain) { showToast('Enter a domain first.'); return; }
+    showToast('Looking up ' + domain + '.IN$DEX…');
+    try {
+      const result = await rpc('get_public_domain_view', { p_slug: domain });
+      const view = Array.isArray(result) ? result[0] : result;
+      if (!view || !view.found) {
+        showToast('No citizen found at ' + domain + '.IN$DEX — check the spelling.');
+        return;
+      }
+      scannedCitizen = {
+        name: view.citizen_name || (domain + ' (citizen)'),
+        domain: view.web3_domain,
+        wisdom_tier: view.wisdom_tier || 'Citizen',
+        member_since: view.member_since,
+        genesis: !!view.genesis_citizen
+      };
+      localStorage.setItem(TOPUP_LASTDOMAIN_KEY, scannedCitizen.domain);
+      showCitizenPreview(scannedCitizen);
+      showToast('✅ Real account found: ' + scannedCitizen.domain);
+      setTimeout(() => goToStep(2), 400);
+    } catch (e) {
+      showToast('Lookup failed: ' + e.message);
+    }
+  }
+
+  // Escape-to-close + focus trap for the manual entry sheet
+  function trapFocus(e) {
+    const overlay = document.getElementById('manualOverlay');
+    if (overlay.style.pointerEvents !== 'all') return;
+    if (e.key === 'Escape') { closeManual(); return; }
+    if (e.key !== 'Tab') return;
+    const sheet = document.getElementById('manualSheet');
+    const focusables = sheet.querySelectorAll('button, input, [tabindex]:not([tabindex="-1"])');
+    if (!focusables.length) return;
+    const first = focusables[0], last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+  document.addEventListener('keydown', trapFocus);
+
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
   const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
@@ -338,6 +480,9 @@
     document.getElementById('msName').textContent = merchantName;
     document.getElementById('msDomain').textContent = merchantDomain + ' · Verified Merchant';
     updateConversion();
+    // GOD MODE PATCH: render the local session log + quick-repeat box on load
+    renderTopupHistory();
+    renderQuickRepeat();
   }
 
   function showManualEntry() {
@@ -353,31 +498,11 @@
     }
   }
 
+  // GOD MODE PATCH: now delegates to the shared lookupAndPreviewDomain() so quick-repeat uses the same path
   async function confirmManualEntry() {
     const domain = document.getElementById('manualInput').value.trim().toLowerCase();
-    if (!domain) { showToast('Enter a domain first.'); return; }
     closeManual();
-    showToast('Looking up ' + domain + '.IN$DEX…');
-    try {
-      const result = await rpc('get_public_domain_view', { p_slug: domain });
-      const view = Array.isArray(result) ? result[0] : result;
-      if (!view || !view.found) {
-        showToast('No citizen found at ' + domain + '.IN$DEX — check the spelling.');
-        return;
-      }
-      scannedCitizen = {
-        name: view.citizen_name || (domain + ' (citizen)'),
-        domain: view.web3_domain,
-        wisdom_tier: view.wisdom_tier || 'Citizen',
-        member_since: view.member_since,
-        genesis: !!view.genesis_citizen
-      };
-      showCitizenPreview(scannedCitizen);
-      showToast('✅ Real account found: ' + scannedCitizen.domain);
-      setTimeout(() => goToStep(2), 400);
-    } catch (e) {
-      showToast('Lookup failed: ' + e.message);
-    }
+    await lookupAndPreviewDomain(domain);
   }
 
   function showCitizenPreview(c) {
@@ -452,6 +577,8 @@
     document.getElementById('successAmount').textContent = '$' + topUpAmt.toFixed(2);
     document.getElementById('successSub').textContent = 'No real USDC or INDX has moved for ' + domain + ' — cash-to-USDC settlement isn\'t automated yet.';
     showToast('Logged only — ' + domain + ' has not actually been credited.');
+    // GOD MODE PATCH: persist this logged (not settled) top-up to the local session log
+    logTopup({ domain: domain, amount: topUpAmt, ts: Date.now() });
     goToStep(4);
   }
 

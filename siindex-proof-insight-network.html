@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Proof &amp; Insight Network — IN$DEX</title>
+<meta name="description" content="Preview of the planned SIINDEX Proof &amp; Insight Network — illustrative example posts (build log, citizen stories, governance and audit news) showing the intended public proof format. Not yet live; no real posts have been published.">
 <style>
   :root {
     --cyan:    #00D4FF;
@@ -169,6 +170,13 @@
   .section-hdr h2 { font-size:14px; font-weight:800; }
   .section-hdr span { font-size:11px; color:var(--text2); }
 
+  /* GOD MODE: live section search */
+  .search-wrap { padding:0 20px 12px; }
+  .search-input { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:12px; color:var(--text); font-size:13px; padding:10px 14px; outline:none; transition:border-color .15s; }
+  .search-input:focus { border-color:var(--purple); }
+  .search-input::placeholder { color:var(--muted); }
+  .search-empty { padding:24px 20px; text-align:center; font-size:12px; color:var(--muted); }
+
   /* TOAST */
   .toast { position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--surface3); border:1px solid rgba(255,255,255,0.12); color:var(--text); font-size:13px; font-weight:600; padding:12px 20px; border-radius:24px; opacity:0; transition:all 0.3s; z-index:999; white-space:nowrap; max-width:340px; pointer-events:none; }
   .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
@@ -197,6 +205,19 @@
   <div class="hero-lock">"IN$DEX does not need a newsroom. It needs a civilization memory." — AJ Henry, Founder</div>
 </div>
 
+<!-- AUDIT 2026-08-29: The full POSTS array below (build log, citizen stories, "Governance
+     Vote GV-0001 ... 94.2% approval, 847 citizen votes", "Security Audit ... Clean", and
+     "First 1,000 Citizens Onboarded") was hardcoded fabricated content presented as
+     published news with no disclaimer. Verified against Supabase (project zljgthfzbalsunuoohcd):
+     citizens table has 14 rows (not 1,000); governance_proposals has 3 rows, all status
+     "active", none named GV-0001 or about a "98/2 Civilisation Law" vote; governance_votes
+     has 0 rows (no vote has ever been cast, so "847 citizen votes / 94.2% approval" is
+     invented); no security-audit table exists anywhere in the schema. Added an explicit
+     illustrative-example disclaimer rather than deleting the feed format design. -->
+<div class="hero-lock illus-banner" style="margin:0 20px 16px;background:rgba(255,184,0,0.08);border-color:rgba(255,184,0,0.3);color:#ffd56a;font-style:normal;">
+  <strong>Illustrative example feed.</strong> The posts below (build log, citizen stories, governance and audit "news") show the intended format of the Proof &amp; Insight Network. They are example content, not real published posts — no citizen has been onboarded at this scale, no governance vote has been cast, and no independent security audit has run yet.
+</div>
+
 <!-- GM3: PROOF COUNTER -->
 <div class="proof-counter fade-in" style="animation-delay:.05s">
   <div class="proof-counter-grid">
@@ -212,6 +233,11 @@
 
 <!-- GM1: SECTION NAVIGATOR -->
 <div class="section-nav fade-in" style="animation-delay:.08s" id="sectionNav"></div>
+
+<!-- GOD MODE: SECTION SEARCH -->
+<div class="search-wrap fade-in" style="animation-delay:.09s">
+  <input class="search-input" id="feedSearch" type="text" placeholder="Search this section by title, summary or category…" oninput="handleSearch(this.value)">
+</div>
 
 <!-- FEED AREA -->
 <div id="feedArea" class="fade-in" style="animation-delay:.10s"></div>
@@ -246,7 +272,10 @@
 </nav>
 
 <script>
-  const INDX_PRICE_USD = 0.24;
+  // AUDIT 2026-08-29: removed unused `const INDX_PRICE_USD = 0.24;` — a hardcoded fixed
+  // USD price for INDX with no live price feed and no display consumer anywhere in this
+  // file. Dead-code landmine: harmless while unreferenced, but ready to render a fabricated
+  // "live" price if a future edit wires it into the UI. INDX has no fixed USD price.
 
   // ── DATA ──
 
@@ -583,9 +612,20 @@
   ];
 
   // ── STATE ──
-  let _selectedSection = 'insights';
+  const _SECTION_KEY = 'indx_pin_lastsection';
+  // GOD MODE PATCH: land returning citizens back on the section they were last reading
+  let _selectedSection = (function () {
+    let saved = null;
+    try { saved = localStorage.getItem(_SECTION_KEY); } catch (e) {}
+    return SECTIONS.some(s => s.key === saved) ? saved : 'insights';
+  })();
   let _openPost = null;
+  let _searchQuery = '';
   let _readPosts = JSON.parse(localStorage.getItem('indx_pin_read') || '[]');
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
 
   // ── GM3: PROOF COUNTER ──
   function animateCount(el, target, delay) {
@@ -632,14 +672,30 @@
   function selectSection(key) {
     _selectedSection = key;
     _openPost = null;
+    _searchQuery = '';
+    const searchEl = document.getElementById('feedSearch');
+    if (searchEl) searchEl.value = '';
+    // GOD MODE PATCH: remember the citizen's last viewed section
+    try { localStorage.setItem(_SECTION_KEY, key); } catch (e) {}
     renderSectionNav();
+    renderFeed();
+  }
+
+  // ── GOD MODE: LIVE SEARCH ──
+  function handleSearch(v) {
+    _searchQuery = v.trim();
     renderFeed();
   }
 
   // ── GM1+2: FEED RENDERER ──
   function renderFeed() {
     const sec = SECTIONS.find(s => s.key === _selectedSection);
-    const posts = POSTS.filter(p => p.section === _selectedSection);
+    let posts = POSTS.filter(p => p.section === _selectedSection);
+    // GOD MODE PATCH: apply the live section search filter
+    if (_searchQuery) {
+      const q = _searchQuery.toLowerCase();
+      posts = posts.filter(p => p.title.toLowerCase().includes(q) || p.summary.toLowerCase().includes(q) || p.cat.toLowerCase().includes(q));
+    }
     const featured = posts.find(p => p.featured);
     const rest = posts.filter(p => !p.featured);
 
@@ -648,8 +704,12 @@
       <div class="feed-sec-tagline">${sec.tagline}</div>
     </div>`;
 
-    if (featured) html += renderFeaturedPost(featured);
-    rest.forEach(p => { html += renderPostCard(p); });
+    if (_searchQuery && posts.length === 0) {
+      html += `<div class="search-empty">No posts match "${escapeHtml(_searchQuery)}" in ${sec.label}.</div>`;
+    } else {
+      if (featured) html += renderFeaturedPost(featured);
+      rest.forEach(p => { html += renderPostCard(p); });
+    }
 
     document.getElementById('feedArea').innerHTML = html;
   }

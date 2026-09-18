@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>SIINDEX Orchestration Layer — IN$DEX</title>
+<meta name="description" content="Concept preview of SIINDEX's six-archetype mission orchestration model. Scripted simulation only — no real agents deployed, nothing written to Supabase.">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -180,6 +181,16 @@
   .gate-reject  { background: var(--surface2); border: 1px solid var(--border2); border-radius: 14px; padding: 14px; color: var(--text2); font-size: 14px; font-weight: 700; cursor: pointer; }
   .gate-dl-note { margin-top: 12px; font-size: 11px; color: var(--muted); text-align: center; }
 
+  /* ── ORCHESTRATION STATS (GOD MODE) ── */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-tile { background: var(--surface); border: 1px solid var(--border2); border-radius: 14px; padding: 12px; text-align: center; }
+  .stat-tile-val { font-size: 18px; font-weight: 900; color: var(--cyan); }
+  .stat-tile-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+  .stat-top-archetype { grid-column: 1 / -1; }
+
+  /* ── GOD MODE: gate sheet focus-visible ring ── */
+  .gate-approve:focus-visible, .gate-reject:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
   /* ── TOAST ── */
   .toast { position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%); background: rgba(30,33,50,0.98); border: 1px solid rgba(0,212,255,0.2); color: var(--text); padding: 10px 18px; border-radius: 12px; font-size: 13px; font-weight: 600; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.25s; z-index: 9999; }
   .toast.show { opacity: 1; }
@@ -207,7 +218,7 @@
   <div class="top-nav">
     <div class="nav-back" onclick="window.location.href='citizen-dashboard.html'">‹</div>
     <div class="nav-title">SIINDEX Orchestration</div>
-    <div class="nav-status"><div class="nav-dot"></div>Active</div>
+    <div class="nav-status"><div class="nav-dot"></div>Preview</div>
   </div>
 
   <div class="scroll-body">
@@ -319,7 +330,7 @@
       <div class="orch-feed">
         <div class="orch-feed-header">
           <div class="orch-feed-title">SIINDEX Decision Log</div>
-          <div class="orch-feed-live"><div class="nav-dot"></div>Live</div>
+          <div class="orch-feed-live"><div class="nav-dot"></div>Preview</div>
         </div>
         <div class="orch-entries" id="orchEntries">
           <div class="orch-entry">
@@ -347,6 +358,12 @@
       <div class="mission-history" id="missionHistory">
         <div style="font-size:13px;color:var(--muted);text-align:center;padding:16px 0;">No missions run yet this session.</div>
       </div>
+    </div>
+
+    <!-- ── ORCHESTRATION STATS (GOD MODE) ── -->
+    <div class="section" style="margin-top:20px;">
+      <div class="sec-label">Orchestration Stats — This Device</div>
+      <div class="stats-grid" id="orchStatsGrid"></div>
     </div>
 
     <!-- ── DOCTRINE CARD ── -->
@@ -390,6 +407,60 @@
 <div class="toast" id="toast"></div>
 
 <script>
+  // ── GOD MODE: ORCHESTRATION STATS (real localStorage tally, computed from actual approvals/rejections) ──
+  const STATS_KEY = 'indx_orch_stats';
+  function getOrchStats() {
+    try { return JSON.parse(localStorage.getItem(STATS_KEY) || 'null') || { approved: 0, rejected: 0, archetypeCounts: {} }; }
+    catch (e) { return { approved: 0, rejected: 0, archetypeCounts: {} }; }
+  }
+  function saveOrchStats(stats) {
+    try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch (e) {}
+  }
+  function recordApprovalStat(route) {
+    const stats = getOrchStats();
+    stats.approved = (stats.approved || 0) + 1;
+    stats.archetypeCounts = stats.archetypeCounts || {};
+    (route.archetypes || []).forEach(a => { stats.archetypeCounts[a] = (stats.archetypeCounts[a] || 0) + 1; });
+    saveOrchStats(stats);
+    renderOrchStats();
+  }
+  function recordRejectionStat() {
+    const stats = getOrchStats();
+    stats.rejected = (stats.rejected || 0) + 1;
+    saveOrchStats(stats);
+    renderOrchStats();
+  }
+  function renderOrchStats() {
+    const el = document.getElementById('orchStatsGrid');
+    if (!el) return;
+    const stats = getOrchStats();
+    const approved = stats.approved || 0;
+    const rejected = stats.rejected || 0;
+    const total    = approved + rejected;
+    const rate     = total ? Math.round((approved / total) * 100) : 0;
+    const counts   = stats.archetypeCounts || {};
+    const keys     = Object.keys(counts);
+    let topArch    = '—';
+    if (keys.length) {
+      const top = keys.reduce((a, b) => (counts[a] || 0) >= (counts[b] || 0) ? a : b);
+      topArch = ARCHETYPES[top] ? (ARCHETYPES[top].icon + ' ' + ARCHETYPES[top].name) : top;
+    }
+    el.innerHTML = `
+      <div class="stat-tile"><div class="stat-tile-val">${approved}</div><div class="stat-tile-lbl">Missions Approved</div></div>
+      <div class="stat-tile"><div class="stat-tile-val">${rate}%</div><div class="stat-tile-lbl">Approval Rate</div></div>
+      <div class="stat-tile stat-top-archetype"><div class="stat-tile-val" style="font-size:14px;">${topArch}</div><div class="stat-tile-lbl">Most-Used Archetype</div></div>
+    `;
+  }
+
+  // ── GOD MODE: approval gate — Escape-to-close + focus trap + return focus ──
+  let _gateLastFocus = null;
+  function restoreGateFocus() {
+    if (_gateLastFocus && typeof _gateLastFocus.focus === 'function') {
+      try { _gateLastFocus.focus(); } catch (e) {}
+    }
+    _gateLastFocus = null;
+  }
+
   // ── CONSTANTS ──
   const INDX_PRICE_USD = 0.24;
   const HISTORY_KEY    = 'indx_orch_history';
@@ -720,11 +791,15 @@
     document.getElementById('gateTitle').textContent  = gate.title;
     document.getElementById('gateSub').textContent    = gate.sub;
     document.getElementById('gateAction').textContent = gate.action;
+    // GOD MODE PATCH: remember trigger element and focus the primary action for keyboard/screen-reader users
+    _gateLastFocus = document.activeElement;
     document.getElementById('gateOverlay').classList.add('show');
+    setTimeout(() => { const b = document.getElementById('gateApproveBtn'); if (b) b.focus(); }, 50);
   }
 
   function approveGate() {
     document.getElementById('gateOverlay').classList.remove('show');
+    restoreGateFocus(); // GOD MODE PATCH: return focus to whatever triggered the gate
     if (!currentMission) return;
     const route = currentMission.route;
 
@@ -746,12 +821,15 @@
 
     // Save to history (local only — this session's browser, not a real backend)
     saveMissionToHistory(currentMission, route);
+    recordApprovalStat(route); // GOD MODE PATCH: tally into Orchestration Stats
 
     showToast('✅ Preview complete — this was simulated, no real agents or Decision Ledger were used');
   }
 
   function rejectGate() {
     document.getElementById('gateOverlay').classList.remove('show');
+    restoreGateFocus(); // GOD MODE PATCH: return focus to whatever triggered the gate
+    recordRejectionStat(); // GOD MODE PATCH: tally into Orchestration Stats
     addOrchEntry('orchestrate', 'Citizen rejected gate (simulated) — mission paused · Changes not applied');
     addLedgerEntry('⚠️', 'Mission gate rejected by citizen (simulated)', 'DL-' + Date.now().toString().slice(-6));
     document.getElementById('amStatus').textContent = '⚠️ Mission paused — you rejected the action. You can redeclare at any time.';
@@ -908,6 +986,23 @@
     // Enter on mission input
     document.getElementById('missionInput').addEventListener('keydown', e => {
       if (e.key === 'Enter') declareMission();
+    });
+
+    // GOD MODE: Orchestration Stats (real localStorage tally)
+    renderOrchStats();
+
+    // GOD MODE: Escape closes the approval gate safely (treated as reject — no approval on dismiss) + Tab focus trap
+    document.addEventListener('keydown', (e) => {
+      const overlay = document.getElementById('gateOverlay');
+      if (!overlay || !overlay.classList.contains('show')) return;
+      if (e.key === 'Escape') { e.preventDefault(); rejectGate(); return; }
+      if (e.key === 'Tab') {
+        const focusables = overlay.querySelectorAll('button');
+        if (!focusables.length) return;
+        const first = focusables[0], last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
     });
   });
 </script>

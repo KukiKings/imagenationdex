@@ -5,6 +5,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Merchant Command Center — IN$DEX</title>
+<meta name="description" content="Prototype dashboard for IN$DEX merchants — listings, orders, payouts, and disputes. Demo screen: figures shown are sample data, not real payments.">
+<meta property="og:title" content="Merchant Command Center — IN$DEX">
+<meta property="og:description" content="Prototype dashboard for IN$DEX merchants — listings, orders, payouts, and disputes. Demo screen: figures shown are sample data, not real payments.">
+
 <style>
 :root{
   --cyan:#00D4FF;--blue:#2B35D8;--purple:#8B3FE8;
@@ -143,6 +147,30 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--surface3);color:var(--text);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;pointer-events:none;transition:transform 0.3s,opacity 0.3s;opacity:0;z-index:999;max-width:320px;text-align:center;white-space:nowrap;}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+/* GOD MODE: ORDER STATUS (persisted) */
+.oc-status.confirmed{background:rgba(0,229,160,0.12);color:var(--green);}
+.oc-status.cancelled{background:rgba(255,77,109,0.12);color:var(--red);}
+.order-card.cancelled{opacity:0.55;}
+
+/* GOD MODE: BOTTOM SHEETS (payout confirm + payout history) */
+.sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.85);z-index:200;display:none;align-items:flex-end;}
+.sheet-overlay.show{display:flex;}
+.bottom-sheet{background:var(--surface2);border-radius:22px 22px 0 0;padding:22px;width:100%;max-width:430px;margin:0 auto;max-height:80vh;overflow-y:auto;}
+.sheet-handle{width:40px;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 auto 18px;}
+.sheet-title{font-size:17px;font-weight:800;margin-bottom:8px;}
+.sheet-sub{font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:16px;}
+.sheet-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.sheet-row:last-child{border-bottom:none;}
+.sheet-row .key{color:var(--text-muted);}
+.sheet-row .val{font-weight:700;}
+.sheet-btn{width:100%;padding:14px;border-radius:14px;border:none;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;margin-top:16px;}
+.sheet-btn.primary{background:var(--green);color:#000;}
+.sheet-btn.cancel{background:none;border:1px solid var(--border);color:var(--text2);margin-top:10px;}
+.payout-log-item{background:var(--surface3);border-radius:12px;padding:12px 14px;margin-bottom:8px;}
+.payout-log-top{display:flex;justify-content:space-between;font-size:13px;font-weight:700;}
+.payout-log-meta{font-size:11px;color:var(--text-muted);margin-top:4px;}
+.payout-log-empty{font-size:12px;color:var(--text-muted);text-align:center;padding:16px 0;}
 </style>
 </head>
 <body>
@@ -189,7 +217,7 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
     <div class="fee-header">
       <div class="fee-icon">⚖️</div>
       <div class="fee-title">98/2 Civilisation Law</div>
-      <div class="fee-badge">Locked forever</div>
+      <div class="fee-badge">Permanent doctrine</div>
     </div>
     <div class="fee-body">
       <div class="fee-example">On every $100 sale:</div>
@@ -198,7 +226,10 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
       <div class="fee-row"><div class="fee-key">IN$DEX fee</div><div class="fee-val muted">$2.00 (2%)</div></div>
       <div class="fee-row"><div class="fee-key">Fee goes to</div><div class="fee-val muted">Civilisation fund + operations</div></div>
       <div class="fee-row"><div class="fee-key">Compared to eBay</div><div class="fee-val green">Save $11.70 per $100</div></div>
-      <div class="fee-note">This fee is constitutionally locked. No governance vote can raise it above 2%. It cannot be changed by any team member, investor, or market condition.</div>
+      <!-- AUDIT 2026-09-11: aligned to indx-98-2-law.html canon — the split is applied today
+           by IN$DEX's ledger system, not yet by deployed on-chain smart contract code. It is
+           policy doctrine, not (yet) a technical guarantee. -->
+      <div class="fee-note">The 98% citizen share is applied today by IN$DEX's ledger system — not yet by deployed on-chain smart contract code. The 98/2 split is intended as permanent doctrine, off the table for any future governance vote. That's a policy commitment, not yet a smart-contract guarantee.</div>
     </div>
   </div>
 </div>
@@ -279,23 +310,23 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 <div class="tab-panel" id="tab-orders">
   <div class="nl-section">Orders this week</div>
 
-  <div class="order-card">
+  <div class="order-card" id="orderCard-order1">
     <div class="oc-top">
       <div class="oc-icon">🪡</div>
       <div class="oc-info">
         <div class="oc-name">Handmade screen print × 2</div>
         <div class="oc-buyer">Buyer: lena_s.IN$DEX · Apia, Samoa</div>
       </div>
-      <div class="oc-status new">New</div>
+      <div class="oc-status new" id="orderStatus-order1">New</div>
     </div>
     <div class="oc-detail">
       <div>Total: <span>$70.00</span></div>
       <div>You receive: <span style="color:var(--green);">$68.60</span></div>
       <div>Fee: <span>$1.40</span></div>
     </div>
-    <div class="oc-actions">
+    <div class="oc-actions" id="orderActions-order1">
       <button class="oc-btn" onclick="showToast('Opening buyer chat…')">Message buyer</button>
-      <button class="oc-btn primary" onclick="showToast('Order confirmed. Consent receipt generated.')">Confirm order</button>
+      <button class="oc-btn primary" onclick="confirmOrder('order1')">Confirm order</button>
     </div>
   </div>
 
@@ -319,23 +350,23 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
     </div>
   </div>
 
-  <div class="order-card">
+  <div class="order-card" id="orderCard-order3">
     <div class="oc-top">
       <div class="oc-icon">🪡</div>
       <div class="oc-info">
         <div class="oc-name">Screen print × 1</div>
         <div class="oc-buyer">Buyer: ana_f.IN$DEX · Suva, Fiji</div>
       </div>
-      <div class="oc-status pending">Pending payment</div>
+      <div class="oc-status pending" id="orderStatus-order3">Pending payment</div>
     </div>
     <div class="oc-detail">
       <div>Total: <span>$35.00</span></div>
       <div>You receive: <span style="color:var(--green);">$34.30</span></div>
-      <div>Status: <span style="color:var(--gold);">Awaiting buyer</span></div>
+      <div>Status: <span style="color:var(--gold);" id="orderStatusNote-order3">Awaiting buyer</span></div>
     </div>
-    <div class="oc-actions">
+    <div class="oc-actions" id="orderActions-order3">
       <button class="oc-btn" onclick="showToast('Sending payment reminder…')">Remind buyer</button>
-      <button class="oc-btn" onclick="showToast('Order cancelled. No funds moved.')">Cancel</button>
+      <button class="oc-btn" onclick="cancelOrder('order3')">Cancel</button>
     </div>
   </div>
 </div>
@@ -369,37 +400,244 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
     <div class="pr-row"><div class="pr-key">Next payout</div><div class="pr-val">Manual — tap when ready</div></div>
   </div>
 
-  <button class="btn-full btn-green" onclick="showToast('SIINDEX trust check: Payout $346.40 → ANZ. Approve to proceed.')">Request payout</button>
-  <button class="btn-full btn-surface" onclick="showToast('Opening payout history…')">View payout history</button>
+  <button class="btn-full btn-green" onclick="openPayoutConfirmSheet()">Request payout</button>
+  <button class="btn-full btn-surface" onclick="openPayoutHistorySheet()">View payout history</button>
+</div>
+
+<!-- GOD MODE: PAYOUT CONFIRM SHEET -->
+<div class="sheet-overlay" id="payoutConfirmOverlay" onclick="if(event.target===this)closePayoutConfirmSheet()">
+  <div class="bottom-sheet" id="payoutConfirmSheet" role="dialog" aria-modal="true" aria-label="Confirm payout request">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Confirm payout request</div>
+    <div class="sheet-sub">Review before you request. Nothing moves until you tap confirm below.</div>
+    <div class="sheet-row"><div class="key">Amount</div><div class="val" style="color:var(--green);">$346.40</div></div>
+    <div class="sheet-row"><div class="key">IN$DEX fee (2%)</div><div class="val">$6.93</div></div>
+    <div class="sheet-row"><div class="key">Destination</div><div class="val">ANZ PayID</div></div>
+    <div class="sheet-row"><div class="key">Estimated timing</div><div class="val">2 hours</div></div>
+    <button class="sheet-btn primary" onclick="confirmPayoutRequest()">Confirm payout request</button>
+    <button class="sheet-btn cancel" onclick="closePayoutConfirmSheet()">Cancel</button>
+  </div>
+</div>
+
+<!-- GOD MODE: PAYOUT HISTORY SHEET -->
+<div class="sheet-overlay" id="payoutHistoryOverlay" onclick="if(event.target===this)closePayoutHistorySheet()">
+  <div class="bottom-sheet" id="payoutHistorySheet" role="dialog" aria-modal="true" aria-label="Your payout requests">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">Your payout requests</div>
+    <div class="sheet-sub">Logged on this device when you tap "Confirm payout request" above.</div>
+    <div id="payoutHistoryList"></div>
+    <button class="sheet-btn cancel" onclick="closePayoutHistorySheet()">Close</button>
+  </div>
 </div>
 
 <!-- ════ DISPUTES ════ -->
 <div class="tab-panel" id="tab-disputes">
   <div class="nl-section">Active disputes</div>
 
-  <div class="dispute-card">
-    <div class="dc-top">
-      <div class="dc-icon">🔍</div>
-      <div class="dc-title">Order #ORD-0032 — Not received</div>
-      <div class="dc-status">Under review</div>
-    </div>
-    <div class="dc-sub">Buyer reports item not received. SIINDEX has paused payout for this order ($35.00) and opened a mediation request. You have 48 hours to respond with evidence.</div>
-    <button class="dc-btn" onclick="showToast('Opening evidence upload — SIINDEX will prepare your case.')">Submit evidence</button>
-  </div>
+  <!-- FIX 2026-09-03: the old copy here claimed "nothing can be filed yet," which was
+       false — dispute.html has been a fully real, RLS-checked dispute system (open_dispute,
+       add_dispute_evidence, get_my_disputes) since before this page's own "roadmap" note
+       was written. This now loads the merchant's real disputes via get_my_disputes and
+       points filing/details to the real dispute.html flow instead of disclaiming it away. -->
+  <div id="disputesLoading" style="margin:16px;padding:14px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;font-size:12px;color:var(--text-muted);">Loading your disputes…</div>
+  <div id="realDisputesList" style="display:none;"></div>
+  <div id="noDisputesMsg" style="display:none;margin:16px;padding:14px;background:rgba(0,229,160,0.05);border:1px solid rgba(0,229,160,0.15);border-radius:14px;font-size:12px;color:var(--text-muted);">No open disputes right now. If a buyer needs to escalate an order, the real dispute system is live — filing goes through dispute.html.</div>
 
   <div style="margin:16px;padding:14px;background:rgba(0,229,160,0.05);border:1px solid rgba(0,229,160,0.15);border-radius:14px;">
     <div style="font-size:13px;font-weight:700;color:var(--green);margin-bottom:8px;">✅ SIINDEX dispute protection</div>
-    <div style="font-size:12px;color:var(--text-muted);line-height:1.7;">Every order creates a consent receipt. SIINDEX records what was sold, the agreed price, and both parties' approvals. This evidence protects you in every dispute.</div>
+    <div style="font-size:12px;color:var(--text-muted);line-height:1.7;">Live: every order carries the record needed to open a dispute — reason, evidence, and resolution requested. SIINDEX-mediated automatic resolution is still on the roadmap; today a dispute is opened, evidence is attached, and it is resolved by IN$DEX review.</div>
   </div>
 
-  <button class="btn-full btn-surface" onclick="showToast('Opening dispute guide…')">How disputes work</button>
+  <button class="btn-full btn-surface" onclick="window.location.href='dispute.html'">How disputes work</button>
 </div>
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
 const INDX_PRICE_USD = 0.24;
 const _MCC_KEY = 'indx_mcc_tab';
+
+// ── GOD MODE: ORDER STATUS PERSISTENCE ──
+const ORDER_STATUS_KEY = 'indx_mcc_order_status';
+
+function getOrderStatuses() {
+  try { return JSON.parse(localStorage.getItem(ORDER_STATUS_KEY) || '{}'); }
+  catch (e) { return {}; }
+}
+
+function saveOrderStatus(id, status) {
+  const all = getOrderStatuses();
+  all[id] = status;
+  localStorage.setItem(ORDER_STATUS_KEY, JSON.stringify(all));
+}
+
+function applyOrderStatus(id, status) {
+  const badge = document.getElementById('orderStatus-' + id);
+  const card = document.getElementById('orderCard-' + id);
+  const actions = document.getElementById('orderActions-' + id);
+  if (!badge || !card || !actions) return;
+  if (status === 'confirmed') {
+    badge.textContent = 'Confirmed';
+    badge.className = 'oc-status confirmed';
+    actions.innerHTML = '<div style="flex:1;text-align:center;font-size:12px;color:var(--green);font-weight:700;">✓ Confirmed — consent receipt generated</div>';
+  } else if (status === 'cancelled') {
+    badge.textContent = 'Cancelled';
+    badge.className = 'oc-status cancelled';
+    card.classList.add('cancelled');
+    const note = document.getElementById('orderStatusNote-' + id);
+    if (note) note.textContent = 'Cancelled — no funds moved';
+    actions.innerHTML = '<div style="flex:1;text-align:center;font-size:12px;color:var(--red);font-weight:700;">✕ Cancelled — no funds moved</div>';
+  }
+}
+
+function confirmOrder(id) {
+  applyOrderStatus(id, 'confirmed');
+  saveOrderStatus(id, 'confirmed');
+  showToast('Order confirmed. Consent receipt generated.');
+}
+
+function cancelOrder(id) {
+  applyOrderStatus(id, 'cancelled');
+  saveOrderStatus(id, 'cancelled');
+  showToast('Order cancelled. No funds moved.');
+}
+
+function restoreOrderStatuses() {
+  const all = getOrderStatuses();
+  Object.keys(all).forEach(id => applyOrderStatus(id, all[id]));
+}
+
+// ── GOD MODE: PAYOUT CONFIRM SHEET + LOCAL PAYOUT LOG ──
+const PAYOUT_LOG_KEY = 'indx_mcc_payout_log';
+
+function getPayoutLog() {
+  try { return JSON.parse(localStorage.getItem(PAYOUT_LOG_KEY) || '[]'); }
+  catch (e) { return []; }
+}
+
+function openPayoutConfirmSheet() {
+  document.getElementById('payoutConfirmOverlay').classList.add('show');
+  const btn = document.querySelector('#payoutConfirmSheet .sheet-btn.primary');
+  if (btn) btn.focus();
+}
+
+function closePayoutConfirmSheet() {
+  document.getElementById('payoutConfirmOverlay').classList.remove('show');
+}
+
+function confirmPayoutRequest() {
+  const log = getPayoutLog();
+  log.unshift({ amount: 346.40, fee: 6.93, destination: 'ANZ PayID', ts: Date.now() });
+  localStorage.setItem(PAYOUT_LOG_KEY, JSON.stringify(log.slice(0, 20)));
+  closePayoutConfirmSheet();
+  showToast('Payout requested: $346.40 → ANZ PayID. Logged to your payout history.');
+}
+
+function openPayoutHistorySheet() {
+  renderPayoutHistory();
+  document.getElementById('payoutHistoryOverlay').classList.add('show');
+  const btn = document.querySelector('#payoutHistorySheet .sheet-btn.cancel');
+  if (btn) btn.focus();
+}
+
+function closePayoutHistorySheet() {
+  document.getElementById('payoutHistoryOverlay').classList.remove('show');
+}
+
+function renderPayoutHistory() {
+  const log = getPayoutLog();
+  const container = document.getElementById('payoutHistoryList');
+  if (!log.length) {
+    container.innerHTML = '<div class="payout-log-empty">No payout requests logged on this device yet.</div>';
+    return;
+  }
+  container.innerHTML = log.map(function(p) {
+    const d = new Date(p.ts);
+    const dateStr = d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) + ' · ' + d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+    return '<div class="payout-log-item">' +
+      '<div class="payout-log-top"><span>$' + p.amount.toFixed(2) + '</span><span style="color:var(--text-muted);font-weight:600;">-$' + p.fee.toFixed(2) + ' fee</span></div>' +
+      '<div class="payout-log-meta">' + p.destination + ' · ' + dateStr + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+// ── GOD MODE: ESCAPE-TO-CLOSE + FOCUS TRAP for both new sheets ──
+function _activeGodModeSheet() {
+  if (document.getElementById('payoutConfirmOverlay').classList.contains('show')) return { overlay: 'payoutConfirmOverlay', sheet: 'payoutConfirmSheet', close: closePayoutConfirmSheet };
+  if (document.getElementById('payoutHistoryOverlay').classList.contains('show')) return { overlay: 'payoutHistoryOverlay', sheet: 'payoutHistorySheet', close: closePayoutHistorySheet };
+  return null;
+}
+
+document.addEventListener('keydown', function(e) {
+  const active = _activeGodModeSheet();
+  if (!active) return;
+  if (e.key === 'Escape') { active.close(); return; }
+  if (e.key !== 'Tab') return;
+  const sheet = document.getElementById(active.sheet);
+  const focusables = sheet.querySelectorAll('button, [tabindex]:not([tabindex="-1"])');
+  if (!focusables.length) return;
+  const first = focusables[0], last = focusables[focusables.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
+
+// ── FIX 2026-09-03: real dispute data for the Disputes tab (see markup comment above) ──
+const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const citizenId = sessionStorage.getItem('citizen_id');
+let _realAccessToken = null;
+async function initRealSession() {
+  try {
+    const { data } = await sb.auth.getSession();
+    if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+  } catch (e) { /* stay on anon key */ }
+}
+async function rpc(name, body) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + name, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || 'Request failed');
+  return data;
+}
+const DISPUTE_STATUS_LABEL = { open: ['OPEN','#ffb800'], evidence: ['EVIDENCE ADDED','#ffb800'], mediation: ['IN MEDIATION','#ffb800'],
+  resolved_buyer: ['RESOLVED (BUYER)','#00e5a0'], resolved_seller: ['RESOLVED (SELLER)','#00e5a0'], withdrawn: ['WITHDRAWN','var(--text-muted)'] };
+async function loadMerchantDisputes() {
+  const loadingEl = document.getElementById('disputesLoading');
+  const listEl = document.getElementById('realDisputesList');
+  const emptyEl = document.getElementById('noDisputesMsg');
+  if (!citizenId) {
+    loadingEl.style.display = 'none';
+    emptyEl.textContent = 'Log in to see your disputes.';
+    emptyEl.style.display = 'block';
+    return;
+  }
+  try {
+    await initRealSession();
+    const disputes = await rpc('get_my_disputes', { p_citizen_id: citizenId });
+    loadingEl.style.display = 'none';
+    if (!disputes || disputes.length === 0) {
+      emptyEl.style.display = 'block';
+      return;
+    }
+    listEl.style.display = 'block';
+    listEl.innerHTML = disputes.map(function(d) {
+      const meta = DISPUTE_STATUS_LABEL[d.status] || [String(d.status || '').toUpperCase(), 'var(--text-muted)'];
+      const opened = d.opened_at ? new Date(d.opened_at).toLocaleDateString() : '';
+      return '<div class="dispute-card" onclick="window.location.href=\'dispute.html\'">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+        '<span style="font-size:11px;font-weight:700;color:' + meta[1] + ';">' + meta[0] + '</span>' +
+        '<span style="font-size:11px;color:var(--text-muted);">Opened ' + opened + '</span></div>' +
+        '<div style="font-size:13px;">' + ((d.reason || '').split(':')[0] || 'Dispute') + '</div></div>';
+    }).join('');
+  } catch (e) {
+    loadingEl.textContent = 'Could not load disputes right now.';
+  }
+}
 
 var SI_MSGS = [
   'Your screen prints listing is getting 3× more views than your average. One buyer has messaged twice. I recommend responding within 2 hours.',
@@ -436,6 +674,9 @@ document.addEventListener('DOMContentLoaded', function() {
     var btn = document.querySelector('.tab-btn[onclick*="' + saved + '"]');
     if (btn) switchTab(saved, btn);
   }
+  loadMerchantDisputes();
+  // GOD MODE PATCH: restore any persisted order confirm/cancel state on load
+  restoreOrderStatuses();
 });
 </script>
 </body>

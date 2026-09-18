@@ -301,7 +301,10 @@ When AJ asks "what should we send and when?", follow this schedule:
 | L99 (launch day) | Template 4 — Launch Day | Email + SMS |
 | L99 + 7 days (non-converted) | Template 5 — Re-engagement | Email |
 
-*Note: SMS requires Twilio or equivalent. Check if AJ has a messaging provider configured before recommending SMS outreach.*
+*Note: SMS requires a configured messaging provider. Twilio was ruled out 2026-09-17 (AJ: "not
+user friendly") and no replacement is configured yet — check `second-brain/companies/twilio.md`
+for current status before recommending SMS outreach. Until a provider is live, do not draft or
+suggest sending any SMS; use the Email template instead.*
 
 ---
 

@@ -5,6 +5,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>SIINDEX · Marketplace Intelligence</title>
+<meta name="description" content="Architecture map of SIINDEX's planned marketplace intelligence domains and loops — shows what is genuinely live today versus what is designed but not yet running.">
+<meta property="og:title" content="SIINDEX · Marketplace Intelligence">
+<meta property="og:description" content="Architecture map of SIINDEX's marketplace intelligence domains and loops — live vs. planned.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" crossorigin="anonymous"></script>
 <script src="js/indx-db.js"></script>
 <script src="js/siindex-system.js"></script>
@@ -122,6 +125,38 @@
 
   /* ── CANVAS ANIMATION ── */
   canvas#heroCanvas{position:absolute;inset:0;width:100%;height:100%;}
+
+  /* ── GOD MODE: PROGRESS SUMMARY ── */
+  .progress-card{margin:0 20px 20px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;}
+  .progress-card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .progress-card-title{font-size:12px;font-weight:700;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;}
+  .progress-card-val{font-size:14px;font-weight:900;color:var(--cyan);}
+  .progress-bar-track{height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;}
+  .progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--cyan));border-radius:4px;transition:width 0.6s ease;}
+  .progress-card-sub{font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5;}
+
+  /* ── GOD MODE: DOMAIN SEARCH + FILTER ── */
+  .domain-tools{margin-bottom:14px;}
+  .domain-search{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-size:13px;outline:none;margin-bottom:8px;}
+  .domain-search:focus{border-color:var(--cyan);}
+  .domain-search::placeholder{color:var(--text-dim);}
+  .domain-filter-chips{display:flex;gap:6px;flex-wrap:wrap;}
+  .dfc{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:6px 12px;font-size:11px;font-weight:700;color:var(--text-muted);cursor:pointer;transition:all 0.2s;}
+  .dfc.active{background:rgba(0,212,255,0.1);border-color:var(--cyan);color:var(--cyan);}
+  .arch-spoke.hidden-filtered{display:none;}
+  .domain-empty{grid-column:1/-1;text-align:center;font-size:11px;color:var(--text-muted);padding:14px 0;}
+
+  /* ── GOD MODE: WATCHLIST STAR ── */
+  .spoke-star{position:absolute;top:6px;right:6px;font-size:12px;line-height:1;opacity:0.35;cursor:pointer;padding:4px;transition:opacity 0.2s,transform 0.2s;}
+  .spoke-star.on{opacity:1;color:var(--gold);}
+  .spoke-star:active{transform:scale(1.2);}
+  .arch-spoke{position:relative;}
+  .ds-star-btn{width:100%;padding:11px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.2s;}
+  .ds-star-btn.on{color:var(--gold);border-color:rgba(255,184,0,0.4);background:rgba(255,184,0,0.06);}
+
+  /* ── GOD MODE: ACCESSIBILITY / FOCUS ── */
+  .dfc:focus-visible,.domain-search:focus-visible,.spoke-star:focus-visible,
+  .ds-close:focus-visible,.ds-star-btn:focus-visible,.arch-spoke:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
 </style>
 </head>
 <body>
@@ -144,7 +179,7 @@
         Operating Intelligence · 15 Domains
       </div>
       <div class="hero-title">SIINDEX<br><span>Intelligence Layer</span></div>
-      <div class="hero-sub">Not another feature. The operating intelligence connecting every marketplace interaction — learning from every transaction, compounding trust over decades.</div>
+      <div class="hero-sub">Not another feature. The operating intelligence designed to connect every marketplace interaction — a handful of loops are live today (see below), the rest are architecture waiting on real marketplace activity.</div>
     </div>
 
     <!-- LIVE METRICS -->
@@ -155,12 +190,22 @@
       </div>
       <div class="metric-cell">
         <div class="mc-val" id="mLoops">10</div>
-        <div class="mc-lbl">Active Loops</div>
+        <div class="mc-lbl">Loop Types</div>
       </div>
       <div class="metric-cell">
         <div class="mc-val" id="mRating">8.5</div>
         <div class="mc-lbl">Architecture Score</div>
       </div>
+    </div>
+
+    <!-- GOD MODE: ARCHITECTURE PROGRESS -->
+    <div class="progress-card" id="progressCard">
+      <div class="progress-card-hdr">
+        <div class="progress-card-title">Architecture Progress</div>
+        <div class="progress-card-val" id="progressVal">0/15 Live</div>
+      </div>
+      <div class="progress-bar-track"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
+      <div class="progress-card-sub" id="progressSub"></div>
     </div>
 
     <!-- ARCHITECTURE DIAGRAM -->
@@ -179,6 +224,18 @@
         </div>
         <div class="arch-line"></div>
       </div>
+
+      <!-- GOD MODE: SEARCH + FILTER -->
+      <div class="domain-tools">
+        <input type="text" id="domainSearch" class="domain-search" placeholder="🔍 Search domains…" oninput="filterSpokes()">
+        <div class="domain-filter-chips" id="domainFilterChips">
+          <button class="dfc active" data-filter="all" onclick="setDomainFilter('all',this)">All 15</button>
+          <button class="dfc" data-filter="active" onclick="setDomainFilter('active',this)">● Active</button>
+          <button class="dfc" data-filter="planned" onclick="setDomainFilter('planned',this)">○ Planned</button>
+          <button class="dfc" data-filter="watchlist" onclick="setDomainFilter('watchlist',this)">★ Watchlist</button>
+        </div>
+      </div>
+
       <div class="arch-spoke-grid" id="spokesGrid">
         <!-- Populated by JS -->
       </div>
@@ -239,15 +296,16 @@
 
 <!-- DOMAIN DETAIL SHEET -->
 <div class="domain-overlay" id="domainOverlay" onclick="closeDomain()"></div>
-<div class="domain-sheet" id="domainSheet">
+<div class="domain-sheet" id="domainSheet" role="dialog" aria-modal="true" aria-labelledby="dsTitle" onkeydown="handleSheetKeydown(event)">
   <div class="domain-sheet-handle"></div>
   <div class="ds-icon" id="dsIcon"></div>
   <div class="ds-title" id="dsTitle"></div>
   <div class="ds-badge" id="dsBadge"></div>
   <div class="ds-desc" id="dsDesc"></div>
+  <button class="ds-star-btn" id="dsStarBtn" onclick="toggleFavoriteFromSheet()">☆ Add to Watchlist</button>
   <div class="ds-signals-title">Intelligence Signals</div>
   <div class="ds-signals" id="dsSignals"></div>
-  <button class="ds-close" onclick="closeDomain()">Close</button>
+  <button class="ds-close" id="dsCloseBtn" onclick="closeDomain()">Close</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -255,6 +313,107 @@
 <script>
 (function () {
   'use strict';
+
+  // ── GOD MODE: WATCHLIST, SEARCH/FILTER, PROGRESS, ACCESSIBILITY ──
+  const FAV_KEY = 'indx_mktintel_favorites';
+  let _favorites = JSON.parse(localStorage.getItem(FAV_KEY) || '[]');
+  let _domainFilter = 'all';
+  let _currentDomainId = null;
+  let _lastFocusedEl = null;
+
+  function saveFavorites() { localStorage.setItem(FAV_KEY, JSON.stringify(_favorites)); }
+
+  function toggleFavorite(id, ev) {
+    if (ev) ev.stopPropagation();
+    const idx = _favorites.indexOf(id);
+    if (idx === -1) { _favorites.push(id); showToast('★ Added to Watchlist'); }
+    else { _favorites.splice(idx, 1); showToast('☆ Removed from Watchlist'); }
+    saveFavorites();
+    renderSpokes();
+    if (_currentDomainId === id) updateStarBtn();
+  }
+
+  function toggleFavoriteFromSheet() {
+    if (_currentDomainId) toggleFavorite(_currentDomainId, null);
+  }
+
+  function updateStarBtn() {
+    const btn = document.getElementById('dsStarBtn');
+    if (!btn || !_currentDomainId) return;
+    const isFav = _favorites.includes(_currentDomainId);
+    btn.textContent = isFav ? '★ In Watchlist' : '☆ Add to Watchlist';
+    btn.classList.toggle('on', isFav);
+  }
+
+  function setDomainFilter(filter, btn) {
+    _domainFilter = filter;
+    document.querySelectorAll('.dfc').forEach(c => c.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    filterSpokes();
+  }
+
+  function filterSpokes() {
+    const searchEl = document.getElementById('domainSearch');
+    const query = ((searchEl && searchEl.value) || '').trim().toLowerCase();
+    const grid = document.getElementById('spokesGrid');
+    if (!grid) return;
+    let visible = 0;
+    grid.querySelectorAll('.arch-spoke').forEach(spoke => {
+      const name = spoke.getAttribute('data-name') || '';
+      const status = spoke.getAttribute('data-status') || '';
+      const id = spoke.getAttribute('data-domain-id') || '';
+      let show = name.includes(query);
+      if (show && _domainFilter === 'active') show = status === 'active';
+      if (show && _domainFilter === 'planned') show = status === 'planned';
+      if (show && _domainFilter === 'watchlist') show = _favorites.includes(id);
+      spoke.classList.toggle('hidden-filtered', !show);
+      if (show) visible++;
+    });
+    let empty = grid.querySelector('.domain-empty');
+    if (visible === 0) {
+      if (!empty) {
+        empty = document.createElement('div');
+        empty.className = 'domain-empty';
+        grid.appendChild(empty);
+      }
+      empty.textContent = _domainFilter === 'watchlist'
+        ? 'No domains starred yet — tap ☆ on any domain to add it.'
+        : 'No domains match your search.';
+    } else if (empty) {
+      empty.remove();
+    }
+  }
+
+  function updateProgress() {
+    const domains = (window.SIINDEX_CONFIG && SIINDEX_CONFIG.intelligence_domains) || [];
+    if (!domains.length) return;
+    const liveCount = domains.filter(d => effectiveStatus(d) === 'active').length;
+    const total = domains.length;
+    const pct = total ? Math.round((liveCount / total) * 100) : 0;
+    const valEl = document.getElementById('progressVal');
+    const fillEl = document.getElementById('progressFill');
+    const subEl = document.getElementById('progressSub');
+    if (valEl) valEl.textContent = liveCount + '/' + total + ' Live';
+    if (fillEl) fillEl.style.width = pct + '%';
+    if (subEl) subEl.textContent = liveCount + ' domain' + (liveCount === 1 ? '' : 's') +
+      ' generating real signals today · ' + (total - liveCount) + ' designed and queued for real marketplace data.';
+  }
+
+  function handleSheetKeydown(ev) {
+    if (ev.key === 'Escape') { ev.preventDefault(); closeDomain(); return; }
+    if (ev.key === 'Tab') {
+      const focusables = [document.getElementById('dsStarBtn'), document.getElementById('dsCloseBtn')].filter(Boolean);
+      if (!focusables.length) return;
+      const first = focusables[0], last = focusables[focusables.length - 1];
+      if (ev.shiftKey && document.activeElement === first) { ev.preventDefault(); last.focus(); }
+      else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first.focus(); }
+    }
+  }
+  window.toggleFavorite = toggleFavorite;
+  window.toggleFavoriteFromSheet = toggleFavoriteFromSheet;
+  window.setDomainFilter = setDomainFilter;
+  window.filterSpokes = filterSpokes;
+  window.handleSheetKeydown = handleSheetKeydown;
 
   // ── Domain signals (what each loop monitors) ──────────────────
   const DOMAIN_SIGNALS = {
@@ -295,32 +454,67 @@
     executive_intelligence:'Executive Intelligence',
   };
 
+  // ── Status overrides (2026-08-29 honesty audit) ────────────────
+  // siindex-system.js marks several marketplace domains "active" that have no
+  // real data behind them: marketplace `listings` and `marketplace_offers` are
+  // both 0 rows in Supabase, as are `disputes`, `shield_checks`,
+  // `known_malicious_indicators`, `credentials`, and `citizen_account_links`.
+  // Overridden locally to "planned" here so this page doesn't display a live
+  // marketplace-intelligence badge the backend can't back up yet. Only
+  // reputation_intelligence stays "active" — citizens.wisdom_score is real,
+  // populated, and varies per citizen. Fix this at the source
+  // (js/siindex-system.js) when marketplace data starts flowing.
+  const STATUS_OVERRIDE = {
+    trade_intelligence:     'planned',
+    escrow_intelligence:    'planned',
+    pricing_intelligence:   'planned',
+    knowledge_intelligence: 'planned',
+    fraud_intelligence:     'planned',
+    sovereign_identity:     'planned',
+    digital_assets:         'planned',
+    executive_intelligence: 'planned',
+  };
+  function effectiveStatus(d) { return STATUS_OVERRIDE[d.id] || d.status; }
+
   // ── Render spoke grid ─────────────────────────────────────────
   function renderSpokes() {
     const grid = document.getElementById('spokesGrid');
     const domains = SIINDEX_CONFIG.intelligence_domains;
+    // GOD MODE PATCH — data attrs for search/filter + watchlist star + keyboard access
     grid.innerHTML = domains.map(d => {
       const icon = SPOKE_ICONS[d.id] || '◉';
-      const isLive = d.status === 'active';
-      return `<div class="arch-spoke ${isLive ? 'live' : ''}" onclick="openDomain('${d.id}')">
+      const status = effectiveStatus(d);
+      const isLive = status === 'active';
+      const name = SPOKE_NAMES[d.id] || d.label;
+      const isFav = _favorites.includes(d.id);
+      return `<div class="arch-spoke ${isLive ? 'live' : ''}" data-domain-id="${d.id}" data-status="${status}" data-name="${name.toLowerCase()}" tabindex="0" onclick="openDomain('${d.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDomain('${d.id}');}">
+        <span class="spoke-star ${isFav ? 'on' : ''}" tabindex="0" role="button" aria-label="Toggle watchlist" onclick="toggleFavorite('${d.id}', event)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleFavorite('${d.id}', event);}">${isFav ? '★' : '☆'}</span>
         <div class="arch-spoke-icon">${icon}</div>
         <div>
-          <div class="arch-spoke-name">${SPOKE_NAMES[d.id] || d.label}</div>
-          <div class="arch-spoke-status ${d.status}">${isLive ? '● Active' : '○ Planned'}</div>
+          <div class="arch-spoke-name">${name}</div>
+          <div class="arch-spoke-status ${status}">${isLive ? '● Active' : '○ Planned'}</div>
         </div>
       </div>`;
     }).join('');
+    filterSpokes();
   }
 
   // ── Render intelligence loops ─────────────────────────────────
+  // Statuses below verified against Supabase on 2026-08-29: marketplace `listings`
+  // and `marketplace_offers` are both 0 rows, `disputes` and `shield_checks` are
+  // 0 rows — so nothing marketplace-specific has real data to run on yet.
+  // Only Fraud Detection (707 real security_events being logged) and Reputation
+  // Scoring (citizens.wisdom_score is real and varies per citizen) are genuinely
+  // active. The rest are downgraded from earlier "active"/"learning" labels that
+  // weren't backed by anything in the database.
   const LOOP_META = [
-    { icon:'🎙', name:'Voice Commerce Loop',        state:'Learning from listing patterns',  status:'learning' },
+    { icon:'🎙', name:'Voice Commerce Loop',        state:'Design complete — no listing data yet',   status:'planned'  },
     { icon:'🛡', name:'Fraud Detection Loop',        state:'Monitoring active signals',   status:'active'   },
-    { icon:'💰', name:'Dynamic Pricing Loop',        state:'Calibrating 7-factor model',      status:'learning' },
+    { icon:'💰', name:'Dynamic Pricing Loop',        state:'Design complete — no marketplace data yet', status:'planned' },
     { icon:'⭐', name:'Reputation Scoring Loop',     state:'Aggregating sovereign scores',    status:'active'   },
-    { icon:'🔒', name:'Escrow Monitoring Loop',      state:'Watching active transactions',    status:'active'   },
-    { icon:'📊', name:'Executive Intelligence Loop', state:'Processing marketplace metrics',  status:'active'   },
-    { icon:'🧠', name:'Knowledge Ingestion Loop',    state:'Indexing transaction patterns',   status:'learning' },
+    { icon:'🔒', name:'Escrow Monitoring Loop',      state:'Design complete — no escrow data yet',    status:'planned' },
+    { icon:'📊', name:'Executive Intelligence Loop', state:'Design complete — no marketplace metrics yet', status:'planned' },
+    { icon:'🧠', name:'Knowledge Ingestion Loop',    state:'Design complete — no listing corpus yet', status:'planned' },
     { icon:'🌍', name:'Geo Intelligence Loop',       state:'Mapping regional demand curves',  status:'planned'  },
     { icon:'🤝', name:'Negotiation Loop',            state:'Training on offer/counter data',  status:'planned'  },
     { icon:'📸', name:'Visual Intelligence Loop',    state:'Computer vision pipeline',        status:'planned'  },
@@ -368,24 +562,39 @@
     if (!d) return;
     const icon = SPOKE_ICONS[id] || '◉';
     const signals = DOMAIN_SIGNALS[id] || [];
-    const isLive = d.status === 'active';
+    const status = effectiveStatus(d);
+    const isLive = status === 'active';
+
+    // GOD MODE PATCH — track open domain + last focus for watchlist star and focus return
+    _currentDomainId = id;
+    _lastFocusedEl = document.activeElement;
 
     document.getElementById('dsIcon').textContent = icon;
     document.getElementById('dsTitle').textContent = SPOKE_NAMES[id] || d.label;
     const badge = document.getElementById('dsBadge');
-    badge.className = 'ds-badge ' + d.status;
+    badge.className = 'ds-badge ' + status;
     badge.textContent = isLive ? '● Active Intelligence Loop' : '○ Planned — Next Phase';
     document.getElementById('dsDesc').textContent = d.desc;
     document.getElementById('dsSignals').innerHTML = signals.map(s =>
       `<div class="ds-signal">${s}</div>`).join('');
+    updateStarBtn();
 
     document.getElementById('domainOverlay').classList.add('show');
-    setTimeout(() => document.getElementById('domainSheet').classList.add('open'), 10);
+    setTimeout(() => {
+      document.getElementById('domainSheet').classList.add('open');
+      // GOD MODE PATCH — move focus into the sheet for keyboard/focus-trap accessibility
+      const closeBtn = document.getElementById('dsCloseBtn');
+      if (closeBtn) closeBtn.focus();
+    }, 10);
   }
 
   function closeDomain() {
     document.getElementById('domainSheet').classList.remove('open');
-    setTimeout(() => document.getElementById('domainOverlay').classList.remove('show'), 320);
+    setTimeout(() => {
+      document.getElementById('domainOverlay').classList.remove('show');
+      // GOD MODE PATCH — return focus to the element that opened the sheet
+      if (_lastFocusedEl && typeof _lastFocusedEl.focus === 'function') _lastFocusedEl.focus();
+    }, 320);
   }
   window.openDomain = openDomain;
   window.closeDomain = closeDomain;
@@ -476,6 +685,9 @@
         countUp(document.getElementById('mRating'), 8.5, 1, '/10', 1000);
       }, 200);
     }, 300);
+
+    // GOD MODE — architecture progress summary (computed from real domain status)
+    updateProgress();
   });
 
   // ── Toast ─────────────────────────────────────────────────────

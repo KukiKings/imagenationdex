@@ -4,6 +4,8 @@
 <link rel="icon" type="image/png" href="assets/favicon.png">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<!-- AUDIT 2026-07-30: title was the imperative "Buy INDX" on the very page whose payment targets
+     were removed on 2026-07-29 because nothing can be credited. INDX cannot be bought. -->
 <title>INDX purchases open at launch — IN$DEX | 24 Feb 2027</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script src="https://js.stripe.com/v3/"></script>
@@ -555,7 +557,10 @@
         Processing fee: <span id="feeSpan">0% during Genesis</span>. Powered by IN$DEX.
       </div>
       <!-- Portfolio Projection Card -->
-<div class="proj-card" id="projCard">
+      <!-- AUDIT 2026-07-30: the 2026-07-29 pass removed the $2.50 row's markup but left an "At $1.00"
+           row (a 4.2x multiple off the $0.24 reference) AND left the JS writing to the deleted
+           #projAt250 element, which threw a TypeError and broke the whole calculator. Both fixed. -->
+      <div class="proj-card" id="projCard">
         <div class="proj-title">Your INDX at the genesis reference</div>
         <div class="proj-row"><span class="proj-key">INDX tokens</span><span class="proj-val" id="projIndx">208</span></div>
         <div class="proj-row"><span class="proj-key">At genesis ($0.24)</span><span class="proj-val" id="projNow">$49.92</span></div>
@@ -840,6 +845,11 @@
   // ⚠️ STRIPE SETUP: Replace with your Stripe publishable key from stripe.com/dashboard
   // Test key format: pk_test_51... | Live key: pk_live_51...
   const STRIPE_PK = 'pk_test_REPLACE_WITH_YOUR_STRIPE_PUBLISHABLE_KEY';
+  // REMOVED 2026-07-30 — treasury address must never appear in citizen-facing page source.
+  // It was a dead constant (declared, never read) left behind when the copyable address,
+  // the PayID line and the Solana Pay QR were removed on 2026-07-29. A published treasury
+  // address is the raw material for a "send your money here" scam page. PQSI Check 10
+  // (payment targets) now fails any screen that reintroduces one.
   const INDX_PRICE_USD = 0.24;
   const GENESIS_BONUS = 50;
 
@@ -951,22 +961,17 @@
 
   async function confirmPayidSent() {
     closeModal('payidModal');
-    const usd = parseFloat(document.getElementById('audInput').value) || 0;
-    const purchased = Math.floor(usd / INDX_PRICE_USD);
-    const bonus = !genesisUsed ? GENESIS_BONUS : 0;
-    const total = purchased + bonus;
     const ref = document.getElementById('payidRef').dataset.ref || makeRef();
 
-    // INSERT pending transaction to Supabase
-    if (citizenId) {
-      await sb.from('transactions').insert({
-        citizen_id: citizenId,
-        amount_indx: total,
-        direction: 'receive',
-        counterparty_address: `fiat_payid:${ref}`,
-        status: 'pending'
-      });
-    }
+    // FIXED: this used to insert a status:'pending' row into the real
+    // transactions table. There is no reconciliation system anywhere in
+    // this codebase that could ever move it to 'complete' — it would sit
+    // there permanently. history.html now correctly renders real status
+    // values instead of hardcoding "Complete", which meant this row would
+    // have shown as "Pending" forever in the citizen's own history,
+    // directly contradicting the disclosure below that nothing happened.
+    // The reference number is shown to the citizen but nothing is written
+    // to the real ledger, since no real transaction occurred.
 
     document.getElementById('pendingSub').textContent =
       `No PayID payment was taken — no receiving account or reconciliation exists. Nothing has been charged. INDX purchases open at launch. Do not send money in the meantime. Any funds sent now cannot be traced or credited. Standing by.`;//` hours. SIINDEX will notify you.`;
@@ -987,22 +992,13 @@
 
   async function confirmUsdcSent() {
     closeModal('usdcModal');
-    const usd = parseFloat(document.getElementById('audInput').value) || 0;
-    const purchased = Math.floor(usd / INDX_PRICE_USD);
-    const bonus = !genesisUsed ? GENESIS_BONUS : 0;
-    const total = purchased + bonus;
     const ref = document.getElementById('usdcRef').dataset.ref || makeRef();
 
-    // INSERT pending transaction to Supabase
-    if (citizenId) {
-      await sb.from('transactions').insert({
-        citizen_id: citizenId,
-        amount_indx: total,
-        direction: 'receive',
-        counterparty_address: `usdc_solana:${ref}`,
-        status: 'pending'
-      });
-    }
+    // FIXED: same issue as confirmPayidSent above — no reconciliation
+    // system exists, so a 'pending' row here would sit unresolved forever
+    // and (after history.html's status-badge fix) show as permanently
+    // "Pending" in the citizen's own history. Nothing is written to the
+    // real ledger for a transfer that was never actually verified.
 
     document.getElementById('pendingSub').textContent =
       `No USDC transfer was recorded — there is no on-chain reconciliation linking a deposit to your account. Nothing has been charged. INDX purchases open at launch. Do not send USDC in the meantime; it is irreversible and cannot be credited. Standing by.`;//` within 1–2 hours.`;
@@ -1051,44 +1047,59 @@
       return;
     }
 
-    // Payment succeeded — credit via the real credit_stripe_purchase RPC.
-    // Previously this did a direct client-side `sb.from('citizens').update()`,
-    // which citizens' RLS policies (all gated on auth.uid() = auth_user_id)
-    // silently block for this app's anon-key-only sessions — confirmed live:
-    // the balance was NEVER actually credited despite a real Stripe charge
+    // Payment succeeded on the card. Crediting the balance is now handled by a real
+    // server-side Stripe webhook (stripe-webhook edge function, verifies the signed
+    // event from Stripe directly) that calls credit_stripe_purchase with the
+    // service-role key — NOT by this page.
+    //
+    // FIXED 2026-08-29: this used to call credit_stripe_purchase directly from the
+    // browser with the anon key right here. Two real problems with that: (1)
+    // credit_stripe_purchase was never actually reachable that way — it's granted
+    // only to service_role, not anon/authenticated, confirmed live, so this call
+    // was already a silent 42501 no-op every time; and (2) even if it had been
+    // reachable, confirmCardPayment() resolving in the browser isn't proof a charge
+    // was actually captured — a malicious client could skip Stripe entirely and
+    // call credit_stripe_purchase with a made-up payment_intent_id to mint itself
+    // free INDX. The only real proof is Stripe's own signed webhook event, so
+    // that's the only thing allowed to trigger a credit now.
+    //
+    // This page polls for the resulting transaction row instead of writing the
+    // balance itself.
     if (citizenId) {
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/credit_stripe_purchase`, {
-          method: 'POST',
-          headers: { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + SUPABASE_ANON, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            p_citizen_id: citizenId,
-            p_amount_indx: total,
-            p_amount_usd: usd,
-            p_stripe_payment_intent_id: result.paymentIntent.id
-          })
-        });
-        const data = await res.json();
-        if (data && data.success) {
-          sessionStorage.setItem('citizen_balance', String(data.new_balance));
-        } else {
-          // Real payment succeeded but the credit failed server-side (e.g.
-          // already credited, or a genuine error) — don't claim success on
-          // a balance that wasn't actually moved. The Stripe charge already
-          // went through, so surface this loudly rather than silently.
-          document.getElementById('card-errors').textContent =
-            'Payment received but crediting your balance failed (' + (data?.error || 'unknown error') + '). Contact support with reference ' + result.paymentIntent.id + '.';
-          return;
-        }
-      } catch (e) {
+      const credited = await pollForStripeCredit(result.paymentIntent.id, citizenId);
+      if (!credited) {
         document.getElementById('card-errors').textContent =
-          'Payment received but we could not confirm your balance credit. Contact support with reference ' + result.paymentIntent.id + '.';
+          'Payment received — crediting your balance can take a few seconds. If it hasn’t shown up shortly, contact support with reference ' + result.paymentIntent.id + '.';
         return;
       }
     }
 
     genesisUsed = true;
     showSuccess(usd, total, bonus);
+  }
+
+  // Polls for the transaction row the stripe-webhook function writes once Stripe's
+  // signed event lands (usually within a second or two, but webhooks are
+  // best-effort on timing). Real reads against the real transactions table — no
+  // synthetic countdown, no fabricated "processing" animation with a fixed fake
+  // duration.
+  async function pollForStripeCredit(paymentIntentId, citizenIdToCheck, attempts = 10) {
+    for (let i = 0; i < attempts; i++) {
+      await new Promise(r => setTimeout(r, 1500));
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/transactions?citizen_id=eq.${citizenIdToCheck}&counterparty_address=eq.stripe:${paymentIntentId}&select=id,amount_indx`,
+          { headers: { apikey: SUPABASE_ANON, Authorization: 'Bearer ' + SUPABASE_ANON } }
+        );
+        const rows = await res.json();
+        if (Array.isArray(rows) && rows.length > 0) {
+          const { data: citizenRow } = await sb.from('citizens').select('indx_balance').eq('id', citizenIdToCheck).single();
+          if (citizenRow) sessionStorage.setItem('citizen_balance', String(citizenRow.indx_balance));
+          return true;
+        }
+      } catch (e) { /* keep polling */ }
+    }
+    return false;
   }
 
   // ── SUCCESS ──
@@ -1253,6 +1264,8 @@
     const total = indxAmt + (document.getElementById('summaryBonus') ? 50 : 0);
     document.getElementById('projIndx').textContent = Math.round(total) + ' INDX';
     document.getElementById('projNow').textContent = '$' + (total*INDX_PRICE_USD).toFixed(2);
+    // AUDIT 2026-07-30: removed writes to #projAt1 (a 4.2x "At $1.00" row) and #projAt250 (deleted
+    // element, so this line threw a TypeError and aborted the calculator on every keystroke).
   };
 
   // ── GOD MODE: FEATURE 8 — Purchase History Feed ──

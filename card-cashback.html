@@ -110,6 +110,33 @@
   .ref-reward{font-size:22px;font-weight:900;color:var(--cyan);margin-bottom:4px;}
   .ref-reward-sub{font-size:11px;color:var(--text-muted);margin-bottom:14px;}
   .ref-btn{width:100%;padding:13px;border-radius:12px;background:linear-gradient(135deg,var(--cyan),var(--purple));border:none;color:#000;font-size:14px;font-weight:800;cursor:pointer;}
+
+  /* GOD MODE: LIVE VAULT TICKER, VISIT-DELTA SNAPSHOT, TIER PROGRESS, SHARE SHEET */
+  .live-ticker{display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 12px;background:rgba(0,229,160,0.06);border:1px solid rgba(0,229,160,0.15);border-radius:10px;font-size:11px;color:var(--green);font-weight:700;}
+  .live-ticker-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:liveDotPulse 1.4s ease-in-out infinite;flex-shrink:0;}
+  @keyframes liveDotPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(0,229,160,0.5);}50%{opacity:0.5;box-shadow:0 0 0 4px rgba(0,229,160,0);}}
+  .live-ticker-label{color:var(--text-muted);font-weight:600;margin-left:auto;}
+
+  .visit-delta{display:none;align-items:center;gap:6px;margin:0 0 14px;padding:8px 12px;background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.15);border-radius:10px;font-size:11px;color:var(--cyan);font-weight:700;}
+
+  .tier-progress-card{display:none;margin:12px 20px 0;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;}
+  .tier-progress-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:12px;font-weight:800;}
+  .tier-progress-top #tierProgressPct{color:var(--cyan);}
+  .tier-progress-bar{height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;margin-bottom:8px;}
+  .tier-progress-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--cyan),var(--purple));width:0%;transition:width 1s cubic-bezier(0.22,1,0.36,1);}
+  .tier-progress-sub{font-size:11px;color:var(--text-muted);line-height:1.4;}
+
+  .ref-btn-secondary{width:100%;padding:12px;border-radius:12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;font-weight:700;cursor:pointer;margin-top:10px;}
+
+  .sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.6);z-index:200;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+  .sheet-overlay.open{opacity:1;pointer-events:auto;}
+  .bottom-sheet{position:fixed;left:0;right:0;bottom:0;max-width:430px;margin:0 auto;background:var(--surface2);border:1px solid var(--border);border-bottom:none;border-radius:20px 20px 0 0;padding:10px 20px 24px;z-index:201;transform:translateY(100%);transition:transform 0.3s cubic-bezier(0.22,1,0.36,1);}
+  .bottom-sheet.open{transform:translateY(0);}
+  .sheet-handle{width:36px;height:4px;background:var(--surface3);border-radius:99px;margin:6px auto 14px;}
+  .sheet-title{font-size:15px;font-weight:800;margin-bottom:14px;text-align:center;}
+  .sheet-option{width:100%;text-align:left;padding:14px 12px;border-radius:12px;background:var(--surface3);border:none;color:var(--text);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;}
+  .sheet-option:focus-visible{outline:2px solid var(--cyan);}
+  .sheet-cancel{width:100%;padding:13px;border-radius:12px;background:transparent;border:1px solid var(--border);color:var(--text-muted);font-size:13px;font-weight:700;cursor:pointer;margin-top:4px;}
 </style>
 </head>
 <body>
@@ -139,8 +166,14 @@
       <div class="vc-title">🏛️ My Genesis Vault</div>
       <div class="vc-apy" id="vcApy">—</div>
     </div>
+    <div class="visit-delta" id="visitDelta"></div>
     <div id="vaultBody">
       <div style="font-size:12px;color:var(--text-muted);text-align:center;padding:8px 0;">Loading your real vault…</div>
+    </div>
+    <div class="live-ticker" id="vaultLiveTicker" style="display:none;">
+      <span class="live-ticker-dot"></span>
+      <span id="vaultLiveTickerVal">+0.000000 INDX</span>
+      <span class="live-ticker-label">earning live</span>
     </div>
   </div>
 
@@ -174,6 +207,16 @@
     </div>
   </div>
 
+  <!-- TIER PROGRESS TRACKER -->
+  <div class="tier-progress-card" id="tierProgressCard">
+    <div class="tier-progress-top">
+      <span id="tierProgressLabel">Progress to next tier</span>
+      <span id="tierProgressPct">0%</span>
+    </div>
+    <div class="tier-progress-bar"><div class="tier-progress-fill" id="tierProgressFill" style="width:0%;"></div></div>
+    <div class="tier-progress-sub" id="tierProgressSub"></div>
+  </div>
+
   <!-- REFERRAL — REAL -->
   <div class="section-title">Refer & Earn</div>
   <div class="referral-card">
@@ -182,8 +225,20 @@
     <div class="ref-reward" id="refReward">+50 INDX</div>
     <div class="ref-reward-sub" id="refSub">per successful referral · No limit on referrals</div>
     <button class="ref-btn" id="refBtn" onclick="copyReferralLink()">Copy My Referral Link →</button>
+    <button class="ref-btn-secondary" id="moreShareBtn" onclick="openShareSheet()">More Ways to Share</button>
   </div>
 
+</div>
+
+<div class="sheet-overlay" id="shareSheetOverlay" onclick="closeShareSheet()"></div>
+<div class="bottom-sheet" id="shareSheet" role="dialog" aria-modal="true" aria-labelledby="shareSheetTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="shareSheetTitle">Share Your Referral Link</div>
+  <button class="sheet-option" onclick="shareVia('native')">📤 Share via…</button>
+  <button class="sheet-option" onclick="shareVia('copy')">🔗 Copy Link</button>
+  <button class="sheet-option" onclick="shareVia('sms')">💬 Share via SMS</button>
+  <button class="sheet-option" onclick="shareVia('email')">✉️ Share via Email</button>
+  <button class="sheet-cancel" onclick="closeShareSheet()">Cancel</button>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
@@ -217,6 +272,122 @@
     return data;
   }
 
+  // GOD MODE: live vault ticker, visit-delta snapshot, tier progress, share sheet
+  const LS_LAST_VAULT_KEY = 'indx_card-cashback_lastvault';
+  let _liveTickerInterval = null;
+  let _liveTickerBase = 0;
+  let _liveTickerPerSec = 0;
+  let _liveTickerStart = 0;
+
+  function startVaultTicker(totalAccrued, dailyEarn) {
+    stopVaultTicker();
+    _liveTickerBase = totalAccrued || 0;
+    _liveTickerPerSec = (dailyEarn || 0) / 86400;
+    _liveTickerStart = Date.now();
+    const wrap = document.getElementById('vaultLiveTicker');
+    const val = document.getElementById('vaultLiveTickerVal');
+    if (!wrap || !val || _liveTickerPerSec <= 0) return;
+    wrap.style.display = 'flex';
+    val.textContent = _liveTickerBase.toFixed(6) + ' INDX unclaimed';
+    _liveTickerInterval = setInterval(() => {
+      const elapsed = (Date.now() - _liveTickerStart) / 1000;
+      const current = _liveTickerBase + (_liveTickerPerSec * elapsed);
+      val.textContent = current.toFixed(6) + ' INDX unclaimed';
+    }, 1000);
+  }
+  function stopVaultTicker() {
+    if (_liveTickerInterval) { clearInterval(_liveTickerInterval); _liveTickerInterval = null; }
+    const wrap = document.getElementById('vaultLiveTicker');
+    if (wrap) wrap.style.display = 'none';
+  }
+
+  function showVaultVisitDelta(totalBal, totalAccrued) {
+    const raw = localStorage.getItem(LS_LAST_VAULT_KEY) || '';
+    const el = document.getElementById('visitDelta');
+    if (raw && el) {
+      try {
+        const last = JSON.parse(raw);
+        const deltaBal = totalBal - (parseFloat(last.totalBal) || 0);
+        if (deltaBal > 0.0001) {
+          const usd = (deltaBal * INDX_PRICE_USD).toFixed(2);
+          el.style.display = 'flex';
+          el.textContent = '📈 +' + deltaBal.toFixed(3) + ' INDX (~$' + usd + ') since your last visit';
+        } else {
+          el.style.display = 'none';
+        }
+      } catch (e) { /* ignore corrupt snapshot */ }
+    }
+    localStorage.setItem(LS_LAST_VAULT_KEY, JSON.stringify({ totalBal: totalBal, totalAccrued: totalAccrued, ts: Date.now() }));
+  }
+
+  function updateTierProgress(wisdom, activeTier) {
+    const card = document.getElementById('tierProgressCard');
+    const fill = document.getElementById('tierProgressFill');
+    const pct = document.getElementById('tierProgressPct');
+    const label = document.getElementById('tierProgressLabel');
+    const sub = document.getElementById('tierProgressSub');
+    if (!card || !fill || !pct || !label || !sub) return;
+    card.style.display = 'block';
+    if (activeTier >= 3) {
+      label.textContent = 'Tier 3 Sovereign Elder — max tier';
+      pct.textContent = '100%';
+      fill.style.width = '100%';
+      sub.textContent = 'You have reached the highest wisdom tier (score ' + wisdom + ').';
+      return;
+    }
+    const floor = activeTier === 1 ? 0 : 100;
+    const target = activeTier === 1 ? 100 : 200;
+    const progress = Math.max(0, Math.min(1, (wisdom - floor) / (target - floor)));
+    label.textContent = 'Progress to Tier ' + (activeTier + 1);
+    pct.textContent = Math.round(progress * 100) + '%';
+    fill.style.width = (progress * 100) + '%';
+    sub.textContent = wisdom + ' / ' + target + ' wisdom score — ' + Math.max(0, target - wisdom) + ' more to unlock the next tier.';
+  }
+
+  function shareSheetKeyHandler(e) {
+    if (e.key === 'Escape') { closeShareSheet(); return; }
+    if (e.key === 'Tab') {
+      const sheet = document.getElementById('shareSheet');
+      if (!sheet) return;
+      const focusable = sheet.querySelectorAll('button');
+      if (!focusable.length) return;
+      const first = focusable[0], last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }
+  function openShareSheet() {
+    if (!referralCode) { showToast('Loading your referral code — try again in a moment'); return; }
+    const overlay = document.getElementById('shareSheetOverlay');
+    const sheet = document.getElementById('shareSheet');
+    if (!overlay || !sheet) return;
+    overlay.classList.add('open');
+    sheet.classList.add('open');
+    document.addEventListener('keydown', shareSheetKeyHandler);
+    const firstBtn = sheet.querySelector('.sheet-option');
+    if (firstBtn) firstBtn.focus();
+  }
+  function closeShareSheet() {
+    const overlay = document.getElementById('shareSheetOverlay');
+    const sheet = document.getElementById('shareSheet');
+    if (overlay) overlay.classList.remove('open');
+    if (sheet) sheet.classList.remove('open');
+    document.removeEventListener('keydown', shareSheetKeyHandler);
+  }
+  async function shareVia(kind) {
+    if (!referralCode) { showToast('Loading your referral code — try again in a moment'); return; }
+    const link = `${BASE_URL}/join?ref=${referralCode}`;
+    if (kind === 'native' && navigator.share) {
+      try { await navigator.share({ title: 'Join me on IN$DEX', text: 'Join IN$DEX and we both earn INDX rewards.', url: link }); closeShareSheet(); return; }
+      catch (e) { /* user cancelled or unsupported — fall through to copy */ }
+    }
+    if (kind === 'sms') { window.location.href = 'sms:?body=' + encodeURIComponent('Join me on IN$DEX: ' + link); closeShareSheet(); return; }
+    if (kind === 'email') { window.location.href = 'mailto:?subject=' + encodeURIComponent('Join me on IN$DEX') + '&body=' + encodeURIComponent('Join IN$DEX using my link: ' + link); closeShareSheet(); return; }
+    try { await navigator.clipboard.writeText(link); showToast('🔗 Referral link copied: ' + link); }
+    catch (e) { showToast('Your link: ' + link + ' (copy failed — select manually)'); }
+    closeShareSheet();
+  }
+
   async function init() {
     await initRealSession();
     if (!citizenId) {
@@ -240,6 +411,8 @@
         tag.className = 'tier-tag ' + (t === activeTier ? 'active' : 'locked');
         tag.textContent = t === activeTier ? 'Current' : 'Score ' + (t === 2 ? 100 : 200);
       });
+      // GOD MODE PATCH — surface wisdom-score progress toward next tier
+      updateTierProgress(wisdom, activeTier);
     } catch (e) {
       showToast('Could not load your real tier right now');
     }
@@ -272,6 +445,10 @@
       body.innerHTML = `
         <div style="font-size:12px;color:var(--text-muted);text-align:center;padding:8px 0 4px;line-height:1.5;">You don't have an active staking position yet — Genesis Vault auto-compounding starts when you stake INDX.</div>
         <button class="ref-btn" style="margin-top:8px;" onclick="window.location.href='staking.html'">Start Staking →</button>`;
+      // GOD MODE PATCH — no vault means no live earnings to tick or compare
+      stopVaultTicker();
+      const visitDeltaEl = document.getElementById('visitDelta');
+      if (visitDeltaEl) visitDeltaEl.style.display = 'none';
       return;
     }
     const totalBal = positions.reduce((s,p) => s + parseFloat(p.amount_indx), 0);
@@ -289,6 +466,9 @@
         <div class="vc-stat"><div class="vc-stat-val">${totalAccrued.toFixed(2)} INDX</div><div class="vc-stat-label">Unclaimed rewards</div></div>
       </div>
       <div class="vc-projection">🔮 At your current blended APY, ${totalBal.toFixed(1)} INDX is projected to earn about <strong>+${yearEarn} INDX this year</strong> if left staked. <a href="staking.html" style="color:var(--cyan);">Manage in Staking →</a></div>`;
+    // GOD MODE PATCH — live-ticking unclaimed rewards + visit-over-visit delta
+    showVaultVisitDelta(totalBal, totalAccrued);
+    startVaultTicker(totalAccrued, parseFloat(dailyEarn));
   }
 
   async function copyReferralLink() {

@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>Sovereign Onboarding · IN$DEX</title>
+  <meta name="description" content="Join IN$DEX with just a phone number — no ID, no bank account, no face scan required for Tier 0. Real SMS code verification, account creation, and your wallet balance are all real.">
   <style>
     :root{--cyan:#00D4FF;--blue:#2B35D8;--purple:#8B3FE8;--black:#090A10;--green:#00E5A0;--gold:#FFB800;--red:#FF4D6D;--surface:#12141F;--surface2:#1A1D2E;--surface3:#22263A;--border:rgba(255,255,255,0.07);--text:#F0F2FF;--text-muted:rgba(240,242,255,0.45);--text-dim:rgba(240,242,255,0.2);}
     *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -136,14 +137,20 @@
   </div>
 
   <!-- STEP DOTS -->
-<div class="step-dots">
+  <!-- Corrected 2026-07-27: removed dot3 (was the Liveness step) — Tier 0 is now
+       phone + OTP only, so only 3 stages remain before the success screen. -->
+  <div class="step-dots">
     <div class="dot active" id="dot0"></div>
     <div class="dot" id="dot1"></div>
     <div class="dot" id="dot2"></div>
   </div>
 
   <!-- SCREEN 0: INTRO -->
-<div class="screen active" id="screen0">
+  <!-- Corrected 2026-07-27: Tier 0 no longer requires or presents a face scan/liveness
+       step. Founder decision: Tier 0 = phone number only, zero biometric. A face-verified
+       credential may become a future Tier 1 step but is never required to get started.
+       See screen3 below (kept, not deleted — no longer reachable from this flow). -->
+  <div class="screen active" id="screen0">
     <div class="screen-inner">
       <div class="intro-hero">
         <div class="ih-emoji">🛡️</div>
@@ -192,7 +199,7 @@
       <div class="step-card">
         <div class="sc-icon">📱</div>
         <div class="sc-title">Your phone number</div>
-        <div class="sc-sub">We'll send a 6-digit code to confirm it's really you. Standard SMS rates may apply.</div>
+        <div class="sc-sub">Enter your number to get started. We'll send a real 6-digit code by SMS to confirm you own this number.</div>
         <div class="phone-input-row">
           <div class="flag-select" onclick="showToast('Country selector 180+ countries')">🇦🇺 +61</div>
           <input class="phone-input" type="tel" id="phoneInput" placeholder="4XX XXX XXX" oninput="checkPhone()">
@@ -209,7 +216,7 @@
       <div class="step-card">
         <div class="sc-icon">💬</div>
         <div class="sc-title">Enter your code</div>
-        <div class="sc-sub" id="otpSub">We sent a 6-digit code to your number. Check your messages.</div>
+        <div class="sc-sub" id="otpSub">Enter the 6-digit code we texted you.</div>
         <div class="otp-row" id="otpRow">
           <div class="otp-box" id="otp0"></div>
           <div class="otp-box" id="otp1"></div>
@@ -239,7 +246,7 @@
     </div>
   </div>
 
-  <!-- SCREEN 3: LIVENESS SCAN — NOT PART OF TIER 0 -->
+  <!-- SCREEN 3: LIVENESS SCAN — NOT PART OF TIER 0 (corrected 2026-07-27) -->
   <!-- Per founder decision: Tier 0 must not require a face scan or liveness check.
        This screen is no longer reachable from the primary flow (OTP confirmation now
        calls completeOnboarding() directly). Left in place, not deleted, as a possible
@@ -308,6 +315,7 @@ let otpInterval = null;
 let scanRunning = false;
 
 function updateDots(step){
+  // Corrected 2026-07-27: loop bound 4→3 — dot3 (Liveness) was removed, see step-dots above.
   for(let i=0;i<3;i++){
     const d = document.getElementById('dot'+i);
     d.className = 'dot';
@@ -316,6 +324,8 @@ function updateDots(step){
   }
 }
 
+// Corrected 2026-07-27: screen3 (liveness scan) removed from the sequence — Tier 0 is
+// phone + OTP only. Step index 3 now maps straight to screen4 (success).
 function goToStep(step){
   const screens = ['screen0','screen1','screen2','screen4'];
   const titles = ['Sovereign Onboarding','Step 1 · Phone','Step 2 · Confirm','You\'re in ✓'];
@@ -337,22 +347,45 @@ function checkPhone(){
   document.getElementById('sendOtpBtn').disabled = v.length < 8;
 }
 
+// FIXED 2026-08-29: this OTP screen used to never send or check a real code — sendOtp() never
+// called Supabase Auth, and otpKey() accepted literally any 6 digits as "confirmed". Business
+// plan (2026-08-29) lists Tier 0 phone verification as "Build" status for the Feb 2027 launch.
+// sovereign-verify.html already proved a real Supabase Auth phone OTP mechanism works in this
+// project (sb.auth.signInWithOtp / sb.auth.verifyOtp, used there for the Tier 1 PayID upgrade) —
+// this wires the same real mechanism into the Tier 0 signup flow instead of duplicating fake UI
+// theater. Account creation was already real (create_onboarding_citizen); now the phone-ownership
+// check that precedes it is real too.
 async function sendOtp(){
   const v = document.getElementById('phoneInput').value;
-  verifiedPhone = '+61' + v;
+  verifiedPhone = '+61' + v.replace(/\s/g,'');
   const btn = document.getElementById('sendOtpBtn');
   btn.disabled = true; btn.textContent = 'Sending…';
 
-  // Try to look up existing citizen by phone
+  // Look up an existing citizen by phone (unchanged — get_citizen_by_phone returns a single
+  // object or null, not an array).
   try {
     const { data } = await sb.rpc('get_citizen_by_phone', { p_phone: verifiedPhone });
-    if (data && data.length > 0) citizenRecord = data[0];
+    if (data && data.id) citizenRecord = data;
   } catch(e) { /* silent — new citizen */ }
 
-  document.getElementById('otpSub').textContent = 'We sent a 6-digit code to ' + verifiedPhone + '. Check your messages.';
+  try {
+    const { error } = await sb.auth.signInWithOtp({ phone: verifiedPhone });
+    if (error) {
+      document.getElementById('phoneInput').focus();
+      showToast('Could not send code. Please try again.');
+      btn.disabled = false; btn.textContent = 'Send code →';
+      return;
+    }
+  } catch(e) {
+    showToast('Could not send code. Please try again.');
+    btn.disabled = false; btn.textContent = 'Send code →';
+    return;
+  }
+
+  document.getElementById('otpSub').textContent = 'Enter the 6-digit code we texted to ' + verifiedPhone + '.';
   goToStep(2);
   btn.disabled = false; btn.textContent = 'Send code →';
-  showToast('Code sent! Check your messages.');
+  showToast('Code sent to ' + verifiedPhone);
 }
 
 function startOtpTimer(){
@@ -382,12 +415,45 @@ function otpKey(k){
   }
   if(otpDigits.length === 6){
     clearInterval(otpInterval);
-    showToast('✓ Code confirmed!');
-    setTimeout(()=>completeOnboarding(), 700);
+    verifyOtpAndComplete();
   }
 }
 
-// startScan() / autoScanDemo() are orphaned from the primary flow — kept only in case screen3 is reused for a future,
+// FIXED 2026-08-29: replaces the old "any 6 digits continues" behavior — this now checks the
+// real code against Supabase Auth (same call sovereign-verify.html uses) before creating or
+// resuming the citizen record.
+async function verifyOtpAndComplete(){
+  const code = otpDigits.join('');
+  showToast('Verifying…');
+  try {
+    const { error } = await sb.auth.verifyOtp({ phone: verifiedPhone, token: code, type: 'sms' });
+    if (error) {
+      showToast('Invalid code — try again');
+      otpDigits = [];
+      for(let i=0;i<6;i++){
+        const box=document.getElementById('otp'+i);
+        box.textContent=''; box.classList.remove('filled');
+      }
+      startOtpTimer();
+      return;
+    }
+  } catch(e) {
+    showToast('Verification failed — try again');
+    otpDigits = [];
+    for(let i=0;i<6;i++){
+      const box=document.getElementById('otp'+i);
+      box.textContent=''; box.classList.remove('filled');
+    }
+    startOtpTimer();
+    return;
+  }
+  // Corrected 2026-07-27: previously routed to the liveness scan (old step 3) before
+  // completing. Tier 0 is phone + OTP only now — go straight to account creation.
+  setTimeout(()=>completeOnboarding(), 400);
+}
+
+// startScan() / autoScanDemo() are orphaned from the primary flow (corrected 2026-07-27,
+// see screen3 comment above) — kept only in case screen3 is reused for a future,
 // independently built Tier 1 biometric step. Not called by the Tier 0 wizard.
 function startScan(){
   if(scanRunning) return;
@@ -418,7 +484,14 @@ function autoScanDemo(){
       document.getElementById('camRing').classList.add('success');
       document.getElementById('scanIcon').textContent = '✅';
       document.getElementById('scanText').textContent = 'Verification complete!';
-      document.getElementById('scanSub').textContent = 'Your identity is confirmed. ZK-proof generated on device.';
+      // DEAD CODE WARNING: this whole scan sequence is scripted (setInterval
+      // timers, not a real camera/liveness check) and this line previously
+      // claimed a "ZK-proof generated on device" that never existed. Left
+      // orphaned/unreachable on purpose (see note above autoScanDemo) — if
+      // this is ever wired back into the live flow for a real Tier 1
+      // biometric step, this entire function must be replaced with actual
+      // capture + verification, not just this string.
+      document.getElementById('scanSub').textContent = 'Preview only — no real scan or proof was performed.';
       showToast('You\'re in. Welcome to IN$DEX 🎉');
       completeOnboarding();
     }
@@ -427,24 +500,67 @@ function autoScanDemo(){
 
 async function completeOnboarding() {
   try {
-    // Link auth or create citizen. p_zk_proof is a placeholder identifier for this
-    // Tier 0 phone-only flow (no biometric scan occurs) — kept as-is to match the
-    // existing link_citizen_auth RPC contract; not a claim of biometric verification.
-    const zkProof = 'zk_' + Array.from({length:16},()=>Math.floor(Math.random()*16).toString(16)).join('');
-    const { data, error } = await sb.rpc('link_citizen_auth', {
-      p_phone:    verifiedPhone,
-      p_zk_proof: zkProof
-    });
-    if (!error && data) {
-      citizenRecord = data;
-      sessionStorage.setItem('citizen_id',      data.id || data.citizen_id || '');
-      sessionStorage.setItem('citizen_name',     data.name || data.full_name || 'Sovereign');
-      sessionStorage.setItem('citizen_balance',  data.balance_indx || '0');
-      sessionStorage.setItem('citizen_wisdom',   data.wisdom_score || '0');
-      // BUGFIX 2026-08-05: citizen_web3_domain is the canonical key read by the rest of
-      // the app; citizen_domain alone was invisible to every other screen. Both written.
-      sessionStorage.setItem('citizen_web3_domain', data.sovereign_domain || '');
-      sessionStorage.setItem('citizen_domain',   data.sovereign_domain || '');
+    // FIXED 2026-08-29: verifyOtpAndComplete() now runs a real sb.auth.verifyOtp() before this
+    // ever executes, so there IS a real Supabase Auth session on this phone number by the time
+    // we get here, so future RLS-gated calls (like transfer_indx's caller-ownership check)
+    // work for this citizen too.
+    // FIXED 2026-09-04: the link call used to fire here, before the citizen id was even known
+    // for a brand-new signup (citizenRecord is null in that case — the id only exists after
+    // create_onboarding_citizen below) — and it used link_citizen_auth(p_phone, p_auth_id),
+    // which had no EXECUTE grant for anon/authenticated at all, so it always failed silently
+    // regardless. Moved below, once the real citizen id is known either way, and switched to
+    // link_citizen_auth_by_id(p_citizen_id) which self-heals phone_number from auth.users.phone
+    // instead of trusting a re-derived client-side phone string.
+    if (citizenRecord && citizenRecord.id) {
+      // BACKEND FIX 2026-08-29: get_citizen_by_phone() now only returns citizen_name/
+      // indx_balance/wisdom_score/web3_domain to the verified phone owner (or founder) --
+      // previously any anonymous caller could pass any phone number and get a real
+      // citizen's name back, a phone-to-identity leak. The sendOtp() lookup above runs
+      // before OTP verification, so it now only gets back {id}. Re-fetch here, after
+      // verifyOtpAndComplete()'s real sb.auth.verifyOtp() has run, so this call is
+      // authenticated as the actual phone owner and gets the full record.
+      try {
+        const { data: verified } = await sb.rpc('get_citizen_by_phone', { p_phone: verifiedPhone });
+        if (verified && verified.id) citizenRecord = verified;
+      } catch (refetchErr) { /* non-fatal — fall back to the id-only pre-OTP record */ }
+
+      sessionStorage.setItem('citizen_id',      citizenRecord.id || '');
+      sessionStorage.setItem('citizen_name',     citizenRecord.citizen_name || 'Sovereign');
+      sessionStorage.setItem('citizen_balance',  citizenRecord.indx_balance || '0');
+      sessionStorage.setItem('citizen_wisdom',   citizenRecord.wisdom_score || '0');
+      sessionStorage.setItem('citizen_domain',   citizenRecord.web3_domain || '');
+      if (citizenRecord.id) {
+        try { await sb.rpc('link_citizen_auth_by_id', { p_citizen_id: citizenRecord.id }); } catch (linkErr) { /* non-fatal */ }
+      }
+    } else {
+      const { data, error } = await sb.rpc('create_onboarding_citizen', {
+        p_payload: { phone_number: verifiedPhone, citizen_name: 'Sovereign' }
+      });
+      if (!error && data && data.success && data.id) {
+        sessionStorage.setItem('citizen_id', data.id);
+        sessionStorage.setItem('citizen_name', 'Sovereign');
+        try { await sb.rpc('link_citizen_auth_by_id', { p_citizen_id: data.id }); } catch (linkErr) { /* non-fatal */ }
+        // FIXED 2026-08-21: this branch used to leave balance/wisdom at 0 --
+        // unlike join.html, grid-account-onboarding.html, and
+        // quickstart-onboarding.html, which all call
+        // claim_genesis_signup_bonus_anon() right after create_onboarding_citizen
+        // to grant the real 50 INDX / 25 Wisdom welcome bonus. claim-gift.html
+        // routes here promising exactly that ("Your gift lands... 50 INDX") but
+        // nothing granted it. Matching the same real pattern used elsewhere.
+        try {
+          const bonus = await sb.rpc('claim_genesis_signup_bonus_anon', { p_citizen_id: data.id });
+          if (bonus && bonus.data && bonus.data.success) {
+            sessionStorage.setItem('citizen_balance', String(bonus.data.indx_balance));
+            sessionStorage.setItem('citizen_wisdom', String(bonus.data.wisdom_score));
+          } else {
+            sessionStorage.setItem('citizen_balance', '0');
+            sessionStorage.setItem('citizen_wisdom', '0');
+          }
+        } catch (bonusErr) {
+          sessionStorage.setItem('citizen_balance', '0');
+          sessionStorage.setItem('citizen_wisdom', '0');
+        }
+      }
     }
   } catch(e) {
     // Demo mode — set placeholder session
@@ -452,14 +568,14 @@ async function completeOnboarding() {
     sessionStorage.setItem('citizen_balance', '0');
     sessionStorage.setItem('citizen_wisdom', '0');
   }
+  // Corrected 2026-07-27: success screen is now step index 3 (screen3/liveness removed
+  // from the sequence — see goToStep()), not 4.
   setTimeout(() => goToStep(3), 1200);
 }
 
 function finishOnboarding() {
   // Route to claim-domain if no domain yet, else dashboard
-  // BUGFIX 2026-08-05: read canonical key first, else a citizen who already had a domain
-  // from onboarding-flow.html was sent back to claim-domain.html to re-claim it.
-  const domain = sessionStorage.getItem('citizen_web3_domain') || sessionStorage.getItem('citizen_domain');
+  const domain = sessionStorage.getItem('citizen_domain');
   if (!domain) {
     window.location.href = 'claim-domain.html';
   } else {
@@ -553,8 +669,16 @@ function startResendCooldown() {
   }, 1000);
 }
 
-function triggerResend() {
-  showToast('New code sent to your number');
+async function triggerResend() {
+  try {
+    const { error } = await sb.auth.signInWithOtp({ phone: verifiedPhone });
+    if (error) { showToast('Could not send code. Please try again.'); return; }
+    showToast('New code sent');
+    startOtpTimer();
+  } catch(e) {
+    showToast('Could not send code. Please try again.');
+    return;
+  }
   startResendCooldown();
 }
 </script>

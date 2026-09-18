@@ -122,6 +122,18 @@
     <div class="tb-right"></div>
   </div>
 
+  <!-- AUDIT 2026-08-21 — PAGE-LEVEL STATUS BANNER.
+       This page had zero disclosure anywhere: "SIM swap protection active",
+       "SIINDEX monitors your device ID... triggers instant card freeze", "SIINDEX
+       monitors for fraudulent activity" are all unhedged present-tense claims about
+       real-time security monitoring with no backend wiring anywhere in this file (no
+       sb.rpc/sb.from calls at all) -- and the card system itself is already
+       established elsewhere (card-cashback.html) as planned, not live. -->
+  <div style="max-width:430px;margin:12px auto 0;padding:14px 16px;border-radius:12px;background:rgba(255,184,0,0.10);border:1px solid rgba(255,184,0,0.45);">
+    <div style="font-weight:800;font-size:14px;color:#FFB800;margin-bottom:4px;">Planned — not live yet</div>
+    <div style="font-size:12px;line-height:1.5;color:#8A93AD;">IN$DEX physical/virtual cards have not launched. There is no live card to freeze, no device-ID or SIM-swap monitoring running, and no fraud-detection service watching this account. Everything on this screen previews how card security is designed to work.</div>
+  </div>
+
   <!-- FREEZE HERO -->
   <div class="freeze-hero active" id="freezeHero">
     <span class="fh-icon" id="freezeIcon">🟢</span>
@@ -357,6 +369,11 @@
         body: JSON.stringify({ p_citizen_id: citizenId, p_frozen: next })
       });
       const data = await res.json();
+      // FIXED 2026-09 (Approval Gateway wiring): unfreeze is now gated
+      // (agent_registry risk_class=3) and can come back as a normal 200
+      // {success:false, pending_approval:true} -- distinguish that from a real
+      // failure so the citizen knows to check Approvals rather than just retry.
+      if (data && data.pending_approval) { showToast('👆 Unfreezing needs your approval first — check Approvals, then try again.'); return; }
       if (!res.ok || !data || data.success === false) { showToast('Could not update card — try again'); return; }
       _cardFrozenAt = next ? new Date().toISOString() : null; // GOD MODE PATCH — real duration counter needs this
       renderFreezeUI(next, false);
@@ -490,11 +507,11 @@
       const row = rows && rows[0];
       if (!row) { showToast('Could not verify — try again'); return; }
       if (row.card_lost_reported_at) {
-        showToast('✅ Verified: card is permanently blocked (reported lost/stolen) — confirmed server-side, right now.');
+        showToast('✅ card_lost_reported_at is set on your real account. 🚧 No physical/virtual card exists yet — nothing to actually block.');
       } else if (row.card_frozen) {
-        showToast('✅ Verified: card_frozen = true on your real account — any transfer, withdrawal or purchase attempt is rejected server-side right now.');
+        showToast('✅ card_frozen = true on your real account. 🚧 No live card exists yet — there is nothing to actually reject.');
       } else {
-        showToast('✅ Verified: your card is active on your real account — real payments are currently allowed.');
+        showToast('✅ card_frozen = false on your real account. 🚧 Preview only — no live card or real payments exist yet.');
       }
       // Reconcile UI in case it had drifted from the real state
       renderFreezeUI(!!row.card_frozen, !!row.card_lost_reported_at);

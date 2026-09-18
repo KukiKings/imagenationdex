@@ -5,6 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>IN$DEX SovereignPay</title>
+<meta name="description" content="Send and request INDX with other IN$DEX citizens. Payments record instantly in IN$DEX's own ledger — INDX is not yet a live token on Solana.">
 <style>
   :root {
     --cyan:#00D4FF; --cyan-dim:#0099BB; --cyan-bg:#071825; --cyan-border:#0A2535;
@@ -277,7 +278,7 @@
             <div class="rp-avatar" id="rpAvatar">J</div>
             <div>
               <div class="rp-name" id="rpName">Jake Nuku</div>
-              <div class="rp-domain" id="rpDomain">jakenuku.IN$DEX · ✓ Verified</div>
+              <div class="rp-domain" id="rpDomain">jakenuku.IN$DEX · unverified — checked when you send</div>
             </div>
             <div class="rp-check">✓</div>
           </div>
@@ -334,10 +335,14 @@
           <div class="fee-row"><span class="fee-label">Recipient receives</span><span class="fee-val cyan" id="feeRecv"></span></div>
           <!-- FIXED 2026-07-25: was fabricated data — "Live settlement" pulsed a random-walking
                number (no real settlement telemetry exists), reworded to a static factual claim about
-               Solana network speed instead of a fake live monitor — see gotchas.md. -->
+               Solana network speed instead of a fake live monitor — see gotchas.md.
+               FIXED 2026-09-10 (screen audit): "· Solana" implied this payment settles on-chain
+               today. No INDX SPL token is deployed yet — transfer_indx settles in IN$DEX's own
+               ledger, not on Solana (same correction already applied to remittance.html's
+               2026-09-05 honesty fix). Reworded to name the ledger instead. -->
           <div class="settle-ticker">
             <div class="settle-dot"></div>
-            ⚡ Typical settlement: <strong id="settleSpeed">~0.4s</strong> avg · Solana
+            ⚡ Typical settlement: <strong id="settleSpeed">~0.4s</strong> avg · IN$DEX ledger
           </div>
           <!-- FIXED 2026-07-25: was fabricated data — "Civilisation Fund today" showed a fake
                DAILY=1200 INDX/day estimate that filled up live based on time-of-day, with zero real
@@ -448,7 +453,7 @@
   <div class="pcs-title">Confirm Payment</div>
   <div class="pcs-diagram">
     <div class="pcs-from" id="pcsFrom">25 INDX</div>
-    <div class="pcs-via">→ Solana · under 1 second →</div>
+    <div class="pcs-via">→ IN$DEX ledger · under 1 second →</div>
     <div class="pcs-to" id="pcsTo">Jake Nuku receives 24.5 INDX</div>
   </div>
   <div id="pcsRows"></div>
@@ -457,11 +462,27 @@
   <button onclick="closePayConfirm()" style="background:none;border:none;color:var(--text-muted);font-size:14px;width:100%;padding:12px;cursor:pointer;">Cancel</button>
 </div>
 
+<!-- Approval Gateway sheet — added 2026-09-05 (god mode Item 7, core stabilization sweep).
+     transfer_indx is risk_class>=3-gated (Session 100), so a real send can come back
+     {success:false, pending_approval:true, intent_id} instead of sending. This screen was
+     missed in the original Approval Gateway wiring (Session 100 wired pay.html/remittance.html
+     but not this one) — executePayment() only checked data.success===false and threw, which
+     showed the gate's message as a plain red error toast with no way to actually approve and
+     complete the send. Same pattern as remittance.html's showTransferGate(). -->
+<div class="sheet-overlay" id="gateOverlay" onclick="closeGateSheet()"></div>
+<div class="pay-confirm-sheet" id="gateSheet">
+  <div class="pcs-handle"></div>
+  <div class="pcs-title">🔐 Approval needed</div>
+  <div class="pcs-diagram" id="gateText" style="text-align:left;">This transfer needs your explicit approval before it can complete.</div>
+  <button class="btn-primary" id="gateApproveBtn" onclick="approveGateAndResend()" style="margin-top:12px;">Approve & Send</button>
+  <button onclick="closeGateSheet()" style="background:none;border:none;color:var(--text-muted);font-size:14px;width:100%;padding:12px;cursor:pointer;">Cancel</button>
+</div>
+
 <!-- SUCCESS -->
 <div class="success-overlay" id="successOverlay">
   <div class="success-icon">✓</div>
   <div class="success-title" id="successTitle">Payment Sent</div>
-  <div class="success-sub" id="successSub">Your payment was confirmed on Solana in under 1 second.</div>
+  <div class="success-sub" id="successSub">Your payment was recorded in IN$DEX's ledger in under 1 second.</div>
   <div class="success-tx">TX: <span id="successTx">4mKp…9xQz</span></div>
   <button class="btn-primary" style="max-width:300px;margin-top:12px" onclick="window.location.href='receipt.html?type=payment'">View Receipt →</button>
   <button onclick="closeSuccess()" style="background:none;border:none;color:var(--text-muted);font-size:14px;margin-top:8px;cursor:pointer;padding:8px;">Send Another</button>
@@ -479,12 +500,27 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const citizenId   = sessionStorage.getItem('citizen_id');
 const citizenName = sessionStorage.getItem('citizen_name');
 
-const CONTACTS = [
-  { name:'Jake Nuku',     domain:'jakenuku',    color:'linear-gradient(135deg,#0099BB,#00D4FF)' },
-  { name:'Ana Reyes',     domain:'anareyes',    color:'linear-gradient(135deg,#8B5CF6,#2563EB)' },
-  { name:'Sione Fale',    domain:'sionefale',   color:'linear-gradient(135deg,#FFD700,#FFA500)' },
-  { name:'Maria Lima',    domain:'marialima',   color:'linear-gradient(135deg,#2ECC71,#16A34A)' },
-];
+// FIXED 2026-09-10 (screen audit): CONTACTS used to be 4 hardcoded demo names (Jake Nuku,
+// Ana Reyes, Sione Fale, Maria Lima) rendered under "Recent" and marked "✓ Verified" on match
+// or on any typed string over 5 chars — none of that was ever checked against a real citizen.
+// Same class of issue already fixed in remittance.html ("recipients are rendered only from
+// what this citizen has actually saved") and qr-scanner.html (FIX 2026-08-30, dropped the fake
+// "✓ Verified" badge — "recipient is checked when you tap Send"). Recent contacts now come only
+// from this citizen's own real send history (logPayment(), written after a real transfer_indx
+// call), and unmatched input is shown as unverified rather than falsely "Verified".
+const RECENT_COLORS = ['linear-gradient(135deg,#0099BB,#00D4FF)','linear-gradient(135deg,#8B5CF6,#2563EB)','linear-gradient(135deg,#FFD700,#FFA500)','linear-gradient(135deg,#2ECC71,#16A34A)'];
+function getRecentRecipients() {
+  let h = [];
+  try { h = JSON.parse(localStorage.getItem('indx_pay_hist') || '[]'); } catch(e) {}
+  const seen = new Set(), out = [];
+  for (const p of h) {
+    if (seen.has(p.domain)) continue;
+    seen.add(p.domain);
+    out.push(p);
+    if (out.length >= 4) break;
+  }
+  return out;
+}
 
 const INDX_PRICE_USD = 0.24;
 let requestVal = '0';
@@ -516,12 +552,13 @@ function selectFreq(el, freq) {
 // ── CONTACT SEARCH ────────────────────────────────────────────────────
 function filterContacts(q) {
   const ql = q.trim().toLowerCase();
-  const filtered = !ql ? CONTACTS : CONTACTS.filter(c =>
+  const all = getRecentRecipients();
+  const filtered = !ql ? all : all.filter(c =>
     c.name.toLowerCase().includes(ql) || c.domain.toLowerCase().includes(ql)
   );
-  document.getElementById('recentContacts').innerHTML = filtered.map(c => `
-    <div class="recent-item" onclick="fillRecipient('${c.domain}','${c.name}')">
-      <div class="ri-avatar" style="background:${c.color}">${c.name[0]}</div>
+  document.getElementById('recentContacts').innerHTML = filtered.map((c,i) => `
+    <div class="recent-item" onclick="fillRecipient('${c.domain}','${c.name}','✓ Sent before')">
+      <div class="ri-avatar" style="background:${RECENT_COLORS[i % RECENT_COLORS.length]}">${c.name[0]}</div>
       <div class="ri-body">
         <div class="ri-name">${c.name}</div>
         <div class="ri-domain">${c.domain}.IN$DEX</div>
@@ -608,31 +645,100 @@ async function executePayment() {
   btn.textContent = 'Sending…'; btn.disabled = true;
   try {
     const cleanDomain = domain.toLowerCase().replace(/\.indx$/i, '') + '.IN$DEX';
-    const { data, error } = await sb.rpc('transfer_indx', {
+    const rpcArgs = {
       p_sender_id:          citizenId,
       p_recipient_address:  cleanDomain,
       p_amount:             amt,
       p_note:               note || null
-    });
+    };
+    const { data, error } = await sb.rpc('transfer_indx', rpcArgs);
     if (error) throw error;
-    if (data && !data.success) throw new Error(data.error || 'Transfer failed');
-    if (data && data.new_balance !== undefined) {
-      sessionStorage.setItem('citizen_balance', data.new_balance);
-      const balEl = document.querySelector('.br-val');
-      if (balEl) balEl.textContent = parseFloat(data.new_balance).toFixed(2) + ' INDX';
+    // Approval Gateway: must be checked before the generic failure branch below —
+    // see comment on #gateOverlay above.
+    if (data && data.pending_approval) {
+      _lastSendArgs = { rpcArgs, name, domain };
+      btn.textContent = 'Send Payment →'; btn.disabled = false;
+      await showTransferGate(data.intent_id);
+      return;
     }
-    logPayment(name, domain, amt);
-    // Real transaction id from transfer_indx — never a fabricated hash.
-    const txRef = data && data.tx_id ? String(data.tx_id) : null;
-    document.getElementById('successTitle').textContent = 'Sent!';
-    document.getElementById('successSub').textContent = amt + ' INDX sent to ' + name + '. Sent instantly. Zero bank needed.';
-    document.getElementById('successTx').textContent = txRef ? (txRef.slice(0,4) + '…' + txRef.slice(-4)) : '—';
-    document.getElementById('successOverlay').classList.add('active');
+    if (data && !data.success) throw new Error(data.error || data.message || 'Transfer failed');
+    showPaymentSuccess(data, name, domain, amt);
   } catch(e) {
     showToast('❌ ' + (e.message || 'Transfer failed. Try again.'));
   } finally {
     btn.textContent = 'Send Payment →'; btn.disabled = false;
     updateSendBtn();
+  }
+}
+
+function showPaymentSuccess(data, name, domain, amt) {
+  if (data && data.new_balance !== undefined) {
+    sessionStorage.setItem('citizen_balance', data.new_balance);
+    const balEl = document.querySelector('.br-val');
+    if (balEl) balEl.textContent = parseFloat(data.new_balance).toFixed(2) + ' INDX';
+  }
+  logPayment(name, domain, amt);
+  // Real transaction id from transfer_indx — never a fabricated hash.
+  const txRef = data && data.tx_id ? String(data.tx_id) : null;
+  document.getElementById('successTitle').textContent = 'Sent!';
+  document.getElementById('successSub').textContent = amt + ' INDX sent to ' + name + '. Sent instantly. Zero bank needed.';
+  document.getElementById('successTx').textContent = txRef ? (txRef.slice(0,4) + '…' + txRef.slice(-4)) : '—';
+  document.getElementById('successOverlay').classList.add('active');
+}
+
+// ── Approval Gateway sheet — see comment above #gateOverlay ──
+let _lastSendArgs = null;
+
+async function showTransferGate(intentId) {
+  let cardData = null;
+  try {
+    const { data } = await sb.rpc('get_action_intent_card', { p_intent_id: intentId });
+    cardData = data;
+  } catch (e) {}
+  document.getElementById('gateText').textContent =
+    (cardData && !cardData.error && cardData.data_involved) ? cardData.data_involved
+      : 'This transfer needs your explicit approval before it can complete.';
+  document.getElementById('gateApproveBtn').dataset.intentId = intentId;
+  document.getElementById('gateOverlay').classList.add('open');
+  document.getElementById('gateSheet').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeGateSheet() {
+  document.getElementById('gateOverlay').classList.remove('open');
+  document.getElementById('gateSheet').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+async function approveGateAndResend() {
+  const gbtn = document.getElementById('gateApproveBtn');
+  const intentId = gbtn.dataset.intentId;
+  gbtn.disabled = true; gbtn.textContent = 'Approving…';
+  try {
+    const { data: grant } = await sb.rpc('grant_intent_approval', { p_intent_id: intentId, p_level: 1, p_method: 'citizen_app_confirm' });
+    if (!grant || !grant.success) throw new Error('Approval could not be recorded.');
+    closeGateSheet();
+    if (_lastSendArgs) {
+      // Re-run the identical transfer_indx call — the terms-hash match clears
+      // the gate server-side and the transfer executes for real this time.
+      const btn = document.getElementById('sendBtn');
+      btn.disabled = true; btn.textContent = 'Sending…';
+      try {
+        const { data, error } = await sb.rpc('transfer_indx', _lastSendArgs.rpcArgs);
+        if (error) throw error;
+        if (!data || data.success === false) throw new Error((data && (data.error || data.message)) || 'Transfer failed — nothing was sent.');
+        showPaymentSuccess(data, _lastSendArgs.name, _lastSendArgs.domain, _lastSendArgs.rpcArgs.p_amount);
+      } catch (e) {
+        showToast('❌ ' + (e.message || 'Transfer failed. Try again.'));
+      } finally {
+        btn.disabled = false; btn.textContent = 'Send Payment →';
+        updateSendBtn();
+      }
+    }
+  } catch (e) {
+    showToast(e.message || 'Approval failed. Try again.');
+  } finally {
+    gbtn.disabled = false; gbtn.textContent = 'Approve & Send';
   }
 }
 
@@ -672,9 +778,15 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 function renderRecent() {
-  document.getElementById('recentContacts').innerHTML = CONTACTS.map(c => `
-    <div class="recent-item" onclick="fillRecipient('${c.domain}','${c.name}')">
-      <div class="ri-avatar" style="background:${c.color}">${c.name[0]}</div>
+  const list = getRecentRecipients();
+  const el = document.getElementById('recentContacts');
+  if (!list.length) {
+    el.innerHTML = '<div style="padding:14px;font-size:13px;color:var(--text-muted);">No recent contacts yet — send your first payment to save one here.</div>';
+    return;
+  }
+  el.innerHTML = list.map((c,i) => `
+    <div class="recent-item" onclick="fillRecipient('${c.domain}','${c.name}','✓ Sent before')">
+      <div class="ri-avatar" style="background:${RECENT_COLORS[i % RECENT_COLORS.length]}">${c.name[0]}</div>
       <div class="ri-body">
         <div class="ri-name">${c.name}</div>
         <div class="ri-domain">${c.domain}.IN$DEX</div>
@@ -699,13 +811,15 @@ function lookupRecipient(val) {
   if (!val.includes('.') && val.length < 3) { preview.classList.remove('visible'); recipientFound = false; updateSendBtn(); return; }
   lookupTimer = setTimeout(() => {
     const slug = val.replace('.IN$DEX','').replace('.insdex','').toLowerCase();
-    const contact = CONTACTS.find(c => c.domain.includes(slug) || slug.includes(c.domain));
+    const contact = getRecentRecipients().find(c => c.domain.includes(slug) || slug.includes(c.domain));
     if (contact || val.length > 5) {
       const name = contact?.name || (slug.charAt(0).toUpperCase() + slug.slice(1));
       const domain = contact?.domain || slug;
       document.getElementById('rpAvatar').textContent = name[0];
       document.getElementById('rpName').textContent = name;
-      document.getElementById('rpDomain').textContent = domain + '.IN$DEX · ✓ Verified';
+      // Only a match against this citizen's own real send history counts as known — anything
+      // else is unverified client-side; transfer_indx is the real check, at send time.
+      document.getElementById('rpDomain').textContent = domain + '.IN$DEX · ' + (contact ? '✓ Sent before' : 'unverified — checked when you send');
       preview.classList.add('visible');
       recipientFound = true;
     } else {
@@ -716,11 +830,11 @@ function lookupRecipient(val) {
   }, 500);
 }
 
-function fillRecipient(domain, name) {
+function fillRecipient(domain, name, statusLabel) {
   document.getElementById('recipientInput').value = domain + '.IN$DEX';
   document.getElementById('rpAvatar').textContent = name[0];
   document.getElementById('rpName').textContent = name;
-  document.getElementById('rpDomain').textContent = domain + '.IN$DEX · ✓ Verified';
+  document.getElementById('rpDomain').textContent = domain + '.IN$DEX · ' + (statusLabel || 'unverified — checked when you send');
   document.getElementById('recipientPreview').classList.add('visible');
   recipientFound = true;
   updateSendBtn();
@@ -810,6 +924,12 @@ function closeSuccess() {
   calcSendUSD();
 }
 
+// DEAD CODE — FABRICATION WARNING (flagged 2026-09-10 screen audit): randomTx() is not called
+// anywhere in this file (showPaymentSuccess() uses the real data.tx_id from transfer_indx, or
+// '—' when absent — see its comment above). Do NOT wire this back in as a tx-id fallback: it
+// generates a fake Math.random() hash and would fabricate a transaction that never happened,
+// exactly the class of issue this audit exists to catch. Left here only because other dead
+// code in this codebase is marked rather than silently deleted, per gotchas.md.
 function randomTx() {
   const c = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz123456789';
   const r = n => Array.from({length:n}, () => c[Math.floor(Math.random()*c.length)]).join('');

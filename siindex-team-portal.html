@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>SIINDEX Team Portal — Internal Operations</title>
+<meta name="description" content="Internal IN$DEX team portal: TGE war room checklist, system health, founder pool tracking, team comms log and threshold-approval sign-off — pre-launch, founder-access only.">
+<meta property="og:title" content="SIINDEX Team Portal — Internal Operations">
+<meta property="og:description" content="Internal IN$DEX team portal: TGE war room checklist, system health, founder pool tracking, team comms log and threshold-approval sign-off — pre-launch, founder-access only.">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <style>
   :root {
@@ -165,6 +168,41 @@
   /* ── TOAST ── */
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;color:var(--text);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:999;white-space:nowrap;pointer-events:none;}
   .toast.show{transform:translateX(-50%) translateY(0);}
+
+  /* ── THRESHOLD APPROVALS ── */
+  .approval-disclosure{background:rgba(255,184,0,.08);border:1px solid rgba(255,184,0,.3);border-radius:12px;padding:12px 14px;font-size:12px;line-height:1.6;color:var(--text);margin-bottom:14px;}
+  .approval-disclosure b{color:var(--gold);}
+  .approval-card{background:var(--surface2);border:1.5px solid var(--surface3);border-radius:14px;padding:14px;margin-bottom:10px;}
+  .approval-card.resolved-approved{border-color:rgba(0,229,160,.4);}
+  .approval-card.resolved-rejected{border-color:rgba(255,77,109,.4);}
+  .approval-target{font-size:12px;font-weight:700;color:var(--cyan);margin-bottom:4px;}
+  .approval-desc{font-size:12.5px;color:var(--text);line-height:1.5;margin-bottom:8px;}
+  .approval-meta{font-size:10.5px;color:var(--muted);margin-bottom:10px;}
+  .approval-signoffs{font-size:11px;color:var(--muted);margin-bottom:10px;}
+  .approval-signoffs .agree{color:var(--green);}
+  .approval-signoffs .reject{color:var(--red);}
+  .approval-row{display:flex;gap:8px;}
+  .approval-name-input{flex:1;background:var(--surface3);border:1px solid rgba(255,255,255,.08);border-radius:8px;color:var(--text);font-size:12px;padding:8px 10px;}
+  .approval-btn{border:none;border-radius:8px;font-size:12px;font-weight:700;padding:8px 14px;cursor:pointer;}
+  .approval-btn.agree{background:var(--green);color:#000;}
+  .approval-btn.reject{background:var(--red);color:#000;}
+  .approval-status-pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;margin-left:6px;}
+  .approval-status-pill.approved{background:rgba(0,229,160,.15);color:var(--green);}
+  .approval-status-pill.rejected{background:rgba(255,77,109,.15);color:var(--red);}
+
+  /* ── GOD MODE PATCH: search + confirm-sheet + a11y (siindex-team-portal.html) ── */
+  .approval-search-input{width:100%;background:var(--surface3);border:1px solid rgba(255,255,255,.08);border-radius:10px;color:var(--text);font-size:12px;padding:10px 12px;margin-bottom:12px;font-family:inherit;}
+  .approval-search-input:focus{outline:none;border-color:var(--cyan);}
+  .sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,.72);z-index:900;opacity:0;pointer-events:none;transition:opacity .2s;}
+  .sheet-overlay.show{opacity:1;pointer-events:auto;}
+  .bottom-sheet{position:fixed;left:0;right:0;bottom:0;max-width:430px;margin:0 auto;background:var(--surface2);border:1px solid var(--surface3);border-radius:20px 20px 0 0;padding:20px;transform:translateY(100%);transition:transform .3s cubic-bezier(.34,1.56,.64,1);z-index:901;}
+  .bottom-sheet.show{transform:translateY(0);}
+  .sheet-handle{width:36px;height:4px;background:var(--surface3);border-radius:2px;margin:0 auto 16px;}
+  .sheet-title{font-size:15px;font-weight:800;color:var(--text);margin-bottom:10px;}
+  .sheet-body{font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:18px;}
+  .sheet-actions{display:flex;gap:10px;}
+  .sheet-actions .approval-btn{flex:1;padding:12px;font-size:13px;}
+  .nav-tab:focus-visible,.gate-btn:focus-visible,.approval-btn:focus-visible,.refresh-health-btn:focus-visible,.approval-search-input:focus-visible,.lock-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
 </style>
 </head>
 <body>
@@ -210,12 +248,13 @@
 </div>
 
 <!-- NAV TABS -->
-<div class="nav-tabs">
-  <div class="nav-tab active" onclick="switchTab('warroom')">⚡ War Room</div>
-  <div class="nav-tab" onclick="switchTab('health')">🟢 Health</div>
-  <div class="nav-tab" onclick="switchTab('kpi')">📊 KPIs</div>
-  <div class="nav-tab" onclick="switchTab('comms')">📡 Comms</div>
-  <div class="nav-tab" onclick="switchTab('ops')">🗂️ Ops Links</div>
+<div class="nav-tabs" role="tablist" aria-label="Team portal sections">
+  <div class="nav-tab active" data-tab="warroom" role="tab" aria-selected="true" tabindex="0" onclick="switchTab('warroom')">⚡ War Room</div>
+  <div class="nav-tab" data-tab="health" role="tab" aria-selected="false" tabindex="0" onclick="switchTab('health')">🟢 Health</div>
+  <div class="nav-tab" data-tab="kpi" role="tab" aria-selected="false" tabindex="0" onclick="switchTab('kpi')">📊 KPIs</div>
+  <div class="nav-tab" data-tab="comms" role="tab" aria-selected="false" tabindex="0" onclick="switchTab('comms')">📡 Comms</div>
+  <div class="nav-tab" data-tab="ops" role="tab" aria-selected="false" tabindex="0" onclick="switchTab('ops')">🗂️ Ops Links</div>
+  <div class="nav-tab" data-tab="approvals" role="tab" aria-selected="false" tabindex="0" onclick="switchTab('approvals')">🔏 Approvals</div>
 </div>
 
 <!-- TAB: WAR ROOM -->
@@ -258,6 +297,7 @@
   <div class="kpi-grid" id="kpiGridLive"></div>
 
   <div class="sect-label">Founder Pool</div>
+  <div class="kpi-note" style="margin:-2px 0 10px;line-height:1.5;">Founder-entered commitments saved locally on this device via the Founders Pool screen — not a live, cross-device feed. Yield and INDX figures below are a forecast model, not a paid or guaranteed return, and the genesis price is a pre-launch reference figure, not a live market price.</div>
   <div class="kpi-grid" id="kpiGrid"></div>
   <div class="kpi-lp-bar">
     <div class="kpi-lp-label">
@@ -279,8 +319,8 @@
 <!-- TAB: COMMS -->
 <div class="tab-content" id="tab-comms">
   <div class="comms-compose">
-    <div class="comms-from">📡 AJ Henry — Broadcast to Team</div>
-    <textarea class="comms-textarea" id="commsInput" placeholder="Write a mission update, alert, or note for the team..."></textarea>
+    <div class="comms-from">📡 AJ Henry — Ops Log (this device only)</div>
+    <textarea class="comms-textarea" id="commsInput" placeholder="Write a mission update, alert, or note..."></textarea>
     <div class="comms-row">
       <select class="comms-tag-select" id="commsTag">
         <option value="mission">🎯 Mission</option>
@@ -288,8 +328,9 @@
         <option value="update">✅ Update</option>
         <option value="note">📝 Note</option>
       </select>
-      <button class="comms-send-btn" onclick="sendComms()">Send</button>
+      <button class="comms-send-btn" onclick="sendComms()">Save</button>
     </div>
+    <div class="card-sub" style="margin-top:8px;line-height:1.5;">Saved to this browser's local storage only — not sent anywhere and not visible to anyone else. If you open this portal on another device, this log won't be there.</div>
   </div>
   <div class="sect-label">Comms Log</div>
   <div class="comms-log" id="commsLog"></div>
@@ -302,7 +343,37 @@
   <div class="ops-link-grid" id="opsLinkGrid"></div>
 </div>
 
+<!-- TAB: THRESHOLD APPROVALS -->
+<div class="tab-content" id="tab-approvals">
+  <div class="approval-disclosure">
+    <b>Read before signing off.</b> These require <code>record_threshold_signoff()</code>, which checks
+    <code>is_founder()</code> server-side — real, not PIN-gated. But <code>founder_authority</code> currently
+    has exactly <b>one</b> registered account (yours). Signoffs are deduplicated by the name you type below,
+    not by account identity, so recording "2 of 3" today means you approving twice under two labels — not two
+    independent people. That satisfies the mechanism as built, per your 5 Sep decision to proceed with 2-of-3
+    for the private pilot. If you want a real second signer later, that needs a second row in
+    <code>founder_authority</code> tied to a second real account.
+  </div>
+  <button class="refresh-health-btn" onclick="refreshApprovalsFiltered()">↻ Refresh Pending Approvals</button>
+  <!-- GOD MODE PATCH: client-side search over already-rendered approval cards (no fetch/RPC change) -->
+  <input type="text" id="approvalSearchInput" class="approval-search-input" placeholder="Search by agent name or description…" oninput="filterApprovals()" aria-label="Search pending approvals">
+  <div class="sect-label">Pending Risk-Class Elevations</div>
+  <div id="thresholdApprovalsList"><div style="text-align:center;color:var(--muted);padding:20px;font-size:13px;">Loading…</div></div>
+</div>
+
 <div class="toast" id="toast"></div>
+
+<!-- GOD MODE PATCH: confirmation sheet — wraps Agree/Reject taps, does not alter record_threshold_signoff() itself -->
+<div class="sheet-overlay" id="signoffConfirmOverlay" onclick="closeSignoffConfirm()"></div>
+<div class="bottom-sheet" id="signoffConfirmSheet" role="dialog" aria-modal="true" aria-labelledby="signoffConfirmTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="signoffConfirmTitle">Confirm signoff</div>
+  <div class="sheet-body" id="signoffConfirmBody"></div>
+  <div class="sheet-actions">
+    <button class="approval-btn" style="background:var(--surface3);color:var(--text);" onclick="closeSignoffConfirm()">Cancel</button>
+    <button class="approval-btn agree" id="signoffConfirmBtn" onclick="confirmSignoffAction()">Confirm</button>
+  </div>
+</div>
 
 <script>
 // ── CONSTANTS ──
@@ -392,12 +463,27 @@ function lockPortal() {
 // ── TAB NAV ──
 function switchTab(id) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
   document.getElementById('tab-' + id).classList.add('active');
   event.target.classList.add('active');
+  event.target.setAttribute('aria-selected', 'true');
+  // GOD MODE PATCH: remember last-viewed tab locally (device-only, cosmetic)
+  try { localStorage.setItem('indx_teamportal_last_tab', id); } catch (e) {}
   if (id === 'health') renderHealth();
   if (id === 'kpi') renderKPIs();
   if (id === 'comms') renderComms();
+  if (id === 'approvals') renderApprovals();
+}
+
+// GOD MODE PATCH: restore last-viewed tab on unlock (reads localStorage only, safe default = warroom)
+function restoreLastTab() {
+  try {
+    const last = localStorage.getItem('indx_teamportal_last_tab');
+    if (last) {
+      const btn = document.querySelector('.nav-tab[data-tab="' + last + '"]');
+      if (btn) btn.click();
+    }
+  } catch (e) {}
 }
 
 // ── TOAST ──
@@ -524,7 +610,7 @@ const HEALTH_SYSTEMS = [
     desc: 'Defense layer active — 8 reg packs ready', status: 'amber',
     statusText: 'IN PREPARATION' },
   { id: 'pool', name: 'Founders Pool', icon: '💰', screen: 'founders-pool.html',
-    desc: 'Tracking active — LP target live', status: 'green',
+    desc: 'Investor commitment tracking active (local device data) — LP not yet created', status: 'green',
     statusText: 'OPERATIONAL' },
   { id: 'security', name: 'Session Security', icon: '🛡️', screen: 'siindex-session-sovereignty.html',
     desc: 'Security layer deployed', status: 'green',
@@ -658,13 +744,13 @@ function renderKPIs() {
     </div>
     <div class="kpi-card">
       <div class="kpi-value" style="color:var(--green)">$${fmtK(monthlyYield)}</div>
-      <div class="kpi-label">Monthly LP Yield</div>
-      <div class="kpi-delta up">${yieldRate}% rate · ${active.length} active</div>
+      <div class="kpi-label">Monthly LP Yield (forecast)</div>
+      <div class="kpi-delta up">${yieldRate}% rate · ${active.length} active · not a live or guaranteed return</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-value" style="color:var(--gold)">${totalIndxAllocated.toLocaleString()}</div>
-      <div class="kpi-label">INDX Allocated</div>
-      <div class="kpi-delta neutral">@ $0.24 genesis</div>
+      <div class="kpi-label">INDX Equivalent (not allocated)</div>
+      <div class="kpi-delta neutral">@ $0.24 genesis ref. · pre-launch</div>
     </div>
     <div class="kpi-card">
       <div class="kpi-value" style="color:var(--purple)">${confirmed.length}</div>
@@ -688,8 +774,8 @@ function renderKPIs() {
     </div>
     <div class="kpi-card">
       <div class="kpi-value" style="color:var(--cyan)">$${INDX_PRICE_USD}</div>
-      <div class="kpi-label">INDX Genesis Price</div>
-      <div class="kpi-delta neutral">Raydium CPMM</div>
+      <div class="kpi-label">INDX Genesis Reference Price</div>
+      <div class="kpi-delta neutral">Pre-launch reference · not live</div>
     </div>`;
 }
 
@@ -699,7 +785,7 @@ function fmtK(n) {
   return n.toFixed(2);
 }
 
-// ── GM4: TEAM BROADCAST + COMMS LOG ──
+// ── GM4: LOCAL OPS LOG (device-local localStorage — not a shared team feed) ──
 function sendComms() {
   const text = document.getElementById('commsInput').value.trim();
   if (!text) { showToast('⚠️ Write a message first'); return; }
@@ -714,14 +800,14 @@ function sendComms() {
   localStorage.setItem('indx_portal_comms', JSON.stringify(log.slice(0, 50)));
   document.getElementById('commsInput').value = '';
   renderComms();
-  showToast('📡 Broadcast sent to team');
+  showToast('📡 Saved to this device');
 }
 
 function renderComms() {
   const log = JSON.parse(localStorage.getItem('indx_portal_comms') || '[]');
   const container = document.getElementById('commsLog');
   if (log.length === 0) {
-    container.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px;">No messages yet. Send the first broadcast.</div>';
+    container.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px;">No messages yet. Log the first note.</div>';
     return;
   }
   const tagLabels = { mission: '🎯 Mission', alert: '🚨 Alert', update: '✅ Update', note: '📝 Note' };
@@ -744,6 +830,151 @@ function clearComms() {
   localStorage.removeItem('indx_portal_comms');
   renderComms();
   showToast('🗑️ Comms log cleared');
+}
+
+// ── THRESHOLD APPROVALS (real: agent_registry risk_class elevations) ──
+// Reads threshold_approvals / threshold_approval_signoffs directly via PostgREST
+// under RLS (founder_reads_threshold_approvals / _signoffs, both `is_founder()`).
+// Writes go through record_threshold_signoff(), which is itself is_founder()-gated
+// server-side. No local PIN or client-side state can forge a signoff — if the real
+// founder session isn't present, these calls simply return nothing / refuse.
+const LAST_APPROVER_NAME_KEY = 'indx_last_approver_name';
+
+async function fetchThresholdApprovals() {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/threshold_approvals?status=eq.pending&order=created_at.desc', {
+    headers: rpcHeaders()
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function fetchSignoffs(thresholdApprovalId) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/threshold_approval_signoffs?threshold_approval_id=eq.' + encodeURIComponent(thresholdApprovalId), {
+    headers: rpcHeaders()
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function fetchAgentName(agentRegistryId) {
+  const res = await fetch(SUPABASE_URL + '/rest/v1/agent_registry?id=eq.' + encodeURIComponent(agentRegistryId) + '&select=agent_name,risk_class', {
+    headers: rpcHeaders()
+  });
+  if (!res.ok) return null;
+  const rows = await res.json();
+  return rows[0] || null;
+}
+
+async function renderApprovals() {
+  const container = document.getElementById('thresholdApprovalsList');
+  container.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px;">Loading…</div>';
+  let approvals;
+  try {
+    approvals = await fetchThresholdApprovals();
+  } catch (e) {
+    container.innerHTML = '<div style="text-align:center;color:var(--red);padding:20px;font-size:12px;">Could not load — ' + esc(String(e.message || e)) + '</div>';
+    return;
+  }
+  if (!_realAccessToken) {
+    container.innerHTML = '<div style="text-align:center;color:var(--gold);padding:20px;font-size:12px;">No real founder session in this browser — sign in as founder elsewhere in the platform (e.g. Command Center), then refresh.</div>';
+    return;
+  }
+  if (approvals.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px;">No pending threshold approvals.</div>';
+    return;
+  }
+  const cards = await Promise.all(approvals.map(async (a) => {
+    const [signoffs, agent] = await Promise.all([fetchSignoffs(a.id), fetchAgentName(a.target_id)]);
+    const agreeCount = signoffs.filter(s => s.decision === 'agree').length;
+    const rejectCount = signoffs.filter(s => s.decision === 'reject').length;
+    const signoffLine = signoffs.length === 0
+      ? 'No signoffs recorded yet.'
+      : signoffs.map(s => `<span class="${s.decision === 'agree' ? 'agree' : 'reject'}">${esc(s.approver_name)}: ${s.decision}</span>`).join(' · ');
+    const lastName = localStorage.getItem(LAST_APPROVER_NAME_KEY) || 'AJ';
+    return `<div class="approval-card" id="approval-${a.id}">
+      <div class="approval-target">${esc(agent ? agent.agent_name : a.target_table)} — risk_class → 3</div>
+      <div class="approval-desc">${esc(a.description || '')}</div>
+      <div class="approval-meta">Filed ${new Date(a.created_at).toLocaleString('en-AU')} · needs ${a.required_count} agree signoffs</div>
+      <div class="approval-signoffs">${signoffLine} (${agreeCount} agree${rejectCount ? ', ' + rejectCount + ' reject' : ''} of ${a.required_count} needed)</div>
+      <div class="approval-row">
+        <input class="approval-name-input" id="approverName-${a.id}" value="${esc(lastName)}" placeholder="Your name for this signoff">
+        <button class="approval-btn agree" onclick="confirmSignoff('${a.id}','agree')">Agree</button>
+        <button class="approval-btn reject" onclick="confirmSignoff('${a.id}','reject')">Reject</button>
+      </div>
+    </div>`;
+  }));
+  container.innerHTML = cards.join('');
+  // GOD MODE PATCH: re-apply any active search filter after a re-render
+  filterApprovals();
+}
+
+// GOD MODE PATCH: confirmation sheet wrapping the real signoff call below.
+// This only gates the UI tap — submitSignoff() itself, and the real RPC it calls,
+// are completely unmodified.
+let _pendingSignoff = null;
+function confirmSignoff(thresholdApprovalId, decision) {
+  _pendingSignoff = { id: thresholdApprovalId, decision };
+  const body = document.getElementById('signoffConfirmBody');
+  const verbLabel = decision === 'agree' ? 'AGREE (approve)' : 'REJECT';
+  body.textContent = 'You are about to record a real, binding signoff: ' + verbLabel + '. This calls the live record_threshold_signoff() function and cannot be undone from this screen.';
+  const btn = document.getElementById('signoffConfirmBtn');
+  btn.textContent = decision === 'agree' ? 'Confirm Agree' : 'Confirm Reject';
+  btn.className = 'approval-btn ' + (decision === 'agree' ? 'agree' : 'reject');
+  document.getElementById('signoffConfirmOverlay').classList.add('show');
+  document.getElementById('signoffConfirmSheet').classList.add('show');
+  btn.focus();
+}
+function closeSignoffConfirm() {
+  _pendingSignoff = null;
+  document.getElementById('signoffConfirmOverlay').classList.remove('show');
+  document.getElementById('signoffConfirmSheet').classList.remove('show');
+}
+function confirmSignoffAction() {
+  if (!_pendingSignoff) return;
+  const { id, decision } = _pendingSignoff;
+  closeSignoffConfirm();
+  submitSignoff(id, decision); // unchanged — real record_threshold_signoff() RPC call
+}
+
+// GOD MODE PATCH: client-side search over already-rendered cards — never touches the fetch/RPC layer
+function filterApprovals() {
+  const input = document.getElementById('approvalSearchInput');
+  if (!input) return;
+  const q = input.value.trim().toLowerCase();
+  document.querySelectorAll('#thresholdApprovalsList .approval-card').forEach(card => {
+    card.style.display = (!q || card.textContent.toLowerCase().includes(q)) ? '' : 'none';
+  });
+}
+async function refreshApprovalsFiltered() {
+  await renderApprovals();
+  showToast(_realAccessToken ? '↻ Approvals refreshed' : '⚠️ No founder session — showing what loaded');
+}
+
+async function submitSignoff(thresholdApprovalId, decision) {
+  const nameInput = document.getElementById('approverName-' + thresholdApprovalId);
+  const approverName = (nameInput && nameInput.value.trim()) || 'AJ';
+  localStorage.setItem(LAST_APPROVER_NAME_KEY, approverName);
+  try {
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/record_threshold_signoff', {
+      method: 'POST', headers: rpcHeaders(),
+      body: JSON.stringify({ p_threshold_approval_id: thresholdApprovalId, p_approver_name: approverName, p_decision: decision })
+    });
+    const body = await res.json().catch(() => null);
+    if (!res.ok || !body || body.success === false) {
+      showToast('❌ ' + (body && body.error ? body.error : 'Signoff failed — ' + res.status));
+      return;
+    }
+    if (body.status === 'approved') showToast('✅ Approved — gate now clears (' + body.agree_count + '/' + body.required_count + ')');
+    else if (body.status === 'rejected') showToast('🚫 Rejected — risk_class elevation blocked');
+    else showToast('☑️ Signoff recorded (' + body.agree_count + '/' + body.required_count + ')');
+    renderApprovals();
+  } catch (e) {
+    showToast('❌ ' + String(e.message || e));
+  }
+}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 // ── OPS LINKS ──
@@ -791,7 +1022,21 @@ async function initPortal() {
   await loadPlatformStats();
   renderLiveHealth();
   renderPlatformLive();
+  renderApprovals();
+  restoreLastTab(); // GOD MODE PATCH: reopen the tab the founder was last viewing (local only)
 }
+
+// GOD MODE PATCH: keyboard navigation (Left/Right across nav tabs, Escape closes the confirm sheet)
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') { closeSignoffConfirm(); return; }
+  const tabsContainer = document.querySelector('.nav-tabs');
+  if (!tabsContainer || !tabsContainer.contains(document.activeElement)) return;
+  const tabs = Array.from(tabsContainer.querySelectorAll('.nav-tab'));
+  const idx = tabs.indexOf(document.activeElement);
+  if (idx === -1) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); const next = tabs[(idx + 1) % tabs.length]; next.focus(); next.click(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); const prev = tabs[(idx - 1 + tabs.length) % tabs.length]; prev.focus(); prev.click(); }
+});
 
 document.addEventListener('DOMContentLoaded', () => {
   // Check if already unlocked this session (within 4 hours)

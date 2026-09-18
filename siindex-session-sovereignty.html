@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Security Centre — IN$DEX</title>
+<meta name="description" content="SIINDEX Security Centre — real device trust registry, session risk score, Vault Mode, Shared Device Mode, and a Decision Ledger of your security actions.">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -415,6 +416,13 @@
           <div class="sdm-rule"><span class="sdm-rule-icon">📋</span>Clipboard warning on all sensitive fields</div>
           <div class="sdm-rule"><span class="sdm-rule-icon">🔐</span>Session auto-revoked on browser close</div>
         </div>
+        <!-- AUDIT 2026-08-29: these 5 rules were presented as active enforcement, but
+        toggleSharedDevice() only sets a localStorage flag and shows the banner below.
+        window._sdmIdleOverride is set but never read by tickIdle() (still fixed at
+        IDLE_TIMEOUT_S = 15 min); no code here blocks passkey storage, payout/recovery
+        changes, or clipboard access, and there is no beforeunload session-revoke handler.
+        Added an honest "planned" disclosure rather than deleting the rule list. -->
+        <div style="font-size:10px;color:var(--muted);margin-top:8px;line-height:1.4;">Planned protections. Today, turning this on shows the banner below and logs the choice to your Decision Ledger. The 5-minute idle timeout, passkey-storage block, payout/recovery block, clipboard warning, and auto-revoke-on-close are not enforced yet.</div>
         <div class="sdm-active-banner" id="sdmActiveBanner">
           ⚠️ Shared Device Mode is active — sensitive actions are restricted. Remember to sign out when done.
         </div>
@@ -486,6 +494,13 @@
           <div class="vault-benefit"><div class="vault-benefit-dot"></div>Recovery changes delayed 72 hours minimum</div>
           <div class="vault-benefit"><div class="vault-benefit-dot"></div>Notifications to all trusted channels simultaneously</div>
         </div>
+        <!-- AUDIT 2026-08-29: these 5 benefits were presented as active protections, but
+        toggleVault() only sets a localStorage flag, changes the Security Health Score,
+        and logs a Decision Ledger entry — no other screen in this repo reads
+        indx_sec_vault_mode (confirmed via repo-wide search), so no send, payout, device,
+        or recovery flow actually enforces a passkey gate or a 24h/72h delay. Added an
+        honest "planned" disclosure rather than deleting the benefit list. -->
+        <div style="font-size:10px;color:var(--muted);margin-top:8px;line-height:1.4;">Planned protections. Today, turning this on raises your Security Health Score and logs the choice to your Decision Ledger. The per-action passkey gate, 24-hour payout/device delays, and 72-hour recovery delay are not enforced yet by Send, Recovery, or Governance screens.</div>
         <div class="vault-doctrine">This is not friction. This is sovereignty.</div>
       </div>
     </div>
@@ -509,7 +524,10 @@
           </div>
         </div>
         <div class="caller-warning">
-          ⚠️ SIINDEX will never ask for this code by chat or email. Agents must verify it before any account changes. If a caller claims urgency without asking for your code — hang up.
+          ⚠️ SIINDEX will never ask for this code by chat or email. If a caller claims urgency — hang up and verify independently.
+        </div>
+        <div class="caller-warning" style="background:rgba(255,184,0,0.08);border-color:rgba(255,184,0,0.25);">
+          🚧 This code is saved on this device only — it isn't yet checked by any support system on our side, so it's for your own records rather than a guarantee an agent will ask for it. Real support-side verification is on the roadmap.
         </div>
       </div>
     </div>
@@ -764,7 +782,10 @@
   }
 
   // ── CONSTANTS ──
-  const INDX_PRICE_USD = 0.24;
+  // AUDIT 2026-08-29: removed unused `const INDX_PRICE_USD = 0.24;` — a hardcoded fixed
+  // USD price for INDX with no live price feed and no display consumer anywhere in this
+  // file. Dead-code landmine: harmless while unreferenced, but ready to render a fabricated
+  // "live" price if a future edit wires it into the UI. INDX has no fixed USD price.
   const VAULT_KEY      = 'indx_sec_vault_mode';
   const CALLER_KEY     = 'indx_sec_caller_code';
   const LEDGER_KEY     = 'indx_sec_ledger';
@@ -964,11 +985,18 @@
     const citizenId = sessionStorage.getItem('citizen_id');
     const thisDeviceId = localStorage.getItem('indx_this_device_id');
     const others = realDevices.filter(d => !d.revoked_at && d.id !== thisDeviceId);
+    // FIXED 2026-09-03: this discarded every revoke_device result and unconditionally
+    // reported "N device(s) signed out" -- if a real revoke failed, the citizen was
+    // told (and the immutable ledger recorded) that it succeeded anyway. Now counts
+    // only the ones that actually confirmed success.
+    let succeeded = 0;
     for (const d of others) {
-      await sb.rpc('revoke_device', { p_device_id: d.id, p_reason: 'citizen_signed_out_all' });
+      const { data, error } = await sb.rpc('revoke_device', { p_device_id: d.id, p_reason: 'citizen_signed_out_all' });
+      if (!error && data && data.success) succeeded++;
     }
-    addLedgerEntry('sign_out_all', '🔐 Signed out everywhere', others.length + ' other real device(s) revoked', 'pass');
-    showToast('✅ ' + others.length + ' other device(s) signed out');
+    const failed = others.length - succeeded;
+    addLedgerEntry('sign_out_all', '🔐 Signed out everywhere', succeeded + ' other real device(s) revoked' + (failed ? ` (${failed} failed — try again)` : ''), failed ? 'warn' : 'pass');
+    showToast(failed ? `⚠️ ${succeeded} signed out, ${failed} failed — try again` : '✅ ' + succeeded + ' other device(s) signed out');
     loadRealDevices();
   }
 
@@ -1101,12 +1129,20 @@
     // same real RPC confirmSignOutAll() uses).
     const thisDeviceId = localStorage.getItem('indx_this_device_id');
     const others = realDevices.filter(d => !d.revoked_at && d.id !== thisDeviceId);
+    // FIXED 2026-09-03: this dimmed every device and logged "N revoked" unconditionally,
+    // without checking whether revoke_device actually succeeded for each one -- same bug
+    // as confirmSignOutAll(), now fixed the same way.
+    let succeeded = 0;
     for (const d of others) {
-      await sb.rpc('revoke_device', { p_device_id: d.id, p_reason: 'secure_my_account_triggered' });
-      const el = document.getElementById('dev-' + d.id);
-      if (el) { el.style.opacity = '0.35'; el.style.pointerEvents = 'none'; }
+      const { data, error } = await sb.rpc('revoke_device', { p_device_id: d.id, p_reason: 'secure_my_account_triggered' });
+      if (!error && data && data.success) {
+        succeeded++;
+        const el = document.getElementById('dev-' + d.id);
+        if (el) { el.style.opacity = '0.35'; el.style.pointerEvents = 'none'; }
+      }
     }
-    if (others.length) addLedgerEntry('sign_out_all', '🔐 Secure My Account', others.length + ' other real device(s) revoked', 'pass');
+    const failed = others.length - succeeded;
+    if (others.length) addLedgerEntry('sign_out_all', '🔐 Secure My Account', succeeded + ' other real device(s) revoked' + (failed ? ` (${failed} failed)` : ''), failed ? 'warn' : 'pass');
     loadRealDevices();
 
     // Render steps (animate in sequence)

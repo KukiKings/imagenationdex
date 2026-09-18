@@ -1,0 +1,74 @@
+name: Verify public surface
+
+# Added 2026-09-05 (god mode Item 7, core stabilization). scripts/verify-*.mjs
+# already existed in the repo but nothing ran them automatically — running
+# them cold surfaced real drift (a routing gap that left internal dev/founder
+# screens publicly reachable, plus stale canon copy) that had gone unnoticed
+# for weeks. This wires the one that was fully rewritten and confirmed
+# accurate (verify-public-surface.mjs) into CI so future drift is caught on
+# every push instead of only when someone happens to run it by hand.
+#
+# scripts/verify-siindex-public-phase-a.mjs was rewritten and confirmed
+# accurate 2026-09-04 (Session 106) and is now wired in below too — its stale
+# checks (a retired 'never_call' key, a frozen sw.js cache-version string, and
+# an aspirational 30-section floor from the original Phase A draft) are fixed,
+# and it caught a real bug in the process: siindex-public/utility-directory.json
+# was still claiming a routing-blocked internal screen (siindex-os.html) was
+# "Live". scripts/verify-siindex-voice.mjs was also rewritten the same session
+# once phase-a's rewrite made clear the pattern was tractable in one pass: its
+# 14 failures were all checks for a retired session-state-machine mic
+# architecture (SESSION_STATES, resetSession(), per-error-name getUserMedia
+# branching) that a full read of the current siindex-speak-core.js (v3.0.16)
+# confirmed was deliberately replaced by a simpler abort-based design — three
+# AbortControllers cancelled by one interrupt(), and a single generic
+# getUserMedia catch that always degrades to a typed-input fallback instead of
+# leaving a visitor stuck. Rewritten to assert the current design instead of
+# the retired one. See memory.md Session 104/105/106.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "*.html"
+      - "vercel.json"
+      - "robots.txt"
+      - "sitemap.xml"
+      - "sw.js"
+      - "images/siindex-public-portrait.webp"
+      - "images/siindex-public-video-poster.webp"
+      - "supabase/functions/siindex-website-runtime/**"
+      - "scripts/verify-public-surface.mjs"
+      - "scripts/verify-siindex-public-phase-a.mjs"
+      - "js/siindex-public-knowledge.js"
+      - "js/siindex-public-bridge.js"
+      - "js/siindex-public-boot.js"
+      - "js/siindex-page-context.js"
+      - "siindex-public/**"
+      - "indx-pwa.js"
+      - "siindex-speak-core.js"
+      - "home-v2.html"
+      - "home-v3.html"
+      - "search.html"
+      - "pag.html"
+      - "siindex-command-center.html"
+      - "siindex-voice-command-os.html"
+      - "voice-wallet.html"
+      - "siindex-voice-interface.html"
+      - "siindex-voice-terminal.html"
+      - "supabase/functions/siindex-website-transcribe/**"
+      - "supabase/functions/siindex-website-voice-tts/**"
+      - "scripts/verify-siindex-voice.mjs"
+      - ".github/workflows/verify-public-surface.yml"
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run public-surface verification
+        run: node scripts/verify-public-surface.mjs
+      - name: Run Phase A public SIINDEX verification
+        run: node scripts/verify-siindex-public-phase-a.mjs
+      - name: Run SIINDEX voice verification
+        run: node scripts/verify-siindex-voice.mjs

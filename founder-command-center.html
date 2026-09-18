@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Founder Command Center · IN$DEX</title>
+<meta name="description" content="Internal founder-only dashboard: wallet, treasury and private notes. Founder-gated (is_founder() RPC) pre-launch tool, not citizen-facing.">
+<meta property="og:title" content="Founder Command Center · IN$DEX">
+<meta property="og:description" content="Internal founder-only dashboard: wallet, treasury and private notes. Founder-gated (is_founder() RPC) pre-launch tool, not citizen-facing.">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <style>
 :root {
   --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
@@ -124,9 +128,31 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 .ticker-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite;flex-shrink:0;}
 .ticker-text{font-size:11px;color:var(--text-dim);white-space:nowrap;}
 .ticker-val{font-size:11px;font-weight:700;color:var(--cyan);margin:0 3px;}
+
+/* ── AUDIT 2026-09-06: REAL ACCESS GATE ──
+   This screen previously had NO access control at all — no is_founder() check, no PIN, nothing —
+   despite branding itself "🔒 FOUNDER COMMAND CENTER" / "Private session". Anyone with the URL
+   could open it. siindex-team-portal.html's own copy even tells founders to "sign in ... elsewhere
+   in the platform (e.g. Command Center)" to get real founder telemetry, implying this screen was
+   meant to be where real is_founder() auth happens. It never did. Fixed: gate now calls the real
+   get_founder_dashboard_stats() RPC (is_founder()-gated server-side) before revealing anything. */
+.fcc-gate{position:fixed;inset:0;z-index:999;background:var(--black);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;}
+.fcc-gate.hidden{display:none;}
+.fcc-gate-icon{font-size:34px;}
+.fcc-gate-title{font-size:16px;font-weight:800;letter-spacing:.4px;color:var(--text);}
+.fcc-gate-sub{font-size:13px;color:var(--text-dim);max-width:300px;line-height:1.5;}
+.fcc-gate-btn{background:var(--cyan);color:var(--black);border:none;border-radius:10px;padding:12px 22px;font-size:13px;font-weight:700;cursor:pointer;}
 </style>
 </head>
 <body>
+
+<!-- REAL ACCESS GATE: hides everything until is_founder() (via get_founder_dashboard_stats()) confirms this session. -->
+<div class="fcc-gate" id="fccGate">
+  <div class="fcc-gate-icon">🔒</div>
+  <div class="fcc-gate-title">Founder Command Center</div>
+  <div class="fcc-gate-sub" id="fccGateSub">Checking founder session…</div>
+  <button class="fcc-gate-btn" id="fccGateBtn" style="display:none;" onclick="window.location.href='login.html'">Sign In</button>
+</div>
 
 <!-- HEADER -->
 <div class="fcc-header">
@@ -145,9 +171,9 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 <div class="rate-ticker">
   <div class="ticker-dot"></div>
   <span class="ticker-text">INDX</span>
-  <span class="ticker-val" id="tickerPrice">$0.240</span>
+  <span class="ticker-val" id="tickerPrice">No fixed price</span>
   <span class="ticker-text">·</span>
-  <span class="ticker-val" id="tickerChange" style="color:var(--green);">+0.00%</span>
+  <span class="ticker-val" id="tickerChange" style="color:var(--text-dim);">Pre-launch</span>
   <span class="ticker-text">· Market cap</span>
   <span class="ticker-val" id="tickerMcap">—</span>
   <span class="ticker-text">· Volume 24h</span>
@@ -157,7 +183,9 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 <!-- P0/P1 COUNTDOWN STRIP -->
 <div class="cd-strip">
   <div class="cd-card">
-<div class="cd-badge">⏳ AUSTRAC</div>
+    <!-- AUDIT 2026-07-30: the ✅ tick read as "licensed/cleared". Actual status per line 556 of this
+         file is enrolment submitted 17 Jul 2026 (AAN 263945366), under assessment. -->
+    <div class="cd-badge">⏳ AUSTRAC</div>
     <div class="cd-label">VASP Enrollment</div>
     <div class="cd-time">UNDER ASSESSMENT</div>
     <div class="cd-sub">Submitted Jul 17, 2026 · staying live until Cook Islands entity is registered + approved, then withdrawing</div>
@@ -193,7 +221,7 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
     </div>
     <div class="wallet-stat">
       <div class="ws-label">Protection</div>
-      <div class="ws-val" style="color:var(--green);">Active</div>
+      <div class="ws-val" style="color:var(--text-dim);font-size:11px;">Planned — not active yet</div>
     </div>
   </div>
 </div>
@@ -259,6 +287,19 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
   </div>
 </div>
 
+<!-- PLATFORM SIGNALS: real data from get_founder_dashboard_stats(), is_founder()-gated server-side. -->
+<div class="sec-head">
+  <div class="sec-title">Platform Signals</div>
+</div>
+<div class="treasury-card" id="platformSignalsCard">
+  <div class="treasury-rows">
+    <div class="treasury-row">
+      <span class="tr-label">Loading live signals…</span>
+      <span class="tr-val">—</span>
+    </div>
+  </div>
+</div>
+
 <!-- QUICK LAUNCH -->
 <div class="sec-head">
   <div class="sec-title">Private Screens</div>
@@ -316,18 +357,26 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 
 <script>
 // ── CONSTANTS ──────────────────────────────────────────────────────────
-const INDX_PRICE_USD = 0.24;
+// AUDIT 2026-09-06: removed `const INDX_PRICE_USD = 0.24;`. INDX has no fixed USD price —
+// this was the same dead/fabricated genesis-price landmine already fixed in
+// siindex-proof-insight-network.html (2026-08-29) and data-sovereignty-hub.html (2026-09-05).
+// Here it was NOT dead code — it fed the live rate ticker and the founder wallet's USD
+// conversion, i.e. it was rendering a fabricated price and a fabricated USD net-worth
+// figure directly to AJ on his own command center. Removed; both displays now say so honestly.
 const TGE_DATE    = new Date('2027-02-24T00:00:00+11:00');
 // AUSTRAC_DL removed 2026-07-22: enrollment already submitted 17 Jul 2026 (AAN 263945366),
 // registration stays live (not a countdown) until the Cook Islands entity is approved — see whitepaper 11.13.
 const TOTAL_SUPPLY = 100_000_000;
-// REMOVED 2026-07-31: `const FOUNDER_ALLOC = 0.15` — declared, never referenced anywhere in this
-// file, and wrong on its own terms. It asserted 15% while tokenomics-v1.md (itself still a DRAFT,
-// never advisor-reviewed) provides for 10%, and token.html publicly stated 0%. Three numbers, no
-// ruling behind any of them. A dead constant is still a claim: the next person to wire up a
-// founder-allocation figure would have reached for this one and shipped 15% as fact.
-// The allocation is an open founder decision. Do not reintroduce a number here until it is ruled
-// on and reflected in tokenomics canon — then reference canon, do not hardcode.
+// AUDIT 2026-09-06: removed `const FOUNDER_ALLOC = 0.15;` — declared but never used, and it
+// directly contradicted both token.html:465 ("Founder allocation: 0%.") and the AUDIT note
+// immediately below (initWallet), which says the founder allocation is undecided and must
+// not be asserted. An unused constant like this is a landmine: harmless while unreferenced,
+// but ready to silently reintroduce a false 15% founder-allocation figure if anyone wires it
+// into the UI later. The real allocation is AJ's decision and remains unset here.
+const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let platformStats = null; // null = not loaded / not authorised. Never faked.
 
 // ── IDENTITY ──────────────────────────────────────────────────────────
 function initIdentity() {
@@ -355,29 +404,44 @@ setInterval(tickCountdowns, 1000);
 // FIXED 2026-07-25: was a fake "Live Rate Ticker" — Math.random() jitter on price and a
 // randomly-generated 24h volume, refreshed every 8s to look like a real live market feed.
 // There is no live exchange for INDX pre-launch, so this fabricated a price history and
-// trading volume that don't exist. Now shows the real fixed genesis price and an honest
-// "no live market yet" state instead of inventing movement. See gotchas.md.
+// trading volume that don't exist.
+// FIXED AGAIN 2026-09-06: the 2026-07-25 fix stopped short — it removed the *movement*
+// but kept asserting `INDX_PRICE_USD = 0.24` as "the real fixed genesis price", which is
+// itself not true. No genesis price has been set; INDX has no fixed USD price (same
+// conclusion reached independently in siindex-proof-insight-network.html and
+// data-sovereignty-hub.html). Market cap is therefore also unknowable and is no longer shown
+// as a dollar figure. Now honestly says there is no price and no market yet.
 function updateTicker() {
-  const mcap = (INDX_PRICE_USD * TOTAL_SUPPLY / 1e6).toFixed(1);
-  document.getElementById('tickerPrice').textContent  = '$' + INDX_PRICE_USD.toFixed(3);
+  document.getElementById('tickerPrice').textContent  = 'No fixed price';
   const chgEl = document.getElementById('tickerChange');
   chgEl.textContent = 'Pre-launch';
   chgEl.style.color = 'var(--text-dim)';
-  document.getElementById('tickerMcap').textContent   = '$' + mcap + 'M (genesis)';
+  document.getElementById('tickerMcap').textContent   = 'Not set';
   document.getElementById('tickerVol').textContent    = '— (no live market yet)';
 }
 updateTicker();
 
 // ── FOUNDER WALLET ─────────────────────────────────────────────────────
 function initWallet() {
+  // 🔴 AUDIT 2026-07-30 — FLAGGED FOR AJ, NOT DECIDED.
+  // This defaulted to `150_000_000` INDX described as "15%". Three problems:
+  //   1. 150M EXCEEDS THE ENTIRE 100M SUPPLY, which is declared as TOTAL_SUPPLY in this same file.
+  //   2. "(15%)" implies a 1B supply — the exact fake figure landing-page.html records as fixed.
+  //   3. It contradicts token.html:465, which states "Founder allocation: 0%."
+  // It rendered "≈ $36,000,000 USD" as a founder holding. The monthly yield used 0.112, the
+  // fabricated 11.2% rate removed from sovereign-lending.html on 2026-07-25.
+  // The founder allocation is token economics and AJ's decision, so no figure is substituted here —
+  // the screen now declines to assert one. AJ to rule on the actual allocation.
   const stored = parseFloat(sessionStorage.getItem('citizen_balance') || '0');
   const founderBase  = stored > 0 ? stored : 0;
   const staked       = Math.floor(founderBase * 0.60);
   const unstaked     = founderBase - staked;
-  const usdVal       = (founderBase * INDX_PRICE_USD).toLocaleString('en-US', {maximumFractionDigits: 0});
+  // AUDIT 2026-09-06: was converting founderBase * INDX_PRICE_USD (0.24) into a "≈ $X USD"
+  // figure. INDX has no fixed USD price, so that dollar figure was fabricated — a real INDX
+  // balance times a made-up price. No USD estimate is shown until a real price exists.
 
   document.getElementById('walletIndx').textContent   = stored > 0 ? founderBase.toLocaleString() : 'Not set';
-  document.getElementById('walletUsd').textContent    = stored > 0 ? '≈ $' + usdVal + ' USD' : 'Allocation pending founder ruling';
+  document.getElementById('walletUsd').textContent    = stored > 0 ? 'No USD price set (INDX has no fixed price)' : 'Allocation pending founder ruling';
   document.getElementById('walletStaked').textContent = stored > 0 ? staked.toLocaleString() : '—';
   document.getElementById('walletYield').textContent  = 'No rate set';
   // FIXED 2026-07-25: was Math.random()*8+2 fabricating a fake "+X.XX% (30d)" balance
@@ -564,13 +628,88 @@ function seedDefaultAlerts() {
   saveAlerts(defaults);
 }
 
-// ── INIT ───────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+// ── REAL ACCESS GATE ─────────────────────────────────────────────────────
+// AUDIT 2026-09-06: this screen had no access control of any kind. It now calls the real
+// get_founder_dashboard_stats() RPC, which is is_founder()-gated server-side (checks
+// founder_authority.auth_user_id against auth.uid(), same mechanism siindex-team-portal.html
+// already relies on). Nothing below the gate renders unless that call succeeds.
+async function checkFounderAccess() {
+  const sub = document.getElementById('fccGateSub');
+  const btn = document.getElementById('fccGateBtn');
+  try {
+    const { data } = await sb.auth.getSession();
+    const token = data && data.session && data.session.access_token;
+    if (!token) {
+      sub.textContent = 'Not signed in. Sign in with the founder account to view this screen.';
+      btn.style.display = 'inline-block';
+      return;
+    }
+    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_founder_dashboard_stats', {
+      method: 'POST',
+      headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    if (!res.ok) {
+      sub.textContent = 'This account is not recognised as the founder. Access denied.';
+      btn.textContent = 'Sign In With Founder Account';
+      btn.style.display = 'inline-block';
+      return;
+    }
+    platformStats = await res.json();
+    grantAccess();
+  } catch (e) {
+    sub.textContent = 'Could not verify founder session. Try signing in again.';
+    btn.style.display = 'inline-block';
+  }
+}
+
+function grantAccess() {
+  document.getElementById('fccGate').classList.add('hidden');
   initIdentity();
   initWallet();
   initTreasury();
+  renderPlatformSignals();
   seedDefaultAlerts();
   renderAlerts();
+}
+
+// ── PLATFORM SIGNALS: real data from get_founder_dashboard_stats() ──────
+function renderPlatformSignals() {
+  const el = document.getElementById('platformSignalsCard');
+  if (!el) return;
+  if (!platformStats) {
+    el.innerHTML = `<div class="treasury-rows"><div class="treasury-row">
+      <span class="tr-label">Live platform signals unavailable</span><span class="tr-val">—</span>
+    </div></div>`;
+    return;
+  }
+  const killEngaged = !!platformStats.kill_switch_engaged;
+  const evCount = platformStats.unresolved_elevated_events_7d || 0;
+  el.innerHTML = `
+    <div class="treasury-rows">
+      <div class="treasury-row">
+        <span class="tr-label">Total Citizens (live)</span>
+        <span class="tr-val cyan">${(platformStats.citizens_count || 0).toLocaleString()}</span>
+      </div>
+      <div class="treasury-row">
+        <span class="tr-label">Total Transactions (live)</span>
+        <span class="tr-val green">${(platformStats.transactions_count || 0).toLocaleString()}</span>
+      </div>
+      <div class="treasury-row">
+        <span class="tr-label">Unresolved T2+ Events (7d)</span>
+        <span class="tr-val" style="color:${evCount > 0 ? 'var(--gold)' : 'var(--green)'};">${evCount}</span>
+      </div>
+      <div class="treasury-row">
+        <span class="tr-label">Kill Switch</span>
+        <span class="tr-val" style="color:${killEngaged ? 'var(--red)' : 'var(--green)'};">${killEngaged ? 'ENGAGED — platform paused' : 'Not engaged'}</span>
+      </div>
+    </div>
+    <div style="padding:8px 20px;font-size:9px;color:var(--text-dim);">Live · get_founder_dashboard_stats()</div>`;
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  checkFounderAccess();
 });
 </script>
 </body>

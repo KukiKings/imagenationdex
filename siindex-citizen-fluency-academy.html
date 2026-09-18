@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Citizen Fluency Academy — IN$DEX</title>
+<meta name="description" content="Learn IN$DEX by building inside it — capability pathways, learn-by-doing lessons, SI fluency tracking, and a capability proof ledger guided by SIINDEX.">
 <style>
   :root {
     --cyan:    #00D4FF;
@@ -53,6 +54,10 @@
   .hero h1 span { color:var(--cyan); }
   .hero-sub { font-size:13px; color:var(--text2); line-height:1.6; max-width:320px; margin:0 auto 20px; }
   .hero-lock { background:var(--surface); border:1px solid rgba(0,212,255,0.15); border-radius:12px; padding:14px 16px; font-size:12px; color:var(--text2); font-style:italic; line-height:1.55; text-align:left; }
+  .planned-banner { display:flex; gap:10px; background:rgba(255,184,0,0.08); border:1px solid rgba(255,184,0,0.3); border-radius:12px; padding:12px 14px; margin-top:12px; text-align:left; }
+  .planned-banner-icon { font-size:16px; flex-shrink:0; }
+  .planned-banner-text { font-size:11px; color:var(--text2); line-height:1.55; }
+  .planned-banner-text strong { color:var(--gold); }
 
   /* STAT ROW */
   .stat-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; padding:0 20px 24px; }
@@ -209,6 +214,22 @@
   .sheet-btn-primary:hover { background:rgba(0,212,255,0.2); }
   .sheet-btn-sec { background:var(--surface3); border:1px solid var(--border); color:var(--text2); }
 
+  /* ── GM5: LESSON SEARCH ── */
+  .lib-search-wrap { position:relative; padding:12px 14px; border-bottom:1px solid var(--border); }
+  .lib-search-input {
+    width:100%; background:var(--surface3); border:1px solid var(--border); border-radius:11px;
+    padding:10px 34px 10px 14px; font-size:12px; color:var(--text); font-family:inherit;
+  }
+  .lib-search-input::placeholder { color:var(--muted); }
+  .lib-search-input:focus { outline:none; border-color:rgba(0,212,255,0.4); }
+  .lib-search-clear {
+    position:absolute; right:24px; top:50%; transform:translateY(-50%);
+    font-size:12px; color:var(--muted); cursor:pointer; padding:4px;
+  }
+
+  /* ── GM6: SHEET FOCUS/KEYBOARD SUPPORT ── */
+  .sheet-btn:focus-visible, .nav-back:focus-visible { outline:2px solid var(--cyan); outline-offset:2px; }
+
   /* TOAST */
   .toast {
     position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px);
@@ -246,6 +267,15 @@
   <h1>Learn the civilization<br>by <span>building inside it.</span></h1>
   <p class="hero-sub">You do not need to understand crypto, code, automation, design, or governance before you begin. SIINDEX teaches through missions. Every lesson creates something useful.</p>
   <div class="hero-lock">"Inside IN$DEX, learning is not separate from earning, ownership, governance, culture, and legacy. Learning is how citizens become sovereign."</div>
+  <!-- AUDIT 2026-09-17: whole-file addition — the academy curriculum below describes SIINDEX
+       drafting, generating, structuring and reviewing things in present tense with zero hedge
+       anywhere in the file. Per DEPLOYMENT.md, the full academy is explicitly not live. Added
+       the same planned-experience banner already used correctly in siindex-use-case-library.html
+       rather than hedging each of ~10 lesson blocks individually. -->
+  <div class="planned-banner">
+    <div class="planned-banner-icon">📋</div>
+    <div class="planned-banner-text"><strong>Planned experience — not live yet.</strong> Every lesson below describes what SIINDEX is designed to teach and help citizens build inside IN$DEX. The full Academy is not live today — nothing here drafts, mints, publishes, or submits anything on your behalf yet.</div>
+  </div>
 </div>
 
 <!-- STAT ROW -->
@@ -277,13 +307,17 @@
   <span>Every lesson creates something real</span>
 </div>
 <div class="library-card fade-in" style="animation-delay:.20s">
+  <div class="lib-search-wrap">
+    <input type="text" id="libSearchInput" class="lib-search-input" placeholder="Search all 65+ lessons…" oninput="handleLibSearch(this.value)" aria-label="Search lessons">
+    <div class="lib-search-clear" id="libSearchClear" style="display:none" onclick="clearLibSearch()">✕</div>
+  </div>
   <div class="lib-tabs" id="libTabs"></div>
   <div id="libContent"></div>
 </div>
 
 <!-- GM3: SOVEREIGN INTELLIGENCE FLUENCY TRACKER -->
 <div class="section-hdr fade-in" style="animation-delay:.26s">
-  <h2>⚡ Sovereign Intelligence Fluency</h2>
+  <h2>⚡ SI Fluency</h2>
   <span>10 dimensions · tap to update</span>
 </div>
 <div class="fluency-card fade-in" style="animation-delay:.28s">
@@ -352,8 +386,8 @@
     </div>
   </div>
   <div class="sheet-actions">
-    <div class="sheet-btn sheet-btn-primary" id="sheetStartBtn" onclick="markLessonDone()">Mark as Complete</div>
-    <div class="sheet-btn sheet-btn-sec" onclick="closeLessonSheet()">Close</div>
+    <div class="sheet-btn sheet-btn-primary" id="sheetStartBtn" role="button" tabindex="0" onclick="markLessonDone()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();markLessonDone();}">Mark as Complete</div>
+    <div class="sheet-btn sheet-btn-sec" id="sheetCloseBtn" role="button" tabindex="0" onclick="closeLessonSheet()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();closeLessonSheet();}">Close</div>
   </div>
 </div>
 
@@ -390,16 +424,23 @@
   }
   const citizenId = sessionStorage.getItem('citizen_id');
 
-  async function awardLessonWisdom(lessonOutput) {
+  async function awardLessonWisdom(lessonOutput, lessonKey) {
     if (!citizenId) return { success:false, reason:'NO_SESSION' };
+    // FIXED: previously inserted straight into wisdom_actions with a fixed
+    // action_key ('academy_lesson_complete') shared by every lesson, and
+    // never touched citizens.wisdom_score at all — every lesson after the
+    // first would have collided on that key, and none of them ever moved
+    // the real score even when they succeeded. Routes through award_wisdom
+    // now, which actually updates the score and is keyed per-lesson.
     try {
-      const res = await fetch(SUPABASE_URL + '/rest/v1/wisdom_actions', {
+      const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/award_wisdom', {
         method:'POST',
-        headers: { ...rpcHeaders(), 'Prefer':'return=representation' },
-        body: JSON.stringify({ citizen_id: citizenId, action_key:'academy_lesson_complete', points:2, source: lessonOutput })
+        headers: rpcHeaders(),
+        body: JSON.stringify({ p_citizen_id: citizenId, p_points: 2, p_reason: 'academy_lesson_' + (lessonKey || lessonOutput) })
       });
       if (!res.ok) return { success:false, reason:'RLS_OR_ERROR' };
-      return { success:true };
+      const newScore = await res.json();
+      return { success:true, newScore: (typeof newScore === 'number') ? newScore : null };
     } catch (e) { return { success:false, reason:'NETWORK' }; }
   }
 
@@ -430,7 +471,7 @@
   const PATHWAYS = [
     { icon:'💡', title:'Start My First Opportunity', sub:'From idea to income path in missions', color:'var(--gold)',
       lessons:[
-        { title:'Meet SIINDEX — Sovereign Intelligence, not Artificial Intelligence', output:'Understanding Brief' },
+        { title:'Meet SIINDEX — PQSI, not Artificial Intelligence', output:'Understanding Brief' },
         { title:'How to brief SIINDEX: Context, Outcome, Role, Unknowns', output:'Mission Brief' },
         { title:'Turn one idea into three income paths', output:'Opportunity Map' },
         { title:'Build my Opportunity Brain', output:'Opportunity Brain' },
@@ -516,7 +557,7 @@
     {
       key:'siindex', icon:'🤝', label:'Start With SIINDEX',
       lessons:[
-        { title:'Meet SIINDEX: Sovereign Intelligence, not Artificial Intelligence', output:'Understanding Brief', covers:'What SIINDEX is, what she is not, and why IN$DEX uses Sovereign Intelligence instead of "AI"', steps:['SIINDEX introduces herself and her role in your civilization','You learn the difference between a tool and a sovereign intelligence','You write a one-paragraph brief about what you want SIINDEX to help with'], capability:'You can explain SIINDEX to someone else and know when to ask for her help' },
+        { title:'Meet SIINDEX: PQSI, not Artificial Intelligence', output:'Understanding Brief', covers:'What SIINDEX is, what she is not, and why IN$DEX uses PQSI and SI language instead of "AI"', steps:['SIINDEX introduces herself and her role in your civilization','You learn the difference between a tool and a PQSI interface','You write a one-paragraph brief about what you want SIINDEX to help with'], capability:'You can explain SIINDEX to someone else and know when to ask for her help' },
         { title:'How to brief SIINDEX: Context → Outcome → Role → Unknowns', output:'Mission Brief', covers:'The four-part briefing framework that helps SIINDEX give you the most useful guidance', steps:['Learn what Context, Outcome, Role, and Unknowns mean','Practice writing a brief using your own situation','Review your brief and confirm SIINDEX understood it correctly'], capability:'You can write a SIINDEX brief for any mission, project, or question' },
         { title:'How to ask for a blind spot pass', output:'Blind Spot Review', covers:'How to ask SIINDEX to check what you might have missed before committing to a decision', steps:['Learn when to request a blind spot pass','Give SIINDEX your plan and ask her to challenge it','Review the findings and decide what to change'], capability:'You know how to stress-test your own decisions before acting' },
         { title:'How to approve or reject SIINDEX work', output:'Approval Protocol', covers:'How to review SIINDEX outputs, request changes, and approve safely', steps:['Learn what "approval" means in a sovereign intelligence context','Review a sample SIINDEX output for accuracy, safety, and fit','Practice approving an output and requesting a revision'], capability:'You can confidently review and manage everything SIINDEX creates for you' },
@@ -667,7 +708,7 @@
     'Every lesson must help a citizen do something real. Learning is not content consumption. Learning is sovereignty formation.',
     'A tutorial should create: a decision, a draft, a page, a listing, a skill, a workflow, a protection, a memory, a proof of capability, or a next best action.',
     'IN$DEX does not teach abstract features. Every lesson produces a real artifact.',
-    'Sovereign Intelligence Fluency: a citizen becomes fluent when they can brief, review, approve, protect, coordinate, automate, and act.',
+    'SI Fluency: a citizen becomes fluent when they can brief, review, approve, protect, coordinate, automate, and act.',
     'Capability Proofs, not gamified badges. A proof is evidence of something the citizen can actually do.',
     'The Academy is not a course library. It is a capability-building system that runs alongside everything the citizen is building.',
     'You do not need to understand crypto, code, automation, design, or governance before you begin. SIINDEX teaches through missions.',
@@ -681,6 +722,42 @@
   let _fluency = JSON.parse(localStorage.getItem('indx_academy_fluency') || '{}');
   let _proofs = JSON.parse(localStorage.getItem('indx_academy_proofs') || '[]');
   let _currentLesson = null;
+  let _librarySearch = '';
+  let _sheetLastFocused = null;
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ── GM5: LESSON SEARCH ──
+  function handleLibSearch(val) {
+    _librarySearch = (val || '').trim().toLowerCase();
+    document.getElementById('libSearchClear').style.display = _librarySearch ? 'block' : 'none';
+    renderLibContent();
+  }
+
+  function clearLibSearch() {
+    _librarySearch = '';
+    const input = document.getElementById('libSearchInput');
+    if (input) input.value = '';
+    document.getElementById('libSearchClear').style.display = 'none';
+    renderLibContent();
+  }
+
+  // ── GM6: SHEET ESCAPE-TO-CLOSE + FOCUS TRAP ──
+  function handleSheetKeydown(e) {
+    const sheet = document.getElementById('lessonSheet');
+    if (!sheet || !sheet.classList.contains('show')) return;
+    if (e.key === 'Escape') { e.preventDefault(); closeLessonSheet(); return; }
+    if (e.key === 'Tab') {
+      const focusables = Array.from(sheet.querySelectorAll('[tabindex="0"]'));
+      if (!focusables.length) return;
+      const first = focusables[0], last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }
+  document.addEventListener('keydown', handleSheetKeydown);
 
   // ── GM1: CAPABILITY PATHWAY NAVIGATOR ──
   function renderPathways() {
@@ -755,9 +832,51 @@
     renderLibContent();
   }
 
+  // GOD MODE PATCH — cross-category search now short-circuits the normal tab render
   function renderLibContent() {
-    const cat = ACADEMY_CATS[_selectedLib];
     const el = document.getElementById('libContent');
+    if (_librarySearch) {
+      const results = [];
+      ACADEMY_CATS.forEach((c, ci) => {
+        c.lessons.forEach((l, li) => {
+          if (l.title.toLowerCase().includes(_librarySearch) || l.output.toLowerCase().includes(_librarySearch)) {
+            results.push({ cat: c, ci, l, li });
+          }
+        });
+      });
+      if (results.length === 0) {
+        el.innerHTML = `<div class="proof-empty">
+          <div class="proof-empty-icon">🔍</div>
+          <div class="proof-empty-text">No lessons match "${escapeHtml(_librarySearch)}". Try a different search term.</div>
+        </div>`;
+        return;
+      }
+      el.innerHTML = `<div class="lib-cat-hdr">
+          <div class="lib-cat-row">
+            <div class="lib-cat-icon">🔍</div>
+            <div class="lib-cat-name">${results.length} matching lesson${results.length===1?'':'s'}</div>
+          </div>
+        </div>` +
+        results.map(r => {
+          const key = `lib-${r.ci}-${r.li}`;
+          const isDone = !!_completedLessons[key];
+          return `<div class="lesson-item">
+            <div class="lesson-row" onclick="openLessonSheet(ACADEMY_CATS[${r.ci}].lessons[${r.li}], ACADEMY_CATS[${r.ci}].label, '${key}')">
+              <div class="lesson-num">${r.cat.icon}</div>
+              <div class="lesson-body">
+                <div class="lesson-title">${r.l.title}</div>
+                <div class="lesson-creates">
+                  <div class="lesson-creates-lbl">${r.cat.label}:</div>
+                  <div class="lesson-creates-val">${r.l.output}</div>
+                </div>
+              </div>
+              ${isDone ? `<div class="lesson-done-badge">✓ Done</div>` : `<div class="lesson-start">Start →</div>`}
+            </div>
+          </div>`;
+        }).join('');
+      return;
+    }
+    const cat = ACADEMY_CATS[_selectedLib];
     el.innerHTML = `
       <div class="lib-cat-hdr">
         <div class="lib-cat-row">
@@ -804,7 +923,7 @@
     if (score <= 3) return 'You are beginning your sovereign intelligence journey. Every lesson you complete brings new capability.';
     if (score <= 6) return 'You are building real capability with SIINDEX. Keep completing missions to reach Capable status.';
     if (score <= 8) return 'You are a capable citizen. You can use SIINDEX confidently across most situations.';
-    return 'You are fluent with Sovereign Intelligence. You can guide others and build complex sovereign systems.';
+    return 'You are fluent with SIINDEX. You can guide others and build complex sovereign systems.';
   }
 
   function renderFluency() {
@@ -906,11 +1025,17 @@
 
     document.getElementById('sheetOverlay').classList.add('show');
     document.getElementById('lessonSheet').classList.add('show');
+    // GOD MODE PATCH — remember focus origin and move focus into the sheet
+    _sheetLastFocused = document.activeElement;
+    setTimeout(() => { const btn = document.getElementById('sheetCloseBtn'); if (btn) btn.focus(); }, 50);
   }
 
   function closeLessonSheet() {
     document.getElementById('sheetOverlay').classList.remove('show');
     document.getElementById('lessonSheet').classList.remove('show');
+    // GOD MODE PATCH — restore focus to whatever opened the sheet
+    if (_sheetLastFocused && typeof _sheetLastFocused.focus === 'function') _sheetLastFocused.focus();
+    _sheetLastFocused = null;
   }
 
   async function markLessonDone() {
@@ -939,7 +1064,7 @@
     // REAL: write a wisdom_actions row (RLS: citizen_id must match the authenticated
     // citizen). Previously this only updated localStorage and always claimed success —
     // now the toast reflects what actually happened on the server.
-    const result = await awardLessonWisdom(_currentLesson.output);
+    const result = await awardLessonWisdom(_currentLesson.output, _currentLessonKey);
     if (result.success) {
       showToast('✓ Lesson complete — ' + _currentLesson.output + ' added · +2 Wisdom Score');
     } else if (result.reason === 'NO_SESSION') {

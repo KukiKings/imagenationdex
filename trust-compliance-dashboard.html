@@ -5,6 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Trust & Compliance — IN$DEX</title>
+<meta name="description" content="Demo of IN$DEX's planned Trust & Compliance dashboard — trust score, badges, and improvement actions. Sample data only, no real compliance records.">
 <style>
 :root{
   --cyan:#00D4FF;--blue:#2B35D8;--purple:#8B3FE8;
@@ -130,6 +131,28 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 
 .tl-empty{padding:32px 16px;text-align:center;color:var(--text-muted);font-size:13px;}
 
+/* GOD MODE PATCH — combined CSS block: accessibility, score trend, badge detail sheet */
+.tab-btn:focus-visible,.bc-action:focus-visible,.ac-btn:focus-visible,.tf-btn:focus-visible,.tb-back:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+
+.score-trend{margin:0 16px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:12px 14px;}
+.score-trend-title{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;}
+.score-trend canvas{display:block;width:100%;height:44px;}
+.score-trend-note{font-size:10px;color:var(--text-muted);margin-top:4px;}
+
+.sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.7);z-index:300;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+.sheet-overlay.show{opacity:1;pointer-events:auto;}
+.bottom-sheet{position:fixed;left:50%;bottom:0;transform:translate(-50%,100%);width:100%;max-width:430px;background:var(--surface2);border-top:1px solid var(--border);border-radius:20px 20px 0 0;padding:20px 20px 28px;z-index:301;transition:transform 0.3s cubic-bezier(.2,.9,.3,1);max-height:80vh;overflow-y:auto;box-sizing:border-box;}
+.bottom-sheet.show{transform:translate(-50%,0);}
+.bs-handle{width:36px;height:4px;background:var(--surface3);border-radius:4px;margin:0 auto 16px;}
+.bs-icon{font-size:34px;text-align:center;margin-bottom:8px;}
+.bs-title{font-size:16px;font-weight:800;text-align:center;margin-bottom:4px;}
+.bs-status{display:block;text-align:center;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;margin:0 auto 12px;width:fit-content;}
+.bs-status.earned{background:rgba(0,229,160,0.12);color:var(--green);}
+.bs-status.locked{background:rgba(90,97,120,0.25);color:var(--text-muted);}
+.bs-desc{font-size:13px;color:var(--text-muted);line-height:1.6;text-align:center;margin-bottom:18px;}
+.bs-btn{width:100%;padding:12px;border-radius:12px;font-size:14px;font-weight:700;border:none;cursor:pointer;background:var(--cyan);color:#000;}
+.bs-btn.secondary{background:transparent;border:1px solid var(--border);color:var(--text);margin-top:8px;}
+
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--surface3);color:var(--text);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;pointer-events:none;transition:transform 0.3s,opacity 0.3s;opacity:0;z-index:200;max-width:320px;text-align:center;}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
 </style>
@@ -144,15 +167,15 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
   <div class="tb-status safe" id="topStatus">Safe ✓</div>
 </div>
 
-<div class="tab-bar">
-  <button class="tab-btn active" onclick="switchTab('overview',this)">Overview</button>
-  <button class="tab-btn" onclick="switchTab('badges',this)">Badges</button>
-  <button class="tab-btn" onclick="switchTab('improve',this)">Improve</button>
-  <button class="tab-btn" onclick="switchTab('timeline',this)">Timeline</button>
+<div class="tab-bar" role="tablist" aria-label="Trust dashboard sections" onkeydown="tabBarKeyNav(event)">
+  <button class="tab-btn active" id="tabbtn-overview" role="tab" aria-selected="true" aria-controls="tab-overview" onclick="switchTab('overview',this)">Overview</button>
+  <button class="tab-btn" id="tabbtn-badges" role="tab" aria-selected="false" aria-controls="tab-badges" onclick="switchTab('badges',this)">Badges</button>
+  <button class="tab-btn" id="tabbtn-improve" role="tab" aria-selected="false" aria-controls="tab-improve" onclick="switchTab('improve',this)">Improve</button>
+  <button class="tab-btn" id="tabbtn-timeline" role="tab" aria-selected="false" aria-controls="tab-timeline" onclick="switchTab('timeline',this)">Timeline</button>
 </div>
 
 <!-- ════ TAB 1: OVERVIEW ════ -->
-<div class="tab-panel active" id="tab-overview">
+<div class="tab-panel active" id="tab-overview" role="tabpanel" aria-labelledby="tabbtn-overview" tabindex="-1">
 
   <div class="trust-hero">
     <div class="th-overall-label">Overall trust score</div>
@@ -174,6 +197,13 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
       <canvas id="radarCanvas" width="260" height="220"></canvas>
     </div>
     <div class="radar-legend" id="radarLegend"></div>
+  </div>
+
+  <!-- GOD MODE PATCH — personal score trend (this device only, never a network stat) -->
+  <div class="score-trend">
+    <div class="score-trend-title">Your trust score trend (this device)</div>
+    <canvas id="scoreTrendCanvas"></canvas>
+    <div class="score-trend-note" id="scoreTrendNote">Your score trend will appear here as you complete actions on this device.</div>
   </div>
 
   <!-- SIINDEX STRIP -->
@@ -208,13 +238,13 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 </div>
 
 <!-- ════ TAB 2: BADGES ════ -->
-<div class="tab-panel" id="tab-badges">
+<div class="tab-panel" id="tab-badges" role="tabpanel" aria-labelledby="tabbtn-badges" tabindex="-1">
   <div class="sec-label">Trust badges</div>
   <div class="badge-grid" id="badgeGrid"></div>
 </div>
 
 <!-- ════ TAB 3: IMPROVE ════ -->
-<div class="tab-panel" id="tab-improve">
+<div class="tab-panel" id="tab-improve" role="tabpanel" aria-labelledby="tabbtn-improve" tabindex="-1">
   <div class="improve-hero">
     <div class="ih-label">SIINDEX recommends improving</div>
     <div class="ih-dim" id="weakDimName">—</div>
@@ -224,12 +254,12 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
   <div id="actionCards"></div>
   <div style="margin:0 16px;padding:14px;background:rgba(0,229,160,0.05);border:1px solid rgba(0,229,160,0.15);border-radius:14px;">
     <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:6px;">Why improve your trust score?</div>
-    <div style="font-size:12px;color:var(--text-muted);line-height:1.7;">Higher trust unlocks larger transaction limits, premium opportunities, governance roles, and priority dispute resolution. The Trust Civilisation Law guarantees no citizen is blocked unfairly — every dimension has a clear improvement path.</div>
+    <div style="font-size:12px;color:var(--text-muted);line-height:1.7;">Higher trust is intended to unlock larger transaction limits, premium opportunities, governance roles, and priority dispute resolution. This is a design commitment, not yet enforced by deployed contract code — every dimension has a clear improvement path.</div>
   </div>
 </div>
 
 <!-- ════ TAB 4: TIMELINE ════ -->
-<div class="tab-panel" id="tab-timeline">
+<div class="tab-panel" id="tab-timeline" role="tabpanel" aria-labelledby="tabbtn-timeline" tabindex="-1">
   <div class="timeline-filter">
     <button class="tf-btn active" onclick="filterTimeline('all',this)">All</button>
     <button class="tf-btn" onclick="filterTimeline('safe',this)">Safe</button>
@@ -243,15 +273,125 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 
 <div class="toast" id="toast"></div>
 
+<!-- GOD MODE PATCH — badge detail bottom sheet -->
+<div class="sheet-overlay" id="sheetOverlay" onclick="closeBadgeDetail()"></div>
+<div class="bottom-sheet" id="badgeDetailSheet">
+  <div class="bs-handle"></div>
+  <div class="bs-icon" id="bsIcon">🪪</div>
+  <div class="bs-title" id="bsTitle">Badge</div>
+  <span class="bs-status locked" id="bsStatus">Locked</span>
+  <div class="bs-desc" id="bsDesc">—</div>
+  <button class="bs-btn" id="bsActionBtn">Action</button>
+  <button class="bs-btn secondary" onclick="closeBadgeDetail()">Close</button>
+</div>
+
 <script>
-const INDX_PRICE_USD = 0.24;
 const _ACT_KEY  = 'indx_trust_actions_done';
 const _TL_KEY   = 'indx_trust_timeline';
+
+// GOD MODE PATCH — namespaced keys for the 4 new features
+const _LASTTAB_KEY    = 'indx_trustdash_lasttab';
+const _LASTFILTER_KEY = 'indx_trustdash_lastfilter';
+const _SCOREHIST_KEY  = 'indx_trustdash_scorehist';
+
+// GOD MODE PATCH — accessibility: arrow-key navigation across the tab bar
+function tabBarKeyNav(e) {
+  if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab-btn'));
+  var idx = tabs.indexOf(document.activeElement);
+  if (idx === -1) return;
+  e.preventDefault();
+  var next = e.key === 'ArrowRight' ? (idx + 1) % tabs.length : (idx - 1 + tabs.length) % tabs.length;
+  tabs[next].focus();
+  tabs[next].click();
+}
+
+// GOD MODE PATCH — information density: personal score-trend sparkline.
+// Sourced ONLY from this citizen's own local score changes (localStorage) —
+// never a network-wide or fabricated statistic.
+function recordScoreSnapshot(score) {
+  var hist = [];
+  try { hist = JSON.parse(localStorage.getItem(_SCOREHIST_KEY) || '[]'); } catch(e){ hist = []; }
+  if (!hist.length || hist[hist.length-1].score !== score) {
+    hist.push({ t: Date.now(), score: score });
+    if (hist.length > 20) hist = hist.slice(hist.length - 20);
+    try { localStorage.setItem(_SCOREHIST_KEY, JSON.stringify(hist)); } catch(e){}
+  }
+  return hist;
+}
+
+function drawScoreTrend() {
+  var hist = [];
+  try { hist = JSON.parse(localStorage.getItem(_SCOREHIST_KEY) || '[]'); } catch(e){ hist = []; }
+  var canvas = document.getElementById('scoreTrendCanvas');
+  var note = document.getElementById('scoreTrendNote');
+  if (!canvas) return;
+  var dpr = window.devicePixelRatio || 1;
+  var w = canvas.clientWidth || 260, h = 44;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,w,h);
+  if (hist.length < 2) {
+    if (note) note.textContent = 'Your score trend will appear here as you complete actions on this device.';
+    return;
+  }
+  var scores = hist.map(function(p){ return p.score; });
+  var min = Math.min.apply(null, scores), max = Math.max.apply(null, scores);
+  var range = Math.max(1, max - min);
+  ctx.beginPath();
+  hist.forEach(function(p, i){
+    var x = (i/(hist.length-1)) * (w-4) + 2;
+    var y = h - 4 - ((p.score - min) / range) * (h - 8);
+    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle = '#00D4FF'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+  var last = hist[hist.length-1];
+  var lx = w-2, ly = h - 4 - ((last.score-min)/range)*(h-8);
+  ctx.beginPath(); ctx.arc(lx,ly,3,0,Math.PI*2); ctx.fillStyle='#00E5A0'; ctx.fill();
+  if (note) note.textContent = 'Your score on this device, last ' + hist.length + ' change' + (hist.length===1?'':'s') + '.';
+}
+
+// GOD MODE PATCH — smart defaults: remember + restore last active tab and last timeline filter
+function restoreLastTabAndFilter() {
+  var lastTab = null, lastFilter = null;
+  try { lastTab = localStorage.getItem(_LASTTAB_KEY); } catch(e){}
+  try { lastFilter = localStorage.getItem(_LASTFILTER_KEY); } catch(e){}
+  if (lastTab && document.getElementById('tab-' + lastTab)) {
+    var btn = document.getElementById('tabbtn-' + lastTab);
+    if (btn) switchTab(lastTab, btn);
+  }
+  if (lastFilter) {
+    var fbtn = document.querySelector('.tf-btn[onclick*="\'' + lastFilter + '\'"]');
+    if (fbtn) filterTimeline(lastFilter, fbtn);
+  }
+}
+
+// GOD MODE PATCH — UX polish: badge detail bottom sheet (replaces a plain toast)
+function openBadgeDetail(id) {
+  var b = BADGES.find(function(x){ return x.id === id; });
+  if (!b) return;
+  document.getElementById('bsIcon').textContent = b.icon;
+  document.getElementById('bsTitle').textContent = b.name;
+  var statusEl = document.getElementById('bsStatus');
+  statusEl.className = 'bs-status ' + (b.earned ? 'earned' : 'locked');
+  statusEl.textContent = b.earned ? '✓ Earned' : 'Locked';
+  document.getElementById('bsDesc').textContent = b.desc;
+  var actionBtn = document.getElementById('bsActionBtn');
+  actionBtn.textContent = b.action;
+  actionBtn.onclick = function(){ closeBadgeDetail(); showToast(b.action + '…'); };
+  document.getElementById('sheetOverlay').classList.add('show');
+  document.getElementById('badgeDetailSheet').classList.add('show');
+}
+function closeBadgeDetail() {
+  document.getElementById('sheetOverlay').classList.remove('show');
+  document.getElementById('badgeDetailSheet').classList.remove('show');
+}
 
 // ── TRUST DIMENSIONS ─────────────────────────────────────────────────
 var DIMS = [
   {id:'identity',  label:'Identity',    color:'#00D4FF', score:78, desc:'How well your identity is verified. Includes ID check and .IN$DEX domain.'},
-  {id:'limits',    label:'Limits',      color:'#00E5A0', score:85, desc:'Your transaction limit compliance. Safe when within AUSTRAC thresholds.'},
+  {id:'limits',    label:'Limits',      color:'#00E5A0', score:85, desc:'Your transaction limit compliance against internal risk thresholds. AUSTRAC / Australian VASP registration is paused and out of scope as IN$DEX\'s current compliance program — Cook Islands registration is in progress and not yet complete.'},
   {id:'pqsi',      label:'PQSI',        color:'#8B3FE8', score:92, desc:'Post-quantum security integrity. Your wallet and sessions are hardened.'},
   {id:'compliance',label:'Compliance',  color:'#FFB800', score:55, desc:'Regulatory compliance including AML/CTF checks and travel rule status.'},
   {id:'cultural',  label:'Cultural',    color:'#2B35D8', score:88, desc:'Cultural IP protection. Your listings have passed Cultural Steward review.'},
@@ -272,9 +412,9 @@ var BADGES = [
 
 // ── ACTIONS ───────────────────────────────────────────────────────────
 var ACTIONS = [
-  {id:'act1', icon:'📋', title:'Complete identity verification',   sub:'Upload a government ID to raise your Identity dimension from 78 to 95+.', reward:'+15 trust pts + 50 INDX'},
-  {id:'act2', icon:'📡', title:'Enable Travel Rule compliance',    sub:'Link your recipient wallet addresses to satisfy cross-border AML requirements.', reward:'+12 trust pts + 30 INDX'},
-  {id:'act3', icon:'🏦', title:'Link a bank account',              sub:'Connect PayID or BSB/account to unlock fiat payouts and increase your Limits score.', reward:'+10 trust pts + 20 INDX'}
+  {id:'act1', icon:'📋', title:'Complete identity verification',   sub:'Upload a government ID to raise your Identity dimension from 78 to 95+.', reward:'+15 trust pts + 50 INDX (provisional, pending launch)'},
+  {id:'act2', icon:'📡', title:'Enable Travel Rule compliance',    sub:'Link your recipient wallet addresses to satisfy cross-border AML requirements.', reward:'+12 trust pts + 30 INDX (provisional, pending launch)'},
+  {id:'act3', icon:'🏦', title:'Link a bank account',              sub:'Connect PayID or BSB/account to unlock fiat payouts and increase your Limits score.', reward:'+10 trust pts + 20 INDX (provisional, pending launch)'}
 ];
 
 // ── TIMELINE SEED ─────────────────────────────────────────────────────
@@ -319,6 +459,9 @@ function init() {
   renderBadges();
   renderActions();
   renderTimeline('all');
+  // GOD MODE PATCH — log this device's score snapshot + draw the trend sparkline
+  recordScoreSnapshot(computeOverall());
+  drawScoreTrend();
 }
 
 function computeOverall() {
@@ -474,7 +617,8 @@ function renderBadges() {
       '<div class="bc-name">' + b.name + '</div>' +
       '<div class="bc-status ' + (b.earned?'earned':'locked') + '">' + (b.earned?'✓ Earned':'Locked') + '</div>' +
       '<div class="bc-desc">' + b.desc + '</div>' +
-      '<button class="bc-action ' + (b.earned?'earn':'') + '" onclick="showToast(\'' + b.action + '…\')">' + b.action + '</button>';
+      // GOD MODE PATCH — open the badge detail bottom sheet instead of a plain toast
+      '<button class="bc-action ' + (b.earned?'earn':'') + '" onclick="openBadgeDetail(\'' + b.id + '\')">' + b.action + '</button>';
     grid.appendChild(div);
   });
 }
@@ -522,6 +666,9 @@ function markAction(id) {
   drawRing();
   drawRadar();
   renderSiInsight();
+  // GOD MODE PATCH — log this device's score snapshot + redraw the trend sparkline
+  recordScoreSnapshot(computeOverall());
+  drawScoreTrend();
   showToast('Action completed! Trust score updated.');
 }
 
@@ -530,6 +677,8 @@ function filterTimeline(state, btn) {
   document.querySelectorAll('.tf-btn').forEach(function(b){ b.classList.remove('active'); });
   btn.classList.add('active');
   renderTimeline(state);
+  // GOD MODE PATCH — remember last timeline filter (smart default)
+  try { localStorage.setItem(_LASTFILTER_KEY, state); } catch(e){}
 }
 
 function renderTimeline(filter) {
@@ -555,9 +704,12 @@ function renderTimeline(filter) {
 
 function switchTab(id, btn) {
   document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
-  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); b.setAttribute('aria-selected','false'); });
   document.getElementById('tab-' + id).classList.add('active');
   btn.classList.add('active');
+  // GOD MODE PATCH — aria-selected + remember last tab (smart default)
+  btn.setAttribute('aria-selected','true');
+  try { localStorage.setItem(_LASTTAB_KEY, id); } catch(e){}
 }
 
 function showToast(msg) {
@@ -571,6 +723,8 @@ document.addEventListener('DOMContentLoaded', function(){
   init();
   // Animate radar after short delay
   setTimeout(drawRadar, 100);
+  // GOD MODE PATCH — restore last active tab / timeline filter
+  restoreLastTabAndFilter();
 });
 </script>
 </body>

@@ -1,13 +1,16 @@
 // Public website SIINDEX voice endpoint. Generated audio is not stored.
+// Path A: prefer ELEVENLABS_VOICE_ID or runtime config voice cloned from intro.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2.95.0";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ELEVENLABS_KEY = Deno.env.get("ELEVENLABS_API_KEY");
-const VOICE_ID = Deno.env.get("ELEVENLABS_VOICE_ID") || "19STyYD15bswVz51nqLf";
-const MODEL_ID = "eleven_flash_v2_5";
-const OUTPUT_FORMAT = "pcm_24000";
+const ENV_VOICE_ID = Deno.env.get("ELEVENLABS_VOICE_ID") || "";
+const APPROVED_INTRO_VOICE_ID = "iBEZxKDWKDCs8WbjiLKK";
+// Natural speech over ultra-low-latency flash (reduces "robot" character)
+const MODEL_ID = Deno.env.get("ELEVENLABS_MODEL_ID") || "eleven_turbo_v2_5";
+const OUTPUT_FORMAT = "mp3_44100_128";
 const ZONE = "siindex_website_voice_tts";
 
 function isAllowedOrigin(origin: string | null) {
@@ -36,7 +39,7 @@ function cors(req: Request) {
     "Access-Control-Allow-Headers":
       "authorization, apikey, content-type, x-siindex-visitor-id, x-siindex-provider-consent",
     "Access-Control-Expose-Headers":
-      "X-Siindex-Correlation-Id, X-Siindex-Audio-Format, X-Siindex-Voice-Model",
+      "X-Siindex-Correlation-Id, X-Siindex-Audio-Format, X-Siindex-Voice-Model, X-Siindex-Voice-Id, X-Siindex-Voice-Source",
     "Access-Control-Max-Age": "86400",
     "Vary": "Origin",
   };
@@ -96,6 +99,13 @@ async function allowed(
   return (minute.count || 0) < 6 && (day.count || 0) < 60;
 }
 
+/** The website always speaks with the approved public-introduction voice. */
+async function resolveVoiceId(
+  _admin: ReturnType<typeof createClient>,
+): Promise<{ id: string; source: "canonical" }> {
+  return { id: APPROVED_INTRO_VOICE_ID, source: "canonical" };
+}
+
 Deno.serve(async (req: Request) => {
   const correlationId = crypto.randomUUID();
   if (!isAllowedOrigin(req.headers.get("Origin"))) {
@@ -152,6 +162,13 @@ Deno.serve(async (req: Request) => {
     return json(req, 400, { error: "invalid_json" }, correlationId);
   }
   if (!text) return json(req, 400, { error: "text_required" }, correlationId);
+  // Sinn-dex (/sɪn/ as in synthetic). Never Sign-dex.
+  text = text
+    .replace(/SIINDEX/gi, "Sinn-dex")
+    .replace(/\bSyn-dex\b/gi, "Sinn-dex")
+    .replace(/\bSin-dex\b/gi, "Sinn-dex")
+    .replace(/\bSign-dex\b/gi, "Sinn-dex")
+    .replace(/\bSighn-dex\b/gi, "Sinn-dex");
   if (text.length > 1400) {
     return json(
       req,
@@ -160,6 +177,10 @@ Deno.serve(async (req: Request) => {
       correlationId,
     );
   }
+
+  const resolved = await resolveVoiceId(admin);
+  const voiceId = resolved.id;
+  const voiceSource = resolved.source;
 
   const { error: auditError } = await admin.from("security_events").insert({
     tier: "T0",
@@ -170,6 +191,8 @@ Deno.serve(async (req: Request) => {
       visitor_hash: hash,
       characters: text.length,
       model_id: MODEL_ID,
+      voice_id_suffix: voiceId.slice(-6),
+      voice_source: voiceSource,
       output_format: OUTPUT_FORMAT,
       text_stored: false,
       audio_stored: false,
@@ -184,29 +207,32 @@ Deno.serve(async (req: Request) => {
     );
   }
 
+  // Natural SIINDEX delivery — less flat than flash+style:0
+  const voice_settings = {
+    stability: 0.48,
+    similarity_boost: 0.8,
+    style: 0.35,
+    use_speaker_boost: true,
+    speed: 0.94,
+  };
+
   let provider: Response;
   try {
     provider = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}/stream?output_format=${OUTPUT_FORMAT}`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?output_format=${OUTPUT_FORMAT}`,
       {
         method: "POST",
-        signal: AbortSignal.timeout(20_000),
+        signal: AbortSignal.timeout(25_000),
         headers: {
           "xi-api-key": ELEVENLABS_KEY,
           "Content-Type": "application/json",
-          "Accept": "audio/pcm",
+          "Accept": "audio/mpeg",
         },
         body: JSON.stringify({
           text,
           model_id: MODEL_ID,
           apply_text_normalization: "auto",
-          voice_settings: {
-            stability: 0.42,
-            similarity_boost: 0.83,
-            style: 0,
-            use_speaker_boost: true,
-            speed: 0.88,
-          },
+          voice_settings,
         }),
       },
     );
@@ -216,7 +242,7 @@ Deno.serve(async (req: Request) => {
       zone: "siindex_website_voice_tts_provider_error",
       correlation_id: correlationId,
       description: "SIINDEX website voice could not reach the voice provider.",
-      detail: { visitor_hash: hash, error: String(error) },
+      detail: { visitor_hash: hash, error: String(error), voice_source: voiceSource },
     });
     return json(
       req,
@@ -237,6 +263,7 @@ Deno.serve(async (req: Request) => {
         provider_status: provider.status,
         provider_request_id: provider.headers.get("request-id"),
         model_id: MODEL_ID,
+        voice_source: voiceSource,
       },
     });
     return json(
@@ -256,6 +283,7 @@ Deno.serve(async (req: Request) => {
       visitor_hash: hash,
       model_id: MODEL_ID,
       output_format: OUTPUT_FORMAT,
+      voice_source: voiceSource,
       audio_stored: false,
     },
   });
@@ -263,12 +291,14 @@ Deno.serve(async (req: Request) => {
   return new Response(provider.body, {
     headers: {
       ...cors(req),
-      "Content-Type": "audio/pcm;rate=24000",
+      "Content-Type": "audio/mpeg",
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
       "X-Siindex-Correlation-Id": correlationId,
       "X-Siindex-Audio-Format": OUTPUT_FORMAT,
       "X-Siindex-Voice-Model": MODEL_ID,
+      "X-Siindex-Voice-Id": voiceId.slice(-6),
+      "X-Siindex-Voice-Source": voiceSource,
     },
   });
 });

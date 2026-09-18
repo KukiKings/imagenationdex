@@ -96,18 +96,27 @@
   <div class="citizen-name" id="citizenName">Welcome back</div>
   <div class="citizen-domain" id="citizenDomain">sovereign.IN$DEX</div>
   <div class="welcome-sub">Your wallet is waiting.<br>Confirm it's you to unlock.</div>
+  <div style="font-size:10.5px;color:var(--text-dim,#5A6080);text-align:center;margin:4px 0 8px;">
+    🚧 Prototype re-entry check — real Face ID / device biometric coming soon. Your account itself is already protected by real sign-in.
+  </div>
 
   <!-- GOD MODE: LOCKOUT BANNER -->
   <div class="lockout-banner" id="lockoutBanner"></div>
 
   <div id="primaryMethods">
-    <!-- Biometric button -->
+    <!-- Biometric button — FIXED 2026-11 (god mode Nov 30 build plan, Priority 1):
+         copy previously said "Use Face ID" / "Tap to scan your face" as if a real camera
+         scan happens. No WebAuthn/camera call exists here (see the PIN-pad section
+         below for the fuller note) — only a scripted pass/fail. The disclosure line
+         above this button already tells the citizen this is a prototype re-entry
+         check, but the button itself shouldn't independently claim real biometric
+         hardware is being used. -->
     <button class="bio-btn" id="bioBtn" onclick="startBiometric()">
       <div class="bio-icon-wrap" id="bioIconWrap">
-        <span id="bioIcon">🔬</span>
+        <span id="bioIcon">🔒</span>
       </div>
-      <div class="bio-label" id="bioLabel">Use Face ID</div>
-      <div class="bio-sub" id="bioSub">Tap to scan your face</div>
+      <div class="bio-label" id="bioLabel">Biometric verification</div>
+      <div class="bio-sub" id="bioSub">Coming Phase 2 — use PIN or your Web3 domain below</div>
     </button>
 
     <!-- Fallback -->
@@ -127,7 +136,7 @@
 
   <!-- GOD MODE: PIN PAD FALLBACK -->
   <div class="pin-pad-wrap" id="pinPadWrap">
-    <div class="domain-recovery-label" style="margin-bottom:16px;">Enter your 6-digit PIN</div>
+    <div class="domain-recovery-label" id="pinPadLabel" style="margin-bottom:16px;">Enter your 6-digit PIN</div>
     <div class="pin-dots" id="pinDots">
       <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
       <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
@@ -146,7 +155,7 @@
       <div class="pin-key" onclick="pinPress('0')">0</div>
       <div class="pin-key" onclick="pinBackspace()">⌫</div>
     </div>
-    <button class="fallback-link" onclick="showFaceID()" style="margin-top:14px;">Use Face ID instead</button>
+    <button class="fallback-link" onclick="showFaceID()" style="margin-top:14px;">Use quick unlock instead</button>
   </div>
 
 </div>
@@ -201,7 +210,7 @@
   function showLockoutBanner() {
     const b = document.getElementById('lockoutBanner');
     if (!b) return;
-    b.textContent = '⚠️ Face ID disabled after 3 failed attempts. Use your PIN or Web3 domain.';
+    b.textContent = '⚠️ Quick unlock disabled after 3 failed attempts. Use your PIN or Web3 domain.';
     b.classList.add('show');
   }
 
@@ -213,32 +222,11 @@
     setTimeout(() => { window.location.href = 'citizen-dashboard.html'; }, 1400);
   }
 
+  // Biometric verification coming Phase 2. No real device biometric API is called here —
+  // this button is an honest placeholder, not an interactive check. Use PIN or Web3 domain
+  // unlock below, both of which are real.
   function startBiometric() {
-    if (isLockedOutFace()) { showToast('Face ID temporarily disabled use PIN'); showPinPad(); return; }
-    const btn = document.getElementById('bioBtn');
-    btn.classList.add('scanning');
-    document.getElementById('bioLabel').textContent = 'Scanning…';
-    document.getElementById('bioSub').textContent   = 'Hold still';
-    document.getElementById('bioIcon').textContent  = '🔬';
-
-    // Simulate Face ID scan
-    setTimeout(() => {
-      btn.classList.remove('scanning');
-      // GOD MODE PATCH: simulate an occasional failed read instead of always succeeding
-      if (Math.random() < FAIL_CHANCE) {
-        failCount++;
-        document.getElementById('bioIcon').textContent  = '⚠️';
-        document.getElementById('bioLabel').textContent = 'Face not recognised';
-        document.getElementById('bioSub').textContent   = 'Tap to try again';
-        showToast(`Scan failed (${failCount}/${MAX_FAILS})`);
-        if (failCount >= MAX_FAILS) lockOutFace();
-        return;
-      }
-      document.getElementById('bioIcon').textContent  = '✅';
-      document.getElementById('bioLabel').textContent = 'Identity confirmed.';
-      document.getElementById('bioSub').textContent   = 'Welcome back. Standing by.';
-      unlockSuccess('faceid');
-    }, 1800);
+    showToast('Biometric verification coming Phase 2. Use PIN or your Web3 domain to unlock.');
   }
 
   function toggleDomainRecovery() {
@@ -255,13 +243,47 @@
   }
 
   // GOD MODE: PIN PAD FALLBACK
+  // NOTE: this screen is a re-entry convenience lock on top of an already-
+  // authenticated session (the real security boundary is Supabase auth +
+  // RLS, enforced server-side regardless of what happens here) -- same
+  // pattern as a phone's app-specific lock screen. startBiometric() below
+  // simulates a quick-unlock check (setTimeout + random pass/fail) rather
+  // than calling a real device biometric API -- there is no WebAuthn
+  // integration anywhere in this codebase yet (checked; login.html has an
+  // unbuilt stub). Neither this nor the PIN below grants any privilege
+  // beyond re-showing an already logged-in session, so this is left as
+  // prototype UX rather than a security gap, but it should not be mistaken
+  // for real re-authentication.
+  //
+  // FIXED 2026-11 (god mode Nov 30 build plan, Priority 1): this used to check
+  // against a single hardcoded DEMO_PIN ('123456') shared by every citizen on
+  // every device -- harmless for privilege (see above) but dishonest UX, since
+  // the screen presented it as "your PIN." Replaced with a real per-device PIN
+  // the citizen sets themselves on first use, stored in localStorage. This is
+  // still not a server-verified secret (same non-boundary caveat as above),
+  // but it's no longer a shared password every citizen and device has in common.
+  const PIN_STORAGE_KEY = 'indx_applock_pin';
   let pinEntry = '';
-  const DEMO_PIN = '123456'; // prototype fallback PIN, not real key material
+  let settingPin = false;
+  let pinSetupFirstEntry = '';
+
+  function getStoredPin() {
+    return localStorage.getItem(PIN_STORAGE_KEY) || '';
+  }
 
   function showPinPad() {
     document.getElementById('primaryMethods').style.display = 'none';
     document.getElementById('pinPadWrap').classList.add('show');
     pinEntry = '';
+    settingPin = false;
+    pinSetupFirstEntry = '';
+    const label = document.getElementById('pinPadLabel');
+    if (!getStoredPin()) {
+      settingPin = true;
+      if (label) label.textContent = 'Set a 6-digit unlock PIN';
+    } else if (label) {
+      label.textContent = 'Enter your 6-digit PIN';
+    }
     renderPinDots();
   }
   function showFaceID() {
@@ -282,7 +304,29 @@
     document.querySelectorAll('#pinDots .pin-dot').forEach((dot, i) => dot.classList.toggle('filled', i < pinEntry.length));
   }
   function checkPin() {
-    if (pinEntry === DEMO_PIN) {
+    const label = document.getElementById('pinPadLabel');
+    if (settingPin) {
+      if (!pinSetupFirstEntry) {
+        pinSetupFirstEntry = pinEntry;
+        pinEntry = '';
+        if (label) label.textContent = 'Confirm your PIN';
+        setTimeout(renderPinDots, 200);
+        return;
+      }
+      if (pinEntry === pinSetupFirstEntry) {
+        localStorage.setItem(PIN_STORAGE_KEY, pinEntry);
+        unlockSuccess('pin');
+      } else {
+        showToast("PINs didn't match — try again");
+        settingPin = true;
+        pinSetupFirstEntry = '';
+        pinEntry = '';
+        if (label) label.textContent = 'Set a 6-digit unlock PIN';
+        setTimeout(renderPinDots, 300);
+      }
+      return;
+    }
+    if (pinEntry === getStoredPin()) {
       unlockSuccess('pin');
     } else {
       showToast('Incorrect PIN try again');

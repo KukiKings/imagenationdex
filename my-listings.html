@@ -109,6 +109,38 @@
   .nav-item.active{opacity:1;}
   .nav-icon{font-size:20px;}
   .nav-label{font-size:10px;font-weight:600;color:#F0F2FF;}
+
+  /* GOD MODE: FILTER BAR (search + category chips + sort) */
+  .filter-bar { padding:0 20px 16px; display:flex; flex-direction:column; gap:10px; }
+  .search-input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:11px 14px; font-size:13px; color:var(--text); outline:none; }
+  .search-input::placeholder { color:var(--text-dim); }
+  .search-input:focus { border-color:var(--cyan); }
+  .chip-row { display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none; }
+  .chip-row::-webkit-scrollbar { display:none; }
+  .filter-chip { flex-shrink:0; padding:7px 14px; border-radius:20px; background:var(--surface2); border:1px solid var(--border); color:var(--text-dim); font-size:12px; font-weight:600; cursor:pointer; transition:all 0.15s; white-space:nowrap; }
+  .filter-chip.active { background:rgba(0,212,255,0.12); border-color:var(--cyan); color:var(--cyan); }
+  .sort-select { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:12px; padding:10px 14px; font-size:13px; color:var(--text); outline:none; -webkit-appearance:none; appearance:none; }
+  .filter-empty { text-align:center; padding:24px; font-size:13px; color:var(--text-dim); }
+
+  /* GOD MODE: CURRENCY TOGGLE */
+  .currency-toggle { display:flex; gap:0; padding:0 20px 14px; }
+  .cur-btn { flex:1; text-align:center; padding:8px; font-size:12px; font-weight:700; color:var(--text-dim); background:var(--surface2); border:1px solid var(--border); cursor:pointer; }
+  .cur-btn:first-child { border-radius:10px 0 0 10px; border-right:none; }
+  .cur-btn:last-child { border-radius:0 10px 10px 0; }
+  .cur-btn.active { background:rgba(0,229,160,0.12); border-color:var(--green); color:var(--green); }
+
+  /* GOD MODE: INSIGHTS BUTTON + SHEET */
+  .insights-btn { display:flex; align-items:center; justify-content:center; gap:6px; margin:0 20px 16px; padding:11px; border-radius:12px; border:1px solid var(--border); background:var(--surface2); color:var(--cyan); font-size:13px; font-weight:700; cursor:pointer; }
+  .sheet-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(8px); z-index:150; }
+  .sheet-overlay.open { display:block; }
+  .bottom-sheet { display:none; position:fixed; left:50%; bottom:0; transform:translate(-50%,100%); width:100%; max-width:430px; background:var(--surface); border-radius:24px 24px 0 0; padding:28px 24px 40px; z-index:151; transition:transform 0.3s ease; max-height:80vh; overflow-y:auto; }
+  .bottom-sheet.open { display:block; transform:translate(-50%,0); }
+  .insight-stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+  .insight-stat { background:var(--surface2); border:1px solid var(--border); border-radius:14px; padding:12px; }
+  .insight-stat-num { font-size:18px; font-weight:800; color:var(--cyan); }
+  .insight-stat-lbl { font-size:10px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.05em; margin-top:3px; }
+  .insight-cat-row { display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--border); font-size:13px; }
+  .insight-cat-row:last-child { border-bottom:none; }
 </style>
 </head>
 <body>
@@ -141,6 +173,15 @@
   </div>
 </div>
 
+<!-- GOD MODE: CURRENCY DISPLAY TOGGLE -->
+<div class="currency-toggle">
+  <div class="cur-btn active" id="curBtnIndx" onclick="setDisplayCurrency('indx')">INDX</div>
+  <div class="cur-btn" id="curBtnUsd" onclick="setDisplayCurrency('usd')">USD</div>
+</div>
+
+<!-- GOD MODE: PORTFOLIO INSIGHTS -->
+<div class="insights-btn" onclick="openInsightsSheet()">📊 View Portfolio Insights</div>
+
 <!-- TABS -->
 <div class="tabs">
   <div class="tab active" id="tab-listings" onclick="switchTab('listings')">🏪 Listings</div>
@@ -155,11 +196,25 @@
 
 <!-- LISTINGS TAB -->
 <div class="tab-content active" id="content-listings">
+  <!-- GOD MODE: LIVE SEARCH + CATEGORY FILTER + SORT -->
+  <div class="filter-bar" id="listingsFilterBar" style="display:none;">
+    <input type="text" id="listingSearchInput" class="search-input" placeholder="Search your listings…" oninput="applyListingFilters()">
+    <div class="chip-row" id="categoryChipRow"></div>
+    <select id="listingSortSelect" class="sort-select" onchange="applyListingFilters()">
+      <option value="default">Sort: Default</option>
+      <option value="price-desc">Price: High to Low</option>
+      <option value="price-asc">Price: Low to High</option>
+      <option value="az">Title: A–Z</option>
+    </select>
+  </div>
+
+  <div id="listingsListContainer">
   <div class="empty-state">
     <div class="empty-icon">🏪</div>
     <div class="empty-title">No listings yet</div>
     <div class="empty-sub">List a service, digital product, or physical item. You keep 98% of every sale 2% goes to the Civilisation.</div>
     <button class="empty-btn" onclick="window.location.href='create-listing.html'">+ Create First Listing</button>
+  </div>
   </div>
 
   <!-- Demo listings (hidden until user creates some) -->
@@ -238,8 +293,8 @@
   <div style="padding:0 20px;">
     <div style="background:var(--surface2); border:1px solid var(--border); border-radius:16px; padding:20px; text-align:center; margin-bottom:16px;">
       <div style="font-size:13px; color:var(--text-dim); margin-bottom:6px;">Total Marketplace Earnings</div>
-      <div style="font-size:36px; font-weight:900; color:var(--green);">0 INDX</div>
-      <div style="font-size:13px; color:var(--text-dim); margin-top:4px;">≈ $0.00</div>
+      <div style="font-size:36px; font-weight:900; color:var(--green);" id="earningsTotalNum">0 INDX</div>
+      <div style="font-size:13px; color:var(--text-dim); margin-top:4px;" id="earningsTotalUsd">≈ $0.00</div>
     </div>
     <div style="background:var(--surface2); border:1px solid var(--border); border-radius:16px; padding:16px;">
       <div style="font-size:14px; font-weight:700; margin-bottom:12px;">The 98/2 Law</div>
@@ -247,7 +302,7 @@
     </div>
     <div style="margin-top:16px; background:rgba(0,229,160,0.05); border:1px solid rgba(0,229,160,0.15); border-radius:14px; padding:14px 16px;">
       <div style="font-size:13px; color:var(--green); font-weight:600; margin-bottom:4px;">💡 Recursive Royalties</div>
-      <div style="font-size:13px; color:rgba(0,229,160,0.75); line-height:1.5;">Digital items you sell earn you a royalty every time they're resold automatically, via Story Protocol. List once, earn forever.</div>
+      <div style="font-size:13px; color:rgba(0,229,160,0.75); line-height:1.5;">Planned: digital items you sell would earn a royalty on future resales via Story Protocol. Not live yet.</div>
     </div>
   </div>
 </div>
@@ -263,6 +318,15 @@
       <button class="sh-btn ghost" onclick="closeOrderSheet()">Close</button>
     </div>
   </div>
+</div>
+
+<!-- GOD MODE: PORTFOLIO INSIGHTS SHEET -->
+<div class="sheet-overlay" id="insightsOverlay" onclick="if(event.target===this) closeInsightsSheet()"></div>
+<div class="bottom-sheet" id="insightsSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">📊 Portfolio Insights</div>
+  <div id="insightsBody"></div>
+  <button class="sh-btn ghost" style="width:100%;" onclick="closeInsightsSheet()">Close</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -281,6 +345,13 @@
   window.addEventListener('DOMContentLoaded', async () => {
     const citizenId = sessionStorage.getItem('citizen_id');
     if (citizenId) await loadMyListings(citizenId);
+
+    // GOD MODE: restore persisted sort + currency preferences
+    const savedSort = localStorage.getItem('indx_mylistings_sort') || 'default';
+    const sortSelect = document.getElementById('listingSortSelect');
+    if (sortSelect) sortSelect.value = savedSort;
+    document.getElementById('curBtnIndx').classList.toggle('active', displayCurrency === 'indx');
+    document.getElementById('curBtnUsd').classList.toggle('active', displayCurrency === 'usd');
   });
 
   async function loadMyListings(citizenId) {
@@ -297,8 +368,13 @@
     renderMyListings();
   }
 
+  // GOD MODE: display-currency preference (persisted) used across listings + earnings tab
+  let displayCurrency = localStorage.getItem('indx_mylistings_currency') || 'indx';
+  let activeCategoryFilter = 'all';
+
   function renderMyListings() {
-    const container = document.getElementById('content-listings');
+    // GOD MODE PATCH: render into the sub-container so the search/sort filter bar above it survives re-renders
+    const container = document.getElementById('listingsListContainer');
     const active  = myListings.filter(l => l.status === 'active');
     const sold    = myListings.filter(l => l.status === 'sold');
     const earned  = sold.reduce((s, l) => s + (l.price_indx * 0.98), 0);
@@ -307,9 +383,17 @@
     const statBoxes = document.querySelectorAll('.stat-box .stat-num');
     if (statBoxes[0]) statBoxes[0].textContent = active.length;
     if (statBoxes[1]) statBoxes[1].textContent = sold.length;
-    if (statBoxes[2]) statBoxes[2].textContent = earned.toFixed(1);
+    if (statBoxes[2]) statBoxes[2].textContent = displayCurrency === 'usd' ? '$' + (earned * INDX_PRICE).toFixed(2) : earned.toFixed(1);
 
+    // GOD MODE PATCH: wire the previously-static Earnings tab total to real computed data
+    const earningsTotalNum = document.getElementById('earningsTotalNum');
+    const earningsTotalUsd = document.getElementById('earningsTotalUsd');
+    if (earningsTotalNum) earningsTotalNum.textContent = (displayCurrency === 'usd' ? '$' + (earned * INDX_PRICE).toFixed(2) : earned.toFixed(1) + ' INDX');
+    if (earningsTotalUsd) earningsTotalUsd.textContent = displayCurrency === 'usd' ? earned.toFixed(1) + ' INDX' : '≈ $' + (earned * INDX_PRICE).toFixed(2);
+
+    const filterBar = document.getElementById('listingsFilterBar');
     if (!myListings.length) {
+      if (filterBar) filterBar.style.display = 'none';
       container.innerHTML = `
         <div class="empty-state">
           <div class="empty-icon">🏪</div>
@@ -320,20 +404,70 @@
       return;
     }
 
-    container.innerHTML = myListings.map(l => {
+    if (filterBar) filterBar.style.display = 'flex';
+    buildCategoryChips();
+    applyListingFilters();
+  }
+
+  // GOD MODE: live search + category filter + sort (client-side, over real myListings data)
+  function buildCategoryChips() {
+    const row = document.getElementById('categoryChipRow');
+    if (!row) return;
+    const cats = Array.from(new Set(myListings.map(l => l.category).filter(Boolean)));
+    row.innerHTML = ['all', ...cats].map(c => {
+      const label = c === 'all' ? 'All' : (CAT_EMOJI[c] || '🛒') + ' ' + c;
+      return `<div class="filter-chip ${activeCategoryFilter === c ? 'active' : ''}" onclick="setCategoryFilter('${c.replace(/'/g,"\\'")}')">${label}</div>`;
+    }).join('');
+  }
+
+  function setCategoryFilter(cat) {
+    activeCategoryFilter = cat;
+    buildCategoryChips();
+    applyListingFilters();
+  }
+
+  function applyListingFilters() {
+    const container = document.getElementById('listingsListContainer');
+    if (!container) return;
+    const searchInput = document.getElementById('listingSearchInput');
+    const sortSelect = document.getElementById('listingSortSelect');
+    const q = (searchInput ? searchInput.value : '').trim().toLowerCase();
+    const sortMode = sortSelect ? sortSelect.value : 'default';
+
+    // GOD MODE: remember last-used sort choice
+    if (sortSelect) localStorage.setItem('indx_mylistings_sort', sortMode);
+
+    let list = myListings.filter(l => {
+      const matchesCat = activeCategoryFilter === 'all' || l.category === activeCategoryFilter;
+      const matchesText = !q || (l.title || '').toLowerCase().includes(q) || (l.description || '').toLowerCase().includes(q);
+      return matchesCat && matchesText;
+    });
+
+    if (sortMode === 'price-desc') list = list.slice().sort((a, b) => b.price_indx - a.price_indx);
+    else if (sortMode === 'price-asc') list = list.slice().sort((a, b) => a.price_indx - b.price_indx);
+    else if (sortMode === 'az') list = list.slice().sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+
+    if (!list.length) {
+      container.innerHTML = `<div class="filter-empty">No listings match "${q || activeCategoryFilter}"</div>`;
+      return;
+    }
+
+    container.innerHTML = list.map(l => {
       const emoji = CAT_EMOJI[l.category] || '🛒';
       const badge = STATUS_BADGE[l.status] || 'paused';
       const label = STATUS_LABEL[l.status] || l.status;
       const usd   = (l.price_indx * INDX_PRICE).toFixed(2);
+      const priceMain = displayCurrency === 'usd' ? '$' + usd : l.price_indx + ' INDX';
+      const priceSub  = displayCurrency === 'usd' ? l.price_indx + ' INDX' : '≈ $' + usd;
       return `
         <div class="listing-item" onclick="openOrderSheet('${l.title.replace(/'/g,"\\'")}', '${l.price_indx}', '${label}', '${(l.description||'').slice(0,60).replace(/'/g,"\\'")}')">
           <div class="listing-thumb">${emoji}</div>
           <div class="listing-body">
             <div class="listing-title">${l.title}</div>
             <div class="listing-meta">
-              <div class="listing-price">${l.price_indx} INDX</div>
+              <div class="listing-price">${priceMain}</div>
               <div class="listing-status ${badge}">${label}</div>
-              <div class="listing-views">≈ $${usd}</div>
+              <div class="listing-views">${priceSub}</div>
             </div>
           </div>
           <div class="listing-actions">
@@ -342,6 +476,48 @@
           </div>
         </div>`;
     }).join('');
+  }
+
+  // GOD MODE: INDX / USD display toggle, persisted across visits
+  function setDisplayCurrency(mode) {
+    displayCurrency = mode;
+    localStorage.setItem('indx_mylistings_currency', mode);
+    document.getElementById('curBtnIndx').classList.toggle('active', mode === 'indx');
+    document.getElementById('curBtnUsd').classList.toggle('active', mode === 'usd');
+    renderMyListings();
+  }
+
+  // GOD MODE: portfolio insights sheet — computed entirely from real myListings data
+  function openInsightsSheet() {
+    const active = myListings.filter(l => l.status === 'active');
+    const totalValue = active.reduce((s, l) => s + l.price_indx, 0);
+    const avgPrice = myListings.length ? (myListings.reduce((s, l) => s + l.price_indx, 0) / myListings.length) : 0;
+    const highest = myListings.slice().sort((a, b) => b.price_indx - a.price_indx)[0];
+    const catCounts = {};
+    myListings.forEach(l => { const c = l.category || 'Other'; catCounts[c] = (catCounts[c] || 0) + 1; });
+
+    const body = document.getElementById('insightsBody');
+    body.innerHTML = `
+      <div class="insight-stat-grid">
+        <div class="insight-stat">
+          <div class="insight-stat-num">${totalValue.toFixed(1)}</div>
+          <div class="insight-stat-lbl">Active Value (INDX)</div>
+        </div>
+        <div class="insight-stat">
+          <div class="insight-stat-num">${avgPrice.toFixed(1)}</div>
+          <div class="insight-stat-lbl">Avg. Listing Price</div>
+        </div>
+      </div>
+      ${highest ? `<div class="detail-row"><div class="lbl">Highest priced listing</div><div class="val">${highest.title} · ${highest.price_indx} INDX</div></div>` : ''}
+      ${Object.keys(catCounts).length ? Object.entries(catCounts).map(([c, n]) => `<div class="insight-cat-row"><div>${CAT_EMOJI[c] || '🛒'} ${c}</div><div>${n}</div></div>`).join('') : '<div class="filter-empty">No listings yet — create one to see insights.</div>'}
+    `;
+    document.getElementById('insightsOverlay').classList.add('open');
+    document.getElementById('insightsSheet').classList.add('open');
+  }
+
+  function closeInsightsSheet() {
+    document.getElementById('insightsOverlay').classList.remove('open');
+    document.getElementById('insightsSheet').classList.remove('open');
   }
 
   function switchTab(tab) {

@@ -5,6 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Trust Before Transaction — IN$DEX</title>
+<meta name="description" content="SIINDEX checks a transaction before it moves and shows you the cost, the risk, and what happens next. Try example scenarios, or review a real pending transaction — nothing proceeds without your approval.">
 <style>
 :root{
   --cyan:#00D4FF;--blue:#2B35D8;--purple:#8B3FE8;
@@ -156,6 +157,15 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 .hist-badge.approved{background:rgba(0,229,160,0.12);color:var(--green);}
 .hist-badge.declined{background:rgba(255,77,109,0.12);color:var(--red);}
 
+/* GOD MODE PATCH — confirm-before-approve, accessibility, copy receipt, receipt stats */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+.scen-card:focus-visible,.btn-approve:focus-visible,.btn-decline:focus-visible,.btn-ask:focus-visible,.topbar-back:focus-visible,.copy-receipt-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+.btn-approve[data-gm-armed="1"]{background:var(--gold);}
+.copy-receipt-btn{width:100%;margin-top:10px;padding:11px;background:transparent;border:1.5px solid rgba(0,229,160,0.3);color:var(--green);border-radius:12px;font-size:12px;font-weight:700;cursor:pointer;}
+.copy-receipt-btn:active{background:rgba(0,229,160,0.08);}
+.hist-stats{margin:0 16px 10px;font-size:11px;color:var(--text-muted);display:none;gap:14px;}
+.hist-stats strong{color:var(--text);}
+
 /* ── TOAST ── */
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--surface3);color:var(--text);padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;pointer-events:none;transition:transform 0.3s ease,opacity 0.3s ease;opacity:0;z-index:999;max-width:320px;text-align:center;white-space:nowrap;}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
@@ -165,10 +175,13 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 
 <!-- TOPBAR -->
 <div class="topbar">
-  <button class="topbar-back" onclick="history.back()">←</button>
+  <button class="topbar-back" onclick="history.back()" aria-label="Go back">←</button>
   <div class="topbar-title">Trust Before Transaction</div>
   <div class="topbar-mode">🛡️ Sentinel</div>
 </div>
+
+<!-- GOD MODE PATCH — screen-reader announcement region for trust verdicts -->
+<div class="sr-only" id="srAnnounce" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <!-- SIINDEX BRIEF -->
 <div class="si-brief">
@@ -258,7 +271,7 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 
 <!-- ACTION BUTTONS -->
 <div class="action-row" id="actionRow">
-  <button class="btn-approve" onclick="handleApprove()">Approve</button>
+  <button class="btn-approve" onclick="gmConfirmApprove()">Approve</button>
   <button class="btn-decline" onclick="handleDecline()">Decline</button>
 </div>
 <div class="ask-row" id="askRow">
@@ -283,11 +296,13 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
     <div class="r-row"><div class="r-key">SIINDEX trust check</div><div class="r-val">✅ Passed</div></div>
     <div class="r-row"><div class="r-key">Decision Ledger</div><div class="r-val">Recorded</div></div>
     <div class="receipt-footer">This is your proof. SIINDEX recorded your approval and the trust check result. You can access this receipt in your Decision Ledger at any time.</div>
+    <button type="button" class="copy-receipt-btn" onclick="gmCopyReceipt()">⧉ Copy receipt</button>
   </div>
 </div>
 
 <!-- PAST RECEIPTS -->
 <div class="sec-head">Consent receipt history</div>
+<div class="hist-stats" id="histStats"></div>
 <div id="histContainer">
   <div class="hist-empty" id="histEmpty">No receipts yet. Try a scenario above.</div>
 </div>
@@ -304,6 +319,19 @@ const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const LARGE_AMOUNT_INDX = 500; // simple real threshold — not a fraud model, just a caution line
+
+// FIX 2026-09-03: get_consent_receipts is granted to `authenticated` only (not anon) — calling
+// it with the bare anon key was silently failing permission-denied every time (res.ok === false,
+// no error surfaced), so this page's "real receipts" section was always empty and quietly fell
+// back to demo-only local history. Fetch the citizen's real access token first, same pattern as
+// dispute.html / merchant-command-center.html.
+let _realAccessToken = null;
+async function initRealSession() {
+  try {
+    const { data } = await sb.auth.getSession();
+    if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+  } catch (e) { /* stay on anon key */ }
+}
 var isLiveMode = false;
 var liveExecuting = false;
 
@@ -529,13 +557,23 @@ function clearTimers() {
 
 function buildScenCards() {
   var el = document.getElementById('scenScroll');
+  // GOD MODE PATCH — tabindex/role/aria-label so scenario cards are keyboard-reachable
   el.innerHTML = SCENARIOS.map(function(s) {
-    return '<div class="scen-card" id="sc_' + s.id + '" onclick="selectScen(\'' + s.id + '\')">' +
+    return '<div class="scen-card" id="sc_' + s.id + '" tabindex="0" role="button" aria-label="' + s.label + '" onclick="selectScen(\'' + s.id + '\')">' +
       '<div class="scen-icon">' + s.icon + '</div>' +
       '<div class="scen-label">' + s.label + '</div>' +
       '<div class="scen-type">' + s.type + '</div>' +
     '</div>';
   }).join('');
+  // GOD MODE PATCH — Enter/Space activates a focused scenario card, same as a click
+  el.querySelectorAll('.scen-card').forEach(function (card) {
+    card.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        card.click();
+      }
+    });
+  });
 }
 
 function selectScen(id) {
@@ -571,6 +609,10 @@ function resetView() {
     var p = document.getElementById('pill' + i);
     if (p) p.classList.remove('lit');
   }
+  // GOD MODE PATCH — clear any armed confirm-approve state when switching scenarios
+  var gmApproveBtn = document.querySelector('.btn-approve');
+  if (gmApproveBtn) { delete gmApproveBtn.dataset.gmArmed; gmApproveBtn.textContent = 'Approve'; }
+  clearTimeout(gmArmTimer);
 }
 
 function lightPill(idx) {
@@ -682,9 +724,62 @@ function showTrustState(s) {
   document.getElementById('askRow').className = meta.showAsk ? 'ask-row visible' : 'ask-row';
 
   lightPill(3); // "What you control"
+
+  // GOD MODE PATCH — announce the trust verdict for screen-reader users
+  var srEl = document.getElementById('srAnnounce');
+  if (srEl) srEl.textContent = meta.label + '. ' + s.siSays;
+}
+
+// Approval Gateway: set while a real RPC has come back pending_approval (risk_class >= 3
+// in agent_registry) and the citizen is being asked for one more explicit sign-off before
+// SIINDEX's own tap-to-approve above is allowed to actually execute.
+var pendingGate = null;
+
+// GOD MODE PATCH — require a deliberate second tap before a REAL (live) transaction executes.
+// Demo scenarios and the server-driven Approval Gateway sign-off (pendingGate) are unaffected —
+// this only arms in front of the first live approve tap, as an extra safeguard against a stray tap.
+var gmArmTimer = null;
+function gmConfirmApprove() {
+  var btn = document.querySelector('.btn-approve');
+  if (pendingGate || !currentScen || !currentScen.live) { handleApprove(); return; }
+  if (btn && btn.dataset.gmArmed === '1') {
+    delete btn.dataset.gmArmed;
+    btn.textContent = 'Approve';
+    handleApprove();
+    return;
+  }
+  if (btn) {
+    btn.dataset.gmArmed = '1';
+    btn.textContent = 'Tap again to confirm';
+    showToast('Real transaction — tap Approve again to confirm');
+    clearTimeout(gmArmTimer);
+    gmArmTimer = setTimeout(function () {
+      if (btn) { delete btn.dataset.gmArmed; btn.textContent = 'Approve'; }
+    }, 4000);
+  }
+}
+
+// GOD MODE PATCH — copy the on-screen consent receipt fields to the clipboard
+function gmCopyReceipt() {
+  var get = function (id) { var el = document.getElementById(id); return el ? el.textContent.trim() : ''; };
+  var text = 'IN$DEX Consent Receipt\n' +
+    'Receipt ID: ' + get('rId') + '\n' +
+    'Action: ' + get('rAction') + '\n' +
+    'To: ' + get('rRecipient') + '\n' +
+    'Amount: ' + get('rAmount') + '\n' +
+    'Fee: ' + get('rFee') + '\n' +
+    'Citizen approved: ' + get('rTime');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function () {
+      showToast('Receipt copied');
+    }).catch(function () { showToast('Copy failed'); });
+  } else {
+    showToast('Copy not supported on this browser');
+  }
 }
 
 async function handleApprove() {
+  if (pendingGate) { await handleGateApprove(); return; }
   if (!currentScen || liveExecuting) return;
 
   if (currentScen.live) {
@@ -761,12 +856,32 @@ async function handleLiveApprove(s) {
         body: JSON.stringify(body)
       });
       const resBody = await res.json();
+
+      // Approval Gateway: transfer_indx/withdraw_indx are risk_class >= 3 in agent_registry,
+      // so this first call can come back a normal 200 {success:false, pending_approval:true,
+      // intent_id} instead of executing. That's not a rejection -- it's a second, explicit
+      // sign-off SIINDEX needs before this specific action can go through.
+      if (resBody?.pending_approval) {
+        liveExecuting = false;
+        await showGateCard(resBody.intent_id, citizenId, p, s, rid, rpcName, body);
+        return;
+      }
+
       if (!res.ok || resBody?.message || resBody?.code) {
-        rpcError = resBody?.message || 'The network rejected this action.';
+        // ACCOUNT_FROZEN / CARD_FROZEN are raw Postgres exception text, not something to
+        // show a citizen verbatim -- map them to the same clear message withdraw.html,
+        // bill-pay.html, and card-atm-withdrawal.html already show for the same real check.
+        var rawMsg = resBody?.message || '';
+        rpcError = rawMsg.includes('ACCOUNT_FROZEN') ? 'Your account is frozen — ' + (p.type === 'withdraw' ? 'withdrawal' : 'transfer') + ' blocked. Unfreeze it from Emergency Freeze, or contact support.'
+          : rawMsg.includes('CARD_FROZEN') ? 'Your card is frozen — this action is blocked.'
+          : rawMsg || 'The network rejected this action.';
       } else if (resBody && resBody.new_balance !== undefined) {
         result = resBody;
       } else {
-        rpcError = 'No confirmation was returned. Nothing was sent.';
+        // transfer_indx/withdraw_indx return a normal (non-error) JSON body with
+        // success:false for expected failures like an unresolvable recipient --
+        // surface that specific reason instead of a generic message when present.
+        rpcError = resBody?.message || resBody?.error || 'No confirmation was returned. Nothing was sent.';
       }
     } catch (e) {
       console.error('[trust-before-transaction] live approve failed:', e);
@@ -834,7 +949,143 @@ async function handleLiveApprove(s) {
   }
 }
 
+// Show the Approval Gateway sign-off card. `rpcName`/`body` are the exact same RPC name and
+// payload that just came back pending, so approving can retry them unchanged once granted.
+async function showGateCard(intentId, citizenId, p, s, rid, rpcName, body) {
+  pendingGate = { intentId, citizenId, p, s, rid, rpcName, body };
+
+  var card = document.getElementById('stateCard');
+  card.className = 'state-card state-needs_approval visible';
+  document.getElementById('stateIcon').textContent = '👆';
+  document.getElementById('stateLabel').textContent = 'One more approval needed';
+  document.getElementById('stateSub').textContent = 'SIINDEX Approval Gateway';
+  document.getElementById('stateSiSays').textContent =
+    'This action needs your explicit sign-off before it can complete. Nothing has moved yet.';
+  document.getElementById('stateRecordText').textContent = '';
+
+  try {
+    const cardRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_action_intent_card', {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_intent_id: intentId })
+    });
+    const cardBody = await cardRes.json();
+    if (cardBody && !cardBody.error && cardBody.data_involved) {
+      document.getElementById('stateSiSays').textContent = cardBody.data_involved + ' — approve to continue. Nothing has moved yet.';
+    }
+  } catch (e) { /* keep the generic message above */ }
+
+  var ar = document.getElementById('actionRow');
+  ar.className = 'action-row show-approve show-decline';
+  document.querySelector('.btn-approve').textContent = 'Approve';
+  document.getElementById('askRow').className = 'ask-row';
+}
+
+async function handleGateApprove() {
+  if (!pendingGate || liveExecuting) return;
+  liveExecuting = true;
+  var g = pendingGate;
+
+  var card = document.getElementById('stateCard');
+  card.className = 'state-card state-processing visible';
+  document.getElementById('stateIcon').textContent = STATE_META.processing.icon;
+  document.getElementById('stateLabel').textContent = STATE_META.processing.label;
+  document.getElementById('stateSub').textContent = STATE_META.processing.sub;
+  document.getElementById('stateSiSays').textContent = 'Recording your approval and retrying now. Do not close this screen.';
+  document.getElementById('actionRow').className = 'action-row';
+
+  try {
+    const grantRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/grant_intent_approval', {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_intent_id: g.intentId, p_level: 1, p_method: 'citizen_app_confirm' })
+    });
+    const grant = await grantRes.json();
+    if (!grant || !grant.success) throw new Error('Approval could not be recorded.');
+
+    const retryRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/' + g.rpcName, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(g.body)
+    });
+    const retryBody = await retryRes.json();
+
+    liveExecuting = false;
+    pendingGate = null;
+
+    if (retryBody?.pending_approval) {
+      throw new Error('Approval did not clear — please try again.');
+    }
+    if (!retryRes.ok || retryBody?.message || retryBody?.code) {
+      var rawMsg = retryBody?.message || '';
+      var rpcError = rawMsg.includes('ACCOUNT_FROZEN') ? 'Your account is frozen — action blocked.'
+        : rawMsg.includes('CARD_FROZEN') ? 'Your card is frozen — this action is blocked.'
+        : rawMsg || 'The network rejected this action.';
+      throw new Error(rpcError);
+    }
+    if (!retryBody || retryBody.new_balance === undefined) {
+      throw new Error(retryBody?.message || retryBody?.error || 'No confirmation was returned. Nothing was sent.');
+    }
+
+    sessionStorage.setItem('citizen_balance', String(Math.round(retryBody.new_balance)));
+    if (retryBody.new_wisdom !== undefined) sessionStorage.setItem('citizen_wisdom', String(retryBody.new_wisdom));
+    sessionStorage.removeItem(_PENDING_KEY);
+
+    card.className = 'state-card';
+    var now = new Date();
+    var timeStr = now.toLocaleString('en-AU', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'short', year:'numeric'});
+    document.getElementById('rId').textContent = g.rid;
+    document.getElementById('rAction').textContent = g.s.type;
+    document.getElementById('rRecipient').textContent = g.s.recipient;
+    document.getElementById('rAmount').textContent = g.s.indxAmount.toFixed(2) + ' INDX ($' + (g.s.indxAmount * INDX_PRICE_USD).toFixed(2) + ' USD)';
+    document.getElementById('rFee').textContent = g.s.feeLabel;
+    document.getElementById('rTime').textContent = timeStr;
+    document.getElementById('receiptWrap').classList.add('visible');
+    lightPill(4);
+    saveToHistory({id: g.rid, label: g.s.label, icon: g.s.icon, ts: now.getTime(), status: 'approved'});
+    renderHistory();
+    showToast(g.p.type === 'withdraw' ? '✅ Withdrawal recorded' : '✅ Sent — confirmed');
+
+    var receiptCard = document.querySelector('#receiptWrap .receipt-card');
+    if (receiptCard && !document.getElementById('liveReturnBtn')) {
+      var btn = document.createElement('button');
+      btn.id = 'liveReturnBtn';
+      btn.textContent = g.p.type === 'withdraw' ? 'Back to Cash Out' : 'Back to Send';
+      btn.style.cssText = 'width:100%;padding:14px;border-radius:12px;background:var(--cyan);border:none;color:#000;font-size:14px;font-weight:800;cursor:pointer;margin-top:12px;';
+      btn.onclick = function() { window.location.href = g.p.returnUrl || 'citizen-dashboard.html'; };
+      receiptCard.appendChild(btn);
+    }
+  } catch (e) {
+    liveExecuting = false;
+    pendingGate = null;
+    card.className = 'state-card state-failed visible';
+    document.getElementById('stateIcon').textContent = STATE_META.failed.icon;
+    document.getElementById('stateLabel').textContent = STATE_META.failed.label;
+    document.getElementById('stateSub').textContent = STATE_META.failed.sub;
+    document.getElementById('stateSiSays').textContent = e?.message || 'The network rejected this action.';
+    document.getElementById('stateRecordText').textContent = '';
+    showToast('❌ ' + (e?.message || 'Approval failed'));
+    var ar2 = document.getElementById('actionRow');
+    ar2.className = 'action-row show-decline';
+    document.querySelector('.btn-decline').textContent = 'Back';
+    document.querySelector('.btn-decline').onclick = function() {
+      window.location.href = g.p.returnUrl || 'citizen-dashboard.html';
+    };
+  }
+}
+
+function handleGateDecline() {
+  var g = pendingGate;
+  pendingGate = null;
+  sessionStorage.removeItem(_PENDING_KEY);
+  showToast('Declined — nothing moved. Returning…');
+  setTimeout(function() {
+    window.location.href = (g && g.p && g.p.returnUrl) || 'citizen-dashboard.html';
+  }, 900);
+}
+
 async function handleDecline() {
+  if (pendingGate) { handleGateDecline(); return; }
   document.getElementById('actionRow').className = 'action-row';
   document.getElementById('askRow').className = 'ask-row';
   lightPill(4);
@@ -919,9 +1170,10 @@ async function renderHistory() {
   // Real receipts (send/withdraw actually executed or genuinely declined/failed) — source of truth.
   if (citizenId) {
     try {
+      await initRealSession();
       const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_consent_receipts', {
         method: 'POST',
-        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+        headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + (_realAccessToken || SUPABASE_ANON_KEY), 'Content-Type': 'application/json' },
         body: JSON.stringify({ p_citizen_id: citizenId, p_limit: 25 })
       });
       if (res.ok) {
@@ -948,6 +1200,23 @@ async function renderHistory() {
   rows = rows.concat(demoHist);
   rows.sort(function(a, b) { return b.ts - a.ts; });
   rows = rows.slice(0, 25);
+
+  // GOD MODE PATCH — real counts from the citizen's own receipts above (real + local demo),
+  // never a network-wide or fabricated figure
+  var statsEl = document.getElementById('histStats');
+  if (statsEl) {
+    if (rows.length) {
+      var approvedCt = rows.filter(function (r) { return r.status === 'approved'; }).length;
+      var declinedCt = rows.length - approvedCt;
+      statsEl.style.display = 'flex';
+      statsEl.innerHTML = '<span><strong>' + rows.length + '</strong> total</span>' +
+        '<span><strong>' + approvedCt + '</strong> approved</span>' +
+        '<span><strong>' + declinedCt + '</strong> declined</span>';
+    } else {
+      statsEl.style.display = 'none';
+      statsEl.innerHTML = '';
+    }
+  }
 
   if (!rows.length) {
     container.innerHTML = '<div class="hist-empty">No receipts yet. Try a scenario above.</div>';

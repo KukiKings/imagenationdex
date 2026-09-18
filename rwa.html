@@ -456,10 +456,10 @@
       <div class="mint-title" style="color:var(--green)">Preview Complete</div>
       <div class="nft-result-card">
         <div class="nft-result-icon" id="successThumb">📦</div>
-        <div class="nft-token-id" id="successTokenId">IN$DEX-RWA-</div>
-        <div class="nft-meta">Preview only · not yet minted on Solana</div>
+        <div class="nft-token-id" id="successTokenId">No token ID — not minted</div>
+        <div class="nft-meta">NFT minting is Phase 2 · not available in this pilot</div>
       </div>
-      <div class="mint-sub" id="successDesc">Your asset. Real minting via Story Protocol opens at launch — nothing has moved on-chain yet.</div>
+      <div class="mint-sub" id="successDesc">NFT minting is a Phase 2 feature — not available in this pilot. Nothing has moved on-chain yet.</div>
       <button class="done-btn" onclick="window.location.href='citizen-dashboard.html'">✓ Back to Dashboard</button>
       <button class="list-btn" onclick="window.location.href='marketplace.html'">🏪 List on Marketplace</button>
     </div>
@@ -575,13 +575,18 @@
     runMinting();
   }
 
+  // FIX: this staged animation used to narrate a fake live mint -- "Confirmed on Solana in
+  // ~0.4s", "Story Protocol royalty hook active", a hardcoded wrong domain
+  // ("mariasantos.IN$DEX" regardless of who's using the page), "Sovereign ownership
+  // certificate issued" -- none of which happened. showMintSuccess() has been removed
+  // entirely (NFT minting Phase 2) — the animation now simply ends after the last step.
   function runMinting() {
     const steps = [
-      { id:'ms1', title:'Compressing…', sub:'Encoding asset metadata as cNFT' },
-      { id:'ms2', title:'Writing…', sub:'Confirmed on Solana in ~0.4s' },
-      { id:'ms3', title:'Registering…', sub:'Story Protocol royalty hook active' },
-      { id:'ms4', title:'Minting…', sub:'NFT deposited to mariasantos.IN$DEX' },
-      { id:'ms5', title:'Certifying…', sub:'Sovereign ownership certificate issued' },
+      { id:'ms1', title:'Preparing…', sub:'Encoding your asset details' },
+      { id:'ms2', title:'Previewing…', sub:'Not submitted to Solana — minting isn\'t live yet' },
+      { id:'ms3', title:'Previewing…', sub:'Story Protocol royalty hook is planned, not connected' },
+      { id:'ms4', title:'Previewing…', sub:'No NFT is being created' },
+      { id:'ms5', title:'Finishing…', sub:'Nothing has moved on-chain' },
     ];
     let i = 0;
     const run = () => {
@@ -600,22 +605,22 @@
         i++;
         setTimeout(run, 1000);
       } else {
-        setTimeout(showMintSuccess, 400);
+        // FIX 2026-09-17: showMintSuccess() was deleted (NFT minting Phase 2, see comment
+        // above) but nothing replaced its one real job -- swapping #mintMinting for
+        // #mintSuccess. The animation used to just stop here, leaving a citizen stuck
+        // staring at "Finishing... Nothing has moved on-chain" forever with no way out of
+        // the overlay. #mintSuccess's copy is already honest ("Preview Complete", "NFT
+        // minting is Phase 2 -- not available in this pilot", "Nothing has moved
+        // on-chain yet") -- this just reveals that existing exit screen instead of
+        // reintroducing any of the fabricated claims (fake confirmation time, wrong
+        // domain, random token ID, "certificate issued") that were removed with it.
+        setTimeout(() => {
+          document.getElementById('mintMinting').style.display = 'none';
+          document.getElementById('mintSuccess').style.display = 'block';
+        }, 500);
       }
     };
     setTimeout(run, 300);
-  }
-
-  function showMintSuccess() {
-    document.getElementById('mintMinting').style.display = 'none';
-    document.getElementById('mintSuccess').style.display = 'block';
-    const name = document.getElementById('assetName').value.trim() || 'Asset';
-    // FIXED 2026-07-25: was a Math.random() token ID shown as a real minted NFT ID.
-    // Nothing is actually minted yet, so show an honest preview label instead.
-    const tokenId = 'PREVIEW — not minted';
-    const royalty = document.getElementById('royaltySlider').value;
-    document.getElementById('successTokenId').textContent = tokenId;
-    document.getElementById('successDesc').textContent = `"${name}" — once real minting is live, every resale will trigger your ${royalty}% royalty automatically via Story Protocol. Nothing has moved on-chain yet.`;
   }
 
   // ── GOD MODE — rwa.html ──
@@ -703,23 +708,7 @@
     updateProjector(val); // GOD MODE PATCH
   }
 
-  // GOD MODE PATCH — showMintSuccess persists minted asset + clears draft
-  function showMintSuccess() {
-    document.getElementById('mintMinting').style.display = 'none';
-    document.getElementById('mintSuccess').style.display = 'block';
-    const name = document.getElementById('assetName').value.trim() || 'Asset';
-    const tokenId = 'IN$DEX-RWA-' + Math.random().toString(36).substr(2,8).toUpperCase();
-    const royalty = document.getElementById('royaltySlider').value;
-    document.getElementById('successTokenId').textContent = tokenId;
-    document.getElementById('successDesc').textContent = `"${name}" is now a sovereign NFT. Every resale triggers your ${royalty}% royalty via Story Protocol.`;
-    // GOD MODE PATCH — save to history + clear draft
-    const arr = getMinted();
-    arr.unshift({ name, tokenId, icon: selectedCatIcon, royalty, date: new Date().toISOString() });
-    if (arr.length > 20) arr.pop();
-    localStorage.setItem(RWA_MINTED_KEY, JSON.stringify(arr));
-    localStorage.removeItem(RWA_DRAFT_KEY);
-    renderMyAssets();
-  }
+  // NFT minting Phase 2.
 
   // GOD MODE PATCH — goStep auto-saves draft on each step transition
   function goStep(n) {

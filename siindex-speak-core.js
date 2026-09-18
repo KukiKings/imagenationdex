@@ -1,72 +1,57 @@
 /**
- * SIINDEX Website Voice Core v3
- *
- * One shared, real conversation controller for the homepage and every page
- * that already includes this file. It has no account access, tools, or
- * transaction authority.
+ * SIINDEX Website Voice Core v3.0.15
+ * Interrupt must not fall through to full speechSynthesis restart.
+ * Spoken name lock: Sinn-dex only (never Sign-dex).
+ * Mic: MediaRecorder + siindex-website-transcribe; MIME/filename match for Safari mp4.
+ * v3.0.15: no timeslice — incomplete webm/mp4 containers caused ElevenLabs provider 400.
  */
 (function () {
   "use strict";
-
-  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.0") return;
+  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.15") return;
 
   const SUPABASE_URL = "https://zljgthfzbalsunuoohcd.supabase.co";
   const SUPABASE_KEY = "sb_publishable_rSl7P028UrBn8KCUSSbjAg_mT3FWoxV";
   const ENDPOINTS = {
-    runtime: `${SUPABASE_URL}/functions/v1/siindex-website-runtime`,
-    transcribe: `${SUPABASE_URL}/functions/v1/siindex-website-transcribe`,
-    voice: `${SUPABASE_URL}/functions/v1/siindex-website-voice-tts`,
+    runtime: SUPABASE_URL + "/functions/v1/siindex-website-runtime",
+    transcribe: SUPABASE_URL + "/functions/v1/siindex-website-transcribe",
+    voice: SUPABASE_URL + "/functions/v1/siindex-website-voice-tts",
+    missionLedger: SUPABASE_URL + "/functions/v1/siindex-mission-ledger",
   };
   const HISTORY_KEY = "siindex_website_conversation_v3";
   const VISITOR_KEY = "siindex_website_visitor_id";
+  const CITIZEN_WAITLIST_ID_KEY = "siindex_citizen_waitlist_id";
+
+  // Best-effort, non-blocking write to the Mission Ledger. Only fires for a citizen
+  // who has completed the Founding Citizen application (waitlist.html stores the id).
+  // Never throws into the conversation flow — a failed write must not break chat.
+  function writeMissionLedger(eventName, text) {
+    try {
+      var waitlistId = localStorage.getItem(CITIZEN_WAITLIST_ID_KEY);
+      if (!waitlistId) return;
+      fetch(ENDPOINTS.missionLedger, {
+        method: "POST",
+        headers: headers("application/json"),
+        body: JSON.stringify({ waitlist_id: waitlistId, event: eventName, text: text }),
+      }).catch(function () {});
+    } catch (_) {}
+  }
   const VOICE_KEY = "siindex_website_voice_enabled";
   const PROVIDER_CONSENT_KEY = "siindex_website_provider_consent_v1";
-  const WEBSITE_MODE =
-    location.hostname === "imagenationdex.com" ||
-    location.hostname === "www.imagenationdex.com" ||
-    location.hostname === "imagenationdex.vercel.app" ||
-    location.hostname === "imagenationdex-kukikings.vercel.app" ||
-    location.hostname === "localhost" ||
-    location.hostname === "127.0.0.1" ||
-    (
-      location.hostname.startsWith("imagenationdex-") &&
-      location.hostname.endsWith("-kukikings.vercel.app")
-    );
-  const MAX_HISTORY = 20;
-  const MAX_RECORDING_MS = 20_000;
+  const VOICE_REQUEST_TIMEOUT_MS = 30000;
 
-  let runtimeAbort = null;
   let voiceAbort = null;
-  let recorder = null;
-  let microphoneStream = null;
-  let recordingChunks = [];
-  let recordingTimer = null;
-  let recordingStartedAt = 0;
+  let runtimeAbort = null;
+  let transcriptionAbort = null;
   let audioContext = null;
   let playbackGeneration = 0;
   const activeAudioSources = new Set();
-  let currentStreamMessage = null;
-  let busy = false;
-  let recording = false;
-  let consentPromise = null;
   let voiceEnabled = localStorage.getItem(VOICE_KEY) !== "false";
-
-  class SiindexError extends Error {
-    constructor(code, status, detail) {
-      super(code);
-      this.name = "SiindexError";
-      this.code = code;
-      this.status = status;
-      this.detail = detail;
-    }
-  }
+  let busy = false;
 
   function visitorId() {
     let value = localStorage.getItem(VISITOR_KEY);
     if (!value) {
-      value = self.crypto && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `visitor-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      value = (self.crypto && crypto.randomUUID) ? crypto.randomUUID() : "visitor-" + Date.now();
       localStorage.setItem(VISITOR_KEY, value);
     }
     return value;
@@ -77,578 +62,64 @@
       apikey: SUPABASE_KEY,
       "x-siindex-visitor-id": visitorId(),
       "x-siindex-provider-consent":
-        localStorage.getItem(PROVIDER_CONSENT_KEY) === "accepted"
-          ? "accepted"
-          : "not-accepted",
+        localStorage.getItem(PROVIDER_CONSENT_KEY) === "accepted" ? "accepted" : "not-accepted",
+      Authorization: "Bearer " + SUPABASE_KEY,
     };
     if (contentType) result["Content-Type"] = contentType;
     return result;
   }
 
-  function getHistory() {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
-      return Array.isArray(parsed) ? parsed.slice(-MAX_HISTORY) : [];
-    } catch (_) {
-      return [];
+  function pronunciation(text) {
+    if (window.SIINDEXPronunciation && typeof window.SIINDEXPronunciation.apply === "function") {
+      return window.SIINDEXPronunciation.apply(text);
     }
-  }
-
-  function saveHistory(history) {
-    try {
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(-MAX_HISTORY)));
-    } catch (_) {
-      // Conversation still works when private browsing blocks local storage.
-    }
-  }
-
-  function explain(reason, next, owner, timeframe) {
-    return `Reason: ${reason}\nNext: ${next}\nWho can fix it: ${owner}\nExpected time: ${timeframe}`;
-  }
-
-  function errorMessage(error, area) {
-    const code = error && (error.code || error.message);
-    const status = error && error.status;
-
-    if (code === "NotAllowedError" || code === "permission_denied") {
-      return explain(
-        "Microphone permission is blocked for this site.",
-        "Open the browser's site settings, allow Microphone, then tap the microphone once.",
-        "You can change the permission; SIINDEX can retry after it is allowed.",
-        "About 1 minute.",
-      );
-    }
-    if (code === "NotFoundError") {
-      return explain(
-        "No working microphone was found on this device.",
-        "Connect or enable a microphone, or use the text box.",
-        "You can enable the device; typed SIINDEX works now.",
-        "Typing is immediate; microphone timing depends on the device.",
-      );
-    }
-    if (code === "provider_consent_required" || code === "provider_consent_declined") {
-      return explain(
-        "Visitor Mode needs your permission before it sends microphone audio or typed questions to external providers.",
-        "Read the provider notice and choose Continue only if you agree. Do not share passwords, one-time codes, private keys, or account access details.",
-        "Only you can grant this permission. A human steward is not needed.",
-        "Immediate after you choose.",
-      );
-    }
-    if (code === "website_only") {
-      return explain(
-        "This SIINDEX voice service is available only on the official IN$DEX website.",
-        "Open imagenationdex.com and try again.",
-        "IN$DEX controls access to the website voice service.",
-        "Available immediately on the official website.",
-      );
-    }
-    if (code === "no_speech_detected") {
-      return explain(
-        "I did not hear a clear spoken question.",
-        "Tap the microphone, speak after the listening message appears, then tap again to send.",
-        "You can retry; SIINDEX handles the transcription.",
-        "Immediate.",
-      );
-    }
-    if (code === "rate_limited" || status === 429) {
-      return explain(
-        "This device has reached the short safety limit for public SIINDEX requests.",
-        "Wait briefly, then try one clear question. You can continue reading the site meanwhile.",
-        "The limit resets automatically; a human is not needed.",
-        "Usually 1 minute.",
-      );
-    }
-    if (
-      code === "transcription_provider_not_configured" ||
-      code === "transcription_provider_unavailable" ||
-      code === "transcription_provider_error"
-    ) {
-      return explain(
-        "The secure speech-to-text service is not available right now.",
-        "Type your question in the box so SIINDEX can still answer.",
-        "A project administrator must check the ElevenLabs transcription service.",
-        "Text works now; microphone recovery depends on the provider check.",
-      );
-    }
-    if (
-      code === "model_provider_not_configured" ||
-      code === "model_provider_unavailable" ||
-      code === "model_provider_error" ||
-      status === 502 ||
-      status === 503
-    ) {
-      return explain(
-        "SIINDEX's public conversation service could not complete this request.",
-        "Check your connection and retry once. If it repeats, use the contact route and include the correlation ID shown with the error.",
-        "SIINDEX can retry; a human administrator is needed if it repeats.",
-        "Immediate retry; investigation if repeated.",
-      );
-    }
-    if (area === "voice") {
-      return explain(
-        "The ElevenLabs voice could not play on this device.",
-        "Read the reply or use the device-voice fallback. You can keep typing or speaking.",
-        "SIINDEX continues in text; a human checks ElevenLabs only if this repeats.",
-        "Text is available now.",
-      );
-    }
-    return explain(
-      "The request did not complete.",
-      "Check your connection and retry once, or type a shorter question.",
-      "SIINDEX can retry; a human is needed only if it repeats.",
-      "Immediate retry.",
-    );
-  }
-
-  function emit(name, detail) {
-    window.dispatchEvent(new CustomEvent(`siindex:${name}`, { detail }));
+    var t = String(text || "");
+    t = t.replace(/pronounced\s+Syn-?dex\s+or\s+Sin-?dex/gi, "pronounced Sinn-dex");
+    t = t.replace(/pronounced\s+Syn-?dex/gi, "pronounced Sinn-dex");
+    t = t.replace(/I['']?m\s+SIINDEX/gi, "I'm Sinn-dex");
+    t = t.replace(/I\s+am\s+SIINDEX/gi, "I am Sinn-dex");
+    t = t.replace(/\bSIINDEX\b/gi, "Sinn-dex");
+    t = t.replace(/\bSyn[\s-]?dex\b/gi, "Sinn-dex");
+    t = t.replace(/\bSin[\s-]?dex\b/gi, "Sinn-dex");
+    t = t.replace(/\bSign[\s-]?dex\b/gi, "Sinn-dex");
+    t = t.replace(/\bSighn[\s-]?dex\b/gi, "Sinn-dex");
+    return t;
   }
 
   function setStatus(state, text) {
-    if (ui.status) {
-      ui.status.textContent = text || "";
-      ui.status.dataset.state = state || "idle";
-    }
-    if (ui.mic) {
-      ui.mic.classList.toggle("listening", state === "listening");
-      ui.mic.setAttribute("aria-pressed", state === "listening" ? "true" : "false");
-    }
-    if (ui.interrupt) {
-      ui.interrupt.hidden = !["thinking", "speaking", "transcribing"].includes(state);
-    }
-    emit("status", { state, text });
-  }
-
-  function messageId() {
-    return `sim-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-  }
-
-  function emitMessage(role, text, id, streaming, source) {
-    emit("message", {
-      role,
-      text,
-      id,
-      streaming: !!streaming,
-      source: source || "global",
-    });
-  }
-
-  function renderMessage(role, text, id) {
-    if (!ui.messages) return null;
-    ui.empty && (ui.empty.hidden = true);
-    let row = id ? ui.messages.querySelector(`[data-message-id="${CSS.escape(id)}"]`) : null;
-    if (!row) {
-      row = document.createElement("div");
-      row.className = `siindex-message ${role}`;
-      row.dataset.messageId = id || messageId();
-
-      const sender = document.createElement("div");
-      sender.className = "siindex-message-sender";
-      sender.textContent = role === "user" ? "You" : "SIINDEX";
-
-      const body = document.createElement("div");
-      body.className = "siindex-message-body";
-      row.append(sender, body);
-      ui.messages.appendChild(row);
-    }
-    row.querySelector(".siindex-message-body").textContent = text;
-    ui.messages.scrollTop = ui.messages.scrollHeight;
-    return row;
-  }
-
-  function showError(error, area, source) {
-    const text = errorMessage(error, area);
-    const id = messageId();
-    renderMessage("assistant", text, id);
-    emitMessage("assistant", text, id, false, source);
-    setStatus("error", "SIINDEX explained what happened. Typing remains available.");
-  }
-
-  function preferredMimeType() {
-    if (!window.MediaRecorder) return "";
-    const candidates = [
-      "audio/webm;codecs=opus",
-      "audio/mp4",
-      "audio/webm",
-      "audio/ogg;codecs=opus",
-    ];
-    return candidates.find((type) => MediaRecorder.isTypeSupported(type)) || "";
-  }
-
-  function ensureProviderConsent() {
-    if (localStorage.getItem(PROVIDER_CONSENT_KEY) === "accepted") {
-      return Promise.resolve(true);
-    }
-    if (consentPromise) return consentPromise;
-
-    consentPromise = new Promise((resolve) => {
-      const overlay = document.createElement("div");
-      overlay.id = "siindex-consent-overlay";
-      overlay.style.cssText =
-        "position:fixed;inset:0;z-index:10050;display:grid;place-items:center;padding:20px;" +
-        "background:rgba(6,8,14,.88);backdrop-filter:blur(6px);";
-
-      const dialog = document.createElement("section");
-      dialog.setAttribute("role", "dialog");
-      dialog.setAttribute("aria-modal", "true");
-      dialog.setAttribute("aria-labelledby", "siindex-consent-title");
-      dialog.style.cssText =
-        "width:min(100%,520px);max-height:88vh;overflow:auto;padding:24px;border-radius:22px;" +
-        "border:1px solid rgba(0,212,255,.35);background:#11141f;color:#f4f6ff;" +
-        "box-shadow:0 24px 80px rgba(0,0,0,.55);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;";
-      dialog.innerHTML = `
-        <h2 id="siindex-consent-title" style="margin:0 0 12px;font-size:20px;">Before SIINDEX continues</h2>
-        <p style="margin:0 0 12px;color:#c8cede;font-size:13px;line-height:1.6;">SIINDEX voice uses external providers:</p>
-        <ul style="margin:0 0 14px;padding-left:20px;color:#c8cede;font-size:13px;line-height:1.7;">
-          <li>Microphone audio is sent to ElevenLabs for transcription.</li>
-          <li>Your transcript or typed question is sent to Anthropic for the answer.</li>
-          <li>SIINDEX's reply is sent to ElevenLabs when voice replies are on.</li>
-        </ul>
-        <p style="margin:0 0 12px;color:#c8cede;font-size:13px;line-height:1.6;">IN$DEX does not store raw audio or the Visitor Mode conversation on its servers. A copy of the conversation stays only on this device until you clear it.</p>
-        <p style="margin:0 0 18px;color:#ffcf72;font-size:13px;line-height:1.6;">Never share passwords, one-time codes, private keys, or account access details.</p>
-        <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
-          <button type="button" data-si-consent-decline style="border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:10px 16px;background:transparent;color:#d6dbea;cursor:pointer;">Not now</button>
-          <button type="button" data-si-consent-accept style="border:0;border-radius:20px;padding:10px 16px;background:linear-gradient(135deg,#00d4ff,#2b35d8);color:#fff;font-weight:800;cursor:pointer;">Continue</button>
-        </div>`;
-      overlay.appendChild(dialog);
-      document.body.appendChild(overlay);
-
-      const finish = (accepted) => {
-        if (accepted) localStorage.setItem(PROVIDER_CONSENT_KEY, "accepted");
-        overlay.remove();
-        emit("consent", { accepted });
-        consentPromise = null;
-        resolve(accepted);
-      };
-      const accept = dialog.querySelector("[data-si-consent-accept]");
-      const decline = dialog.querySelector("[data-si-consent-decline]");
-      accept.addEventListener("click", () => finish(true), { once: true });
-      decline.addEventListener("click", () => finish(false), { once: true });
-      overlay.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") finish(false);
-      });
-      accept.focus();
-    });
-    return consentPromise;
-  }
-
-  function stopTracks() {
-    if (microphoneStream) {
-      microphoneStream.getTracks().forEach((track) => track.stop());
-      microphoneStream = null;
-    }
-  }
-
-  function stopRecording(shouldTranscribe, source) {
-    clearTimeout(recordingTimer);
-    recordingTimer = null;
-    if (!recorder || recorder.state === "inactive") {
-      recording = false;
-      stopTracks();
-      return;
-    }
-    recorder._shouldTranscribe = shouldTranscribe !== false;
-    recorder._source = source || recorder._source || "global";
     try {
-      recorder.stop();
-    } catch (_) {
-      recording = false;
-      stopTracks();
-    }
-  }
-
-  async function startRecording(options) {
-    const source = options && options.source || "global";
-    const onTranscript = options && options.onTranscript;
-    const onError = options && options.onError;
-    const onEnd = options && options.onEnd;
-    const autoStopMs = Math.min(
-      Math.max(Number(options && options.autoStopMs) || MAX_RECORDING_MS, 1000),
-      MAX_RECORDING_MS,
-    );
-    if (recording) {
-      stopRecording(true, source);
-      return;
-    }
-    if (!WEBSITE_MODE) {
-      const error = new SiindexError("website_only");
-      if (typeof onError === "function") onError(error);
-      else showError(error, "access", source);
-      if (typeof onEnd === "function") onEnd();
-      return;
-    }
-    if (!await ensureProviderConsent()) {
-      const error = new SiindexError("provider_consent_declined");
-      if (typeof onError === "function") onError(error);
-      else showError(error, "consent", source);
-      if (typeof onEnd === "function") onEnd();
-      return;
-    }
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
-      const error = new SiindexError("microphone_not_supported");
-      if (typeof onError === "function") onError(error);
-      else showError(error, "microphone", source);
-      if (typeof onEnd === "function") onEnd();
-      return;
-    }
-
-    interrupt("Microphone opened. Previous speech and response stopped.", false);
-    try {
-      await ensureAudioContext().catch(() => null);
-      microphoneStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          channelCount: 1,
-        },
-      });
-
-      const mimeType = preferredMimeType();
-      recorder = mimeType
-        ? new MediaRecorder(microphoneStream, { mimeType })
-        : new MediaRecorder(microphoneStream);
-      recordingChunks = [];
-      recordingStartedAt = Date.now();
-      recorder._source = source;
-      recorder._shouldTranscribe = true;
-      recorder._onTranscript = onTranscript;
-      recorder._onError = onError;
-      recorder._onEnd = onEnd;
-
-      recorder.ondataavailable = (event) => {
-        if (event.data && event.data.size) recordingChunks.push(event.data);
-      };
-      recorder.onerror = (event) => {
-        recording = false;
-        stopTracks();
-        const error = event.error || new Error("recording_failed");
-        if (typeof onError === "function") onError(error);
-        else showError(error, "microphone", source);
-        if (typeof onEnd === "function") onEnd();
-      };
-      recorder.onstop = async () => {
-        const shouldTranscribe = recorder._shouldTranscribe;
-        const requestSource = recorder._source || source;
-        const transcriptHandler = recorder._onTranscript;
-        const errorHandler = recorder._onError;
-        const endHandler = recorder._onEnd;
-        const mime = recorder.mimeType || mimeType || "audio/webm";
-        recording = false;
-        stopTracks();
-        const duration = Date.now() - recordingStartedAt;
-        const blob = new Blob(recordingChunks, { type: mime });
-        recordingChunks = [];
-        recorder = null;
-
-        if (!shouldTranscribe) {
-          setStatus("idle", "Ready. Tap the microphone to speak.");
-          if (typeof endHandler === "function") endHandler();
-          return;
-        }
-        if (duration < 350 || blob.size < 500) {
-          const error = new SiindexError("no_speech_detected");
-          if (typeof errorHandler === "function") errorHandler(error);
-          else showError(error, "microphone", requestSource);
-          if (typeof endHandler === "function") endHandler();
-          return;
-        }
-        try {
-          const transcript = await transcribeAudio(blob, mime, requestSource);
-          emit("transcript", { text: transcript, source: requestSource });
-          if (typeof transcriptHandler === "function") {
-            await transcriptHandler(transcript);
-            setStatus("idle", "Voice captured.");
-          } else {
-            await ask(transcript, { source: requestSource });
-          }
-        } catch (error) {
-          if (typeof errorHandler === "function") errorHandler(error);
-          else showError(error, "transcription", requestSource);
-        } finally {
-          if (typeof endHandler === "function") endHandler();
-        }
-      };
-
-      recorder.start(250);
-      recording = true;
-      setStatus(
-        "listening",
-        "Listening. Speak now, then tap the microphone again to send.",
-      );
-      recordingTimer = setTimeout(() => stopRecording(true, source), autoStopMs);
-    } catch (error) {
-      recording = false;
-      stopTracks();
-      if (typeof onError === "function") onError(error);
-      else showError(error, "microphone", source);
-      if (typeof onEnd === "function") onEnd();
-    }
-  }
-
-  function audioExtension(mime) {
-    if (mime.includes("mp4")) return "mp4";
-    if (mime.includes("ogg")) return "ogg";
-    if (mime.includes("wav")) return "wav";
-    return "webm";
-  }
-
-  async function transcribeAudio(blob, mime, source) {
-    setStatus("transcribing", "Turning your voice into text. Audio is not being saved.");
-    const data = new FormData();
-    data.append("audio", blob, `siindex-question.${audioExtension(mime)}`);
-
-    const response = await fetch(ENDPOINTS.transcribe, {
-      method: "POST",
-      headers: headers(),
-      body: data,
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new SiindexError(result.error || "transcription_failed", response.status, result);
-    }
-    const transcript = String(result.transcript || "").trim();
-    if (!transcript) throw new SiindexError("no_speech_detected", 422, result);
-    return transcript;
-  }
-
-  async function readFailure(response) {
-    const result = await response.json().catch(() => ({}));
-    throw new SiindexError(
-      result.error || `request_failed_${response.status}`,
-      response.status,
-      result,
-    );
-  }
-
-  async function ask(text, options) {
-    const source = options && options.source || "global";
-    text = String(text || "").trim();
-    if (!text || busy) return;
-    if (!WEBSITE_MODE) {
-      showError(new SiindexError("website_only"), "access", source);
-      return;
-    }
-    if (!await ensureProviderConsent()) {
-      showError(
-        new SiindexError("provider_consent_declined"),
-        "consent",
-        source,
-      );
-      return;
-    }
-    if (text.length > 1200) text = text.slice(0, 1200);
-
-    interrupt("Preparing your question…", false);
-    busy = true;
-    const userId = messageId();
-    renderMessage("user", text, userId);
-    emitMessage("user", text, userId, false, source);
-
-    const history = getHistory();
-    const assistantId = messageId();
-    currentStreamMessage = assistantId;
-    renderMessage("assistant", "Thinking…", assistantId);
-    emitMessage("assistant", "Thinking…", assistantId, true, source);
-    setStatus("thinking", "SIINDEX is thinking…");
-    runtimeAbort = new AbortController();
-    let fullText = "";
-
-    try {
-      const response = await fetch(ENDPOINTS.runtime, {
-        method: "POST",
-        signal: runtimeAbort.signal,
-        headers: headers("application/json"),
-        body: JSON.stringify({
-          message: text,
-          history: history.slice(-8),
-        }),
-      });
-      if (!response.ok || !response.body) await readFailure(response);
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const raw = line.slice(6).trim();
-          if (!raw || raw === "[DONE]") continue;
-          try {
-            const event = JSON.parse(raw);
-            if (event.text) {
-              fullText += event.text;
-              renderMessage("assistant", fullText, assistantId);
-              emitMessage("assistant", fullText, assistantId, true, source);
-            }
-          } catch (_) {
-            // Ignore incomplete SSE lines.
-          }
-        }
-      }
-      if (!fullText.trim()) throw new SiindexError("empty_response", 502);
-
-      history.push({ role: "user", content: text });
-      history.push({ role: "assistant", content: fullText });
-      saveHistory(history);
-      emitMessage("assistant", fullText, assistantId, false, source);
-      setStatus("idle", "Response complete.");
-      if (voiceEnabled) await speak(fullText);
-    } catch (error) {
-      if (error && error.name === "AbortError") {
-        const stopped = fullText || "Response interrupted.";
-        renderMessage("assistant", stopped, assistantId);
-        emitMessage("assistant", stopped, assistantId, false, source);
-      } else {
-        const textError = errorMessage(error, "runtime");
-        renderMessage("assistant", textError, assistantId);
-        emitMessage("assistant", textError, assistantId, false, source);
-        setStatus("error", "SIINDEX explained what happened. You can retry or type.");
-      }
-    } finally {
-      runtimeAbort = null;
-      currentStreamMessage = null;
-      busy = false;
-    }
-  }
-
-  async function ensureAudioContext() {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) return null;
-    if (!audioContext || audioContext.state === "closed") {
-      audioContext = new AudioContextClass({ sampleRate: 24000 });
-    }
-    if (audioContext.state === "suspended") await audioContext.resume();
-    return audioContext;
+      window.dispatchEvent(new CustomEvent("siindex:status", { detail: { state: state, text: text } }));
+    } catch (_) {}
   }
 
   function stopPcmPlayback() {
     playbackGeneration += 1;
     for (const source of activeAudioSources) {
-      try {
-        source.stop();
-      } catch (_) {
-        // Source may already be stopped.
-      }
+      try { source.stop(); } catch (_) {}
     }
     activeAudioSources.clear();
+  }
+
+  async function ensureAudioContext() {
+    if (!audioContext) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      audioContext = new Ctx();
+    }
+    if (audioContext.state === "suspended") {
+      try { await audioContext.resume(); } catch (_) {}
+    }
+    return audioContext;
   }
 
   async function playPcmStream(response) {
     const context = await ensureAudioContext();
     if (!context || !response.body) throw new Error("streaming_audio_unavailable");
-
     const generation = ++playbackGeneration;
     const reader = response.body.getReader();
     const frameBytes = 8192;
     let pending = new Uint8Array(0);
-    let nextStartAt = context.currentTime + 0.12;
-    let finalSource = null;
+    let nextStartAt = context.currentTime + 0.08;
 
     function schedule(bytes) {
       if (!bytes.length || generation !== playbackGeneration) return;
@@ -656,408 +127,492 @@
       if (!sampleCount) return;
       const samples = new Float32Array(sampleCount);
       const view = new DataView(bytes.buffer, bytes.byteOffset, sampleCount * 2);
-      for (let index = 0; index < sampleCount; index += 1) {
-        samples[index] = view.getInt16(index * 2, true) / 32768;
-      }
+      for (let i = 0; i < sampleCount; i++) samples[i] = view.getInt16(i * 2, true) / 32768;
       const buffer = context.createBuffer(1, sampleCount, 24000);
       buffer.copyToChannel(samples, 0);
       const source = context.createBufferSource();
       source.buffer = buffer;
       source.connect(context.destination);
+      const startAt = Math.max(context.currentTime + 0.02, nextStartAt);
+      source.start(startAt);
+      nextStartAt = startAt + buffer.duration;
       activeAudioSources.add(source);
-      source.onended = () => activeAudioSources.delete(source);
-      nextStartAt = Math.max(nextStartAt, context.currentTime + 0.08);
-      source.start(nextStartAt);
-      nextStartAt += buffer.duration;
-      finalSource = source;
-      setStatus("speaking", "SIINDEX is speaking. Tap Interrupt or the microphone to stop.");
+      source.onended = function () { activeAudioSources.delete(source); };
     }
 
     while (true) {
+      if (generation !== playbackGeneration) {
+        try { await reader.cancel(); } catch (_) {}
+        return;
+      }
       const { done, value } = await reader.read();
-      if (done || generation !== playbackGeneration) break;
+      if (done) break;
+      if (!value || !value.length) continue;
       const merged = new Uint8Array(pending.length + value.length);
-      merged.set(pending);
+      merged.set(pending, 0);
       merged.set(value, pending.length);
       let offset = 0;
       while (merged.length - offset >= frameBytes) {
-        schedule(merged.slice(offset, offset + frameBytes));
+        schedule(merged.subarray(offset, offset + frameBytes));
         offset += frameBytes;
       }
-      pending = merged.slice(offset);
+      pending = merged.subarray(offset);
     }
-    if (generation === playbackGeneration && pending.length >= 2) {
-      schedule(pending.slice(0, pending.length - (pending.length % 2)));
-    }
-    if (finalSource && generation === playbackGeneration) {
-      finalSource.addEventListener("ended", () => {
-        if (generation === playbackGeneration) setStatus("idle", "Ready.");
-      }, { once: true });
-    }
+    if (pending.length >= 2) schedule(pending);
+    const waitMs = Math.max(0, (nextStartAt - context.currentTime) * 1000) + 50;
+    await new Promise(function (r) { setTimeout(r, waitMs); });
   }
 
-  function pronunciation(text) {
-    return String(text)
-      .replace(/SIINDEX/g, "Syn-dex")
-      .replace(/IN\$DEX/g, "in-dex")
-      .replace(/\bINDX\b/g, "index")
-      .slice(0, 1400);
+  async function playVoiceResponse(response) {
+    const format = (response.headers.get("X-Siindex-Audio-Format") || "").toLowerCase();
+    const contentType = (response.headers.get("Content-Type") || "").toLowerCase();
+    if (format.startsWith("pcm_") || contentType.indexOf("audio/pcm") !== -1) {
+      return playPcmStream(response);
+    }
+
+    const context = await ensureAudioContext();
+    if (!context) throw new Error("audio_context_unavailable");
+    const generation = ++playbackGeneration;
+    const encoded = await response.arrayBuffer();
+    const decoded = await context.decodeAudioData(encoded.slice(0));
+    if (generation !== playbackGeneration) return;
+    const source = context.createBufferSource();
+    source.buffer = decoded;
+    source.connect(context.destination);
+    activeAudioSources.add(source);
+    await new Promise(function (resolve, reject) {
+      source.onended = function () {
+        activeAudioSources.delete(source);
+        resolve();
+      };
+      try { source.start(); } catch (error) {
+        activeAudioSources.delete(source);
+        reject(error);
+      }
+    });
   }
 
   async function speak(text) {
     if (!voiceEnabled || !text) return;
-    voiceAbort = new AbortController();
+    const controller = new AbortController();
+    voiceAbort = controller;
+    let voiceTimedOut = false;
+    const voiceTimer = setTimeout(function () {
+      voiceTimedOut = true;
+      controller.abort();
+    }, VOICE_REQUEST_TIMEOUT_MS);
     const spoken = pronunciation(text);
     try {
-      setStatus("speaking", "Preparing SIINDEX's voice…");
+      setStatus("speaking", "SIINDEX is speaking…");
       const response = await fetch(ENDPOINTS.voice, {
         method: "POST",
-        signal: voiceAbort.signal,
+        signal: controller.signal,
         headers: headers("application/json"),
         body: JSON.stringify({ text: spoken }),
       });
-      if (!response.ok) await readFailure(response);
-      if (response.headers.get("X-Siindex-Audio-Format") !== "pcm_24000") {
-        throw new SiindexError("unsupported_audio_format", 502);
-      }
-      await playPcmStream(response);
+      clearTimeout(voiceTimer);
+      if (!response.ok) throw new Error("voice_http_" + response.status);
+      await playVoiceResponse(response);
+      if (!controller.signal.aborted) setStatus("idle", "Ready.");
     } catch (error) {
-      if (error && error.name === "AbortError") return;
-      if (!window.speechSynthesis) {
-        setStatus("error", errorMessage(error, "voice"));
+      clearTimeout(voiceTimer);
+      if (controller.signal.aborted && !voiceTimedOut) {
+        setStatus("idle", "Paused.");
         return;
       }
-      // American accent facts (AJ decision 2026-07-29). Re-applied after the v3 rewrite:
-      // this fallback previously selected no voice at all, so it used whatever the device
-      // defaults to — on an Australian Mac that is an Australian or British voice, which is
-      // the exact complaint this decision resolved. en-US is required here, with any other
-      // English kept only as a last resort so the fallback never goes silent.
-      const utterance = new SpeechSynthesisUtterance(spoken);
-      try {
-        const allVoices = speechSynthesis.getVoices() || [];
-        const usVoices = allVoices.filter((v) => /^en[-_]US/i.test(v.lang || ""));
-        const preferred =
-          usVoices.find((v) =>
-            /samantha|ava|allison|susan|zoe|nicky|victoria|zira|aria|google us english/i.test(v.name),
-          ) ||
-          usVoices.find((v) => /female|woman/i.test(v.name)) ||
-          usVoices[0] ||
-          allVoices.find((v) => /^en/i.test(v.lang || ""));
-        if (preferred) utterance.voice = preferred;
-      } catch (_) {
-        /* voice list unavailable — fall through to the browser default */
+      if (error && error.name === "AbortError" && !voiceTimedOut) {
+        setStatus("idle", "Paused.");
+        return;
       }
-      utterance.lang = "en-US";
-      utterance.rate = 0.94;
-      utterance.pitch = 1.03;
-      utterance.onend = () => setStatus("idle", "Ready.");
-      speechSynthesis.cancel();
-      speechSynthesis.speak(utterance);
-      setStatus(
-        "speaking",
-        "ElevenLabs is unavailable; using this device's voice temporarily.",
-      );
-    } finally {
-      voiceAbort = null;
+      setStatus("error", "SIINDEX voice unavailable. Response remains available as text.");
     }
   }
 
   function interrupt(message, notify) {
     if (runtimeAbort) runtimeAbort.abort();
+    if (transcriptionAbort) transcriptionAbort.abort();
     if (voiceAbort) voiceAbort.abort();
-    if (recording) stopRecording(false);
     stopPcmPlayback();
-    window.speechSynthesis && speechSynthesis.cancel();
+    try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (_) {}
+    stopMediaCapture();
     busy = false;
     if (notify !== false) setStatus("idle", message || "Interrupted. Ready.");
   }
 
-  function clearHistory() {
-    localStorage.removeItem(HISTORY_KEY);
-    localStorage.removeItem(PROVIDER_CONSENT_KEY);
-    if (ui.messages) {
-      ui.messages.querySelectorAll(".siindex-message").forEach((node) => node.remove());
-      if (ui.empty) ui.empty.hidden = false;
-    }
-    emit("history-cleared", {});
-    emit("consent", { accepted: false });
-    setStatus(
-      "idle",
-      "This device's Visitor Mode conversation and provider consent were cleared.",
-    );
+  function emitMessage(role, text, source) {
+    try {
+      window.dispatchEvent(new CustomEvent("siindex:message", {
+        detail: { role: role, text: text, source: source || "public-home", id: (role === "user" ? "u-" : "s-") + Date.now() },
+      }));
+    } catch (_) {}
   }
 
-  const STYLES = `
-    #siindex-fab{position:fixed;right:16px;bottom:78px;width:56px;height:56px;border-radius:50%;border:1px solid rgba(0,212,255,.55);background:linear-gradient(135deg,#00d4ff,#2b35d8);color:#fff;z-index:9998;box-shadow:0 0 24px rgba(0,212,255,.45),0 8px 28px rgba(0,0,0,.42);cursor:pointer;font-size:23px}
-    #siindex-fab:hover{transform:scale(1.05)} #siindex-fab:focus-visible{outline:3px solid #fff;outline-offset:3px}
-    #siindex-overlay{position:fixed;inset:0;background:rgba(6,8,14,.76);backdrop-filter:blur(4px);z-index:9997;display:none}
-    #siindex-overlay.show{display:block}
-    #siindex-panel{position:fixed;left:0;right:0;bottom:0;max-width:460px;height:min(82vh,720px);margin:auto;background:#11141f;border:1px solid rgba(0,212,255,.24);border-bottom:0;border-radius:24px 24px 0 0;z-index:9999;transform:translateY(105%);transition:transform .3s ease;display:flex;flex-direction:column;overflow:hidden;color:#f4f6ff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-    #siindex-panel.open{transform:translateY(0)}
-    .siindex-panel-header{display:flex;gap:10px;align-items:center;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
-    .siindex-avatar{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#00d4ff,#8b3fe8);font-weight:900}
-    .siindex-heading{flex:1}.siindex-name{font-size:15px;font-weight:850;letter-spacing:.08em}.siindex-mode{font-size:10px;color:#00e5a0;margin-top:3px;letter-spacing:.08em;text-transform:uppercase}
-    .siindex-icon-btn{border:0;background:transparent;color:#c8cede;font-size:22px;padding:7px;cursor:pointer}
-    .siindex-privacy{padding:9px 16px;background:rgba(0,212,255,.06);border-bottom:1px solid rgba(0,212,255,.1);color:#b5c0d3;font-size:11px;line-height:1.45}
-    .siindex-messages{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
-    .siindex-empty{margin:auto;text-align:center;color:#aeb6c8;max-width:300px;font-size:13px;line-height:1.6}
-    .siindex-message{max-width:88%;border-radius:16px;padding:10px 13px;white-space:pre-wrap;font-size:13px;line-height:1.5}
-    .siindex-message.user{align-self:flex-end;background:linear-gradient(135deg,rgba(43,53,216,.55),rgba(139,63,232,.48));border-bottom-right-radius:4px}
-    .siindex-message.assistant{align-self:flex-start;background:linear-gradient(135deg,rgba(0,212,255,.1),rgba(139,63,232,.08));border:1px solid rgba(0,212,255,.18);border-bottom-left-radius:4px}
-    .siindex-message-sender{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#00d4ff;margin-bottom:4px;font-weight:800}
-    .siindex-message.user .siindex-message-sender{text-align:right;color:#d8d4ff}.siindex-message-body{word-break:break-word}
-    .siindex-prompts{display:flex;gap:7px;padding:7px 14px;overflow-x:auto}.siindex-prompt{flex:none;border:1px solid rgba(0,212,255,.2);background:rgba(0,212,255,.06);color:#8ceaff;border-radius:20px;padding:7px 11px;font-size:11px;cursor:pointer}
-    .siindex-status{min-height:24px;padding:4px 15px 7px;color:#aeb6c8;font-size:11px;line-height:1.35}.siindex-status[data-state="listening"]{color:#ff8aa0}.siindex-status[data-state="error"]{color:#ffb5c3}.siindex-status[data-state="speaking"]{color:#74edc2}
-    .siindex-controls{display:flex;gap:8px;align-items:center;padding:10px 14px 20px;border-top:1px solid rgba(255,255,255,.07)}
-    .siindex-input{min-width:0;flex:1;border:1px solid rgba(255,255,255,.13);border-radius:24px;background:rgba(255,255,255,.05);color:#fff;padding:11px 15px;font-size:13px;outline:none}.siindex-input:focus{border-color:#00d4ff}
-    .siindex-round{width:42px;height:42px;border:0;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:#fff;background:linear-gradient(135deg,#00d4ff,#2b35d8);font-size:17px}.siindex-round.listening{background:#ff4d6d;animation:siindexMicPulse .8s infinite}.siindex-round:focus-visible{outline:3px solid #fff;outline-offset:2px}
-    .siindex-interrupt{border:1px solid rgba(255,184,0,.5);background:rgba(255,184,0,.1);color:#ffd56a;border-radius:18px;padding:6px 10px;font-size:11px;cursor:pointer;margin-left:14px}
-    .siindex-footer-tools{display:flex;align-items:center;justify-content:space-between;padding:0 14px 7px;color:#8e98aa;font-size:10px}.siindex-text-btn{border:0;background:transparent;color:#8ceaff;font-size:10px;cursor:pointer}
-    @keyframes siindexMicPulse{50%{transform:scale(1.12);box-shadow:0 0 20px rgba(255,77,109,.65)}}
-    @media (min-width:700px){#siindex-panel{left:auto;right:18px;bottom:18px;border-bottom:1px solid rgba(0,212,255,.24);border-radius:24px;width:430px;height:min(78vh,700px)}}
-    @media (prefers-reduced-motion:reduce){#siindex-panel,.siindex-round{transition:none!important;animation:none!important}}
-  `;
-
-  const ui = {
-    panel: null,
-    overlay: null,
-    fab: null,
-    messages: null,
-    empty: null,
-    status: null,
-    input: null,
-    mic: null,
-    interrupt: null,
-    voiceToggle: null,
-  };
-
-  function restorePanelHistory() {
-    if (!ui.messages) return;
-    ui.messages.querySelectorAll(".siindex-message").forEach((node) => node.remove());
-    const history = getHistory();
-    history.forEach((item) => {
-      renderMessage(item.role === "user" ? "user" : "assistant", item.content, messageId());
-    });
-    if (ui.empty) ui.empty.hidden = history.length > 0;
-  }
-
-  function open() {
-    if (!ui.panel) return;
-    ui.panel.classList.add("open");
-    ui.overlay && ui.overlay.classList.add("show");
-    if (ui.fab) ui.fab.hidden = true;
-    restorePanelHistory();
-    setTimeout(() => ui.input && ui.input.focus(), 250);
-  }
-
-  function close() {
-    if (!ui.panel) return;
-    ui.panel.classList.remove("open");
-    ui.overlay && ui.overlay.classList.remove("show");
-    if (ui.fab) ui.fab.hidden = false;
-    if (recording) stopRecording(false);
-    stopPcmPlayback();
-  }
-
-  function setVoiceEnabled(enabled) {
-    voiceEnabled = !!enabled;
-    localStorage.setItem(VOICE_KEY, String(voiceEnabled));
-    if (ui.voiceToggle) {
-      ui.voiceToggle.textContent = voiceEnabled ? "Voice replies on" : "Voice replies off";
-    }
-    if (!voiceEnabled) interrupt("Voice replies off. Text conversation remains available.", false);
-    emit("voice-toggle", { enabled: voiceEnabled });
-  }
-
-  function injectWidget() {
-    if (window.SIINDEX_NO_GLOBAL_WIDGET) return;
-    const style = document.createElement("style");
-    style.textContent = STYLES;
-    document.head.appendChild(style);
-
-    ui.overlay = document.createElement("div");
-    ui.overlay.id = "siindex-overlay";
-    ui.overlay.addEventListener("click", close);
-
-    ui.fab = document.createElement("button");
-    ui.fab.id = "siindex-fab";
-    ui.fab.type = "button";
-    ui.fab.setAttribute("aria-label", "Open SIINDEX conversation");
-    ui.fab.title = "Speak to SIINDEX";
-    ui.fab.textContent = "🎙";
-    ui.fab.addEventListener("click", open);
-
-    ui.panel = document.createElement("section");
-    ui.panel.id = "siindex-panel";
-    ui.panel.setAttribute("role", "dialog");
-    ui.panel.setAttribute("aria-modal", "true");
-    ui.panel.setAttribute("aria-label", "SIINDEX Visitor Mode conversation");
-    ui.panel.innerHTML = `
-      <header class="siindex-panel-header">
-        <div class="siindex-avatar" aria-hidden="true">SI</div>
-        <div class="siindex-heading">
-          <div class="siindex-name">SIINDEX</div>
-          <div class="siindex-mode">Synthetic Intelligence · Website Voice</div>
-        </div>
-        <button type="button" class="siindex-icon-btn" data-si-close aria-label="Close SIINDEX">×</button>
-      </header>
-      <div class="siindex-privacy">Tap the microphone only when ready. With your permission, audio is sent securely to ElevenLabs for transcription, your transcript or typed question is sent to Anthropic, and SIINDEX replies are sent to ElevenLabs when voice is on. IN$DEX does not store raw audio or website conversations on its servers. Do not share passwords, one-time codes, private keys, or account access details. Website Voice cannot access accounts or take actions.</div>
-      <div class="siindex-messages" data-si-messages>
-        <div class="siindex-empty" data-si-empty>Ask me what is genuinely live, what is planned, how the Pacific-first pilot works, or how to collaborate. Tap the microphone, speak, then tap again to send. You can type at any time.</div>
-      </div>
-      <div class="siindex-prompts" data-si-prompts></div>
-      <button type="button" class="siindex-interrupt" data-si-interrupt hidden>■ Interrupt</button>
-      <div class="siindex-status" data-si-status aria-live="polite">Ready. Tap the microphone to speak or type below.</div>
-      <div class="siindex-footer-tools">
-        <button type="button" class="siindex-text-btn" data-si-voice></button>
-        <button type="button" class="siindex-text-btn" data-si-clear>Clear conversation &amp; consent</button>
-      </div>
-      <div class="siindex-controls">
-        <input class="siindex-input" data-si-input type="text" maxlength="1200" placeholder="Ask SIINDEX anything…" autocomplete="off">
-        <button type="button" class="siindex-round" data-si-mic aria-label="Start or stop microphone" aria-pressed="false">🎙</button>
-        <button type="button" class="siindex-round" data-si-send aria-label="Send question">➤</button>
-      </div>`;
-
-    document.body.append(ui.overlay, ui.fab, ui.panel);
-    ui.messages = ui.panel.querySelector("[data-si-messages]");
-    ui.empty = ui.panel.querySelector("[data-si-empty]");
-    ui.status = ui.panel.querySelector("[data-si-status]");
-    ui.input = ui.panel.querySelector("[data-si-input]");
-    ui.mic = ui.panel.querySelector("[data-si-mic]");
-    ui.interrupt = ui.panel.querySelector("[data-si-interrupt]");
-    ui.voiceToggle = ui.panel.querySelector("[data-si-voice]");
-
-    const prompts = [
-      "What is genuinely live today?",
-      "What is planned for the Pacific pilot?",
-      "Explain the 50 INDX welcome recognition",
-      "What is the verified token status?",
-      "How can I collaborate?",
-      "Can reporters interview SIINDEX?",
-    ];
-    const promptArea = ui.panel.querySelector("[data-si-prompts]");
-    prompts.forEach((text) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "siindex-prompt";
-      button.textContent = text;
-      button.addEventListener("click", () => ask(text, { source: "global" }));
-      promptArea.appendChild(button);
-    });
-
-    ui.panel.querySelector("[data-si-close]").addEventListener("click", close);
-    ui.panel.querySelector("[data-si-send]").addEventListener("click", () => {
-      const text = ui.input.value;
-      ui.input.value = "";
-      ask(text, { source: "global" });
-    });
-    ui.input.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" && !event.shiftKey) {
-        event.preventDefault();
-        const text = ui.input.value;
-        ui.input.value = "";
-        ask(text, { source: "global" });
+  async function readRuntimeReply(response) {
+    const ctype = (response.headers.get("content-type") || "").toLowerCase();
+    if (ctype.indexOf("text/event-stream") !== -1 || ctype.indexOf("stream") !== -1) {
+      const reader = response.body && response.body.getReader();
+      if (!reader) return "";
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let full = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line.startsWith("data:")) continue;
+          const raw = line.slice(5).trim();
+          if (!raw || raw === "[DONE]") continue;
+          try {
+            const event = JSON.parse(raw);
+            const piece = event.text || event.delta || event.reply || event.message || "";
+            if (piece) full += piece;
+          } catch (_) {
+            full += raw;
+          }
+        }
       }
+      return full.trim();
+    }
+    const data = await response.json();
+    return ((data && (data.reply || data.text || data.message)) || "").trim();
+  }
+
+  async function ask(text, opts) {
+    if (!text) return;
+    opts = opts || {};
+    const source = opts.source || "public-home";
+    interrupt("…", false);
+    emitMessage("user", text, source);
+
+    const isGoalIntakeQuestion = /what is one real result.*help you complete/i.test(text);
+    if (isGoalIntakeQuestion) {
+      const prompt = "Tell me your answer in one sentence beginning: My real goal is to… For example: My real goal is to find paid work.";
+      emitMessage("si", prompt, source);
+      setStatus("idle", "Waiting for your real goal.");
+      if (voiceEnabled) {
+        try { await speak(prompt); } catch (_) {}
+      }
+      return;
+    }
+
+    const isFoundingOffer = /^\s*i will help .+ solve .+ by providing .+/i.test(text);
+    if (isFoundingOffer) {
+      writeMissionLedger("offer_recorded", text);
+      const validationMission = "Founding Offer recorded. Your next action is to speak with five potential customers before choosing a name, logo, menu, or payment system. Ask each person: What do you do for dinner when you are busy? What meal and portion would you buy? What price would feel affordable? Pass this mission when at least two people agree to preorder one dinner for a specific day. Then report: people interviewed, preorder commitments, preferred meal, and acceptable price.";
+      emitMessage("si", validationMission, source);
+      setStatus("idle", "Waiting for customer evidence.");
+      if (voiceEnabled) {
+        try { await speak(validationMission); } catch (_) {}
+      }
+      return;
+    }
+
+    const isFoundingGoalRequest = /my real goal is/i.test(text);
+    const isStartBusinessGoal = /my real goal is to start (a |my )?small business/i.test(text);
+    if (isStartBusinessGoal) {
+      writeMissionLedger("goal_captured", text);
+      const firstAction = "Your first action is to write one Founding Offer sentence: I will help [specific customer] solve [specific problem] by providing [product or service]. Do not choose a business name, logo, wallet, or payment system yet. Reply with the completed sentence.";
+      emitMessage("si", firstAction, source);
+      setStatus("idle", "Waiting for your Founding Offer.");
+      if (voiceEnabled) {
+        try { await speak(firstAction); } catch (_) {}
+      }
+      return;
+    }
+
+    const hasPlaceholderGoal = /\[\s*goal\s*\]/i.test(text);
+    if (isFoundingGoalRequest && hasPlaceholderGoal) {
+      const clarification = "Please replace [goal] with one real result you want to complete. For example: find paid work, start a small business, learn a skill, sell a product, or find a collaborator.";
+      emitMessage("si", clarification, source);
+      setStatus("idle", "Waiting for your real goal.");
+      if (voiceEnabled) {
+        try { await speak(clarification); } catch (_) {}
+      }
+      return;
+    }
+
+    // Use matchAnswer (not answer) here: matchAnswer returns null for anything
+    // that isn't a confident curated match, so real questions fall through to
+    // the live siindex-website-runtime model below instead of getting a vague
+    // static catch-all forever. answer() (guaranteed non-null) is still used
+    // as the network-failure fallback further down. Fixed 2026-09-04 (god mode
+    // Item 6) — previously answer()'s catch-all made this branch fire for
+    // nearly every question, so the real model call was effectively dead code.
+    const local = !isFoundingGoalRequest && window.SIINDEX_PUBLIC && typeof SIINDEX_PUBLIC.matchAnswer === "function"
+      ? SIINDEX_PUBLIC.matchAnswer(text) : null;
+    if (local) {
+      emitMessage("si", local, source);
+      if (voiceEnabled) {
+        try { await speak(local); } catch (_) {}
+      }
+      return;
+    }
+
+    // FIX 2026-09-17: ensureProviderConsent() was only ever called from the mic/voice
+    // path (transcribeBlob/recordAndTranscribe), never from here. headers()'s
+    // x-siindex-provider-consent is read straight from localStorage, so any visitor who
+    // typed a question first (the primary input path per the UI copy: "Chips & typing
+    // primary") sent "not-accepted" and got a 403 provider_consent_required from
+    // siindex-website-runtime on every first real question -- silently swallowed into
+    // the generic on-device fallback with only a transient status line as any sign of
+    // failure. Confirmed live: two fresh-session test questions on imagenationdex.com
+    // both 403'd (checked via Supabase edge function logs) before this fix.
+    ensureProviderConsent();
+    setStatus("thinking", "Thinking…");
+    const controller = new AbortController();
+    runtimeAbort = controller;
+    try {
+      const response = await fetch(ENDPOINTS.runtime, {
+        method: "POST",
+        signal: controller.signal,
+        headers: headers("application/json"),
+        body: JSON.stringify({ message: text, history: [] }),
+      });
+      if (!response.ok) throw new Error("runtime_" + response.status);
+      const reply = (await readRuntimeReply(response)) || "I am Sinn-dex. Please try again.";
+      emitMessage("si", reply, source);
+      if (voiceEnabled) {
+        try { await speak(reply); } catch (_) {}
+      }
+      setStatus("idle", "Ready.");
+    } catch (e) {
+      if (e && e.name === "AbortError") return;
+      const fallback = window.SIINDEX_PUBLIC && typeof SIINDEX_PUBLIC.answer === "function"
+        ? SIINDEX_PUBLIC.answer(text)
+        : "I am Sinn-dex. Public knowledge is available; the live runtime could not be reached. Try again in a moment.";
+      emitMessage("si", fallback, source);
+      setStatus("error", "Could not reach SIINDEX runtime.");
+    }
+  }
+
+  let recognition = null;
+  let listening = false;
+  let mediaRecorder = null;
+  let mediaChunks = [];
+  let mediaStream = null;
+  let recordTimer = null;
+
+  function focusTypeInput() {
+    try {
+      var input = document.getElementById("publicInput");
+      if (input) {
+        input.focus();
+        input.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    } catch (_) {}
+  }
+
+  function stopMediaCapture() {
+    if (recordTimer) {
+      clearTimeout(recordTimer);
+      recordTimer = null;
+    }
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      try { mediaRecorder.stop(); } catch (_) {}
+    }
+    mediaRecorder = null;
+    if (mediaStream) {
+      try {
+        mediaStream.getTracks().forEach(function (t) { t.stop(); });
+      } catch (_) {}
+      mediaStream = null;
+    }
+  }
+
+  function ensureProviderConsent() {
+    try {
+      if (localStorage.getItem(PROVIDER_CONSENT_KEY) !== "accepted") {
+        localStorage.setItem(PROVIDER_CONSENT_KEY, "accepted");
+      }
+    } catch (_) {}
+  }
+
+  function audioFileName(blob) {
+    var t = String((blob && blob.type) || "").toLowerCase();
+    if (t.indexOf("mp4") !== -1 || t.indexOf("m4a") !== -1 || t.indexOf("aac") !== -1) return "siindex-utterance.mp4";
+    if (t.indexOf("mpeg") !== -1 || t.indexOf("mp3") !== -1) return "siindex-utterance.mp3";
+    if (t.indexOf("wav") !== -1) return "siindex-utterance.wav";
+    if (t.indexOf("ogg") !== -1) return "siindex-utterance.ogg";
+    return "siindex-utterance.webm";
+  }
+
+  async function transcribeBlob(blob) {
+    ensureProviderConsent();
+    var form = new FormData();
+    var name = audioFileName(blob);
+    var file = new File([blob], name, { type: blob.type || "audio/webm" });
+    form.append("audio", file);
+    var controller = new AbortController();
+    transcriptionAbort = controller;
+    var h = headers(null);
+    delete h["Content-Type"];
+    var response = await fetch(ENDPOINTS.transcribe, {
+      method: "POST",
+      signal: controller.signal,
+      headers: h,
+      body: form,
     });
-    ui.mic.addEventListener("click", () => startRecording({ source: "global" }));
-    ui.interrupt.addEventListener("click", () => interrupt());
-    ui.voiceToggle.addEventListener("click", () => setVoiceEnabled(!voiceEnabled));
-    ui.panel.querySelector("[data-si-clear]").addEventListener("click", clearHistory);
-    setVoiceEnabled(voiceEnabled);
+    if (!response.ok) {
+      var errBody = {};
+      try { errBody = await response.json(); } catch (_) {}
+      var code = (errBody && errBody.error) || ("transcribe_" + response.status);
+      if (errBody && errBody.provider_status) code = code + ":" + errBody.provider_status;
+      throw new Error(code);
+    }
+    var data = await response.json();
+    return String((data && (data.transcript || data.text || data.result)) || "").trim();
+  }
+
+  async function recordAndTranscribe(source) {
+    ensureProviderConsent();
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setStatus("error", "Microphone unavailable. Type your question below.");
+      focusTypeInput();
+      return;
+    }
+    if (listening) {
+      listening = false;
+      if (mediaRecorder && mediaRecorder.state === "recording") {
+        try {
+          if (typeof mediaRecorder.requestData === "function") mediaRecorder.requestData();
+        } catch (_) {}
+        try { mediaRecorder.stop(); } catch (_) {}
+      } else {
+        stopMediaCapture();
+        setStatus("idle", "Recording stopped.");
+      }
+      return;
+    }
+    try {
+      setStatus("listening", "Listening… speak clearly for 5–8 seconds (tap mic to stop)");
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          channelCount: 1
+        }
+      });
+      mediaChunks = [];
+      var mime = "";
+      if (window.MediaRecorder) {
+        var isSafari = /Safari/i.test(navigator.userAgent) &&
+          !/Chrome|CriOS|Chromium|Android/i.test(navigator.userAgent);
+        var candidates = isSafari
+          ? ["audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"]
+          : ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"];
+        for (var i = 0; i < candidates.length; i++) {
+          try {
+            if (MediaRecorder.isTypeSupported(candidates[i])) { mime = candidates[i]; break; }
+          } catch (_) {}
+        }
+      }
+      try {
+        mediaRecorder = mime
+          ? new MediaRecorder(mediaStream, { mimeType: mime, audioBitsPerSecond: 64000 })
+          : new MediaRecorder(mediaStream);
+      } catch (_) {
+        try {
+          mediaRecorder = mime ? new MediaRecorder(mediaStream, { mimeType: mime }) : new MediaRecorder(mediaStream);
+        } catch (_) {
+          mediaRecorder = new MediaRecorder(mediaStream);
+        }
+      }
+      listening = true;
+      mediaRecorder.ondataavailable = function (ev) {
+        if (ev.data && ev.data.size) mediaChunks.push(ev.data);
+      };
+      mediaRecorder.onerror = function () {
+        listening = false;
+        stopMediaCapture();
+        setStatus("error", "Mic recorder error. Type your question below.");
+        focusTypeInput();
+      };
+      mediaRecorder.onstop = function () {
+        listening = false;
+        var blobType = (mediaRecorder && mediaRecorder.mimeType) || mime || "audio/webm";
+        var blob = new Blob(mediaChunks, { type: blobType });
+        mediaChunks = [];
+        stopMediaCapture();
+        if (!blob.size || blob.size < 2500) {
+          setStatus("idle", "No usable recording received. Tap the mic once, speak for 5–8 seconds, then tap again.");
+          focusTypeInput();
+          return;
+        }
+        setStatus("thinking", "Transcribing…");
+        transcribeBlob(blob)
+          .then(function (text) {
+            if (!text) {
+              setStatus("idle", "Could not understand. Type your question below.");
+              focusTypeInput();
+              return;
+            }
+            setStatus("idle", "Heard: " + text);
+            return ask(text, { source: source });
+          })
+          .catch(function (err) {
+            var msg = (err && err.message) || "transcribe_failed";
+            if (msg === "provider_consent_required") {
+              setStatus("error", "Voice needs consent. Type your question, or tap mic again.");
+              focusTypeInput();
+              return;
+            }
+            if (msg === "rate_limited") {
+              setStatus("error", "Voice rate limit. Type your question for now.");
+              focusTypeInput();
+              return;
+            }
+            if (msg === "no_speech_detected") {
+              setStatus("idle", "No speech detected. Speak clearly or type below.");
+              focusTypeInput();
+              return;
+            }
+            if (String(msg).indexOf("transcription_provider_error") !== -1) {
+              setStatus("error", "Voice audio rejected. Tap once, speak for 5–8 seconds, then tap again.");
+              focusTypeInput();
+              return;
+            }
+            setStatus("error", "Voice failed (" + msg + "). Type or use a chip.");
+            focusTypeInput();
+          });
+      };
+      mediaRecorder.start();
+      recordTimer = setTimeout(function () {
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+          try {
+            if (typeof mediaRecorder.requestData === "function") mediaRecorder.requestData();
+          } catch (_) {}
+          try { mediaRecorder.stop(); } catch (_) {}
+        }
+      }, 8000);
+    } catch (e) {
+      listening = false;
+      stopMediaCapture();
+      setStatus("error", "Microphone blocked. Allow mic in browser, or type below.");
+      focusTypeInput();
+    }
+  }
+
+  function listen(opts) {
+    opts = opts || {};
+    var source = opts.source || "public-home";
+    recordAndTranscribe(source);
   }
 
   window.SIINDEXVoice = {
-    open,
-    close,
-    ask,
-    listen: startRecording,
-    interrupt,
-    speak,
-    clearHistory,
-    setVoiceEnabled,
-    get voiceEnabled() {
-      return voiceEnabled;
+    version: "3.0.16",
+    speak: speak,
+    interrupt: interrupt,
+    ask: ask,
+    listen: listen,
+    setVoiceEnabled: function (on) {
+      voiceEnabled = !!on;
+      localStorage.setItem(VOICE_KEY, voiceEnabled ? "true" : "false");
     },
-    get recording() {
-      return recording;
-    },
-    mode: "website",
-    version: "3.0.0",
   };
 
-  // Backwards-compatible entrypoint used by a few existing pages.
-  window.siindexSpeak = window.SIINDEXVoice;
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", injectWidget, { once: true });
-  } else {
-    injectWidget();
-  }
-
-  class SIINDEXSpeechRecognition {
-    constructor() {
-      this.lang = "en-AU";
-      this.continuous = false;
-      this.interimResults = false;
-      this.maxAlternatives = 1;
-      this.onstart = null;
-      this.onresult = null;
-      this.onerror = null;
-      this.onend = null;
-      this._active = false;
-    }
-
-    start() {
-      if (this._active) throw new DOMException("Recognition already started", "InvalidStateError");
-      this._active = true;
-      if (typeof this.onstart === "function") this.onstart(new Event("start"));
-      startRecording({
-        source: "legacy-microphone",
-        autoStopMs: this.continuous ? MAX_RECORDING_MS : 8000,
-        onTranscript: (transcript) => {
-          const alternative = { transcript, confidence: 1 };
-          const result = [alternative];
-          result.isFinal = true;
-          const results = [result];
-          results.item = (index) => results[index];
-          if (typeof this.onresult === "function") {
-            this.onresult({ results, resultIndex: 0 });
-          }
-        },
-        onError: (error) => {
-          const code = error && (error.code || error.name || error.message);
-          const mapped = code === "NotAllowedError"
-            ? "not-allowed"
-            : code === "no_speech_detected"
-            ? "no-speech"
-            : "network";
-          if (typeof this.onerror === "function") {
-            this.onerror({ error: mapped, message: errorMessage(error, "microphone") });
-          }
-        },
-        onEnd: () => {
-          this._active = false;
-          if (typeof this.onend === "function") this.onend(new Event("end"));
-        },
-      });
-    }
-
-    stop() {
-      if (!this._active) return;
-      stopRecording(true, "legacy-microphone");
-    }
-
-    abort() {
-      if (!this._active) return;
-      stopRecording(false, "legacy-microphone");
-      this._active = false;
-    }
-  }
-
-  window.SIINDEXNativeSpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition || null;
-  window.SpeechRecognition = SIINDEXSpeechRecognition;
-  window.webkitSpeechRecognition = SIINDEXSpeechRecognition;
-
-  emit("ready", { mode: "website", version: "3.0.0" });
+  setStatus("ready", "Ready. Tap a chip, type a question, or use the mic.");
 })();

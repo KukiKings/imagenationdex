@@ -410,6 +410,13 @@
   </div>
 </div>
 
+<!-- FIXED 2026-09 (Approval Gateway audit): purchase_listing is authenticated_exec
+     only (anon cannot call it), but this page's purchase flow hardcoded the anon
+     key as the bearer token below -- every real purchase attempt was silently
+     rejected. Added supabase-js so a real session token can be used, matching the
+     fix already applied to marketplace.html and the pattern staking.html has used
+     since its own "God Mode R3" fix. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" crossorigin="anonymous"></script>
 <script>
 function switchTab(t){
   ['Browse','Music','Sales','Mine','List'].forEach(id=>{
@@ -490,9 +497,22 @@ async function buyNFT(priceStr, nftId) {
   }
   showToast('⏳ Processing purchase…');
   try {
+    // FIXED 2026-09 (Approval Gateway audit): use a real session access token when
+    // one exists, instead of always sending the anon key -- purchase_listing is
+    // authenticated_exec only, so the anon key alone was always rejected.
+    let _accessToken = SUPA_KEY;
+    try {
+      const _sb = window.supabase && window.supabase.createClient
+        ? window.supabase.createClient(SUPA_URL, SUPA_KEY)
+        : null;
+      const { data: _sessionData } = _sb ? await _sb.auth.getSession() : { data: null };
+      if (_sessionData && _sessionData.session && _sessionData.session.access_token) {
+        _accessToken = _sessionData.session.access_token;
+      }
+    } catch (_) { /* fall back to anon key -- request will fail cleanly, not silently */ }
     const res = await fetch(`${SUPA_URL}/rest/v1/rpc/purchase_listing`, {
       method: 'POST',
-      headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' },
+      headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + _accessToken, 'Content-Type': 'application/json' },
       body: JSON.stringify({ p_buyer_id: buyerId, p_listing_id: nftId })
     });
     const data = await res.json();
@@ -500,11 +520,21 @@ async function buyNFT(priceStr, nftId) {
       const newBal = bal - indxAmt;
       sessionStorage.setItem('citizen_balance', newBal.toFixed(6));
       showToast(`✅ NFT purchased! ${indxAmt} INDX · Seller received ${(indxAmt * 0.98).toFixed(2)} INDX (98%)`);
+    } else if (data && data.pending_approval) {
+      // FIXED 2026-09 (Approval Gateway audit): purchase_listing's risk_class is
+      // filed for elevation but not yet approved (see BUILD_LOG.md) -- a no-op
+      // today, future-proofed so no second deploy is needed once it activates.
+      showToast('👆 This purchase needs approval first — check Approvals, then try again.');
     } else {
       // Real rejection from the backend (sold, insufficient funds, listing
       // gone, etc.) — show the real reason. Do NOT deduct balance or fake
       // a success toast here; that was the bug.
-      showToast(data?.error || 'Could not complete purchase. Try again.');
+      // ACCOUNT_FROZEN / CARD_FROZEN are raw error codes, not something to show verbatim.
+      const errCode = data?.error || '';
+      const msg = errCode === 'ACCOUNT_FROZEN' ? 'Your account is frozen — purchase blocked. Unfreeze it from Emergency Freeze, or contact support.'
+        : errCode === 'CARD_FROZEN' ? 'Your card is frozen — this action is blocked.'
+        : errCode || 'Could not complete purchase. Try again.';
+      showToast(msg);
     }
   } catch(e) {
     showToast('Connection error. Purchase not completed — your balance was not charged.');
@@ -606,11 +636,14 @@ function setOfferExpiry(chip, val) {
   chip.classList.add('active');
   offerExpiry = val;
 }
+// FIX 2026-09-03: was a fake success toast ("✅ Offer sent: X INDX · expires in Y") with no
+// fetch/RPC call behind it at all — no offer routine exists anywhere in the DB. Matches the
+// honest treatment buyNFT() above already got on 2026-07-25 for the same reason.
 function submitOffer() {
   const amt = parseFloat(document.getElementById('offerInput').value) || 0;
   if (amt <= 0) { showToast('Enter an offer amount in INDX'); return; }
   closeOfferSheet();
-  showToast('✅ Offer sent: ' + amt + ' INDX · expires in ' + offerExpiry);
+  showToast('Offers aren\'t live yet — preview only. Nothing was sent.');
 }
 
 // FIXED 2026-07-25: this used to inject a fictional NFT "sale" into the LIVE FEED

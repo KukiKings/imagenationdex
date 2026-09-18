@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Mission Ledger IN$DEX</title>
+<meta name="description" content="Your founding-citizen business validation record — real, read-only, from your actual mission_ledger row.">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --cyan: #00D4FF; --blue: #2B35D8; --purple: #8B3FE8;
+    --black: #090A10; --green: #00E5A0; --gold: #FFB800;
+    --red: #FF4D6D; --surface: #12141F; --surface2: #1A1D2E;
+    --surface3: #22263A; --text: #F0F2FF; --text2: #A0A8C8;
+    --text-muted: #5A6080;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { background:var(--black); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; max-width:430px; margin:0 auto; min-height:100vh; }
+  .topbar { background:var(--surface); border-bottom:1px solid rgba(255,255,255,0.06); padding:14px 16px; display:flex; align-items:center; gap:12px; position:sticky; top:0; z-index:100; }
+  .back-btn { width:36px; height:36px; border:none; background:var(--surface2); border-radius:10px; color:var(--text); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; text-decoration:none; }
+  .topbar-title { font-size:16px; font-weight:600; flex:1; }
+  .content { padding:16px; padding-bottom:40px; }
+
+  .status-banner { background:var(--surface); border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:14px 16px; margin-bottom:16px; font-size:12px; color:var(--text-muted); line-height:1.5; }
+  .status-banner strong { color:var(--text2); }
+
+  .card { background:var(--surface); border-radius:14px; padding:18px; margin-bottom:16px; }
+  .card-title { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+  .card-value { font-size:20px; font-weight:800; }
+  .card-sub { font-size:12px; color:var(--text2); margin-top:4px; }
+
+  .status-pill { display:inline-block; font-size:11px; font-weight:700; padding:4px 10px; border-radius:8px; text-transform:capitalize; }
+  .status-pill.active, .status-pill.in_progress { background:#00D4FF18; color:var(--cyan); }
+  .status-pill.completed { background:#00E5A018; color:var(--green); }
+  .status-pill.paused, .status-pill.stalled { background:#FFB80018; color:var(--gold); }
+  .status-pill.default { background:var(--surface2); color:var(--text-muted); }
+
+  .row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+  .row:last-child { border-bottom:none; }
+  .row-label { font-size:13px; color:var(--text-muted); }
+  .row-value { font-size:13px; font-weight:600; text-align:right; max-width:60%; }
+
+  .section-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin:20px 0 10px; }
+
+  .reflection-block { font-size:13px; color:var(--text2); line-height:1.6; background:var(--surface2); border-radius:10px; padding:14px; margin-top:8px; }
+
+  .empty-state { text-align:center; padding:60px 20px; }
+  .empty-icon { font-size:40px; margin-bottom:12px; }
+  .empty-title { font-size:16px; font-weight:700; margin-bottom:8px; }
+  .empty-desc { font-size:13px; color:var(--text-muted); line-height:1.6; }
+  .empty-cta { display:inline-block; margin-top:16px; padding:12px 20px; background:linear-gradient(135deg,var(--blue),var(--purple)); border-radius:10px; color:#fff; font-size:13px; font-weight:600; text-decoration:none; }
+
+  .skeleton { background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%); background-size:200% 100%; animation:shimmer 1.2s infinite; border-radius:8px; height:60px; margin-bottom:16px; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+  /* GOD MODE: sync cache, change detection, progress stepper, stat summary */
+  .sync-row { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; font-size:11px; color:var(--text-muted); }
+  .sync-row .sync-time { flex:1; }
+  .refresh-btn { display:flex; align-items:center; gap:6px; background:var(--surface2); border:1px solid rgba(255,255,255,0.08); color:var(--cyan); font-size:11px; font-weight:700; padding:6px 12px; border-radius:20px; cursor:pointer; }
+  .refresh-btn .refresh-icon { display:inline-block; }
+  .refresh-btn.spinning .refresh-icon { animation:indx-spin 0.8s linear infinite; }
+  @keyframes indx-spin { from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+
+  .change-banner { background:rgba(0,212,255,0.08); border:1px solid rgba(0,212,255,0.2); border-radius:12px; padding:12px 14px; margin-bottom:16px; font-size:12px; color:var(--cyan); line-height:1.55; display:none; }
+  .change-banner.show { display:block; }
+
+  .stepper { display:flex; align-items:flex-start; margin:4px 0 18px; }
+  .step { flex:1; display:flex; flex-direction:column; align-items:center; position:relative; }
+  .step-dot { width:22px; height:22px; border-radius:50%; background:var(--surface3); border:2px solid var(--surface3); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; color:var(--text-muted); z-index:2; }
+  .step.done .step-dot { background:var(--green); border-color:var(--green); color:#04140d; }
+  .step.current .step-dot { background:var(--cyan); border-color:var(--cyan); color:#04141a; box-shadow:0 0 0 4px rgba(0,212,255,0.15); }
+  .step-label { font-size:9.5px; color:var(--text-muted); margin-top:6px; text-align:center; line-height:1.3; }
+  .step.done .step-label, .step.current .step-label { color:var(--text2); }
+  .step-line { position:absolute; top:11px; left:-50%; width:100%; height:2px; background:var(--surface3); z-index:1; }
+  .step.done .step-line { background:var(--green); }
+  .step:first-child .step-line { display:none; }
+
+  .stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:4px; }
+  .stat-box { background:var(--surface2); border-radius:10px; padding:12px; }
+  .stat-box .stat-num { font-size:16px; font-weight:800; color:var(--green); }
+  .stat-box .stat-lbl { font-size:10.5px; color:var(--text-muted); margin-top:3px; }
+
+  .copy-summary-btn { width:100%; margin-top:14px; padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.08); background:var(--surface2); color:var(--text); font-size:12.5px; font-weight:700; cursor:pointer; }
+  .copy-summary-btn:active { transform:scale(0.98); }
+
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(60px); background:var(--surface3); color:var(--text); padding:12px 20px; border-radius:12px; font-size:13px; font-weight:600; pointer-events:none; transition:transform 0.3s,opacity 0.3s; opacity:0; z-index:200; max-width:320px; text-align:center; }
+  .toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="public-home.html" class="back-btn">←</a>
+  <div class="topbar-title">Mission Ledger</div>
+</div>
+
+<div class="content">
+
+  <!--
+    Built 2026-08-20. Read-only by design: mission_ledger has SELECT-only
+    RLS policies (mission_ledger_citizen_select scoped to auth.uid() =
+    citizen_user_id; mission_ledger_founder_select for founders). There is
+    no INSERT/UPDATE policy for citizens and no record_mission_event RPC —
+    a prior draft of this screen assumed both existed. They don't. This
+    screen only displays what's already recorded against your account;
+    it does not let you create or edit a mission from here.
+  -->
+  <div class="status-banner">
+    <strong>What this is:</strong> your founding-citizen business validation record — application status, cohort position, and outcomes, exactly as recorded on your account. This is a live view, not an editable form; missions are recorded by the IN$DEX team, not self-reported here.
+  </div>
+
+  <div id="loadingState">
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+  </div>
+
+  <div id="emptyState" style="display:none;" class="empty-state">
+    <div class="empty-icon">📋</div>
+    <div class="empty-title" id="emptyTitle">No mission on record yet</div>
+    <div class="empty-desc" id="emptyDesc">Nothing has been recorded against your account yet. If you're expecting a founding-citizen mission here, check back after your application is reviewed.</div>
+    <a href="waitlist.html" class="empty-cta" id="emptyCta">Join the waitlist</a>
+  </div>
+
+  <div id="ledgerContent" style="display:none;">
+
+    <div class="sync-row">
+      <div class="sync-time" id="syncTime">—</div>
+      <button class="refresh-btn" id="refreshBtn" onclick="refreshLedger()"><span class="refresh-icon">⟳</span> Refresh</button>
+    </div>
+    <div class="change-banner" id="changeBanner"></div>
+
+    <div class="card">
+      <div class="card-title">Application</div>
+      <div class="card-value" id="appNumber">—</div>
+      <div class="card-sub" id="cohortPosition"></div>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <div class="row-label">Status</div>
+        <div class="row-value"><span class="status-pill default" id="statusPill">—</span></div>
+      </div>
+      <div class="row">
+        <div class="row-label">Goal</div>
+        <div class="row-value" id="goalValue">—</div>
+      </div>
+      <div class="row">
+        <div class="row-label">Founding offer</div>
+        <div class="row-value" id="offerValue">—</div>
+      </div>
+    </div>
+
+    <div class="stepper" id="progressStepper"></div>
+
+    <div class="section-label">Validation Evidence</div>
+    <div class="card">
+      <div class="row">
+        <div class="row-label">Revenue collected</div>
+        <div class="row-value" id="revenueValue">—</div>
+      </div>
+      <div class="row">
+        <div class="row-label">Deposits collected</div>
+        <div class="row-value" id="depositsValue">—</div>
+      </div>
+      <div class="row">
+        <div class="row-label">Gross profit</div>
+        <div class="row-value" id="profitValue">—</div>
+      </div>
+      <div class="row">
+        <div class="row-label">Fulfillment status</div>
+        <div class="row-value" id="fulfillmentValue">—</div>
+      </div>
+    </div>
+
+    <div class="card" id="finSummaryCard" style="display:none;">
+      <div class="card-title">At a Glance</div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-num" id="statMargin">—</div><div class="stat-lbl">Gross margin</div></div>
+        <div class="stat-box"><div class="stat-num" id="statDepositRatio">—</div><div class="stat-lbl">Deposits vs revenue</div></div>
+      </div>
+      <button class="copy-summary-btn" onclick="copySummary()">📋 Copy mission summary</button>
+    </div>
+
+    <div class="section-label" id="reflectionLabel" style="display:none;">Reflection</div>
+    <div class="reflection-block" id="reflectionBlock" style="display:none;"></div>
+
+    <div class="section-label" id="nextLabel" style="display:none;">Next Opportunity</div>
+    <div class="reflection-block" id="nextBlock" style="display:none;"></div>
+
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc3NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // GOD MODE: local snapshot cache, change detection, progress stepper, financial summary
+  const SNAPSHOT_KEY = 'indx_missionledger_snapshot';
+  const LASTSYNC_KEY = 'indx_missionledger_lastsync';
+  var _lastLedgerData = null;
+
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, 3000);
+  }
+
+  function fmtSyncTime(ts) {
+    var n = Number(ts || '0');
+    if (!n) return 'Not yet synced';
+    var d = new Date(n);
+    return 'Last synced ' + d.toLocaleString('en-AU', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+  }
+
+  var STEP_DEFS = [
+    { label: 'Applied' },
+    { label: 'Active Mission' },
+    { label: 'Completed' }
+  ];
+
+  function stepIndexForStatus(status) {
+    var s = (status || '').toLowerCase();
+    if (s.indexOf('complete') > -1) return 2;
+    if (s.indexOf('active') > -1 || s.indexOf('progress') > -1 || s.indexOf('paused') > -1 || s.indexOf('stalled') > -1) return 1;
+    return 0;
+  }
+
+  function renderProgressStepper(status) {
+    var el = document.getElementById('progressStepper');
+    if (!el) return;
+    var idx = stepIndexForStatus(status);
+    el.innerHTML = STEP_DEFS.map(function(step, i) {
+      var cls = i < idx ? 'done' : (i === idx ? 'current' : '');
+      var mark = i < idx ? '✓' : String(i + 1);
+      return '<div class="step ' + cls + '"><div class="step-line"></div><div class="step-dot">' + mark + '</div><div class="step-label">' + step.label + '</div></div>';
+    }).join('');
+  }
+
+  function renderFinancialSummary(data) {
+    var card = document.getElementById('finSummaryCard');
+    if (!card) return;
+    var revenue = Number(data.revenue_amount) || 0;
+    if (revenue <= 0) { card.style.display = 'none'; return; }
+    var profit = Number(data.gross_profit) || 0;
+    var deposits = Number(data.deposits_collected) || 0;
+    var margin = Math.round((profit / revenue) * 100);
+    var depositRatio = Math.round((deposits / revenue) * 100);
+    document.getElementById('statMargin').textContent = margin + '%';
+    document.getElementById('statDepositRatio').textContent = depositRatio + '%';
+    card.style.display = '';
+  }
+
+  function checkForChanges(data) {
+    var banner = document.getElementById('changeBanner');
+    var prev = null;
+    try { prev = JSON.parse(localStorage.getItem(SNAPSHOT_KEY) || 'null'); } catch (e) { prev = null; }
+
+    var changes = [];
+    if (prev && prev.application_number === data.application_number) {
+      if (prev.status !== data.status) {
+        changes.push('Status changed from "' + (prev.status || 'Unrecorded') + '" to "' + (data.status || 'Unrecorded') + '"');
+      }
+      if (Number(prev.revenue_amount || 0) !== Number(data.revenue_amount || 0)) {
+        changes.push('Revenue updated to ' + fmtMoney(data.revenue_amount, data.currency_code));
+      }
+      if (prev.fulfillment_status !== data.fulfillment_status) {
+        changes.push('Fulfillment status now "' + (data.fulfillment_status || 'Not started') + '"');
+      }
+    }
+
+    if (banner) {
+      if (changes.length > 0) {
+        banner.innerHTML = '<strong>Updated since your last visit:</strong><br>' + changes.join('<br>');
+        banner.classList.add('show');
+      } else {
+        banner.classList.remove('show');
+      }
+    }
+
+    try {
+      localStorage.setItem(SNAPSHOT_KEY, JSON.stringify({
+        application_number: data.application_number,
+        status: data.status,
+        revenue_amount: data.revenue_amount,
+        currency_code: data.currency_code,
+        fulfillment_status: data.fulfillment_status
+      }));
+      localStorage.setItem(LASTSYNC_KEY, String(Date.now()));
+    } catch (e) {}
+
+    var syncEl = document.getElementById('syncTime');
+    if (syncEl) syncEl.textContent = fmtSyncTime(localStorage.getItem(LASTSYNC_KEY) || '0');
+  }
+
+  function refreshLedger() {
+    var btn = document.getElementById('refreshBtn');
+    if (btn) btn.classList.add('spinning');
+    loadMissionLedger().then(function () {
+      if (btn) btn.classList.remove('spinning');
+      showToast('Ledger refreshed.');
+    }).catch(function () {
+      if (btn) btn.classList.remove('spinning');
+    });
+  }
+
+  function copySummary() {
+    if (!_lastLedgerData) { showToast('Nothing to copy yet.'); return; }
+    var name = sessionStorage.getItem('citizen_name') || 'Citizen';
+    var d = _lastLedgerData;
+    var lines = [
+      'IN$DEX Mission Ledger — ' + name,
+      d.application_number ? 'Application #' + d.application_number : 'Application on record',
+      'Status: ' + (d.status || 'Unrecorded'),
+      'Goal: ' + (d.goal || 'Not set'),
+      'Revenue: ' + fmtMoney(d.revenue_amount, d.currency_code),
+      'Gross profit: ' + fmtMoney(d.gross_profit, d.currency_code),
+      'Fulfillment: ' + (d.fulfillment_status || 'Not started')
+    ];
+    var text = lines.join('\n');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        showToast('Mission summary copied.');
+      }).catch(function () {
+        showToast('Could not copy — select and copy manually.');
+      });
+    } else {
+      showToast('Clipboard not available on this device.');
+    }
+  }
+
+  function fmtMoney(amount, currency) {
+    if (amount === null || amount === undefined) return '—';
+    const n = Number(amount);
+    const code = currency || 'AUD';
+    try {
+      return new Intl.NumberFormat('en-AU', { style: 'currency', currency: code }).format(n);
+    } catch (e) {
+      return code + ' ' + n.toFixed(2);
+    }
+  }
+
+  function setStatusPill(status) {
+    const el = document.getElementById('statusPill');
+    const clean = (status || '').toLowerCase().replace(/\s+/g, '_');
+    el.textContent = status || 'Unrecorded';
+    el.className = 'status-pill ' + (clean || 'default');
+  }
+
+  async function loadMissionLedger() {
+    const loading = document.getElementById('loadingState');
+    const empty = document.getElementById('emptyState');
+    const content = document.getElementById('ledgerContent');
+
+    const { data: { user }, error: userErr } = await sb.auth.getUser();
+    if (userErr || !user) {
+      loading.style.display = 'none';
+      empty.style.display = '';
+      document.getElementById('emptyTitle').textContent = 'Sign in to view your mission';
+      document.getElementById('emptyDesc').textContent = 'Mission Ledger records are tied to your signed-in account. Sign in to see what\'s recorded against yours.';
+      document.getElementById('emptyCta').textContent = 'Sign in';
+      document.getElementById('emptyCta').href = 'login.html';
+      return;
+    }
+
+    // RLS scopes this to auth.uid() = citizen_user_id automatically —
+    // no need to filter client-side, but the .eq() also makes the intent
+    // explicit and keeps this working if RLS is ever loosened for admins.
+    const { data, error } = await sb
+      .from('mission_ledger')
+      .select('application_number, cohort_position, goal, founding_offer, status, revenue_amount, currency_code, deposits_collected, gross_profit, fulfillment_status, citizen_reflection, next_opportunity')
+      .eq('citizen_user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    loading.style.display = 'none';
+
+    if (error || !data) {
+      empty.style.display = '';
+      return;
+    }
+
+    content.style.display = '';
+
+    // GOD MODE PATCH: cache the fetched record for the copy-summary and change-detection features
+    _lastLedgerData = data;
+
+    document.getElementById('appNumber').textContent = data.application_number
+      ? 'Founding Application #' + data.application_number
+      : 'Application on record';
+    document.getElementById('cohortPosition').textContent = data.cohort_position
+      ? 'Cohort position ' + data.cohort_position
+      : '';
+
+    setStatusPill(data.status);
+    document.getElementById('goalValue').textContent = data.goal || 'Not set';
+    document.getElementById('offerValue').textContent = data.founding_offer || 'Not set';
+
+    document.getElementById('revenueValue').textContent = fmtMoney(data.revenue_amount, data.currency_code);
+    document.getElementById('depositsValue').textContent = fmtMoney(data.deposits_collected, data.currency_code);
+    document.getElementById('profitValue').textContent = fmtMoney(data.gross_profit, data.currency_code);
+    document.getElementById('fulfillmentValue').textContent = data.fulfillment_status || 'Not started';
+
+    if (data.citizen_reflection) {
+      document.getElementById('reflectionLabel').style.display = '';
+      document.getElementById('reflectionBlock').style.display = '';
+      document.getElementById('reflectionBlock').textContent = data.citizen_reflection;
+    }
+    if (data.next_opportunity) {
+      document.getElementById('nextLabel').style.display = '';
+      document.getElementById('nextBlock').style.display = '';
+      document.getElementById('nextBlock').textContent = data.next_opportunity;
+    }
+
+    // GOD MODE PATCH: progress stepper, financial summary, change-since-last-visit detection
+    renderProgressStepper(data.status);
+    renderFinancialSummary(data);
+    checkForChanges(data);
+  }
+
+  document.addEventListener('DOMContentLoaded', loadMissionLedger);
+</script>
+<script src="siindex-speak-core.js"></script>
+</body>
+</html>

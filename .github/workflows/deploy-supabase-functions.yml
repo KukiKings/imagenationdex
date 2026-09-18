@@ -1,0 +1,56 @@
+name: Deploy Supabase Edge Functions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/functions/**"
+      - "supabase/migrations/**"
+      - ".github/workflows/deploy-supabase-functions.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy edge functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ] || [ -z "$SUPABASE_PROJECT_ID" ]; then
+            echo "Missing SUPABASE_ACCESS_TOKEN or SUPABASE_PROJECT_ID in GitHub Actions secrets."
+            exit 1
+          fi
+          supabase functions deploy siindex-website-voice-tts --project-ref "$SUPABASE_PROJECT_ID"
+          supabase functions deploy siindex-website-voice-setup --project-ref "$SUPABASE_PROJECT_ID"
+          supabase functions deploy siindex-website-runtime --project-ref "$SUPABASE_PROJECT_ID" || true
+          supabase functions deploy siindex-website-transcribe --project-ref "$SUPABASE_PROJECT_ID" || true
+          supabase functions deploy siindex-agent-dispatch --project-ref "$SUPABASE_PROJECT_ID"
+          supabase functions deploy siindex-agent-claim --project-ref "$SUPABASE_PROJECT_ID"
+          supabase functions deploy siindex-agent-complete --project-ref "$SUPABASE_PROJECT_ID"
+          supabase functions deploy siindex-visitor-feedback --project-ref "$SUPABASE_PROJECT_ID"
+          echo "Edge functions deployed (voice, agent bus, visitor-feedback)."
+
+      - name: Apply database migrations (agent bus + visitor feedback + prior)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          if [ -z "$SUPABASE_DB_PASSWORD" ]; then
+            echo "::warning::SUPABASE_DB_PASSWORD not set — skipping db push."
+            echo "AJ action required: set GitHub secret SUPABASE_DB_PASSWORD, or paste"
+            echo "supabase/migrations/20260816_siindex_visitor_feedback_v1.sql into Supabase SQL Editor."
+            echo "Edge functions may already be live; only tables remain to apply."
+            exit 0
+          fi
+          supabase link --project-ref "$SUPABASE_PROJECT_ID" -p "$SUPABASE_DB_PASSWORD"
+          supabase db push --include-all
+          echo "Migrations applied (including visitor_feedback v1 if pending)."

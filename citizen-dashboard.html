@@ -1858,9 +1858,9 @@
           .order('created_at', { ascending: false })
           .limit(5);
 
-        if (txs && txs.length) {
-          const actList = document.querySelector('.activity-list');
-          if (actList) {
+        const actList = document.querySelector('.activity-list');
+        if (actList) {
+          if (txs && txs.length) {
             actList.innerHTML = txs.map(tx => {
               const sign = tx.direction === 'receive' ? '+' : '−';
               const cls = tx.direction === 'receive' ? 'plus' : 'minus';
@@ -1877,6 +1877,19 @@
                 <div class="activity-amount ${cls}">${sign}${tx.amount_indx} INDX</div>
               </div>`;
             }).join('');
+          } else {
+            // FIX 2026-08-30: this used to leave the static placeholder markup below
+            // untouched when a citizen had zero real transactions -- which showed EVERY
+            // new citizen a fabricated "Genesis Bonus +50 INDX" card and a "Portal
+            // Activated · mariasantos.IN$DEX is live" card (mariasantos being a sample
+            // name baked into the HTML, not the visiting citizen) as if it were their own
+            // real activity. Show an honest empty state instead.
+            actList.innerHTML = `<div class="activity-item" style="opacity:0.6;pointer-events:none;">
+              <div class="activity-body">
+                <div class="activity-title">No activity yet</div>
+                <div class="activity-sub">Your real transactions will appear here.</div>
+              </div>
+            </div>`;
           }
         }
 
@@ -2078,6 +2091,9 @@
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const W = 44, H = 44, cx = 22, cy = 22, R = 17;
+    // AUDIT 2026-07-30: was `0.24 / 2.50` — a progress ring showing 9.6% "of the way" to the retired
+    // $2.50 price target. A filled arc toward a price is a return claim even with no number on it.
+    // Now tracks elapsed time toward the published 24 Feb 2027 launch date, which is a real fact.
     const progress = Math.max(0, Math.min(1, (Date.now() - new Date('2026-07-01T00:00:00+10:00').getTime()) / (new Date('2027-02-24T00:00:00+11:00').getTime() - new Date('2026-07-01T00:00:00+10:00').getTime())));
     const TARGET = new Date('2027-02-24T00:00:00');
     const daysLeft = Math.max(0, Math.ceil((TARGET - new Date()) / 86400000));
@@ -2179,9 +2195,24 @@
       }
     } catch (e) { /* leave default badge text on network/RPC failure */ }
   }
-  function openPqsiSheet() {
+  async function openPqsiSheet() {
     const ov = document.getElementById('pqsiOverlay');
     if (ov) ov.style.display = 'flex';
+    const checksEl = document.getElementById('pqsiChecks');
+    if (!checksEl) return;
+    checksEl.innerHTML = '<div class="pqsi-check-row">Checking live status…</div>';
+    try {
+      const sb = INDXDB.getClient();
+      const { data, error } = await sb.rpc('get_platform_security_status');
+      if (error || !data) { checksEl.innerHTML = '<div class="pqsi-check-row">Status unavailable right now.</div>'; return; }
+      const mark = data.clear ? '✓' : '⚠️';
+      const lastScan = data.last_scan_at ? new Date(data.last_scan_at).toLocaleString() : 'no scan recorded yet';
+      checksEl.innerHTML =
+        '<div class="pqsi-check-row"><span class="pqsi-check-ok">' + mark + '</span> Platform tier ' + data.tier + (data.clear ? ' — clear' : ' — ' + data.open_count + ' open issue(s)') + '</div>' +
+        '<div class="pqsi-check-row">Last scan logged: ' + lastScan + '</div>';
+    } catch (e) {
+      checksEl.innerHTML = '<div class="pqsi-check-row">Status unavailable right now.</div>';
+    }
   }
   function closePqsiSheet() {
     const ov = document.getElementById('pqsiOverlay');
@@ -2353,6 +2384,9 @@
       return;
     }
 
+    // [Fixed 2026-07-27] added "Est." / "up to...variable" qualifiers — this
+    // was presented as a flat, certain number, inconsistent with the 3-13%
+    // (up to 22.4%) range disclosed elsewhere on this same dashboard.
     if (amtEl) amtEl.textContent = 'Est. +' + monthlyYield.toFixed(2) + ' INDX/mo ($' + monthlyUSD + ' USD)';
     if (subEl) subEl.textContent = 'Waiting for you at Wisdom Score 100';
     if (ptsEl) ptsEl.textContent = toUnlock + ' pts to unlock · up to 10% APY on your current balance (variable, not guaranteed)';
@@ -2911,13 +2945,20 @@
       <div class="pqsi-sheet-title">🛡️ PQSI Protection</div>
       <div class="ewa-x" onclick="closePqsiSheet()">✕</div>
     </div>
-    <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:4px;">Post-Quantum Security Intelligence monitors your account. Every transaction is scanned before it executes — no exceptions.</div>
-    <div class="pqsi-checks">
-      <div class="pqsi-check-row"><span class="pqsi-check-ok">✓</span> MPC Key Shield active</div>
-      <div class="pqsi-check-row"><span class="pqsi-check-ok">✓</span> Quantum threat scan — T0 CLEAR</div>
-      <div class="pqsi-check-row"><span class="pqsi-check-ok">✓</span> Network integrity confirmed</div>
-      <div class="pqsi-check-row"><span class="pqsi-check-ok">✓</span> Civilisation Law 2% enforced</div>
-      <div class="pqsi-check-row"><span class="pqsi-check-ok">✓</span> Behavioral anomaly scan — clear</div>
+    <!-- FIXED 2026-08-21: this sheet described 5 static checkmarks (including
+         "Recovery Word Shield" -- there are no recovery words in this MPC 2-of-3
+         account, that check named a thing that doesn't exist -- and "Civilisation
+         Law 2% enforced", which contradicts indx-98-2-law.html's own honest
+         disclosure that the 98/2 split is doctrine, not yet enforced by deployed
+         contract code) plus a claim that PQSI scans "every transaction... no
+         exceptions." Verified against the live schema: no HTML screen calls
+         pqsi_classify/pqsi_log_event and no DB trigger connects PQSI to the
+         transactions table, so that claim was false. get_platform_security_status
+         IS a real RPC backed by the security_events table, so this sheet now
+         renders its real response instead of fabricated checkmarks. -->
+    <div style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:4px;">Post-Quantum Security Intelligence (PQSI) tracks platform-wide security events and reports the highest open severity tier. It does not scan individual transactions before they execute.</div>
+    <div class="pqsi-checks" id="pqsiChecks">
+      <div class="pqsi-check-row">Checking live status…</div>
     </div>
     <button class="ewa-cta" onclick="runPqsiScan()">Run Full Scan Now</button>
   </div>

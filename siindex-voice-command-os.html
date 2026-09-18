@@ -4,7 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <title>SIINDEX Voice Command OS — IN$DEX</title>
-  <meta name="description" content="Speak to SIINDEX. No endless clicking. No complicated forms. The citizen speaks. SIINDEX handles the system." />
+  <meta name="description" content="Speak to SIINDEX. No endless clicking, no complicated forms — she prepares each step and waits for your approval before anything executes." />
+  <meta property="og:title" content="SIINDEX Voice Command OS — IN$DEX" />
+  <meta property="og:description" content="Speak to SIINDEX. No endless clicking, no complicated forms — she prepares each step and waits for your approval before anything executes." />
   <script src="siindex-speak-core.js"></script>
   <style>
     :root {
@@ -152,6 +154,29 @@
     .doctrine-quote span{color:var(--cyan);}
     .doctrine-sig{font-size:10px;color:rgba(0,212,255,0.4);letter-spacing:0.5px;font-weight:700;text-transform:uppercase;}
 
+    /* ── GOD MODE PATCH: COMMAND HISTORY ── */
+    .cmd-history{padding:0 18px 4px;}
+    .cmd-history-hdr{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;}
+    .cmd-history-clear{font-size:9px;color:var(--muted);background:none;border:none;cursor:pointer;font-weight:700;font-family:inherit;}
+    .cmd-history-row{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;}
+    .cmd-history-row::-webkit-scrollbar{display:none;}
+    .cmd-history-chip{flex-shrink:0;background:var(--surface2);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:6px 12px;font-size:10px;font-weight:600;color:var(--text);white-space:nowrap;cursor:pointer;max-width:180px;overflow:hidden;text-overflow:ellipsis;}
+    .cmd-history-chip:hover{border-color:rgba(0,212,255,0.3);}
+
+    /* ── GOD MODE PATCH: TAB BADGE COUNTS (real localStorage counts only) ── */
+    .tab-badge-count{display:inline-flex;align-items:center;justify-content:center;min-width:15px;height:15px;padding:0 4px;margin-left:4px;border-radius:8px;background:var(--red);color:var(--black);font-size:8px;font-weight:800;}
+
+    /* ── GOD MODE PATCH: KEYBOARD SHORTCUTS HINT ── */
+    .kbd-hint{font-size:9px;color:var(--muted);text-align:center;padding:6px 18px 0;}
+    .kbd-hint kbd{background:var(--surface3);border:1px solid rgba(255,255,255,0.1);border-radius:4px;padding:1px 5px;font-family:inherit;font-size:9px;color:var(--text);}
+
+    /* ── GOD MODE PATCH: ACCESSIBILITY ── */
+    .tab-btn:focus-visible, .vc-btn:focus-visible, .vc-text-input:focus-visible, .vc-send:focus-visible,
+    .qcmd-btn:focus-visible, .voice-orb:focus-visible, .cmd-history-chip:focus-visible,
+    .mission-approve:focus-visible, .mission-reject:focus-visible, .mission-view:focus-visible,
+    .tool-master:focus-visible, .scope-chip:focus-visible, .stop-btn:focus-visible, .stop-sec-btn:focus-visible,
+    .sect-add:focus-visible, .nav-stop:focus-visible, .brief-read-btn:focus-visible, .brief-act-btn:focus-visible { outline:2px solid var(--cyan); outline-offset:2px; }
+
     /* TOAST */
     .toast-el{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(10px);background:var(--surface2);border:1px solid rgba(0,229,160,0.3);border-radius:24px;padding:10px 18px;font-size:12px;font-weight:700;color:var(--green);z-index:9000;opacity:0;transition:all 0.3s;pointer-events:none;white-space:nowrap;}
     .toast-el.show{opacity:1;transform:translateX(-50%) translateY(0);}
@@ -162,28 +187,28 @@
 <body>
 
   <nav class="nav">
-    <a href="index.html" class="nav-back">← IN$DEX</a>
+    <a href="public-home.html" class="nav-back">← IN$DEX</a>
     <span class="nav-title">Voice Command OS</span>
     <button class="nav-stop" onclick="emergencyStop()">⬛ STOP ALL</button>
   </nav>
 
-  <div class="tabs">
-    <button class="tab-btn active" onclick="openTab('tab-speak')">🎙 Speak</button>
-    <button class="tab-btn" onclick="openTab('tab-brief')">📋 Daily Brief</button>
-    <button class="tab-btn" onclick="openTab('tab-missions')">⚡ Missions</button>
-    <button class="tab-btn" onclick="openTab('tab-tools')">🔧 Tools</button>
-    <button class="tab-btn" onclick="openTab('tab-control')">🛑 Control</button>
+  <div class="tabs" id="vcosTabs" role="tablist" aria-label="Voice Command OS sections" onkeydown="handleVcosTabsKeydown(event)">
+    <button class="tab-btn active" onclick="openTab('tab-speak')" role="tab" aria-selected="true" tabindex="0">🎙 Speak</button>
+    <button class="tab-btn" onclick="openTab('tab-brief')" role="tab" aria-selected="false" tabindex="-1">📋 Daily Brief</button>
+    <button class="tab-btn" onclick="openTab('tab-missions')" role="tab" aria-selected="false" tabindex="-1">⚡ Missions<span class="tab-badge-count" id="missionsBadge" style="display:none;"></span></button>
+    <button class="tab-btn" onclick="openTab('tab-tools')" role="tab" aria-selected="false" tabindex="-1">🔧 Tools</button>
+    <button class="tab-btn" onclick="openTab('tab-control')" role="tab" aria-selected="false" tabindex="-1">🛑 Control<span class="tab-badge-count" id="controlBadge" style="display:none;"></span></button>
   </div>
 
   <!-- TAB: SPEAK -->
   <div class="tab-pane active" id="tab-speak">
     <div class="voice-hero">
       <div class="voice-orb-wrap">
-        <div class="voice-orb" id="voiceOrb" onclick="toggleVoice()">⬡</div>
+        <div class="voice-orb" id="voiceOrb" onclick="toggleVoice()" role="button" tabindex="0" aria-label="Tap to speak to SIINDEX" onkeydown="if(event.key==='Enter'){this.click()}">⬡</div>
       </div>
       <div class="voice-status-label" id="voiceStatusLbl">TAP TO SPEAK</div>
-      <div class="voice-transcript" id="voiceTranscript"></div>
-      <div class="voice-response" id="voiceResponse">Good morning. I am SIINDEX — the sovereign intelligence of IN$DEX. Tap the orb or type a command below. I am ready.</div>
+      <div class="voice-transcript" id="voiceTranscript" aria-live="polite"></div>
+      <div class="voice-response" id="voiceResponse" aria-live="polite">Good morning. I'm SIINDEX, your Sovereign SI. Tap the orb or type a command below. Standing by.</div>
       <div style="font-size:10px;color:var(--muted);max-width:320px;margin:0 auto 6px;line-height:1.5;">Preview mode: spoken replies below are scripted examples of how SIINDEX will respond. Specific numbers (buyer counts, payout amounts, proposal IDs) are illustrative, not yet pulled from your live account — except your account security check, which is real.</div>
       <div class="voice-controls">
         <button class="vc-btn vc-mic" id="voiceMicBtn" onclick="toggleVoice()">🎙 Hold to Speak</button>
@@ -191,16 +216,27 @@
       </div>
     </div>
     <div class="vc-text-row">
-      <input class="vc-text-input" id="vcTextInput" placeholder="Type a command for SIINDEX…" onkeydown="if(event.key==='Enter')submitVoiceCmd(this.value)">
-      <button class="vc-send" onclick="submitVoiceCmd(document.getElementById('vcTextInput').value)">➤</button>
+      <input class="vc-text-input" id="vcTextInput" placeholder="Type a command for SIINDEX…" aria-label="Type a command for SIINDEX" onkeydown="if(event.key==='Enter')submitVoiceCmd(this.value)">
+      <button class="vc-send" onclick="submitVoiceCmd(document.getElementById('vcTextInput').value)" aria-label="Send command to SIINDEX">➤</button>
     </div>
+
+    <!-- GOD MODE PATCH: COMMAND HISTORY -->
+    <div class="cmd-history" id="cmdHistoryWrap" style="display:none;">
+      <div class="cmd-history-hdr">Recent commands (this device)
+        <button class="cmd-history-clear" onclick="clearCommandHistory()">Clear</button>
+      </div>
+      <div class="cmd-history-row" id="cmdHistoryRow"></div>
+    </div>
+
+    <!-- GOD MODE PATCH: KEYBOARD SHORTCUTS HINT -->
+    <div class="kbd-hint">Press <kbd>/</kbd> to type a command · <kbd>1</kbd>–<kbd>5</kbd> to switch tabs · <kbd>Esc</kbd> to clear</div>
 
     <div class="qcmd-title">EXAMPLE COMMANDS</div>
     <div class="qcmd-grid" id="qcmdGrid"></div>
 
     <div class="doctrine-card">
       <div class="doctrine-eyebrow">SIINDEX Doctrine · Voice OS</div>
-      <div class="doctrine-quote">The future of financial inclusion is not another form. It is <span>a citizen speaking</span>, and a sovereign intelligence building the path.</div>
+      <div class="doctrine-quote">The future of financial inclusion is not another form. It is <span>a citizen speaking</span>, and a Sovereign SI building the path.</div>
       <div class="doctrine-sig">IN$DEX · Speak to SIINDEX</div>
     </div>
   </div>
@@ -216,7 +252,7 @@
         </div>
         <button class="brief-read-btn" id="briefReadBtn" onclick="readBriefAloud()">🔊 Read Aloud</button>
       </div>
-      <div style="font-size:10px;color:var(--muted);padding-bottom:8px;line-height:1.5;">Preview mode: this brief is a scripted example layout. Balance and Wisdom Score above use your session data — buyer, payout, and governance line items are illustrative, not live yet.</div>
+      <div style="font-size:10px;color:var(--muted);padding-bottom:8px;line-height:1.5;">Preview mode: this brief is a scripted example layout. Balance and Wisdom Score use your real session data when you're signed in, otherwise placeholder demo figures are shown — buyer, payout, and governance line items are illustrative, not live yet.</div>
       <div id="briefSections">
         <div style="font-size:13px;color:var(--muted);padding:8px 0;">Tap "Prepare My Day" to generate your brief.</div>
       </div>
@@ -235,6 +271,7 @@
         <button class="sect-add" onclick="addTestMission()">+ New</button>
       </div>
       <div style="font-size:10px;color:var(--muted);margin:-4px 0 10px;line-height:1.5;">Missions here are saved to this device only, as a preview of the approval flow — SIINDEX is not yet actually drafting listings, replies, or videos in the background.</div>
+
       <div class="mission-list" id="missionList"></div>
     </div>
   </div>
@@ -243,7 +280,8 @@
   <div class="tab-pane" id="tab-tools">
     <div style="padding:14px 18px 0;">
       <div class="sect-lbl">Approved Tool Registry</div>
-      <div style="font-size:11px;color:var(--muted);margin-top:4px;margin-bottom:0;">SIINDEX can only act through tools you approve. Toggle scopes. Revoke at any time.</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;margin-bottom:0;">SIINDEX will only act through tools you approve. Toggle scopes. Revoke at any time.</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5;">Preview mode: these approvals are saved on this device only. SIINDEX does not yet execute tool actions in the background — this records what you'll control once live execution ships.</div>
     </div>
     <div class="tool-grid" id="toolGrid"></div>
   </div>
@@ -252,7 +290,7 @@
   <div class="tab-pane" id="tab-control">
     <div class="stop-zone">
       <div class="stop-title">⬛ Emergency Shutdown</div>
-      <div class="stop-desc">Say "SIINDEX, stop all actions" or tap below to immediately terminate all running missions, abort in-flight tool calls, flush the task queue, and revoke all execute permissions.</div>
+      <div class="stop-desc">Say "SIINDEX, stop all actions" or tap below to immediately clear all saved missions and revoke every tool permission stored on this device. Preview mode: there is no live background execution yet to abort — this resets local state only.</div>
       <button class="stop-btn" onclick="emergencyStop()">⬛ STOP ALL SIINDEX ACTIONS</button>
       <div class="stop-secondary">
         <button class="stop-sec-btn" onclick="pauseMissions()">⏸ Pause Missions</button>
@@ -269,7 +307,7 @@
     </div>
   </div>
 
-  <div class="toast-el" id="toastEl"></div>
+  <div class="toast-el" id="toastEl" role="status" aria-live="polite"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
   <script>
@@ -309,20 +347,109 @@
     }
 
     // ── CONSTANTS ──────────────────────────────────────────
-    const INDX_PRICE_USD = 0.24;
+    const INDX_REFERENCE_PRICE_USD = 0.24; // planning reference only — no live market, not a purchase/founding price
     const TGE_DATE       = new Date('2027-02-24T00:00:00+11:00');
     const AUSTRAC_DL     = new Date('2026-07-29T23:59:59+10:00');
     const MISS_KEY       = 'indx_vcos_missions';
     const TOOL_KEY       = 'indx_vcos_tools';
     const AUDIT_KEY      = 'indx_vcos_audit';
+    const CMD_HISTORY_KEY = 'indx_vcos_command_history'; // GOD MODE PATCH
+    const VCOS_TAB_IDS   = ['tab-speak','tab-brief','tab-missions','tab-tools','tab-control']; // GOD MODE PATCH
 
     // ── TABS ───────────────────────────────────────────────
     function openTab(id) {
       document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      // GOD MODE PATCH: keep aria-selected / roving tabindex in sync for accessibility
+      document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected','false'); b.tabIndex = -1; });
       document.getElementById(id).classList.add('active');
-      const idx = ['tab-speak','tab-brief','tab-missions','tab-tools','tab-control'].indexOf(id);
-      document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+      const idx = VCOS_TAB_IDS.indexOf(id);
+      const btn = document.querySelectorAll('.tab-btn')[idx];
+      btn.classList.add('active');
+      btn.setAttribute('aria-selected','true'); // GOD MODE PATCH
+      btn.tabIndex = 0; // GOD MODE PATCH
+    }
+
+    // GOD MODE PATCH: accessibility — arrow-key navigation across tabs
+    function handleVcosTabsKeydown(e) {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      e.preventDefault();
+      const dir = e.key === 'ArrowRight' ? 1 : -1;
+      const current = VCOS_TAB_IDS.indexOf(document.querySelector('.tab-pane.active').id);
+      let next = current + dir;
+      if (next < 0) next = VCOS_TAB_IDS.length - 1;
+      if (next >= VCOS_TAB_IDS.length) next = 0;
+      openTab(VCOS_TAB_IDS[next]);
+      document.querySelectorAll('#vcosTabs .tab-btn')[next].focus();
+    }
+
+    // GOD MODE PATCH: keyboard shortcuts — "/" focuses the command box, 1-5 switch tabs, Esc clears transcript
+    document.addEventListener('keydown', (e) => {
+      const tag = (e.target && e.target.tagName) || '';
+      const typing = tag === 'INPUT' || tag === 'TEXTAREA';
+      if (e.key === '/' && !typing) {
+        e.preventDefault();
+        openTab('tab-speak');
+        const inp = document.getElementById('vcTextInput');
+        if (inp) inp.focus();
+        return;
+      }
+      if (!typing && /^[1-5]$/.test(e.key)) {
+        const idx = parseInt(e.key, 10) - 1;
+        if (VCOS_TAB_IDS[idx]) {
+          openTab(VCOS_TAB_IDS[idx]);
+          document.querySelectorAll('#vcosTabs .tab-btn')[idx].focus();
+        }
+        return;
+      }
+      if (e.key === 'Escape' && !typing) {
+        const t = document.getElementById('voiceTranscript');
+        if (t) t.textContent = '';
+      }
+    });
+
+    // ── GOD MODE PATCH: COMMAND HISTORY (data persistence) ──
+    function getCommandHistory() { try { return JSON.parse(localStorage.getItem(CMD_HISTORY_KEY) || '[]'); } catch (e) { return []; } }
+    function addCommandHistory(text) {
+      let hist = getCommandHistory();
+      hist = hist.filter(h => h !== text);
+      hist.unshift(text);
+      hist = hist.slice(0, 8);
+      localStorage.setItem(CMD_HISTORY_KEY, JSON.stringify(hist));
+      renderCommandHistory();
+    }
+    function clearCommandHistory() {
+      localStorage.setItem(CMD_HISTORY_KEY, JSON.stringify([]));
+      renderCommandHistory();
+      showToast('Command history cleared');
+    }
+    function renderCommandHistory() {
+      const hist = getCommandHistory();
+      const wrap = document.getElementById('cmdHistoryWrap');
+      const row  = document.getElementById('cmdHistoryRow');
+      if (!wrap || !row) return;
+      if (!hist.length) { wrap.style.display = 'none'; return; }
+      wrap.style.display = 'block';
+      row.innerHTML = hist.map(h => {
+        const safe = esc(h).replace(/'/g,"\\'");
+        return `<div class="cmd-history-chip" onclick="submitVoiceCmd('${safe}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){this.click()}">${esc(h)}</div>`;
+      }).join('');
+    }
+
+    // ── GOD MODE PATCH: TAB BADGE COUNTS (derived only from real localStorage state) ──
+    function updateTabBadges() {
+      const missions = getMissions();
+      const pendingCount = missions.filter(m => m.status === 'approval' || m.status === 'pending').length;
+      const missionsBadge = document.getElementById('missionsBadge');
+      if (missionsBadge) {
+        if (pendingCount > 0) { missionsBadge.textContent = pendingCount; missionsBadge.style.display = 'inline-flex'; }
+        else { missionsBadge.style.display = 'none'; }
+      }
+      const audit = getAudit();
+      const controlBadge = document.getElementById('controlBadge');
+      if (controlBadge) {
+        if (audit.length > 0) { controlBadge.textContent = audit.length > 99 ? '99+' : String(audit.length); controlBadge.style.display = 'inline-flex'; }
+        else { controlBadge.style.display = 'none'; }
+      }
     }
 
     // ── TOAST ──────────────────────────────────────────────
@@ -345,7 +472,7 @@
     function renderAuditLog() {
       const el = document.getElementById('auditLog');
       const a  = getAudit();
-      if (!a.length) { el.innerHTML = '<div class="audit-empty">No actions logged yet.</div>'; return; }
+      if (!a.length) { el.innerHTML = '<div class="audit-empty">No actions logged yet.</div>'; updateTabBadges(); return; } // GOD MODE PATCH
       el.innerHTML = a.slice(0,20).map(entry => {
         const dt = new Date(entry.ts).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
         const dd = new Date(entry.ts).toLocaleDateString('en-AU',{day:'numeric',month:'short'});
@@ -357,6 +484,7 @@
           </div>
         </div>`;
       }).join('');
+      updateTabBadges(); // GOD MODE PATCH
     }
     function exportAuditLog() {
       const a = getAudit();
@@ -375,7 +503,7 @@
     let femaleVoice = null;
     if (synth) {
       const loadV = () => {
-        // American accent facts (AJ 2026-07-29). Was matching Karen/Moira/Tessa and
+        // American accent canon (AJ 2026-07-29). Was matching Karen/Moira/Tessa and
         // falling back to en-AU|en-GB ahead of en-US.
         const vs = synth.getVoices();
         const us = vs.filter(v => /^en[-_]US/i.test(v.lang || ''));
@@ -457,6 +585,7 @@
       document.getElementById('vcTextInput').value = '';
       document.getElementById('voiceTranscript').textContent = '"' + input + '"';
       addAudit('Command: ' + input, 'cmd');
+      addCommandHistory(input); // GOD MODE PATCH
 
       // Check for emergency stop command
       if (/stop all|shut down all|revoke all|emergency stop/i.test(input)) {
@@ -561,7 +690,7 @@
       }
       // Overnight summary
       if (/overnight|what.*changed|summarize|changed.*night/i.test(input)) {
-        const r = "Overnight summary: 2 new buyer questions on your marketplace listing. Your INDX yield added 0.82 INDX to your balance. One governance proposal opened — GIP-042. No security alerts. Your scheduled content post at 5 p.m. is confirmed.";
+        const r = "Overnight summary: 2 new buyer questions on your marketplace listing. Sovereign Yield staking isn't live yet, so no yield was paid overnight. One governance proposal opened — GIP-042. No security alerts. Your scheduled content post at 5 p.m. is confirmed.";
         document.getElementById('voiceResponse').textContent = r;
         speak(r); return;
       }
@@ -576,7 +705,7 @@
       // Price / token
       if (/price|how much|indx worth|token/i.test(input)) {
         const tge = Math.ceil((TGE_DATE - Date.now()) / 86400000);
-        const r = `INDX genesis price is $${INDX_PRICE_USD.toFixed(2)} USD — a planning reference, not a live or guaranteed price. It's the reference set for the Raydium liquidity pool at TGE in ${tge} days, if TGE proceeds as planned. No future price is promised.`;
+        const r = `There's no live INDX price yet — no exchange listing, no open market. $${INDX_REFERENCE_PRICE_USD.toFixed(2)} USD is a planning reference number only, not a price anyone can buy or sell at today. TGE is targeted in ${tge} days; that date isn't a guarantee the full system launches then.`;
         document.getElementById('voiceResponse').textContent = r;
         speak(r); return;
       }
@@ -598,9 +727,12 @@
       const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
       const tge   = Math.ceil((TGE_DATE - now) / 86400000);
 
+      const rawWisdom   = sessionStorage.getItem('citizen_wisdom');
+      const rawBalance  = sessionStorage.getItem('citizen_balance');
+      const hasRealData = rawWisdom !== null || rawBalance !== null;
       const name = sessionStorage.getItem('citizen_name') || 'citizen';
-      const ws   = parseInt(sessionStorage.getItem('citizen_wisdom') || '42', 10);
-      const bal  = parseFloat(sessionStorage.getItem('citizen_balance') || '1247.5');
+      const ws   = parseInt(rawWisdom || '42', 10);
+      const bal  = parseFloat(rawBalance || '1247.5');
 
       document.getElementById('briefTitle').textContent = `${greeting}, ${name}.`;
       document.getElementById('briefTime').textContent = now.toLocaleDateString('en-AU',{weekday:'long', day:'numeric', month:'long'}) + ' · ' + now.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});
@@ -608,10 +740,10 @@
       const sections = [
         { lbl:'🎯 Highest Priority', text: 'Your marketplace listing has 2 buyer questions waiting for replies.', cls:'priority' },
         { lbl:'✅ Pending Your Approval', text: '2 buyer reply drafts ready · 1 payout confirmation (247.50 INDX) · GIP-041 governance vote prepared · Weekend live commerce schedule ready', cls:'' },
-        { lbl:'💚 Opportunities', text: '2 new buyer enquiries · Your video post is scheduled for 5 p.m. · 1 collab request from a Pacific creator · Staking yield earned overnight: +0.82 INDX', cls:'opportunity' },
+        { lbl:'💚 Opportunities', text: '2 new buyer enquiries · Your video post is scheduled for 5 p.m. · 1 collab request from a Pacific creator', cls:'opportunity' },
         { lbl:'⚠️ Risks & Protections', text: 'No active risks detected. All systems nominal. (AUSTRAC VASP enrollment submitted 17 Jul, under assessment — GIP-040 AUSTRAC Compliance Fund vote closes tomorrow.)', cls:'' },
         { lbl:'💡 Suggested Next Action', text: 'Review and approve your buyer replies.', cls:'' },
-        { lbl:'📊 Your Status', text: `Balance: ${bal.toFixed(2)} INDX ($${(bal * INDX_PRICE_USD).toFixed(2)} USD) · Wisdom Score: ${ws} WS · TGE: ${tge} days away`, cls:'' },
+        { lbl:'📊 Your Status', text: `Balance: ${bal.toFixed(2)} INDX${hasRealData ? '' : ' (demo figure — sign in for your real balance)'} · No live USD price yet ($${INDX_REFERENCE_PRICE_USD.toFixed(2)} is a planning reference only) · Wisdom Score: ${ws} WS · TGE: ${tge} days away`, cls:'' },
       ];
 
       document.getElementById('briefSections').innerHTML = sections.map(s =>
@@ -799,6 +931,7 @@
       const el = document.getElementById('missionList');
       if (!missions.length) {
         el.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0;">No active missions. Speak a command to create one.</div>';
+        updateTabBadges(); // GOD MODE PATCH
         return;
       }
       el.innerHTML = missions.map(m => {
@@ -822,6 +955,7 @@
           </div>
         </div>`;
       }).join('');
+      updateTabBadges(); // GOD MODE PATCH
     }
 
     // ── QUICK COMMANDS ─────────────────────────────────────
@@ -871,10 +1005,12 @@
       const audit = getAudit();
       if (!audit.length) {
         addAudit('SIINDEX Voice Command OS initialized', 'cmd');
-        addAudit('All tool permissions loaded from secure store', 'approve');
+        addAudit('All tool permissions loaded from this device', 'approve');
       }
+
+      renderCommandHistory(); // GOD MODE PATCH
+      updateTabBadges(); // GOD MODE PATCH
     });
   </script>
-<script src="siindex-speak-core.js"></script>
 </body>
 </html>

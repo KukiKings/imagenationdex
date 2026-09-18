@@ -5,6 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>SIINDEX Console — IN$DEX</title>
+<meta name="description" content="Live orchestrator status for SIINDEX — Sovereign Pause, agent registry, citizen intents, and council reviews, read directly from Supabase. AJ only.">
 <style>
   :root {
     --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8;
@@ -64,6 +65,40 @@
 
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--surface3);border-radius:12px;padding:11px 20px;font-size:13px;font-weight:600;white-space:nowrap;z-index:999;opacity:0;transition:opacity 0.3s;pointer-events:none;}
   .toast.show{opacity:1;}
+
+  /* GOD MODE: auto-refresh bar, risk filter chips, delta badges, Sovereign Pause confirm sheet */
+  .refresh-bar{display:flex;align-items:center;justify-content:space-between;margin:14px 20px 0;padding:10px 14px;background:var(--surface);border:1px solid var(--surface3);border-radius:12px;font-size:12px;}
+  .refresh-toggle{display:flex;align-items:center;gap:8px;color:var(--text2);}
+  .refresh-switch{width:34px;height:20px;border-radius:10px;background:var(--surface3);position:relative;cursor:pointer;transition:background 0.2s;flex-shrink:0;}
+  .refresh-switch.on{background:var(--cyan);}
+  .refresh-switch::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left 0.2s;}
+  .refresh-switch.on::after{left:16px;}
+  .refresh-countdown{color:var(--cyan);font-weight:700;font-variant-numeric:tabular-nums;}
+
+  .filter-chip-row{display:flex;gap:6px;margin:2px 0 10px;flex-wrap:wrap;}
+  .filter-chip{font-size:10px;font-weight:700;padding:4px 10px;border-radius:8px;background:var(--surface2);border:1px solid var(--surface3);color:var(--text2);cursor:pointer;}
+  .filter-chip.active{background:rgba(0,212,255,0.12);border-color:rgba(0,212,255,0.4);color:var(--cyan);}
+
+  .delta-badge{font-size:10px;font-weight:800;padding:1px 6px;border-radius:6px;margin-left:6px;vertical-align:middle;}
+  .delta-badge.up{background:rgba(0,229,160,0.15);color:var(--green);}
+  .delta-badge.flat{background:rgba(160,168,200,0.12);color:var(--text3);}
+
+  .sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:none;backdrop-filter:blur(4px);}
+  .sheet-overlay.open{display:block;}
+  .bottom-sheet{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--surface);border-radius:20px 20px 0 0;padding:24px 20px 32px;z-index:201;border-top:1px solid var(--surface3);display:none;}
+  .bottom-sheet.open{display:block;}
+  .sheet-handle{width:40px;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 auto 18px;}
+  .sheet-title{font-size:16px;font-weight:800;margin-bottom:6px;}
+  .sheet-sub{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:16px;}
+  .sheet-field{margin-bottom:12px;}
+  .sheet-field label{display:block;font-size:10.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;}
+  .sheet-field textarea,.sheet-field input{width:100%;background:var(--surface2);border:1px solid var(--surface3);border-radius:10px;color:var(--text);font-size:13px;padding:11px 13px;font-family:inherit;resize:none;}
+  .sheet-field textarea:focus,.sheet-field input:focus{outline:none;border-color:rgba(0,212,255,0.4);}
+  .sheet-btn-row{display:flex;gap:8px;margin-top:16px;}
+  .sheet-btn{flex:1;padding:13px;border-radius:12px;border:none;font-size:14px;font-weight:800;cursor:pointer;}
+  .sheet-btn.cancel{background:var(--surface2);color:var(--text2);border:1px solid var(--surface3);}
+  .sheet-btn.confirm-danger{background:var(--red);color:#fff;}
+  .sheet-btn.confirm-danger:disabled{opacity:0.4;cursor:not-allowed;}
 </style>
 </head>
 <body>
@@ -77,6 +112,14 @@
 </div>
 
 <div class="disclosure">This console reads real Supabase tables: <strong>agent_registry, citizen_intents, council_reviews, siindex_kill_switch</strong>. It's the first real cockpit view into SIINDEX's Orchestration Plane — see <code>siindex-master-architecture-v1.md</code> for what's doctrine vs. what's live today. For a spoken CEO/COO briefing on build status and the August roadmap, see <a href="siindex-command-center.html" style="color:var(--cyan);">SIINDEX Command Center</a>.</div>
+
+<div class="refresh-bar">
+  <div class="refresh-toggle">
+    <div class="refresh-switch" id="autoRefreshSwitch" onclick="toggleAutoRefresh()" role="switch" aria-checked="false" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleAutoRefresh();}"></div>
+    <span>Auto-refresh</span>
+  </div>
+  <span class="refresh-countdown" id="refreshCountdown">Off</span>
+</div>
 
 <div class="section">
   <div class="section-title">Sovereign Pause</div>
@@ -94,16 +137,28 @@
   <div class="section-title">Agent Registry <span class="refresh-btn" onclick="loadAgents()">Refresh</span></div>
   <div class="card">
     <div class="stat-row">
-      <div class="stat-box"><div class="stat-val" id="agentCount">—</div><div class="stat-lbl">Registered</div></div>
+      <div class="stat-box"><div class="stat-val"><span id="agentCount">—</span><span class="delta-badge" id="agentCountDelta"></span></div><div class="stat-lbl">Registered</div></div>
       <div class="stat-box"><div class="stat-val" id="agentActiveCount">—</div><div class="stat-lbl">Active</div></div>
+    </div>
+    <div class="filter-chip-row" id="agentRiskFilter">
+      <div class="filter-chip active" onclick="setAgentRiskFilter('all',this)">All</div>
+      <div class="filter-chip" onclick="setAgentRiskFilter('low',this)">L0–1</div>
+      <div class="filter-chip" onclick="setAgentRiskFilter('mid',this)">L2–3</div>
+      <div class="filter-chip" onclick="setAgentRiskFilter('high',this)">L4–5</div>
     </div>
     <div id="agentList"><div class="empty-mini">Loading…</div></div>
   </div>
 </div>
 
 <div class="section">
-  <div class="section-title">Recent Citizen Intents <span class="refresh-btn" onclick="loadIntents()">Refresh</span></div>
+  <div class="section-title">Recent Citizen Intents <span id="intentDelta"></span><span class="refresh-btn" onclick="loadIntents()">Refresh</span></div>
   <div class="card">
+    <div class="filter-chip-row" id="intentRiskFilter">
+      <div class="filter-chip active" onclick="setIntentRiskFilter('all',this)">All</div>
+      <div class="filter-chip" onclick="setIntentRiskFilter('low',this)">L0–1</div>
+      <div class="filter-chip" onclick="setIntentRiskFilter('mid',this)">L2–3</div>
+      <div class="filter-chip" onclick="setIntentRiskFilter('high',this)">L4–5</div>
+    </div>
     <div id="intentList"><div class="empty-mini">Loading…</div></div>
   </div>
 </div>
@@ -112,6 +167,25 @@
   <div class="section-title">Council Reviews <span class="refresh-btn" onclick="loadCouncil()">Refresh</span></div>
   <div class="card">
     <div id="councilList"><div class="empty-mini">No Level 4+ intents reviewed yet.</div></div>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="pauseConfirmOverlay" onclick="if(event.target===this)closePauseConfirm()"></div>
+<div class="bottom-sheet" id="pauseConfirmSheet" role="dialog" aria-modal="true" aria-labelledby="pauseConfirmTitle">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title" id="pauseConfirmTitle">⚠️ Engage Sovereign Pause</div>
+  <div class="sheet-sub">This halts every Level 2+ SIINDEX action platform-wide, immediately, for every citizen. Confirm you mean to do this.</div>
+  <div class="sheet-field">
+    <label>Reason (logged to security_events)</label>
+    <textarea id="pauseReasonInput" rows="2" placeholder="Why are you engaging the Sovereign Pause?"></textarea>
+  </div>
+  <div class="sheet-field">
+    <label>Type PAUSE to confirm</label>
+    <input type="text" id="pauseConfirmInput" placeholder="PAUSE" oninput="checkPauseConfirmInput()" autocomplete="off">
+  </div>
+  <div class="sheet-btn-row">
+    <button class="sheet-btn cancel" onclick="closePauseConfirm()">Cancel</button>
+    <button class="sheet-btn confirm-danger" id="pauseConfirmBtn" onclick="confirmEngagePause()" disabled>Engage Pause</button>
   </div>
 </div>
 
@@ -142,6 +216,142 @@ async function select(table, query) {
   return res.json();
 }
 
+// ── GOD MODE ──
+const CONSOLE_AUTOREFRESH_KEY = 'indx_console_autorefresh';
+const CONSOLE_COUNTS_KEY = 'indx_console_lastcounts';
+let autoRefreshOn = false;
+let autoRefreshTimer = null;
+let autoRefreshSeconds = 30;
+let autoRefreshRemaining = 30;
+let _agentRows = [];
+let _intentRows = [];
+let agentRiskFilter = 'all';
+let intentRiskFilter = 'all';
+
+function riskBucket(n) {
+  n = Number(n) || 0;
+  if (n <= 1) return 'low';
+  if (n <= 3) return 'mid';
+  return 'high';
+}
+
+function setAgentRiskFilter(bucket, el) {
+  agentRiskFilter = bucket;
+  document.querySelectorAll('#agentRiskFilter .filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderAgentList();
+}
+function setIntentRiskFilter(bucket, el) {
+  intentRiskFilter = bucket;
+  document.querySelectorAll('#intentRiskFilter .filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderIntentList();
+}
+
+function renderAgentList() {
+  const list = document.getElementById('agentList');
+  const rows = agentRiskFilter === 'all' ? _agentRows : _agentRows.filter(r => riskBucket(r.risk_class) === agentRiskFilter);
+  if (rows.length === 0) { list.innerHTML = '<div class="empty-mini">No agents match this filter.</div>'; return; }
+  list.innerHTML = rows.map(r => `<div class="agent-row">
+    <div><div class="agent-name">${r.agent_name}</div><div class="agent-domain">${r.domain}</div></div>
+    <span class="risk-badge risk-${r.risk_class}">L${r.risk_class}</span>
+  </div>`).join('');
+}
+function renderIntentList() {
+  const list = document.getElementById('intentList');
+  const rows = intentRiskFilter === 'all' ? _intentRows : _intentRows.filter(r => riskBucket(r.risk_level) === intentRiskFilter);
+  if (rows.length === 0) { list.innerHTML = '<div class="empty-mini">No intents match this filter.</div>'; return; }
+  list.innerHTML = rows.map(r => `<div class="intent-row">
+    <div class="intent-top"><span class="intent-domain">${r.domain} · L${r.risk_level}</span><span class="intent-status">${r.status}</span></div>
+    <div class="intent-meta">${new Date(r.created_at).toLocaleString()}</div>
+  </div>`).join('');
+}
+
+function getLastCounts() {
+  try { return JSON.parse(localStorage.getItem(CONSOLE_COUNTS_KEY) || '{}'); } catch (e) { return {}; }
+}
+function showDelta(elId, current, previous) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (previous === undefined || previous === null) { el.innerHTML = ''; return; }
+  const diff = current - previous;
+  if (diff === 0) { el.innerHTML = '<span class="delta-badge flat">+0</span>'; return; }
+  el.innerHTML = `<span class="delta-badge up">${diff > 0 ? '+' : ''}${diff} since last visit</span>`;
+}
+
+function toggleAutoRefresh() {
+  autoRefreshOn = !autoRefreshOn;
+  localStorage.setItem(CONSOLE_AUTOREFRESH_KEY, autoRefreshOn ? '1' : '0');
+  if (autoRefreshOn) startAutoRefresh(); else stopAutoRefresh();
+}
+function applyAutoRefreshUI() {
+  const sw = document.getElementById('autoRefreshSwitch');
+  const cd = document.getElementById('refreshCountdown');
+  if (sw) { sw.classList.toggle('on', autoRefreshOn); sw.setAttribute('aria-checked', String(autoRefreshOn)); }
+  if (cd) cd.textContent = autoRefreshOn ? `Every ${autoRefreshSeconds}s · ${autoRefreshRemaining}s` : 'Off';
+}
+function startAutoRefresh() {
+  if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+  autoRefreshRemaining = autoRefreshSeconds;
+  applyAutoRefreshUI();
+  autoRefreshTimer = setInterval(() => {
+    autoRefreshRemaining--;
+    if (autoRefreshRemaining <= 0) {
+      loadKillSwitch(); loadAgents(); loadIntents(); loadCouncil();
+      autoRefreshRemaining = autoRefreshSeconds;
+    }
+    applyAutoRefreshUI();
+  }, 1000);
+}
+function stopAutoRefresh() {
+  if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+  autoRefreshTimer = null;
+  applyAutoRefreshUI();
+}
+
+// Sovereign Pause type-to-confirm sheet
+function openPauseConfirm() {
+  document.getElementById('pauseReasonInput').value = '';
+  document.getElementById('pauseConfirmInput').value = '';
+  document.getElementById('pauseConfirmBtn').disabled = true;
+  document.getElementById('pauseConfirmOverlay').classList.add('open');
+  document.getElementById('pauseConfirmSheet').classList.add('open');
+  document.addEventListener('keydown', pauseConfirmKeydown);
+  setTimeout(() => document.getElementById('pauseReasonInput').focus(), 50);
+}
+function closePauseConfirm() {
+  document.getElementById('pauseConfirmOverlay').classList.remove('open');
+  document.getElementById('pauseConfirmSheet').classList.remove('open');
+  document.removeEventListener('keydown', pauseConfirmKeydown);
+}
+function pauseConfirmKeydown(e) {
+  if (e.key === 'Escape') { closePauseConfirm(); return; }
+  if (e.key === 'Tab') {
+    const sheet = document.getElementById('pauseConfirmSheet');
+    const focusable = sheet.querySelectorAll('textarea, input, button');
+    if (focusable.length === 0) return;
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+}
+function checkPauseConfirmInput() {
+  const val = document.getElementById('pauseConfirmInput').value.trim().toUpperCase();
+  document.getElementById('pauseConfirmBtn').disabled = (val !== 'PAUSE');
+}
+async function confirmEngagePause() {
+  const reason = document.getElementById('pauseReasonInput').value.trim();
+  if (!reason) { showToast('Reason required — not engaged.'); return; }
+  closePauseConfirm();
+  try {
+    await rpc('toggle_kill_switch', { p_engaged: true, p_engaged_by: 'AJ (console)', p_reason: reason });
+    showToast('Sovereign Pause engaged — SIINDEX halted.');
+    await loadKillSwitch();
+  } catch (e) {
+    showToast('Failed: ' + e.message);
+  }
+}
+
 let killEngaged = false;
 
 async function loadKillSwitch() {
@@ -169,14 +379,11 @@ async function loadKillSwitch() {
 
 async function toggleKillSwitch() {
   const next = !killEngaged;
-  let reason = null;
-  if (next) {
-    reason = prompt('Reason for engaging the Sovereign Pause (required, logged to security_events):');
-    if (!reason) { showToast('Reason required — not engaged.'); return; }
-  }
+  // GOD MODE PATCH: engaging the pause now opens a type-to-confirm safety sheet instead of a plain browser prompt
+  if (next) { openPauseConfirm(); return; }
   try {
-    await rpc('toggle_kill_switch', { p_engaged: next, p_engaged_by: 'AJ (console)', p_reason: reason });
-    showToast(next ? 'Sovereign Pause engaged — SIINDEX halted.' : 'Sovereign Pause released.');
+    await rpc('toggle_kill_switch', { p_engaged: false, p_engaged_by: 'AJ (console)', p_reason: null });
+    showToast('Sovereign Pause released.');
     await loadKillSwitch();
   } catch (e) {
     showToast('Failed: ' + e.message);
@@ -187,13 +394,13 @@ async function loadAgents() {
   const list = document.getElementById('agentList');
   try {
     const rows = await select('agent_registry', 'select=agent_name,domain,risk_class,status&order=risk_class.desc');
+    // GOD MODE PATCH: keep the raw real rows for client-side risk filtering, and diff the real count against last visit
+    _agentRows = rows;
     document.getElementById('agentCount').textContent = rows.length;
     document.getElementById('agentActiveCount').textContent = rows.filter(r => r.status === 'active').length;
+    showDelta('agentCountDelta', rows.length, getLastCounts().agents);
     if (rows.length === 0) { list.innerHTML = '<div class="empty-mini">No agents registered.</div>'; return; }
-    list.innerHTML = rows.map(r => `<div class="agent-row">
-      <div><div class="agent-name">${r.agent_name}</div><div class="agent-domain">${r.domain}</div></div>
-      <span class="risk-badge risk-${r.risk_class}">L${r.risk_class}</span>
-    </div>`).join('');
+    renderAgentList();
   } catch (e) { list.innerHTML = '<div class="empty-mini">Could not load: ' + e.message + '</div>'; }
 }
 
@@ -201,11 +408,11 @@ async function loadIntents() {
   const list = document.getElementById('intentList');
   try {
     const rows = await select('citizen_intents', 'select=domain,status,risk_level,created_at&order=created_at.desc&limit=15');
+    // GOD MODE PATCH: keep the raw real rows for client-side risk filtering, and diff the real count against last visit
+    _intentRows = rows;
+    showDelta('intentDelta', rows.length, getLastCounts().intents);
     if (rows.length === 0) { list.innerHTML = '<div class="empty-mini">No intents logged yet — this fills up as citizens use SIINDEX-classified actions.</div>'; return; }
-    list.innerHTML = rows.map(r => `<div class="intent-row">
-      <div class="intent-top"><span class="intent-domain">${r.domain} · L${r.risk_level}</span><span class="intent-status">${r.status}</span></div>
-      <div class="intent-meta">${new Date(r.created_at).toLocaleString()}</div>
-    </div>`).join('');
+    renderIntentList();
   } catch (e) { list.innerHTML = '<div class="empty-mini">Could not load: ' + e.message + '</div>'; }
 }
 
@@ -231,9 +438,12 @@ function showToast(msg) {
 document.addEventListener('DOMContentLoaded', async () => {
   await initRealSession();
   loadKillSwitch();
-  loadAgents();
-  loadIntents();
+  await loadAgents();
+  await loadIntents();
   loadCouncil();
+  // GOD MODE PATCH: persist this visit's real counts as the baseline for next visit's delta badges, restore auto-refresh preference
+  localStorage.setItem(CONSOLE_COUNTS_KEY, JSON.stringify({ agents: _agentRows.length, intents: _intentRows.length }));
+  if (localStorage.getItem(CONSOLE_AUTOREFRESH_KEY) === '1') { autoRefreshOn = true; startAutoRefresh(); } else { applyAutoRefreshUI(); }
 });
 </script>
 </body>

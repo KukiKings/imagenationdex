@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
   <title>SIINDEX Readability Guardian — IN$DEX</title>
+  <meta name="description" content="Client-side SIINDEX design tools — a 10-point screen readability audit, WCAG contrast checker, button-label improver, and Citizen Protection Mode demo.">
   <style>
     :root {
       --cyan:#00D4FF; --blue:#2B35D8; --purple:#8B3FE8; --black:#090A10;
@@ -123,6 +124,24 @@
     .protection-note{margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(255,184,0,0.08);border:1px solid rgba(255,184,0,0.2);}
     .protection-note-lbl{font-size:10px;font-weight:900;color:var(--gold);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;}
     .protection-note-text{font-size:11px;color:var(--text2);line-height:1.5;}
+    /* ── GOD MODE PATCH: COMBINED FEATURE STYLES ── */
+    .rg-stats-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+    .rg-stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 8px;text-align:center;}
+    .rg-stat-val{font-size:18px;font-weight:900;color:var(--cyan);}
+    .rg-stat-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;margin-top:2px;}
+    .audit-save-row{display:flex;gap:8px;margin-top:12px;}
+    .audit-save-btn{flex:1;background:var(--surface3);border:1px solid var(--border);border-radius:10px;padding:10px;color:var(--green);font-size:12px;font-weight:800;cursor:pointer;}
+    .audit-save-btn:active{opacity:0.75;}
+    .audit-history-wrap{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
+    .audit-history-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+    .audit-history-clear{font-size:11px;color:var(--muted);cursor:pointer;}
+    .audit-history-item{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--surface2);border-radius:10px;padding:8px 10px;margin-bottom:6px;cursor:pointer;}
+    .audit-history-item:active{opacity:0.8;}
+    .audit-history-name{font-size:12px;font-weight:700;color:var(--text);}
+    .audit-history-meta{font-size:10px;color:var(--muted);}
+    .audit-history-score{font-size:12px;font-weight:900;}
+    .audit-history-empty{font-size:11px;color:var(--muted);text-align:center;padding:10px 0;}
+    .check-toggle:focus-visible,.vague-chip:focus-visible,.mode-sw-btn:focus-visible,.audit-history-item:focus-visible,.audit-history-clear:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
     /* TOAST */
     .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--border);border-radius:24px;padding:10px 20px;font-size:13px;font-weight:700;color:var(--text);opacity:0;pointer-events:none;transition:opacity 0.25s;z-index:999;white-space:nowrap;}
     .toast.show{opacity:1;}
@@ -140,7 +159,7 @@
 
 <!-- TOP BAR -->
 <div class="top-bar">
-  <a href="index.html" class="top-bar-back">←</a>
+  <a href="public-home.html" class="top-bar-back">←</a>
   <div class="top-bar-title">Readability Guardian</div>
   <div class="top-bar-badge">SIINDEX</div>
 </div>
@@ -156,6 +175,9 @@
 <div class="doctrine fade-in" style="animation-delay:0.06s">
   <p class="doctrine-text"><strong>Readable text is not decoration. Readable text is citizen access.</strong> If citizens cannot read the app, they cannot trust it. If they cannot trust it, they will not use it. IN$DEX must look premium — but clarity comes first.</p>
 </div>
+
+<!-- ── GOD MODE PATCH: SESSION STATS BAR ── -->
+<div class="rg-stats-bar fade-in" id="rgStatsBar" style="margin:0 20px 16px;animation-delay:0.08s"></div>
 
 <!-- STATUS COLOR REFERENCE -->
 <div class="section-hdr fade-in" style="animation-delay:0.09s">
@@ -210,6 +232,18 @@
     <div class="audit-verdict pass" id="auditVerdict">CLEAR</div>
   </div>
   <div style="margin-top:12px;font-size:11px;color:var(--muted);">Tap each question to mark pass ✓ or fail ✕. Any "no" answer means the screen needs a redesign before it ships.</div>
+
+  <!-- ── GOD MODE PATCH: AUDIT HISTORY ── -->
+  <div class="audit-save-row">
+    <button class="audit-save-btn" onclick="saveAuditResult()">💾 Save this audit</button>
+  </div>
+  <div class="audit-history-wrap">
+    <div class="audit-history-hdr">
+      <span class="field-lbl" style="margin-bottom:0">Saved Audits (this device)</span>
+      <span class="audit-history-clear" onclick="clearAuditHistory()" tabindex="0" role="button" onkeydown="handleKeyActivate(event)">Clear</span>
+    </div>
+    <div id="auditHistoryList"></div>
+  </div>
 </div>
 
 <!-- ── FEATURE 2: COLOR CONTRAST CHECKER ── -->
@@ -347,7 +381,7 @@
 
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav">
-  <a href="index.html" class="nav-item"><span class="nav-item-icon">🏠</span><span class="nav-item-label">Home</span></a>
+  <a href="public-home.html" class="nav-item"><span class="nav-item-icon">🏠</span><span class="nav-item-label">Home</span></a>
   <a href="citizen-dashboard.html" class="nav-item"><span class="nav-item-icon">👤</span><span class="nav-item-label">Profile</span></a>
   <a href="siindex-readability-guardian.html" class="nav-item active"><span class="nav-item-icon">👁</span><span class="nav-item-label">Readability</span></a>
   <a href="siindex-prompt-optimiser.html" class="nav-item"><span class="nav-item-icon">⚡</span><span class="nav-item-label">Optimiser</span></a>
@@ -356,7 +390,10 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  const INDX_PRICE_USD = 0.24;
+  // AUDIT 2026-08-29: removed unused `const INDX_PRICE_USD = 0.24;` — a hardcoded fixed
+  // USD price for INDX with no live price feed and no display consumer anywhere in this
+  // file. Dead-code landmine: harmless while unreferenced, but ready to render a fabricated
+  // "live" price if a future edit wires it into the UI. INDX has no fixed USD price.
 
   // ── FEATURE 1: 10-POINT AUDIT ──
   const AUDIT_ITEMS = [
@@ -380,8 +417,9 @@
       const s = _auditState[i];
       const cls = s === true ? 'pass' : s === false ? 'fail' : '';
       const icon = s === true ? '✓' : s === false ? '✕' : '?';
+      // GOD MODE PATCH: keyboard + ARIA support on the checklist toggle
       return `<div class="checklist-item">
-        <div class="check-toggle ${cls}" onclick="toggleAudit(${i})">${icon}</div>
+        <div class="check-toggle ${cls}" tabindex="0" role="checkbox" aria-checked="${s === true ? 'true' : s === false ? 'false' : 'mixed'}" onclick="toggleAudit(${i})" onkeydown="handleKeyActivate(event)">${icon}</div>
         <div class="check-q">${i+1}. ${q}</div>
       </div>`;
     }).join('');
@@ -394,6 +432,8 @@
     renderAudit();
     const screenName = document.getElementById('auditScreenName').value.trim();
     if (screenName) {
+      // GOD MODE PATCH: remember last-used screen name for smart-default prefill
+      localStorage.setItem('indx_readability_last_screen', screenName);
       const score = _auditState.filter(x => x === true).length;
       const total = _auditState.filter(x => x !== null).length;
       if (score < total) showToast('⚠ ' + (total - score) + ' item' + (total - score === 1 ? '' : 's') + ' need attention.');
@@ -483,6 +523,7 @@
   function syncColor(which, val) {
     document.getElementById(which === 'fg' ? 'fgHex' : 'bgHex').value = val.toUpperCase();
     updateContrast();
+    incrementStat('contrast'); // GOD MODE PATCH: session stats
   }
 
   function syncHex(which, val) {
@@ -490,6 +531,7 @@
       document.getElementById(which === 'fg' ? 'fgSwatch' : 'bgSwatch').value = val;
     }
     updateContrast();
+    incrementStat('contrast'); // GOD MODE PATCH: session stats
   }
 
   function setPreset(fg, bg) {
@@ -498,6 +540,7 @@
     document.getElementById('fgSwatch').value = fg;
     document.getElementById('bgSwatch').value = bg;
     updateContrast();
+    incrementStat('contrast'); // GOD MODE PATCH: session stats
   }
 
   // ── FEATURE 3: BUTTON LABEL IMPROVER ──
@@ -537,6 +580,7 @@
           <div class="label-context">${r.context}</div>
         </div>`).join('');
     }
+    incrementStat('labels'); // GOD MODE PATCH: session stats
     showToast('✓ ' + (results ? results.length : 1) + ' improved label' + ((results && results.length !== 1) ? 's' : '') + ' ready.');
   }
 
@@ -572,6 +616,9 @@
       btn.style.fontSize = '17px'; btn.style.padding = '18px';
       btn.style.background = 'var(--gold)'; btn.style.color = 'var(--black)';
       btn.textContent = 'Review before sending INDX';
+      // GOD MODE PATCH: personalize the protection note with the citizen's name when known
+      var citizenName = sessionStorage.getItem('citizen_name');
+      document.getElementById('protNoteText').textContent = (citizenName ? citizenName + ', this' : 'This') + ' sends real INDX from your account. Please check the amount and recipient before continuing. If anything looks wrong, tap Cancel.';
       note.style.display = 'block';
       showToast('🛡 Protection Mode active — larger text, slower flow, extra confirmation.');
     } else {
@@ -591,6 +638,83 @@
     }
   }
 
+  // ── GOD MODE PATCH: SESSION STATS + AUDIT HISTORY + ACCESSIBILITY ──
+  function getStats() {
+    try { return JSON.parse(localStorage.getItem('indx_readability_stats') || '{}'); } catch(e) { return {}; }
+  }
+  function saveStats(s) {
+    localStorage.setItem('indx_readability_stats', JSON.stringify(s));
+  }
+  function incrementStat(key) {
+    const s = getStats();
+    s[key] = (s[key] || 0) + 1;
+    saveStats(s);
+    renderStatsBar();
+  }
+  function renderStatsBar() {
+    const s = getStats();
+    const el = document.getElementById('rgStatsBar');
+    if (!el) return;
+    el.innerHTML = [
+      { v: s.audits || 0, l: 'Audits Saved' },
+      { v: s.labels || 0, l: 'Labels Improved' },
+      { v: s.contrast || 0, l: 'Contrast Checks' },
+    ].map(x => `<div class="rg-stat"><div class="rg-stat-val">${x.v}</div><div class="rg-stat-lbl">${x.l}</div></div>`).join('');
+  }
+
+  function getAuditLog() {
+    try { return JSON.parse(localStorage.getItem('indx_readability_audit_log') || '[]'); } catch(e) { return []; }
+  }
+  function saveAuditResult() {
+    const screen = document.getElementById('auditScreenName').value.trim();
+    const answered = _auditState.filter(x => x !== null).length;
+    if (!screen) { showToast('Name the screen before saving.'); return; }
+    if (answered === 0) { showToast('Mark at least one item first.'); return; }
+    const passes = _auditState.filter(x => x === true).length;
+    const log = getAuditLog();
+    log.unshift({ screen, state: _auditState.slice(), score: passes, total: answered, ts: Date.now() });
+    localStorage.setItem('indx_readability_audit_log', JSON.stringify(log.slice(0, 12)));
+    localStorage.setItem('indx_readability_last_screen', screen);
+    incrementStat('audits');
+    renderAuditHistory();
+    showToast('✓ Saved audit for ' + screen + '.');
+  }
+  function loadAuditEntry(i) {
+    const log = getAuditLog();
+    const entry = log[i];
+    if (!entry) return;
+    _auditState = entry.state.slice();
+    document.getElementById('auditScreenName').value = entry.screen;
+    renderAudit();
+    showToast('Loaded saved audit for ' + entry.screen + '.');
+  }
+  function clearAuditHistory() {
+    localStorage.removeItem('indx_readability_audit_log');
+    renderAuditHistory();
+    showToast('Saved audits cleared.');
+  }
+  function renderAuditHistory() {
+    const el = document.getElementById('auditHistoryList');
+    if (!el) return;
+    const log = getAuditLog();
+    if (!log.length) { el.innerHTML = '<div class="audit-history-empty">No saved audits yet — save one above.</div>'; return; }
+    el.innerHTML = log.map((e, i) => {
+      const color = e.score === e.total ? 'var(--green)' : (e.total - e.score) <= 2 ? 'var(--gold)' : 'var(--red)';
+      const when = new Date(e.ts).toLocaleDateString('en-AU', { day:'numeric', month:'short' });
+      return `<div class="audit-history-item" tabindex="0" role="button" onclick="loadAuditEntry(${i})" onkeydown="handleKeyActivate(event)">
+        <div>
+          <div class="audit-history-name">${e.screen}</div>
+          <div class="audit-history-meta">${when}</div>
+        </div>
+        <div class="audit-history-score" style="color:${color}">${e.score}/${e.total}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function handleKeyActivate(e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); }
+  }
+
   // ── TOAST ──
   function showToast(msg) {
     const t = document.getElementById('toast');
@@ -602,6 +726,17 @@
   window.addEventListener('DOMContentLoaded', () => {
     renderAudit();
     updateContrast();
+
+    // GOD MODE PATCH: smart defaults + stats/history render + keyboard support
+    const lastScreen = localStorage.getItem('indx_readability_last_screen');
+    if (lastScreen) document.getElementById('auditScreenName').value = lastScreen;
+    renderStatsBar();
+    renderAuditHistory();
+    document.querySelectorAll('.vague-chip, .mode-sw-btn').forEach(el => {
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('role', 'button');
+      el.addEventListener('keydown', handleKeyActivate);
+    });
   });
 </script>
 <script src="siindex-speak-core.js"></script>

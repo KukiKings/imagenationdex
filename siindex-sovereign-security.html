@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Sovereign Security — IN$DEX</title>
+<meta name="description" content="Design preview of IN$DEX's continuous security scan, red-team verification, and finding ledger — sample data, plus a real MCP connector decision log.">
 <style>
   :root {
     --cyan:    #00D4FF;
@@ -222,6 +223,35 @@
   .doctrine-line:last-child { border-bottom: none; }
   .doctrine-line::before { content: '🛡️'; flex-shrink: 0; margin-top: 1px; }
 
+  /* ── GOD MODE PATCH: LAST SCAN RESUME BANNER (data persistence) ── */
+  .gm-lastscan { margin: 12px 16px 0; padding: 9px 12px; border-radius: 10px; font-size: 11px; color: var(--text2); background: var(--surface3); border: 1px solid var(--border); display: none; align-items: center; gap: 8px; line-height: 1.4; }
+  .gm-lastscan.show { display: flex; }
+  .gm-lastscan strong { color: var(--cyan); }
+
+  /* ── GOD MODE PATCH: BLOCK-CONNECTOR CONFIRM SHEET (confirmation / safety) ── */
+  .sheet-overlay { position: fixed; inset: 0; background: rgba(9,10,16,0.7); z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+  .sheet-overlay.show { opacity: 1; pointer-events: auto; }
+  .bottom-sheet { position: fixed; left: 50%; bottom: 0; transform: translate(-50%,100%); width: 100%; max-width: 430px; background: var(--surface2); border: 1px solid var(--border); border-bottom: none; border-radius: 20px 20px 0 0; z-index: 201; padding: 20px 20px 28px; transition: transform 0.3s ease; }
+  .bottom-sheet.show { transform: translate(-50%,0); }
+  .bs-title { font-size: 14px; font-weight: 800; margin-bottom: 8px; color: var(--red); }
+  .bs-body { font-size: 12px; color: var(--text2); line-height: 1.55; margin-bottom: 16px; }
+  .bs-body strong { color: var(--text); }
+  .bs-actions { display: flex; gap: 10px; }
+  .bs-btn { flex: 1; padding: 12px; border-radius: 12px; font-size: 12px; font-weight: 800; text-align: center; cursor: pointer; }
+  .bs-btn-cancel { background: var(--surface3); border: 1px solid var(--border); color: var(--text2); }
+  .bs-btn-confirm { background: rgba(255,77,109,0.15); border: 1px solid rgba(255,77,109,0.4); color: var(--red); }
+
+  /* ── GOD MODE PATCH: SMART-DEFAULT DRAFT BADGE (smart defaults) ── */
+  .gm-draft-badge { display: inline-block; font-size: 9px; font-weight: 800; color: var(--gold); margin-left: 6px; }
+
+  /* ── GOD MODE PATCH: KEYBOARD / SCREEN-READER ACCESSIBILITY (accessibility) ── */
+  .scan-domain:focus-visible,
+  .ledger-row:focus-visible,
+  .mcp-row:focus-visible,
+  .rt-domain-chip:focus-visible,
+  .lf-tab:focus-visible,
+  .bs-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
   /* TOAST */
   .toast {
     position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px);
@@ -290,6 +320,7 @@
       <div class="card-sub">Code · Session · Wallet · MCP · Cultural · Child · Governance · Media</div>
     </div>
   </div>
+  <div class="gm-lastscan" id="gmLastScan"></div>
   <div class="scan-summary">
     <div class="scan-sum-cell"><div class="scan-sum-val" style="color:var(--red)" id="sumCrit">—</div><div class="scan-sum-lbl">Critical</div></div>
     <div class="scan-sum-cell"><div class="scan-sum-val" style="color:var(--gold)" id="sumHigh">—</div><div class="scan-sum-lbl">High</div></div>
@@ -309,14 +340,14 @@
   <div class="card-hdr">
     <div class="card-icon" style="background:rgba(255,77,109,0.1)">⚔️</div>
     <div>
-      <div class="card-title">SIINDEX Challenges Its Own Finding</div>
+      <div class="card-title">SIINDEX Challenges Her Own Finding</div>
       <div class="card-sub">False positives and bad patches are prevented before they escalate</div>
     </div>
   </div>
   <div class="rt-intro">Before any serious finding is surfaced, SIINDEX runs a Red Team pass — 9 adversarial questions to verify the finding, confirm impact, and prevent noise. Select the security domain and describe the potential finding.</div>
   <div class="rt-input-wrap">
     <div class="rt-domain-row" id="rtDomainChips"></div>
-    <textarea class="rt-textarea" id="rtDesc" rows="3" placeholder="Describe the potential finding. e.g. 'Admin session does not require step-up verification for high-value payout approvals'"></textarea>
+    <textarea class="rt-textarea" id="rtDesc" rows="3" placeholder="Describe the potential finding. e.g. 'Admin session does not require step-up verification for high-value payout approvals'" oninput="saveRtDraft(this.value)"></textarea>
   </div>
   <div class="rt-run" onclick="runRedTeam()">⚔️ Run Red Team Verification Pass</div>
   <div class="rt-steps" id="rtSteps"></div>
@@ -372,6 +403,17 @@
   <div id="doctrineLines"></div>
 </div>
 
+<!-- GOD MODE PATCH: block-connector confirm sheet (confirmation / safety) -->
+<div class="sheet-overlay" id="blockConfirmOverlay" onclick="closeBlockConfirm()"></div>
+<div class="bottom-sheet" id="blockConfirmSheet">
+  <div class="bs-title">⛔ Confirm Block</div>
+  <div class="bs-body">Blocking <strong id="bcConnectorName">this connector</strong> is the highest-impact MCP decision available on this page. It will be recorded in the security ledger. Confirm the block.</div>
+  <div class="bs-actions">
+    <div class="bs-btn bs-btn-cancel" tabindex="0" role="button" onclick="closeBlockConfirm()">Cancel</div>
+    <div class="bs-btn bs-btn-confirm" tabindex="0" role="button" onclick="confirmBlock()">⛔ Confirm Block</div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- BOTTOM NAV -->
@@ -384,7 +426,8 @@
 </nav>
 
 <script>
-  const INDX_PRICE_USD = 0.24;
+  // Audit 2026-08-29: removed unused INDX_PRICE_USD constant (dead code, no references
+  // anywhere in this file).
 
   // ── REAL SUPABASE BACKEND — MCP connector decisions write a real security_events row.
   // (The scan grid / red-team pass / ledger above stay sample data, clearly labelled as such —
@@ -626,6 +669,69 @@
   let _ledgerFilter = 'all';
   let _openLedger = null;
   let _openMcp = null;
+  let _pendingBlockName = null; // GOD MODE PATCH
+
+  // ── GOD MODE PATCH: TOP-UP FEATURES (data persistence, confirmation/safety, smart defaults, accessibility) ──
+
+  // Data persistence: restore + render the last completed scan on load, instead of a blank card.
+  function renderLastScanBanner() {
+    const el = document.getElementById('gmLastScan');
+    if (!el) return;
+    let raw = null;
+    try { raw = JSON.parse(localStorage.getItem('indx_security_lastresults') || 'null'); } catch (e) {}
+    if (!raw || !raw.ts) { el.classList.remove('show'); return; }
+    const mins = Math.max(0, Math.round((Date.now() - raw.ts) / 60000));
+    const when = mins < 1 ? 'just now' : mins < 60 ? mins + 'm ago' : Math.round(mins / 60) + 'h ago';
+    el.innerHTML = `🕓 Last scan <strong>${when}</strong> — ${raw.crit || 0} critical, ${raw.high || 0} high, ${raw.med || 0} medium, ${raw.low || 0} low.`;
+    el.classList.add('show');
+  }
+
+  // Confirmation/safety: block is the highest-impact MCP decision, so it gets an explicit confirm step
+  // instead of firing straight to the ledger like approve/review do.
+  function openBlockConfirm(name) {
+    _pendingBlockName = name;
+    document.getElementById('bcConnectorName').textContent = name;
+    document.getElementById('blockConfirmOverlay').classList.add('show');
+    document.getElementById('blockConfirmSheet').classList.add('show');
+  }
+  function closeBlockConfirm() {
+    _pendingBlockName = null;
+    document.getElementById('blockConfirmOverlay').classList.remove('show');
+    document.getElementById('blockConfirmSheet').classList.remove('show');
+  }
+  function confirmBlock() {
+    const name = _pendingBlockName;
+    closeBlockConfirm();
+    if (name) mcpAction('block', name);
+  }
+
+  // Smart defaults: remember the last Red Team domain + in-progress description across visits.
+  function restoreRtSmartDefaults() {
+    let savedDomain = '';
+    let savedDraft = '';
+    try {
+      savedDomain = localStorage.getItem('indx_security_rtdomain') || '';
+      savedDraft  = localStorage.getItem('indx_security_rtdraft')  || '';
+    } catch (e) {}
+    if (savedDomain) _rtDomain = savedDomain;
+    initRedTeamChips();
+    const desc = document.getElementById('rtDesc');
+    if (desc && savedDraft) desc.value = savedDraft;
+  }
+  function saveRtDraft(val) {
+    try { localStorage.setItem('indx_security_rtdraft', val); } catch (e) {}
+  }
+
+  // Accessibility: Enter/Space activates any keyboard-focused row that only had a click handler.
+  function gmInitKeyboardActivation() {
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const el = document.activeElement;
+      if (!el || !el.classList) return;
+      const focusable = ['ledger-row','mcp-row','rt-domain-chip','lf-tab','bs-btn'];
+      if (focusable.some(c => el.classList.contains(c))) { e.preventDefault(); el.click(); }
+    });
+  }
 
   // ── GM1: LIVE SCAN ──
   function initScanGrid() {
@@ -688,6 +794,9 @@
               btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
               _scanning = false;
               localStorage.setItem('indx_security_lastscan', Date.now());
+              // GOD MODE PATCH: persist the summary itself so a returning citizen sees results, not a blank card.
+              localStorage.setItem('indx_security_lastresults', JSON.stringify({ ts: Date.now(), crit: totCrit, high: totHigh, med: totMed, low: totLow }));
+              renderLastScanBanner();
               showToast('⚡ Scan complete — ' + (totCrit+totHigh) + ' High/Critical findings need attention.');
             }, 500);
           }
@@ -700,12 +809,13 @@
   function initRedTeamChips() {
     const el = document.getElementById('rtDomainChips');
     el.innerHTML = RT_DOMAINS.map(d =>
-      `<div class="rt-domain-chip ${_rtDomain===d?'sel':''}" onclick="selectRtDomain('${d.replace(/\//g,'\\/')}',this)">${d}</div>`
+      `<div class="rt-domain-chip ${_rtDomain===d?'sel':''}" tabindex="0" role="button" onclick="selectRtDomain('${d.replace(/\//g,'\\/')}',this)">${d}</div>`
     ).join('');
   }
 
   function selectRtDomain(d, el) {
     _rtDomain = d;
+    try { localStorage.setItem('indx_security_rtdomain', d); } catch (e) {} // GOD MODE PATCH: smart default
     document.querySelectorAll('.rt-domain-chip').forEach(c=>c.classList.remove('sel'));
     el.classList.add('sel');
     document.getElementById('rtSteps').classList.remove('show');
@@ -769,7 +879,7 @@
   function initSecLedger() {
     const fEl = document.getElementById('secLedgerFilter');
     fEl.innerHTML = LEDGER_FILTERS.map(f =>
-      `<div class="lf-tab ${f.key===_ledgerFilter?'active':''}" onclick="filterSecLedger('${f.key}')">${f.label}</div>`
+      `<div class="lf-tab ${f.key===_ledgerFilter?'active':''}" tabindex="0" role="button" onclick="filterSecLedger('${f.key}')">${f.label}</div>`
     ).join('');
     renderSecLedger();
   }
@@ -802,7 +912,7 @@
     el.innerHTML = filtered.map(f => {
       const isOpen = _openLedger === f.id;
       return `<div class="ledger-item" id="li-${f.id}">
-        <div class="ledger-row" onclick="toggleLedger('${f.id}')">
+        <div class="ledger-row" tabindex="0" role="button" aria-expanded="${isOpen}" onclick="toggleLedger('${f.id}')">
           <div class="ledger-icon">${f.icon}</div>
           <div class="ledger-info">
             <div class="ledger-type">${f.cat}</div>
@@ -836,7 +946,7 @@
     const el = document.getElementById('mcpRegistry');
     el.innerHTML = MCP_CONNECTORS.map((c, i) => `
       <div class="mcp-item">
-        <div class="mcp-row" onclick="toggleMcp(${i})">
+        <div class="mcp-row" tabindex="0" role="button" aria-expanded="${_openMcp===i}" onclick="toggleMcp(${i})">
           <div class="mcp-icon">${c.icon}</div>
           <div class="mcp-info">
             <div class="mcp-name">${c.name}</div>
@@ -858,7 +968,7 @@
           <div class="mcp-action">
             <div class="mcp-btn mcp-btn-approve" onclick="mcpAction('approve','${c.name}')">✓ Approve</div>
             <div class="mcp-btn mcp-btn-review"  onclick="mcpAction('review','${c.name}')">⚠ Flag Review</div>
-            <div class="mcp-btn mcp-btn-block"   onclick="mcpAction('block','${c.name}')">⛔ Block</div>
+            <div class="mcp-btn mcp-btn-block"   tabindex="0" role="button" onclick="openBlockConfirm('${c.name}')">⛔ Block</div>
           </div>
         </div>
       </div>`).join('');
@@ -925,11 +1035,14 @@
   // ── INIT ──
   window.addEventListener('DOMContentLoaded', () => {
     initScanGrid();
-    initRedTeamChips();
+    restoreRtSmartDefaults(); // GOD MODE PATCH: replaces initRedTeamChips() call — restores saved domain/draft too
     initSecLedger();
     initMcpRegistry();
     renderPioneerTable();
     renderDoctrine();
+    // GOD MODE PATCH: top-up features
+    renderLastScanBanner();
+    gmInitKeyboardActivation();
   });
 </script>
 <script src="siindex-speak-core.js"></script>

@@ -5,6 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Civilisation Governance IN$DEX</title>
+<meta name="description" content="Vote on IN$DEX governance proposals once your Wisdom Score reaches 50 — one citizen, one equal vote. Browse active, passed, and failed proposals, or submit your own.">
 <style>
   :root{
     --bg:#090A10;--surface:#10121A;--surface2:#181B26;--surface3:#1E2130;
@@ -254,7 +255,7 @@
 <!-- GVE INFO -->
 <div class="gve-card">
   <div class="gve-title">⚡ GVE Loop Governance Value Engine</div>
-  <div class="gve-desc">Your votes shape IN$DEX. High-participation votes unlock bonus INDX rewards. Proposals that pass earn their author +10 Wisdom Score. Every citizen's voice matters equally.</div>
+  <div class="gve-desc">Your votes shape IN$DEX. Every citizen's voice matters equally — one vote per citizen, regardless of Wisdom Score or wallet size. Planned: bonus INDX for high-participation votes, and +10 Wisdom Score for authors of passed proposals. Not live yet.</div>
 </div>
 
 <!-- VOTE STATS CARD -->
@@ -382,6 +383,24 @@
   </div>
 </div>
 
+<!-- APPROVAL GATE SHEET -->
+<div class="sheet-overlay" id="gateOverlay" onclick="closeGateSheet()"></div>
+<div class="propose-sheet" id="gateSheet" style="z-index:102;">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title">Approval required</div>
+    <button class="sheet-close" onclick="closeGateSheet()">✕</button>
+  </div>
+  <div class="propose-body">
+    <div style="text-align:center;padding:20px 0 24px;">
+      <div style="font-size:52px;margin-bottom:16px;">👆</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:24px;" id="gateSheetDesc">This vote needs your explicit approval before it can complete.</div>
+    </div>
+    <button class="btn-primary" id="gateApproveBtn">Approve &amp; Vote</button>
+    <button onclick="closeGateSheet()" style="background:none;border:none;color:var(--text-muted);font-size:14px;width:100%;padding:14px;cursor:pointer;">Cancel</button>
+  </div>
+</div>
+
 <!-- GOD MODE R3 — WS CELEBRATION BANNER -->
 <div class="ws-celebration" id="wsCelebration">
   <div class="ws-cel-icon">⚖️</div>
@@ -467,10 +486,9 @@ function renderCard(p) {
   const quorumRequired = p.quorum_required || 100;
   const quorumPct = Math.min(100, Math.round((total / quorumRequired) * 100));
   const quorumMet = total >= quorumRequired;
-  const voteWeight = (1 + WISDOM_SCORE / 200).toFixed(1);
 
   const voteHtml = voted
-    ? `<div class="voted-label">✅ You voted <strong>${voted === 'for' ? 'For' : 'Against'}</strong> this proposal<span class="vote-weight">${voteWeight}× weight</span></div>`
+    ? `<div class="voted-label">✅ You voted <strong>${voted === 'for' ? 'For' : 'Against'}</strong> this proposal</div>`
     : `<div class="vote-buttons" id="btn_${p.id}">
         <button class="vote-btn for" onclick="castVote('${p.id}','for')">✓ Vote For</button>
         <button class="vote-btn against" onclick="castVote('${p.id}','against')">✗ Vote Against</button>
@@ -572,7 +590,7 @@ async function loadPassedProposals() {
         <div class="vote-bar-wrap">
           <div class="vote-labels"><span class="vote-for">For ${forPct}%</span><span class="vote-against">Against ${100 - forPct}%</span></div>
           <div class="vote-bar-track"><div class="vote-bar-fill" style="width:${forPct}%;"></div></div>
-          <div class="vote-meta"><span>${total.toLocaleString()} votes</span><span>✅ Enacted</span></div>
+          <div class="vote-meta"><span>${total.toLocaleString()} votes</span><span>✅ Passed</span></div>
         </div>
       </div>`;
     }).join('');
@@ -609,26 +627,22 @@ async function loadMyVotesPanel() {
 
 // ── CAST VOTE ──
 async function castVote(proposalId, choice) {
-  if (!canVote)     { openLockedSheet(); return; }
-  if (!CITIZEN_ID)  { showToast('Please log in to vote'); return; }
-  if (myVotes[proposalId]) { showToast('You already voted on this proposal'); return; }
+  if (!canVote)     { openLockedSheet(); return false; }
+  if (!CITIZEN_ID)  { showToast('Please log in to vote'); return false; }
+  if (myVotes[proposalId]) { showToast('You already voted on this proposal'); return false; }
 
-  // Optimistic UI
-  myVotes[proposalId] = choice;
+  // FIXED 2026-09-03: this used to update the UI optimistically BEFORE the RPC
+  // even fired -- "You voted", incremented vote count, toast -- and never checked
+  // the RPC's response for success at all (cast_governance_vote returns a normal
+  // 200 with success:false for a real rejection like already-voted or a closed
+  // proposal, not a transport error). A real rejection was silently swallowed by
+  // the catch block with the UI still claiming the vote landed. pillar-amendment.html's
+  // castVote() already gets this right (check the result, THEN update UI) -- matching
+  // that pattern here instead.
   const btnEl = document.getElementById('btn_' + proposalId);
-  if (btnEl) btnEl.outerHTML = `<div class="voted-label">✅ You voted <strong>${choice === 'for' ? 'For' : 'Against'}</strong> this proposal</div>`;
   const card = document.getElementById('card_' + proposalId);
-  if (card) card.classList.add('voted');
+  if (btnEl) btnEl.disabled = true;
 
-  const votesEl = document.getElementById('votes_' + proposalId);
-  if (votesEl) {
-    const n = parseInt(votesEl.textContent.replace(/,/g,'')) || 0;
-    votesEl.textContent = (n + 1).toLocaleString() + ' votes cast';
-  }
-  document.querySelectorAll('.stat-val')[2].textContent = Object.keys(myVotes).length;
-  showToast(choice === 'for' ? '✅ Voted For your voice counts' : '❌ Voted Against noted');
-
-  // RPC call
   try {
     const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/cast_governance_vote', {
       method: 'POST',
@@ -640,8 +654,34 @@ async function castVote(proposalId, choice) {
         p_wisdom:      WISDOM_SCORE
       })
     });
+    const voteResult = await res.clone().json().catch(() => null);
+
+    // Approval Gateway: cast_governance_vote is risk_class >= 3 in agent_registry, so a
+    // first call can come back {success:false, pending_approval:true, intent_id} instead of
+    // recording the vote. That is not a rejection -- route it to the approval gate so the
+    // citizen has an actual way to complete the vote, rather than just a dead-end toast.
+    if (voteResult && voteResult.pending_approval) {
+      if (btnEl) btnEl.disabled = false;
+      await showVoteGate(voteResult.intent_id, proposalId, choice);
+      return false;
+    }
+
+    if (!res.ok || !voteResult || voteResult.success === false) {
+      const raw = voteResult?.error || voteResult?.message || 'Vote could not be recorded';
+      showToast('❌ ' + raw);
+      if (btnEl) btnEl.disabled = false;
+      return false;
+    }
+
+    // Real vote confirmed — now safe to reflect in the UI.
+    myVotes[proposalId] = choice;
+    if (btnEl) btnEl.outerHTML = `<div class="voted-label">✅ You voted <strong>${choice === 'for' ? 'For' : 'Against'}</strong> this proposal</div>`;
+    if (card) card.classList.add('voted');
+    document.querySelectorAll('.stat-val')[2].textContent = Object.keys(myVotes).length;
+    showToast(choice === 'for' ? '✅ Voted For your voice counts' : '❌ Voted Against noted');
 
     // Refresh vote counts from DB
+    const votesEl = document.getElementById('votes_' + proposalId);
     const fresh = await sbFetch('/rest/v1/governance_proposals?id=eq.' + proposalId + '&select=votes_for,votes_against');
     if (fresh && fresh[0]) {
       const p = fresh[0];
@@ -656,17 +696,60 @@ async function castVote(proposalId, choice) {
       if (votesEl)   votesEl.textContent   = total.toLocaleString() + ' votes cast';
     }
 
-    // Award +5 wisdom for voting
-    try {
-      const newWisdom = await sbFetch('/rest/v1/rpc/award_wisdom', {
-        method: 'POST',
-        headers: rpcHeaders(),
-        body: JSON.stringify({ p_citizen_id: CITIZEN_ID, p_points: 5, p_reason: 'governance_vote' })
-      });
-      if (newWisdom) sessionStorage.setItem('citizen_wisdom', String(newWisdom));
-    } catch(e) { /* non-critical */ }
+    // Wisdom (+5) is now awarded INSIDE cast_governance_vote itself (via
+    // award_wisdom_internal, keyed to this proposal's real id) -- atomic with the vote
+    // and works for every citizen, not only ones with a real auth.uid() session. This
+    // used to be a separate client-side call to the public, auth-gated award_wisdom RPC.
+    if (voteResult.new_wisdom != null) sessionStorage.setItem('citizen_wisdom', String(voteResult.new_wisdom));
+    return true;
 
-  } catch(e) { /* vote already reflected in UI */ }
+  } catch(e) {
+    showToast('❌ Connection error — vote not recorded');
+    if (btnEl) btnEl.disabled = false;
+    return false;
+  }
+}
+
+async function showVoteGate(intentId, proposalId, choice) {
+  let cardData = null;
+  try {
+    const cardRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_action_intent_card', {
+      method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_intent_id: intentId })
+    });
+    cardData = await cardRes.json();
+  } catch (e) {}
+  document.getElementById('gateSheetDesc').textContent =
+    (cardData && !cardData.error && cardData.data_involved) ? cardData.data_involved
+      : 'This vote needs your explicit approval before it can complete.';
+  document.getElementById('gateOverlay').classList.add('open');
+  document.getElementById('gateSheet').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  document.getElementById('gateApproveBtn').onclick = async function () {
+    const gbtn = document.getElementById('gateApproveBtn');
+    gbtn.textContent = 'Voting…'; gbtn.disabled = true;
+    try {
+      const grantRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/grant_intent_approval', {
+        method: 'POST', headers: rpcHeaders(),
+        body: JSON.stringify({ p_intent_id: intentId, p_level: 1, p_method: 'citizen_app_confirm' })
+      });
+      const grant = await grantRes.json();
+      if (!grant || !grant.success) throw new Error('Approval could not be recorded.');
+      closeGateSheet();
+      await castVote(proposalId, choice);
+    } catch (e) {
+      showToast('❌ ' + (e.message || 'Approval failed'));
+      closeGateSheet();
+    } finally {
+      gbtn.textContent = 'Approve & Vote'; gbtn.disabled = false;
+    }
+  };
+}
+
+function closeGateSheet() {
+  document.getElementById('gateOverlay').classList.remove('open');
+  document.getElementById('gateSheet').classList.remove('open');
+  document.body.style.overflow = '';
 }
 
 // ── TAB SWITCHING ──
@@ -786,9 +869,9 @@ function renderVoteStats() {
 
 // ── TIPS ──
 const TIPS = {
-  gov:  { title: 'Governance', body: 'Citizens with Wisdom Score 50+ vote on proposals that change how IN$DEX works fees, features, Civilisation Fund allocation. Voting power scales with your Wisdom Score, not your wallet size.', link: 'help.html' },
+  gov:  { title: 'Governance', body: 'Citizens with Wisdom Score 50+ vote on proposals that change how IN$DEX works fees, features, Civilisation Fund allocation. Each unlocked citizen gets one equal vote — not scaled by wallet size or Wisdom Score.', link: 'help.html' },
   ws:   { title: 'Wisdom Score', body: 'Your reputation on IN$DEX (0–200). It grows by trading, verifying, voting, and referring friends. WS 50 unlocks governance voting.', link: 'wisdom-score.html' },
-  fund: { title: 'Civilisation Fund', body: '2% of every transaction on IN$DEX flows here. It pays for mesh nodes, education, insurance reserves, and ambassador rewards. Citizens vote on every allocation.', link: 'help.html' }
+  fund: { title: 'Civilisation Fund', body: 'A 2% fee applies to marketplace sales. Planned: this is intended to fund mesh nodes, education, insurance reserves, and ambassador rewards, with citizens voting on each allocation. Not live yet.', link: 'help.html' }
 };
 function showTip(key) {
   const tip = TIPS[key]; if (!tip) return;
@@ -1083,7 +1166,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   const _origCastVote = window.castVote;
   // GOD MODE PATCH
   window.castVote = async function(propId, choice) {
-    await _origCastVote(propId, choice);
+    // FIXED 2026-09-03: this wrapper used to run the "+5 Wisdom Earned" celebration
+    // and WS progress-bar update UNCONDITIONALLY after calling the real castVote(),
+    // even when the vote was rejected (already voted, proposal closed) -- celebrating
+    // a wisdom gain the citizen never actually received. Now skips it on failure.
+    const ok = await _origCastVote(propId, choice);
+    if (!ok) return;
     const prevWS = parseInt(sessionStorage.getItem('citizen_wisdom') || String(WISDOM_SCORE));
     const newWS  = prevWS + 5;
     const pct    = Math.min(100, (newWS / VOTE_THRESHOLD) * 100);

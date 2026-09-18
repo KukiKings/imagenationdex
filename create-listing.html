@@ -456,9 +456,13 @@
 </div>
 
 <!-- GOD MODE — Photo quality tip toast -->
+<!-- FIXED: "sell 40% faster" was an unattributed, unsourced statistic with no
+     backing data anywhere in this codebase (no analytics table, no A/B test,
+     nothing) presented as fact in SIINDEX's own voice. Rewritten as genuine
+     advice without a fabricated number. -->
 <div class="photo-tip-toast" id="photoTipToast">
   <div class="tip-title">📸 Photo tips from SIINDEX</div>
-  Good lighting + real product shots sell 40% faster. Fill the frame. Shoot on a plain background. Avoid screenshots or stock images — buyers trust real photos.
+  Good lighting and real product shots build buyer trust fastest. Fill the frame. Shoot on a plain background. Avoid screenshots or stock images — buyers trust real photos.
 </div>
 
 <script>
@@ -604,17 +608,13 @@
       const data = await res.json();
       if (data && data.success) {
         publishedListingId = data.listing_id;
-        // Real wisdom award via the award_wisdom RPC (was previously faked
-        // client-side with no backend - fixed as part of the full-app audit).
-        try {
-          const wRes = await fetch(`${SUPA_URL}/rest/v1/rpc/award_wisdom`, {
-            method: 'POST',
-            headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ p_citizen_id: sellerId, p_points: 5, p_reason: 'listing_published' })
-          });
-          const newScore = await wRes.json();
-          if (wRes.ok && typeof newScore === 'number') sessionStorage.setItem('citizen_wisdom', String(newScore));
-        } catch (e) { /* non-fatal - listing itself already succeeded */ }
+        // Wisdom award now happens INSIDE create_listing itself (via award_wisdom_internal,
+        // keyed to this listing's real id) -- it's atomic with listing creation and works
+        // for every seller, not just ones with a real auth.uid() session. The RPC returns
+        // the resulting score directly, so no separate client-side award_wisdom call is
+        // needed here anymore. (A redundant call used to live here -- it double-awarded
+        // wisdom once create_listing started succeeding reliably. Removed.)
+        if (data.new_wisdom != null) sessionStorage.setItem('citizen_wisdom', String(data.new_wisdom));
 
         document.getElementById('successSub').textContent =
           `"${title}" is live at ${indxVal} INDX ($${usdVal.toFixed(2)}). You keep 98% of every sale.`;

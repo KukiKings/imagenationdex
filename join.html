@@ -145,6 +145,36 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 .fee-note{font-size:12px;color:var(--muted);text-align:center;margin-top:-4px;}
 .fee-note span{color:var(--green);font-weight:700;}
 
+/* ── GOD MODE: RESUME BANNER + ACTIVITY TICKER + LIVE USD PREVIEW + LISTING CONFIRM SHEET ── */
+.resume-banner{display:none;align-items:center;gap:10px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.25);border-radius:14px;padding:12px 14px;margin:0 0 16px;}
+.resume-banner-icon{font-size:20px;flex-shrink:0;}
+.resume-banner-text{flex:1;font-size:12px;line-height:1.4;color:var(--text2);}
+.resume-banner-text b{color:var(--text);}
+.resume-banner-actions{display:flex;flex-direction:column;gap:6px;align-items:stretch;}
+.resume-banner-btn{background:var(--cyan);color:var(--black);border:none;border-radius:10px;padding:6px 10px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;}
+.resume-banner-dismiss{background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;padding:0;}
+
+.activity-ticker{display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;color:var(--gold);margin:0 auto 20px;font-weight:700;}
+.activity-ticker-dot{width:6px;height:6px;border-radius:50%;background:var(--gold);animation:tickerPulse 1.6s ease-in-out infinite;}
+@keyframes tickerPulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.7);}}
+.activity-ticker.bump{animation:tickerBump 0.4s ease;}
+@keyframes tickerBump{0%{transform:translateY(0);}30%{transform:translateY(-3px);}100%{transform:translateY(0);}}
+
+.price-usd-preview{font-size:12px;color:var(--green);font-weight:700;text-align:right;margin-top:-4px;min-height:16px;}
+
+.sheet-overlay{position:fixed;inset:0;background:rgba(9,10,16,0.7);z-index:900;opacity:0;pointer-events:none;transition:opacity 0.25s;}
+.sheet-overlay.show{opacity:1;pointer-events:auto;}
+.bottom-sheet{position:fixed;left:0;right:0;bottom:0;max-width:430px;margin:0 auto;background:var(--surface);border-top:1px solid var(--border);border-radius:22px 22px 0 0;padding:10px 20px 26px;z-index:901;transform:translateY(100%);transition:transform 0.3s cubic-bezier(.32,.72,0,1);max-height:80vh;overflow-y:auto;}
+.bottom-sheet.show{transform:translateY(0);}
+.sheet-handle{width:36px;height:4px;background:var(--surface3);border-radius:2px;margin:0 auto 16px;}
+.sheet-title{font-size:17px;font-weight:900;margin-bottom:14px;text-align:center;}
+.sheet-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.sheet-row:last-of-type{border-bottom:none;}
+.sheet-row-label{color:var(--muted);}
+.sheet-row-val{font-weight:800;color:var(--text);}
+.sheet-row-val.usd{color:var(--green);}
+.sheet-actions{display:flex;flex-direction:column;gap:10px;margin-top:18px;}
+
 /* ── TOAST ─────────────────────────────────────────────────── */
 #toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:rgba(26,29,46,0.97);border:1px solid var(--border);border-radius:12px;padding:12px 20px;font-size:13px;font-weight:600;white-space:nowrap;opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:999;}
 
@@ -254,7 +284,7 @@ body{background:var(--black);color:var(--text);font-family:-apple-system,BlinkMa
 
     <div class="flex-space"></div>
 
-    <button class="cta cta-primary" id="s2Btn" onclick="goS3()" disabled>Verify →</button>
+    <button class="cta cta-primary" id="s2Btn" onclick="verifyAndGoS3()" disabled>Verify →</button>
     <button class="cta cta-secondary mt8" onclick="showScreen('s1')">← Back</button>
   </div>
 
@@ -543,8 +573,19 @@ function goS2(){
   document.getElementById('phoneDisplay').textContent = code + ' ' + num.replace(/(\d{3})(\d{4})/,'$1 $2');
   showScreen('s2');
   startResendTimer();
-  // demo: auto-fill OTP after 2.5s
-  setTimeout(()=>autoFillOtp(), 2500);
+  sendRealOtp();
+}
+
+// FIXED 2026-08-29: this screen used to claim "Code sent to [phone]" and then auto-fill six
+// fake digits after 2.5s (autoFillOtp(), below) — no code was ever sent and nothing was ever
+// checked. Wired to the same real Supabase Auth phone OTP mechanism biometric-kyc.html and
+// sovereign-verify.html use (sb.auth.signInWithOtp / verifyOtp) instead of duplicating the
+// fabrication. See DEAD CODE note on autoFillOtp() below — it's kept but no longer called.
+async function sendRealOtp(){
+  try {
+    const { error } = await sb.auth.signInWithOtp({ phone: phoneNumber });
+    if (error) showToast('Could not send code. Please try again.');
+  } catch(e) { showToast('Could not send code. Please try again.'); }
 }
 
 // ── SCREEN 2 ────────────────────────────────────────────────────
@@ -560,6 +601,9 @@ function checkOtpComplete(){
   document.getElementById('s2Btn').disabled = !allFilled;
   if(allFilled) document.getElementById('s2Btn').focus();
 }
+// DEAD CODE 2026-08-29: filled the OTP boxes with a hardcoded digit sequence, unconditionally,
+// on a timer — not a real code, not tied to what was actually texted. No longer called (see
+// sendRealOtp() above); kept only so a future test/demo mode could reuse it deliberately.
 function autoFillOtp(){
   const digits = ['4','2','6','1','9','7'];
   digits.forEach((d,i)=>{
@@ -585,16 +629,42 @@ function startResendTimer(){
     }
   }, 1000);
 }
-function resendOtp(){
-  showToast('📱 Code resent!');
+async function resendOtp(){
+  try {
+    const { error } = await sb.auth.signInWithOtp({ phone: phoneNumber });
+    if (error) { showToast('Could not send code. Please try again.'); return; }
+    showToast('New code sent');
+  } catch(e) { showToast('Could not send code. Please try again.'); return; }
   startResendTimer();
-  setTimeout(()=>autoFillOtp(), 2500);
 }
 function goS3(){
   showScreen('s3');
   // apply pre-selected role from URL param
   if(selectedRole) selectRole(selectedRole);
   setTimeout(()=>document.getElementById('nameInput').focus(), 400);
+}
+
+// FIXED 2026-08-29: the "Verify →" button used to call goS3() directly — it never checked the
+// entered digits against anything, since none of them were ever real (see sendRealOtp() above).
+// This checks the real code via Supabase Auth before letting the citizen past the OTP screen.
+async function verifyAndGoS3(){
+  const digits = [1,2,3,4,5,6].map(i=>document.getElementById('o'+i).value).join('');
+  const btn = document.getElementById('s2Btn');
+  btn.disabled = true; btn.textContent = 'Verifying…';
+  try {
+    const { error } = await sb.auth.verifyOtp({ phone: phoneNumber, token: digits, type: 'sms' });
+    if (error) {
+      showToast('Invalid code — try again');
+      btn.disabled = false; btn.textContent = 'Verify →';
+      return;
+    }
+  } catch(e) {
+    showToast('Verification failed — try again');
+    btn.disabled = false; btn.textContent = 'Verify →';
+    return;
+  }
+  btn.textContent = 'Verify →';
+  goS3();
 }
 
 // ── SCREEN 3 ────────────────────────────────────────────────────
@@ -682,6 +752,21 @@ async function createRealCitizen(slug, attempt){
   sessionStorage.setItem('citizen_web3_domain', domain + '.IN$DEX');
   sessionStorage.setItem('citizen_genesis', 'true');
 
+  // FIXED 2026-08-29: link the real Supabase Auth session (created by verifyAndGoS3()'s real
+  // sb.auth.verifyOtp() call) to this citizen row, same pattern as biometric-kyc.html.
+  // FIXED 2026-09-04: link_citizen_auth(p_phone, p_auth_id) had no EXECUTE grant for anon/
+  // authenticated at all (every call from any screen was silently failing) AND matched by a
+  // client-formatted phone string that frequently didn't equal what Supabase Auth actually
+  // verified -- switched to link_citizen_auth_by_id(p_citizen_id), which uses the citizen id
+  // we already have in hand (data.id, just returned by create_onboarding_citizen) and
+  // self-heals phone_number from auth.users.phone (the one value in this flow guaranteed to
+  // be the real verified number) instead of trusting a re-derived string. Still non-fatal.
+  if (isPhone) {
+    try {
+      await sb.rpc('link_citizen_auth_by_id', { p_citizen_id: data.id });
+    } catch(linkErr) { /* non-fatal */ }
+  }
+
   // Referral attribution — best-effort, non-blocking. Real account
   // creation above already succeeded regardless of this outcome.
   if (referrer && referrer.id) {
@@ -700,6 +785,13 @@ async function createRealCitizen(slug, attempt){
 // ── SCREEN 4: WALLET GEN ─────────────────────────────────────────
 function slugify(str){ return str.toLowerCase().replace(/[^a-z0-9]/g,''); }
 
+// DEAD CODE 2026-08-29: generateAddress() produced a deterministic base58-looking string from
+// a local hash — not a real Solana keypair, never touched any chain — while runWalletGen()'s
+// narration claimed "Generating quantum-secure keys…" and "Anchoring to Solana mainnet…" and
+// revealed the fake string character-by-character as if it were the citizen's wallet address.
+// No mainnet interaction, key generation, or address derivation has ever happened here. Left
+// defined (unused) rather than deleted in case a real client-side keygen step is built later —
+// do not reconnect it without an actual Solana keypair/mainnet call behind it.
 function generateAddress(seed){
   let hash = 0;
   for(let i=0;i<seed.length;i++) hash = ((hash<<5)-hash)+seed.charCodeAt(i), hash|=0;
@@ -714,17 +806,21 @@ function generateAddress(seed){
 
 function runWalletGen(citizenId){
   const stages = [
-    { pct: 20, msg: 'Generating quantum-secure keys…' },
-    { pct: 45, msg: 'Deriving your sovereign address…' },
-    { pct: 65, msg: 'Anchoring to Solana mainnet…' },
+    { pct: 20, msg: 'Setting up your account…' },
+    { pct: 45, msg: 'Reserving your IN$DEX name…' },
+    { pct: 65, msg: 'Almost there…' },
     { pct: 85, msg: 'Registering '+citizenId+'…' },
-    { pct: 100, msg: 'Wallet activated ✓' },
+    { pct: 100, msg: 'Account ready ✓' },
   ];
   const bar  = document.getElementById('genBar');
   const status = document.getElementById('genStatus');
   const addrEl = document.getElementById('walletAddr');
   const sphere = document.getElementById('walletSphere');
-  walletAddress = generateAddress(citizenId + phoneNumber);
+  // FIXED 2026-08-29: previously called generateAddress() (see DEAD CODE note above) to fabricate
+  // a fake wallet address. citizenId here is actually the real display slug this citizen is about
+  // to be registered under (see goS4 — "Display-only slug... REAL citizen_id is set later"), so
+  // reveal that real, about-to-be-real identifier instead of an invented one.
+  walletAddress = citizenId;
 
   let si = 0;
   function nextStage(){

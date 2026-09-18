@@ -5,6 +5,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>IN$DEX — Pay</title>
+<!-- AUDIT 2026-07-30: this is the page a stranger hits first when scanning a payment QR, and its
+     description asserted a live instant-payment service. No settlement exists. -->
 <meta name="description" content="How IN$DEX payments are designed to work. IN$DEX has not launched — no payment can be sent or settled yet. Launch 24 Feb 2027.">
 <style>
 :root {
@@ -31,6 +33,7 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
 .citizen-name{font-size:20px;font-weight:900;margin-bottom:4px;}
 .citizen-domain{font-size:15px;color:var(--cyan);font-family:'SF Mono',monospace;margin-bottom:8px;}
 .citizen-verified{display:inline-flex;align-items:center;gap:5px;background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.25);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;color:var(--green);}
+.citizen-verified.unverified{background:rgba(255,176,32,0.1);border-color:rgba(255,176,32,0.3);color:#ffb020;}
 .citizen-not-found{display:none;text-align:center;padding:40px 24px;}
 .citizen-nf-icon{font-size:48px;margin-bottom:16px;}
 .citizen-nf-title{font-size:18px;font-weight:800;margin-bottom:8px;color:var(--red);}
@@ -189,7 +192,7 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
       <div class="citizen-avatar" id="citizenAvatar">?</div>
       <div class="citizen-name" id="citizenName">Loading…</div>
       <div class="citizen-domain" id="citizenDomain"></div>
-      <div class="citizen-verified">✅ Verified Sovereign Citizen</div>
+      <div class="citizen-verified" id="citizenVerified">✅ Verified Sovereign Citizen</div>
     </div>
 
     <!-- NOT FOUND STATE (hidden by default) -->
@@ -267,15 +270,15 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
       <div class="join-card">
         <div class="join-icon">🌐</div>
         <div class="join-title">Join free. Pay <span id="joinTargetName">them</span> instantly.</div>
-        <div class="join-sub">IN$DEX is free to join. No bank. No documents. No face scan. Just your phone number.</div>
+        <div class="join-sub">IN$DEX is free to join. 90 seconds. No bank. No documents. No face scan. Just your phone number.</div>
         <div class="join-package">
           <div class="join-item"><span>💰</span><span><strong>50 INDX Genesis Recognition</strong> — recorded pending review</span></div>
           <div class="join-item"><span>🌐</span><span><strong>Free Web3 domain</strong> — yourname.IN$DEX, yours forever</span></div>
           <div class="join-item"><span>🪙</span><span><strong>NFT Domain Certificate</strong> — provable ownership on Solana</span></div>
-          <div class="join-item"><span>🛡️</span><span><strong>$10K Transaction Protection (planned)</strong> — design parameter, not cover in force; no payment is covered today — covered</span></div>
+          <div class="join-item"><span>🛡️</span><span><strong>$10K transaction protection</strong> — every payment covered</span></div>
         </div>
         <button class="btn-join" onclick="joinAndPay()">Join IN$DEX Free — Then Pay →</button>
-        <div class="join-reassure">No credit card · No bank account · a phone number</div>
+        <div class="join-reassure">No credit card · No bank account · 90 seconds</div>
       </div>
     </div>
 
@@ -289,7 +292,7 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
         </div>
         <div class="how-step">
           <div class="how-num">2</div>
-          <div class="how-text"><strong>Phone number only</strong> — no documents, no ID, no face scan.</div>
+          <div class="how-text"><strong>Phone number only</strong> — 90 seconds. No documents. No ID. No face scan.</div>
         </div>
         <div class="how-step">
           <div class="how-num">3</div>
@@ -337,10 +340,21 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
     </div>
     <div class="cs-law">
       <span>⚖️</span>
-      <span>98/2 Civilisation Law: 98% goes to <strong id="csLawRecip">recipient</strong>. 2% to the Civilisation Fund. A permanent commitment, not yet enforced on-chain.</span>
+      <span>98/2 Civilisation Law: 98% goes to <strong id="csLawRecip">recipient</strong>. 2% to the Civilisation Fund. A permanent commitment — not yet enforced by deployed contract code.</span>
     </div>
     <button class="btn-confirm" onclick="confirmPayment()">Confirm &amp; Send →</button>
     <button class="btn-cancel" onclick="closeConfirm()">Cancel</button>
+  </div>
+</div>
+
+<!-- APPROVAL GATE OVERLAY -->
+<div class="confirm-overlay" id="gateOverlay">
+  <div class="confirm-sheet" id="gateSheet">
+    <div class="cs-handle"></div>
+    <div class="cs-title">Approval required</div>
+    <div class="cs-sub" id="gateText">This payment needs your explicit approval before it can complete.</div>
+    <button class="btn-confirm" id="gateApproveBtn">Approve &amp; Send →</button>
+    <button class="btn-cancel" id="gateDeclineBtn">Cancel</button>
   </div>
 </div>
 
@@ -376,10 +390,26 @@ html,body{height:100%;background:var(--black);color:var(--text);font-family:-app
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
 const INDX_PRICE = 0.24;
 const SUPA_URL   = 'https://zljgthfzbalsunuoohcd.supabase.co';
 const SUPA_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+
+// REAL AUTH FIX (God Mode) — transfer_indx/withdraw_indx/stake_indx/grant_intent_approval/
+// get_action_intent_card are granted EXECUTE to `authenticated` (and now `anon` for the two
+// intent-card RPCs) but NOT to plain `anon` for the money-moving RPCs themselves — verified via
+// information_schema.role_routine_grants. This screen was sending only the anon key as its
+// Bearer token, same bug class already fixed in withdraw.html/staking.html/trust-before-
+// transaction.html: use the real Supabase Auth access_token when a genuine session exists.
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+let _realAccessToken = null;
+async function initRealSession() {
+  try {
+    const { data } = await sb.auth.getSession();
+    if (data && data.session && data.session.access_token) _realAccessToken = data.session.access_token;
+  } catch (e) { /* stay on anon key */ }
+}
 
 let TARGET_SLUG = '';
 let TARGET_NAME = '';
@@ -387,8 +417,16 @@ let IS_CITIZEN  = false;
 
 // ── INIT — read ?to= param ──
 (async function init() {
+  await initRealSession(); // resolves from local storage almost instantly — needed before any RPC call
   const params = new URLSearchParams(window.location.search);
-  const to     = params.get('to') || '';
+  // FIX 2026-08-30: /pay/<slug> is served via a vercel.json REWRITE, not a redirect -- the
+  // browser's address bar (and therefore window.location.search, which this script reads)
+  // never changes to the rewritten /pay.html?to=<slug> destination; it stays exactly as
+  // typed/scanned. So the short-link format has to be recovered from window.location.pathname
+  // instead of the query string. The ?to= query-string format (used by receive.html's real QR
+  // codes, served via the bare /pay route) is unaffected and still read from params below.
+  const pathMatch = window.location.pathname.match(/^\/pay\/([a-z0-9]+)$/i);
+  const to     = params.get('to') || (pathMatch ? pathMatch[1] : '') || '';
   const amount = params.get('amount') || '';
   const ref    = params.get('ref') || '';
 
@@ -453,6 +491,19 @@ function showCitizen(name, slug, isFallback) {
   document.getElementById('csRecipient').textContent    = slug + '.IN$DEX';
   document.getElementById('csLawRecip').textContent     = name.split(' ')[0] || slug;
 
+  // FIX 2026-08-30: this badge used to be static HTML shown unconditionally, regardless of
+  // whether the Supabase lookup above actually found a matching citizen. isFallback is true
+  // when no citizen row matched TARGET_SLUG -- showing "Verified" here would be a fabricated
+  // trust signal on a real payment screen. Reflect the real lookup result instead.
+  const badge = document.getElementById('citizenVerified');
+  if (isFallback) {
+    badge.textContent = '⚠️ Not yet an IN$DEX citizen';
+    badge.classList.add('unverified');
+  } else {
+    badge.textContent = '✅ Verified Sovereign Citizen';
+    badge.classList.remove('unverified');
+  }
+
   // Enable pay button when amount entered
   document.getElementById('amountInput').addEventListener('input', () => {
     const v = parseFloat(document.getElementById('amountInput').value);
@@ -492,6 +543,69 @@ function closeConfirm(e) {
   }
 }
 
+async function callSupaRpc(name, body) {
+  const res = await fetch(`${SUPA_URL}/rest/v1/rpc/${name}`, {
+    method: 'POST',
+    headers: { apikey: SUPA_KEY, Authorization: 'Bearer ' + (_realAccessToken || SUPA_KEY), 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  const result = await res.json().catch(() => ({}));
+  return { res, result };
+}
+
+async function sendTransfer(amt, note, senderId) {
+  return callSupaRpc('transfer_indx', {
+    p_sender_id: senderId,
+    p_amount: amt,
+    p_recipient_address: TARGET_SLUG + '.IN$DEX',
+    p_note: note
+  });
+}
+
+// Approval Gateway: transfer_indx is risk_class >= 3 in agent_registry, so a first call can
+// come back pending instead of executing. Show what SIINDEX is asking approval for; on
+// explicit approve, grant it and retry the exact same transfer — request_action_approval()
+// matches it by terms hash and lets it through.
+async function showApprovalGate(intentId, amt, note) {
+  let card = null;
+  try { ({ result: card } = await callSupaRpc('get_action_intent_card', { p_intent_id: intentId })); } catch (e) {}
+  document.getElementById('gateText').textContent =
+    (card && !card.error && card.data_involved) ? card.data_involved
+      : `Send ${amt} INDX to ${TARGET_SLUG}.IN$DEX needs your explicit approval before it can complete.`;
+  document.getElementById('gateOverlay').classList.add('show');
+
+  document.getElementById('gateApproveBtn').onclick = async function () {
+    const gbtn = document.getElementById('gateApproveBtn');
+    gbtn.textContent = 'Sending…';
+    gbtn.disabled = true;
+    try {
+      const senderId = sessionStorage.getItem('citizen_id');
+      const { result: grant } = await callSupaRpc('grant_intent_approval', { p_intent_id: intentId, p_level: 1, p_method: 'citizen_app_confirm' });
+      if (!grant || !grant.success) throw new Error('Approval could not be recorded');
+      const { result: result2 } = await sendTransfer(amt, note, senderId);
+      if (result2?.pending_approval) throw new Error('Approval did not clear — please try again');
+      if (result2?.message || result2?.code || result2?.success === false) {
+        throw new Error(result2?.message || result2?.error || 'The network rejected this payment.');
+      }
+      if (result2?.new_balance !== undefined) sessionStorage.setItem('citizen_balance', String(result2.new_balance));
+      document.getElementById('gateOverlay').classList.remove('show');
+      document.getElementById('successSub').innerHTML =
+        `${amt} INDX sent to <strong>${TARGET_SLUG}.IN$DEX</strong>.<br>Standing by.`;
+      document.getElementById('successOverlay').classList.add('show');
+    } catch (e) {
+      showToast(e?.message || 'Approval failed. Try again.');
+      document.getElementById('gateOverlay').classList.remove('show');
+    } finally {
+      gbtn.textContent = 'Approve & Send →';
+      gbtn.disabled = false;
+    }
+  };
+
+  document.getElementById('gateDeclineBtn').onclick = function () {
+    document.getElementById('gateOverlay').classList.remove('show');
+  };
+}
+
 async function confirmPayment() {
   const btn = document.querySelector('.btn-confirm');
   btn.textContent = 'Sending…';
@@ -502,25 +616,27 @@ async function confirmPayment() {
   const note    = document.getElementById('noteInput').value.trim() || 'Sent via IN$DEX';
 
   try {
-    const res = await fetch(`${SUPA_URL}/rest/v1/rpc/transfer_indx`, {
-      method: 'POST',
-      headers: {
-        apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        p_sender_id: senderId,
-        p_amount: amt,
-        p_recipient_address: TARGET_SLUG + '.IN$DEX',
-        p_note: note
-      })
-    });
-    const result = await res.json();
+    const { res, result } = await sendTransfer(amt, note, senderId);
 
     // PostgREST/RPC failures come back as a non-2xx HTTP status with a
     // {message, code, ...} body — not {error} — so check res.ok first.
-    if (!res.ok || result?.message || result?.code) {
-      throw new Error(result?.message || 'The network rejected this payment.');
+    // FIXED 2026-09-03: transfer_indx also returns a normal 200 response with
+    // success:false for expected rejections (e.g. "Cannot send to yourself" has
+    // neither .message nor .code) -- that branch fell through here and showed
+    // the success screen for a transfer that never happened.
+    // Approval Gateway: transfer_indx is risk_class >= 3, so a first attempt can come
+    // back as a normal 200 {success:false, pending_approval:true, intent_id} instead of
+    // executing. That is not a rejection — route it to the approval sheet, not the error path.
+    if (result?.pending_approval) {
+      document.getElementById('confirmOverlay').classList.remove('show');
+      btn.textContent = 'Confirm & Send →';
+      btn.disabled = false;
+      await showApprovalGate(result.intent_id, amt, note);
+      return;
+    }
+
+    if (!res.ok || result?.message || result?.code || result?.success === false) {
+      throw new Error(result?.message || result?.error || 'The network rejected this payment.');
     }
 
     // Success — real transfer_indx result, update local balance from what the RPC returned
