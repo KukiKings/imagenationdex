@@ -129,7 +129,7 @@
     if (code === "provider_consent_required" || code === "provider_consent_declined") {
       return explain(
         "Visitor Mode needs your permission before it sends microphone audio or typed questions to external providers.",
-        "Read the provider notice and choose Continue only if you agree. Do not share passwords, seed phrases, private keys, identity documents, or sensitive account details.",
+        "Read the provider notice and choose Continue only if you agree. Do not share passwords, one-time codes, private keys, or account access details.",
         "Only you can grant this permission. A human steward is not needed.",
         "Immediate after you choose.",
       );
@@ -305,7 +305,7 @@
           <li>SIINDEX's reply is sent to ElevenLabs when voice replies are on.</li>
         </ul>
         <p style="margin:0 0 12px;color:#c8cede;font-size:13px;line-height:1.6;">IN$DEX does not store raw audio or the Visitor Mode conversation on its servers. A copy of the conversation stays only on this device until you clear it.</p>
-        <p style="margin:0 0 18px;color:#ffcf72;font-size:13px;line-height:1.6;">Never share passwords, seed phrases, private keys, identity documents, or sensitive account information.</p>
+        <p style="margin:0 0 18px;color:#ffcf72;font-size:13px;line-height:1.6;">Never share passwords, one-time codes, private keys, or account access details.</p>
         <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
           <button type="button" data-si-consent-decline style="border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:10px 16px;background:transparent;color:#d6dbea;cursor:pointer;">Not now</button>
           <button type="button" data-si-consent-accept style="border:0;border-radius:20px;padding:10px 16px;background:linear-gradient(135deg,#00d4ff,#2b35d8);color:#fff;font-weight:800;cursor:pointer;">Continue</button>
@@ -727,7 +727,7 @@
         setStatus("error", errorMessage(error, "voice"));
         return;
       }
-      // American accent canon (AJ decision 2026-07-29). Re-applied after the v3 rewrite:
+      // American accent facts (AJ decision 2026-07-29). Re-applied after the v3 rewrite:
       // this fallback previously selected no voice at all, so it used whatever the device
       // defaults to — on an Australian Mac that is an Australian or British voice, which is
       // the exact complaint this decision resolved. en-US is required here, with any other
@@ -901,7 +901,7 @@
         </div>
         <button type="button" class="siindex-icon-btn" data-si-close aria-label="Close SIINDEX">×</button>
       </header>
-      <div class="siindex-privacy">Tap the microphone only when ready. With your permission, audio is sent securely to ElevenLabs for transcription, your transcript or typed question is sent to Anthropic, and SIINDEX replies are sent to ElevenLabs when voice is on. IN$DEX does not store raw audio or website conversations on its servers. Do not share passwords, seed phrases, private keys, identity documents, or sensitive account details. Website Voice cannot access accounts or take actions.</div>
+      <div class="siindex-privacy">Tap the microphone only when ready. With your permission, audio is sent securely to ElevenLabs for transcription, your transcript or typed question is sent to Anthropic, and SIINDEX replies are sent to ElevenLabs when voice is on. IN$DEX does not store raw audio or website conversations on its servers. Do not share passwords, one-time codes, private keys, or account access details. Website Voice cannot access accounts or take actions.</div>
       <div class="siindex-messages" data-si-messages>
         <div class="siindex-empty" data-si-empty>Ask me what is genuinely live, what is planned, how the Pacific-first pilot works, or how to collaborate. Tap the microphone, speak, then tap again to send. You can type at any time.</div>
       </div>
