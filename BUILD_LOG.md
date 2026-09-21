@@ -2317,3 +2317,240 @@ accounts) and real Pacific-corridor delivery testing before Tier 0 signup can be
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
+
+## Fixed: the real About + Mission page existed but was unreachable — 2026-09-19
+
+AJ asked "why dont we have a about and our mission section." The honest answer: we do — it was
+just orphaned.
+
+**Found:** `about.html` (709 lines, actively maintained — last touched 2026-09-10) already has a
+full, properly-hedged Our Story / The Founder / **The Mission** / The CEO & COO (SIINDEX) / The 15
+Pillars / The Governance / The Civilisation Fund page, complete with its own "IN$DEX has not
+launched" status banner (added 2026-07-29, same pattern as `how-it-works.html`). Nothing was
+missing or needed writing — it just wasn't linked from anywhere a visitor would find it.
+
+**Root cause, two bugs stacked:**
+1. `vercel.json` routed the clean `/about` URL straight to `/public-home.html` (the homepage),
+   not to `/about.html` — so the intended About URL silently served the homepage instead.
+2. `public-home.html`'s nav "Our story" link only pointed to `#story`, a single one-paragraph
+   in-page blurb ("Built from a Pacific gap") — not the real page.
+
+**Fixed, both minimal:**
+- `vercel.json` — split the old combined redirect rule; `/about` now routes to `/about.html`,
+  `how|token|status|contact|genesis` unchanged.
+- `public-home.html` — nav's "Our story" now links to `/about`; added a "Read the full story, the
+  mission, and the 15 Pillars →" link under the existing homepage blurb so the in-page summary
+  bridges to the full page instead of being a dead end.
+
+**Deliberately not touched:** `about.html`'s own internal nav (logo → `home-v3.html`, plus
+`how-it-works.html` / `token.html` / `help.html` / `app-lock.html`) — verified this is a
+self-consistent, currently-maintained "preview the app" layer (all pages checked, all properly
+hedged: `how-it-works.html` has its own "not live yet" banner, `token.html` explicitly says "$0.24
+is a planning reference, not a price you can pay," `app-lock.html` is labeled 🚧 Prototype). Not a
+compliance issue — a different, legitimate layer of the site from the public marketing homepage.
+Rewiring that internal nav wasn't asked for and risks breaking a working experience for no
+requested benefit.
+
+**Not live-verified on production this time** — Chrome extension bridge wasn't reachable when I
+went to confirm `imagenationdex.com/about` behavior live. The fix itself is a direct, confirmed
+read of the exact routing rule that was wrong (`vercel.json` line 13) plus the exact dead-end nav
+link (`public-home.html` line 86) — high confidence, but flagging that the usual live A/B browser
+check didn't happen this round. Worth a quick look after this deploys.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
+
+## Post-merge compliance sweep: Checks 2+3 (capability/availability) + Check 6b grammar — 2026-09-21
+
+After the large parallel-session merge (470+ commits) landed in this repo, ran the
+standing `indx-screen-audit` v2 methodology against the 56 HTML files that changed in
+that merge and hadn't yet been checked by this session's own sweep. Checks 1/4
+(value/framing), 5/8 (fabrication/canon drift), and 6/6a/7/9 (legacy/recovery-words/meta/
+syntax) all came back clean — prior sessions had already remediated that ground. Checks
+2+3 (capability/availability — the two that require reading rendered prose, not grep)
+found real, fixable gaps across 12 files:
+
+- **instant-onboard.html, join.html, join-chooser.html, share-indx.html** — "wallet"/
+  "payment"/"instantly" language presented as if a real transfer happens today. Wallets
+  and payments are not live (per status.json). Reworded to "recorded to their portal" /
+  "Grid Account is set up" with explicit 🚧 not-live-yet banners, matching the
+  established hedging pattern used elsewhere (e.g. genesis-offer.html's "recorded
+  pending review").
+- **kyc-compliance.html** — the Tier 0 card correctly says no-KYC-required is active,
+  but implied the marketplace/DEX/staking/governance behind it were also active. Split
+  the claim: policy is active, the features it applies to are planned/not live yet.
+- **notifications.html** — 4 sample notifications ("Referral Programme is Live",
+  "Marketplace is Open", "Light Node Available", wallet security toast) overclaimed
+  live status. Hedged each to match what's actually live vs. recorded/planned.
+- **pag.html** (SIINDEX chat canned responses) — marketplace listing copy implied real
+  buyer sales are live; hedged to preview/not-live-yet, consistent with the rest of the
+  fix set.
+- **payment-methods.html** — added a page-level 🚧 status banner (no method here can
+  settle a real payment yet) and softened "enforced by smart contract, no exceptions"
+  on the 98/2 law to the already-established "doctrine, not yet enforced by deployed
+  contract code" phrasing used elsewhere.
+- **referral.html** — "Recent Joins ... Live" activity feed label corrected to "Not
+  live yet" (the feed itself isn't wired to real data).
+- **savings-goals.html** — auto-invest / round-up toggles hedged as planned, not live.
+- **tax-compliance-hub.html** — "Generated by SIINDEX · Ready for lodgement" on a
+  certificate that hasn't actually been generated, corrected to "Preview only — not
+  generated yet, nothing to lodge" (this sits right next to a 2026-07-25 fixed-comment
+  about the same file's earlier fabricated-figures bug — same honesty standard applied
+  to the label, not just the numbers).
+- **sovereign-academy.html** (Check 6b, grammar) — two recovery-words explainer
+  sentences were missing their em dash from an earlier blind find-and-replace ("There
+  are no recovery words at all nothing to write down..."), fixed to match the file's
+  own em-dash style used elsewhere in the same lesson block.
+
+No conflict markers from the merge were found anywhere in the 56-file scope (checked
+explicitly, since that's the one class of bug a merge can introduce that a content
+audit wouldn't otherwise catch). All inline `<script>` blocks in scope pass
+`node --check`. `siindex-command-center.html` and `founder-voice.html` were inspected
+per the standing protected-file rule and left untouched (both already clean).
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
+
+## agents/compliance-agent.js — added flagLargeTransaction, a real $5000 USD large-transaction check — 2026-09-21
+
+AJ asked (god mode) for a compliance agent that flags transactions over $5000. This
+module already existed (built 2026-09-17, real Supabase-backed, honestly documented —
+see its own header) and already had `assess_transfer_risk` wired in, but that's a
+separate, smaller, INDX-denominated check (500 INDX default, per the real RPC's own
+body) — not a USD threshold. Added `flagLargeTransaction(client, { transactionId })`
+as a distinct, additional check:
+
+- Reads the real `transactions` row (confirmed columns via information_schema:
+  amount_usd and amount_indx both exist as separate real numeric columns — no
+  conversion math needed, uses amount_usd directly).
+- If amount_usd is null, returns an honest `{ flagged: false, reason: 'no_amount_usd' }`
+  rather than guessing a conversion.
+- At or above the $5000 threshold (a plain documented constant —
+  `siindex_runtime_config`, the project's one real key/value config table, was checked
+  live and holds no large-transaction threshold row today, so there's nothing to read
+  it from yet), opens a real `threshold_approvals` row (required_count: 2, matching
+  that table's own default) and logs a real `security_events` row using the exact
+  `tier`/`zone` naming convention `assess_transfer_risk` already established
+  (confirmed via a live query of existing rows: `transfer_risk_high_amount` at T1 for
+  its own high-amount case — used `large_transaction_usd_threshold` at T1 here, same
+  pattern, different zone name since it's a genuinely different check).
+- The resulting threshold_approvals row surfaces through this same module's existing
+  `listOpenThresholdApprovals()` and clears through existing `recordThresholdSignoff()`
+  — both already real and wired; nothing new invented for the resolution path.
+
+Wired into `agents/orchestrator.js`'s COMPLIANCE_ACTIONS map as `flag_large_transaction`.
+
+**Verification:** confirmed the real transactions/threshold_approvals/security_events
+column shapes via live `information_schema` queries before writing any code (same
+discipline the file's own existing functions already used). Unit-tested the threshold
+branching (below/above/no-amount-usd) against a stub client shaped like the real
+supabase-js client — this tests only this file's own control flow, not a claim about
+live infrastructure. `node --check` clean.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
+
+## agents/orchestrator.js — real agent_tasks queue worker, closing the gap this file already flagged — 2026-09-21
+
+AJ asked (god mode) for `agents/orchestrator.js` to route tasks via the `agent_tasks`
+table. The file already existed (2026-09-17) as a real, direct, synchronous dispatcher
+over `agent_registry` + `kyc-agent.js`/`compliance-agent.js` — but its own header
+comment already honestly documented that it did NOT touch the separate, already-deployed
+`agent_tasks`/`agent_messages`/`agent_evidence`/`agent_audit` queue bus (driven by the
+three already-live edge functions `siindex-agent-dispatch`, `-claim`, `-complete`).
+That gap is what this session closed — not a rewrite of the existing dispatcher, an
+addition on top of it.
+
+**Added:**
+- `callAgentBusFunction()` — calls the real, already-deployed edge functions over HTTP,
+  authenticated exactly the way their own deployed source checks (confirmed by reading
+  `supabase/functions/siindex-agent-claim/index.ts` and `-complete/index.ts` directly):
+  service-role bearer token (already required by this file's existing `getClient()`) or
+  the `x-siindex-agent-worker` header + `SIINDEX_AGENT_WORKER_SECRET`.
+- `claimAndProcessNext(agentName)` — claims one real `agent_tasks` row via
+  `siindex-agent-claim`, reads `task.payload.action`/`task.payload.params`, runs it
+  through the existing `dispatch()` (so all the already-built, already-honest
+  kyc-agent/compliance-agent logic is reused, not duplicated), and reports the real
+  outcome back via `siindex-agent-complete`. A task whose payload has no action string
+  is reported back as a real failure (not silently dropped, which would leave it
+  claimed until its visibility timeout).
+- `runWorkerLoop(agentName)` — drains the queue for one agent, bounded at 50 iterations
+  per call so a cron-triggered run can never hang indefinitely.
+- A CLI entry point (`node agents/orchestrator.js kyc-agent` / `compliance-agent`) for
+  manual or cron invocation — drains once and exits, not a long-running daemon.
+- `agents/package.json` — the directory had no package.json at all despite requiring
+  `@supabase/supabase-js`, so the file could never actually run (only be syntax-checked).
+  Added it with the same `@supabase/supabase-js` version already used in
+  `indx-mcp/package.json` (`^2.39.0`) for consistency, ran `npm install`, and
+  runtime-verified (not just `node --check`) that all three agent modules load cleanly
+  and fail with the correct honest error when `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`
+  aren't set — no fabricated fallback client.
+
+**Documented, not invented:** the task-payload contract (`{ action, params }` inside
+`agent_tasks.payload`) is this worker's own convention — there is no existing caller
+enqueueing tasks shaped this way yet, so this is flagged explicitly in the file's own
+comments as a contract a future `siindex-agent-dispatch` caller needs to follow, not
+something already proven end-to-end against a real enqueued task.
+
+**kyc-agent.js — not changed.** AJ asked for "Tier 0/1/2 verification"; the existing
+file already covers this honestly: phone-based Tier 0 onboarding (`get_citizen_by_phone`,
+`create_onboarding_citizen`, `link_citizen_auth_by_id`), Tier 1 (`verify_payid`), Tier 2
+(`verify_government_id` — which itself, and this file's own comment already discloses
+this, calls a backend RPC that inserts a `security_events` row admitting it's a MOCK
+document check), Tier 3 (`verify_address_funds`, same honest mock disclosure), and
+`get_current_kyc_tier` to read the real tier. Adding a wrapper function here that didn't
+change any real behavior would have been padding, not a fix — reported as already
+satisfying the ask instead.
+
+**Verification:** `node --check` on both edited files. Runtime-loaded all three modules
+under Node with the new `agents/package.json`'s installed dependencies — confirmed
+exports, confirmed `getClient()`/`dispatch()` throw the correct honest
+credentials-missing error rather than silently constructing a fake client.
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
+
+## "Why is Jarvis separate from SIINDEX" — it wasn't, on the backend; fixed the one place it looked like it was — 2026-09-21
+
+AJ asked why Jarvis is separate from SIINDEX and said it should be one system. Investigated
+before changing anything:
+
+**Backend/runtime: already one system, confirmed, not assumed.** `siindex-jarvis.html`
+wires into the exact same shared modules every other SIINDEX surface uses —
+`SIINDEX_QA.bindChips/bindAsk/bindMic`, `SIINDEXVoice.listen`, `SIINDEX_TRUST.boot` — with
+`source: 'jarvis'` only as a page-identifier tag, the same pattern `speak-to-siindex.html`/
+`siindex-interview.html`/etc. all use with their own source tags. Grepped the live model
+backend (`supabase/functions/`) for any Jarvis-specific branching or persona — zero hits.
+The client-side knowledge base's own Jarvis FAQ entry (`js/siindex-public-knowledge.js:386`)
+already correctly answers "Jarvis for IN$DEX is the SIINDEX Voice Command OS layer" — not a
+separate identity. The page's own default greeting says "I am SIINDEX... not AI," never
+"I am Jarvis." There is no second AI system to merge.
+
+**What was actually wrong: every nav bar and card in the site labelled it bare "Jarvis"**
+— no SIINDEX prefix — sitting in the same nav row as "SIINDEX", "Interview", "Present",
+"System Card". To anyone skimming the nav (which is the realistic way most people encounter
+it, not by reading the page's own body copy), that reads exactly like a second product, even
+though it isn't one. Found via `grep -rn '>Jarvis<'` — 5 files, 8 occurrences, always bare.
+
+**Fixed:** every bare `Jarvis` nav label / card label → `SIINDEX Jarvis` across
+`public-home.html` (both the main nav and the visitor-tools button row), `siindex-jarvis.html`
+itself, `siindex-system-card.html`, `speak-to-siindex.html` (3 occurrences), and
+`siindex-test-board.html` (nav link + its own test-card label). Left the page's own
+in-context copy alone ("Jarvis was built for one billionaire. SIINDEX Voice Command OS is
+built for citizens...") — that's a deliberate, already-clear comparison to the fictional
+Jarvis, not a competing brand name, and rewriting it risked losing a good explanatory line
+for no reason.
+
+**Deliberately did not merge or delete the page.** AJ's framing was "it should be one
+system," and it already is one system technically — the fix that matches what was actually
+broken is the branding consistency fix, not deleting a working, already-integrated page or
+restructuring the site's information architecture on a guess. If AJ specifically wants the
+Jarvis URL folded away entirely (e.g. redirected into Voice Command OS), that's a distinct,
+bigger decision — flagging it rather than assuming it.
+
+**Verification:** diffed every file before and after to confirm only the intended 8 label
+changes landed; ran `node --check` on every inline `<script>` block in all 5 files (all
+clean, unaffected by a plain-text label change as expected).
+
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814

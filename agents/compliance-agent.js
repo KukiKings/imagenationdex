@@ -215,6 +215,100 @@ async function logSecurityEvent(client, { tier, zone, description, detail } = {}
 }
 
 /**
+ * flagLargeTransaction(client, { transactionId }) — added 2026-09-21.
+ *
+ * Reads the real transactions row (columns confirmed via information_schema on
+ * 2026-09-21: id, citizen_id, amount_indx, amount_usd, direction, counterparty_address,
+ * status, created_at, memo, tx_hash, token, corridor, metadata) and, when its real
+ * amount_usd is at or above LARGE_TRANSACTION_USD_THRESHOLD, opens a real
+ * threshold_approvals row (columns confirmed: id, action_type, target_table, target_id,
+ * description, required_count default 2, status default 'pending', created_at,
+ * resolved_at) plus a real security_events row, using the exact zone-naming convention
+ * already established by assess_transfer_risk's own real writes (confirmed via a live
+ * query of existing security_events rows: 'transfer_risk_high_amount' at tier T1 for its
+ * smaller, separate 500-INDX-denominated check). This is a distinct, additional,
+ * USD-denominated check — it does not replace or duplicate assess_transfer_risk's
+ * existing threshold, which is a different amount and a different currency
+ * (INDX, not USD).
+ *
+ * The $5000 threshold is a plain documented constant, not read from a config table —
+ * siindex_runtime_config (the one real key/value config table in this project) was
+ * checked live on 2026-09-21 and holds no large-transaction threshold row today. If AJ
+ * wants this configurable without a code change later, add a
+ * large_transaction_usd_threshold row there and this constant becomes its fallback.
+ *
+ * Once flagged, the resulting threshold_approvals row surfaces through this same
+ * module's listOpenThresholdApprovals() and is cleared through recordThresholdSignoff()
+ * — both already real, already wired, nothing new invented for the resolution path.
+ */
+const LARGE_TRANSACTION_USD_THRESHOLD = 5000;
+
+async function flagLargeTransaction(client, { transactionId } = {}) {
+  assertClient(client);
+  if (!transactionId) throw new Error('flagLargeTransaction requires { transactionId }');
+
+  const { data: txn, error: txnErr } = await client
+    .from('transactions')
+    .select('id, citizen_id, amount_indx, amount_usd, direction, counterparty_address, status, created_at, corridor')
+    .eq('id', transactionId)
+    .maybeSingle();
+  if (txnErr) throw txnErr;
+  if (!txn) throw new Error(`flagLargeTransaction: no transactions row for id ${transactionId}`);
+
+  if (txn.amount_usd == null) {
+    // Honest non-answer: this transaction has no recorded USD amount, so a USD
+    // threshold cannot be evaluated. Do not guess a conversion here — amount_usd is
+    // the real column this table already maintains for exactly this purpose.
+    return { flagged: false, reason: 'no_amount_usd', transaction_id: transactionId };
+  }
+
+  const amountUsd = Number(txn.amount_usd);
+  if (!(amountUsd >= LARGE_TRANSACTION_USD_THRESHOLD)) {
+    return { flagged: false, reason: 'below_threshold', amount_usd: amountUsd, threshold_usd: LARGE_TRANSACTION_USD_THRESHOLD };
+  }
+
+  const description =
+    `Transaction ${txn.id} (${txn.direction || 'unknown direction'}, ` +
+    `citizen ${txn.citizen_id || 'unknown'}) is $${amountUsd.toFixed(2)} USD, ` +
+    `at or above the $${LARGE_TRANSACTION_USD_THRESHOLD} large-transaction review threshold.`;
+
+  const { data: approval, error: approvalErr } = await client
+    .from('threshold_approvals')
+    .insert({
+      action_type: 'large_transaction_review',
+      target_table: 'transactions',
+      target_id: txn.id,
+      description,
+      required_count: 2,
+    })
+    .select('id, action_type, target_table, target_id, required_count, status, created_at')
+    .maybeSingle();
+  if (approvalErr) throw approvalErr;
+
+  await client.from('security_events').insert({
+    tier: 'T1',
+    zone: 'large_transaction_usd_threshold',
+    description,
+    detail: {
+      transaction_id: txn.id,
+      citizen_id: txn.citizen_id,
+      amount_usd: amountUsd,
+      amount_indx: txn.amount_indx,
+      threshold_usd: LARGE_TRANSACTION_USD_THRESHOLD,
+      threshold_approval_id: approval ? approval.id : null,
+    },
+  });
+
+  return {
+    flagged: true,
+    transaction_id: txn.id,
+    amount_usd: amountUsd,
+    threshold_usd: LARGE_TRANSACTION_USD_THRESHOLD,
+    threshold_approval: approval,
+  };
+}
+
+/**
  * complaints (real table, columns confirmed): id, citizen_id, category, description,
  * status ('open' default), internal_target_response_by, opened_at, resolved_at.
  */
@@ -280,4 +374,6 @@ module.exports = {
   openComplaint,
   addComplaintEvent,
   listOpenComplaints,
+  flagLargeTransaction,
+  LARGE_TRANSACTION_USD_THRESHOLD,
 };

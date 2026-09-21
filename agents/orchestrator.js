@@ -146,6 +146,7 @@ const COMPLIANCE_ACTIONS = new Map([
   ['open_complaint', (client, p) => complianceAgent.openComplaint(client, p)],
   ['add_complaint_event', (client, p) => complianceAgent.addComplaintEvent(client, p)],
   ['list_open_complaints', (client) => complianceAgent.listOpenComplaints(client)],
+  ['flag_large_transaction', (client, p) => complianceAgent.flagLargeTransaction(client, p)],
 ]);
 
 /** Best-effort write to the real agent_audit table. Never throws — an audit failure
@@ -239,11 +240,178 @@ async function dispatch(task, client = getClient()) {
   }
 }
 
+/**
+ * --------------------------------------------------------------------------
+ * Queue worker — added 2026-09-21, closes the gap this file's own header
+ * comment flagged above: this project already has a real, deployed
+ * agent_tasks/agent_messages/agent_evidence/agent_audit bus, driven by three
+ * already-deployed edge functions (supabase/functions/siindex-agent-dispatch,
+ * -claim, -complete). Nothing in this repo previously actually claimed a row
+ * from that queue and drove it to completion. This section does that — it
+ * does not reimplement the claim/visibility-timeout/chain-advance state
+ * machine those edge functions already own; it calls them over real HTTP,
+ * exactly the contract they define (confirmed by reading their deployed
+ * source directly, 2026-09-21), and reuses dispatch() above to actually run
+ * the work once a task is claimed.
+ *
+ * Task shape this worker expects: a queued agent_tasks row whose `chain`
+ * contains this worker's own agent name (e.g. "kyc-agent" or
+ * "compliance-agent") at the current step, and whose `payload` carries
+ * { action: <a real KYC_ACTIONS/COMPLIANCE_ACTIONS key>, params: {...} }.
+ * That payload shape is this file's own convention (there is no existing
+ * caller enqueueing tasks this way yet) — documented here rather than
+ * silently assumed, so a future caller of siindex-agent-dispatch knows the
+ * contract this worker expects.
+ * --------------------------------------------------------------------------
+ */
+
+const SIINDEX_AGENT_WORKER_SECRET = process.env.SIINDEX_AGENT_WORKER_SECRET || '';
+
+/**
+ * Calls a real, already-deployed edge function under supabase/functions/.
+ * Auths the same way orchestrator.js's env already requires: service-role
+ * bearer token (preferred, already mandatory via getClient()) or the worker
+ * secret header, matching exactly what siindex-agent-claim/-complete check
+ * server-side (`authorized(req)` in both files' real source).
+ */
+async function callAgentBusFunction(functionSlug, body) {
+  if (!SUPABASE_URL) {
+    throw new Error('orchestrator: SUPABASE_URL must be set to call the real agent-bus edge functions.');
+  }
+  const headers = { 'Content-Type': 'application/json' };
+  if (SUPABASE_SERVICE_ROLE_KEY) {
+    headers.Authorization = `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`;
+  } else if (SIINDEX_AGENT_WORKER_SECRET) {
+    headers['x-siindex-agent-worker'] = SIINDEX_AGENT_WORKER_SECRET;
+  } else {
+    throw new Error(
+      'orchestrator: neither SUPABASE_SERVICE_ROLE_KEY nor SIINDEX_AGENT_WORKER_SECRET is set — ' +
+      'refusing to call the agent-bus edge functions unauthenticated.'
+    );
+  }
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/${functionSlug}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body || {}),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(`orchestrator: ${functionSlug} returned ${res.status}: ${json.error || 'unknown_error'}`);
+    err.status = res.status;
+    err.body = json;
+    throw err;
+  }
+  return json;
+}
+
+/**
+ * Claims at most one real agent_tasks row for `agentName` (via the real
+ * siindex-agent-claim edge function), runs it through dispatch() using this
+ * file's KYC_ACTIONS/COMPLIANCE_ACTIONS maps, and reports the real outcome
+ * back via siindex-agent-complete. Returns { claimed: false } when the queue
+ * had nothing runnable for this agent — that is a normal, honest outcome,
+ * not an error.
+ */
+async function claimAndProcessNext(agentName, { client = getClient(), visibilitySeconds } = {}) {
+  if (!agentName) throw new Error('claimAndProcessNext requires agentName ("kyc-agent" or "compliance-agent")');
+
+  const claimBody = { agent: agentName };
+  if (visibilitySeconds) claimBody.visibility_seconds = visibilitySeconds;
+  const claimed = await callAgentBusFunction('siindex-agent-claim', claimBody);
+
+  if (!claimed.claimed || !claimed.task) {
+    return { claimed: false };
+  }
+
+  const task = claimed.task;
+  const payload = task.payload || {};
+  const action = payload.action;
+
+  if (!action || typeof action !== 'string') {
+    // A real claimed task with no runnable action in its payload. Report this
+    // honestly as a failure back to the bus rather than silently dropping it
+    // (which would leave it claimed forever until the visibility timeout).
+    await callAgentBusFunction('siindex-agent-complete', {
+      task_id: task.id,
+      claim_token: claimed.claim_token,
+      agent: agentName,
+      result: { ok: false, summary: 'payload.action missing or not a string — nothing to dispatch' },
+    });
+    return { claimed: true, task_id: task.id, ok: false, error: 'payload_action_missing' };
+  }
+
+  const outcome = await dispatch({ task_id: task.id, action, params: payload.params || {} }, client);
+
+  const completeResult = {
+    ok: outcome.ok,
+    summary: outcome.ok
+      ? `dispatch(${action}) via ${outcome.module} completed`
+      : `dispatch(${action}) failed: ${outcome.error}`,
+    payload_update: { last_dispatch_action: action, last_dispatch_ok: outcome.ok },
+  };
+  if (!outcome.ok) completeResult.blocked_reason = outcome.error;
+
+  const completed = await callAgentBusFunction('siindex-agent-complete', {
+    task_id: task.id,
+    claim_token: claimed.claim_token,
+    agent: agentName,
+    result: completeResult,
+  });
+
+  return {
+    claimed: true,
+    task_id: task.id,
+    ok: outcome.ok,
+    dispatch_result: outcome,
+    bus_status: completed.status,
+  };
+}
+
+/**
+ * Polls claimAndProcessNext in a real loop until the queue is empty for this
+ * agent, or maxIterations is reached (default 50, so a stuck loop can never
+ * run unbounded in, say, a cron invocation). Does not swallow a thrown auth
+ * or network error from callAgentBusFunction — a caller running this
+ * unattended (e.g. cron) should catch and alert on that itself rather than
+ * have failures silently vanish here.
+ */
+async function runWorkerLoop(agentName, { client = getClient(), maxIterations = 50, visibilitySeconds } = {}) {
+  const results = [];
+  for (let i = 0; i < maxIterations; i += 1) {
+    const outcome = await claimAndProcessNext(agentName, { client, visibilitySeconds });
+    if (!outcome.claimed) break;
+    results.push(outcome);
+  }
+  return results;
+}
+
+// CLI entry point: `node agents/orchestrator.js kyc-agent` or `... compliance-agent`
+// drains that agent's real queue once and exits — for cron/manual invocation, not a
+// long-running daemon (no invented backoff/retry loop beyond maxIterations above).
+if (require.main === module) {
+  const agentArg = process.argv[2];
+  if (!agentArg || (agentArg !== 'kyc-agent' && agentArg !== 'compliance-agent')) {
+    console.error('Usage: node agents/orchestrator.js <kyc-agent|compliance-agent>');
+    process.exitCode = 1;
+  } else {
+    runWorkerLoop(agentArg)
+      .then((results) => {
+        console.log(JSON.stringify({ agent: agentArg, processed: results.length, results }, null, 2));
+      })
+      .catch((err) => {
+        console.error('orchestrator worker loop failed:', err.message || err);
+        process.exitCode = 1;
+      });
+  }
+}
+
 module.exports = {
   getClient,
   loadActiveAgentRegistry,
   getRegisteredAgent,
   dispatch,
+  claimAndProcessNext,
+  runWorkerLoop,
   KYC_ACTIONS,
   COMPLIANCE_ACTIONS,
 };
