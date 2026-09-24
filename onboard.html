@@ -19,10 +19,10 @@ button{width:100%;margin-top:12px;padding:14px;border:0;border-radius:12px;backg
 </style>
 </head>
 <body>
-<div class="banner">STEP 1. Brand IN$DEX. Till name yourname.INDX. Not issued. Not Solana Pay.</div>
+<div class="banner">STEP 1. Login is the email <strong>Sign in</strong> link (not a 6-digit code unless AJ changes the Auth template). .INDX not issued.</div>
 <p class="step">ESTHER PATH · ONBOARD FIRST</p>
 <h1>Start like Esther.</h1>
-<p>Name. Phone. Reserve <strong>yourname.INDX</strong> later. Under 18: parent email.</p>
+<p>Name. Phone. Then click the link in your email. Come back here and Save.</p>
 <label>Your name</label>
 <input id="name" placeholder="Esther" autocomplete="name">
 <label>Phone (the till)</label>
@@ -30,12 +30,12 @@ button{width:100%;margin-top:12px;padding:14px;border:0;border-radius:12px;backg
 <label>Name you want</label>
 <input id="handle" placeholder="esther" autocapitalize="off">
 <p id="preview" style="margin:6px 0;color:#00E5A0"></p>
-<label>Email — login code</label>
+<label>Email</label>
 <input id="email" type="email" autocomplete="email" placeholder="you@email.com">
-<button type="button" id="send">Send email code</button>
-<label>6-digit code</label>
-<input id="otp" inputmode="numeric" maxlength="8" placeholder="000000">
-<button type="button" id="verify">Verify email</button>
+<button type="button" id="send">Send sign-in email</button>
+<label>Optional 6-digit code (only if your email shows one)</label>
+<input id="otp" inputmode="numeric" maxlength="8" placeholder="usually empty — use the link">
+<button type="button" id="verify">Verify code if you have one</button>
 <label>Where are you</label>
 <input id="region" value="Cook Islands">
 <label>Date of birth (optional)</label>
@@ -49,13 +49,33 @@ button{width:100%;margin-top:12px;padding:14px;border:0;border-radius:12px;backg
 (function () {
   var SB_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
   var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+  var REDIR = 'https://imagenationdex.com/onboard';
   var out = document.getElementById('out');
   function say(m, ok) { out.className = 'out ' + (ok ? 'ok' : 'bad'); out.textContent = m; }
   var sb;
   try {
     if (!window.supabase) throw new Error('supabase-js did not load');
-    sb = window.supabase.createClient(SB_URL, SB_KEY);
+    sb = window.supabase.createClient(SB_URL, SB_KEY, {
+      auth: { detectSessionInUrl: true, persistSession: true, flowType: 'pkce' }
+    });
   } catch (e) { say('Client failed: ' + (e && e.message ? e.message : e)); return; }
+
+  async function consumeLink() {
+    var q = new window.URLSearchParams(window.location.search);
+    var h = new window.URLSearchParams(window.location.hash.replace(/^#/, ''));
+    var token_hash = q.get('token_hash') || h.get('token_hash');
+    var type = q.get('type') || h.get('type') || 'email';
+    if (token_hash) {
+      var v = await sb.auth.verifyOtp({ token_hash: token_hash, type: type });
+      if (v.error) say('Link verify: ' + v.error.message);
+      else say('Signed in from email link. Save next.', true);
+      return;
+    }
+    var sess = await sb.auth.getSession();
+    if (sess.data && sess.data.session) say('Already signed in. Save when ready.', true);
+  }
+  consumeLink();
+
   document.getElementById('handle').addEventListener('input', function () {
     var h = document.getElementById('handle').value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
     document.getElementById('preview').textContent = h ? h + '.INDX — reserved later, not issued' : '';
@@ -64,20 +84,25 @@ button{width:100%;margin-top:12px;padding:14px;border:0;border-radius:12px;backg
     var email = document.getElementById('email').value.trim();
     if (email.indexOf('@') < 0) return say('Enter an email.');
     try {
-      var res = await sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true } });
-      say(res.error ? res.error.message : 'Code sent. Check email.', !res.error);
+      var res = await sb.auth.signInWithOtp({
+        email: email,
+        options: { shouldCreateUser: true, emailRedirectTo: REDIR }
+      });
+      say(res.error ? res.error.message : 'Email sent. Open Sign in. It should return to this page.', !res.error);
     } catch (e) { say('Send failed: ' + (e && e.message ? e.message : e)); }
   };
   document.getElementById('verify').onclick = async function () {
+    var token = document.getElementById('otp').value.trim();
+    if (!token) return say('No code in the email. Use the Sign in link instead.');
     try {
-      var res = await sb.auth.verifyOtp({ email: document.getElementById('email').value.trim(), token: document.getElementById('otp').value.trim(), type: 'email' });
+      var res = await sb.auth.verifyOtp({ email: document.getElementById('email').value.trim(), token: token, type: 'email' });
       say(res.error ? res.error.message : 'Signed in. Save next.', !res.error);
     } catch (e) { say('Verify failed: ' + (e && e.message ? e.message : e)); }
   };
   document.getElementById('save').onclick = async function () {
     try {
       var sess = await sb.auth.getSession();
-      if (!sess.data || !sess.data.session) return say('Verify email first.');
+      if (!sess.data || !sess.data.session) return say('Open the Sign in link in the email first.');
       var name = document.getElementById('name').value.trim();
       var phone = document.getElementById('phone').value.trim();
       var h = document.getElementById('handle').value.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
