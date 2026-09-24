@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Onboard | IN$DEX</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" crossorigin="anonymous"></script>
+<style>
+:root{color-scheme:dark;--bg:#090A10;--line:#2A2D38;--text:#F0F2FF;--muted:#8B90A8;--cyan:#00D4FF;--red:#FF4D6D;--green:#00E5A0}
+*{box-sizing:border-box}body{margin:0 auto;max-width:430px;padding:24px 20px 80px;background:var(--bg);color:var(--text);font-family:-apple-system,sans-serif}
+.banner{border:1px solid #3a2a10;background:#1a1408;color:#ffb800;padding:10px 12px;border-radius:10px;font-size:13px}
+h1{font-size:24px;margin:16px 0 8px}p{color:var(--muted);line-height:1.5}
+label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
+input{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#1A1D2E;color:var(--text)}
+button{width:100%;margin-top:12px;padding:14px;border:0;border-radius:12px;background:linear-gradient(135deg,#2B35D8,#8B3FE8);color:#fff;font-weight:700}
+.out{margin-top:16px;font-size:13px;white-space:pre-wrap}.ok{color:var(--green)}.bad{color:var(--red)}a{color:var(--cyan)}
+.step{font-size:12px;letter-spacing:.04em;color:var(--cyan);font-weight:700}
+</style>
+</head>
+<body>
+<div class="banner">STEP 1 ONLY. Not a wallet. Not Solana Pay. Not a live domain. Phone OTP is not on yet — email code is the login.</div>
+<p class="step">ESTHER PATH · ONBOARD FIRST</p>
+<h1>Start like Esther.</h1>
+<p>Name. Phone. Then a free <code style="color:#00E5A0">yourname.IN$DEX</code> is reserved later. Money via Solana Pay is later. Under 18: parent email.</p>
+
+<label>Your name</label>
+<input id="name" placeholder="Esther" autocomplete="name">
+<label>Phone (the till)</label>
+<input id="phone" type="tel" placeholder="+682 …" autocomplete="tel">
+<label>Name you want</label>
+<input id="handle" placeholder="esther" autocapitalize="off">
+<p id="preview" style="margin:6px 0;color:#00E5A0"></p>
+<label>Email — login code (SMS not live)</label>
+<input id="email" type="email" autocomplete="email" placeholder="you@email.com">
+<button type="button" id="send">Send email code</button>
+<label>6-digit code</label>
+<input id="otp" inputmode="numeric" maxlength="8" placeholder="000000">
+<button type="button" id="verify">Verify email</button>
+<label>Where are you</label>
+<input id="region" placeholder="Cook Islands" value="Cook Islands">
+<label>Date of birth (optional)</label>
+<input id="dob" type="date">
+<label>Guardian email if under 18</label>
+<input id="guardian" type="email" placeholder="parent@email.com">
+<button type="button" id="save">Save onboarding preview</button>
+<div class="out" id="out"></div>
+<p><a href="/coconut-till.html">Esther's till</a> · <a href="/launch">Full path</a> · <a href="/">Home</a></p>
+<script>
+const URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
+const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
+const sb = supabase.createClient(URL, KEY);
+const out = document.getElementById('out');
+const handle = document.getElementById('handle');
+const preview = document.getElementById('preview');
+handle.addEventListener('input', () => {
+  const h = handle.value.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
+  preview.textContent = h ? h + '.IN$DEX  — reserved later, not issued' : '';
+});
+function say(m, ok){ out.className = 'out ' + (ok ? 'ok' : 'bad'); out.textContent = m; }
+
+document.getElementById('send').onclick = async () => {
+  const email = document.getElementById('email').value.trim();
+  if (!email.includes('@')) return say('Enter an email.');
+  const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+  say(error ? error.message : 'Code sent. Check email.', !error);
+};
+document.getElementById('verify').onclick = async () => {
+  const email = document.getElementById('email').value.trim();
+  const token = document.getElementById('otp').value.trim();
+  const { error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
+  say(error ? error.message : 'Signed in. Save next.', !error);
+};
+document.getElementById('save').onclick = async () => {
+  const { data: sess } = await sb.auth.getSession();
+  if (!sess.session) return say('Verify email first.');
+  const name = document.getElementById('name').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const h = handle.value.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
+  if (!name || !phone) return say('Name and phone are required. That is Esther\'s till.');
+  const display = name + (h ? ' / ' + h + '.IN$DEX' : '') + ' / ' + phone;
+  const { data, error } = await sb.rpc('upsert_tier0_profile', {
+    p_display_name: display,
+    p_region: document.getElementById('region').value,
+    p_date_of_birth: document.getElementById('dob').value || null,
+    p_guardian_email: document.getElementById('guardian').value || null
+  });
+  if (error) return say('Save needs the live database function. Email sign-in can still work. Error: ' + error.message);
+  say((data && data.ok ? 'Preview saved. Domain not issued. Solana Pay not live.\n' : '') + JSON.stringify(data, null, 2), data && data.ok);
+};
+</script>
+</body>
+</html>
