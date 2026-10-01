@@ -18,9 +18,8 @@ textarea{width:100%;min-height:88px;border-radius:10px;border:1px solid #2A2D38;
 button{width:100%;margin-top:8px;padding:12px;border:0;border-radius:12px;font-weight:800;background:linear-gradient(135deg,#2B35D8,#8B3FE8);color:#fff}
 button.sec{background:#1A1D2E;border:1px solid #2A2D38}
 .wait{color:#ffb800;font-weight:800;font-size:12px}
-.ok{color:#00E5A0;font-size:13px}
-.off{color:#FF4D6D;font-weight:800;font-size:12px}
 .reply{color:#00E5A0;font-size:14px;min-height:2.4em}
+.note{font-size:12px;color:#8B90A8}
 .log{font-size:12px;color:#A0A8C8;white-space:pre-wrap;max-height:220px;overflow:auto}
 a{color:#00D4FF}
 </style>
@@ -28,15 +27,17 @@ a{color:#00D4FF}
 <body>
 <p class="who">COMPUTER · FOUNDER ONLY · SINN-DEX</p>
 <h1>Computer.</h1>
-<p>You speak. I answer. I log. I push sub-agents. This is the dialogue.</p>
-<div class="banner">Codeword COMPUTER. Say Sinn-dex then the order.</div>
+<p>You speak. I answer. I log. I push sub-agents.</p>
+<div class="banner">Codeword COMPUTER. Voice is on-device only (browser speech). Not ElevenLabs. Not visitor Talk.</div>
 
 <div class="strip">
 <h2>Speak or type</h2>
 <textarea id="order" placeholder="Computer. Draft the PM interview. Assign transcripts."></textarea>
 <button type="button" id="mic">Speak</button>
 <button type="button" id="log">Log, speak back, email</button>
+<button type="button" class="sec" id="mute">Mute replies</button>
 <button type="button" class="sec" id="clear">Clear log</button>
+<p class="note">Mute stays on this device. Mic uses the phone/browser. No cloud voice on this page.</p>
 <p id="st" class="wait">IDLE — waiting on founder</p>
 <p class="reply" id="reply"></p>
 </div>
@@ -50,28 +51,32 @@ a{color:#00D4FF}
 <script>
 (function () {
   var KEY = 'siindex_founder_orders_v1';
+  var MUTE = 'siindex_founder_mute_v1';
   var order = document.getElementById('order');
   var logbox = document.getElementById('logbox');
   var st = document.getElementById('st');
   var replyEl = document.getElementById('reply');
+  var muteBtn = document.getElementById('mute');
+  function muted() { return localStorage.getItem(MUTE) === '1'; }
+  function setMute(on) {
+    localStorage.setItem(MUTE, on ? '1' : '0');
+    muteBtn.textContent = on ? 'Unmute replies' : 'Mute replies';
+    try { window.speechSynthesis.cancel(); } catch (e) {}
+  }
   function load() {
     try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; }
   }
   function save(rows) { localStorage.setItem(KEY, JSON.stringify(rows)); }
   function render() {
     var rows = load();
-    logbox.textContent = rows.length ? rows.map(function (r) { return r.t + '\n' + r.q + (r.a ? '\n' + r.a : ''); }).join('\n\n') : 'No orders yet this device.';
+    logbox.textContent = rows.length ? rows.map(function (r) { return r.t + '\nYOU: ' + r.q + '\nOS: ' + (r.a || ''); }).join('\n\n') : 'No orders yet this device.';
   }
   function answer(q) {
-    var s = q.toLowerCase();
-    if (/hold|stop/.test(s)) return 'Acknowledged. Holding. Sub-agents stand down on that item.';
-    if (/proceed|go|launch/.test(s)) return 'Acknowledged. Pushing to sub-agents. I will mail you the split.';
-    if (/interview|prime|pm|minister/.test(s)) return 'Acknowledged. Interview pack assigned. I run the system. Sub-agents draft.';
-    if (/onboard|domain|indx/.test(s)) return 'Acknowledged. Onboard and reserved name stay on the row. Not issued until you proceed.';
-    return 'Acknowledged founder. Order logged. I push sub-agents. Reply PROCEED or HOLD on the mail.';
+    return 'Acknowledged. Order taken: ' + q + '. Pushing to sub-agents. Mail is the split. Reply PROCEED or HOLD.';
   }
   function speak(text) {
     replyEl.textContent = text;
+    if (muted()) return;
     try {
       window.speechSynthesis.cancel();
       var u = new SpeechSynthesisUtterance(text.replace(/Sinn-dex/g, 'Sin dex'));
@@ -94,13 +99,14 @@ a{color:#00D4FF}
       var href = 'mailto:dadyboy73@gmail.com?cc=imagenationdex@gmail.com'
         + '&subject=' + encodeURIComponent('Sinn-dex founder order')
         + '&body=' + encodeURIComponent('Founder: ' + q + '\n\nSIINDEX: ' + a + '\n\nReply PROCEED or HOLD.');
-      setTimeout(function () { window.location.href = href; }, 600);
+      setTimeout(function () { window.location.href = href; }, 700);
     }
   }
   document.getElementById('log').onclick = function () { push(order.value, true); };
   document.getElementById('clear').onclick = function () {
     localStorage.removeItem(KEY); render(); replyEl.textContent = ''; st.textContent = 'IDLE — waiting on founder';
   };
+  muteBtn.onclick = function () { setMute(!muted()); };
   var Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
   document.getElementById('mic').onclick = function () {
     if (!Rec) { st.textContent = 'Type the order. This browser has no speech input.'; return; }
@@ -117,8 +123,8 @@ a{color:#00D4FF}
     r.onerror = function () { st.textContent = 'Mic failed. Type.'; };
     r.start();
   };
+  setMute(muted());
   render();
-  speak('Computer online. Sinn-dex listening for the founder.');
 })();
 </script>
 </body>
