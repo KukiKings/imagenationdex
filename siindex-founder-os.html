@@ -15,11 +15,12 @@ h1{font-size:24px;margin:8px 0}
 .strip{border:1px solid #2A2D38;background:#12141F;border-radius:14px;padding:14px;margin:12px 0}
 .strip h2{margin:0 0 8px;font-size:14px;color:#00D4FF}
 textarea{width:100%;min-height:88px;border-radius:10px;border:1px solid #2A2D38;background:#1A1D2E;color:#F0F2FF;padding:10px;font:inherit}
-button,.btn{width:100%;margin-top:8px;padding:12px;border:0;border-radius:12px;font-weight:800;background:linear-gradient(135deg,#2B35D8,#8B3FE8);color:#fff}
+button{width:100%;margin-top:8px;padding:12px;border:0;border-radius:12px;font-weight:800;background:linear-gradient(135deg,#2B35D8,#8B3FE8);color:#fff}
 button.sec{background:#1A1D2E;border:1px solid #2A2D38}
 .wait{color:#ffb800;font-weight:800;font-size:12px}
 .ok{color:#00E5A0;font-size:13px}
 .off{color:#FF4D6D;font-weight:800;font-size:12px}
+.reply{color:#00E5A0;font-size:14px;min-height:2.4em}
 .log{font-size:12px;color:#A0A8C8;white-space:pre-wrap;max-height:220px;overflow:auto}
 a{color:#00D4FF}
 </style>
@@ -27,26 +28,22 @@ a{color:#00D4FF}
 <body>
 <p class="who">COMPUTER · FOUNDER ONLY · SINN-DEX</p>
 <h1>Computer.</h1>
-<p>You speak. I log. I mail you. Sub-agents wait for PROCEED. Visitors never use this page.</p>
-<div class="banner">Say “Sinn-dex” then the order. Same as Tony / Picard — on this desk, not on the public Talk page.</div>
+<p>You speak. I answer. I log. I push sub-agents. This is the dialogue.</p>
+<div class="banner">Codeword COMPUTER. Say Sinn-dex then the order.</div>
 
 <div class="strip">
-<h2>Speak or type the order</h2>
-<textarea id="order" placeholder="Sinn-dex, log the Speak 404. Draft the PM interview. Hold Pay."></textarea>
-<button type="button" id="mic">Hold to speak (on-device)</button>
-<button type="button" id="log">Log + open email to me</button>
-<button type="button" class="sec" id="clear">Clear local log</button>
+<h2>Speak or type</h2>
+<textarea id="order" placeholder="Computer. Draft the PM interview. Assign transcripts."></textarea>
+<button type="button" id="mic">Speak</button>
+<button type="button" id="log">Log, speak back, email</button>
+<button type="button" class="sec" id="clear">Clear log</button>
 <p id="st" class="wait">IDLE — waiting on founder</p>
+<p class="reply" id="reply"></p>
 </div>
 
 <div class="strip">
 <h2>Log</h2>
 <div class="log" id="logbox">No orders yet this device.</div>
-</div>
-
-<div class="strip">
-<h2>Off until you PROCEED</h2>
-<p class="off">Pay · AllDomains submit · liquidity · voice lock change</p>
 </div>
 
 <p><a href="/siindex-test-board.html">Test board</a> · <a href="/onboard">Onboard</a></p>
@@ -56,47 +53,72 @@ a{color:#00D4FF}
   var order = document.getElementById('order');
   var logbox = document.getElementById('logbox');
   var st = document.getElementById('st');
+  var replyEl = document.getElementById('reply');
   function load() {
     try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; }
   }
   function save(rows) { localStorage.setItem(KEY, JSON.stringify(rows)); }
   function render() {
     var rows = load();
-    logbox.textContent = rows.length ? rows.map(function (r) { return r.t + '\n' + r.q; }).join('\n\n') : 'No orders yet this device.';
+    logbox.textContent = rows.length ? rows.map(function (r) { return r.t + '\n' + r.q + (r.a ? '\n' + r.a : ''); }).join('\n\n') : 'No orders yet this device.';
   }
-  function push(q) {
+  function answer(q) {
+    var s = q.toLowerCase();
+    if (/hold|stop/.test(s)) return 'Acknowledged. Holding. Sub-agents stand down on that item.';
+    if (/proceed|go|launch/.test(s)) return 'Acknowledged. Pushing to sub-agents. I will mail you the split.';
+    if (/interview|prime|pm|minister/.test(s)) return 'Acknowledged. Interview pack assigned. I run the system. Sub-agents draft.';
+    if (/onboard|domain|indx/.test(s)) return 'Acknowledged. Onboard and reserved name stay on the row. Not issued until you proceed.';
+    return 'Acknowledged founder. Order logged. I push sub-agents. Reply PROCEED or HOLD on the mail.';
+  }
+  function speak(text) {
+    replyEl.textContent = text;
+    try {
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text.replace(/Sinn-dex/g, 'Sin dex'));
+      u.lang = 'en-AU';
+      u.rate = 0.95;
+      window.speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  function push(q, mail) {
     q = (q || '').trim();
-    if (!q) { st.textContent = 'Say or type an order first.'; return; }
+    if (!q) { st.textContent = 'Say or type an order.'; return; }
+    var a = answer(q);
     var rows = load();
-    rows.unshift({ t: new Date().toISOString(), q: q });
+    rows.unshift({ t: new Date().toISOString(), q: q, a: a });
     save(rows.slice(0, 40));
     render();
-    st.textContent = 'LOGGED — email yourself the order';
-    var href = 'mailto:dadyboy73@gmail.com?cc=imagenationdex@gmail.com'
-      + '&subject=' + encodeURIComponent('Sinn-dex founder order')
-      + '&body=' + encodeURIComponent('Founder order:\n\n' + q + '\n\nSplit to sub-agents. Reply PROCEED or HOLD.');
-    window.location.href = href;
+    st.textContent = 'LOGGED';
+    speak(a);
+    if (mail) {
+      var href = 'mailto:dadyboy73@gmail.com?cc=imagenationdex@gmail.com'
+        + '&subject=' + encodeURIComponent('Sinn-dex founder order')
+        + '&body=' + encodeURIComponent('Founder: ' + q + '\n\nSIINDEX: ' + a + '\n\nReply PROCEED or HOLD.');
+      setTimeout(function () { window.location.href = href; }, 600);
+    }
   }
-  document.getElementById('log').onclick = function () { push(order.value); };
+  document.getElementById('log').onclick = function () { push(order.value, true); };
   document.getElementById('clear').onclick = function () {
-    localStorage.removeItem(KEY); render(); st.textContent = 'IDLE — waiting on founder';
+    localStorage.removeItem(KEY); render(); replyEl.textContent = ''; st.textContent = 'IDLE — waiting on founder';
   };
   var Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
   document.getElementById('mic').onclick = function () {
-    if (!Rec) { st.textContent = 'This browser has no on-device speech. Type the order.'; return; }
+    if (!Rec) { st.textContent = 'Type the order. This browser has no speech input.'; return; }
     var r = new Rec();
     r.lang = 'en-AU';
     r.interimResults = false;
     st.textContent = 'LISTENING';
     r.onresult = function (e) {
       var t = e.results[0][0].transcript;
-      order.value = (order.value ? order.value + ' ' : '') + t;
-      st.textContent = 'HEARD — tap Log + email';
+      order.value = t;
+      st.textContent = 'HEARD';
+      push(t, false);
     };
-    r.onerror = function () { st.textContent = 'Mic failed. Type the order.'; };
+    r.onerror = function () { st.textContent = 'Mic failed. Type.'; };
     r.start();
   };
   render();
+  speak('Computer online. Sinn-dex listening for the founder.');
 })();
 </script>
 </body>
