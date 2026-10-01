@@ -287,6 +287,12 @@
     const source = opts.source || "public-home";
     interrupt("…", false);
     emitMessage("user", text, source);
+    // 2026-10-01: ensureProviderConsent() was only reached by the live-runtime
+    // branch further down. Every curated/local matchAnswer() reply (most chip
+    // taps and common FAQ-style typed questions) called speak() above that
+    // point and got a silent 403 provider_consent_required -> no audio, text
+    // only. Call it here, once, before any speak() in this function can fire.
+    ensureProviderConsent();
 
     const isGoalIntakeQuestion = /what is one real result.*help you complete/i.test(text);
     if (isGoalIntakeQuestion) {
