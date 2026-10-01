@@ -194,38 +194,44 @@
 
   async function speak(text) {
     if (!voiceEnabled || !text) return;
-    const controller = new AbortController();
-    voiceAbort = controller;
-    let voiceTimedOut = false;
-    const voiceTimer = setTimeout(function () {
-      voiceTimedOut = true;
-      controller.abort();
-    }, VOICE_REQUEST_TIMEOUT_MS);
+    // 2026-10-01: Founder standing rule -- no ElevenLabs, no cloud voice
+    // provider. Use what's already on the device. Switched from the
+    // ElevenLabs-backed siindex-website-voice-tts Supabase endpoint to
+    // native on-device window.speechSynthesis. That endpoint was returning
+    // 502 (provider_status 401 from ElevenLabs), which left the public
+    // chat silent ("SIINDEX voice unavailable") even with consent and
+    // network both fine -- the provider itself was the problem, and it
+    // should never have been in this path.
+    if (!window.speechSynthesis) {
+      setStatus("error", "Voice unavailable on this device. Response remains available as text.");
+      return;
+    }
     const spoken = pronunciation(text);
     try {
-      setStatus("speaking", "SIINDEX is speaking…");
-      const response = await fetch(ENDPOINTS.voice, {
-        method: "POST",
-        signal: controller.signal,
-        headers: headers("application/json"),
-        body: JSON.stringify({ text: spoken }),
-      });
-      clearTimeout(voiceTimer);
-      if (!response.ok) throw new Error("voice_http_" + response.status);
-      await playVoiceResponse(response);
-      if (!controller.signal.aborted) setStatus("idle", "Ready.");
-    } catch (error) {
-      clearTimeout(voiceTimer);
-      if (controller.signal.aborted && !voiceTimedOut) {
-        setStatus("idle", "Paused.");
-        return;
+      window.speechSynthesis.cancel();
+    } catch (_) {}
+    return new Promise(function (resolve) {
+      try {
+        const utter = new SpeechSynthesisUtterance(spoken);
+        utter.rate = 1;
+        utter.pitch = 1;
+        utter.onstart = function () {
+          setStatus("speaking", "SIINDEX is speaking…");
+        };
+        utter.onend = function () {
+          setStatus("idle", "Ready.");
+          resolve();
+        };
+        utter.onerror = function () {
+          setStatus("error", "SIINDEX voice unavailable. Response remains available as text.");
+          resolve();
+        };
+        window.speechSynthesis.speak(utter);
+      } catch (error) {
+        setStatus("error", "SIINDEX voice unavailable. Response remains available as text.");
+        resolve();
       }
-      if (error && error.name === "AbortError" && !voiceTimedOut) {
-        setStatus("idle", "Paused.");
-        return;
-      }
-      setStatus("error", "SIINDEX voice unavailable. Response remains available as text.");
-    }
+    });
   }
 
   function interrupt(message, notify) {
@@ -609,7 +615,7 @@
   }
 
   window.SIINDEXVoice = {
-    version: "3.0.17",
+    version: "3.0.18",
     speak: speak,
     interrupt: interrupt,
     ask: ask,
