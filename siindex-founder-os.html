@@ -74,16 +74,68 @@ a{color:#00D4FF}
   function answer(q) {
     return 'Acknowledged. Order taken: ' + q + '. Pushing to sub-agents. Mail is the split. Reply PROCEED or HOLD.';
   }
+  // 2026-10-01: same-voice fix. Founder OS must sound like the rest of
+  // SIINDEX. Was raw speechSynthesis with only u.lang = 'en-AU' set, which
+  // left voice selection to whatever the device defaults to (a man's voice
+  // on this founder's Mac). Matched to the same explicit voice-selection
+  // logic as siindex-speak-core.js so both surfaces pick the same voice.
+  var cachedVoice = null;
+  var cachedVoicePromise = null;
+  var FEMALE_VOICE_NAMES = /\b(Karen|Samantha|Victoria|Zira|Susan|Moira|Tessa|Fiona|Veena|Serena|Kate|Allison|Ava|Catherine|Hazel|Linda|Heather|Joanna|Salli|Kendra|Kimberly|Ivy|Google US English Female|Google UK English Female)\b/i;
+  var MALE_VOICE_NAMES = /\b(David|Daniel|Alex|Fred|Albert|Arthur|Bruce|Eddy|Gordon|Lee|Oliver|Reed|Rishi|Aaron|Nathan|Tom|Junior|Guy|Matthew|Brian|Justin|Kevin)\b/i;
+  function choosePreferredVoice(voices) {
+    if (!voices || !voices.length) return null;
+    var enVoices = voices.filter(function (v) { return /^en[-_]/i.test(v.lang || ""); });
+    var pool = enVoices.length ? enVoices : voices;
+    var byPriority = pool.slice().sort(function (a, b) {
+      function rank(v) {
+        if (/^en-AU/i.test(v.lang)) return 0;
+        if (/^en-GB/i.test(v.lang)) return 1;
+        if (/^en-US/i.test(v.lang)) return 2;
+        return 3;
+      }
+      return rank(a) - rank(b);
+    });
+    var female = byPriority.find(function (v) { return FEMALE_VOICE_NAMES.test(v.name); });
+    if (female) return female;
+    var notMale = byPriority.filter(function (v) { return !MALE_VOICE_NAMES.test(v.name); });
+    if (notMale.length) return notMale[0];
+    return byPriority[0];
+  }
+  function getPreferredVoice() {
+    if (cachedVoice) return Promise.resolve(cachedVoice);
+    if (cachedVoicePromise) return cachedVoicePromise;
+    cachedVoicePromise = new Promise(function (resolve) {
+      var existing = window.speechSynthesis.getVoices();
+      if (existing && existing.length) {
+        cachedVoice = choosePreferredVoice(existing);
+        resolve(cachedVoice);
+        return;
+      }
+      var settled = false;
+      var done = function () {
+        if (settled) return;
+        settled = true;
+        cachedVoice = choosePreferredVoice(window.speechSynthesis.getVoices());
+        resolve(cachedVoice);
+      };
+      try { window.speechSynthesis.onvoiceschanged = done; } catch (_) {}
+      setTimeout(done, 1000);
+    });
+    return cachedVoicePromise;
+  }
   function speak(text) {
     replyEl.textContent = text;
     if (muted()) return;
-    try {
-      window.speechSynthesis.cancel();
-      var u = new SpeechSynthesisUtterance(text.replace(/Sinn-dex/g, 'Sin dex'));
-      u.lang = 'en-AU';
-      u.rate = 0.95;
-      window.speechSynthesis.speak(u);
-    } catch (e) {}
+    try { window.speechSynthesis.cancel(); } catch (e) {}
+    getPreferredVoice().then(function (v) {
+      try {
+        var u = new SpeechSynthesisUtterance(text.replace(/Sinn-dex/g, 'Sin dex'));
+        if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = 'en-AU'; }
+        u.rate = 0.95;
+        window.speechSynthesis.speak(u);
+      } catch (e) {}
+    });
   }
   function push(q, mail) {
     q = (q || '').trim();
