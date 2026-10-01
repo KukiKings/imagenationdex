@@ -175,7 +175,19 @@
         audit.q_len = q.length;
         auditLog(audit);
         showLocalAnswer(answer, source, audit);
-        if (window.SIINDEXVoice.speak && window.SIINDEXVoice.voiceEnabled) {
+        // Fixed 2026-10-01: window.SIINDEXVoice.voiceEnabled was never set by
+        // siindex-speak-core.js (voiceEnabled is a private variable there, not
+        // exported on the SIINDEXVoice object), so this check was always
+        // false and speak() never ran for any confidently-matched question
+        // -- i.e. most chip taps and common typed questions got text only,
+        // no audio. speak() already honors its own internal voiceEnabled
+        // state, so that half of the check is redundant; the real missing
+        // piece was provider consent, which ask()'s own path sets but this
+        // shortcut path never did.
+        if (typeof window.SIINDEXVoice.ensureProviderConsent === 'function') {
+          try { window.SIINDEXVoice.ensureProviderConsent(); } catch (_) {}
+        }
+        if (window.SIINDEXVoice.speak) {
           try {
             window.SIINDEXVoice.speak(answer);
           } catch (_) {}
