@@ -192,6 +192,62 @@
     });
   }
 
+  // 2026-10-01: Browser default speechSynthesis voice is not consistently
+  // female across devices/OSes -- confirmed the founder heard a male voice,
+  // even though this is supposed to be SIINDEX (she/her). Pick an explicit
+  // female-sounding voice instead of leaving it to whatever the device
+  // defaults to. Cached after first successful pick; voice list loads async
+  // on first page load in some browsers, so this also waits for that once.
+  var cachedVoice = null;
+  var cachedVoicePromise = null;
+  var FEMALE_VOICE_NAMES = /\b(Karen|Samantha|Victoria|Zira|Susan|Moira|Tessa|Fiona|Veena|Serena|Kate|Allison|Ava|Catherine|Hazel|Linda|Heather|Joanna|Salli|Kendra|Kimberly|Ivy|Google US English Female|Google UK English Female)\b/i;
+  var MALE_VOICE_NAMES = /\b(David|Daniel|Alex|Fred|Albert|Arthur|Bruce|Eddy|Gordon|Lee|Oliver|Reed|Rishi|Aaron|Nathan|Tom|Junior|Guy|Matthew|Brian|Justin|Kevin)\b/i;
+
+  function choosePreferredVoice(voices) {
+    if (!voices || !voices.length) return null;
+    var enVoices = voices.filter(function (v) { return /^en[-_]/i.test(v.lang || ""); });
+    var pool = enVoices.length ? enVoices : voices;
+    var byPriority = pool.slice().sort(function (a, b) {
+      function rank(v) {
+        if (/^en-AU/i.test(v.lang)) return 0;
+        if (/^en-GB/i.test(v.lang)) return 1;
+        if (/^en-US/i.test(v.lang)) return 2;
+        return 3;
+      }
+      return rank(a) - rank(b);
+    });
+    var female = byPriority.find(function (v) { return FEMALE_VOICE_NAMES.test(v.name); });
+    if (female) return female;
+    var notMale = byPriority.filter(function (v) { return !MALE_VOICE_NAMES.test(v.name); });
+    if (notMale.length) return notMale[0];
+    return byPriority[0];
+  }
+
+  function getPreferredVoice() {
+    if (cachedVoice) return Promise.resolve(cachedVoice);
+    if (cachedVoicePromise) return cachedVoicePromise;
+    cachedVoicePromise = new Promise(function (resolve) {
+      var existing = window.speechSynthesis.getVoices();
+      if (existing && existing.length) {
+        cachedVoice = choosePreferredVoice(existing);
+        resolve(cachedVoice);
+        return;
+      }
+      var settled = false;
+      var done = function () {
+        if (settled) return;
+        settled = true;
+        cachedVoice = choosePreferredVoice(window.speechSynthesis.getVoices());
+        resolve(cachedVoice);
+      };
+      try {
+        window.speechSynthesis.onvoiceschanged = done;
+      } catch (_) {}
+      setTimeout(done, 1000);
+    });
+    return cachedVoicePromise;
+  }
+
   async function speak(text) {
     if (!voiceEnabled || !text) return;
     // 2026-10-01: Founder standing rule -- no ElevenLabs, no cloud voice
@@ -210,9 +266,16 @@
     try {
       window.speechSynthesis.cancel();
     } catch (_) {}
+    const preferredVoice = await getPreferredVoice();
     return new Promise(function (resolve) {
       try {
         const utter = new SpeechSynthesisUtterance(spoken);
+        if (preferredVoice) {
+          utter.voice = preferredVoice;
+          utter.lang = preferredVoice.lang;
+        } else {
+          utter.lang = "en-AU";
+        }
         utter.rate = 1;
         utter.pitch = 1;
         utter.onstart = function () {
@@ -615,7 +678,7 @@
   }
 
   window.SIINDEXVoice = {
-    version: "3.0.18",
+    version: "3.0.19",
     speak: speak,
     interrupt: interrupt,
     ask: ask,
