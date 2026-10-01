@@ -609,11 +609,15 @@
   }
 
   window.SIINDEXVoice = {
-    version: "3.0.16",
+    version: "3.0.17",
     speak: speak,
     interrupt: interrupt,
     ask: ask,
     listen: listen,
+    // Exposed 2026-10-01 so siindex-public-bridge.js's confident-match path
+    // (the one most chip taps and common questions actually take) can set
+    // consent before calling speak() directly, the same way ask() does.
+    ensureProviderConsent: ensureProviderConsent,
     setVoiceEnabled: function (on) {
       voiceEnabled = !!on;
       localStorage.setItem(VOICE_KEY, voiceEnabled ? "true" : "false");
