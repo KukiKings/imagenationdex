@@ -37,7 +37,7 @@ a{color:#00D4FF}
 <button type="button" id="log">Log, speak back, email</button>
 <button type="button" class="sec" id="mute">Mute replies</button>
 <button type="button" class="sec" id="clear">Clear log</button>
-<p class="note">Tap Start Listening once, then just say "Computer, ..." — hands-free from there, like Jarvis. Mic uses the phone/browser. No cloud voice on this page.</p>
+<p class="note">Tap Start Listening once, then just say "Computer, ..." — hands-free from there, like Jarvis. Say nothing after "Computer" for the board. Actions that send, call, pay, or issue a domain need the word PROCEED. No cloud voice on this page.</p>
 <p id="st" class="wait">IDLE — waiting on founder</p>
 <p class="reply" id="reply"></p>
 </div>
@@ -71,14 +71,42 @@ a{color:#00D4FF}
     var rows = load();
     logbox.textContent = rows.length ? rows.map(function (r) { return r.t + '\nYOU: ' + r.q + '\nOS: ' + (r.a || ''); }).join('\n\n') : 'No orders yet this device.';
   }
-  function answer(q) {
-    return 'Acknowledged. Order taken: ' + q + '. Pushing to sub-agents. Mail is the split. Reply PROCEED or HOLD.';
+  // 2026-10-03: real board report + guardrails. Founder's god-mode spec:
+  // answer from status.json only, draft mail/log/sub-agent notes freely,
+  // never send/call/pay/issue a domain without the word PROCEED, never
+  // invent a calendar/client/invoice/balance, never claim INDEX Limited
+  // is registered, never set a voice ID. Was a canned one-liner; now
+  // pulls the live board from status.json at the repo root and only
+  // falls back to the last known board if that fetch fails offline.
+  var FALLBACK_BOARD = 'OS live. Onboard SAVE OK. Domain reserved, not issued. Pay HOLD. Pilot 24 February 2027.';
+  var statusCache = null;
+  function fetchStatus() {
+    if (statusCache) return Promise.resolve(statusCache);
+    return fetch('/status.json', { cache: 'no-store' }).then(function (r) { return r.json(); })
+      .then(function (j) { statusCache = j; return j; })
+      .catch(function () { return null; });
   }
-  // 2026-10-01: same-voice fix. Founder OS must sound like the rest of
-  // SIINDEX. Was raw speechSynthesis with only u.lang = 'en-AU' set, which
-  // left voice selection to whatever the device defaults to (a man's voice
-  // on this founder's Mac). Matched to the same explicit voice-selection
-  // logic as siindex-speak-core.js so both surfaces pick the same voice.
+  function boardLine(s) {
+    if (!s) return FALLBACK_BOARD;
+    var co = s.captain_orders_2026_09_30 || {};
+    var onboard = (co.onboard_status || 'SAVE_OK').replace(/_/g, ' ');
+    var domain = co.domain_choice || 'reserved, not issued';
+    var pilot = s.public_pilot_target || '24 February 2027';
+    return 'OS live. Onboard ' + onboard + '. Domain ' + domain + '. Pay HOLD. Pilot ' + pilot + '.';
+  }
+  var REFUSE = /\b(seed phrase|private key|live wallet|moonpay|auto[- ]buy|auto[- ]sell|auto[- ]send)\b/i;
+  var REGISTERED_CLAIM = /index\s+limited/i;
+  var ACTION_WORD = /\b(email|mail|send|call|pay|payment|domain|issue)\b/i;
+  var PROCEED_WORD = /\bproceed\b/i;
+  var NO_ORDER = /^(report|board|status)?\.?$/i;
+  function answer(q, s) {
+    var t = (q || '').trim();
+    if (REFUSE.test(t)) return 'Refused. No seed phrases, live wallets, MoonPay, auto-buy, or auto-send.';
+    if (REGISTERED_CLAIM.test(t) && /regist/i.test(t)) return 'I cannot say INDEX Limited is registered. Not confirmed in status.json.';
+    if (!t || NO_ORDER.test(t)) return boardLine(s);
+    if (ACTION_WORD.test(t) && !PROCEED_WORD.test(t)) return 'Staged, not sent: ' + t + '. Say PROCEED to send, call, pay, or issue.';
+    return 'Logged: ' + t + '. From status.json and the repo only — no invented calendar, client, invoice, or balance. Noting it for sub-agents.';
+  }
   var cachedVoice = null;
   var cachedVoicePromise = null;
   var FEMALE_VOICE_NAMES = /\b(Karen|Samantha|Victoria|Zira|Susan|Moira|Tessa|Fiona|Veena|Serena|Kate|Allison|Ava|Catherine|Hazel|Linda|Heather|Joanna|Salli|Kendra|Kimberly|Ivy|Google US English Female|Google UK English Female)\b/i;
@@ -139,20 +167,21 @@ a{color:#00D4FF}
   }
   function push(q, mail) {
     q = (q || '').trim();
-    if (!q) { st.textContent = 'Say or type an order.'; return; }
-    var a = answer(q);
-    var rows = load();
-    rows.unshift({ t: new Date().toISOString(), q: q, a: a });
-    save(rows.slice(0, 40));
-    render();
-    st.textContent = 'LOGGED';
-    speak(a);
-    if (mail) {
-      var href = 'mailto:dadyboy73@gmail.com?cc=imagenationdex@gmail.com'
-        + '&subject=' + encodeURIComponent('Sinn-dex founder order')
-        + '&body=' + encodeURIComponent('Founder: ' + q + '\n\nSIINDEX: ' + a + '\n\nReply PROCEED or HOLD.');
-      setTimeout(function () { window.location.href = href; }, 700);
-    }
+    fetchStatus().then(function (s) {
+      var a = answer(q, s);
+      var rows = load();
+      rows.unshift({ t: new Date().toISOString(), q: q || '(no order — board)', a: a });
+      save(rows.slice(0, 40));
+      render();
+      st.textContent = 'LOGGED';
+      speak(a);
+      if (mail && q) {
+        var href = 'mailto:dadyboy73@gmail.com?cc=imagenationdex@gmail.com'
+          + '&subject=' + encodeURIComponent('Sinn-dex founder order')
+          + '&body=' + encodeURIComponent('Founder: ' + q + '\n\nSIINDEX: ' + a + '\n\nDraft only. Reply PROCEED or HOLD.');
+        setTimeout(function () { window.location.href = href; }, 700);
+      }
+    });
   }
   document.getElementById('log').onclick = function () { push(order.value, true); };
   document.getElementById('clear').onclick = function () {
@@ -187,14 +216,9 @@ a{color:#00D4FF}
         }
         if (!WAKE_WORD.test(transcript)) continue;
         var command = transcript.replace(WAKE_WORD, '').trim();
-        if (command) {
-          order.value = command;
-          st.textContent = 'HEARD';
-          push(command, false);
-        } else {
-          speak('Yes?');
-          st.textContent = 'LISTENING — say your order';
-        }
+        order.value = command;
+        st.textContent = command ? 'HEARD' : 'HEARD — no order, reporting board';
+        push(command, false);
       }
     };
     recognizer.onerror = function (e) {
