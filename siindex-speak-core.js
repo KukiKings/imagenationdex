@@ -248,7 +248,7 @@
     return cachedVoicePromise;
   }
 
-  async function speak(text) {
+  async function speakNative(text) {
     if (!voiceEnabled || !text) return;
     // 2026-10-01: Founder standing rule -- no ElevenLabs, no cloud voice
     // provider. Use what's already on the device. Switched from the
@@ -298,6 +298,35 @@
         resolve();
       }
     });
+  }
+
+  // 2026-10-02: founder re-approved ElevenLabs voice iBEZxKDWKDCs8WbjiLKK (set server-side in
+  // siindex-website-voice-tts). Try it first; if the provider fails, fall back to device voice.
+  async function speak(text) {
+    if (!voiceEnabled || !text) return;
+    ensureProviderConsent();
+    const controller = new AbortController();
+    voiceAbort = controller;
+    let timedOut = false;
+    const timer = setTimeout(function () { timedOut = true; controller.abort(); }, 25000);
+    try {
+      setStatus("speaking", "SIINDEX is speaking…");
+      const response = await fetch(ENDPOINTS.voice, {
+        method: "POST",
+        signal: controller.signal,
+        headers: headers("application/json"),
+        body: JSON.stringify({ text: pronunciation(text).slice(0, 1400) }),
+      });
+      clearTimeout(timer);
+      if (!response.ok) throw new Error("voice_http_" + response.status);
+      await playVoiceResponse(response);
+      setStatus("idle", "Ready.");
+      return;
+    } catch (error) {
+      clearTimeout(timer);
+      if (controller.signal.aborted && !timedOut) { setStatus("idle", "Paused."); return; }
+    }
+    return speakNative(text);
   }
 
   function interrupt(message, notify) {
