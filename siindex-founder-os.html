@@ -33,11 +33,11 @@ a{color:#00D4FF}
 <div class="strip">
 <h2>Speak or type</h2>
 <textarea id="order" placeholder="Computer. Draft the PM interview. Assign transcripts."></textarea>
-<button type="button" id="mic">Speak</button>
+<button type="button" id="mic">Start Listening</button>
 <button type="button" id="log">Log, speak back, email</button>
 <button type="button" class="sec" id="mute">Mute replies</button>
 <button type="button" class="sec" id="clear">Clear log</button>
-<p class="note">Mute stays on this device. Mic uses the phone/browser. No cloud voice on this page.</p>
+<p class="note">Tap Start Listening once, then just say "Computer, ..." — hands-free from there, like Jarvis. Mic uses the phone/browser. No cloud voice on this page.</p>
 <p id="st" class="wait">IDLE — waiting on founder</p>
 <p class="reply" id="reply"></p>
 </div>
@@ -159,21 +159,75 @@ a{color:#00D4FF}
     localStorage.removeItem(KEY); render(); replyEl.textContent = ''; st.textContent = 'IDLE — waiting on founder';
   };
   muteBtn.onclick = function () { setMute(!muted()); };
+  // 2026-10-03: Jarvis mode. Founder asked why this page isn't
+  // voice-activated like Jarvis -- the old mic button was tap-to-talk,
+  // one utterance per click. Replaced with continuous listening: tap
+  // Start Listening once, then speak the codeword "Computer" plus the
+  // order, hands-free, same as the banner already promises. Recognition
+  // auto-restarts on end/no-speech to simulate always-on listening,
+  // since the Web Speech API doesn't offer a true always-on mode.
   var Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-  document.getElementById('mic').onclick = function () {
-    if (!Rec) { st.textContent = 'Type the order. This browser has no speech input.'; return; }
-    var r = new Rec();
-    r.lang = 'en-AU';
-    r.interimResults = false;
-    st.textContent = 'LISTENING';
-    r.onresult = function (e) {
-      var t = e.results[0][0].transcript;
-      order.value = t;
-      st.textContent = 'HEARD';
-      push(t, false);
+  var micBtn = document.getElementById('mic');
+  var WAKE_WORD = /\bcomputer\b[,.]?\s*/i;
+  var listening = false;
+  var recognizer = null;
+
+  function startRecognizer() {
+    recognizer = new Rec();
+    recognizer.lang = 'en-AU';
+    recognizer.continuous = true;
+    recognizer.interimResults = true;
+    recognizer.onresult = function (e) {
+      for (var i = e.resultIndex; i < e.results.length; i++) {
+        var res = e.results[i];
+        var transcript = res[0].transcript;
+        if (!res.isFinal) {
+          if (WAKE_WORD.test(transcript)) st.textContent = 'LISTENING — heard "Computer"';
+          continue;
+        }
+        if (!WAKE_WORD.test(transcript)) continue;
+        var command = transcript.replace(WAKE_WORD, '').trim();
+        if (command) {
+          order.value = command;
+          st.textContent = 'HEARD';
+          push(command, false);
+        } else {
+          speak('Yes?');
+          st.textContent = 'LISTENING — say your order';
+        }
+      }
     };
-    r.onerror = function () { st.textContent = 'Mic failed. Type.'; };
-    r.start();
+    recognizer.onerror = function (e) {
+      if (e.error === 'no-speech' || e.error === 'aborted') return;
+      st.textContent = listening ? 'Mic error: ' + e.error + '. Still listening.' : 'Mic failed. Type.';
+    };
+    recognizer.onend = function () {
+      if (listening) {
+        try { recognizer.start(); } catch (e) {}
+      }
+    };
+    try { recognizer.start(); } catch (e) {}
+  }
+
+  function stopRecognizer() {
+    if (recognizer) {
+      try { recognizer.onend = null; recognizer.stop(); } catch (e) {}
+      recognizer = null;
+    }
+  }
+
+  micBtn.onclick = function () {
+    if (!Rec) { st.textContent = 'Type the order. This browser has no speech input.'; return; }
+    listening = !listening;
+    if (listening) {
+      micBtn.textContent = 'Stop Listening';
+      st.textContent = 'LISTENING — say "Computer, ..."';
+      startRecognizer();
+    } else {
+      micBtn.textContent = 'Start Listening';
+      st.textContent = 'IDLE — waiting on founder';
+      stopRecognizer();
+    }
   };
   setMute(muted());
   render();
