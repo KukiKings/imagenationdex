@@ -66,8 +66,8 @@
       'not a random library voice when the locked identity is set. I do not claim a specific ElevenLabs product name in public answers.',
 
     legal_name_answer:
-      'IN$DEX is the brand. Image Nation DEX is short for Image Nation Decentralized Exchange. ' +
-      'The intended Cook Islands legal registrant is Image Nation DEx Limited. Registration is in progress until the certificate is issued.',
+      'INDEX Limited. Cook Islands registration is still processing. No certificate. AUSTRAC does not apply. ' +
+      'IN$DEX is the brand. Sinn-dex is the spoken name.',
 
     registration_status_answer:
       'For IN$DEX, company registration in the Cook Islands is in progress. ' +
