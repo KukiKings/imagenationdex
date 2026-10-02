@@ -188,7 +188,7 @@
         return this.identity_blurb;
       }
 
-      if (/pronounc|how.*(say|spell)|sinn-?dex|sign-?dex|syn-?dex/.test(q)) {
+      if (/pronounc|how.*(say|spell)|^\s*(sinn|sign|syn)-?dex\W*$/.test(q)) {
         this._lastFactId = 'pronunciation_note';
         return this.pronunciation_note + ' TTS and public speech use Sinn-dex only.';
       }

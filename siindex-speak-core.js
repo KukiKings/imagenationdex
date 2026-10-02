@@ -267,6 +267,9 @@
       window.speechSynthesis.cancel();
     } catch (_) {}
     const preferredVoice = await getPreferredVoice();
+    // Chrome drops an utterance queued in the same tick as cancel(); wait, then resume.
+    await new Promise(function (r) { setTimeout(r, 120); });
+    try { window.speechSynthesis.resume(); } catch (_) {}
     return new Promise(function (resolve) {
       try {
         const utter = new SpeechSynthesisUtterance(spoken);
