@@ -4,6 +4,11 @@
  * Spoken name lock: Sinn-dex only (never Sign-dex).
  * Mic: MediaRecorder + siindex-website-transcribe; MIME/filename match for Safari mp4.
  * v3.0.15: no timeslice — incomplete webm/mp4 containers caused ElevenLabs provider 400.
+ * v3.0.20: public mic no longer calls the ElevenLabs transcribe provider at all when
+ * the browser has native speech recognition. listen() tries window.SpeechRecognition /
+ * webkitSpeechRecognition first (en-AU, single result) and calls ask() directly with
+ * the transcript. Only falls back to the old MediaRecorder + transcribe upload path
+ * when no native recognizer exists. Fixes transcription_provider_error (400) on tap.
  */
 (function () {
   "use strict";
@@ -706,11 +711,48 @@
   function listen(opts) {
     opts = opts || {};
     var source = opts.source || "public-home";
+    var Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (Rec) {
+      try {
+        var recognizer = new Rec();
+        recognizer.lang = "en-AU";
+        recognizer.interimResults = false;
+        recognizer.maxAlternatives = 1;
+        setStatus("listening", "Listening… speak clearly (tap mic to stop)");
+        recognizer.onresult = function (e) {
+          var transcript = "";
+          try { transcript = e.results[0][0].transcript || ""; } catch (_) {}
+          transcript = transcript.trim();
+          if (!transcript) {
+            setStatus("idle", "Could not understand. Type your question below.");
+            focusTypeInput();
+            return;
+          }
+          setStatus("idle", "Heard: " + transcript);
+          ask(transcript, { source: source });
+        };
+        recognizer.onerror = function (e) {
+          var code = (e && e.error) || "recognition_error";
+          if (code === "no-speech" || code === "aborted") {
+            setStatus("idle", "No speech detected. Speak clearly or type below.");
+            focusTypeInput();
+            return;
+          }
+          setStatus("error", "Voice failed (" + code + "). Type or use a chip.");
+          focusTypeInput();
+        };
+        recognizer.start();
+        return;
+      } catch (_) {
+        // Native recognizer unavailable or failed to start -- fall through
+        // to the MediaRecorder + transcribe upload path below.
+      }
+    }
     recordAndTranscribe(source);
   }
 
   window.SIINDEXVoice = {
-    version: "3.0.19",
+    version: "3.0.20",
     speak: speak,
     interrupt: interrupt,
     ask: ask,
