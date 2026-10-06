@@ -15,7 +15,7 @@
     full: 'Synthetic Intelligence',
     pqsi: 'Physical Quantum Synthetic Intelligence',
     brand: 'IN$DEX',
-    legal_registrant_when_complete: 'Image Nation DEx Limited',
+    legal_registrant_when_complete: 'INDEX Limited',
     legal_short: 'Image Nation DEX',
     legal_descriptive: 'Image Nation Decentralized Exchange',
     registration_status: 'in_progress',
@@ -66,11 +66,11 @@
       'not a random library voice when the locked identity is set. I do not claim a specific ElevenLabs product name in public answers.',
 
     legal_name_answer:
-      'INDEX Limited. Cook Islands registration is still processing. No certificate. AUSTRAC does not apply. ' +
+      'INDEX Limited. Cook Islands registration is still processing. No certificate. AUSTRAC does not apply. .INDX is reserved, not issued. Pay is not live. Pilot target 24 February 2027. ' +
       'IN$DEX is the brand. Sinn-dex is the spoken name.',
 
     registration_status_answer:
-      'For IN$DEX, company registration in the Cook Islands is in progress. ' +
+      'INDEX Limited. Cook Islands registration is still processing. No certificate. AUSTRAC does not apply. .INDX is reserved, not issued. Pay is not live. Pilot target 24 February 2027. ' +
       'I will not claim a completed registration, a certificate number, or a government licence until that is verified and AJ confirms it may be stated publicly.',
 
     offer_cook_islands_answer:
@@ -298,12 +298,12 @@
         if (/licence|license|approved|authoris|authoriz/.test(q)) {
           return (
             'IN$DEX does not claim a Cook Islands government licence or approval here. ' +
-            'Registration is in progress. Any formal authorisation requires proper process and AJ confirmation. ' +
+            'INDEX Limited. Cook Islands registration is still processing. No certificate. AUSTRAC does not apply. .INDX is reserved, not issued. Pay is not live. Pilot target 24 February 2027. Any formal authorisation requires proper process and AJ confirmation. ' +
             'I will speak honestly about status — not invent approvals.'
           );
         }
         return (
-          'IN$DEX is establishing its legal home in the Cook Islands. The founder is a New Zealand and Cook Islands citizen. ' +
+          'INDEX Limited. Cook Islands registration is still processing. No certificate. AUSTRAC does not apply. .INDX is reserved, not issued. Pay is not live. Pilot target 24 February 2027. IN$DEX is establishing its legal home in the Cook Islands. The founder is a New Zealand and Cook Islands citizen. ' +
           'I can explain IN$DEX and our pre-launch status honestly. I do not claim government licences or approvals that do not exist. ' +
           'If you need the formal company name for registration context, ask me the company name and I will give it.'
         );
