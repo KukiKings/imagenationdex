@@ -11,9 +11,22 @@ const CORS = {
 const INDX_PRICE_USD = 0.24;
 const GENESIS_BONUS = 50;
 
+// PAY NOT LIVE (Wallet SI hold, 2026-10-06, founder order): payments stay off until the
+// Cook Islands certificate exists and AJ says PROCEED. While false, this function refuses
+// every request with 403 pay_not_live BEFORE reading STRIPE_SECRET_KEY or making any Stripe
+// call. Do not flip without a founder PROCEED. The code below is kept, not deleted.
+const PAY_LIVE = false;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: CORS });
+  }
+
+  if (!PAY_LIVE) {
+    return new Response(
+      JSON.stringify({ error: 'pay_not_live' }),
+      { status: 403, headers: { 'Content-Type': 'application/json', ...CORS } }
+    );
   }
 
   try {
