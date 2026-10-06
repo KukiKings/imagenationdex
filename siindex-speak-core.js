@@ -738,6 +738,12 @@
             focusTypeInput();
             return;
           }
+          if (code === "network" || code === "service-not-allowed" || code === "language-not-supported") {
+            // Browser has no speech service (e.g. Brave) -- use the server transcription path.
+            setStatus("thinking", "Switching to server transcription…");
+            recordAndTranscribe(source);
+            return;
+          }
           setStatus("error", "Voice failed (" + code + "). Type or use a chip.");
           focusTypeInput();
         };
@@ -752,7 +758,7 @@
   }
 
   window.SIINDEXVoice = {
-    version: "3.0.20",
+    version: "3.0.21",
     speak: speak,
     interrupt: interrupt,
     ask: ask,
