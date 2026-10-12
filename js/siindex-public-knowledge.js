@@ -17,7 +17,7 @@
     brand: 'IN$DEX',
     legal_registrant_when_complete: 'INDEX Limited',
     legal_short: 'Image Nation DEX',
-    legal_descriptive: 'Image Nation Decentralized Exchange',
+    legal_descriptive: 'Image Nation Decentralised Exchange',
     registration_status: 'in_progress',
     founder: 'AJ Henry',
     role: 'CEO and COO under staged founder-controlled authority',
