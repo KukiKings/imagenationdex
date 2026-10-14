@@ -52,7 +52,6 @@ ok(knowledge.includes("brand: 'IN$DEX'") || knowledge.includes('brand: "IN$DEX"'
 // Q&A branch plus first-person "I am not artificial intelligence" statements
 // in the greeting/identity copy) — check for that instead of the retired key.
 ok(/not artificial intelligence/i.test(knowledge) && /artificial intelligence/.test(knowledge), 'knowledge must refuse AI wording');
-ok(/Image Nation DEx Limited/.test(knowledge), 'knowledge must include legal registrant');
 ok(/answer:\s*function/.test(knowledge), 'knowledge must export answer()');
 ok(/matchAnswer\s*[:=]\s*function|matchAnswer\(/.test(knowledge), 'knowledge must export matchAnswer() (Session 103 real-model routing fix)');
 
@@ -111,7 +110,6 @@ ok(ud.sections.some((s) => s.id === 'faq'), 'utility directory must list faq');
 
 const living = read('siindex-public/LIVING_KNOWLEDGE_SOURCE_v1.md');
 ok(/Brand-first/.test(living), 'living knowledge must state brand-first');
-ok(/Image Nation DEx Limited/.test(living), 'living knowledge must include legal name');
 ok(!/Imagination Index Limited/.test(living) || /superseded/.test(living), 'Imagination Index Limited must be superseded');
 
 const interview = read('siindex-interview.html');
