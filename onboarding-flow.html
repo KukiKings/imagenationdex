@@ -989,8 +989,9 @@
 
         <div class="field-group">
           <label class="field-label" for="nameInput">Your Name</label>
-          <input class="field-input" id="nameInput" type="text" placeholder="e.g. Maria Santos" autocomplete="name" oninput="updateDomain()" style="font-size:18px;">
+          <input class="field-input" id="nameInput" type="text" placeholder="e.g. Maria Santos" autocomplete="name" oninput="updateDomain()" onblur="checkDomainAvailability()" style="font-size:18px;">
           <div style="font-size:11px;color:var(--text-muted);margin-top:6px;padding-left:2px;">Spaces and special characters are removed to create your address.</div>
+          <div id="domainStatus" role="status" style="display:none;margin-top:8px;padding-left:2px;font-size:13px;font-weight:600;line-height:1.5;"></div>
         </div>
 
         <div class="field-group">
@@ -1324,6 +1325,18 @@
     <button class="otp-back" onclick="cancelOnboardOtp()">← Back to edit</button>
   </div>
 </div>
+<!-- Optional email step - shown after a phone OTP succeeds, before the citizen row is created.
+     Skippable. If skipped, the email key is omitted from the create_onboarding_citizen payload. -->
+<div class="otp-overlay" id="emailOverlay">
+  <div class="otp-title">Add an email (optional)</div>
+  <div class="otp-sub">Lets you recover your account if you lose your phone. You can skip this.</div>
+  <input class="field-input" id="optEmailInput" type="email" inputmode="email" autocomplete="email" placeholder="you@email.com" oninput="onOptEmailInput()" style="max-width:320px;width:100%;">
+  <div class="otp-error" id="emailOverlayError"></div>
+  <div class="otp-actions">
+    <button class="btn-primary" id="emailContinueBtn" disabled onclick="submitOptionalEmail()">Continue &rarr;</button>
+    <button class="otp-resend" id="emailSkipBtn" onclick="skipOptionalEmail()">Skip</button>
+  </div>
+</div>
 
 <!-- Optional QR referral-code scanner — additive convenience only. Never touches
      phone/email OTP verification above: scanning or typing a code here only sets
@@ -1411,6 +1424,22 @@
     });
   }
 
+  // ── DOMAIN AVAILABILITY (live check) ──
+  // check_domain_available(p_domain) takes the BARE name (no suffix) and appends .IN$DEX itself.
+  // create_onboarding_citizen takes the FULL string (slug + '.IN$DEX') in web3_domain. Two formats.
+  let domainCheck = { slug: '', ok: false };
+  function currentSlug() {
+    const name = document.getElementById('nameInput').value.trim();
+    return name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) || 'sovereign';
+  }
+  function setDomainStatus(html, color) {
+    const st = document.getElementById('domainStatus');
+    if (!st) return;
+    st.style.display = html ? 'block' : 'none';
+    st.style.color = color || '';
+    st.innerHTML = html || '';
+  }
+
   // ── DOMAIN PREVIEW ──
   function updateDomain() {
     const name = document.getElementById('nameInput').value.trim();
@@ -1418,6 +1447,7 @@
     const errEl = document.getElementById('domainError');
     // Clear any domain collision error when user edits
     if (errEl) { errEl.style.display = 'none'; }
+    if (domainCheck.slug !== currentSlug()) { domainCheck = { slug: '', ok: false }; setDomainStatus(''); }
     if (name.length > 0) {
       const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) || 'sovereign';
       domainEl.innerHTML = slug + '<span>.IN$DEX</span>';
@@ -1434,8 +1464,50 @@
   function checkIdentityForm() {
     const name = document.getElementById('nameInput').value.trim();
     const contact = document.getElementById('contactInput').value.trim();
-    const valid = name.length > 1 && contact.length > 4;
+    const valid = name.length > 1 && contact.length > 4 && domainCheck.ok && domainCheck.slug === currentSlug();
     document.getElementById('btn2').disabled = !valid;
+  }
+
+  async function checkDomainAvailability() {
+    const name = document.getElementById('nameInput').value.trim();
+    if (name.length < 2) { return; }
+    const slug = currentSlug();
+    if (domainCheck.ok && domainCheck.slug === slug) { return; }
+    domainCheck = { slug: '', ok: false };
+    checkIdentityForm();
+    setDomainStatus('Checking ' + slug + '.IN$DEX\u2026', 'var(--text-muted)');
+    try {
+      const { data, error } = await sb.rpc('check_domain_available', { p_domain: slug });
+      if (currentSlug() !== slug) { return; } // name changed while the check was running
+      if (error || typeof data !== 'boolean') {
+        setDomainStatus('Could not check availability \u2014 click out of the name box to try again.', 'var(--red)');
+        return;
+      }
+      if (data) {
+        domainCheck = { slug, ok: true };
+        setDomainStatus('\u2713 ' + slug + '.IN$DEX is available', 'var(--green)');
+        checkIdentityForm();
+        return;
+      }
+      // Taken: find up to two alternatives that are actually available.
+      const alts = [];
+      for (const n of ['1', '2', '3', '4', '5']) {
+        if (alts.length >= 2) break;
+        const cand = slug.slice(0, 20 - n.length) + n;
+        try {
+          const r = await sb.rpc('check_domain_available', { p_domain: cand });
+          if (currentSlug() !== slug) { return; }
+          if (!r.error && r.data === true) alts.push(cand);
+        } catch (e) { /* skip this candidate */ }
+      }
+      const tryText = alts.length
+        ? ' Try: ' + alts.map(a => '<em style="color:#00D4FF;">' + a + '.IN$DEX</em>').join(' or ') + ' \u2014 edit your name above.'
+        : ' Edit your name above to try another.';
+      setDomainStatus('\u2717 <strong>' + slug + '.IN$DEX is already claimed.</strong>' + tryText, 'var(--red)');
+    } catch (e) {
+      if (currentSlug() !== slug) { return; }
+      setDomainStatus('Could not check availability \u2014 click out of the name box to try again.', 'var(--red)');
+    }
   }
 
   // ── FIRST STEPS BY GOAL ──
@@ -1477,9 +1549,12 @@
   // not another parallel implementation of it.
   let onboardOtpContact = '';
   let onboardOtpIsPhone = false;
+  let optionalEmail = null; // set only if the citizen enters one on the optional email step
 
   function activatePortal() {
     const name = document.getElementById('nameInput').value.trim();
+    optionalEmail = null;
+    if (!(domainCheck.ok && domainCheck.slug === currentSlug())) { checkDomainAvailability(); return; }
     const rawContact = document.getElementById('contactInput').value.trim();
     onboardOtpIsPhone = rawContact.startsWith('+') || /^[\d\s\-()+]+$/.test(rawContact);
     // Same normalization as quickstart-onboarding.html's e164Phone() / login.html's
@@ -1576,6 +1651,36 @@
     }
     btn.textContent = 'Verify →';
     document.getElementById('otpOverlay').classList.remove('active');
+    if (onboardOtpIsPhone) { openOptionalEmailStep(); }
+    else { completeActivation(onboardOtpContact, onboardOtpIsPhone); }
+  }
+
+  // ── OPTIONAL EMAIL STEP (phone sign-ups only; an email sign-up already has one) ──
+  function openOptionalEmailStep() {
+    document.getElementById('optEmailInput').value = '';
+    document.getElementById('emailOverlayError').textContent = '';
+    document.getElementById('emailContinueBtn').disabled = true;
+    document.getElementById('emailOverlay').classList.add('active');
+    document.getElementById('optEmailInput').focus();
+  }
+  function onOptEmailInput() {
+    const v = document.getElementById('optEmailInput').value.trim();
+    document.getElementById('emailContinueBtn').disabled = !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
+    document.getElementById('emailOverlayError').textContent = '';
+  }
+  function submitOptionalEmail() {
+    const v = document.getElementById('optEmailInput').value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) {
+      document.getElementById('emailOverlayError').textContent = 'Enter a valid email or tap Skip.';
+      return;
+    }
+    optionalEmail = v;
+    document.getElementById('emailOverlay').classList.remove('active');
+    completeActivation(onboardOtpContact, onboardOtpIsPhone);
+  }
+  function skipOptionalEmail() {
+    optionalEmail = null;
+    document.getElementById('emailOverlay').classList.remove('active');
     completeActivation(onboardOtpContact, onboardOtpIsPhone);
   }
 
@@ -1663,17 +1768,17 @@
           // RPC inserts server-side and returns the id directly. Reward
           // fields granted after via claim_genesis_signup_bonus_anon() —
           // found + fixed 19 Jul 2026.
-          const { data: created, error: rpcError } = await sb.rpc('create_onboarding_citizen', {
-            p_payload: {
-              citizen_name: name,
-              phone_number: isPhone ? contact : null,
-              // FIXED 2026-09-04: an email contact was previously discarded entirely —
-              // create_onboarding_citizen accepts an email field, this just never sent one.
-              email: !isPhone ? contact : null,
-              web3_domain: slug + '.IN$DEX',
-              referred_by: urlRef || null
-            }
-          });
+          const onboardPayload = {
+            citizen_name: name,
+            phone_number: isPhone ? contact : null,
+            web3_domain: slug + '.IN$DEX', // FULL string; the availability check used the bare slug
+            referred_by: urlRef || null
+          };
+          // email: the verified email contact, or the optional email from the email step.
+          // If neither exists the key is omitted.
+          if (!isPhone) onboardPayload.email = contact;
+          else if (optionalEmail) onboardPayload.email = optionalEmail;
+          const { data: created, error: rpcError } = await sb.rpc('create_onboarding_citizen', { p_payload: onboardPayload });
           const data = created && created.success ? { id: created.id } : null;
           const error = created && !created.success ? { code: created.reason === 'duplicate' ? '23505' : 'unknown', message: created.reason, details: created.detail } : rpcError;
           // Real Supabase Auth session now exists (verifyOnboardOtp()'s verifyOtp() call
