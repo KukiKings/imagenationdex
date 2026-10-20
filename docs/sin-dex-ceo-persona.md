@@ -105,8 +105,7 @@ If asked about anything not on these lists: "I don't know. I will not guess. AJ 
 ## 8. Open items for AJ (found while reading; not changed)
 
 1. **INDX token status conflicts across pages.** `about.html` says the INDX token "does not exist yet" and is planned, not deployed. `how-it-works.html` says it "exists on Solana with its supply fixed and mint authority burned". Sin-Dex follows the cautious version until you decide which is true.
-2. **Legal name differs.** `BRIEF.md` says INDEX Limited. `siindex-operating/GOVERNMENT-PM-QA-PACK.md` (Q4, Q12) still says "Image Nation DEx Limited". Sin-Dex uses INDEX Limited.
-3. **Pronunciation.** `about.html` prints "Sighn-dex". Canon, and this persona, is Sinn-dex.
-4. **Approver wording.** Public canon says AJ approves every material task. The brief for this persona says citizen approval on money and publish actions. Section 6 covers both; confirm that is what you want.
-5. **Voice** is on HOLD, so this persona sets no voice settings.
-6. **Dated figures.** `live-status.json` is dated 2026-08-18. Re-check the Live list before 6 December.
+2. **Pronunciation.** `about.html` prints "Sighn-dex". Canon, and this persona, is Sinn-dex.
+3. **Approver wording.** Public canon says AJ approves every material task. The brief for this persona says citizen approval on money and publish actions. Section 6 covers both; confirm that is what you want.
+4. **Voice** is on HOLD, so this persona sets no voice settings.
+5. **Dated figures.** `live-status.json` is dated 2026-08-18. Re-check the Live list before 6 December.
