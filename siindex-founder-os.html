@@ -22,6 +22,11 @@ button.sec{background:#1A1D2E;border:1px solid #2A2D38}
 .note{font-size:12px;color:#8B90A8}
 .log{font-size:12px;color:#A0A8C8;white-space:pre-wrap;max-height:220px;overflow:auto}
 a{color:#00D4FF}
+.orb{border-radius:999px;padding:16px;background:radial-gradient(circle at 30% 30%,#00D4FF,#2B35D8 60%,#8B3FE8)}
+.orb.on{box-shadow:0 0 0 3px #00E5A0 inset}
+.rtstate{font-weight:800;font-size:12px;letter-spacing:.06em;color:#8B90A8;margin:8px 0 4px}
+.rtstate.listening{color:#00E5A0}.rtstate.thinking{color:#ffb800}.rtstate.speaking{color:#00D4FF}.rtstate.error{color:#ff6b6b}
+.rtlog{font-size:12px;color:#A0A8C8;white-space:pre-wrap;min-height:2.4em}
 </style>
 </head>
 <body>
@@ -43,11 +48,21 @@ a{color:#00D4FF}
 </div>
 
 <div class="strip">
+<h2>Live voice</h2>
+<button type="button" id="orb" class="orb">Start live voice</button>
+<button type="button" class="sec" id="stopall">STOP ALL</button>
+<p id="rtstate" class="rtstate">IDLE</p>
+<div id="rtlog" class="rtlog"></div>
+<p class="note">Continuous and interruptible: just talk, and talk over it to cut it off. Conversation only — it cannot send, pay or change anything. Uses an OpenAI voice, not the locked SIINDEX voice. Mute or STOP ALL closes it immediately.</p>
+</div>
+
+<div class="strip">
 <h2>Log</h2>
 <div class="log" id="logbox">No orders yet this device.</div>
 </div>
 
 <p><a href="/siindex-test-board.html">Test board</a> · <a href="/onboard">Onboard</a></p>
+<script src="/siindex-realtime-voice.js"></script>
 <script>
 (function () {
   var KEY = 'siindex_founder_orders_v1';
@@ -63,6 +78,7 @@ a{color:#00D4FF}
     muteBtn.textContent = on ? 'Unmute replies' : 'Mute replies';
     try { window.speechSynthesis.cancel(); } catch (e) {}
     stopAudio();
+    if (on && window.SIINDEXRealtime) window.SIINDEXRealtime.stop();
   }
   function load() {
     try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; }
@@ -180,6 +196,7 @@ a{color:#00D4FF}
   function speak(text) {
     replyEl.textContent = text;
     if (muted()) return;
+    if (window.SIINDEXRealtime && window.SIINDEXRealtime.isActive()) return;
     try { window.speechSynthesis.cancel(); } catch (e) {}
     stopAudio();
     var gen = speakGen;
@@ -241,6 +258,58 @@ a{color:#00D4FF}
   document.getElementById('log').onclick = function () { push(order.value, true); };
   document.getElementById('clear').onclick = function () {
     localStorage.removeItem(KEY); render(); replyEl.textContent = ''; st.textContent = 'IDLE — waiting on founder';
+  };
+  // --- Live voice (additional channel; text, board, log and mailto flows are untouched) ---
+  var orb = document.getElementById('orb');
+  var stopAllBtn = document.getElementById('stopall');
+  var rtStateEl = document.getElementById('rtstate');
+  var rtLogEl = document.getElementById('rtlog');
+  var rtHist = [];
+  var rtLive = { user: '', assistant: '' };
+  var RT_LABEL = { idle: 'IDLE', connecting: 'CONNECTING…', listening: 'LISTENING', thinking: 'THINKING', speaking: 'SPEAKING', error: 'ERROR' };
+  function rtRender() {
+    var lines = rtHist.slice(-5);
+    if (rtLive.user) lines.push('You: ' + rtLive.user + ' …');
+    if (rtLive.assistant) lines.push('SIINDEX: ' + rtLive.assistant + ' …');
+    rtLogEl.textContent = lines.join('\n');
+  }
+  function rtOnState(state, detail) {
+    rtStateEl.className = 'rtstate ' + state;
+    rtStateEl.textContent = (RT_LABEL[state] || state.toUpperCase()) + (detail && state === 'error' ? ' — ' + detail : '');
+    var active = state !== 'idle' && state !== 'error';
+    orb.classList.toggle('on', active);
+    orb.textContent = active ? 'End live voice' : 'Start live voice';
+  }
+  function rtStop() {
+    if (window.SIINDEXRealtime) window.SIINDEXRealtime.stop();
+    rtLive = { user: '', assistant: '' };
+    rtRender();
+  }
+  orb.onclick = function () {
+    if (!window.SIINDEXRealtime) { rtOnState('error', 'live voice module did not load'); return; }
+    if (window.SIINDEXRealtime.isActive()) { rtStop(); return; }
+    if (muted()) setMute(false);
+    try { window.speechSynthesis.cancel(); } catch (e) {}
+    stopAudio();
+    rtHist = []; rtLive = { user: '', assistant: '' }; rtRender();
+    window.SIINDEXRealtime.start({
+      onState: rtOnState,
+      onError: function (m) { rtOnState('error', m); },
+      onTranscript: function (role, text, final) {
+        if (final) { rtHist.push((role === 'user' ? 'You: ' : 'SIINDEX: ') + text); rtLive[role] = ''; }
+        else { rtLive[role] = text; }
+        rtRender();
+      }
+    });
+  };
+  stopAllBtn.onclick = function () {
+    rtStop();
+    try { window.speechSynthesis.cancel(); } catch (e) {}
+    stopAudio();
+    try {
+      if (listening) { listening = false; micBtn.textContent = 'Start Listening'; st.textContent = 'IDLE — waiting on founder'; }
+      stopRecognizer();
+    } catch (e) {}
   };
   muteBtn.onclick = function () { setMute(!muted()); };
   // 2026-10-03: Jarvis mode. Founder asked why this page isn't
