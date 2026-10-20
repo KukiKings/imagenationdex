@@ -192,7 +192,9 @@ a{color:#00D4FF}
       headers: { 'Content-Type': 'application/json', 'x-siindex-provider-consent': 'accepted' },
       body: JSON.stringify({ text: String(text).slice(0, 1400) })
     }).then(function (res) {
-      if (!res.ok) throw new Error('tts_http_' + res.status);
+      if (!res.ok) {
+        return res.text().then(function (b) { throw new Error('HTTP ' + res.status + ' ' + String(b).slice(0, 160)); });
+      }
       return res.blob();
     }).then(function (blob) {
       clearTimeout(timer);
@@ -208,9 +210,12 @@ a{color:#00D4FF}
         try { URL.revokeObjectURL(url); } catch (e) {}
       };
       return audio.play();
-    }).catch(function () {
+    }).catch(function (err) {
       clearTimeout(timer);
       if (gen !== speakGen) return;
+      var why = (err && (err.name === 'AbortError' ? 'timeout' : err.message)) || 'unknown';
+      try { console.warn('[founder-os] provider voice failed, using browser speech:', why); } catch (e) {}
+      try { st.textContent = 'LOGGED — voice fallback: ' + why; } catch (e) {}
       stopAudio();
       speakNative(text);
     });
