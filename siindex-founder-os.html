@@ -28,7 +28,7 @@ a{color:#00D4FF}
 <p class="who">COMPUTER · FOUNDER ONLY · SINN-DEX</p>
 <h1>Computer.</h1>
 <p>You speak. I answer. I log. I push sub-agents.</p>
-<div class="banner">Codeword COMPUTER. Voice is on-device only (browser speech). Not ElevenLabs. Not visitor Talk.</div>
+<div class="banner">Codeword COMPUTER. Replies use the same SIINDEX voice as public Talk (provider voice); if it is unavailable they fall back to browser speech. Mic input is browser speech recognition.</div>
 
 <div class="strip">
 <h2>Speak or type</h2>
@@ -62,6 +62,7 @@ a{color:#00D4FF}
     localStorage.setItem(MUTE, on ? '1' : '0');
     muteBtn.textContent = on ? 'Unmute replies' : 'Mute replies';
     try { window.speechSynthesis.cancel(); } catch (e) {}
+    stopAudio();
   }
   function load() {
     try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; }
@@ -152,9 +153,7 @@ a{color:#00D4FF}
     });
     return cachedVoicePromise;
   }
-  function speak(text) {
-    replyEl.textContent = text;
-    if (muted()) return;
+  function speakNative(text) {
     try { window.speechSynthesis.cancel(); } catch (e) {}
     getPreferredVoice().then(function (v) {
       try {
@@ -163,6 +162,57 @@ a{color:#00D4FF}
         u.rate = 0.95;
         window.speechSynthesis.speak(u);
       } catch (e) {}
+    });
+  }
+  // Same public TTS endpoint and project as siindex-speak-core.js. The voice ID is locked
+  // server-side (siindex-website-voice-tts); nothing here selects or changes it.
+  var TTS_URL = 'https://zljgthfzbalsunuoohcd.supabase.co/functions/v1/siindex-website-voice-tts';
+  var activeAudio = null;
+  var activeAbort = null;
+  var activeUrl = null;
+  var speakGen = 0;
+  function stopAudio() {
+    speakGen++;
+    if (activeAbort) { try { activeAbort.abort(); } catch (e) {} activeAbort = null; }
+    if (activeAudio) { try { activeAudio.pause(); } catch (e) {} activeAudio = null; }
+    if (activeUrl) { try { URL.revokeObjectURL(activeUrl); } catch (e) {} activeUrl = null; }
+  }
+  function speak(text) {
+    replyEl.textContent = text;
+    if (muted()) return;
+    try { window.speechSynthesis.cancel(); } catch (e) {}
+    stopAudio();
+    var gen = speakGen;
+    var controller = new AbortController();
+    activeAbort = controller;
+    var timer = setTimeout(function () { controller.abort(); }, 25000);
+    fetch(TTS_URL, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json', 'x-siindex-provider-consent': 'accepted' },
+      body: JSON.stringify({ text: String(text).slice(0, 1400) })
+    }).then(function (res) {
+      if (!res.ok) throw new Error('tts_http_' + res.status);
+      return res.blob();
+    }).then(function (blob) {
+      clearTimeout(timer);
+      if (gen !== speakGen) return;
+      if (!blob || !blob.size) throw new Error('tts_empty');
+      var url = URL.createObjectURL(new Blob([blob], { type: 'audio/mpeg' }));
+      var audio = new Audio(url);
+      activeAudio = audio;
+      activeUrl = url;
+      audio.onended = function () {
+        if (activeAudio === audio) { activeAudio = null; }
+        if (activeUrl === url) { activeUrl = null; }
+        try { URL.revokeObjectURL(url); } catch (e) {}
+      };
+      return audio.play();
+    }).catch(function () {
+      clearTimeout(timer);
+      if (gen !== speakGen) return;
+      stopAudio();
+      speakNative(text);
     });
   }
   function push(q, mail) {
