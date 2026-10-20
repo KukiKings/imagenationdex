@@ -27,6 +27,42 @@
   var partial = { user: "", assistant: "" };
   var speakingSince = 0;
 
+  // Client-side cooldown after a failed session start (token HTTP 429 included).
+  // The start button (opts.button, else #orb) stays disabled and the state line counts down.
+  var COOLDOWN_SECONDS = 60;
+  var cooldownUntil = 0;
+  var cooldownTimer = null;
+  var cooldownLabel = "";
+
+  function setButtonDisabled(flag) {
+    try {
+      var el = (opts && opts.button) || document.getElementById("orb");
+      if (el) el.disabled = !!flag;
+    } catch (e) {}
+  }
+
+  function cooldownTick() {
+    var left = Math.ceil((cooldownUntil - Date.now()) / 1000);
+    if (left <= 0) {
+      if (cooldownTimer) { clearInterval(cooldownTimer); cooldownTimer = null; }
+      cooldownUntil = 0;
+      setButtonDisabled(false);
+      setState("idle", "ready to retry");
+      return;
+    }
+    setButtonDisabled(true);
+    setState("error", cooldownLabel + ", retry in " + left + " s");
+  }
+
+  function startCooldown(seconds, label) {
+    var secs = Math.max(COOLDOWN_SECONDS, Number(seconds) || 0);
+    cooldownUntil = Date.now() + secs * 1000;
+    cooldownLabel = label;
+    if (cooldownTimer) clearInterval(cooldownTimer);
+    cooldownTimer = setInterval(cooldownTick, 1000);
+    cooldownTick();
+  }
+
   function setState(next, detail) {
     if (current === next && !detail) return;
     current = next;
@@ -115,6 +151,7 @@
   async function start(options) {
     if (current !== "idle" && current !== "error") return;
     opts = options || {};
+    if (cooldownUntil > Date.now()) { cooldownTick(); return; }
     var gen = ++generation;
     setState("connecting");
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof RTCPeerConnection === "undefined") {
@@ -132,7 +169,10 @@
       });
       if (!tokenRes.ok) {
         var body = ""; try { body = (await tokenRes.text()).slice(0, 200); } catch (e) {}
-        throw new Error("token HTTP " + tokenRes.status + " " + body);
+        var httpErr = new Error("token HTTP " + tokenRes.status + " " + body);
+        httpErr.status = tokenRes.status;
+        try { httpErr.retryAfter = Number(JSON.parse(body).retry_after_seconds) || 0; } catch (e) {}
+        throw httpErr;
       }
       var tok = await tokenRes.json();
       if (!tok || !tok.client_secret) throw new Error("token response had no client_secret");
@@ -182,9 +222,13 @@
       clearTimeout(timer);
       if (gen !== generation) return;
       var name = err && err.name;
-      fail(name === "NotAllowedError" ? "Microphone blocked. Allow the mic, or use the text box."
-        : name === "AbortError" ? "Live voice timed out."
-        : String((err && err.message) || err));
+      var limited = !!(err && err.status === 429);
+      var reason = limited ? "Rate limited"
+        : name === "NotAllowedError" ? "Microphone blocked"
+        : name === "AbortError" ? "Live voice timed out"
+        : String((err && err.message) || err).slice(0, 80);
+      fail(reason);
+      startCooldown(limited ? err.retryAfter : 0, reason);
     }
   }
 
