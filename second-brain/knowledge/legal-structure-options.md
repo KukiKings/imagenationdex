@@ -6,7 +6,7 @@
 
 The **Decentralized Unincorporated Nonprofit Association** is a **Wyoming** entity (SF0050, effective 1 Jul 2024). Three facts decide it on their own:
 
-1. **It is a US entity.** Adopting it gives IN$DEX a Wyoming legal home, contradicting the live site (*"Image Nation Dex Limited is the intended Cook Islands company name"*) and the entire Pacific-first position — and creating US securities, tax and sanctions nexus a Cook Islands structure does not carry.
+1. **It is a US entity.** Adopting it gives IN$DEX a Wyoming legal home, contradicting the site's stated Cook Islands intent and the entire Pacific-first position — and creating US securities, tax and sanctions nexus a Cook Islands structure does not carry.
 2. **It requires at least 100 members.** IN$DEX has **zero citizens** today. Not available even if wanted.
 3. **Strictly nonprofit** — no distribution to members or token holders. ⚠️ Needs checking against the 98/2 model and anything INDX is ever meant to return.
 
@@ -28,7 +28,7 @@ The Cook Islands runs **two separate regimes**. **Domestic** (Companies Act 2017
 |---|---|
 | Company limited by guarantee | Closest domestic analogue to a DUNA's nonprofit character. Price first. ⚠️ |
 | Incorporated Society (Act 1994, am. 2017) | Membership-based, community-legible, near Citizen Governance conceptually. Member-count rules need checking. ⚠️ |
-| Company limited by shares | Simplest, already the stated intent (`Image Nation DEX Limited`). Does not express 98/2 by itself. |
+| Company limited by shares | Simplest, already the stated intent (`INDEX LIMITED`). Does not express 98/2 by itself. |
 | **Hybrid** — operating company + guarantee company/society holding the Civilisation Fund | Makes 98/2 **structural rather than a promise**. Most likely to survive scrutiny. ⚠️ |
 
 ## Status
