@@ -108,7 +108,7 @@
 
 ## Nightly pass 2026-07-30 — new entries
 
-**Legal entity name decided:** the Cook Islands company will be **`Image Nation DEX Limited`** (AJ, 2026-07-29, recorded in `cook-islands-registration-prep.md`). The legal name and the brand are deliberately different — `IN$DEX` already stands for *Image Nation Decentralised Exchange*, so the legal name is the literal expansion and loses no meaning; the wordmark, logo, wave, star and `$` stay brand assets. Rejected: `Image Nation Decentralised Exchange Limited` (unwieldy on forms), `INDEX Limited` (generic, likely conflicts). **Correction of record:** the earlier claim that the registry will not accept `$` in a company name was *inferred, not verified* — BTIB states only that names must be in English. Settle with a name search, and search the variants (`Image Nation DEX`, `Image Nation`, `ImageNation`, `Index`), not just the exact string.
+**Legal entity name:** the Cook Islands company is **INDEX LIMITED** (AJ; all caps, no full stop). The brand stays `IN$DEX` (*Image Nation Decentralised Exchange*); the wordmark, logo, wave, star and `$` stay brand assets, separate from the legal name.
 
 **Registered office is still open.** See [[uncle-mac]] — asked, not confirmed.
 
