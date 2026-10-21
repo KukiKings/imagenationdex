@@ -12,7 +12,7 @@
 |------|--------|
 | Founder | AJ Henry — **New Zealand and Cook Islands citizen** |
 | Company home | **Cook Islands** |
-| Legal name (when complete) | **Image Nation DEx Limited** |
+| Legal name (when complete) | **INDEX LIMITED** |
 | **AUSTRAC** | **Not involved** — removed from P0 / programme path |
 
 See `siindex-operating/JURISDICTION.md`.
@@ -42,7 +42,7 @@ See `siindex-operating/JURISDICTION.md`.
 
 **AJ speed path:**
 1. Confirm domestic vs international path with Cook Islands counsel / trustee  
-2. Name check for Image Nation DEx Limited  
+2. Name check for INDEX LIMITED  
 3. File (registry or trustee)  
 4. Certificate → update living public knowledge  
 
