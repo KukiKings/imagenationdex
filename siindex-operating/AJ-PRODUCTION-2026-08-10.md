@@ -13,4 +13,4 @@
 - Always-on daemon on dedicated hardware (approved in principle; deploy as separate ops job)
 - EVE CLI production app (`npx eve init`) — optional later; doctrine does not require the Vercel product name to be live
 
-**Brand:** IN$DEX · **SI:** SIINDEX (Syn-dex) · **Company:** Image Nation DEx Limited (registration in progress)
+**Brand:** IN$DEX · **SI:** SIINDEX (Syn-dex) · **Company:** INDEX LIMITED (registration in progress)
