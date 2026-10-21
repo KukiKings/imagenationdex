@@ -42,5 +42,5 @@ This wires every page that already loads speak-core.
 ## Speech rules
 
 - Always **IN$DEX** first
-- Legal stack only when asked: Image Nation DEX → Decentralized Exchange → Image Nation DEx Limited
+- Legal stack only when asked: Image Nation DEX → Decentralized Exchange → INDEX LIMITED
 - SI / PQSI — never AI
