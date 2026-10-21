@@ -93,7 +93,7 @@
 - **KYC Tier 0** — phone number only. No documents, no face scan, no liveness check. Capped at $1,000/month.
 - **ZK-Proof identity** — verifies without exposing data
 - **FATF Travel Rule** — ZK-proof via TRISA/OpenVASP
-- **Legal structure** — Cook Islands company registration **in progress** (registry account created 2026-07-29; name reserved: Image Nation DEX Limited).
+- **Legal structure** — Cook Islands company registration **in progress** (registry account created 2026-07-29; name reserved: INDEX LIMITED).
 
 ---
 
