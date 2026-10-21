@@ -34,7 +34,7 @@
 
 ### Q4 — Is registration complete?
 
-**A:** Registration is **in progress** in the Cook Islands for the intended legal name **Image Nation DEx Limited**. SIINDEX does not invent a completed certificate.
+**A:** Registration is **in progress** in the Cook Islands for the intended legal name **INDEX LIMITED**. SIINDEX does not invent a completed certificate.
 
 ### Q5 — Are wallets and payments live?
 
@@ -66,7 +66,7 @@
 
 ### Q12 — Company name?
 
-**A:** Brand is always **IN$DEX**. Short form when asked: Image Nation DEX. Full descriptive: Image Nation Decentralized Exchange. Legal registrant when complete: Image Nation DEx Limited.
+**A:** Brand is always **IN$DEX**. Short form when asked: Image Nation DEX. Full descriptive: Image Nation Decentralized Exchange. Legal registrant when complete: INDEX LIMITED.
 
 ---
 
