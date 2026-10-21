@@ -14,7 +14,7 @@ All Phase A construction is **Grok** until Codex credits return.
 ## Locked speech rules
 
 1. Always lead with **IN$DEX**
-2. Legal stack only when asked: Image Nation DEX → Image Nation Decentralized Exchange → Image Nation DEx Limited
+2. Legal stack only when asked: Image Nation DEX → Image Nation Decentralized Exchange → INDEX LIMITED
 3. SIINDEX = SI / PQSI — never AI
 4. Pre-launch labels — not demo product framing
 5. Registration in progress — not complete until certificate
