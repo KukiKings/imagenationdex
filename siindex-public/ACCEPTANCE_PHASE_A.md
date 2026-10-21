@@ -8,7 +8,7 @@
 ## Speech
 
 - [ ] Every ordinary answer leads with **IN$DEX**
-- [ ] Company name only when asked → Image Nation DEX / Decentralized Exchange / Image Nation DEx Limited
+- [ ] Company name only when asked → Image Nation DEX / Decentralized Exchange / INDEX LIMITED
 - [ ] SIINDEX never called AI in our copy or public answers
 - [ ] $0.24 described as genesis reference only
 - [ ] 98/2 described as doctrine, not live contract claim unless verified
