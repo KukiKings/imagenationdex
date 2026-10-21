@@ -14,7 +14,7 @@ The order's wording contained claims the repo does not support. The application 
 
 | Supplied wording | Problem | Used instead |
 |---|---|---|
-| "headquartered in the Cook Islands" | INDEX Limited is not registered; no certificate. AJ builds from Melbourne. | "establishing its legal home in the Cook Islands; registration in progress" |
+| "headquartered in the Cook Islands" | INDEX LIMITED is not registered; no certificate. AJ builds from Melbourne. | "establishing its legal home in the Cook Islands; registration in progress" |
 | "mission to bank the unbanked" | IN$DEX is not a bank and has no licence; no banking is live. | "identity and everyday payment tools for the unbanked" |
 | "ties directly to a live platform" | Accounts, wallets, payments are not live. Only the website and information tools are. | Live and not-live stated separately |
 | "each citizen claims yourname.index as a free permanent address" | Issuance is not live. `.INDX` names are reserved, not issued. Free and permanent are design intents, not promises. | Described as the planned design |
@@ -24,7 +24,7 @@ The order's wording contained claims the repo does not support. The application 
 
 ## B. Application content
 
-**Project name:** IN$DEX (Image Nation Dex), founded by Arthur John Henry. Legal entity: INDEX Limited, Cook Islands registration in progress, no certificate yet.
+**Project name:** IN$DEX (Image Nation Dex), founded by Arthur John Henry. Legal entity: INDEX LIMITED, Cook Islands registration in progress, no certificate yet.
 
 **Proposed TLD:** `.index` (5 characters; AllDomains' steps page says ASCII, at least 3 and under 10 characters, so the length is acceptable). Fallback to consider: `.indx`, which matches the token ticker (see section C).
 
