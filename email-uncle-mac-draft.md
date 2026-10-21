@@ -19,7 +19,7 @@ We're in the final stretch now, finishing backend, security, and deployment work
 
 There's one thing I could use your help with, and I want to be upfront that it's a real favour, not a small formality.
 
-I'm registering the company in the Cook Islands, not Australia. That's a deliberate choice. Australia has its own regulators and its own systems; the Pacific doesn't, and I want this thing to belong here rather than be run at it from somewhere else. The company will be called Image Nation DEX Limited.
+I'm registering the company in the Cook Islands, not Australia. That's a deliberate choice. Australia has its own regulators and its own systems; the Pacific doesn't, and I want this thing to belong here rather than be run at it from somewhere else. The company will be called INDEX LIMITED.
 
 To register, I have to give a Cook Islands address as the company's registered office. It's the address the government uses to send official mail. I'm in Melbourne until December, so I don't have one.
 
