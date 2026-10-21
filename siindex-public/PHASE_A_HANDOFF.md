@@ -9,7 +9,7 @@
 
 - Always **IN$DEX**
 - **Image Nation DEX** = short for **Image Nation Decentralized Exchange** (only when asked)
-- **Image Nation DEx Limited** = legal registrant when complete (only when asked)
+- **INDEX LIMITED** = legal registrant when complete (only when asked)
 - SIINDEX = SI / PQSI — not AI
 
 ## Shipped
