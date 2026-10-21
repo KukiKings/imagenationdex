@@ -31,7 +31,7 @@
 - [ ] Re-run `REALTIME_API_KEY` token check: curl siindex-realtime-token, record exact status and body shape.
 
 **Thu 22 Oct**
-- [ ] Read DEPLOYMENT.md (repo root) and list every deployment step; fold the list into Phase 7.
+- [x] Read DEPLOYMENT.md (repo root) and list every deployment step; fold the list into Phase 7 — PASS — 2026-10-21 — read in full (12,440 bytes); steps folded into the Wed 2 Dec block of Phase 7 below; stale parts (section 5 token status, function list) recorded as C14 and P5 in docs/canon-utilities-mined.md (c4b8307).
 - [ ] **GATED (voice HOLD, needs AJ's explicit order):** trace the ElevenLabs consent-header bug in siindex-speak-core.js and siindex-founder-os.html. Voice ID stays `iBEZxKDWKDCs8WbjiLKK`.
 
 **Fri 23 Oct**
@@ -146,7 +146,7 @@ For each page: load, interact, confirm output, log PASS or FAIL with date and no
 ## Phase 5 — 18 to 24 November: security and doctrine
 
 **Wed 18 Nov**
-- [ ] Locate security-canon.md and god-mode-canon-v12.md. Neither file was found in the repo on 2026-10-21. If they live elsewhere, AJ supplies them.
+- [x] Locate security-canon.md and god-mode-canon-v12.md — PASS — 2026-10-21 — found on AJ's Desktop at imagenationdex-push/ (also god-mode-canon-v13.md), deleted from main in 8fdb9f5 on 2026-08-29, older copies on origin/rescue/mac-canon-fixes-20260806. Mined into docs/canon-utilities-mined.md (c4b8307): 60 rated items, 16 conflicts, 5 platform findings.
 
 **Thu 19 Nov**
 - [ ] Review security-canon.md against the protections actually implemented. List gaps.
@@ -198,7 +198,16 @@ For each page: load, interact, confirm output, log PASS or FAIL with date and no
 
 **Wed 2 Dec**
 - [ ] Re-test everything that failed in Phases 2 to 6.
-- [ ] Walk through the DEPLOYMENT.md steps listed on 22 October.
+- [ ] Walk through the DEPLOYMENT.md steps (read 2026-10-21; section numbers refer to that file):
+  - [ ] Vercel (section 1): static site serves; vercel.json routing and security headers present; internal screens return 404.
+  - [ ] Supabase migrations (section 2): applied by CLI, MCP or CI (`supabase db push --include-all`, gated on `SUPABASE_DB_PASSWORD`). **AJ-ONLY:** the secret.
+  - [ ] RLS on every table (section 2): re-run the query and record the count (84 public tables on 2026-10-21; DEPLOYMENT.md says 82).
+  - [ ] Client config (section 3): the Supabase URL and anon key constants in js/indx-db.js and the per-screen files match the live project.
+  - [ ] CI secrets present (section 3): `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_ID`, `SUPABASE_DB_PASSWORD`. **AJ-ONLY:** Claude checks the workflow result, never the values.
+  - [ ] Edge functions (section 4): deployed by CI. Verify live versions with the function list, because the siindex-website-runtime and siindex-website-transcribe steps end in `|| true`. DEPLOYMENT.md's list omits siindex-realtime-token; check it too.
+  - [ ] Fail-closed stubs still return 503 (section 4): create-payment-intent, stripe-webhook, lending-collateral-webhook. Pay stays off.
+  - [ ] Skip section 5 (token status is stale; the mint was read on-chain instead, see S32 and C3). The placeholder at js/indx-wallet.js line 28 is AJ's decision; do not change it here.
+  - [ ] Lending collateral escrow (section 6) stays inert; its two AJ-only steps are not performed.
 
 **Thu 3 Dec**
 - [ ] Re-test again. Anything still failing gets a written workaround.
@@ -221,3 +230,4 @@ For each page: load, interact, confirm output, log PASS or FAIL with date and no
 *(One line per day: date — done — next — blockers.)*
 
 - 2026-10-21 — Rename, runtime deploy, two line fixes verified and pushed. Next: token check, DEPLOYMENT.md. Blockers: none logged. Open: security-canon.md and god-mode-canon-v12.md not found in repo.
+- 2026-10-21 (later) — Company name normalised to INDEX LIMITED (6 files) and facts.json updated; canon located on Desktop and mined (c4b8307); DEPLOYMENT.md read and folded into Phase 7. Next: token check (REALTIME_API_KEY), Oct 23 decisions. Blockers: none. Open for AJ: public wording for token status (C3), unconditional "no renewal" claims (C16), PQSI SQL not applied (S3, S20, S23).
