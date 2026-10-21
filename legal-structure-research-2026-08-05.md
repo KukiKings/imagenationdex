@@ -14,7 +14,7 @@ The Decentralized Unincorporated Nonprofit Association was created by Wyoming SF
 
 **Three facts that decide this on their own:**
 
-1. **It is a United States entity.** Adopting it gives IN$DEX a Wyoming legal home. That contradicts the live site — *"Image Nation Dex Limited is the intended Cook Islands company name"* — and it contradicts the entire Pacific-first, Cook-Islands-first positioning. It also creates a US nexus, and with it US securities, tax and sanctions exposure that a Cook Islands structure does not carry. **This is the opposite direction from where the project has said it is going, publicly.**
+1. **It is a United States entity.** Adopting it gives IN$DEX a Wyoming legal home. That contradicts the live site — *"INDEX LIMITED is the intended Cook Islands company name"* — and it contradicts the entire Pacific-first, Cook-Islands-first positioning. It also creates a US nexus, and with it US securities, tax and sanctions exposure that a Cook Islands structure does not carry. **This is the opposite direction from where the project has said it is going, publicly.**
 2. **It requires at least 100 members.** IN$DEX has **zero citizens** today. The entity is not available yet even if it were wanted.
 3. **It is strictly nonprofit — no distribution of profits to members or token holders.** All surplus must go back into the mission. That needs to be checked against the 98/2 model and against anything INDX is ever intended to return to holders. ⚠️
 
@@ -58,7 +58,7 @@ One distinction first, because it is the most common expensive mistake: the Cook
 |---|---|---|
 | **Company limited by guarantee** | Domestic company, no share capital, members guarantee a fixed sum on winding up, surplus reinvested rather than distributed. Separate legal personality, limited liability. | Closest domestic analogue to a DUNA's nonprofit character. Worth pricing first. ⚠️ |
 | **Incorporated Society** | Membership body under the Incorporated Societies Act 1994, amended 2017 (the amendment was mainly to enable the online register, not a rewrite). | Membership-based and community-legible — conceptually near MemeDAO governance. Member-count and rule requirements need checking. ⚠️ |
-| **Company limited by shares** | Ordinary domestic company — the "Image Nation Dex Limited" already named on the site. | Simplest, fastest, already the stated intent. Does not by itself express the 98/2 doctrine. |
+| **Company limited by shares** | Ordinary domestic company — the "INDEX LIMITED" already named on the site. | Simplest, fastest, already the stated intent. Does not by itself express the 98/2 doctrine. |
 | **Hybrid** | Operating company + a guarantee company or society holding the Civilisation Fund. | Lets the 98/2 split be structural rather than a promise. Most likely to survive scrutiny. ⚠️ |
 
 Registration is fully electronic via the Ministry of Justice registry (companies, incorporated societies and PPSR on one platform, launched December 2019 with ADB and New Zealand support, publicly searchable free, 24/7).
@@ -71,7 +71,7 @@ Registration is fully electronic via the Ministry of Justice registry (companies
 2. **Does operating a non-custodial DEX and issuing INDX require any Cook Islands licence today**, given there is no VASP regime — and what is the FSC's actual posture?
 3. **Does the absence of a framework create exposure** if the Ransomware Suppression Bill or a successor is passed *after* launch and applies retrospectively?
 4. **Would a guarantee company or society jeopardise the ability to hold a bank account**, given the Chamber's stated banking concerns?
-5. **Is "Image Nation Dex Limited" available**, and does the name imply regulated activity requiring consent?
+5. **Is "INDEX LIMITED" available**, and does the name imply regulated activity requiring consent?
 
 ---
 
@@ -83,7 +83,7 @@ Registration is fully electronic via the Ministry of Justice registry (companies
 
 **Do incorporate under the existing domestic regime** — most likely a company limited by shares for operations, with a guarantee company or incorporated society for the Civilisation Fund — and get that in front of a Cook Islands practitioner **after the 12 August election**, when there is a government to engage with.
 
-**Until an adviser confirms a structure, publish nothing about legal form** beyond what the site already says, which is accurate and appropriately modest: *"Image Nation Dex Limited is intended as a Cook Islands entity; registration has not yet been filed."*
+**Until an adviser confirms a structure, publish nothing about legal form** beyond what the site already says, which is accurate and appropriately modest: *"INDEX LIMITED is intended as a Cook Islands entity; registration has not yet been filed."*
 
 **DUNA must not appear in any IN$DEX file, screen or document.** It entered via a pasted strategy document on 5 August 2026 labelled "(From Production)" — it is not on the site and never was. This is the same class as the fabricated Swiss Verein / Wyoming DAO structure purged from five files on 29 July 2026.
 
