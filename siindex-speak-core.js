@@ -50,24 +50,39 @@
   let audioContext = null;
   let playbackGeneration = 0;
   const activeAudioSources = new Set();
-  let voiceEnabled = localStorage.getItem(VOICE_KEY) !== "false";
+  // localStorage can throw (Safari with site data blocked, quota, some in-app webviews);
+  // a throw at load time would stop this whole module, so reads on the voice path are guarded.
+  function lsGet(key) { try { return localStorage.getItem(key); } catch (_) { return null; } }
+  let voiceEnabled = lsGet(VOICE_KEY) !== "false";
   let busy = false;
 
+  let memoryVisitorId = null;
   function visitorId() {
-    let value = localStorage.getItem(VISITOR_KEY);
-    if (!value) {
-      value = (self.crypto && crypto.randomUUID) ? crypto.randomUUID() : "visitor-" + Date.now();
-      localStorage.setItem(VISITOR_KEY, value);
+    try {
+      let value = localStorage.getItem(VISITOR_KEY);
+      if (!value) {
+        value = (self.crypto && crypto.randomUUID) ? crypto.randomUUID() : "visitor-" + Date.now();
+        localStorage.setItem(VISITOR_KEY, value);
+      }
+      return value;
+    } catch (_) {
+      if (!memoryVisitorId) memoryVisitorId = (self.crypto && crypto.randomUUID) ? crypto.randomUUID() : "visitor-" + Date.now();
+      return memoryVisitorId;
     }
-    return value;
   }
+
+  // 2026-10-21: the consent header is now unconditional on every request to the voice,
+  // runtime and transcribe functions. It used to be derived from localStorage per request,
+  // so a blocked or throwing localStorage sent "not-accepted" -> 403 provider_consent_required
+  // -> silent fallback to the browser voice. There is no decline control in the UI; consent is
+  // recorded on first use by ensureProviderConsent(). Rejections are logged by logVoiceFailure().
+  const PROVIDER_CONSENT_VALUE = "accepted";
 
   function headers(contentType) {
     const result = {
       apikey: SUPABASE_KEY,
       "x-siindex-visitor-id": visitorId(),
-      "x-siindex-provider-consent":
-        localStorage.getItem(PROVIDER_CONSENT_KEY) === "accepted" ? "accepted" : "not-accepted",
+      "x-siindex-provider-consent": PROVIDER_CONSENT_VALUE,
       Authorization: "Bearer " + SUPABASE_KEY,
     };
     if (contentType) result["Content-Type"] = contentType;
@@ -305,6 +320,18 @@
     });
   }
 
+  // Surface why the provider voice failed instead of silently using the browser voice.
+  function logVoiceFailure(error, timedOut) {
+    try {
+      if (error && error.consentRejected) {
+        console.error("[siindex-voice] TTS rejected: provider consent header missing or not accepted (HTTP 403 provider_consent_required). Falling back to browser voice.", error.detail || "");
+      } else {
+        console.warn("[siindex-voice] provider TTS failed, falling back to browser voice:",
+          timedOut ? "timeout" : ((error && error.message) || "unknown"), (error && error.detail) || "");
+      }
+    } catch (_) {}
+  }
+
   // 2026-10-02: founder re-approved ElevenLabs voice iBEZxKDWKDCs8WbjiLKK (set server-side in
   // siindex-website-voice-tts). Try it first; if the provider fails, fall back to device voice.
   async function speak(text) {
@@ -323,13 +350,22 @@
         body: JSON.stringify({ text: pronunciation(text).slice(0, 1400) }),
       });
       clearTimeout(timer);
-      if (!response.ok) throw new Error("voice_http_" + response.status);
+      if (!response.ok) {
+        let detail = "";
+        try { detail = String(await response.text()).slice(0, 200); } catch (_) {}
+        const failure = new Error("voice_http_" + response.status);
+        failure.status = response.status;
+        failure.detail = detail;
+        failure.consentRejected = response.status === 403 && detail.indexOf("provider_consent_required") !== -1;
+        throw failure;
+      }
       await playVoiceResponse(response);
       setStatus("idle", "Ready.");
       return;
     } catch (error) {
       clearTimeout(timer);
       if (controller.signal.aborted && !timedOut) { setStatus("idle", "Paused."); return; }
+      logVoiceFailure(error, timedOut);
     }
     return speakNative(text);
   }
@@ -758,7 +794,7 @@
   }
 
   window.SIINDEXVoice = {
-    version: "3.0.21",
+    version: "3.0.22",
     speak: speak,
     interrupt: interrupt,
     ask: ask,
@@ -769,7 +805,7 @@
     ensureProviderConsent: ensureProviderConsent,
     setVoiceEnabled: function (on) {
       voiceEnabled = !!on;
-      localStorage.setItem(VOICE_KEY, voiceEnabled ? "true" : "false");
+      try { localStorage.setItem(VOICE_KEY, voiceEnabled ? "true" : "false"); } catch (_) {}
     },
   };
 
