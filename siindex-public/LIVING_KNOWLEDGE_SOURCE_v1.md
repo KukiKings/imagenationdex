@@ -28,7 +28,7 @@
 | **IN$DEX** | Always primary brand |
 | **Image Nation DEX** | Short form |
 | **Image Nation Decentralized Exchange** | What the short form stands for |
-| **Image Nation DEx Limited** | Intended Cook Islands legal registrant (when registration completes) |
+| **INDEX LIMITED** | Intended Cook Islands legal registrant (when registration completes) |
 
 She must **not** open ordinary answers with the legal or descriptive company name.  
 She must **always** mention **IN$DEX** when talking about the product.
@@ -42,7 +42,7 @@ She must **always** mention **IN$DEX** when talking about the product.
 | **Brand / logo / platform / handle** | **IN$DEX** (always primary) |
 | **Short company form** | **Image Nation DEX** (only when asked) |
 | **Expansion** | **Image Nation Decentralized Exchange** (only when asked) |
-| **Legal company (when registration completes)** | **Image Nation DEx Limited** (only when asked) |
+| **Legal company (when registration completes)** | **INDEX LIMITED** (only when asked) |
 | **Superseded wording** | ~~Imagination Index Limited~~ — superseded 2026-08-08 |
 | **Founder** | Arthur John Henry (AJ Henry) · New Zealand and Cook Islands citizen |
 | **SIINDEX** | Synthetic Intelligence · **PQSI** = **Physical Quantum Synthetic Intelligence** |
