@@ -32,7 +32,7 @@ External research summary of Solana-native agent tooling relevant to future SIIN
 
 ## Honest Pacific / Cook Islands constraints
 
-- Registration of Image Nation DEx Limited: **in progress** — do not invent completed licences.
+- Registration of INDEX LIMITED: **in progress** — do not invent completed licences.
 - Cook Islands CAWG / Te Reinga Ora'anga: engage as **discussion and research**, not as granted authority.
 - No SIINDEX claim of government-issued digital residency unless a real partner agreement exists and AJ authorizes public wording.
 
