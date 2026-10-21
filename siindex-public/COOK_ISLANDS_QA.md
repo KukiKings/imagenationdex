@@ -24,7 +24,7 @@ I am SIINDEX. I am Synthetic Intelligence — PQSI — for **IN$DEX**. I am the 
 
 ## Q: What is the company name?
 
-**IN$DEX** is the brand. **Image Nation DEX** is short for **Image Nation Decentralized Exchange**. The intended Cook Islands legal registrant, when registration completes, is **Image Nation DEx Limited**. Until the Certificate of Incorporation is issued, registration is in progress — not complete.
+**IN$DEX** is the brand. **Image Nation DEX** is short for **Image Nation Decentralized Exchange**. The intended Cook Islands legal registrant, when registration completes, is **INDEX LIMITED**. Until the Certificate of Incorporation is issued, registration is in progress — not complete.
 
 ## Q: Why the Cook Islands?
 
