@@ -16,7 +16,7 @@
 - ID uploaded: Cook Islands driver licence (same-government document; also quietly supports the not-a-foreign-enterprise position, though it does not decide it).
 - Address: Melbourne, Australia — **Country must be set away from the "Cook Islands" default.** This is the account holder's address, NOT the company's registered office.
 
-**Company name — founder decision, AJ 2026-07-29: `Image Nation DEX Limited`.**
+**Company name — founder decision, AJ 2026-07-29: `INDEX LIMITED`.**
 The legal entity name and the brand are deliberately different, which is normal and protective. The `IN$DEX` wordmark, logo, wave, star and `$` are brand assets that live in trade marks and product surfaces — incorporation does not touch them. `IN$DEX` already stands for *Image Nation Decentralised Exchange* (canon), so the legal name is the literal expansion and loses no meaning. Rejected alternatives: `Image Nation Decentralised Exchange Limited` (accurate but unwieldy on forms), `INDEX Limited` (generic, likely conflicts).
 
 **Correction of record:** an earlier version of this document asserted the registry would not accept `$` in a company name. That was **inferred, not verified** — BTIB states only that names must be in English. Settle it with a name search rather than an assumption. The "same or nearly the same" test also means variants must be searched, not just the exact string: `Image Nation DEX`, `Image Nation`, `ImageNation`, `Index`.
