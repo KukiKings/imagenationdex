@@ -7,7 +7,7 @@ Every package must pass this checklist before status can become `needs-aj`.
 - [ ] Spoken and on-screen text leads with **IN$DEX** where the product is named
 - [ ] SIINDEX described as **Synthetic Intelligence** / **SI** / **PQSI** only
 - [ ] Never: AI, artificial intelligence, chatbot, assistant (except deliberate SI-vs-AI contrast if explicitly briefed)
-- [ ] Legal stack only if the job is about company name: Image Nation DEX → Image Nation Decentralized Exchange → Image Nation DEx Limited
+- [ ] Legal stack only if the job is about company name: Image Nation DEX → Image Nation Decentralized Exchange → INDEX LIMITED
 - [ ] Registration: **in progress** until certificate — never claim completed registration or government licence
 
 ## Facts
