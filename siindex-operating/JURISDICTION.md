@@ -15,7 +15,7 @@
 | Field | Value |
 |-------|--------|
 | **Brand** | **IN$DEX** (always primary in public speech) |
-| **Legal registrant (when complete)** | **Image Nation DEx Limited** |
+| **Legal registrant (when complete)** | **INDEX LIMITED** |
 | **Registration home** | **Cook Islands** |
 | **Status** | Registration **in progress** — do not claim Certificate of Incorporation until AJ confirms |
 
@@ -31,7 +31,7 @@
 
 - Founder is a New Zealand and Cook Islands citizen.  
 - Company is being registered in the **Cook Islands**.  
-- Legal name **Image Nation DEx Limited** only when asked.  
+- Legal name **INDEX LIMITED** only when asked.  
 - Registration is **in progress** until AJ has the certificate.  
 - Do **not** invent Cook Islands licences, FSC approvals, or completed registration.
 
