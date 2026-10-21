@@ -9,7 +9,7 @@
 ## Entity type being considered
 
 - Founder: Arthur John Henry ("AJ" Henry), citizen of New Zealand and the Cook Islands.
-- Entity: a **Cook Islands company**, intended legal name **Image Nation DEx Limited**, registered via the standard Ministry of Justice company registry (not an offshore International Business Company — AJ's Cook Islands citizenship is the basis for using the citizen/domestic registration route rather than the foreign-investor route, per `cook-islands-registration-prep.md` and `siindex-operating/JURISDICTION.md`).
+- Entity: a **Cook Islands company**, intended legal name **INDEX LIMITED**, registered via the standard Ministry of Justice company registry (not an offshore International Business Company — AJ's Cook Islands citizenship is the basis for using the citizen/domestic registration route rather than the foreign-investor route, per `cook-islands-registration-prep.md` and `siindex-operating/JURISDICTION.md`).
 - Status as of the most recent internal record: registry account application submitted 2026-07-29; Form A-1 not yet filed; no Certificate of Incorporation. See `docs/legal/cook-islands-registration-steps.md` for the fuller checklist.
 - Brand: **IN$DEX** (Image Nation Decentralised Exchange) — the operating brand is deliberately distinct from the legal entity name.
 
@@ -47,7 +47,7 @@
 >
 > Dear [AJ TO CONFIRM — lawyer/firm name, not yet identified],
 >
-> My name is Arthur John Henry. I am a citizen of New Zealand and the Cook Islands, currently completing registration of a Cook Islands company (intended name: Image Nation DEx Limited) — the registry account application was submitted on 29 July 2026 and Form A-1 has not yet been filed.
+> My name is Arthur John Henry. I am a citizen of New Zealand and the Cook Islands, currently completing registration of a Cook Islands company (intended name: INDEX LIMITED) — the registry account application was submitted on 29 July 2026 and Form A-1 has not yet been filed.
 >
 > The company will operate IN$DEX, a phone-based digital identity and remittance platform currently in closed development. Today it operates as a database ledger with no live blockchain settlement, no live token, and no live fiat on/off-ramp. A Solana-based token and fiat rails are planned for the future but not yet built.
 >
