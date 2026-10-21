@@ -22,7 +22,7 @@ What is **not** confirmed, and needs AJ's/counsel's judgment before sending:
 ## Current actual legal status (state this honestly, do not overstate)
 
 - Founder: Arthur John Henry ("AJ" Henry), a citizen of New Zealand and the Cook Islands.
-- Entity: a Cook Islands company, intended legal name **Image Nation DEx Limited**, is being registered. As of the most recent internal status (`BUILD_LOG.md`): the registry account application was **submitted 2026-07-29**; **Form A-1 has not yet been filed**; no Certificate of Incorporation exists.
+- Entity: a Cook Islands company, intended legal name **INDEX LIMITED**, is being registered. As of the most recent internal status (`BUILD_LOG.md`): the registry account application was **submitted 2026-07-29**; **Form A-1 has not yet been filed**; no Certificate of Incorporation exists.
 - **No legal counsel has been retained yet.**
 - **No prior correspondence has been sent to FSC or any other Cook Islands regulator.** This would be the first contact.
 
@@ -53,7 +53,7 @@ Do not state or imply that the company is incorporated, that counsel is engaged,
 >
 > **What IN$DEX is today:** a phone-based platform where citizens hold and send value on an internal database ledger. There is no live blockchain settlement, no live token, and no live fiat on-ramp or off-ramp today. A tokenized value-transfer layer is planned for the future but has not been built or deployed.
 >
-> **Current legal status:** I am in the process of registering a Cook Islands company (intended name: Image Nation DEx Limited). The registry account application was submitted on 29 July 2026; Form A-1 has not yet been filed. I have not yet retained legal counsel, and this letter is the first correspondence I have sent to the Commission.
+> **Current legal status:** I am in the process of registering a Cook Islands company (intended name: INDEX LIMITED). The registry account application was submitted on 29 July 2026; Form A-1 has not yet been filed. I have not yet retained legal counsel, and this letter is the first correspondence I have sent to the Commission.
 >
 > **What I am asking:** before any token or fiat on/off-ramp goes live, I would like to understand what licensing or registration under the Commission's remit — including, if relevant, the Money Changing & Remittance Businesses Act 2009 — would apply to a platform of this kind, and at what stage of development that requirement would attach. I am not asking for an expedited approval or a determination today; I am asking to understand the path so the platform is built to meet it, not around it.
 >
