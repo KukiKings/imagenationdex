@@ -9,7 +9,7 @@
 ## Current state (as of BUILD_LOG.md)
 
 - ✅ Registry account application **submitted 2026-07-29** — awaiting Registrar approval by email.
-- ✅ Company name **decided**: Image Nation DEx Limited.
+- ✅ Company name **decided**: INDEX LIMITED.
 - ❌ **Form A-1 not yet filed.**
 - ❌ No Certificate of Incorporation.
 - ❌ No legal counsel retained.
@@ -23,7 +23,7 @@
 Status: submitted, awaiting Registrar approval by email. No action pending on AJ's side until that approval arrives — confirmed process, per `cook-islands-registration-prep.md`.
 
 ### 2. Company name search / clearance
-The Cook Islands registry requires the name be in English and not "the same or nearly the same" as an existing registered entity. "Image Nation DEx Limited" has been decided as the intended name, but a formal name search does not appear to have been logged as completed yet in this repo's records. **Action:** run the name search (registry's own name-search tool) before or as part of filing Form A-1, including close variants ("Image Nation DEX," "Image Nation," "ImageNation," "Index") — this was flagged in the source document as worth checking rather than assuming clear.
+The Cook Islands registry requires the name be in English and not "the same or nearly the same" as an existing registered entity. "INDEX LIMITED" has been decided as the intended name, but a formal name search does not appear to have been logged as completed yet in this repo's records. **Action:** run the name search (registry's own name-search tool) before or as part of filing Form A-1, including close variants ("Image Nation DEX," "Image Nation," "ImageNation," "Index") — this was flagged in the source document as worth checking rather than assuming clear.
 
 ### 3. Resolve foreign-enterprise status
 This determines the incorporation fee (NZD $75 vs. NZD $750) and whether BTIB (Business Trade and Investment Board) approval is required before registration can proceed. AJ is a Cook Islands citizen resident in Australia — whether Australian residency affects "foreign enterprise" status under the Development Investment Act is an open question, not yet resolved as of the source document's writing. **CONFIRM WITH BTIB DIRECTLY AND/OR COUNSEL** — this is explicitly flagged in the source material as something not to guess.
