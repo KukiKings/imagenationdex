@@ -35,7 +35,7 @@
 ## Do not say in the 15s open
 
 - Artificial intelligence / AI
-- Image Nation DEx Limited (unless the visitor asked the company name)
+- INDEX LIMITED (unless the visitor asked the company name)
 - Live token price or purchase offer
 - Government licence or completed registration claims
 - Promises that every feature is finished
