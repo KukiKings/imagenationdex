@@ -178,7 +178,17 @@ a{color:#00D4FF}
         var u = new SpeechSynthesisUtterance(text.replace(/Sinn-dex/g, 'Sin dex'));
         if (v) { u.voice = v; u.lang = v.lang; } else { u.lang = 'en-AU'; }
         u.rate = 0.95;
+        var started = false;
+        // iOS can accept speak() and then never start, with no error: say so instead of staying silent.
+        var wd = setTimeout(function () {
+          if (started) return;
+          try { window.speechSynthesis.cancel(); } catch (e) {}
+          armTapToEnable(text, "The voice didn't start. Tap anywhere to try again.");
+        }, 4000);
+        u.onstart = function () { started = true; clearTimeout(wd); markPlayoutStart(); };
+        u.onend = function () { clearTimeout(wd); maybeShowRingerHint(); };
         u.onerror = function (ev) {
+          clearTimeout(wd);
           if (ev && ev.error === 'not-allowed') { armTapToEnable(text); }
           else if (ev && ev.error !== 'canceled' && ev.error !== 'interrupted') { st.textContent = "Voice didn't play on this device. Read the reply below."; }
         };
@@ -193,39 +203,84 @@ a{color:#00D4FF}
   var activeAbort = null;
   var activeUrl = null;
   var speakGen = 0;
-  // 2026-10-03 mobile hardening (mirrors siindex-speak-core.js v3.0.23).
-  // One persistent <audio> element, unlocked by a silent WAV inside the first user gesture, then reused
-  // for every TTS reply. iOS Safari only lets an element play later if it was started in a gesture.
+  // 2026-10-28 mobile-voice hardening (mirrors siindex-speak-core.js v3.0.24).
+  // One persistent <audio> element, unlocked by a silent WAV inside a real tap (touchend, mouseup, click or
+  // keydown -- pointerdown does not count on iOS), then reused for every TTS reply. Its src is set once at
+  // creation and load() is never called, because load() cancels the unlock. The listeners are never removed:
+  // if play() is rejected, the next tap simply tries again.
   var SILENT_WAV = 'data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQIAAACAgA==';
   var MIN_USER_UTTERANCE_MS = 300;
+  var POST_PLAYOUT_QUIET_MS = 1000;   // Chromium suppresses near-end speech for up to ~1.2 s after playout starts
+  var PLAY_TIMEOUT_MS = 2500;         // iPhone Safari can leave play() hanging for seconds
   var sharedAudio = null;
+  var audioUnlocked = false;
+  var unlockPending = false;
   var audioSessionSet = false;
+  var audioSessionStuck = false;
   var pendingSpeech = '';
   var retryArmed = false;
-  function unlockAudio() {
-    if (!audioSessionSet) {
-      audioSessionSet = true;
-      try { if (navigator.audioSession && 'type' in navigator.audioSession) navigator.audioSession.type = 'play-and-record'; } catch (e) {}
-    }
-    try {
-      if (!sharedAudio) { sharedAudio = new Audio(); sharedAudio.setAttribute('playsinline', ''); }
+  var lastSpokenText = '';
+  var ttsStartedAt = 0;
+  var ringerHintShown = false;
+  var wasTalkingWhenHidden = false;
+  var IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent || '') ||
+    (navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1);
+  function markPlayoutStart() { ttsStartedAt = Date.now(); }
+  function getSharedAudio() {
+    if (!sharedAudio) {
+      sharedAudio = new Audio();
+      sharedAudio.setAttribute('playsinline', '');
       sharedAudio.src = SILENT_WAV;
-      var p = sharedAudio.play();
-      if (p && p.catch) p.catch(function () {});
+      sharedAudio.onplaying = function () { if (activeAudio === sharedAudio) markPlayoutStart(); };
+    }
+    return sharedAudio;
+  }
+  // iOS 17+ audio session type: set ONCE at page load, never changed afterwards.
+  function setAudioSessionOnce() {
+    if (audioSessionSet) return;
+    audioSessionSet = true;
+    try {
+      if (navigator.audioSession && 'type' in navigator.audioSession) {
+        navigator.audioSession.type = 'play-and-record';
+        audioSessionStuck = navigator.audioSession.type === 'play-and-record';
+        // Standard AudioSession event: state is "active", "interrupted" or "inactive".
+        try { navigator.audioSession.addEventListener('statechange', onAudioSessionStateChange); } catch (e) {}
+      }
     } catch (e) {}
   }
+  function onAudioSessionStateChange() {
+    var state = '';
+    try { state = navigator.audioSession.state; } catch (e) {}
+    if ((state === 'interrupted' || state === 'inactive') && isTalking()) {
+      var t = lastSpokenText;
+      try { window.speechSynthesis.cancel(); } catch (e) {}
+      stopAudio();
+      armTapToEnable(t, 'Voice paused. Tap anywhere to hear it again.');
+    }
+  }
+  // Must run synchronously inside the gesture handler. Never throws; a rejected play() is retried on the next tap.
+  function unlockAudio() {
+    setAudioSessionOnce();
+    if (audioUnlocked || unlockPending) return;
+    try {
+      var a = getSharedAudio();
+      var p = a.play();
+      if (p && typeof p.then === 'function') {
+        unlockPending = true;
+        p.then(function () { audioUnlocked = true; unlockPending = false; })
+         .catch(function () { audioUnlocked = false; unlockPending = false; });
+      } else { audioUnlocked = true; }
+    } catch (e) { audioUnlocked = false; unlockPending = false; }
+  }
+  setAudioSessionOnce();
   (function () {
-    var names = ['touchend', 'click', 'keydown'];
-    var first = function (ev) {
-      if (ev && ev.isTrusted === false) return;
-      unlockAudio();
-      names.forEach(function (n) { document.removeEventListener(n, first, true); });
-    };
-    names.forEach(function (n) { try { document.addEventListener(n, first, { capture: true, passive: true }); } catch (e) {} });
+    var names = ['touchend', 'mouseup', 'click', 'keydown'];
+    var onGesture = function (ev) { if (ev && ev.isTrusted === false) return; unlockAudio(); };
+    names.forEach(function (n) { try { document.addEventListener(n, onGesture, { capture: true, passive: true }); } catch (e) {} });
   })();
-  function armTapToEnable(text) {
+  function armTapToEnable(text, message) {
     pendingSpeech = text || '';
-    st.textContent = 'Tap anywhere to turn on voice. Your browser is holding sound until you do.';
+    st.textContent = message || 'Tap anywhere to turn on voice. Your browser is holding sound until you do.';
     if (retryArmed) return;
     retryArmed = true;
     var names = ['touchend', 'click', 'keydown'];
@@ -239,6 +294,33 @@ a{color:#00D4FF}
     };
     names.forEach(function (n) { try { document.addEventListener(n, go, { capture: true, passive: true }); } catch (e) {} });
   }
+  // The iOS ringer switch cannot be read by a web page. On iOS 17+ the session type above lets sound play
+  // with it on, so nothing is shown there. Where it did not take effect, show ONE short instruction after
+  // the first spoken reply (text only; any tap re-runs the unlock).
+  function maybeShowRingerHint() {
+    if (!IS_IOS || audioSessionStuck || ringerHintShown) return;
+    ringerHintShown = true;
+    st.textContent = "Can't hear me? Flip the ringer switch on the side of your phone, then tap anywhere to turn voice back on.";
+  }
+  // Backgrounding: never tear anything down on "hidden". On return, revive what the founder was using and
+  // only speak up if a reply that was playing has stopped.
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') { wasTalkingWhenHidden = isTalking(); return; }
+    var wasTalking = wasTalkingWhenHidden;
+    wasTalkingWhenHidden = false;
+    try { if (window.speechSynthesis && window.speechSynthesis.paused) window.speechSynthesis.resume(); } catch (e) {}
+    try { if (listening && Rec) { if (!recognizer) startRecognizer(); else recognizer.start(); } } catch (e) {}
+    if (!wasTalking) return;
+    var away = 'Voice paused while you were away. Tap anywhere to hear it again.';
+    if (activeAudio) {
+      if (activeAudio.paused && !activeAudio.ended) { armTapToEnable(lastSpokenText, away); return; }
+      // Looks playing but frozen after backgrounding (no error event): check the clock really moves.
+      var t0 = activeAudio.currentTime, a0 = activeAudio;
+      setTimeout(function () {
+        if (activeAudio === a0 && !a0.ended && a0.currentTime === t0) { stopAudio(); armTapToEnable(lastSpokenText, away); }
+      }, 500);
+    }
+  });
   function isTalking() {
     try {
       if (activeAudio && !activeAudio.paused && !activeAudio.ended) return true;
@@ -253,6 +335,7 @@ a{color:#00D4FF}
   }
   function stopAudio() {
     speakGen++;
+    ttsStartedAt = 0; // stopped on purpose: nothing left to echo, so listen normally at once
     if (activeAbort) { try { activeAbort.abort(); } catch (e) {} activeAbort = null; }
     pendingSpeech = '';
     if (activeAudio) { try { activeAudio.pause(); } catch (e) {} activeAudio = null; }
@@ -260,6 +343,7 @@ a{color:#00D4FF}
   }
   function speak(text) {
     unlockAudio();
+    lastSpokenText = text;
     replyEl.textContent = text;
     if (muted()) return;
     if (window.SIINDEXRealtime && window.SIINDEXRealtime.isActive()) return;
@@ -284,8 +368,7 @@ a{color:#00D4FF}
       if (gen !== speakGen) return;
       if (!blob || !blob.size) throw new Error('tts_empty');
       var url = URL.createObjectURL(new Blob([blob], { type: 'audio/mpeg' }));
-      if (!sharedAudio) { sharedAudio = new Audio(); sharedAudio.setAttribute('playsinline', ''); }
-      var audio = sharedAudio;
+      var audio = getSharedAudio();
       audio.src = url;
       activeAudio = audio;
       activeUrl = url;
@@ -293,8 +376,13 @@ a{color:#00D4FF}
         if (activeAudio === audio) { activeAudio = null; }
         if (activeUrl === url) { activeUrl = null; }
         try { URL.revokeObjectURL(url); } catch (e) {}
+        maybeShowRingerHint();
       };
-      return audio.play().then(function () {
+      // play() can hang on iPhone Safari: race it so the citizen gets a visible message, not silence.
+      var playTimeout = new Promise(function (_, reject) {
+        setTimeout(function () { var e = new Error('play_timeout'); e.name = 'NotAllowedError'; reject(e); }, PLAY_TIMEOUT_MS);
+      });
+      return Promise.race([audio.play(), playTimeout]).then(function () {
         if (/^Tap anywhere to turn on voice/.test(st.textContent)) st.textContent = 'LOGGED';
       });
     }).catch(function (err) {
@@ -386,6 +474,8 @@ a{color:#00D4FF}
       if (listening) { listening = false; micBtn.textContent = 'Start Listening'; st.textContent = 'IDLE — waiting on founder'; }
       stopRecognizer();
     } catch (e) {}
+    pendingSpeech = '';
+    st.textContent = 'STOPPED — nothing is playing or listening.';
   };
   muteBtn.onclick = function () { setMute(!muted()); };
   // 2026-10-03: Jarvis mode. Founder asked why this page isn't
@@ -406,17 +496,26 @@ a{color:#00D4FF}
     recognizer.lang = 'en-AU';
     recognizer.continuous = true;
     recognizer.interimResults = true;
-    // Echo-bleed heuristic: a sound shorter than 300 ms while SIINDEX is talking is her own voice, not the founder.
-    var speechStartAt = 0, lastSpeechMs = 0;
-    recognizer.onspeechstart = function () { speechStartAt = Date.now(); lastSpeechMs = 0; };
+    // Echo-bleed heuristic. Input counts as SIINDEX's own voice when it is shorter than 300 ms, or when it began
+    // inside the first 1 s after playback started (Chromium suppresses near-end speech then). Real input must
+    // pass both tests. Bleed is dropped silently.
+    var speechStartAt = 0, lastSpeechMs = 0, startedInQuiet = false;
+    function inQuiet(t) { return ttsStartedAt > 0 && t >= ttsStartedAt && t < ttsStartedAt + POST_PLAYOUT_QUIET_MS; }
+    recognizer.onspeechstart = function () { speechStartAt = Date.now(); lastSpeechMs = 0; startedInQuiet = inQuiet(speechStartAt); };
     recognizer.onspeechend = function () { if (speechStartAt) lastSpeechMs = Date.now() - speechStartAt; };
     recognizer.onresult = function (e) {
       for (var i = e.resultIndex; i < e.results.length; i++) {
         var res = e.results[i];
         var transcript = res[0].transcript;
         var spokenMs = lastSpeechMs || (speechStartAt ? Date.now() - speechStartAt : 0);
-        if (isTalking() && spokenMs > 0 && spokenMs < MIN_USER_UTTERANCE_MS) {
-          try { console.info('[founder-os] ignored a ' + spokenMs + ' ms sound while speaking (likely echo)'); } catch (e2) {}
+        var tooShort = spokenMs > 0 && spokenMs < MIN_USER_UTTERANCE_MS;
+        var quiet = startedInQuiet || (!speechStartAt && inQuiet(Date.now()));
+        if (quiet || (isTalking() && tooShort)) {
+          try { console.info('[founder-os] dropped echo bleed (' + spokenMs + ' ms, quiet window ' + quiet + ')'); } catch (e2) {}
+          continue;
+        }
+        if (tooShort && res.isFinal && WAKE_WORD.test(transcript)) {
+          st.textContent = 'LISTENING — I didn\'t catch that. Say "Computer, ..." again.';
           continue;
         }
         if (!res.isFinal) {
