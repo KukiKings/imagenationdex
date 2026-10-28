@@ -1,5 +1,5 @@
 /**
- * SIINDEX Website Voice Core v3.0.23
+ * SIINDEX Website Voice Core v3.0.24
  * Interrupt must not fall through to full speechSynthesis restart.
  * Spoken name lock: Sinn-dex only (never Sign-dex).
  * Mic: MediaRecorder + siindex-website-transcribe; MIME/filename match for Safari mp4.
@@ -14,6 +14,12 @@
  * treated as echo bleed and discarded. (3) navigator.audioSession.type = "play-and-record" once
  * (iOS 17+). UX rule: no silent failures -- every voice failure shows a plain-language message,
  * and a browser-blocked sound shows "tap to turn on voice" and replays on the next tap.
+ * v3.0.24: (1) the silent-WAV unlock listens on touchend/mouseup/click/keydown for the whole session
+ * and retries on every tap until it succeeds (pointerdown is not a gesture on iOS; load() is never
+ * called). (2) echo bleed: input under 300 ms, or starting in the first 1 s after playback begins, is
+ * dropped silently. (3) audioSession.type is set once at script load; AudioContext resume is raced
+ * against a timeout; audioSession/AudioContext statechange are handled. (4) iOS ringer hint, and
+ * visibility return re-checks the AudioContext without ever tearing it down.
  */
 (function () {
   "use strict";
@@ -71,6 +77,18 @@
   let speakingNow = false;
   let pendingSpeech = "";
   let retryArmed = false;
+  // v3.0.24
+  const POST_PLAYOUT_QUIET_MS = 1000;   // Chromium suppresses near-end speech up to ~1.2 s after playout starts
+  const RESUME_TIMEOUT_MS = 2500;       // iPhone Safari AudioContext.resume() can hang for seconds
+  let ttsStartedAt = 0;
+  let lastSpokenText = "";
+  let unlockPending = false;
+  let ctxPrimed = false;
+  let audioSessionStuck = false;
+  let ringerHintShown = false;
+  let wasSpeakingWhenHidden = false;
+  const IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent || "") ||
+    (navigator.platform === "MacIntel" && (navigator.maxTouchPoints || 0) > 1);
 
   let memoryVisitorId = null;
   function visitorId() {
@@ -136,77 +154,193 @@
     activeAudioSources.clear();
   }
 
-  async function ensureAudioContext() {
+  // Create the AudioContext once and watch its state. Safari reports "interrupted" for phone calls,
+  // Siri and the lock screen; Chrome reports "suspended" until a tap.
+  function getContext() {
     if (!audioContext) {
       const Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) return null;
       audioContext = new Ctx();
-    }
-    // "suspended" and iOS "interrupted" both need a resume; resume() can hang outside a gesture, so race it.
-    if (audioContext.state !== "running") {
-      try {
-        await Promise.race([audioContext.resume(), new Promise(function (r) { setTimeout(r, 600); })]);
-      } catch (_) {}
+      try { audioContext.addEventListener("statechange", onContextStateChange); } catch (_) {}
     }
     return audioContext;
   }
 
-  // Fix 3: iOS 17+ audio session type, set once at session open and never changed afterwards.
+  // Resume with a timeout so a hung promise (iPhone Safari) never freezes the voice silently.
+  // Resolves true only if the context is really running afterwards.
+  async function resumeContext(ms) {
+    const ctx = getContext();
+    if (!ctx) return false;
+    if (ctx.state === "running") return true;
+    try {
+      await Promise.race([ctx.resume(), new Promise(function (r) { setTimeout(r, ms || RESUME_TIMEOUT_MS); })]);
+    } catch (_) {}
+    return ctx.state === "running";
+  }
+
+  async function ensureAudioContext() {
+    const ctx = getContext();
+    if (!ctx) return null;
+    if (ctx.state !== "running") {
+      // Say what is happening if it takes more than a moment, instead of a silent wait.
+      const slow = setTimeout(function () { setStatus("thinking", "Waking up the voice…"); }, 500);
+      try { await resumeContext(RESUME_TIMEOUT_MS); } finally { clearTimeout(slow); }
+    }
+    return ctx;
+  }
+
+  function onContextStateChange() {
+    if (!audioContext) return;
+    const st = audioContext.state;
+    if (st === "running") {
+      // Back after an interruption: if we were waiting on a tap, the next reply will play normally.
+      return;
+    }
+    // suspended / interrupted / closed while a reply was playing: tell the citizen and offer a replay.
+    if (speakingNow) {
+      speakingNow = false;
+      pendingSpeech = lastSpokenText;
+      armTapToEnable(lastSpokenText, "Voice paused. Tap anywhere to hear it again.");
+    }
+  }
+
+  // Fix 3: iOS 17+ audio session type. Set ONCE, at script load, and never changed afterwards
+  // (changing it mid-session can leave a media element looking unpaused but frozen).
   function setAudioSessionOnce() {
     if (audioSessionSet) return;
     audioSessionSet = true;
     try {
       if (navigator.audioSession && "type" in navigator.audioSession) {
         navigator.audioSession.type = "play-and-record";
+        audioSessionStuck = navigator.audioSession.type === "play-and-record";
+        // Standard AudioSession event (state: "active" | "interrupted" | "inactive").
+        try { navigator.audioSession.addEventListener("statechange", onAudioSessionStateChange); } catch (_) {}
       }
     } catch (_) {}
   }
 
-  // Fix 1: must run synchronously inside a user-gesture handler. Plays a silent WAV on one persistent
-  // element and starts the AudioContext, so later playback (after network waits) is allowed.
+  function onAudioSessionStateChange() {
+    let state = "";
+    try { state = navigator.audioSession.state; } catch (_) {}
+    if (state === "active") {
+      // Interruption over: try to bring the context back quietly (no message if it just works).
+      resumeContext(RESUME_TIMEOUT_MS).then(function (ok) {
+        if (!ok && pendingSpeech) setStatus("blocked", "Tap anywhere to turn on voice.");
+      });
+    } else if (state === "interrupted" || state === "inactive") {
+      if (speakingNow) {
+        speakingNow = false;
+        stopPcmPlayback();
+        armTapToEnable(lastSpokenText, "Voice paused. Tap anywhere to hear it again.");
+      }
+    }
+  }
+  setAudioSessionOnce();
+
+  // Fix 1: must run synchronously inside a user-gesture handler (touchend, mouseup, click, keydown).
+  // Plays a silent WAV on one persistent element and starts the AudioContext, so later playback
+  // (after network waits) is allowed. The element's src is set once; load() is never called, because
+  // it cancels the unlock. If play() is rejected nothing throws and the next tap tries again.
   function unlockAudio() {
     setAudioSessionOnce();
-    try {
-      if (!unlockEl && typeof Audio !== "undefined") {
-        unlockEl = new Audio();
-        unlockEl.setAttribute("playsinline", "");
-        unlockEl.preload = "auto";
-      }
-      if (unlockEl) {
-        unlockEl.src = SILENT_WAV;
-        const p = unlockEl.play();
-        if (p && typeof p.then === "function") {
-          p.then(function () { audioUnlocked = true; }).catch(function () {});
-        } else {
-          audioUnlocked = true;
+    if (!audioUnlocked && !unlockPending) {
+      try {
+        if (!unlockEl && typeof Audio !== "undefined") {
+          unlockEl = new Audio();
+          unlockEl.setAttribute("playsinline", "");
+          unlockEl.src = SILENT_WAV;
         }
-      }
-    } catch (_) {}
+        if (unlockEl) {
+          const p = unlockEl.play();
+          if (p && typeof p.then === "function") {
+            unlockPending = true;
+            p.then(function () { audioUnlocked = true; unlockPending = false; })
+             .catch(function () { audioUnlocked = false; unlockPending = false; });
+          } else {
+            audioUnlocked = true;
+          }
+        }
+      } catch (_) { audioUnlocked = false; unlockPending = false; }
+    }
     try {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (Ctx) {
-        if (!audioContext) audioContext = new Ctx();
-        if (audioContext.state !== "running") {
-          const r = audioContext.resume();
+      const ctx = getContext();
+      if (ctx) {
+        if (ctx.state !== "running") {
+          const r = ctx.resume();
           if (r && r.catch) r.catch(function () {});
         }
-        const src = audioContext.createBufferSource();
-        src.buffer = audioContext.createBuffer(1, 1, 22050);
-        src.connect(audioContext.destination);
-        src.start(0);
+        if (!ctxPrimed) {
+          const src = ctx.createBufferSource();
+          src.buffer = ctx.createBuffer(1, 1, 22050);
+          src.connect(ctx.destination);
+          src.start(0);
+          ctxPrimed = true;
+        }
       }
     } catch (_) {}
   }
 
-  (function armFirstGestureUnlock() {
-    var names = ["touchend", "click", "keydown"];
-    var first = function (ev) {
+  // Never removed: a tap is cheap, and any later tap retries the unlock or resumes a suspended context.
+  (function armUnlockListeners() {
+    var names = ["touchend", "mouseup", "click", "keydown"];
+    var onGesture = function (ev) {
       if (ev && ev.isTrusted === false) return;
       unlockAudio();
-      names.forEach(function (n) { document.removeEventListener(n, first, true); });
     };
-    names.forEach(function (n) { try { document.addEventListener(n, first, { capture: true, passive: true }); } catch (_) {} });
+    names.forEach(function (n) { try { document.addEventListener(n, onGesture, { capture: true, passive: true }); } catch (_) {} });
   })();
+
+  // Fix 4: coming back from the lock screen or another app. Never tear anything down on "hidden";
+  // on "visible" re-check the AudioContext and only speak up if something the citizen was hearing stopped.
+  function onVisibilityChange() {
+    if (document.visibilityState === "hidden") {
+      wasSpeakingWhenHidden = speakingNow;
+      return;
+    }
+    const wasSpeaking = wasSpeakingWhenHidden;
+    wasSpeakingWhenHidden = false;
+    try { if (window.speechSynthesis && window.speechSynthesis.paused) window.speechSynthesis.resume(); } catch (_) {}
+    if (listening && mediaStream) {
+      let dead = false;
+      try { dead = mediaStream.getAudioTracks().every(function (t) { return t.readyState === "ended"; }); } catch (_) {}
+      if (dead) {
+        listening = false;
+        stopMediaCapture();
+        setStatus("idle", "The microphone stopped while you were away. Tap the mic to start again.");
+      }
+    }
+    if (!audioContext) return;
+    resumeContext(RESUME_TIMEOUT_MS).then(function (ok) {
+      if (!ok) {
+        // Needs a tap on iOS. Say so only if she was mid-sentence; otherwise the next tap resumes it silently.
+        if (wasSpeaking && lastSpokenText) armTapToEnable(lastSpokenText, "Voice paused while you were away. Tap anywhere to hear it again.");
+        return;
+      }
+      if (wasSpeaking && audioContext) {
+        // "Running" but frozen after backgrounding? Check that the clock really moves.
+        const t0 = audioContext.currentTime;
+        setTimeout(function () {
+          if (audioContext && audioContext.currentTime === t0 && (speakingNow || activeAudioSources.size)) {
+            stopPcmPlayback();
+            speakingNow = false;
+            armTapToEnable(lastSpokenText, "Voice paused while you were away. Tap anywhere to hear it again.");
+          }
+        }, 500);
+      }
+    });
+  }
+  try { document.addEventListener("visibilitychange", onVisibilityChange); } catch (_) {}
+  try { window.addEventListener("pageshow", function (e) { if (e && e.persisted) onVisibilityChange(); }); } catch (_) {}
+
+  // Fix 4: the iOS ringer switch. Web pages cannot read it. On iOS 17+ the session type set above
+  // lets sound play with the switch on, so nothing is shown. Where that is not available (older iOS)
+  // show ONE short instruction after the first spoken reply, with a tap to hear it again.
+  function maybeShowRingerHint() {
+    if (!IS_IOS || audioSessionStuck || ringerHintShown) return;
+    ringerHintShown = true;
+    // Text only: any later tap already re-runs the unlock, so no replay is queued behind a stray tap.
+    setStatus("blocked", "Can't hear me? Flip the ringer switch on the side of your phone, then tap anywhere to turn voice back on.");
+  }
 
   function blockedError() {
     var e = new Error("audio_blocked_by_browser");
@@ -214,14 +348,16 @@
     return e;
   }
 
+  function markPlayoutStart() { ttsStartedAt = Date.now(); speakingNow = true; }
+
   function assertAudioRunning(context) {
     if (context && context.state !== "running") throw blockedError();
   }
 
   // UX: the browser is blocking sound. Say so in one short line and replay on the next tap.
-  function armTapToEnable(text) {
+  function armTapToEnable(text, message) {
     pendingSpeech = text || "";
-    setStatus("blocked", "Tap anywhere to turn on voice. Your browser is holding sound until you do.");
+    setStatus("blocked", message || "Tap anywhere to turn on voice. Your browser is holding sound until you do.");
     if (retryArmed) return;
     retryArmed = true;
     var names = ["touchend", "click", "keydown"];
@@ -246,6 +382,7 @@
     const frameBytes = 8192;
     let pending = new Uint8Array(0);
     let nextStartAt = context.currentTime + 0.08;
+    let firstScheduled = false;
 
     function schedule(bytes) {
       if (!bytes.length || generation !== playbackGeneration) return;
@@ -261,6 +398,7 @@
       source.connect(context.destination);
       const startAt = Math.max(context.currentTime + 0.02, nextStartAt);
       source.start(startAt);
+      if (!firstScheduled) { firstScheduled = true; markPlayoutStart(); }
       nextStartAt = startAt + buffer.duration;
       activeAudioSources.add(source);
       source.onended = function () { activeAudioSources.delete(source); };
@@ -312,7 +450,7 @@
         activeAudioSources.delete(source);
         resolve();
       };
-      try { source.start(); } catch (error) {
+      try { source.start(); markPlayoutStart(); } catch (error) {
         activeAudioSources.delete(source);
         reject(error);
       }
@@ -408,16 +546,27 @@
         }
         utter.rate = 1;
         utter.pitch = 1;
+        let startedFlag = false;
+        const watchdog = setTimeout(function () {
+          if (startedFlag) return;
+          try { window.speechSynthesis.cancel(); } catch (_) {}
+          armTapToEnable(text, "The voice didn't start. Tap anywhere to try again.");
+          resolve();
+        }, 4000);
         utter.onstart = function () {
-          speakingNow = true;
+          markPlayoutStart();
+          startedFlag = true;
           setStatus("speaking", note || "SIINDEX is speaking…");
         };
         utter.onend = function () {
+          clearTimeout(watchdog);
           speakingNow = false;
           setStatus("idle", "Ready.");
+          maybeShowRingerHint();
           resolve();
         };
         utter.onerror = function (ev) {
+          clearTimeout(watchdog);
           speakingNow = false;
           if (ev && (ev.error === "not-allowed")) { armTapToEnable(text); resolve(); return; }
           if (ev && (ev.error === "canceled" || ev.error === "interrupted")) { resolve(); return; }
@@ -459,11 +608,18 @@
   async function speak(text) {
     if (!voiceEnabled || !text) return;
     unlockAudio();
+    lastSpokenText = text;
     try { return await speakInner(text); } finally { speakingNow = false; }
   }
 
   async function speakInner(text) {
     ensureProviderConsent();
+    // Before every TTS call: make sure the AudioContext is running (raced against a timeout).
+    // If the browser still will not start it, say so now and replay on the next tap.
+    {
+      const ctx = await ensureAudioContext();
+      if (ctx && ctx.state !== "running") { armTapToEnable(text); return; }
+    }
     const controller = new AbortController();
     voiceAbort = controller;
     let timedOut = false;
@@ -486,10 +642,10 @@
         failure.consentRejected = response.status === 403 && detail.indexOf("provider_consent_required") !== -1;
         throw failure;
       }
-      speakingNow = true;
       await playVoiceResponse(response);
       speakingNow = false;
       setStatus("idle", "Ready.");
+      maybeShowRingerHint();
       return;
     } catch (error) {
       clearTimeout(timer);
@@ -509,6 +665,7 @@
     try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (_) {}
     stopMediaCapture();
     speakingNow = false;
+    ttsStartedAt = 0; // playback was stopped on purpose: nothing left to echo, so listen normally at once
     pendingSpeech = "";
     busy = false;
     if (notify !== false) setStatus("idle", message || "Interrupted. Ready.");
@@ -890,26 +1047,42 @@
         recognizer.interimResults = false;
         recognizer.maxAlternatives = 1;
         setStatus("listening", "Listening… speak clearly (tap mic to stop)");
-        // Fix 2: echo-bleed heuristic. A sound shorter than MIN_USER_UTTERANCE_MS while SIINDEX is
-        // speaking is assumed to be her own voice leaking into the mic: discard it, keep playing.
-        var speechStartAt = 0, lastSpeechMs = 0, discarded = false, restarts = 0;
-        recognizer.onspeechstart = function () { speechStartAt = Date.now(); lastSpeechMs = 0; };
+        // Fix 2: echo-bleed heuristic. Input is treated as SIINDEX's own voice leaking into the mic when
+        //  (a) it is shorter than MIN_USER_UTTERANCE_MS, or
+        //  (b) it began inside the first POST_PLAYOUT_QUIET_MS after playback started (Chromium
+        //      suppresses near-end speech for up to ~1.2 s then).
+        // Real input must pass BOTH tests. Bleed is dropped silently and listening carries on.
+        var speechStartAt = 0, lastSpeechMs = 0, discarded = false, restarts = 0, startedInQuiet = false;
+        var inQuiet = function (t) { return ttsStartedAt > 0 && t >= ttsStartedAt && t < ttsStartedAt + POST_PLAYOUT_QUIET_MS; };
+        recognizer.onspeechstart = function () {
+          speechStartAt = Date.now(); lastSpeechMs = 0;
+          startedInQuiet = inQuiet(speechStartAt);
+        };
         recognizer.onspeechend = function () { if (speechStartAt) lastSpeechMs = Date.now() - speechStartAt; };
         recognizer.onend = function () {
           if (!discarded) return;
           discarded = false;
           if (speakingNow && restarts < 3) {
-            restarts += 1; speechStartAt = 0; lastSpeechMs = 0;
+            restarts += 1; speechStartAt = 0; lastSpeechMs = 0; startedInQuiet = false;
             try { recognizer.start(); return; } catch (_) {}
           }
           if (!speakingNow) setStatus("idle", "Ready.");
         };
         recognizer.onresult = function (e) {
-          var spokenMs = lastSpeechMs || (speechStartAt ? Date.now() - speechStartAt : 0);
-          if (speakingNow && spokenMs > 0 && spokenMs < MIN_USER_UTTERANCE_MS) {
+          var now = Date.now();
+          var spokenMs = lastSpeechMs || (speechStartAt ? now - speechStartAt : 0);
+          var tooShort = spokenMs > 0 && spokenMs < MIN_USER_UTTERANCE_MS;
+          var quiet = startedInQuiet || (!speechStartAt && inQuiet(now));
+          if (quiet || (speakingNow && tooShort)) {
+            // Bleed: invisible to the citizen. Keep the current status and keep playing.
             discarded = true;
-            try { console.info("[siindex-voice] ignored a " + spokenMs + " ms sound while speaking (likely echo)"); } catch (_) {}
-            setStatus("speaking", "SIINDEX is speaking…");
+            try { console.info("[siindex-voice] dropped echo bleed (" + spokenMs + " ms, quiet window " + quiet + ")"); } catch (_) {}
+            if (speakingNow) setStatus("speaking", "SIINDEX is speaking…");
+            return;
+          }
+          if (tooShort) {
+            // Nothing is playing, so this is not echo: be honest that it was too short to use.
+            setStatus("idle", "I didn't catch that. Tap the mic and try again.");
             return;
           }
           var transcript = "";
@@ -950,8 +1123,9 @@
   }
 
   window.SIINDEXVoice = {
-    version: "3.0.23",
+    version: "3.0.24",
     minUtteranceMs: MIN_USER_UTTERANCE_MS,
+    quietAfterPlayoutMs: POST_PLAYOUT_QUIET_MS,
     unlock: unlockAudio,
     speak: speak,
     interrupt: interrupt,
