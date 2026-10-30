@@ -121,13 +121,24 @@ a.btn{display:block;text-align:center;min-height:52px;margin-top:24px;padding:14
   var REDIR = 'https://imagenationdex.com/onboard';
   var STORE = 'indx_onboard_v1';
   var $ = function (id) { return document.getElementById(id); };
-  var data = { name: '', phone: '', handle: '', email: '' };
+  var data = { name: '', phone: '', handle: '', email: '', events: [] };
   var step = 1;
   var busy = false;
 
-  function load() { try { var s = JSON.parse(localStorage.getItem(STORE) || 'null'); if (s) for (var k in data) if (typeof s[k] === 'string') data[k] = s[k]; } catch (e) {} }
+  function load() { try { var s = JSON.parse(localStorage.getItem(STORE) || 'null'); if (s) { for (var k in data) if (typeof data[k] === 'string' && typeof s[k] === 'string') data[k] = s[k]; if (Array.isArray(s.events)) data.events = s.events.slice(-20); } } catch (e) {} }
   function persist() { try { localStorage.setItem(STORE, JSON.stringify(data)); } catch (e) {} }
   function wipe() { try { localStorage.removeItem(STORE); } catch (e) {} }
+  // Evidence trail. Each step is queued here and saved to the database after sign-in, when the citizen row exists.
+  function addEvent(type, payload) { data.events.push({ t: type, p: payload || {}, ts: new Date().toISOString() }); data.events = data.events.slice(-20); persist(); }
+  async function flushEvents(extra) {
+    var list = data.events.concat(extra || []).slice(-20);
+    try {
+      var r = await sb.rpc('log_onboarding_events', { p_events: list.map(function (e) { return { event_type: e.t, payload: e.p, client_ts: e.ts }; }) });
+      if (!r.error && r.data && r.data.ok) return true;
+    } catch (e) {}
+    data.events = list; data.name = ''; data.phone = ''; data.handle = ''; data.email = ''; persist();
+    return false;
+  }
   function cleanHandle(v) { return String(v || '').trim().toLowerCase().replace(/[^a-z0-9]/g, ''); }
   function setErr(id, m) { $(id).textContent = m || ''; }
   function clearErrs() { ['e1', 'e2', 'e2b', 'e3', 'n1'].forEach(function (i) { setErr(i, ''); }); }
@@ -206,6 +217,7 @@ a.btn{display:block;text-align:center;min-height:52px;margin-top:24px;padding:14
     if (phone.replace(/\D/g, '').length < 7) return setErr('e1', 'Enter your phone number with the country code, like +682 12345.');
     if (h.length < 2) return setErr('e1', 'Choose the name you want, using letters and numbers. For example: yourname.');
     data.name = name; data.phone = phone; data.handle = h; persist();
+    addEvent('name_reserved', { handle: h, domain: h + '.INDEX', issued: false });
     var s = null;
     try { var r = await sb.auth.getSession(); s = r && r.data && r.data.session; } catch (e) {}
     showStep(s ? 3 : 2);
@@ -224,7 +236,7 @@ a.btn{display:block;text-align:center;min-height:52px;margin-top:24px;padding:14
     try {
       var res = await sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true, emailRedirectTo: REDIR } });
       if (res.error) setErr('e2', plain(res.error));
-      else { $('sent').hidden = false; $('b2').textContent = 'Send the link again'; }
+      else { addEvent('email_sent', { email_domain: email.split('@')[1] || '' }); $('sent').hidden = false; $('b2').textContent = 'Send the link again'; }
     } catch (e) { setErr('e2', plain(e)); }
     setBusy($('b2'), false, '', $('sent').hidden ? 'Send sign-in link' : 'Send the link again');
   });
@@ -237,7 +249,7 @@ a.btn{display:block;text-align:center;min-height:52px;margin-top:24px;padding:14
     setBusy($('b2b'), true, 'Checking…', 'Use this code');
     try {
       var res = await sb.auth.verifyOtp({ email: $('email').value.trim() || data.email, token: token, type: 'email' });
-      if (res.error) setErr('e2b', plain(res.error)); else afterSignIn();
+      if (res.error) setErr('e2b', plain(res.error)); else { addEvent('otp_verified', { method: 'code' }); afterSignIn(); }
     } catch (e) { setErr('e2b', plain(e)); }
     setBusy($('b2b'), false, '', 'Use this code');
   });
@@ -282,12 +294,16 @@ a.btn{display:block;text-align:center;min-height:52px;margin-top:24px;padding:14
         setBusy(btn, false, '', idle); return;
       }
       var shown = data.handle ? data.handle + '.INDEX' : '';
+      var extra = [skip || (!dob && !region)
+        ? { t: 'details_skipped', p: {}, ts: new Date().toISOString() }
+        : { t: 'details_provided', p: { region_given: !!region, dob_given: !!dob, under_18: under, guardian_given: under && !!guardian }, ts: new Date().toISOString() }];
       try {
         var row = await sb.from('citizens').select('web3_domain').eq('auth_user_id', session.user.id).maybeSingle();
         if (row && row.data && /\.INDEX$/i.test(row.data.web3_domain || '')) shown = row.data.web3_domain;
       } catch (e) {}
       $('doneDomain').textContent = shown;
-      wipe();
+      extra.push({ t: 'signup_completed', p: { tier: 'tier0', domain_issued: false, reserved_domain: shown }, ts: new Date().toISOString() });
+      if (await flushEvents(extra)) wipe();
       setBusy(btn, false, '', idle);
       showStep(4);
     } catch (e) { setErr('e3', plain(e)); setBusy(btn, false, '', idle); }
@@ -302,13 +318,14 @@ a.btn{display:block;text-align:center;min-height:52px;margin-top:24px;padding:14
     var token_hash = q.get('token_hash') || hsh.get('token_hash');
     var type = q.get('type') || hsh.get('type') || 'email';
     var failed = false;
+    var cameFromLink = !!(token_hash || q.get('code'));
     if (token_hash) {
       try { var v = await sb.auth.verifyOtp({ token_hash: token_hash, type: type }); failed = !!v.error; } catch (e) { failed = true; }
     }
     var session = null;
     try { var r = await sb.auth.getSession(); session = r && r.data && r.data.session; } catch (e) {}
     try { if (window.location.search || window.location.hash) window.history.replaceState(null, '', window.location.pathname); } catch (e) {}
-    if (session) { afterSignIn(); return; }
+    if (session) { if (cameFromLink) addEvent('otp_verified', { method: 'link' }); afterSignIn(); return; }
     showStep(data.name && data.phone && data.handle && data.email ? 2 : 1, true);
     if (failed) { setErr(step === 2 ? 'e2' : 'e1', 'That sign-in link did not work or has expired. Send a new one.'); }
   }
