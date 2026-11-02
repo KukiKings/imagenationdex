@@ -5,10 +5,9 @@
  * strip non-digits, reject under ten digits (400, not a silent false).
  *
  * KNOWN RISK: a public yes/no on phone numbers is an enumeration oracle. Mitigation here:
- * durable per-IP rate limit in Upstash Redis, key = IP + UTC day, rejects after 5 checks
+ * durable per-IP rate limit in Upstash Redis, key = IP + UTC day, rejects after 20 checks
  * per IP per day. Fails CLOSED: if Upstash is not configured or unreachable the request is
  * refused. Required secrets: UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN.
- * NOT DEPLOYED by committing this file.
  */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2.95.0";
@@ -16,7 +15,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2.95.0";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const MIN_DIGITS = 10;
-const DAILY_LIMIT = 5;      // checks per IP per UTC day
+const DAILY_LIMIT = 20;     // checks per IP per UTC day
 const UPSTASH_URL = Deno.env.get("UPSTASH_REDIS_REST_URL");
 const UPSTASH_TOKEN = Deno.env.get("UPSTASH_REDIS_REST_TOKEN");
 
