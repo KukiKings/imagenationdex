@@ -246,6 +246,7 @@
   .sh-footer:active{opacity:0.7;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
+<script src="/phone-normalize.js"></script>
 <script src="js/indx-db.js"></script>
 <meta name="theme-color" content="#090A10">
 <link rel="manifest" href="/manifest.json">
@@ -657,8 +658,11 @@ function onPhoneInput() {
     _phoneLookupTimer = setTimeout(async () => {
       let found = false;
       try {
-        const { data } = await sb.rpc('get_citizen_by_phone', { p_phone: lookupNum });
-        found = !!(data && (data.id || data.exists === true));
+        // No session guarantee here, so no get_citizen_by_phone: boolean-only edge function.
+        const existsPhone = IndxPhone.forRpc(lookupNum);
+        if (!existsPhone) { status.className = 'lookup-status'; status.style.display = 'none'; return; }
+        const { data } = await sb.functions.invoke('citizen-exists', { body: { phone: existsPhone } });
+        found = !!(data && data.exists === true);
       } catch (e) { /* network hiccup -- fall through to the invite state */ }
       if (lookupNum !== fullNum) return; // superseded by a newer keystroke
       if (found) {
