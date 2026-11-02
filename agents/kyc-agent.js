@@ -37,19 +37,31 @@ function assertClient(client) {
  * get_citizen_by_phone(p_phone text) RETURNS json
  * Confirmed via pg_proc (routine_type FUNCTION, data_type json).
  */
-async function lookupCitizenByPhone(client, { phone } = {}) {
-  assertClient(client);
+function notAuthenticated() {
+  IndxPhone.log('kyc-agent', 'not-authenticated');
+  const e = new Error('not_authenticated: get_citizen_by_phone requires the caller\'s own JWT');
+  e.code = 'not_authenticated';
+  return e;
+}
+
+async function lookupCitizenByPhone(_client, { phone, jwt } = {}) {
+  // The passed client is deliberately NOT used: it may be service role. The hardened RPC
+  // resolves auth.uid() from the caller's JWT, so a client scoped to that JWT is built here.
+  // No JWT means not_authenticated; this function never falls back to service role.
+  if (!jwt || typeof jwt !== 'string' || !jwt.replace(/^Bearer\s+/i, '').trim()) throw notAuthenticated();
   const rpcPhone = IndxPhone.forRpc(phone);
   if (!rpcPhone) throw new Error('lookupCitizenByPhone requires { phone } with ten or more digits');
-  const { data, error } = await client.rpc('get_citizen_by_phone', { p_phone: rpcPhone });
+  const url = process.env.SUPABASE_URL;
+  const anonKey = process.env.SUPABASE_ANON_KEY;
+  if (!url || !anonKey) throw new Error('kyc-agent: SUPABASE_URL and SUPABASE_ANON_KEY must be set to build a user-scoped client');
+  const { createClient } = require('@supabase/supabase-js');
+  const userClient = createClient(url, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: 'Bearer ' + jwt.replace(/^Bearer\s+/i, '').trim() } },
+  });
+  const { data, error } = await userClient.rpc('get_citizen_by_phone', { p_phone: rpcPhone });
   if (error) {
-    if (IndxPhone.isNotAuthenticated(error)) {
-      // Hardened RPC needs a real user session (auth.uid()). A service-role client has none.
-      IndxPhone.log('kyc-agent', 'not-authenticated');
-      const e = new Error('not_authenticated: get_citizen_by_phone requires a signed-in citizen session');
-      e.code = 'not_authenticated';
-      throw e;
-    }
+    if (IndxPhone.isNotAuthenticated(error)) throw notAuthenticated();
     throw error;
   }
   if (!data) IndxPhone.log('kyc-agent', 'null');
