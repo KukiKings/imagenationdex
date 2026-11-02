@@ -218,6 +218,7 @@
 <div id="toast"></div>
 
 <script src="/indx-captcha.js"></script>
+<script src="/phone-normalize.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
@@ -375,11 +376,24 @@
 
       await initRealSession(); // GOD MODE PATCH — resolve real access token before any RPC call
 
+      const rpcPhone = IndxPhone.forRpc(recovPhoneNum);
+      if (!rpcPhone) {
+        IndxPhone.log('account-recovery', 'invalid-phone');
+        showToast('Enter your full phone number');
+        btn.disabled = false; btn.textContent = 'Verify';
+        return;
+      }
       const lookupRes = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_citizen_by_phone', {
-        method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_phone: recovPhoneNum })
+        method: 'POST', headers: rpcHeaders(), body: JSON.stringify({ p_phone: rpcPhone })
       });
-      const citizen = await lookupRes.json();
+      const citizen = await lookupRes.json().catch(() => null);
+      if (IndxPhone.isNotAuthenticated(citizen)) {
+        IndxPhone.log('account-recovery', 'not-authenticated');
+        window.location.href = 'login.html';
+        return;
+      }
       if (!citizen || !citizen.id) {
+        IndxPhone.log('account-recovery', 'null');
         showToast('No IN$DEX account found for this phone');
         btn.disabled = false; btn.textContent = 'Verify';
         return;
