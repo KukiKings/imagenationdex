@@ -24,6 +24,8 @@
  * throw "not_authorized" if the caller isn't entitled to the citizen row).
  */
 
+const IndxPhone = require('../phone-normalize.js');
+
 function assertClient(client) {
   if (!client || typeof client.rpc !== 'function') {
     throw new Error('kyc-agent: a real Supabase client instance is required (got none).');
@@ -37,9 +39,22 @@ function assertClient(client) {
  */
 async function lookupCitizenByPhone(client, { phone } = {}) {
   assertClient(client);
-  if (!phone) throw new Error('lookupCitizenByPhone requires { phone }');
-  const { data, error } = await client.rpc('get_citizen_by_phone', { p_phone: phone });
-  if (error) throw error;
+  const rpcPhone = IndxPhone.forRpc(phone);
+  if (!rpcPhone) throw new Error('lookupCitizenByPhone requires { phone } with ten or more digits');
+  const { data, error } = await client.rpc('get_citizen_by_phone', { p_phone: rpcPhone });
+  if (error) {
+    if (IndxPhone.isNotAuthenticated(error)) {
+      // Hardened RPC needs a real user session (auth.uid()). A service-role client has none.
+      IndxPhone.log('kyc-agent', 'not-authenticated');
+      const e = new Error('not_authenticated: get_citizen_by_phone requires a signed-in citizen session');
+      e.code = 'not_authenticated';
+      throw e;
+    }
+    throw error;
+  }
+  if (!data) IndxPhone.log('kyc-agent', 'null');
+  // Returns { id, citizen_name, wisdom_score, indx_balance, web3_domain } for the caller's own
+  // citizen, or null (no match or not owned: same result).
   return data;
 }
 
