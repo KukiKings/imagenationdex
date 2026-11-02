@@ -5,7 +5,7 @@
  * Enforcement happens in Supabase: Auth > Attack Protection > CAPTCHA (Turnstile + secret key).
  * Until that is enabled, the token is sent but ignored. Browser-side gating alone is not a security control. */
 (function (w) {
-  var SITE_KEY = '';
+  var SITE_KEY = '0x4AAAAAAAFwSSoTCP42UpNvx';
   var key = w.INDX_TURNSTILE_SITEKEY || SITE_KEY;
   var API = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
   var wid = null, token = null, waiters = [], loading = null;
