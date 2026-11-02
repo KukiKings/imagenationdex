@@ -6,8 +6,7 @@
  * Env (never commit secrets):
  *   AJ_NOTIFY_EMAIL      — primary (AJ personal: dadyboy73@gmail.com)
  *   AJ_NOTIFY_EMAIL_CC   — ops trail (imagenationdex@gmail.com)
- *   AJ_NOTIFY_SMS        — E.164 phone for Twilio
- *   TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN / TWILIO_FROM
+ *   AJ_NOTIFY_SMS        — E.164 phone for SMS (transport stubbed; outbox only until SMSGlobal is wired in)
  *   NEEDS_AJ_DRY_RUN=1   — outbox only
  */
 import { promises as fs } from "node:fs";
@@ -106,31 +105,10 @@ async function writeOutbox(packet, email, sms, delivery) {
   return file;
 }
 
-async function sendSmsTwilio(to, body) {
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  const from = process.env.TWILIO_FROM;
-  if (!sid || !token || !from || !to) {
-    return { ok: false, skipped: true, reason: "twilio_or_sms_not_configured" };
-  }
-  const auth = Buffer.from(`${sid}:${token}`).toString("base64");
-  const params = new URLSearchParams({ To: to, From: from, Body: body });
-  const res = await fetch(
-    `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${auth}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: params.toString(),
-    },
-  );
-  const text = await res.text();
-  if (!res.ok) {
-    return { ok: false, status: res.status, body: text.slice(0, 500) };
-  }
-  return { ok: true, provider: "twilio" };
+// SMS transport stub. Twilio removed. No message is sent; the packet stays in the outbox.
+// Replace with the SMSGlobal transport when it is wired in for this script.
+async function sendSmsStub(to, body) {
+  return { ok: false, skipped: true, reason: "sms_transport_not_configured" };
 }
 
 export async function notifyNeedsAj(job, result = {}) {
@@ -152,7 +130,7 @@ export async function notifyNeedsAj(job, result = {}) {
   };
 
   if (!dry && process.env.AJ_NOTIFY_SMS) {
-    const smsResult = await sendSmsTwilio(process.env.AJ_NOTIFY_SMS, sms);
+    const smsResult = await sendSmsStub(process.env.AJ_NOTIFY_SMS, sms);
     delivery.sms = {
       to: process.env.AJ_NOTIFY_SMS,
       status: smsResult.ok ? "sent" : smsResult.skipped ? "skipped" : "failed",
