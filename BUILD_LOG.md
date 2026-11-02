@@ -2554,3 +2554,7 @@ clean, unaffected by a plain-text label change as expected).
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01U57VbYcJz9FgBwyMitw814
+
+## 2026-11-02 — Sub-agent operating model
+
+Sub-agents run read-mostly work autonomously. Destructive or security-settings changes need Arthur's consent first. See siindex-operating/SUB-AGENT-CONSENT-MODEL.md.
