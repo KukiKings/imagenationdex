@@ -49,6 +49,16 @@
   }
   function renew() { if (wid !== null && w.turnstile) { try { w.turnstile.reset(wid); } catch (e) {} } }
 
+  // PKCE client options for pages that send OTPs. The code verifier is kept in sessionStorage;
+  // the session itself stays in localStorage so other pages keep reading it. Fragments are not parsed.
+  var CV = /-code-verifier$/;
+  function pick(k) { return CV.test(k) ? w.sessionStorage : w.localStorage; }
+  w.IndxAuthOpts = { auth: { flowType: 'pkce', detectSessionInUrl: false, storage: {
+    getItem: function (k) { try { return pick(k).getItem(k); } catch (e) { return null; } },
+    setItem: function (k, v) { try { pick(k).setItem(k, v); } catch (e) {} },
+    removeItem: function (k) { try { pick(k).removeItem(k); } catch (e) {} }
+  } } };
+
   w.IndxCaptcha = {
     enabled: function () { return !!key; },
     // Returns an options object for signInWithOtp; consumes the single-use token and starts a fresh challenge.
