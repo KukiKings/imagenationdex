@@ -301,6 +301,7 @@
 </div>
 <div id="toast"></div>
 <script src="/indx-captcha.js"></script>
+<script src="/phone-normalize.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
 const SUPABASE_URL      = 'https://zljgthfzbalsunuoohcd.supabase.co';
@@ -308,6 +309,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, window.IndxAuthOpts);
 let verifiedPhone = '';
 let citizenRecord = null;
+let citizenExists = false;
 
 let currentStep = 0;
 let otpDigits = [];
@@ -362,12 +364,17 @@ async function sendOtp(){
   const btn = document.getElementById('sendOtpBtn');
   btn.disabled = true; btn.textContent = 'Sending…';
 
-  // Look up an existing citizen by phone (unchanged — get_citizen_by_phone returns a single
-  // object or null, not an array).
+  // Pre-OTP there is no session, so get_citizen_by_phone (owner-only) cannot be used.
+  // The citizen-exists edge function answers a boolean only; no citizen data reaches this page.
   try {
-    const { data } = await sb.rpc('get_citizen_by_phone', { p_phone: verifiedPhone });
-    if (data && data.id) citizenRecord = data;
-  } catch(e) { /* silent — new citizen */ }
+    const existsPhone = IndxPhone.forRpc(verifiedPhone);
+    if (existsPhone) {
+      const { data } = await sb.functions.invoke('citizen-exists', { body: { phone: existsPhone } });
+      citizenExists = !!(data && data.exists === true);
+    } else {
+      IndxPhone.log('biometric-kyc', 'invalid-phone');
+    }
+  } catch(e) { /* silent — treat as new citizen */ }
 
   try {
     const { error } = await sb.auth.signInWithOtp({ phone: verifiedPhone, options: await IndxCaptcha.options() });
@@ -512,7 +519,7 @@ async function completeOnboarding() {
     // regardless. Moved below, once the real citizen id is known either way, and switched to
     // link_citizen_auth_by_id(p_citizen_id) which self-heals phone_number from auth.users.phone
     // instead of trusting a re-derived client-side phone string.
-    if (citizenRecord && citizenRecord.id) {
+    if (citizenExists) {
       // BACKEND FIX 2026-08-29: get_citizen_by_phone() now only returns citizen_name/
       // indx_balance/wisdom_score/web3_domain to the verified phone owner (or founder) --
       // previously any anonymous caller could pass any phone number and get a real
@@ -521,9 +528,20 @@ async function completeOnboarding() {
       // verifyOtpAndComplete()'s real sb.auth.verifyOtp() has run, so this call is
       // authenticated as the actual phone owner and gets the full record.
       try {
-        const { data: verified } = await sb.rpc('get_citizen_by_phone', { p_phone: verifiedPhone });
-        if (verified && verified.id) citizenRecord = verified;
-      } catch (refetchErr) { /* non-fatal — fall back to the id-only pre-OTP record */ }
+        const rpcPhone = IndxPhone.forRpc(verifiedPhone);
+        const res = rpcPhone ? await sb.rpc('get_citizen_by_phone', { p_phone: rpcPhone }) : { data: null, error: null };
+        if (res.error && IndxPhone.isNotAuthenticated(res.error)) {
+          IndxPhone.log('biometric-kyc', 'not-authenticated');
+          window.location.href = 'login.html';
+          return;
+        }
+        if (res.data && res.data.id) citizenRecord = res.data; else IndxPhone.log('biometric-kyc', 'null');
+      } catch (refetchErr) { IndxPhone.log('biometric-kyc', 'lookup-error'); }
+      if (!citizenRecord || !citizenRecord.id) {
+        // An account exists for this number but is not linked to this sign-in: never create a duplicate.
+        showToast('We found an account for this number that is not linked to this sign-in. Please contact support.');
+        return;
+      }
 
       sessionStorage.setItem('citizen_id',      citizenRecord.id || '');
       sessionStorage.setItem('citizen_name',     citizenRecord.citizen_name || 'Sovereign');
