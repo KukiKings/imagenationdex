@@ -279,6 +279,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
+<script src="/phone-normalize.js"></script>
 <script src="assets/indx-shield.js"></script>
 <script>
 const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
@@ -473,17 +474,21 @@ async function verifyOTP() {
     .single();
   citizen = byAuth;
 
-  // 2. If not found, citizen may have been created anon during onboarding look up by phone
+  // 2. Not found by auth_user_id: ask the hardened get_citizen_by_phone, which now returns
+  // only the caller's own linked citizen. The old relink fallback is gone: it relied on the
+  // function returning unlinked rows, which it no longer does.
   if (!citizen) {
-    const { data: byPhone } = await sb.rpc('get_citizen_by_phone', { p_phone: fullPhone });
-    if (byPhone && byPhone.id) {
-      citizen = byPhone;
-      // Link this auth session to the citizen row for future logins.
-      // FIXED 2026-09-04: link_citizen_auth(p_phone, p_auth_id) had no EXECUTE grant for
-      // anon/authenticated (silently failed every time) and matched by a client-formatted
-      // phone string instead of the id we already have from byPhone above. Switched to
-      // link_citizen_auth_by_id, which also self-heals phone_number from auth.users.phone.
-      await sb.rpc('link_citizen_auth_by_id', { p_citizen_id: byPhone.id });
+    const rpcPhone = IndxPhone.forRpc(fullPhone);
+    if (!rpcPhone) {
+      IndxPhone.log('login', 'invalid-phone');
+    } else {
+      const { data: byPhone, error: phoneErr } = await sb.rpc('get_citizen_by_phone', { p_phone: rpcPhone });
+      if (phoneErr && IndxPhone.isNotAuthenticated(phoneErr)) {
+        IndxPhone.log('login', 'not-authenticated');
+        window.location.replace('login.html');
+        return;
+      }
+      if (byPhone && byPhone.id) citizen = byPhone; else IndxPhone.log('login', 'null');
     }
   }
 
