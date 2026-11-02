@@ -85,4 +85,6 @@ or a Supabase-native option would fit better with the "we are using supabase" di
 
 `PROCEED` · `HOLD` · `REJECT`
 
+Sub-agent consent rules (what runs autonomously, what needs Arthur's yes): see SUB-AGENT-CONSENT-MODEL.md.
+
 *SIINDEX prepares · AJ authorizes*
