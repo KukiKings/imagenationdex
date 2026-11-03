@@ -435,7 +435,7 @@ function indxJ(v) { return JSON.stringify(v).replace(/&/g, '&amp;').replace(/"/g
 (function () {
   const EV = { click: ['click', 'action', 'args', true], input: ['input', 'inputAction', 'inputArgs', true], change: ['change', 'changeAction', 'changeArgs', true],
     submit: ['submit', 'submitAction', 'submitArgs', true], keydown: ['keydown', 'keydownAction', 'keydownArgs', true], keyup: ['keyup', 'keyupAction', 'keyupArgs', true],
-    keypress: ['keypress', 'keypressAction', 'keypressArgs', true], dblclick: ['dblclick', 'dblclickAction', 'dblclickArgs', true],
+    keypress: ['keypress', 'keypressAction', 'keypressArgs', true], dblclick: ['dblclick', 'dblclickAction', 'dblclickArgs', true], paste: ['paste', 'pasteAction', 'pasteArgs', true],
     mouseover: ['mouseover', 'mouseoverAction', 'mouseoverArgs', true], mouseout: ['mouseout', 'mouseoutAction', 'mouseoutArgs', true],
     blur: ['focusout', 'blurAction', 'blurArgs', false], focus: ['focusin', 'focusAction', 'focusArgs', false],
     error: ['error', 'errorAction', 'errorArgs', false], load: ['load', 'loadAction', 'loadArgs', false] };
@@ -451,14 +451,18 @@ function indxJ(v) { return JSON.stringify(v).replace(/&/g, '&amp;').replace(/"/g
   (function (c) { document.addEventListener(c[0], function (e) {
       if (!c[3]) { if (e.target && e.target.dataset) run(e, e.target, c[1], c[2]); return; }
       for (let el = e.target; el && el !== document; el = el.parentElement) { if (el.dataset) run(e, el, c[1], c[2]); if (e.cancelBubble) break; }
-    }, false); })(EV.input);
+    }, true); })(EV.input);
   (function (c) { document.addEventListener(c[0], function (e) {
       if (!c[3]) { if (e.target && e.target.dataset) run(e, e.target, c[1], c[2]); return; }
       for (let el = e.target; el && el !== document; el = el.parentElement) { if (el.dataset) run(e, el, c[1], c[2]); if (e.cancelBubble) break; }
-    }, false); })(EV.click);
+    }, true); })(EV.click);
   (function (c) { document.addEventListener(c[0], function (e) {
       if (!c[3]) { if (e.target && e.target.dataset) run(e, e.target, c[1], c[2]); return; }
       for (let el = e.target; el && el !== document; el = el.parentElement) { if (el.dataset) run(e, el, c[1], c[2]); if (e.cancelBubble) break; }
-    }, false); })(EV.keydown);
+    }, true); })(EV.keydown);
+  (function (c) { document.addEventListener(c[0], function (e) {
+      if (!c[3]) { if (e.target && e.target.dataset) run(e, e.target, c[1], c[2]); return; }
+      for (let el = e.target; el && el !== document; el = el.parentElement) { if (el.dataset) run(e, el, c[1], c[2]); if (e.cancelBubble) break; }
+    }, true); })(EV.paste);
 
 })();
