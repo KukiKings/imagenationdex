@@ -1,0 +1,1 @@
+window.SIINDEX_NO_GLOBAL_WIDGET = true;
