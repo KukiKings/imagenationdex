@@ -26,10 +26,6 @@ button{width:100%;margin-top:14px;padding:14px;border:0;border-radius:12px;backg
 <input id="email" type="email" autocomplete="email" placeholder="you@email.com">
 <button type="button" id="send">Send login code</button>
 
-<label>6-digit code</label>
-<input id="otp" inputmode="numeric" maxlength="8" placeholder="000000">
-<button type="button" id="verify">Verify email</button>
-
 <label>Display name</label>
 <input id="name" placeholder="Your name">
 <label>Region</label>
@@ -49,13 +45,31 @@ const sb = supabase.createClient(SB_URL, KEY, { auth: { flowType: 'pkce', detect
 const out = document.getElementById('out');
 function say(m, ok){ out.className = 'out ' + (ok ? 'ok' : 'bad'); out.textContent = m; }
 
-// Email sign-in link lands here with ?code=. Exchange it for a session, then clean the URL.
+// Email sign-in link lands here with ?code= (or an error in the query/hash). Exchange it for a session.
+const LINK_MSG = 'This sign-in link expired or was already used. Request a new one.';
+function linkProblem(){
+  say(LINK_MSG, false);
+  out.setAttribute('role', 'alert');
+  if (document.getElementById('resend')) return;
+  const b = document.createElement('button');
+  b.type = 'button'; b.id = 'resend'; b.textContent = 'Send a new sign-in link';
+  b.onclick = () => { b.remove(); document.getElementById('send').click(); };
+  out.insertAdjacentElement('afterend', b);
+  b.focus();
+}
 (async () => {
-  const code = new URLSearchParams(location.search).get('code');
-  if (!code) return;
+  const q = new URLSearchParams(location.search);
+  const h = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const code = q.get('code');
+  const hasErr = q.has('error') || q.has('error_code') || h.has('error') || h.has('error_code');
+  if (!code && !hasErr) return;
   history.replaceState(null, '', location.pathname);
+  if (hasErr) return linkProblem();
   const { error } = await sb.auth.exchangeCodeForSession(code);
-  say(error ? error.message : 'Signed in. Save profile next.', !error);
+  if (!error) return say('Signed in. Save profile next.', true);
+  const st = error.status;
+  if (st && st < 500 || /expired|invalid|already|verifier|not found/i.test(error.message || '')) return linkProblem();
+  say(error.message, false);
 })();
 
 document.getElementById('send').onclick = async () => {
@@ -63,13 +77,6 @@ document.getElementById('send').onclick = async () => {
   if (!email.includes('@')) return say('Enter an email.');
   const { error } = await sb.auth.signInWithOtp({ email, options: await IndxCaptcha.options({ shouldCreateUser: true, emailRedirectTo: location.origin + '/tier0' }) });
   say(error ? error.message : 'Sign-in link sent. Open it from the email.', !error);
-};
-
-document.getElementById('verify').onclick = async () => {
-  const email = document.getElementById('email').value.trim();
-  const token = document.getElementById('otp').value.trim();
-  const { error } = await sb.auth.verifyOtp({ email, token, type: 'email' });
-  say(error ? error.message : 'Signed in. Save profile next.', !error);
 };
 
 document.getElementById('save').onclick = async () => {
