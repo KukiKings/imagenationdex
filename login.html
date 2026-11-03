@@ -278,6 +278,7 @@
   </div>
 </div>
 
+<script src="/indx-captcha.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script src="/phone-normalize.js"></script>
 <script src="assets/indx-shield.js"></script>
@@ -286,6 +287,17 @@ const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
 const { createClient } = supabase;
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON);
+// Turnstile: send the OTP with a captcha token. IndxCaptcha.options() consumes the token and resets the widget after every attempt.
+// On captcha_failed, retry once with a fresh token. On sitekey-secret-mismatch, stop (dashboard secret does not match the site key).
+async function otpSend(payload) {
+  const go = async () => sb.auth.signInWithOtp({ ...payload, options: window.IndxCaptcha ? await IndxCaptcha.options(payload.options || {}) : (payload.options || {}) });
+  const why = (e) => e ? ((e.code || '') + ' ' + (e.message || '')) : '';
+  let r = await go();
+  if (r.error && /sitekey-secret-mismatch/i.test(why(r.error))) { console.error('[captcha] sitekey-secret-mismatch: Supabase secret does not match the Turnstile site key'); return r; }
+  if (r.error && /captcha/i.test(why(r.error))) r = await go();
+  return r;
+}
+
 
 const CORRIDORS = [
   { flag:'🇫🇯', name:'Fiji',           dial:'+679' },
@@ -422,7 +434,7 @@ async function sendOTP() {
   document.getElementById('sendOtpBtn').disabled = true;
   document.getElementById('sendOtpBtn').textContent = 'Sending…';
 
-  const { error } = await sb.auth.signInWithOtp({ phone: fullPhone });
+  const { error } = await otpSend({ phone: fullPhone });
 
   if (error) {
     document.getElementById('phoneError').textContent = error.message;
@@ -608,7 +620,7 @@ function startResendTimer() {
 }
 
 async function resendCode() {
-  await sb.auth.signInWithOtp({ phone: fullPhone });
+  await otpSend({ phone: fullPhone });
   startResendTimer();
 }
 

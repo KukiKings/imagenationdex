@@ -626,6 +626,7 @@
   <button class="sheet-close-btn" id="whySheetCloseBtn" onclick="closeWhySheet()">Got it</button>
 </div>
 
+<script src="/indx-captcha.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <script>
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
@@ -633,6 +634,17 @@
   const SB_HEADERS = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY, 'Content-Type': 'application/json' };
   const { createClient } = supabase;
   const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // Turnstile: send the OTP with a captcha token. IndxCaptcha.options() consumes the token and resets the widget after every attempt.
+  // On captcha_failed, retry once with a fresh token. On sitekey-secret-mismatch, stop (dashboard secret does not match the site key).
+  async function otpSend(payload) {
+    const go = async () => sb.auth.signInWithOtp({ ...payload, options: window.IndxCaptcha ? await IndxCaptcha.options(payload.options || {}) : (payload.options || {}) });
+    const why = (e) => e ? ((e.code || '') + ' ' + (e.message || '')) : '';
+    let r = await go();
+    if (r.error && /sitekey-secret-mismatch/i.test(why(r.error))) { console.error('[captcha] sitekey-secret-mismatch: Supabase secret does not match the Turnstile site key'); return r; }
+    if (r.error && /captcha/i.test(why(r.error))) r = await go();
+    return r;
+  }
+
   const citizenId = sessionStorage.getItem('citizen_id');
 
   // ── GOD MODE: Verification Progress Snapshot — real Wisdom Score from sessionStorage + tier dots ──
@@ -858,7 +870,7 @@
     }
     if (!citizenId) { errEl.textContent = 'Sign in first to verify a PayID'; return; }
     try {
-      const { error } = await sb.auth.signInWithOtp({ phone: payid });
+      const { error } = await otpSend({ phone: payid });
       if (error) { errEl.textContent = error.message; return; }
       otpSent = true;
       showToast('📨 Real code sent to ' + payid);

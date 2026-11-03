@@ -877,6 +877,7 @@
   .qr-error { font-size: 12px; color: var(--red); min-height: 16px; text-align: left; }
   .qr-toggle-manual { background: none; border: none; color: var(--cyan); font-size: 13px; cursor: pointer; padding: 4px; }
 </style>
+<script src="/indx-captcha.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" integrity="sha384-JWEyvHh+lRf0sN/WWY+QTQwX+CyWqmNg4tkc8GQzAMEtR2wGNrCJlvnu1lHD1kDm" crossorigin="anonymous"></script>
 <meta name="theme-color" content="#090A10">
 <link rel="manifest" href="/manifest.json">
@@ -1373,6 +1374,17 @@
   const SUPABASE_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // Turnstile: send the OTP with a captcha token. IndxCaptcha.options() consumes the token and resets the widget after every attempt.
+  // On captcha_failed, retry once with a fresh token. On sitekey-secret-mismatch, stop (dashboard secret does not match the site key).
+  async function otpSend(payload) {
+    const go = async () => sb.auth.signInWithOtp({ ...payload, options: window.IndxCaptcha ? await IndxCaptcha.options(payload.options || {}) : (payload.options || {}) });
+    const why = (e) => e ? ((e.code || '') + ' ' + (e.message || '')) : '';
+    let r = await go();
+    if (r.error && /sitekey-secret-mismatch/i.test(why(r.error))) { console.error('[captcha] sitekey-secret-mismatch: Supabase secret does not match the Turnstile site key'); return r; }
+    if (r.error && /captcha/i.test(why(r.error))) r = await go();
+    return r;
+  }
+
 
   let _realAccessToken = null;
   async function initRealSession() {
@@ -1576,8 +1588,8 @@
     (async () => {
       try {
         const { error } = onboardOtpIsPhone
-          ? await sb.auth.signInWithOtp({ phone: onboardOtpContact })
-          : await sb.auth.signInWithOtp({ email: onboardOtpContact });
+          ? await otpSend({ phone: onboardOtpContact })
+          : await otpSend({ email: onboardOtpContact });
         if (error) {
           const errEl = document.getElementById('domainError');
           if (errEl) { errEl.style.display = 'block'; errEl.textContent = error.message || 'Could not send a verification code — try again.'; }
@@ -1614,8 +1626,8 @@
     resendBtn.disabled = true;
     try {
       const { error } = onboardOtpIsPhone
-        ? await sb.auth.signInWithOtp({ phone: onboardOtpContact })
-        : await sb.auth.signInWithOtp({ email: onboardOtpContact });
+        ? await otpSend({ phone: onboardOtpContact })
+        : await otpSend({ email: onboardOtpContact });
       document.getElementById('otpOverlayError').textContent = error ? (error.message || 'Could not resend — try again.') : '';
       if (!error) document.getElementById('otpOverlayError').style.color = 'var(--green)';
       if (!error) document.getElementById('otpOverlayError').textContent = 'New code sent';
