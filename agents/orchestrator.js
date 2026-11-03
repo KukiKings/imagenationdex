@@ -46,6 +46,7 @@ const complianceAgent = require('./compliance-agent');
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
 let _client = null;
 
@@ -66,6 +67,80 @@ function getClient() {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   return _client;
+}
+
+/**
+ * ---- User-scoped client (added 2026-11-03) ----------------------------------------
+ * getClient() above is service role and has no auth.uid(). Actions that must act as a
+ * signed-in citizen (see USER_ACTIONS) get a client built from that citizen's own JWT.
+ * Validation order, all before any database call:
+ *   1. present and well-formed (three base64url parts, JSON header and payload)
+ *   2. not expired (numeric exp in the future)
+ *   3. issued by THIS project (iss === SUPABASE_URL + '/auth/v1')
+ *   4. a user token (role 'authenticated', non-empty sub)
+ *   5. signature verified by the project's own Auth service (GET /auth/v1/user). This
+ *      does not hold the JWT secret locally and works for any signing algorithm.
+ * Any failure throws an Error with code 'not_authenticated' and a non-secret reason.
+ * The JWT itself is never logged.
+ */
+function authError(reason) {
+  const e = new Error('not_authenticated');
+  e.code = 'not_authenticated';
+  e.reason = reason;
+  return e;
+}
+
+function decodeJwt(jwt) {
+  if (typeof jwt !== 'string') return null;
+  const token = jwt.replace(/^Bearer\s+/i, '').trim();
+  const parts = token.split('.');
+  if (parts.length !== 3 || parts.some((p) => !p)) return null;
+  try {
+    const header = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+    if (!header || typeof header !== 'object' || !payload || typeof payload !== 'object') return null;
+    return { token, header, payload };
+  } catch (_) {
+    return null;
+  }
+}
+
+async function verifyJwtWithSupabaseAuth(token, { url, anonKey }) {
+  const res = await fetch(`${url}/auth/v1/user`, {
+    headers: { apikey: anonKey, Authorization: `Bearer ${token}` },
+  });
+  return res.ok;
+}
+
+/**
+ * createUserClient(jwt, opts?) -> Supabase client scoped to that user's JWT.
+ * opts (for tests): { url, anonKey, verify(token, {url, anonKey}) -> Promise<boolean>, now() -> seconds }
+ */
+async function createUserClient(jwt, opts = {}) {
+  if (typeof jwt !== 'string' || !jwt.replace(/^Bearer\s+/i, '').trim()) throw authError('missing');
+  const url = (opts.url || SUPABASE_URL || '').replace(/\/+$/, '');
+  const anonKey = opts.anonKey || SUPABASE_ANON_KEY;
+  if (!url || !anonKey) {
+    throw new Error('orchestrator: SUPABASE_URL and SUPABASE_ANON_KEY must be set to build a user-scoped client.');
+  }
+  const decoded = decodeJwt(jwt);
+  if (!decoded) throw authError('malformed');
+  const { token, payload } = decoded;
+  const nowSec = opts.now ? opts.now() : Math.floor(Date.now() / 1000);
+  if (typeof payload.exp !== 'number' || payload.exp <= nowSec) throw authError('expired');
+  if (payload.iss !== `${url}/auth/v1`) throw authError('wrong_project');
+  if (payload.role !== 'authenticated' || typeof payload.sub !== 'string' || !payload.sub) throw authError('not_user_token');
+  let ok = false;
+  try {
+    ok = await (opts.verify || verifyJwtWithSupabaseAuth)(token, { url, anonKey });
+  } catch (_) {
+    ok = false;
+  }
+  if (!ok) throw authError('bad_signature');
+  return createClient(url, anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
 }
 
 /**
@@ -126,6 +201,13 @@ const KYC_ACTIONS = new Map([
   ['get_citizen_verification_bundle', (client, p) => kycAgent.getCitizenVerificationBundle(client, p)],
   ['get_current_kyc_tier', (client, p) => kycAgent.getCurrentKycTier(client, p)],
 ]);
+
+/**
+ * Action tags. USER actions act as a signed-in citizen: params.jwt is required and a
+ * user-scoped client is built from it. Every other action is a SYSTEM action and keeps
+ * the service-role client exactly as before.
+ */
+const USER_ACTIONS = new Set(['get_citizen_by_phone']);
 
 /**
  * Actions routed to ./compliance-agent.js. Same real-RPC/table-backed contract as
@@ -198,6 +280,21 @@ async function dispatch(task, client = getClient()) {
     return { ok: false, task_id: taskId, error: 'unknown_action' };
   }
 
+  // Tag-based client selection. A user action with a missing or invalid JWT throws
+  // not_authenticated HERE, before any database call (no registry read, no audit row).
+  let handlerClient = client;
+  if (USER_ACTIONS.has(task.action)) {
+    try {
+      handlerClient = await createUserClient(params.jwt);
+    } catch (err) {
+      console.info('[orchestrator] action=%s client=none rejected=%s', task.action, err && err.reason ? err.reason : 'config');
+      throw err;
+    }
+    console.info('[orchestrator] action=%s client=user', task.action);
+  } else {
+    console.info('[orchestrator] action=%s client=service-role', task.action);
+  }
+
   // Real gate: only ever consult agent_registry for a row that genuinely exists under
   // this exact action name. registryRow is null (not fabricated) when there is none.
   let registryRow = null;
@@ -224,7 +321,7 @@ async function dispatch(task, client = getClient()) {
   });
 
   try {
-    const result = await handler(client, params);
+    const result = await handler(handlerClient, params);
     await writeAudit(client, {
       taskId, agent: task.action, action: 'complete', ok: true,
       detail: { routed_to: moduleName },
@@ -407,6 +504,8 @@ if (require.main === module) {
 
 module.exports = {
   getClient,
+  createUserClient,
+  USER_ACTIONS,
   loadActiveAgentRegistry,
   getRegisteredAgent,
   dispatch,
