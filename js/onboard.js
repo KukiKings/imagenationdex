@@ -182,10 +182,11 @@
       if (rd.error || !out || out.ok !== true) {
         done();
         if (out && out.error === 'taken') { showStep(1); return setErr('e1', 'That name was just taken. Choose another, then tap I\'m in.'); }
-        if (out && out.error === 'already_set') { done(); showStep(3); return; }
+        if (out && out.error === 'already_set') { state.claimed = out.domain || ''; done(); showStep(3); return; }
         if (out && out.error === 'invalid_length') { showStep(1); return setErr('e1', 'Choose a name of 3 to 30 letters and numbers.'); }
         return setErr(errId, 'We could not reserve your name. Tap again to retry.');
       }
+      state.claimed = out.domain || '';
       addEvent('name_reserved', { handle: state.handle, domain: state.handle + '.INDEX', issued: false });
       await flushEvents();
     } catch (e) { done(); return setErr(errId, plain(e)); }
@@ -195,7 +196,7 @@
 
   // ---- Step 3: email
   function finish(note) {
-    $('doneDomain').textContent = state.handle + '.INDEX';
+    $('doneDomain').textContent = state.claimed ? String(state.claimed).replace('$', '') : state.handle + '.INDEX';
     $('doneNote').textContent = note || '';
     showStep(4);
   }
@@ -204,6 +205,7 @@
     if (busy) return;
     setErr('e3', '');
     var email = $('email').value.trim();
+    if (!email) return skipEmail();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setErr('e3', 'Enter a valid email, like you@example.com.');
     setBusy($('b3'), true, 'Sending…', 'Finish');
     var note = '';
@@ -212,6 +214,7 @@
       if (res.error) {
         var m = String(res.error.message || res.error.code || '').toLowerCase();
         if (m.indexOf('rate limit') >= 0 || m.indexOf('429') >= 0) note = 'We could not send the email link just now. Your name is saved.';
+        else if (m.indexOf('already') >= 0 || m.indexOf('registered') >= 0 || m.indexOf('exists') >= 0) note = 'That email belongs to another account, so it was not added. Your name is saved. You can add a different email later.';
         else { setErr('e3', plain(res.error)); setBusy($('b3'), false, '', 'Finish'); return; }
       } else {
         addEvent('email_sent', { email_domain: email.split('@')[1] || '' });
@@ -223,12 +226,13 @@
     setBusy($('b3'), false, '', 'Finish');
     finish(note);
   });
-  $('skip').addEventListener('click', async function () {
+  async function skipEmail() {
     if (busy) return;
     addEvent('signup_completed', { tier: 'tier0', domain_issued: false, reserved_domain: state.handle + '.INDEX', email_given: false });
     await flushEvents();
-    finish('You can add an email later.');
-  });
+    finish('Your name is saved. You can add an email later.');
+  }
+  $('skip').addEventListener('click', skipEmail);
 
   showStep(1, true);
 })();
