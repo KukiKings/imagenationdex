@@ -177,11 +177,12 @@
       if (!(sess && sess.data && sess.data.session)) { done(); state.verified = false; showStep(1); return setErr('e1', 'Your sign-in did not carry over. Tap I\'m in to start again.'); }
       var prof = await sb.rpc('upsert_tier0_profile', { p_display_name: state.handle + '.INDEX / ' + state.phone, p_region: null, p_date_of_birth: null, p_guardian_email: null });
       if (prof.error || (prof.data && prof.data.ok === false)) { done(); return setErr(errId, 'We could not save your name. Tap again to retry.'); }
-      var rd = await sb.rpc('reserve_domain', { p_domain: state.handle });
+      var rd = await sb.rpc('claim_web3_domain', { p_domain: state.handle, p_citizen_name: state.handle });
       var out = rd && rd.data;
       if (rd.error || !out || out.ok !== true) {
         done();
         if (out && out.error === 'taken') { showStep(1); return setErr('e1', 'That name was just taken. Choose another, then tap I\'m in.'); }
+        if (out && out.error === 'already_set') { done(); showStep(3); return; }
         if (out && out.error === 'invalid_length') { showStep(1); return setErr('e1', 'Choose a name of 3 to 30 letters and numbers.'); }
         return setErr(errId, 'We could not reserve your name. Tap again to retry.');
       }
