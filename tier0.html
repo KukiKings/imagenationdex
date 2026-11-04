@@ -2,96 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Tier-0 preview | IN$DEX</title>
-<script src="/indx-captcha.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2" crossorigin="anonymous"></script>
-<style>
-:root{--bg:#090A10;--card:#12141F;--line:#2A2D38;--text:#F0F2FF;--muted:#8B90A8;--cyan:#00D4FF;--red:#FF4D6D;--green:#00E5A0}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-width:430px;margin:0 auto;padding:24px 20px 64px}
-h1{font-size:22px;margin:0 0 8px}p{color:var(--muted);line-height:1.5}.banner{border:1px solid #3a2a10;background:#1a1408;color:#ffb800;padding:10px 12px;border-radius:10px;font-size:13px;margin-bottom:16px}
-label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}input{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#1A1D2E;color:var(--text)}
-button{width:100%;margin-top:14px;padding:14px;border:0;border-radius:12px;background:linear-gradient(135deg,#2B35D8,#8B3FE8);color:#fff;font-weight:700}
-.out{margin-top:16px;font-size:13px;white-space:pre-wrap}.ok{color:var(--green)}.bad{color:var(--red)}a{color:var(--cyan)}
-</style>
+<title>Join IN$DEX</title>
+<meta http-equiv="refresh" content="0;url=/onboard">
+<link rel="canonical" href="https://imagenationdex.com/onboard">
+<style>body{margin:0;padding:24px;background:#090A10;color:#F0F2FF;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:16px}a{color:#00D4FF}</style>
 </head>
 <body>
-<div class="banner">PREVIEW: not a live account, wallet, or domain. Email sign-in only. Pilot target 24 February 2027.</div>
-<h1>Tier-0 identity preview</h1>
-<p>Creates a signed-in citizen row. Does not move money. Children need a parent email until 18.</p>
-<p><a href="/">Back to IN$DEX</a> · <a href="/waitlist.html">Waitlist</a></p>
-
-<label>Email</label>
-<input id="email" type="email" autocomplete="email" placeholder="you@email.com">
-<button type="button" id="send">Send sign-in link</button>
-
-<label>Display name</label>
-<input id="name" placeholder="Your name">
-<label>Region</label>
-<input id="region" placeholder="Cook Islands">
-<label>Date of birth (optional)</label>
-<input id="dob" type="date">
-<label>Guardian email if under 18</label>
-<input id="guardian" type="email" placeholder="parent@email.com">
-<button type="button" id="save">Save Tier-0 profile</button>
-<div class="out" id="out"></div>
-
-<script>
-const SB_URL = 'https://zljgthfzbalsunuoohcd.supabase.co';
-const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpsamd0aGZ6YmFsc3VudW9vaGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODc1NTIsImV4cCI6MjA5NzE2MzU1Mn0.5xNG-E4R9OOHEm7Gq6qHVn5Hkq2mqoGRrL5aHHYwvVA';
-// PKCE with default localStorage so the verifier survives the email link opening in a new tab.
-const sb = supabase.createClient(SB_URL, KEY, { auth: { flowType: 'pkce', detectSessionInUrl: false } });
-const out = document.getElementById('out');
-function say(m, ok){ out.className = 'out ' + (ok ? 'ok' : 'bad'); out.textContent = m; }
-
-// Email sign-in link lands here with ?code= (or an error in the query/hash). Exchange it for a session.
-const LINK_MSG = 'This sign-in link expired or was already used. Request a new one.';
-function linkProblem(){
-  say(LINK_MSG, false);
-  out.setAttribute('role', 'alert');
-  if (document.getElementById('resend')) return;
-  const b = document.createElement('button');
-  b.type = 'button'; b.id = 'resend'; b.textContent = 'Send a new sign-in link';
-  b.onclick = () => { b.remove(); document.getElementById('send').click(); };
-  out.insertAdjacentElement('afterend', b);
-  b.focus();
-}
-(async () => {
-  const q = new URLSearchParams(location.search);
-  const h = new URLSearchParams(location.hash.replace(/^#/, ''));
-  const code = q.get('code');
-  const hasErr = q.has('error') || q.has('error_code') || h.has('error') || h.has('error_code');
-  if (!code && !hasErr) return;
-  history.replaceState(null, '', location.pathname);
-  if (hasErr) return linkProblem();
-  const { error } = await sb.auth.exchangeCodeForSession(code);
-  if (!error) return say('Signed in. Save profile next.', true);
-  const st = error.status;
-  if (st && st < 500 || /expired|invalid|already|verifier|not found/i.test(error.message || '')) return linkProblem();
-  say(error.message, false);
-})();
-
-document.getElementById('send').onclick = async () => {
-  const email = document.getElementById('email').value.trim();
-  if (!email.includes('@')) return say('Enter an email.');
-  const { error } = await sb.auth.signInWithOtp({ email, options: await IndxCaptcha.options({ shouldCreateUser: true, emailRedirectTo: location.origin + '/tier0' }) });
-  say(error ? error.message : 'Sign-in link sent. Open it from the email.', !error);
-};
-
-document.getElementById('save').onclick = async () => {
-  const { data: sess } = await sb.auth.getSession();
-  if (!sess.session) return say('Verify email first.');
-  const dob = document.getElementById('dob').value || null;
-  const { data, error } = await sb.rpc('upsert_tier0_profile', {
-    p_display_name: document.getElementById('name').value,
-    p_region: document.getElementById('region').value,
-    p_date_of_birth: dob,
-    p_guardian_email: document.getElementById('guardian').value || null
-  });
-  if (error) return say(error.message);
-  say(JSON.stringify(data, null, 2), data && data.ok);
-};
-</script>
+<p>Taking you to sign up. If nothing happens, <a href="/onboard">tap here</a>.</p>
 </body>
 </html>
