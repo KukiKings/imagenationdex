@@ -36,6 +36,11 @@
     } catch (_) {}
   }
 
+  // Tell the privacy meter (js/siindex-privacy-meter.js) a page-rendered answer used no request.
+  function markLocal() {
+    try { if (window.SIINDEX_PRIVACY) window.SIINDEX_PRIVACY.answered('local'); } catch (_) {}
+  }
+
   function bindChips(root, outEl, inputEl, source, speak) {
     root = root || document;
     root.querySelectorAll('[data-q]').forEach(function (btn) {
@@ -45,6 +50,7 @@
         var q = btn.getAttribute('data-q') || '';
         if (inputEl) inputEl.value = q;
         if (outEl) outEl.textContent = answerText(q);
+        markLocal();
         if (speak) speakOptional(q, source);
       });
     });
@@ -68,6 +74,7 @@
         : answerText(q);
       if (matched !== null && matched !== undefined) {
         if (outEl) outEl.textContent = matched;
+        markLocal();
         if (speak) speakOptional(q, source);
         return;
       }
@@ -85,6 +92,7 @@
         SIINDEXVoice.ask(q, { source: source || 'qa-mode' });
       } else if (outEl) {
         outEl.textContent = answerText(q);
+        markLocal();
       }
     }
     askBtn.addEventListener('click', go);
