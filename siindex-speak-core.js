@@ -23,7 +23,7 @@
  */
 (function () {
   "use strict";
-  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.15") return;
+  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.24") return;
 
   const SUPABASE_URL = "https://zljgthfzbalsunuoohcd.supabase.co";
   const SUPABASE_KEY = "sb_publishable_rSl7P028UrBn8KCUSSbjAg_mT3FWoxV";
