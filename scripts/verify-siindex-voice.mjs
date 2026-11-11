@@ -109,6 +109,15 @@ requireText("public-home.html", /window\.SIINDEXVoice\.listen\(\{\s*source:\s*'p
 requireText("public-home.html", /window\.SIINDEXVoice\.interrupt\(\)/, "approved public interruption control is missing");
 // siindex-chat.html keeps its scripts in split files (CSP batch 3); the microphone call lives in siindex-chat-3.js.
 requireText("js/siindex-chat-3.js", /window\.SIINDEXVoice\.listen\(\{\s*source:\s*'chat-page'\s*\}\)/, "chat microphone is not routed through the core");
+// Load order: siindex-chat-3.js calls SIINDEXVoice, so the core tag must come first in siindex-chat.html.
+{
+  const chatHtml = read("siindex-chat.html");
+  const coreTag = chatHtml.search(/<script src="\/?siindex-speak-core\.js(\?[^"]*)?"><\/script>/);
+  const chat3Tag = chatHtml.search(/<script src="\/?js\/siindex-chat-3\.js(\?[^"]*)?"><\/script>/);
+  if (coreTag < 0 || chat3Tag < 0 || coreTag > chat3Tag) {
+    failures.push("siindex-chat.html: siindex-speak-core.js must load before js/siindex-chat-3.js");
+  }
+}
 forbidText("home-v2.html", /Google's servers|webkitSpeechRecognition|SpeechRecognition/, "homepage still contains the retired Google speech path");
 forbidText(core, /Sighn-dex/, "retired SIINDEX pronunciation remains in the voice core");
 
