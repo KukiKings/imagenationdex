@@ -2,7 +2,8 @@
  * siindex-public-bridge.js
  * Patches SIINDEXVoice.ask for identity / status / brand facts from living public knowledge.
  * Self-loads knowledge + page-context if missing. SI not AI. Brand-first: always IN$DEX.
- * Version: 1.3.1 | 2026-09-04 defers to matchAnswer() instead of its own drifted regex
+ * Version: 1.3.2 | 2026-11-12 defers claimed visitor-assist intents (remember / visual explain) to the core
+ * (1.3.1 | 2026-09-04 defers to matchAnswer() instead of its own drifted regex)
  */
 (function () {
   'use strict';
@@ -139,6 +140,12 @@
     window.SIINDEXVoice.ask = function (text, options) {
       var q = String(text || '').trim();
       var source = (options && options.source) || 'global';
+
+      // Visitor assist intents ("remember that…", "visually explain this") are answered on-device inside
+      // the core's ask() (js/siindex-visitor-assist.js). Never let the knowledge shortcut answer them.
+      if (window.SIINDEX_ASSIST && window.SIINDEX_ASSIST.claims(q)) {
+        return Promise.resolve(originalAsk.call(window.SIINDEXVoice, text, options));
+      }
 
       // Fixed 2026-09-04 (god mode Item 6): this used to decide "answer
       // locally" using its own separate matchesPublicFact() regex, then

@@ -72,7 +72,9 @@
       var matched = (window.SIINDEX_PUBLIC && typeof SIINDEX_PUBLIC.matchAnswer === 'function')
         ? SIINDEX_PUBLIC.matchAnswer(q)
         : answerText(q);
-      if (matched !== null && matched !== undefined) {
+      // Visitor assist intents (js/siindex-visitor-assist.js) go to SIINDEXVoice.ask, where the core answers them on-device.
+      var assistClaims = !!(window.SIINDEX_ASSIST && SIINDEX_ASSIST.claims(q));
+      if (!assistClaims && matched !== null && matched !== undefined) {
         if (outEl) outEl.textContent = matched;
         markLocal();
         if (speak) speakOptional(q, source);

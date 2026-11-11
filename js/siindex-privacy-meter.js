@@ -162,7 +162,7 @@
     text: currentText,
     state: function () {
       var b = bucket || last;
-      return { phase: bucket ? "checking" : (last ? "done" : "idle"), calls: b ? b.calls.slice() : [], text: currentText() };
+      return { phase: bucket ? "checking" : (last ? "done" : "idle"), calls: b ? b.calls.slice() : [], mic: !!(b && b.mic), voice: !!(b && b.voice), text: currentText() };
     }
   };
 
