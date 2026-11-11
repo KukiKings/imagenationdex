@@ -6,11 +6,11 @@
 
 The Cryptocurrency Advisory Working Group (CAWG) was established on 9 March 2026 by the Office of the Prime Minister (OPM) and the Financial Intelligence Unit (FIU), who co-chair it. It advises on international and transnational cybercrime, especially ransomware, including AML/CFT compliance, correspondent banking impacts and reputational risk. Preliminary advice was expected "within the coming months". As of November there is no public update.
 
-The Cryptocurrency Ransomware Suppression Bill (2025) was still under review as of late 2025, and an earlier draft was reported to have been set aside on Crown Law advice. That care is warranted. The result is a gap: the Cook Islands has no VASP licensing regime, while Nauru has passed a virtual-asset authority act, and the Marshall Islands (USDM1) and Palau (a Ripple stablecoin pilot) have moved. The Cook Islands is behind on licensing, but ahead on trust structuring.
+The Cryptocurrency Ransomware Suppression Bill (2025) was still under review as of late 2025, and an earlier draft was reported to have been set aside on Crown Law advice. That care is warranted. The result is a gap: the Cook Islands has no VASP licensing regime, while Nauru has passed a virtual-asset authority act, and the Marshall Islands (USDM1) and Palau (a stablecoin pilot) have moved. The Cook Islands is behind on licensing, but ahead on trust structuring.
 
 ## The precedent: Smart Trust
 
-Under the SMART Economy Initiative, a government-funded programme, Ora Partners (a licensed trustee since 1993) built a blockchain-based trust administration platform. The Cook Islands has already shown that new technology can work inside the trustee system, led by licensed trustees.
+Under the SMART Economy Scheme, a government-funded programme, Ora Fiduciary (a licensed trustee since 1993) built a blockchain-based trust administration platform with Cyber Ventures. The Cook Islands has already shown that new technology can work inside the trustee system, led by licensed trustees.
 
 ## The offer: a registry and disclosure rails
 
@@ -52,11 +52,15 @@ Confirmed by AJ's primary-source research, supplied 12 Nov 2026. Claude did not 
 - Palau: stablecoin pilot with roughly 200 government employees from March 2023, paused over custodian-bank issues, revived through the Digital Service Bill in July 2025.
 - No VASP regime: no VASP Act, no registration, FSC supervises trustees only (Prifinance and Expanship, as of October 2026). This also supports "under FSC-supervised trustees".
 
-Still flagged. The research above does not support these lines as written:
-- "Ripple" in "a Ripple stablecoin pilot" is not covered by the research on Palau. Left as written; confirm or cut.
-- "ahead on trust" is a judgement, not a sourced fact.
-- "As of November there is no public update" (problem section) is not covered by the research. Re-check on the day.
-- Smart Trust: the research describes an MFEM-backed pilot under the "SMART Economy Scheme", built with Cyber Ventures, and names the trustee firm as Ora Fiduciary (founded by Puai Wichman, asset protection since 1993). The text says "SMART Economy Initiative", "Ora Partners", "built a blockchain-based trust administration platform" and "a licensed trustee since 1993". The scheme name, firm name, pilot status and "licensed trustee" need confirming. Left as written, so nothing is softened silently.
+Primary-source verified by AJ's research, wording updated 12 Nov 2026 (Claude did not re-fetch):
+- Marshall Islands (USDM1) and Palau (a stablecoin pilot). "Ripple" was removed from the Palau line.
+- Smart Trust: SMART Economy Scheme (MFEM-backed), Ora Fiduciary as the trustee firm, platform built with Cyber Ventures.
+- Claude's own searches on 12 Nov 2026 support USDM1 as on-chain sovereign debt with Anchorage custody and Membrane integration. They returned no page confirming Ora Fiduciary or Cyber Ventures, so those two names rest on AJ's research alone.
+
+Still flagged:
+- "ahead on trust" is a judgement, not a sourced fact. Left as written.
+- "As of November there is no public update" (problem section): per AJ's research, accurate as of November. Re-check on the day.
+- Smart Trust, "a licensed trustee since 1993": the research says asset protection since 1993, founded by Puai Wichman. It does not use "licensed trustee". Left as written; confirm.
 - Chainlink ACE, StarCompliance and Safeheron are named as examples only and are not covered by the research. "Claims no agreements" must stay true.
 - "designed so supervisors can see trustee decisions and transfers as they are recorded" is a design intent, not a built feature.
 - Contact: add an email or phone before sending. The spoken script carries AJ's supplied details. -->
