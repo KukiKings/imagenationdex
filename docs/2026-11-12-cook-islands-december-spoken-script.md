@@ -13,9 +13,9 @@
 
 Kia orana. I am Sinn-dex, the Synthetic Intelligence for Index. Thank you for your time. I will keep this plain, and I will say clearly what is real and what is not. In March this year, the Office of the Prime Minister and the Financial Intelligence Unit set up the Cryptocurrency Advisory Working Group. It was asked to advise on cybercrime, especially ransomware, and on money laundering rules, banking relationships, and the country's reputation. Preliminary advice was expected within a few months. It is now November. We have not seen a public update.
 
-## Cut 2: The problem: a bill under review (about 44 seconds)
+## Cut 2: The problem: a bill under review (about 45 seconds)
 
-There is also the Cryptocurrency Ransomware Suppression Bill from twenty twenty-five. As far as we know, it remains under review. We understand an earlier draft was set aside after advice from Crown Law. That care is right. This is a different bill from the Cybercrime Legislation Amendment Bill tabled in May, and we are not speaking about that one. The result is a gap. The Cook Islands has no licensing regime for virtual asset providers. Nauru, the Marshall Islands, and Palau have each started pilots. The Cook Islands is behind on licensing, and ahead on trust.
+There is also the Cryptocurrency Ransomware Suppression Bill. As of late twenty twenty-five, it was still under review. We understand an earlier draft was set aside after advice from Crown Law. That care is right. This is a different bill from the Cybercrime Legislation Amendment Bill tabled in May, which we are not addressing. The result is a gap. The Cook Islands has no licensing regime for virtual asset providers. Nauru has passed a virtual-asset authority act. The Marshall Islands and Palau have each started pilots. The Cook Islands is behind on licensing, and ahead on trust.
 
 ## Cut 3: The precedent: Smart Trust (about 44 seconds)
 
@@ -43,19 +43,25 @@ So here is our ask. We would like a meeting in December with the working group, 
 
 AJ Henry, founder: ajhenry@imagenationdex.com, +61 451 565 863
 
-<!-- CONFIRM BEFORE DELIVERY (not shown in the rendered page):
-Confirmed on the OPM page (pmoffice.gov.ck, 9 Mar 2026): Cut 1 facts about the Cryptocurrency Advisory Working Group (set up in March by OPM and the FIU, scope items, preliminary advice "within the coming months"); Cut 5 "alternative approaches". Cut 2 date of the Cybercrime Legislation Amendment Bill 2026 (tabled 20 May 2026; a different bill, kept separate on purpose).
+<!-- VERIFICATION TRAIL (not shown in the rendered page). Updated 12 November 2026.
 
-Relies on facts NOT independently checked:
-- Cut 1, last two sentences: "It is now November. We have not seen a public update." Re-check for any CAWG update on the day.
-- Cut 2, Crown Law: "an earlier draft was set aside after advice from Crown Law". Supplied in the brief only. Safe to cut if it cannot be confirmed.
-- Cut 2, bill under review: "As far as we know, it remains under review". Supplied in the brief (recent coverage), not confirmed.
-- Cut 2, no licensing regime: "no licensing regime for virtual asset providers". Supplied, not confirmed.
-- Cut 2, Pacific examples: Nauru, the Marshall Islands and Palau pilots. Supplied, not confirmed. Product names were left out on purpose.
-- Cut 2, "ahead on trust" is a judgement from the brief, not a sourced fact.
-- Cut 3, Smart Trust: every detail (SMART Economy Initiative, government-funded, Ora Partners, licensed trustee since 1993, blockchain trust administration platform, led by a licensed trustee) was supplied and not confirmed. Do not say "regulator can see" or any claim about oversight of it.
-- Cut 4, regtech names: Chainlink ACE, StarCompliance and Safeheron are named as examples only. Confirm you are comfortable naming them aloud. "We claim no agreement" must stay true.
-- Cut 5, "supervisors can see decisions and transfers as they are recorded" is a design intent, not a built feature.
-- Cut 6, "under trustees supervised by the Financial Supervisory Commission" and "trustee system" come from the brief. Confirm the wording with a trustee or the FSC.
-- Cut 7, the email and phone are exactly as supplied in the brief. Confirm both are monitored. The phone number is spoken in words; the email is spoken as "a j henry, at imagenation dex, dot com".
-Also: only "Kia orana" is used from Cook Islands Maori, as the persona notes require. -->
+Checked independently by Claude on 12 Nov 2026, against the Office of the Prime Minister page (pmoffice.gov.ck, 9 Mar 2026): the working group's name, OPM and FIU as co-chairs, the scope items, "within the coming months" (Cut 1); "alternative approaches" (Cut 5); and the Cybercrime Legislation Amendment Bill 2026 tabled 20 May 2026, a different bill kept separate on purpose (Cut 2).
+
+Confirmed by AJ's primary-source research, supplied 12 Nov 2026. Claude did not re-fetch these sources:
+- Cut 2, bill under review: the Financial Intelligence Unit head's statement of November 2025 (Cook Islands News and PMN). The script dates it as "late twenty twenty-five" and claims no current status.
+- Cut 2, Crown Law: the earlier Drumcliffe-drafted bill was rejected by Crown Law (One News, November 2025; Expanship). The script says only that an earlier draft was set aside after Crown Law advice.
+- Cut 2, Nauru: Nauru has passed a virtual-asset authority act. As of October 2026 the licensing categories are not stood up and no licence can be issued, so the script does not say licences are being issued.
+- Cut 2, Marshall Islands: USDM1 is live (Membrane integrated it 10 November 2026; Anchorage Digital provides custody; the Marshall Islands Finance Ministry confirms its use for UBI disbursement).
+- Cut 2, Palau: stablecoin pilot with roughly 200 government employees from March 2023, paused over custodian-bank issues, revived through the Digital Service Bill in July 2025.
+- Cut 2 and Cut 6, no VASP regime: no VASP Act, no registration, and the FSC supervises trustees only (Prifinance and Expanship, as of October 2026).
+
+Still flagged. The research above does not support these lines as written:
+- Cut 1, "It is now November. We have not seen a public update." Re-check on the day.
+- Cut 2, "pilots" for the Marshall Islands: the research says USDM1 is live. Left as written; confirm the wording before delivery.
+- Cut 2, "ahead on trust" is a judgement, not a sourced fact.
+- Cut 3, Smart Trust: the research describes an MFEM-backed pilot under the "SMART Economy Scheme", built with Cyber Ventures, and names the trustee firm as Ora Fiduciary (founded by Puai Wichman, asset protection since 1993). The script says "SMART Economy Initiative", "Ora Partners", "built a trust administration platform" and "licensed trustee since nineteen ninety-three". The scheme name, firm name, pilot status and "licensed trustee" all need confirming. Left as written, so nothing is softened silently.
+- Cut 4: Chainlink ACE, StarCompliance and Safeheron are named as examples only and are not covered by the research. "We claim no agreement" must stay true.
+- Cut 5: "supervisors can see decisions and transfers as they are recorded" is a design intent, not a built feature.
+- Cut 7: the email and phone are exactly as supplied. Confirm both are monitored.
+
+Only "Kia orana" is used from Cook Islands Maori, as the persona notes require. -->
