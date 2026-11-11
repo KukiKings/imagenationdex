@@ -175,7 +175,12 @@
     try {
       var sess = await sb.auth.getSession();
       if (!(sess && sess.data && sess.data.session)) { done(); state.verified = false; showStep(1); return setErr('e1', 'Your sign-in did not carry over. Tap I\'m in to start again.'); }
-      var prof = await sb.rpc('upsert_tier0_profile', { p_display_name: state.handle + '.INDEX / ' + state.phone, p_region: null, p_date_of_birth: null, p_guardian_email: null });
+      // Keep an existing display_name; only a null or empty one is set from the typed handle.
+      var cur = await sb.from('citizens').select('display_name').eq('auth_user_id', sess.data.session.user.id).maybeSingle();
+      if (cur && cur.error) { done(); return setErr(errId, 'We could not save your name. Tap again to retry.'); }
+      var keepName = cur && cur.data && cur.data.display_name ? String(cur.data.display_name) : '';
+      var dispName = keepName.trim() ? keepName : state.handle + '.INDEX / ' + state.phone;
+      var prof = await sb.rpc('upsert_tier0_profile', { p_display_name: dispName, p_region: null, p_date_of_birth: null, p_guardian_email: null });
       if (prof.error || (prof.data && prof.data.ok === false)) { done(); return setErr(errId, 'We could not save your name. Tap again to retry.'); }
       var rd = await sb.rpc('claim_web3_domain', { p_domain: state.handle, p_citizen_name: state.handle });
       var out = rd && rd.data;
