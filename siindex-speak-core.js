@@ -729,6 +729,23 @@
     // only. Call it here, once, before any speak() in this function can fire.
     ensureProviderConsent();
 
+    // On-device visitor assist (js/siindex-visitor-assist.js): "remember that…", "forget…" and
+    // "visually explain this" are answered from the page itself with NO request, so they never reach
+    // the runtime. The pill (js/siindex-privacy-meter.js) sees the siindex:message below and shows
+    // the real call count. Memory text is never spoken through the voice endpoint: assisted.spoken
+    // is a generic line. Keep this block before any request is made in ask().
+    try {
+      const assisted = window.SIINDEX_ASSIST && window.SIINDEX_ASSIST.claims(text) ? window.SIINDEX_ASSIST.handle(text) : null;
+      if (assisted && assisted.text) {
+        emitMessage("si", assisted.text, source);
+        setStatus("idle", "Answered on this device.");
+        if (voiceEnabled && assisted.spoken) {
+          try { await speak(assisted.spoken); } catch (_) {}
+        }
+        return;
+      }
+    } catch (_) {}
+
     const isGoalIntakeQuestion = /what is one real result.*help you complete/i.test(text);
     if (isGoalIntakeQuestion) {
       const prompt = "Tell me your answer in one sentence beginning: My real goal is to… For example: My real goal is to find paid work.";
@@ -1128,7 +1145,7 @@
   }
 
   window.SIINDEXVoice = {
-    version: "3.0.24",
+    version: "3.0.25",
     minUtteranceMs: MIN_USER_UTTERANCE_MS,
     quietAfterPlayoutMs: POST_PLAYOUT_QUIET_MS,
     unlock: unlockAudio,
