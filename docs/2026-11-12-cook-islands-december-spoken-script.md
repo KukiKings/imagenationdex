@@ -13,13 +13,13 @@
 
 Kia orana. I am Sinn-dex, the Synthetic Intelligence for Index. Thank you for your time. I will keep this plain, and I will say clearly what is real and what is not. In March this year, the Office of the Prime Minister and the Financial Intelligence Unit set up the Cryptocurrency Advisory Working Group. It was asked to advise on cybercrime, especially ransomware, and on money laundering rules, banking relationships, and the country's reputation. Preliminary advice was expected within a few months. It is now November. We have not seen a public update.
 
-## Cut 2: The problem: a bill under review (about 48 seconds)
+## Cut 2: The problem: a bill under review (about 45 seconds)
 
-There is also the Cryptocurrency Ransomware Suppression Bill. As of late twenty twenty-five, it was still under review. We understand an earlier draft was set aside after advice from Crown Law. That care is right. This is a different bill from the Cybercrime Legislation Amendment Bill tabled in May, which we are not addressing. The result is a gap. The Cook Islands has no licensing regime for virtual asset providers. Nauru has passed a virtual-asset authority act. The Marshall Islands has U S D M one, a live sovereign bond. Palau has started a pilot. The Cook Islands is behind on licensing, and ahead on trust.
+There is also the Cryptocurrency Ransomware Suppression Bill. As of late twenty twenty-five, it was still under review. We understand an earlier draft was set aside after advice from Crown Law. This is a different bill from the Cybercrime Legislation Amendment Bill tabled in May. The result is a gap. The Cook Islands has no licensing regime for virtual asset providers. Nauru has passed a virtual-asset authority act. The Marshall Islands has U S D M one, a live sovereign bond. Palau has started a pilot. The Cook Islands is behind on licensing, and ahead on trust.
 
-## Cut 3: The precedent: Smart Trust (about 46 seconds)
+## Cut 3: The precedent: Smart Trust (about 45 seconds)
 
-The Cook Islands has already shown a way forward. Under the SMART Economy Scheme, a government-funded programme, Ora Fiduciary built a trust administration platform on blockchain, with Cyber Ventures. Ora Fiduciary has been a licensed trustee since nineteen ninety-three. So this was not technology arriving from outside. It was led by a licensed trustee, inside the trustee system. That matters to us. It tells us new technology can serve this jurisdiction when licensed trustees lead. Index does not want to replace that work. We want to learn from it, and build on the same thinking, only with your guidance.
+The Cook Islands has shown a way forward. Under the SMART Economy Scheme, a government-funded programme, Ora Fiduciary built a trust administration platform on blockchain, with Cyber Ventures. Ora Fiduciary is a licensed trustee company, founded in two thousand and seven by Puai Wichman, who has worked in asset protection since nineteen ninety-three. So this was not technology arriving from outside. It was led by a licensed trustee. It tells us new technology can serve here when licensed trustees lead. Index does not want to replace that work. We want to learn from it, with your guidance.
 
 ## Cut 4: The offer: a registry and disclosure tools (about 45 seconds)
 
@@ -58,14 +58,16 @@ Confirmed by AJ's primary-source research, supplied 12 Nov 2026. Claude did not 
 Primary-source verified by AJ's research, wording updated 12 Nov 2026 (Claude did not re-fetch):
 - Cut 2, Marshall Islands: U S D M one is a live sovereign bond, no longer described as a pilot.
 - Cut 2, Palau: described as a pilot, as the research states.
-- Cut 3, Smart Trust: SMART Economy Scheme (MFEM-backed), Ora Fiduciary as the trustee firm, platform built with Cyber Ventures.
-- Claude's own searches on 12 Nov 2026 support U S D M one as on-chain sovereign debt with Anchorage custody and Membrane integration. They returned no page confirming Ora Fiduciary or Cyber Ventures, so those two names rest on AJ's research alone.
+- Cut 3, Smart Trust: announced May 2021, MFEM-backed under the SMART Economy Scheme, built with Cyber Ventures (an international cybersecurity consultancy specialising in blockchain). Both "Ora Fiduciary" and "Cyber Ventures" are verified.
+- Cut 3, Ora Fiduciary: a licensed trustee company (one of ten FSC-licensed trustee companies, Avarua, Rarotonga), founded in 2007 by Puai Wichman, a Cook Islands-admitted solicitor who has worked in asset protection since 1993. The script says exactly that and no longer says the firm has been a trustee since 1993.
+- Other verified Ora facts supplied (rankings, crypto partnerships) are deliberately not used in the script.
+- Claude's own searches on 12 Nov 2026 support U S D M one as on-chain sovereign debt with Anchorage custody and Membrane integration. They did not independently confirm Ora Fiduciary or Cyber Ventures.
+- "Aura" does not appear in either file. Unrelated Aura entities are not involved.
 
 Still flagged:
 - Cut 1, "It is now November. We have not seen a public update." Per AJ's research, accurate as of November. Re-check on the day.
 - Cut 2, "ahead on trust" is a judgement, not a sourced fact. Left as written.
-- Cut 3, "licensed trustee since nineteen ninety-three": the research says asset protection since 1993, founded by Puai Wichman. It does not use "licensed trustee". Left as written; confirm.
-- Cut 2 and Cut 3 now run about 48 and 46 seconds, over the 45 second target, because only the flagged lines were changed.
+- Cuts 2 and 3 were trimmed to fit 45 seconds: Cut 2 lost "That care is right" and "which we are not addressing"; Cut 3 lost "That matters to us", "inside the trustee system" and "already", and "this jurisdiction" became "here". No verified fact was removed.
 - Cut 4: Chainlink ACE, StarCompliance and Safeheron are named as examples only and are not covered by the research. "We claim no agreement" must stay true.
 - Cut 5: "supervisors can see decisions and transfers as they are recorded" is a design intent, not a built feature.
 - Cut 7: the email and phone are exactly as supplied. Confirm both are monitored.

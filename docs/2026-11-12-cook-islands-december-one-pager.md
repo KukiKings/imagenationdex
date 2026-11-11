@@ -10,7 +10,7 @@ The Cryptocurrency Ransomware Suppression Bill (2025) was still under review as 
 
 ## The precedent: Smart Trust
 
-Under the SMART Economy Scheme, a government-funded programme, Ora Fiduciary (a licensed trustee since 1993) built a blockchain-based trust administration platform with Cyber Ventures. The Cook Islands has already shown that new technology can work inside the trustee system, led by licensed trustees.
+Under the SMART Economy Scheme, a government-funded programme, Ora Fiduciary (a licensed trustee company, founded in 2007 by Puai Wichman, who has worked in asset protection since 1993) built a blockchain-based trust administration platform with Cyber Ventures. The Cook Islands has already shown that new technology can work inside the trustee system, led by licensed trustees.
 
 ## The offer: a registry and disclosure rails
 
@@ -54,13 +54,15 @@ Confirmed by AJ's primary-source research, supplied 12 Nov 2026. Claude did not 
 
 Primary-source verified by AJ's research, wording updated 12 Nov 2026 (Claude did not re-fetch):
 - Marshall Islands (USDM1) and Palau (a stablecoin pilot). "Ripple" was removed from the Palau line.
-- Smart Trust: SMART Economy Scheme (MFEM-backed), Ora Fiduciary as the trustee firm, platform built with Cyber Ventures.
-- Claude's own searches on 12 Nov 2026 support USDM1 as on-chain sovereign debt with Anchorage custody and Membrane integration. They returned no page confirming Ora Fiduciary or Cyber Ventures, so those two names rest on AJ's research alone.
+- Smart Trust: announced May 2021, MFEM-backed under the SMART Economy Scheme, built with Cyber Ventures (an international cybersecurity consultancy specialising in blockchain). Both "Ora Fiduciary" and "Cyber Ventures" are verified.
+- Ora Fiduciary: a licensed trustee company (one of ten FSC-licensed trustee companies, Avarua, Rarotonga), founded in 2007 by Puai Wichman, a Cook Islands-admitted solicitor who has worked in asset protection since 1993. The text says exactly that and no longer says the firm has been a trustee since 1993.
+- Other verified Ora facts supplied (rankings, crypto partnerships) are deliberately not used in the text.
+- Claude's own searches on 12 Nov 2026 support USDM1 as on-chain sovereign debt with Anchorage custody and Membrane integration. They did not independently confirm Ora Fiduciary or Cyber Ventures.
+- "Aura" does not appear in either file. Unrelated Aura entities are not involved.
 
 Still flagged:
 - "ahead on trust" is a judgement, not a sourced fact. Left as written.
 - "As of November there is no public update" (problem section): per AJ's research, accurate as of November. Re-check on the day.
-- Smart Trust, "a licensed trustee since 1993": the research says asset protection since 1993, founded by Puai Wichman. It does not use "licensed trustee". Left as written; confirm.
 - Chainlink ACE, StarCompliance and Safeheron are named as examples only and are not covered by the research. "Claims no agreements" must stay true.
 - "designed so supervisors can see trustee decisions and transfers as they are recorded" is a design intent, not a built feature.
 - Contact: add an email or phone before sending. The spoken script carries AJ's supplied details. -->
