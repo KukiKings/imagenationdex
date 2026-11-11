@@ -83,10 +83,19 @@ const earlyBridgePages = [
   "siindex-voice-command-os.html",
   "voice-wallet.html",
 ];
+// Pages whose legacy microphone constructor moved out of the HTML into an external script
+// (CSP batch 2 removed the inline scripts). The constructor must exist in that file, and the
+// shared core tag must come before the tag that loads it.
+const externalMicScripts = {
+  "search.html": { file: "js/search.js", tag: '<script src="/js/search.js"></script>' },
+};
 for (const file of earlyBridgePages) {
   const source = read(file);
   const coreAt = source.indexOf('<script src="siindex-speak-core.js"></script>');
-  const speechAt = source.search(/SpeechRecognition|webkitSpeechRecognition/);
+  const ext = externalMicScripts[file];
+  const speechAt = ext
+    ? (/SpeechRecognition|webkitSpeechRecognition/.test(read(ext.file)) ? source.indexOf(ext.tag) : -1)
+    : source.search(/SpeechRecognition|webkitSpeechRecognition/);
   if (coreAt < 0 || speechAt < 0 || coreAt > speechAt) {
     failures.push(`${file}: shared bridge must load before the legacy microphone constructor`);
   }
@@ -98,7 +107,8 @@ for (const file of earlyBridgePages) {
 requireText("home-v2.html", /window\.SIINDEXVoice\.listen\(\{\s*source:\s*'homepage'\s*\}\)/, "homepage microphone is not routed through the core");
 requireText("public-home.html", /window\.SIINDEXVoice\.listen\(\{\s*source:\s*'public-home'\s*\}\)/, "approved public microphone is not routed through the core");
 requireText("public-home.html", /window\.SIINDEXVoice\.interrupt\(\)/, "approved public interruption control is missing");
-requireText("siindex-chat.html", /window\.SIINDEXVoice\.listen\(\{\s*source:\s*'chat-page'\s*\}\)/, "chat microphone is not routed through the core");
+// siindex-chat.html keeps its scripts in split files (CSP batch 3); the microphone call lives in siindex-chat-3.js.
+requireText("js/siindex-chat-3.js", /window\.SIINDEXVoice\.listen\(\{\s*source:\s*'chat-page'\s*\}\)/, "chat microphone is not routed through the core");
 forbidText("home-v2.html", /Google's servers|webkitSpeechRecognition|SpeechRecognition/, "homepage still contains the retired Google speech path");
 forbidText(core, /Sighn-dex/, "retired SIINDEX pronunciation remains in the voice core");
 
