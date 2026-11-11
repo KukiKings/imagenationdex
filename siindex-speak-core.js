@@ -573,6 +573,8 @@
           setStatus("error", "Voice didn't play on this device. Read the reply below.");
           resolve();
         };
+        // Privacy meter: a non-local browser voice may send the reply text online.
+        try { window.dispatchEvent(new CustomEvent("siindex:browser-speech", { detail: { kind: "synthesis", local: !!(preferredVoice && preferredVoice.localService === true) } })); } catch (_) {}
         window.speechSynthesis.speak(utter);
       } catch (error) {
         setStatus("error", "Voice didn't play on this device. Read the reply below.");
@@ -1094,6 +1096,9 @@
             return;
           }
           setStatus("idle", "Heard: " + transcript);
+          // Privacy meter (js/siindex-privacy-meter.js): native recognition runs in the browser's
+          // speech service, not via fetch(), so announce it or the meter cannot note it.
+          try { window.dispatchEvent(new CustomEvent("siindex:browser-speech", { detail: { kind: "recognition" } })); } catch (_) {}
           ask(transcript, { source: source });
         };
         recognizer.onerror = function (e) {
@@ -1135,6 +1140,7 @@
     // (the one most chip taps and common questions actually take) can set
     // consent before calling speak() directly, the same way ask() does.
     ensureProviderConsent: ensureProviderConsent,
+    isVoiceOn: function () { return voiceEnabled; }, // read by js/siindex-privacy-meter.js
     setVoiceEnabled: function (on) {
       voiceEnabled = !!on;
       try { localStorage.setItem(VOICE_KEY, voiceEnabled ? "true" : "false"); } catch (_) {}
