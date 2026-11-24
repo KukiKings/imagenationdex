@@ -339,6 +339,145 @@ async function dispatch(task, client = getClient()) {
 
 /**
  * --------------------------------------------------------------------------
+ * Skill assignment — added 2026-11 (wiring only; see siindex-operating/DISPATCHER-MODEL.md,
+ * "Skill assignment").
+ *
+ * SIINDEX names a skill by its directory name under SIINDEX-Skills/ (for example
+ * "siindex-devops"). assignSkill() looks the name up in the skills that really exist on disk,
+ * runs the dispatcher's risk-tier gate, and returns the filtered assignment: the skill's
+ * SKILL.md text for the sub-agent to follow. It returns that result to SIINDEX; it does not
+ * speak, deploy, write to a database or run any code from the skill.
+ *
+ * What this does NOT do (on purpose):
+ *  - It never builds a Supabase client, reads a credential or makes a network call. Audit rows
+ *    are written only when the caller passes its own client in opts.client.
+ *  - It never runs a skill's scripts. A skill here is its SKILL.md; none of the skills has an
+ *    entry-point file today, and none is searched for.
+ *  - It does not start a daemon, poll, or hire agents. It is one synchronous call.
+ *  - The name is only ever matched against the scanned list, never joined into a path, so
+ *    "../x" or an absolute path simply is "skill_not_registered".
+ *
+ * Tier gate (docs: DISPATCHER-MODEL.md section 1 and 2, unchanged):
+ *   1 read-only            -> proceeds, logged
+ *   2 reversible write     -> proceeds, notify_required: true
+ *   3 irreversible/finance/security setting -> needs a recorded yes AND a complete four-answer
+ *                             review packet, for this skill, answered inside its window
+ *   4 outside policy       -> blocked, no approval path
+ *   missing or invalid tier, or security_setting: true -> treated as tier 3 (take the higher).
+ * --------------------------------------------------------------------------
+ */
+const fs = require('fs');
+const path = require('path');
+
+const SKILLS_DIR = path.resolve(__dirname, '..', 'SIINDEX-Skills');
+
+/** Skills that exist right now: one entry per directory under SIINDEX-Skills/ holding a SKILL.md. */
+function listRegisteredSkills(dir = SKILLS_DIR) {
+  const out = new Map();
+  let entries = [];
+  try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return out; }
+  for (const e of entries) {
+    if (!e.isDirectory()) continue;
+    const file = path.join(dir, e.name, 'SKILL.md');
+    if (fs.existsSync(file) && fs.statSync(file).isFile()) out.set(e.name, file);
+  }
+  return out;
+}
+
+function skillDescription(text, fallbackName) {
+  const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text);
+  if (fm) {
+    const d = /^description:\s*(.+)$/m.exec(fm[1]);
+    if (d) return d[1].trim().replace(/^"|"$/g, '');
+  }
+  const h = /^#\s+(.+)$/m.exec(text);
+  return h ? h[1].trim() : fallbackName;
+}
+
+const PACKET_FIELDS = ['what', 'why', 'risk', 'alternatives'];
+const nonEmpty = (v) => typeof v === 'string' && v.trim().length > 0;
+
+/**
+ * Tier-3 consent check. Returns { ok: true } or { ok: false, error, missing? }.
+ * consent = { approved: true, skill, queue_entry, run_id, answered_at, window_ends_at,
+ *             packet: { what, why, risk, alternatives } }
+ * A bare yes is rejected; a yes after the window is rejected; a yes for another skill is rejected.
+ */
+function checkTier3Consent(consent, skill) {
+  if (!consent || typeof consent !== 'object' || consent.approved !== true) {
+    return { ok: false, error: 'consent_required' };
+  }
+  const missing = [];
+  if (consent.skill !== skill) missing.push('skill');
+  if (!nonEmpty(consent.queue_entry)) missing.push('queue_entry');
+  if (!nonEmpty(consent.run_id)) missing.push('run_id');
+  const packet = consent.packet && typeof consent.packet === 'object' ? consent.packet : {};
+  for (const f of PACKET_FIELDS) if (!nonEmpty(packet[f])) missing.push('packet.' + f);
+  const answered = Date.parse(consent.answered_at);
+  const ends = Date.parse(consent.window_ends_at);
+  if (!Number.isFinite(answered)) missing.push('answered_at');
+  if (!Number.isFinite(ends)) missing.push('window_ends_at');
+  if (missing.length) return { ok: false, error: 'consent_incomplete', missing };
+  if (answered > ends) return { ok: false, error: 'consent_expired' };
+  return { ok: true };
+}
+
+/**
+ * assignSkill(task, opts?) -> filtered result for SIINDEX. Never throws for a rejected task.
+ * task = { task_id?, skill, tier?, security_setting?, consent? }
+ * opts = { skillsDir?, client? }   (client only for the existing agent_audit insert-only log)
+ */
+async function assignSkill(task, opts = {}) {
+  const taskId = (task && task.task_id) || crypto.randomUUID();
+  const skill = task && typeof task.skill === 'string' ? task.skill : '';
+  const audit = async (action, ok, detail) => {
+    if (opts.client) await writeAudit(opts.client, { taskId, agent: skill || 'unknown_skill', action, ok, detail });
+  };
+
+  const registry = listRegisteredSkills(opts.skillsDir || SKILLS_DIR);
+  if (!skill || !registry.has(skill)) {
+    await audit('skill_rejected', false, { reason: 'skill_not_registered', skill });
+    return { ok: false, task_id: taskId, error: 'skill_not_registered', skill };
+  }
+
+  let tier = Number.isInteger(task.tier) && task.tier >= 1 && task.tier <= 4 ? task.tier : 3;
+  if (task.security_setting === true && tier < 3) tier = 3;
+
+  if (tier === 4) {
+    await audit('skill_rejected', false, { reason: 'blocked_tier_4', skill });
+    return { ok: false, task_id: taskId, error: 'blocked_tier_4', skill, tier };
+  }
+
+  let gate = tier === 1 ? 'auto' : 'auto_notify';
+  if (tier === 3) {
+    const c = checkTier3Consent(task.consent, skill);
+    if (!c.ok) {
+      await audit('skill_rejected', false, { reason: c.error, skill, missing: c.missing || [] });
+      const r = { ok: false, task_id: taskId, error: c.error, skill, tier };
+      if (c.missing) r.missing = c.missing;
+      return r;
+    }
+    gate = 'consent_verified';
+  }
+
+  const file = registry.get(skill);
+  const instructions = fs.readFileSync(file, 'utf8');
+  await audit('skill_assigned', true, { skill, tier, gate });
+  return {
+    ok: true,
+    task_id: taskId,
+    skill,
+    tier,
+    gate,
+    notify_required: tier === 2,
+    description: skillDescription(instructions, skill),
+    entry: 'SIINDEX-Skills/' + skill + '/SKILL.md',
+    instructions,
+  };
+}
+
+/**
+ * --------------------------------------------------------------------------
  * Queue worker — added 2026-09-21, closes the gap this file's own header
  * comment flagged above: this project already has a real, deployed
  * agent_tasks/agent_messages/agent_evidence/agent_audit bus, driven by three
@@ -509,6 +648,10 @@ module.exports = {
   loadActiveAgentRegistry,
   getRegisteredAgent,
   dispatch,
+  assignSkill,
+  listRegisteredSkills,
+  checkTier3Consent,
+  SKILLS_DIR,
   claimAndProcessNext,
   runWorkerLoop,
   KYC_ACTIONS,
