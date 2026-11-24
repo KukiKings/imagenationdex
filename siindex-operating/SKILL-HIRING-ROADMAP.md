@@ -27,6 +27,16 @@ Every step is tier 1 and read-only. A step stays tier 1 until AJ explicitly rais
 
 The SMSGlobal and Cannon follow-up is not in the five. It touches a live service, so no skill is proposed until AJ states its scope.
 
+### Optional external fact-check tools (secondary signals only)
+
+No external fact-check service is required for the December materials. These tools do not replace primary-source checks or AJ's final judgment. The rule stays: primary source, plus the date checked, and "cannot be confirmed" when the source does not support the claim. They can flag that a public claim has already been reviewed or may have changed.
+
+- Google Fact Check Tools API (Claim Search), optional: existing fact-checks from 800+ publishers.
+- ClaimBuster, optional: scores sentences for check-worthiness (triage only).
+- Verity MCP / Parallel Decisions, optional: structured agent-native verdicts (CURRENT/OUTDATED/DISPUTED or supported/contradicted).
+
+Use only after the primary source is fetched. List every external call in the skill report. Return results only to SIINDEX. No standing credentials or automatic spend.
+
 ## 4. Rules that never change
 
 - Naming a skill is not consent. A yes covers one skill and one change.
