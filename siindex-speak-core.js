@@ -71,9 +71,10 @@
   // v3.0.23 mobile-voice state
   const MIN_USER_UTTERANCE_MS = 300;
   // Valid 46-byte silent WAV (44-byte header + 1 sample of 8-bit silence + pad); 8 kHz mono.
-  // Same 46-byte silent WAV, now a same-origin file: a data: URL is blocked by the CSP (media-src falls back
-  // to default-src 'self') and logged a violation on every first tap.
-  const SILENT_WAV = "/assets/silent.wav";
+  // Silent clip as a same-origin file: a data: URL is blocked by the CSP (media-src falls back to default-src
+  // 'self') and logged a violation on every first tap. It is an .mp3 because vercel.json only serves
+  // listed file extensions (no .wav), so a .wav here is a 404.
+  const SILENT_WAV = "/assets/silent.mp3";
   let unlockEl = null;
   let audioUnlocked = false;
   let audioSessionSet = false;
