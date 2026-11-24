@@ -65,9 +65,48 @@ The open findings in [security-audits/README.md](security-audits/README.md) (202
 
 Read the README's current status column before routing; it is the source of truth, not this list.
 
-## 5. References
+## 5. Skill assignment
 
-- [SUB-AGENT-CONSENT-MODEL.md](SUB-AGENT-CONSENT-MODEL.md): autonomous versus consent-required work, credentials rule, consent queue mechanics.
+Skills under `SIINDEX-Skills/` can be assigned by name. This is wiring only: no new skills, no change to any skill's own text, no new credentials, no daemon, no auto-hire.
+
+1. **SIINDEX names the skill.** She gives the orchestrator the skill's directory name (for example `siindex-devops`), the tier of the task, and, for tier 3, the consent record.
+2. **The orchestrator looks it up.** `assignSkill()` in `agents/orchestrator.js` matches the name against the directories that actually contain a `SKILL.md`. The name is never used to build a path. Anything else, including an empty name, `../x` or an archive-only skill, returns `skill_not_registered`.
+3. **The skill runs under the consent model.** The tier gate in section 1 and the review packet in section 2 apply unchanged:
+   - Tier 1: proceeds, logged.
+   - Tier 2: proceeds, with `notify_required` set so Arthur is told.
+   - Tier 3: refused (`consent_required`, `consent_incomplete` or `consent_expired`) unless the record shows a yes from Arthur for **that skill**, a filed consent-queue entry, a run ID, all four packet answers, and an answer given inside the window.
+   - Tier 4: `blocked_tier_4`, no override.
+   - A missing or invalid tier counts as tier 3, and a task marked `security_setting` is at least tier 3.
+4. **The filtered result returns to SIINDEX.** The orchestrator returns the skill's `SKILL.md` text and a short description to SIINDEX, not to Arthur and not to a citizen. SIINDEX is the only voice; she decides what to say.
+
+Where it stops:
+
+- Assigning a skill reads one file. It makes no network call and builds no Supabase client. An `agent_audit` row is written only when the caller passes its own client.
+- A skill's `SKILL.md` is instructions, not code. The orchestrator runs none of it. Any change a skill describes still goes through the gates above, one change at a time.
+- Skills do not hold standing Supabase, Cloudflare or SMSGlobal credentials with autonomous judgment (consent model, section 3).
+- Skills that mention live money, tokens, wallets or pool actions describe plans. They are not evidence that any of that is live.
+
+### Presentation-critical skills assignable now
+
+| Area | Skill (directory name) |
+| --- | --- |
+| Materials and status | `siindex-community-report`, `siindex-pre-build-checklist` |
+| Security | `pqsi-compliance` |
+| Knowledge | none: no knowledge skill directory exists |
+| DevOps | `siindex-devops` |
+| Citizen ops | `siindex-citizen-ops` |
+| Coordination | `siindex-coo-orchestrator` |
+
+Not assignable by name today: `pqsi-security`, `siindex-ops-brief`, `siindex-market-intel`, `siindex-anomaly` and `siindex-support`, which exist only as packaged `.skill` archives with no directory. They become assignable when a directory with a `SKILL.md` exists. Unpacking them is a separate change.
+
+All assignable directory names (17): `indx-onboarding-concierge`, `indx-website-builder`, `pqsi-compliance`, `siindex-agent-wallet`, `siindex-citizen-ops`, `siindex-community-report`, `siindex-coo-orchestrator`, `siindex-devops`, `siindex-git-commit-prep`, `siindex-lending-monitor`, `siindex-lp-manager`, `siindex-memedao-governance`, `siindex-pre-build-checklist`, `siindex-referral-engine`, `siindex-token-launch`, `siindex-treasury`, `siindex-waitlist-ops`.
+
+Run `node --test agents/orchestrator.test.js` (after `npm install` in `agents/`) to check the lookup and the gates.
+
+## 6. References
+
+- [SUB-AGENT-CONSENT-MODEL.md](SUB-AGENT-CONSENT-MODEL.md): autonomous versus consent-required work, credentials rule, consent queue mechanics, skills.
+- `SIINDEX-Skills/<name>/SKILL.md` and `agents/orchestrator.js` (`assignSkill`): the skills that can be named and how they are looked up.
 - [security-audits/README.md](security-audits/README.md): open findings to prioritize.
 - consent-queue/: dated consent entries and TEMPLATE.md.
 

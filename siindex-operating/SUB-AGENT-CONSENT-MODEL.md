@@ -39,7 +39,15 @@ The queue lives in the siindex-operating folder as dated entries, one file per r
 
 Entries are not deleted. A declined request stays in the queue with the answer recorded.
 
-## 5. References
+## 5. Skills assigned by name
+
+SIINDEX may assign a skill under `SIINDEX-Skills/` to a sub-agent by its directory name (see DISPATCHER-MODEL.md, section 5). Assigning a skill changes nothing in sections 1 to 4:
+
+- The skill's work is sorted into the same autonomous and consent-required categories. A skill that says it can do something does not make that thing autonomous.
+- Naming a skill is not consent. A consent-required change still needs Arthur's yes for that exact change before it runs, and the skill gets no credentials of its own.
+- A yes covers one skill and one change. It does not carry over to another skill or a later run.
+
+## 6. References
 
 Referenced from BUILD_LOG.md and siindex-operating/AJ-BLOCKERS-RUNBOOK.md.
 
