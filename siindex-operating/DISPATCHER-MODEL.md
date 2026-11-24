@@ -103,6 +103,8 @@ Example: `presentation-materials` is a read-only skill that checks the December 
 
 `multi-agent-verify` is now a named skill: it is read-only, tier 1, and re-checks each claim in another skill's findings report against its primary source, returning the result only to SIINDEX.
 
+`knowledge-refresh` is now a named skill: it is read-only, tier 1, and re-checks public facts against their primary official sources, returning the result only to SIINDEX.
+
 ### Presentation-critical skills assignable now
 
 | Area | Skill (directory name) |
@@ -116,7 +118,7 @@ Example: `presentation-materials` is a read-only skill that checks the December 
 
 Not assignable by name today: `pqsi-security`, `siindex-ops-brief`, `siindex-market-intel`, `siindex-anomaly` and `siindex-support`, which exist only as packaged `.skill` archives with no directory. They become assignable when a directory with a `SKILL.md` exists. Unpacking them is a separate change.
 
-All assignable directory names (19): `indx-onboarding-concierge`, `indx-website-builder`, `multi-agent-verify`, `pqsi-compliance`, `presentation-materials`, `siindex-agent-wallet`, `siindex-citizen-ops`, `siindex-community-report`, `siindex-coo-orchestrator`, `siindex-devops`, `siindex-git-commit-prep`, `siindex-lending-monitor`, `siindex-lp-manager`, `siindex-memedao-governance`, `siindex-pre-build-checklist`, `siindex-referral-engine`, `siindex-token-launch`, `siindex-treasury`, `siindex-waitlist-ops`.
+All assignable directory names (20): `indx-onboarding-concierge`, `indx-website-builder`, `knowledge-refresh`, `multi-agent-verify`, `pqsi-compliance`, `presentation-materials`, `siindex-agent-wallet`, `siindex-citizen-ops`, `siindex-community-report`, `siindex-coo-orchestrator`, `siindex-devops`, `siindex-git-commit-prep`, `siindex-lending-monitor`, `siindex-lp-manager`, `siindex-memedao-governance`, `siindex-pre-build-checklist`, `siindex-referral-engine`, `siindex-token-launch`, `siindex-treasury`, `siindex-waitlist-ops`.
 
 Run `node --test agents/orchestrator.test.js` (after `npm install` in `agents/`) to check the lookup and the gates.
 
