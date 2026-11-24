@@ -166,3 +166,5 @@ test('assignSkill: presentation-materials is registered and accepted at tier 1',
 test('assignSkill: multi-agent-verify is registered and accepted at tier 1', async () => { assert.strictEqual((await assignSkill({ skill: 'multi-agent-verify', tier: 1 })).ok, true); });
 
 test('assignSkill: knowledge-refresh is registered and accepted at tier 1', async () => { const r = await assignSkill({ skill: 'knowledge-refresh', tier: 1 }); assert.strictEqual(r.ok, true); assert.strictEqual(r.gate, 'auto'); });
+
+test('assignSkill: cook-islands-registration-status is registered and accepted at tier 1', async () => { const r = await assignSkill({ skill: 'cook-islands-registration-status', tier: 1 }); assert.strictEqual(r.ok, true); assert.strictEqual(r.gate, 'auto'); });
