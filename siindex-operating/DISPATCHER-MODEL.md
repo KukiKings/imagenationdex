@@ -86,11 +86,26 @@ Where it stops:
 - Skills do not hold standing Supabase, Cloudflare or SMSGlobal credentials with autonomous judgment (consent model, section 3).
 - Skills that mention live money, tokens, wallets or pool actions describe plans. They are not evidence that any of that is live.
 
+### Hiring a new position
+
+A "hire" is a new skill directory. Nothing else registers it.
+
+1. **SIINDEX prepares the skill.** She drafts `SIINDEX-Skills/<name>/SKILL.md`. The directory name is the name she will use to assign it: lowercase letters, digits and hyphens. The file states its goal, what it reads, what it may and may not do, the highest tier it asks for, and what done looks like.
+2. **Arthur authorizes it.** The new directory is a normal repo change. It enters main only when Arthur has asked for it or approved it. This is the same "SIINDEX prepares · AJ authorizes" rule as everything else here, and a hire is never made by an agent on its own.
+3. **The orchestrator finds it by scanning.** `assignSkill()` lists the directories under `SIINDEX-Skills/` and accepts a name only if a directory of exactly that name holds a regular file called `SKILL.md`. There is no registration table, no list to edit and no code change.
+4. **It runs under the existing rules.** The tier of each task is set when the task is assigned, not by the skill. A skill cannot raise its own tier or lower the tier of a task. Tier 3 still needs a consent record and a four-answer packet for that skill, tier 4 is still blocked, and an unknown tier counts as tier 3.
+5. **Being registered grants nothing.** A new skill gets no credentials, no write path and no outbound channel from being listed. Anything it describes that changes something still goes through the gates in sections 1 and 2.
+6. **No continuous running.** A hire is assigned a task one call at a time. It does not start a daemon, poll, schedule itself or hire another skill.
+
+To take a skill out of service, remove or rename its directory by the same route. The name then returns `skill_not_registered`.
+
+Example: `presentation-materials` is a read-only skill that checks the December Cook Islands one-pager and spoken script and reports findings. It is tier 1 and changes no file.
+
 ### Presentation-critical skills assignable now
 
 | Area | Skill (directory name) |
 | --- | --- |
-| Materials and status | `siindex-community-report`, `siindex-pre-build-checklist` |
+| Materials and status | `presentation-materials`, `siindex-community-report`, `siindex-pre-build-checklist` |
 | Security | `pqsi-compliance` |
 | Knowledge | none: no knowledge skill directory exists |
 | DevOps | `siindex-devops` |
@@ -99,7 +114,7 @@ Where it stops:
 
 Not assignable by name today: `pqsi-security`, `siindex-ops-brief`, `siindex-market-intel`, `siindex-anomaly` and `siindex-support`, which exist only as packaged `.skill` archives with no directory. They become assignable when a directory with a `SKILL.md` exists. Unpacking them is a separate change.
 
-All assignable directory names (17): `indx-onboarding-concierge`, `indx-website-builder`, `pqsi-compliance`, `siindex-agent-wallet`, `siindex-citizen-ops`, `siindex-community-report`, `siindex-coo-orchestrator`, `siindex-devops`, `siindex-git-commit-prep`, `siindex-lending-monitor`, `siindex-lp-manager`, `siindex-memedao-governance`, `siindex-pre-build-checklist`, `siindex-referral-engine`, `siindex-token-launch`, `siindex-treasury`, `siindex-waitlist-ops`.
+All assignable directory names (18): `indx-onboarding-concierge`, `indx-website-builder`, `pqsi-compliance`, `presentation-materials`, `siindex-agent-wallet`, `siindex-citizen-ops`, `siindex-community-report`, `siindex-coo-orchestrator`, `siindex-devops`, `siindex-git-commit-prep`, `siindex-lending-monitor`, `siindex-lp-manager`, `siindex-memedao-governance`, `siindex-pre-build-checklist`, `siindex-referral-engine`, `siindex-token-launch`, `siindex-treasury`, `siindex-waitlist-ops`.
 
 Run `node --test agents/orchestrator.test.js` (after `npm install` in `agents/`) to check the lookup and the gates.
 
