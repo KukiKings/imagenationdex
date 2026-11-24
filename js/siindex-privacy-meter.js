@@ -24,6 +24,7 @@
   var VOICE_KEY = "siindex_website_voice_enabled";
   var SETTLE_VOICE_ON_MS = 3200; // the voice request can start up to ~2.5 s after the answer
   var SETTLE_VOICE_OFF_MS = 700;
+  var AWAIT_ANSWER_MS = 20000; // longest a finished runtime call keeps the count open for its answer
 
   var KIND_BY_URL = [
     ["siindex-website-runtime", "runtime", "question sent to SIINDEX server"],
@@ -68,6 +69,10 @@
 
   function settle() {
     if (inflight > 0) { touch(); return; }
+    // A runtime reply streams in after its request has returned. Without this the bucket closed
+    // before the answer arrived, the answer then opened a new empty bucket, and the pill read
+    // "Local only · 0 external calls" for a question that WAS sent to the server.
+    if (bucket && bucket.awaiting && Date.now() - bucket.runtimeAt < AWAIT_ANSWER_MS) { touch(); return; }
     var b = bucket;
     bucket = null;
     if (b && (b.answered || b.calls.length || b.mic || b.voice)) last = b;
@@ -129,7 +134,8 @@
         var url = typeof input === "string" ? input : (input && input.url) || String(input);
         var kind = classify(url);
         if (bucket || kind !== "other") {
-          open().calls.push(kind);
+          var ob = open(); ob.calls.push(kind);
+          if (kind === "runtime") { ob.awaiting = !ob.answered; ob.runtimeAt = Date.now(); }
           inflight += 1;
           tracked = true;
           touch();
@@ -146,7 +152,7 @@
 
   window.addEventListener("siindex:message", function (ev) {
     var role = ev && ev.detail && ev.detail.role;
-    if (role === "si" || role === "assistant") { open().answered = true; touch(); }
+    if (role === "si" || role === "assistant") { var mb = open(); mb.answered = true; mb.awaiting = false; touch(); }
   });
   window.addEventListener("siindex:browser-speech", function (ev) {
     var d = (ev && ev.detail) || {};
@@ -158,7 +164,7 @@
 
   window.SIINDEX_PRIVACY = {
     version: "1.0.0",
-    answered: function () { open().answered = true; touch(); },
+    answered: function () { var ab = open(); ab.answered = true; ab.awaiting = false; touch(); },
     text: currentText,
     state: function () {
       var b = bucket || last;

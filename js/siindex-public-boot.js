@@ -62,11 +62,8 @@
           return tryLoad('/js/siindex-presence-feedback.js?v=5', 'js/siindex-presence-feedback.js');
         });
       }
-      if (document.querySelector('.portrait-ring') || /siindex\.html/i.test(location.pathname)) {
-        chain = chain.then(function () {
-          return tryLoad('/js/siindex-presence-form.js', 'js/siindex-presence-form.js');
-        });
-      }
+      // js/siindex-presence-form.js was loaded here but the file does not exist (404 + a MIME error on every
+      // page that has .portrait-ring, e.g. speak-to-siindex). Removed; add it back only with the file.
       return chain;
     })
     .then(function () {
