@@ -23,7 +23,8 @@
  */
 (function () {
   "use strict";
-  if (window.SIINDEXVoice && window.SIINDEXVoice.version === "3.0.24") return;
+  // Load the core once per page whatever its version (was pinned to "3.0.24", so 3.0.25 could run twice).
+  if (window.SIINDEXVoice && window.SIINDEXVoice.version) return;
 
   const SUPABASE_URL = "https://zljgthfzbalsunuoohcd.supabase.co";
   const SUPABASE_KEY = "sb_publishable_rSl7P028UrBn8KCUSSbjAg_mT3FWoxV";
@@ -70,7 +71,9 @@
   // v3.0.23 mobile-voice state
   const MIN_USER_UTTERANCE_MS = 300;
   // Valid 46-byte silent WAV (44-byte header + 1 sample of 8-bit silence + pad); 8 kHz mono.
-  const SILENT_WAV = "data:audio/wav;base64,UklGRiYAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQIAAACAgA==";
+  // Same 46-byte silent WAV, now a same-origin file: a data: URL is blocked by the CSP (media-src falls back
+  // to default-src 'self') and logged a violation on every first tap.
+  const SILENT_WAV = "/assets/silent.wav";
   let unlockEl = null;
   let audioUnlocked = false;
   let audioSessionSet = false;
@@ -243,7 +246,9 @@
   // it cancels the unlock. If play() is rejected nothing throws and the next tap tries again.
   function unlockAudio() {
     setAudioSessionOnce();
-    if (!audioUnlocked && !unlockPending) {
+    // Voice off: nothing will be played, so skip the silent-file unlock (it would be a network request on a
+    // local-only answer). speak() calls this again when voice is on, so the unlock still runs before playback.
+    if (!audioUnlocked && !unlockPending && voiceEnabled) {
       try {
         if (!unlockEl && typeof Audio !== "undefined") {
           unlockEl = new Audio();
