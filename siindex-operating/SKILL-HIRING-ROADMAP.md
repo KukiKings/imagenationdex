@@ -37,6 +37,14 @@ No external fact-check service is required for the December materials. These too
 
 Use only after the primary source is fetched. List every external call in the skill report. Return results only to SIINDEX. No standing credentials or automatic spend.
 
+### Solana December demo path (live)
+
+`solana-sas-onboarding`, `solana-usdc-routing`, `solana-compliance-attest` and `solana-mobile-wallet-status` are now live tier-1, read-only skills, on main and assignable by name.
+
+They form the primary December demo path, in this order: progressive SAS KYC, then a cost and path quote, then compliance status, then mobile wallet readiness (Samsung Wallet, keyless model).
+
+Solana remains the settlement layer only. No funds move. Primary sources are required. "Cannot be confirmed" stays the default for any claim that is not verified. These are instruction files only: they run no code and cannot check anything that needs a real device.
+
 ## 4. Rules that never change
 
 - Naming a skill is not consent. A yes covers one skill and one change.
