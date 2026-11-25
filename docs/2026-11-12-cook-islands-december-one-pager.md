@@ -32,6 +32,14 @@ CAWG is also asked to consider "alternative approaches". This is one, and it doe
 
 IN$DEX does not seek a VASP licence. It would operate inside the existing trustee perimeter, under FSC-supervised trustees, and defers to the FSC and Crown Law on what is permitted.
 
+## Settlement path and what is not yet confirmed
+
+IN$DEX is at pilot-preparation stage; payments and wallets are not live, and Solana is used as a settlement layer only. The Solana Attestation Service is live on Solana mainnet and lets trusted issuers attach KYC-type attestations to a wallet. On Solana a sponsor can pay the network fee, so a sender never needs to hold SOL. Confidential transfers are not available for USDC today, so the pilot does not rely on them.
+
+Australia's Travel Rule has applied to value transfers, including virtual asset service providers, since 31 March 2026.
+
+Samsung Wallet launched USDC on Solana for eligible US Galaxy users in November 2026, with funds held by a licensed custodian; it is US-only for now. Mobile wallet readiness for the Cook Islands is not yet confirmed.
+
 ## The ask
 
 A meeting in December with CAWG or the FIU to present the registry concept as a complement to their work, not a competitor to the legislation under review.
@@ -59,6 +67,8 @@ Primary-source verified by AJ's research, wording updated 12 Nov 2026 (Claude di
 - Other verified Ora facts supplied (rankings, crypto partnerships) are deliberately not used in the text.
 - Claude's own searches on 12 Nov 2026 support USDM1 as on-chain sovereign debt with Anchorage custody and Membrane integration. They did not independently confirm Ora Fiduciary or Cyber Ventures.
 - "Aura" does not appear in either file. Unrelated Aura entities are not involved.
+
+Solana path sentences added on AJ's order, 26 Nov 2026. Checked by multi-agent-verify against primary sources on that date: solana.com (attestation, fee-abstraction and privacy pages), austrac.gov.au, news.samsung.com and the Solana Foundation Samsung posts. "Launched" for Samsung Wallet rests on the Solana Foundation post of 5 Nov 2026; Samsung's own release of 7 Oct 2026 says "launching". Re-check on the day. Not claimed: progressive KYC, Cook Islands corridor readiness, non-custodial Samsung, USDC confidential transfers, any fee figure.
 
 Still flagged:
 - "ahead on trust" is a judgement, not a sourced fact. Left as written.
