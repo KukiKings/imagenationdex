@@ -4,7 +4,7 @@
 
 ## Delivery notes (not read aloud)
 
-- Seven cuts of about 40 to 45 seconds each, roughly five minutes in all. Pace is unhurried, about 130 words a minute, with a clear pause between cuts.
+- Eight cuts. Seven are about 40 to 45 seconds each and Cut 7 is about 65 seconds, roughly six minutes in all. Pace is unhurried, about 130 words a minute, with a clear pause between cuts.
 - No subtitles and no on-screen text. The contact details are spoken in full, so read the last cut slowly.
 - Spoken names: SIINDEX is said "Sinn-dex". The brand IN$DEX is said "Index". Acronyms are written out in full on purpose.
 - SIINDEX is a Synthetic Intelligence. Do not call it AI.
@@ -33,7 +33,11 @@ Let me connect this to the working group's own questions. On money laundering an
 
 Now, the boundaries. Index does not seek a licence as a virtual asset provider. It would work inside the existing trustee system, under trustees supervised by the Financial Supervisory Commission. We defer to the Commission, and to Crown Law, on what is permitted. Other uses, such as funds or private credit, are only options. They would depend on future legislation, and we are not promising them. Today, Index is in pilot preparation. We are not running a live service in the Cook Islands, and we will not describe anything as live until it is.
 
-## Cut 7: The ask and contact (about 42 seconds)
+## Cut 7: Settlement path and what is not yet confirmed (about 65 seconds)
+
+Index is at pilot-preparation stage; payments and wallets are not live, and Solana is used as a settlement layer only. The Solana Attestation Service is live on Solana mainnet and lets trusted issuers attach K Y C type attestations to a wallet. On Solana a sponsor can pay the network fee, so a sender never needs to hold SOL. Confidential transfers are not available for U S D C today, so the pilot does not rely on them. Australia's Travel Rule has applied to value transfers, including virtual asset service providers, since the thirty-first of March, twenty twenty-six. Samsung Wallet launched U S D C on Solana for eligible U S Galaxy users in November twenty twenty-six, with funds held by a licensed custodian; it is U S only for now. Mobile wallet readiness for the Cook Islands is not yet confirmed.
+
+## Cut 8: The ask and contact (about 42 seconds)
 
 So here is our ask. We would like a meeting in December with the working group, or with the Financial Intelligence Unit. We would present the registry as a complement to your work, not a competitor to the legislation under review. You can write to AJ Henry, the founder, at a j henry, at imagenation dex, dot com. Or call: plus six one, four five one, five six five, eight six three. Thank you. We would be honoured to listen first, and to learn from the people who know this place best.
 
@@ -64,12 +68,14 @@ Primary-source verified by AJ's research, wording updated 12 Nov 2026 (Claude di
 - Claude's own searches on 12 Nov 2026 support U S D M one as on-chain sovereign debt with Anchorage custody and Membrane integration. They did not independently confirm Ora Fiduciary or Cyber Ventures.
 - "Aura" does not appear in either file. Unrelated Aura entities are not involved.
 
+Cut 7 added on AJ's order, 26 Nov 2026. The seven sentences are in spoken form: acronyms and dates spelled out, "IN$DEX" said "Index". Checked by multi-agent-verify against primary sources on that date: solana.com (attestation, fee-abstraction and privacy pages), austrac.gov.au, news.samsung.com and the Solana Foundation Samsung posts. "Launched" for Samsung Wallet rests on the Solana Foundation post of 5 Nov 2026; Samsung's own release of 7 Oct 2026 says "launching". Re-check on the day. Not claimed: progressive KYC, Cook Islands corridor readiness, non-custodial Samsung, USDC confidential transfers, any fee figure. Cut 7 is 142 words, about 65 seconds at 130 words a minute, so it runs past the 45-second target.
+
 Still flagged:
 - Cut 1, "It is now November. We have not seen a public update." Per AJ's research, accurate as of November. Re-check on the day.
 - Cut 2, "ahead on trust" is a judgement, not a sourced fact. Left as written.
 - Cuts 2 and 3 were trimmed to fit 45 seconds: Cut 2 lost "That care is right" and "which we are not addressing"; Cut 3 lost "That matters to us", "inside the trustee system" and "already", and "this jurisdiction" became "here". No verified fact was removed.
 - Cut 4: Chainlink ACE, StarCompliance and Safeheron are named as examples only and are not covered by the research. "We claim no agreement" must stay true.
 - Cut 5: "supervisors can see decisions and transfers as they are recorded" is a design intent, not a built feature.
-- Cut 7: the email and phone are exactly as supplied. Confirm both are monitored.
+- Cut 8: the email and phone are exactly as supplied. Confirm both are monitored.
 
 Only "Kia orana" is used from Cook Islands Maori, as the persona notes require. -->
