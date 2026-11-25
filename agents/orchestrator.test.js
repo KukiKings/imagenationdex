@@ -184,3 +184,15 @@ test('assignSkill: solana-compliance-attest without a tier returns consent_requi
 test('assignSkill: solana-mobile-wallet-status is registered and accepted at tier 1', async () => { const r = await assignSkill({ skill: 'solana-mobile-wallet-status', tier: 1 }); assert.strictEqual(r.ok, true); assert.strictEqual(r.gate, 'auto'); });
 
 test('assignSkill: solana-mobile-wallet-status without a tier returns consent_required', async () => { const r = await assignSkill({ skill: 'solana-mobile-wallet-status' }); assert.strictEqual(r.ok, false); assert.strictEqual(r.error, 'consent_required'); });
+
+test('assignSkill: elite-mastery-roadmap is registered and accepted at tier 1', async () => { const r = await assignSkill({ skill: 'elite-mastery-roadmap', tier: 1 }); assert.strictEqual(r.ok, true); assert.strictEqual(r.gate, 'auto'); });
+
+test('assignSkill: elite-mastery-roadmap without a tier returns consent_required', async () => { const r = await assignSkill({ skill: 'elite-mastery-roadmap' }); assert.strictEqual(r.ok, false); assert.strictEqual(r.error, 'consent_required'); });
+
+test('assignSkill: thinking-beyond-human-limits is registered and accepted at tier 1', async () => { const r = await assignSkill({ skill: 'thinking-beyond-human-limits', tier: 1 }); assert.strictEqual(r.ok, true); assert.strictEqual(r.gate, 'auto'); });
+
+test('assignSkill: thinking-beyond-human-limits without a tier returns consent_required', async () => { const r = await assignSkill({ skill: 'thinking-beyond-human-limits' }); assert.strictEqual(r.ok, false); assert.strictEqual(r.error, 'consent_required'); });
+
+test('assignSkill: forbidden-wisdom-decoder is registered and accepted at tier 1', async () => { const r = await assignSkill({ skill: 'forbidden-wisdom-decoder', tier: 1 }); assert.strictEqual(r.ok, true); assert.strictEqual(r.gate, 'auto'); });
+
+test('assignSkill: forbidden-wisdom-decoder without a tier returns consent_required', async () => { const r = await assignSkill({ skill: 'forbidden-wisdom-decoder' }); assert.strictEqual(r.ok, false); assert.strictEqual(r.error, 'consent_required'); });
