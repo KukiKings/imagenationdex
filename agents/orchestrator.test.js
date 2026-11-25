@@ -172,3 +172,15 @@ test('assignSkill: cook-islands-registration-status is registered and accepted a
 test('assignSkill: demo-readiness is registered and accepted at tier 1', async () => { const r = await assignSkill({ skill: 'demo-readiness', tier: 1 }); assert.strictEqual(r.ok, true); assert.strictEqual(r.gate, 'auto'); });
 
 test('assignSkill: solana-sas-onboarding is registered and accepted at tier 1', async () => { const r = await assignSkill({ skill: 'solana-sas-onboarding', tier: 1 }); assert.strictEqual(r.ok, true); assert.strictEqual(r.gate, 'auto'); });
+
+test('assignSkill: solana-usdc-routing is registered and accepted at tier 1', async () => { const r = await assignSkill({ skill: 'solana-usdc-routing', tier: 1 }); assert.strictEqual(r.ok, true); assert.strictEqual(r.gate, 'auto'); });
+
+test('assignSkill: solana-usdc-routing without a tier returns consent_required', async () => { const r = await assignSkill({ skill: 'solana-usdc-routing' }); assert.strictEqual(r.ok, false); assert.strictEqual(r.error, 'consent_required'); });
+
+test('assignSkill: solana-compliance-attest is registered and accepted at tier 1', async () => { const r = await assignSkill({ skill: 'solana-compliance-attest', tier: 1 }); assert.strictEqual(r.ok, true); assert.strictEqual(r.gate, 'auto'); });
+
+test('assignSkill: solana-compliance-attest without a tier returns consent_required', async () => { const r = await assignSkill({ skill: 'solana-compliance-attest' }); assert.strictEqual(r.ok, false); assert.strictEqual(r.error, 'consent_required'); });
+
+test('assignSkill: solana-mobile-wallet-status is registered and accepted at tier 1', async () => { const r = await assignSkill({ skill: 'solana-mobile-wallet-status', tier: 1 }); assert.strictEqual(r.ok, true); assert.strictEqual(r.gate, 'auto'); });
+
+test('assignSkill: solana-mobile-wallet-status without a tier returns consent_required', async () => { const r = await assignSkill({ skill: 'solana-mobile-wallet-status' }); assert.strictEqual(r.ok, false); assert.strictEqual(r.error, 'consent_required'); });
