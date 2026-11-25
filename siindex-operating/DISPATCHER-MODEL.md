@@ -111,6 +111,12 @@ Example: `presentation-materials` is a read-only skill that checks the December 
 
 `solana-sas-onboarding` is now a named skill: it is read-only, tier 1, and checks progressive KYC and Solana Attestation Service status against primary sources, returning the result only to SIINDEX.
 
+`solana-usdc-routing` is now a named skill: it is read-only, tier 1, and reports a current total-cost quote and recommended path for a USDC transfer on Solana (including fee-sponsorship and Token-2022 options), returning the result only to SIINDEX.
+
+`solana-compliance-attest` is now a named skill: it is read-only, tier 1, and reports current sanctions and Travel Rule status for a Solana wallet or corridor against primary sources, returning the result only to SIINDEX.
+
+`solana-mobile-wallet-status` is now a named skill: it is read-only, tier 1, and reports current readiness of mobile wallet paths (Samsung Wallet, Seeker, MWA) for keyless Solana USDC use, returning the result only to SIINDEX.
+
 ### Presentation-critical skills assignable now
 
 | Area | Skill (directory name) |
@@ -124,7 +130,7 @@ Example: `presentation-materials` is a read-only skill that checks the December 
 
 Not assignable by name today: `pqsi-security`, `siindex-ops-brief`, `siindex-market-intel`, `siindex-anomaly` and `siindex-support`, which exist only as packaged `.skill` archives with no directory. They become assignable when a directory with a `SKILL.md` exists. Unpacking them is a separate change.
 
-All assignable directory names (23): `cook-islands-registration-status`, `demo-readiness`, `indx-onboarding-concierge`, `indx-website-builder`, `knowledge-refresh`, `multi-agent-verify`, `pqsi-compliance`, `presentation-materials`, `siindex-agent-wallet`, `siindex-citizen-ops`, `siindex-community-report`, `siindex-coo-orchestrator`, `siindex-devops`, `siindex-git-commit-prep`, `siindex-lending-monitor`, `siindex-lp-manager`, `siindex-memedao-governance`, `siindex-pre-build-checklist`, `siindex-referral-engine`, `siindex-token-launch`, `siindex-treasury`, `siindex-waitlist-ops`, `solana-sas-onboarding`.
+All assignable directory names (26): `cook-islands-registration-status`, `demo-readiness`, `indx-onboarding-concierge`, `indx-website-builder`, `knowledge-refresh`, `multi-agent-verify`, `pqsi-compliance`, `presentation-materials`, `siindex-agent-wallet`, `siindex-citizen-ops`, `siindex-community-report`, `siindex-coo-orchestrator`, `siindex-devops`, `siindex-git-commit-prep`, `siindex-lending-monitor`, `siindex-lp-manager`, `siindex-memedao-governance`, `siindex-pre-build-checklist`, `siindex-referral-engine`, `siindex-token-launch`, `siindex-treasury`, `siindex-waitlist-ops`, `solana-compliance-attest`, `solana-mobile-wallet-status`, `solana-sas-onboarding`, `solana-usdc-routing`.
 
 Run `node --test agents/orchestrator.test.js` (after `npm install` in `agents/`) to check the lookup and the gates.
 
