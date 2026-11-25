@@ -34,11 +34,11 @@ IN$DEX does not seek a VASP licence. It would operate inside the existing truste
 
 ## Settlement path and what is not yet confirmed
 
-IN$DEX is at pilot-preparation stage; payments and wallets are not live, and Solana is used as a settlement layer only. The Solana Attestation Service is live on Solana mainnet and lets trusted issuers attach KYC-type attestations to a wallet. On Solana a sponsor can pay the network fee, so a sender never needs to hold SOL. Confidential transfers are not available for USDC today, so the pilot does not rely on them.
+IN$DEX is at pilot-preparation stage; payments and wallets are not live, and Solana is used as a settlement layer only. The Solana Attestation Service is live on Solana mainnet and lets trusted issuers attach KYC-type attestations to a wallet. A sponsor can pay the network fee. For some fee-sponsorship methods the sender does not need to hold SOL. Confidential transfers are not available for USDC today, so the pilot does not rely on them.
 
 Australia's Travel Rule has applied to value transfers, including virtual asset service providers, since 31 March 2026.
 
-Samsung Wallet launched USDC on Solana for eligible US Galaxy users in November 2026, with funds held by a licensed custodian; it is US-only for now. Mobile wallet readiness for the Cook Islands is not yet confirmed.
+Samsung Wallet added USDC on Solana for eligible US Galaxy users, with funds held by a licensed custodian. Eligibility at launch was US residents. Mobile wallet readiness for the Cook Islands is not yet confirmed.
 
 ## The ask
 
