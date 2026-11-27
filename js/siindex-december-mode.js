@@ -52,7 +52,23 @@
       s: ['Samsung Wallet added U S D C on Solana for eligible U S Galaxy users, with funds held by a licensed custodian.', 'Eligibility at launch was U S residents.'] },
     { id: 'S7', re: /(cook islands|cook).*(wallet|mobile|ready|readiness)|mobile wallet/,
       w: ['Mobile wallet readiness for the Cook Islands is not yet confirmed.'],
-      s: ['Mobile wallet readiness for the Cook Islands is not yet confirmed.'] }
+      s: ['Mobile wallet readiness for the Cook Islands is not yet confirmed.'] },
+    // Honest-status sentences, as written on the static Government & PM Q&A page and in the living public knowledge.
+    { id: 'G1', re: /\baccounts?\b|domain issuance|issue (a )?domain|what (is|are) not live|not live/,
+      w: ['Accounts, wallets, payments and domain issuance are not live.'],
+      s: ['Accounts, wallets, payments and domain issuance are not live.'] },
+    { id: 'G2', re: /registration|registered|incorporat|certificate/,
+      w: ['Cook Islands registration is in progress; no Certificate of Incorporation exists yet.'],
+      s: ['Cook Islands registration is in progress; no Certificate of Incorporation exists yet.'] },
+    { id: 'G3', re: /pilot (target|date)|24 feb|launch date|when .*(pilot|launch|live)|february/,
+      w: ['Pilot target 24 February 2027.'],
+      s: ['Pilot target: the twenty-fourth of February, twenty twenty-seven.'] },
+    { id: 'G4', re: /\bbank(ing|s)?\b|claim live|do you claim|live payments/,
+      w: ['We do not claim live banking or payments today.'],
+      s: ['We do not claim live banking or payments today.'] },
+    { id: 'G5', re: /who (is|are) siindex|what is siindex|are you (an? )?(ai|artificial|synthetic)|artificial intelligence|synthetic intelligence|pqsi|pronounce|sinn? ?dex/,
+      w: ['Synthetic Intelligence for IN$DEX (PQSI). Spoken Sin-dex. Not artificial intelligence.'],
+      s: ['Synthetic Intelligence for Index, P Q S I. Spoken Sin-dex. Not artificial intelligence.'] }
   ];
 
   // Pill demo questions pass through untouched.
