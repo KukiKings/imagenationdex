@@ -142,7 +142,31 @@
     if (handle(val())) stop(e);
   }, true);
 
+  // Single-screen flow: these links are suppressed only for the Cook Islands pilot (?mode=december).
+  // Everything is spoken to SIINDEX on this one page, so Government & PM Q&A, Present, Operator, System Card,
+  // Interview Mode and every other page link are removed. The static pages stay in the repo as internal reference.
+  function suppressLinks() {
+    function sweep() {
+      var as = document.querySelectorAll('a[href]');
+      for (var i = 0; i < as.length; i++) {
+        var h = (as[i].getAttribute('href') || '').trim().toLowerCase();
+        if (h.charAt(0) === '#' || h.indexOf('mailto:') === 0 || !as[i].parentNode) continue;
+        if (as[i].classList.contains('brand')) {
+          var sp = document.createElement('span'); sp.className = 'brand'; sp.textContent = as[i].textContent;
+          as[i].parentNode.replaceChild(sp, as[i]);
+        } else as[i].parentNode.removeChild(as[i]);
+      }
+      var bs = document.querySelectorAll('button,.chip');
+      for (var j = 0; j < bs.length; j++) {
+        if (/government\s*(&|and)?\s*(pm\s*)?q\s*&?\s*a/i.test(bs[j].textContent || '') && bs[j].parentNode) bs[j].parentNode.removeChild(bs[j]);
+      }
+    }
+    sweep();
+    new MutationObserver(sweep).observe(document.documentElement, { childList: true, subtree: true });
+  }
+
   function ui() {
+    suppressLinks();
     var mic = document.getElementById('mic');
     if (mic) { mic.disabled = true; mic.title = 'December mode: typed questions only'; }
     var st = document.createElement('style');
