@@ -724,6 +724,8 @@
   async function ask(text, opts) {
     if (!text) return;
     opts = opts || {};
+    // Page-level gate (speak-to-siindex.html): answers a locked sentence or the fallback and returns true. Undefined on other pages.
+    if (typeof window.SIINDEX_ASK_GATE === "function") { try { if (window.SIINDEX_ASK_GATE(text, opts) === true) return; } catch (_) {} }
     const source = opts.source || "public-home";
     unlockAudio();
     interrupt("…", false);
